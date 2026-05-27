@@ -13,6 +13,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -38,18 +40,27 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
     private boolean isImportEnabled;
     private boolean isSupplyEnabled;
     private boolean removeEntry;
+    private LogisticsConfigAccessMode accessMode = LogisticsConfigAccessMode.FULL;
 
     public LogisticsConfigUpdatePacket() {}
 
     public LogisticsConfigUpdatePacket(CelestialAsset.ID assetId, InventoryKey resource,
         LogisticsResourceConfig config) {
+        this(assetId, resource, config, LogisticsConfigAccessMode.FULL);
+    }
+
+    public LogisticsConfigUpdatePacket(CelestialAsset.ID assetId, InventoryKey resource, LogisticsResourceConfig config,
+        LogisticsConfigAccessMode accessMode) {
         this.assetId = assetId;
         this.resource = resource;
-        this.minReserve = config.minReserve();
-        this.orderSize = config.orderSize();
-        this.isImportEnabled = config.isImportEnabled();
-        this.isSupplyEnabled = config.isSupplyEnabled();
+        LogisticsConfigAccessMode mode = accessMode == null ? LogisticsConfigAccessMode.FULL : accessMode;
+        LogisticsResourceConfig sanitized = mode.sanitize(config);
+        this.minReserve = sanitized.minReserve();
+        this.orderSize = sanitized.orderSize();
+        this.isImportEnabled = sanitized.isImportEnabled();
+        this.isSupplyEnabled = sanitized.isSupplyEnabled();
         this.removeEntry = false;
+        this.accessMode = mode;
     }
 
     public static LogisticsConfigUpdatePacket remove(CelestialAsset.ID assetId, InventoryKey resource) {
@@ -61,6 +72,7 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
         packet.isImportEnabled = false;
         packet.isSupplyEnabled = false;
         packet.removeEntry = true;
+        packet.accessMode = LogisticsConfigAccessMode.FULL;
         return packet;
     }
 
@@ -73,6 +85,7 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
         buf.writeBoolean(isImportEnabled);
         buf.writeBoolean(isSupplyEnabled);
         buf.writeBoolean(removeEntry);
+        PacketUtil.writeEnum(buf, accessMode == null ? LogisticsConfigAccessMode.FULL : accessMode);
     }
 
     @Override
@@ -84,6 +97,7 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
         isImportEnabled = buf.readBoolean();
         isSupplyEnabled = buf.readBoolean();
         removeEntry = buf.readBoolean();
+        accessMode = PacketUtil.readEnum(buf, LogisticsConfigAccessMode.class);
     }
 
     public static class Handler implements IMessageHandler<LogisticsConfigUpdatePacket, IMessage> {
@@ -116,6 +130,7 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
         if (resource == null) return null;
         if (removeEntry) {
             asset.logisticsConfig.reset(resource);
+            LogisticStore.updateSignalsForFacility(asset);
             asset.bumpSyncRevision();
             return AssetSyncPacket.logisticsConfigRemoved(assetId, resource)
                 .withSyncRevision(asset.getSyncRevision());
@@ -125,7 +140,9 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
                 orderSize,
                 isImportEnabled,
                 isSupplyEnabled);
+            config = (accessMode == null ? LogisticsConfigAccessMode.FULL : accessMode).sanitize(config);
             asset.logisticsConfig.set(resource, config);
+            LogisticStore.updateSignalsForFacility(asset);
             asset.bumpSyncRevision();
             return AssetSyncPacket
                 .logisticsConfigUpdated(
@@ -138,4 +155,5 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
                 .withSyncRevision(asset.getSyncRevision());
         }
     }
+
 }

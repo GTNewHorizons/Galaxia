@@ -6,7 +6,7 @@ import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.compat.GTUtility;
+import com.gtnewhorizons.galaxia.compat.GTCompat;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContributionFormatter;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureMiningContext;
@@ -59,7 +59,7 @@ public final class RareCrystalFormationFeature implements PlanetaryFeature {
     }
 
     private static List<ItemStack> miningPool() {
-        List<ItemStack> pool = GTUtility.getRawOreStacks(MATERIALS);
+        List<ItemStack> pool = GTCompat.getRawOreStacks(MATERIALS);
         if (pool.isEmpty()) {
             pool.add(new ItemStack(Items.diamond));
             pool.add(new ItemStack(Items.emerald));

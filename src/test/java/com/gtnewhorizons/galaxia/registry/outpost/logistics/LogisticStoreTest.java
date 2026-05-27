@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.outpost.logistics;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
+import java.util.List;
 import java.util.UUID;
 
 import net.minecraft.init.Items;
@@ -17,6 +18,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class LogisticStoreTest {
@@ -29,6 +31,7 @@ final class LogisticStoreTest {
     @AfterEach
     void cleanup() {
         LogisticStore.clearDeliveries();
+        LogisticStore.clearSignals();
         CelestialAssetStore.clear();
     }
 
@@ -139,6 +142,46 @@ final class LogisticStoreTest {
                 0));
 
         assertEquals(12L, LogisticStore.inboundInTransitAmount(destination.assetId, resource));
+    }
+
+    @Test
+    void upkeepAutoOrderUsesCoreImportConfigForRequest() {
+        AutomatedFacility station = facility();
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        station.updateItems(resource, 3);
+        station.setBound(resource, 5, true);
+        station.setUpkeepReserve(resource, 10L);
+        station.setUpkeepAutoOrder(resource, true);
+
+        LogisticStore.updateSignalsForFacility(station);
+
+        LogisticSignal signal = signalFor(station, resource);
+        assertEquals(-12L, signal.amount());
+    }
+
+    @Test
+    void coreImportConfigEmitsRequestUpToConfiguredReserve() {
+        AutomatedFacility station = facility();
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        station.updateItems(resource, 3);
+        station.logisticsConfig.set(resource, new LogisticsResourceConfig(15, 64, true, false));
+
+        LogisticStore.updateSignalsForFacility(station);
+
+        LogisticSignal signal = signalFor(station, resource);
+        assertEquals(resource, signal.resourceId());
+        assertEquals(-12L, signal.amount());
+    }
+
+    private static LogisticSignal signalFor(AutomatedFacility station, ItemStackWrapper resource) {
+        return LogisticStore.allSignalsForScope(LogisticSignal.Scope.SYSTEM)
+            .values()
+            .stream()
+            .flatMap(List::stream)
+            .filter(signal -> station.assetId.equals(signal.outpostAssetId()))
+            .filter(signal -> resource.equals(signal.resourceId()))
+            .findFirst()
+            .orElseThrow();
     }
 
     private static AutomatedFacility facility() {

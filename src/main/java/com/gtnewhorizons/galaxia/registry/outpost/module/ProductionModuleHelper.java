@@ -78,7 +78,7 @@ public final class ProductionModuleHelper {
 
         // Consume inputs
         for (Map.Entry<ItemStackWrapper, Long> e : requiredInputs.entrySet()) {
-            outpost.updateContents(e.getKey(), -(int) Math.min(e.getValue(), Integer.MAX_VALUE), true);
+            outpost.updateContents(e.getKey(), -e.getValue(), true);
         }
 
         if (fluidInputs != null) {
@@ -90,13 +90,13 @@ public final class ProductionModuleHelper {
         // Produce outputs
         for (Map.Entry<ItemStackWrapper, Long> e : selectedItemOutputs.totals()
             .entrySet()) {
-            outpost.updateContents(e.getKey(), (int) Math.min(e.getValue(), Integer.MAX_VALUE), true);
+            outpost.updateContents(e.getKey(), e.getValue(), true);
         }
 
         if (fluidOutputs != null) {
             for (Map.Entry<FluidKey, Long> e : selectedFluidOutputs.totals()
                 .entrySet()) {
-                outpost.updateContents(e.getKey(), (int) Math.min(e.getValue(), Integer.MAX_VALUE), true);
+                outpost.updateContents(e.getKey(), e.getValue(), true);
             }
         }
 

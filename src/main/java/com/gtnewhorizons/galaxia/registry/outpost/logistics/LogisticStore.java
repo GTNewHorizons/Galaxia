@@ -14,6 +14,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
@@ -39,6 +40,14 @@ public final class LogisticStore {
 
     public static void clearDeliveries() {
         activeDeliveries.clear();
+    }
+
+    public static void clearSignals() {
+        outpostSignals.clear();
+    }
+
+    public static void removeSignalsFor(CelestialAsset.ID assetId) {
+        if (assetId != null) outpostSignals.remove(assetId);
     }
 
     public static long inboundInTransitAmount(CelestialAsset.ID toAssetId, ItemStackWrapper resource) {
@@ -70,10 +79,7 @@ public final class LogisticStore {
                         ticked.data.toAssetId());
                     return;
                 }
-                long accepted = destination.updateContents(
-                    ticked.data.resourceId(),
-                    (int) Math.min(ticked.data.amount(), Integer.MAX_VALUE),
-                    true);
+                long accepted = destination.updateContents(ticked.data.resourceId(), ticked.data.amount(), true);
                 long remaining = ticked.data.amount() - accepted;
                 if (remaining > 0L) {
                     ticked.setAmount(remaining);
@@ -97,6 +103,7 @@ public final class LogisticStore {
         if (asset instanceof Station station) {
             cannonItems = station.getCannonChestItems();
         }
+        AutomatedFacility automatedFacility = asset instanceof AutomatedFacility facility ? facility : null;
 
         Map<ItemStackWrapper, LogisticSignal> currentSignals = outpostSignals
             .computeIfAbsent(assetId, k -> new LinkedHashMap<>());
@@ -111,7 +118,9 @@ public final class LogisticStore {
         for (ItemStackWrapper r : snapshot.keySet()) {
             if (!allResources.contains(r)) allResources.add(r);
         }
-
+        for (ItemStackWrapper r : currentSignals.keySet()) {
+            if (!allResources.contains(r)) allResources.add(r);
+        }
         CelestialObjectId bodyId = asset.celestialObjectId;
         CelestialObjectId systemId = asset.systemId;
         CelestialObjectId planetaryAnchorBodyId = asset.planetaryAnchorBodyId;
@@ -124,16 +133,24 @@ public final class LogisticStore {
 
             long newAmount = 0;
             LogisticSignal.Scope newScope = LogisticSignal.Scope.SYSTEM;
+            long importTarget = cfg.isImportEnabled() ? cfg.minReserve() : 0L;
+            long supplyReserve = cfg.minReserve();
+            if (automatedFacility != null) {
+                supplyReserve = Math.max(supplyReserve, automatedFacility.effectiveLowerBound(resource));
+                if (cfg.isImportEnabled()) {
+                    importTarget = Math.max(importTarget, automatedFacility.effectiveLowerBound(resource));
+                }
+            }
 
-            if (cfg.isImportEnabled() && stock < cfg.minReserve()) {
-                newAmount = -(cfg.minReserve() - stock);
+            if (importTarget > 0L && stock < importTarget) {
+                newAmount = -(importTarget - stock);
             } else if (cfg.isSupplyEnabled()) {
                 long supplyStock = stock;
                 if (cannonItems != null) {
                     supplyStock += cannonItems.getOrDefault(resource, 0L);
                 }
-                if (supplyStock > cfg.minReserve()) {
-                    newAmount = supplyStock - cfg.minReserve();
+                if (supplyStock > supplyReserve) {
+                    newAmount = supplyStock - supplyReserve;
                 }
             }
 

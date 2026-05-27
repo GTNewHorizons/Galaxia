@@ -5,7 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+
+import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -116,6 +120,31 @@ final class AutomatedFacilityDeltaSyncTest {
         List<ModuleInstance> dirty = facility.drainDirtyModules();
         assertEquals(1, dirty.size());
         assertEquals(module.id, dirty.get(0).id);
+    }
+
+    @Test
+    void inventoryDeltaTracksOnlyAppliedAmount() {
+        AutomatedFacility facility = createFacility();
+        facility.markSyncedFor(PLAYER_A);
+        facility.clean();
+        ItemStackWrapper resource = ItemStackWrapper.of(new ItemStack(Items.diamond));
+
+        assertEquals(AutomatedFacility.BASE_ITEM_CAPACITY, facility.updateContents(resource, 1200, true));
+
+        assertEquals(Map.of(resource, AutomatedFacility.BASE_ITEM_CAPACITY), facility.drainDirtyInventoryDeltas());
+    }
+
+    @Test
+    void inventoryDeltaAcceptsLongAmountWithoutTruncation() {
+        AutomatedFacility facility = createFacility();
+        facility.markSyncedFor(PLAYER_A);
+        facility.clean();
+        ItemStackWrapper resource = ItemStackWrapper.of(new ItemStack(Items.diamond));
+
+        long requested = (long) Integer.MAX_VALUE + 1L;
+
+        assertEquals(AutomatedFacility.BASE_ITEM_CAPACITY, facility.updateContents(resource, requested, true));
+        assertEquals(Map.of(resource, AutomatedFacility.BASE_ITEM_CAPACITY), facility.drainDirtyInventoryDeltas());
     }
 
     @Test

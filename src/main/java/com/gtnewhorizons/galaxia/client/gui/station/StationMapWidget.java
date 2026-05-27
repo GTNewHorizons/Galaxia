@@ -12,6 +12,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.util.ResourceLocation;
 
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
@@ -23,6 +24,7 @@ import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.CapacityConnectorLayer;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.ConnectionLayerRenderer;
@@ -70,6 +72,9 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
 
     private boolean listenersRegistered;
     private static final int CLICK_DRAG_THRESHOLD = 3;
+    private static final int ALERT_ICON_SIZE = 8;
+    private static final ResourceLocation DEFAULT_ALERT_ICON = EnumTextures.ICON_STATION_ALERT_WARNING.get();
+    private static final ResourceLocation DEFAULT_RED_ALERT_ICON = EnumTextures.ICON_STATION_ALERT_ERROR.get();
 
     public StationMapWidget(CelestialAsset.ID assetId) {
         this(assetId, null, null);
@@ -267,6 +272,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
 
         updateHover(layout);
         Map<StationTileCoord, PlacedTile> tiles = layout.snapshot();
+        Map<ModuleInstance.ID, List<StationModuleAlert>> moduleAlerts = StationModuleAlertRegistry.alerts(facility);
         updateExpansionSlots(layout);
 
         int widgetWidth = getArea().width;
@@ -308,6 +314,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             int ty = tileLocalY(coord);
             ModuleLayerRenderer.drawOccupied(context, tx, ty, e.getValue());
         }
+        drawModuleAlerts(tiles, moduleAlerts);
 
         drawPickerOverlay(context, tiles);
 
@@ -357,6 +364,118 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
         }
 
         drawFeatureTooltip(facility);
+        drawModuleAlertTooltip(tiles, moduleAlerts);
+    }
+
+    private void drawModuleAlerts(Map<StationTileCoord, PlacedTile> tiles,
+        Map<ModuleInstance.ID, List<StationModuleAlert>> moduleAlerts) {
+        if (moduleAlerts.isEmpty()) return;
+        for (Map.Entry<StationTileCoord, PlacedTile> entry : tiles.entrySet()) {
+            ModuleInstance module = moduleOf(entry.getValue());
+            if (module == null || !entry.getKey()
+                .equals(alertBadgeCoord(module, tiles))) {
+                continue;
+            }
+            StationModuleAlert alert = firstAlert(moduleAlerts, module);
+            if (alert == null) continue;
+            drawModuleAlertIcon(tileLocalX(entry.getKey()), tileLocalY(entry.getKey()), alert);
+        }
+    }
+
+    private static void drawModuleAlertIcon(int tileX, int tileY, StationModuleAlert alert) {
+        ResourceLocation icon = alert.icon() != null ? alert.icon() : defaultAlertIcon(alert.severity());
+        ModuleConfigModalSupport.renderTextureIcon(icon, tileX + 2, tileY + 2, ALERT_ICON_SIZE, ALERT_ICON_SIZE);
+    }
+
+    private void drawModuleAlertTooltip(Map<StationTileCoord, PlacedTile> tiles,
+        Map<ModuleInstance.ID, List<StationModuleAlert>> moduleAlerts) {
+        if (moduleAlerts.isEmpty() || hovered == null) return;
+        PlacedTile tile = tiles.get(hovered);
+        ModuleInstance module = moduleOf(tile);
+        if (module == null) return;
+        List<StationModuleAlert> alerts = moduleAlerts.get(module.id);
+        if (alerts == null || alerts.isEmpty()) return;
+
+        FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
+        int localX = toLocalMouseX(getContext().getMouseX());
+        int localY = toLocalMouseY(getContext().getMouseY());
+        int maxTextWidth = Math.max(40, Math.min(180, getArea().width - 20));
+        int tooltipWidth = 40;
+        for (StationModuleAlert alert : alerts) {
+            tooltipWidth = Math.max(tooltipWidth, fr.getStringWidth(fr.trimStringToWidth(alert.title(), maxTextWidth)));
+            tooltipWidth = Math
+                .max(tooltipWidth, fr.getStringWidth(fr.trimStringToWidth(alert.message(), maxTextWidth)));
+        }
+        tooltipWidth += 12;
+        int tooltipHeight = 8 + alerts.size() * (fr.FONT_HEIGHT * 2 + 6);
+        int tooltipX = Math.min(localX + 10, getArea().width - tooltipWidth - 2);
+        int tooltipY = Math.min(localY + 10, getArea().height - tooltipHeight - 2);
+        tooltipX = Math.max(2, tooltipX);
+        tooltipY = Math.max(2, tooltipY);
+        boolean red = hasRedAlert(alerts);
+        BorderedRect.draw(
+            tooltipX,
+            tooltipY,
+            tooltipWidth,
+            tooltipHeight,
+            EnumColors.MAP_COLOR_STATION_PANEL_BG.getColor(),
+            red ? EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_BLOCKING.getColor()
+                : EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_WARNING.getColor());
+        int textY = tooltipY + 4;
+        for (StationModuleAlert alert : alerts) {
+            String title = fr.trimStringToWidth(alert.title(), maxTextWidth);
+            String message = fr.trimStringToWidth(alert.message(), maxTextWidth);
+            fr.drawStringWithShadow(title, tooltipX + 6, textY, alertTitleColor(alert));
+            textY += fr.FONT_HEIGHT + 2;
+            fr.drawStringWithShadow(message, tooltipX + 6, textY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+            textY += fr.FONT_HEIGHT + 4;
+        }
+    }
+
+    private static @Nullable StationModuleAlert firstAlert(
+        Map<ModuleInstance.ID, List<StationModuleAlert>> moduleAlerts, ModuleInstance module) {
+        List<StationModuleAlert> alerts = moduleAlerts.get(module.id);
+        return alerts == null || alerts.isEmpty() ? null : alerts.get(0);
+    }
+
+    private static @Nullable ModuleInstance moduleOf(@Nullable PlacedTile tile) {
+        return tile == null ? null : tile.module();
+    }
+
+    private static ResourceLocation defaultAlertIcon(StationModuleAlert.Severity severity) {
+        return severity == StationModuleAlert.Severity.RED ? DEFAULT_RED_ALERT_ICON : DEFAULT_ALERT_ICON;
+    }
+
+    private static boolean hasRedAlert(List<StationModuleAlert> alerts) {
+        for (StationModuleAlert alert : alerts) {
+            if (alert.severity() == StationModuleAlert.Severity.RED) return true;
+        }
+        return false;
+    }
+
+    private static int alertTitleColor(StationModuleAlert alert) {
+        return alert.severity() == StationModuleAlert.Severity.RED ? EnumColors.MAP_COLOR_TEXT_DANGER.getColor()
+            : EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_WARNING.getColor();
+    }
+
+    private static StationTileCoord alertBadgeCoord(ModuleInstance module, Map<StationTileCoord, PlacedTile> tiles) {
+        int minDx = module.anchor()
+            .dx();
+        int minDy = module.anchor()
+            .dy();
+        for (Map.Entry<StationTileCoord, PlacedTile> entry : tiles.entrySet()) {
+            ModuleInstance tileModule = moduleOf(entry.getValue());
+            if (tileModule == null || !module.id.equals(tileModule.id)) continue;
+            minDx = Math.min(
+                minDx,
+                entry.getKey()
+                    .dx());
+            minDy = Math.min(
+                minDy,
+                entry.getKey()
+                    .dy());
+        }
+        return StationTileCoord.of(minDx, minDy);
     }
 
     private void updateHover(StationLayout layout) {

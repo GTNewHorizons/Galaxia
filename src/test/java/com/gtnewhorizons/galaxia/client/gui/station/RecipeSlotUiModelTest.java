@@ -2,8 +2,6 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.lang.reflect.Field;
-
 import net.minecraftforge.fluids.FluidStack;
 
 import org.junit.jupiter.api.Test;
@@ -12,6 +10,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+import com.gtnewhorizons.galaxia.testing.TestFluidStacks;
 
 final class RecipeSlotUiModelTest {
 
@@ -40,18 +39,6 @@ final class RecipeSlotUiModelTest {
     }
 
     private static FluidStack fluidStackWithAmount(int amount) {
-        try {
-            FluidStack stack = (FluidStack) unsafe().allocateInstance(FluidStack.class);
-            stack.amount = amount;
-            return stack;
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError(e);
-        }
-    }
-
-    private static sun.misc.Unsafe unsafe() throws ReflectiveOperationException {
-        Field field = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
-        field.setAccessible(true);
-        return (sun.misc.Unsafe) field.get(null);
+        return TestFluidStacks.stack("galaxia.recipe_slot_test_fluid", amount);
     }
 }

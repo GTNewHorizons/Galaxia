@@ -271,7 +271,7 @@ final class ModuleMinerTest {
 
     @Test
     void mineralVeinBonusRollsUseCoveredTiles() {
-        AutomatedFacility facility = createFacility();
+        AutomatedFacility facility = createFeatureFacility();
         facility.setStationFeatureSalt(987654321L);
         ModuleInstance miner = createMiner(
             findMinerAnchorWithFeature(facility, PlanetaryFeatureRegistry.MINERAL_VEIN.key()));
@@ -345,7 +345,7 @@ final class ModuleMinerTest {
         return new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.FROZEN_BELT,
-            CelestialAsset.Kind.AUTOMATED_STATION,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
             Buildable.Status.OPERATIONAL);
     }
 

@@ -16,6 +16,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -123,6 +124,17 @@ final class ModuleConfigModalControllerTest {
 
         controller.openUpgrade(0);
         assertFalse(controller.isOpen());
+    }
+
+    @Test
+    void coreLogisticsOpensInImportOnlyMode() {
+        TestFacility test = facilityWith(FacilityModuleKind.HAMMER, ModuleTier.EV);
+        ModuleConfigModalController controller = controllerFor(test.facility());
+
+        controller.openCoreLogistics();
+
+        assertTrue(controller.isLogisticsOpen());
+        assertEquals(LogisticsConfigAccessMode.IMPORT_ONLY, controller.logisticsAccessMode());
     }
 
     private static ModuleConfigModalController controllerFor(AutomatedFacility facility) {

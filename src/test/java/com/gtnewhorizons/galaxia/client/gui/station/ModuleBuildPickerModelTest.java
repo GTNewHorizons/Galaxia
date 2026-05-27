@@ -225,7 +225,7 @@ final class ModuleBuildPickerModelTest {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.PANSPIRA,
-            CelestialAsset.Kind.AUTOMATED_STATION,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
             Buildable.Status.OPERATIONAL);
         StationTileCoord center = StationTileCoord.of(2, 0);
 

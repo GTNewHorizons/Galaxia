@@ -46,6 +46,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 import io.netty.buffer.Unpooled;
@@ -145,6 +147,23 @@ final class StationPacketRoundTripTest {
             .component();
         assertEquals(HammerVariant.BIG, clientHammer.variant());
         assertEquals(123_456L, clientHammer.energyStored());
+    }
+
+    @Test
+    void fullSyncRoundTripPreservesUpkeepCredits() {
+        AutomatedFacility server = createFacility();
+        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
+        server.loadUpkeepCredits(new UpkeepSettlement.Credits(Map.of(resource, UpkeepAmount.parse("0.5")), Map.of()));
+
+        AssetSyncPacket.Handler.handleFull(roundTrip(AssetSyncPacket.fullSync(server)));
+
+        AutomatedFacility client = (AutomatedFacility) CelestialAssetStore.CLIENT.findAssetInternal(server.assetId);
+        assertNotNull(client);
+        assertEquals(
+            "0.5",
+            client.upkeepCredits()
+                .itemCredit(resource)
+                .toDisplayString());
     }
 
     @Test

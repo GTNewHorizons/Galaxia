@@ -223,7 +223,7 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         dirty = false;
     }
 
-    public abstract long updateContents(InventoryKey item, int delta, boolean sync);
+    public abstract long updateContents(InventoryKey item, long delta, boolean sync);
 
     /// ----------------------------------------------------------------------------------
     /// Inventory Bounds
@@ -257,6 +257,17 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         } else {
             bound.setUppper(amount);
         }
+    }
+
+    public boolean trySetBound(InventoryKey key, long amount, boolean low) {
+        InventoryBounds current = getBound(key);
+        long nextLow = low ? amount : current.low();
+        long nextUpper = low ? current.upper() : amount;
+        boolean hasNextLow = low || current.hasLow();
+        boolean hasNextUpper = !low || current.hasUpper();
+        if (hasNextLow && hasNextUpper && nextLow > nextUpper) return false;
+        getBoundsMap(key).put(key, new InventoryBounds(nextLow, nextUpper));
+        return true;
     }
 
     public void clearBound(InventoryKey key) {

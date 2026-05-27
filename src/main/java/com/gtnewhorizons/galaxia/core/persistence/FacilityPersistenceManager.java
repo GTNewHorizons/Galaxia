@@ -84,6 +84,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import sun.misc.Unsafe;
@@ -114,7 +116,11 @@ public final class FacilityPersistenceManager {
         if (!(event.world instanceof WorldServer)) return;
         if (event.world.provider.dimensionId != 0) return;
         ISaveHandler saveHandler = event.world.getSaveHandler();
-        worldSaveDir = saveHandler.getWorldDirectory();
+        loadFromSaveDirectory(saveHandler.getWorldDirectory());
+    }
+
+    public void loadFromSaveDirectory(File worldSaveDir) {
+        this.worldSaveDir = worldSaveDir;
         CelestialAssetStore.clear();
         LogisticStore.clearDeliveries();
         HammerTrajectoryLoadTracker.reset();
@@ -538,7 +544,12 @@ public final class FacilityPersistenceManager {
                 e.getValue());
         }
         out.fluidBuffer = toFluidBuffer(state);
-
+        out.upkeepItemCredits = encodeItemUpkeepAmountMap(
+            state.upkeepCredits()
+                .itemCredits());
+        out.upkeepFluidCredits = encodeFluidUpkeepAmountMap(
+            state.upkeepCredits()
+                .fluidCredits());
         out.layoutTiles = new ArrayList<>();
         StationLayout layout = state.stationLayout();
         int anchorCount = 0;
@@ -735,6 +746,11 @@ public final class FacilityPersistenceManager {
         if (json.fluidBuffer != null) {
             state.loadFluidSnapshot(json.fluidBuffer);
         }
+        state.loadUpkeepCredits(
+            new UpkeepSettlement.Credits(
+                decodeItemUpkeepAmountMap(json.upkeepItemCredits),
+                decodeFluidUpkeepAmountMap(json.upkeepFluidCredits)));
+
         StationLayout layout = state.stationLayout();
         int tilesLoaded = 0;
         int tilesSkipped = 0;
@@ -882,15 +898,15 @@ public final class FacilityPersistenceManager {
         return requirements;
     }
 
-    private static Map<String, Map.Entry<Long, Long>> encodeBoundsMap(Map<InventoryKey, InventoryBounds> amounts) {
-        Map<String, Map.Entry<Long, Long>> encoded = new LinkedHashMap<>();
+    private static Map<String, BoundsJson> encodeBoundsMap(Map<InventoryKey, InventoryBounds> amounts) {
+        Map<String, BoundsJson> encoded = new LinkedHashMap<>();
         if (amounts == null) return encoded;
         for (Map.Entry<InventoryKey, InventoryBounds> entry : amounts.entrySet()) {
             if (entry.getKey() == null) continue;
             encoded.put(
                 entry.getKey()
                     .toKey(),
-                Map.entry(
+                new BoundsJson(
                     entry.getValue()
                         .low(),
                     entry.getValue()
@@ -899,20 +915,14 @@ public final class FacilityPersistenceManager {
         return encoded;
     }
 
-    private static Map<InventoryKey, InventoryBounds> decodeBoundsMap(Map<String, Map.Entry<Long, Long>> encoded,
-        boolean items) {
+    private static Map<InventoryKey, InventoryBounds> decodeBoundsMap(Map<String, BoundsJson> encoded, boolean items) {
         Map<InventoryKey, InventoryBounds> decoded = new LinkedHashMap<>();
         if (encoded == null || encoded.isEmpty()) return decoded;
-        for (Map.Entry<String, Map.Entry<Long, Long>> entry : encoded.entrySet()) {
+        for (Map.Entry<String, BoundsJson> entry : encoded.entrySet()) {
             InventoryKey key = items ? ItemStackWrapper.fromKey(entry.getKey()) : FluidKey.fromName(entry.getKey());
-            if (key == null) continue;
-            decoded.put(
-                key,
-                new InventoryBounds(
-                    entry.getValue()
-                        .getKey(),
-                    entry.getValue()
-                        .getValue()));
+            BoundsJson value = entry.getValue();
+            if (key == null || value == null || !value.hasBounds()) continue;
+            decoded.put(key, new InventoryBounds(value.low(), value.upper()));
         }
         return decoded;
     }
@@ -933,6 +943,60 @@ public final class FacilityPersistenceManager {
         return result;
     }
 
+    private static Map<String, Long> encodeItemUpkeepAmountMap(Map<ItemStackWrapper, UpkeepAmount> amounts) {
+        Map<String, Long> encoded = new LinkedHashMap<>();
+        if (amounts == null) return encoded;
+        for (Map.Entry<ItemStackWrapper, UpkeepAmount> entry : amounts.entrySet()) {
+            if (entry.getKey() == null || entry.getValue() == null
+                || entry.getValue()
+                    .isZero())
+                continue;
+            encoded.put(
+                entry.getKey()
+                    .toKey(),
+                entry.getValue()
+                    .microUnitsPerMinute());
+        }
+        return encoded;
+    }
+
+    private static Map<ItemStackWrapper, UpkeepAmount> decodeItemUpkeepAmountMap(Map<String, Long> encoded) {
+        Map<ItemStackWrapper, UpkeepAmount> decoded = new LinkedHashMap<>();
+        if (encoded == null || encoded.isEmpty()) return decoded;
+        for (Map.Entry<String, Long> entry : encoded.entrySet()) {
+            ItemStackWrapper key = ItemStackWrapper.fromKey(entry.getKey());
+            if (key != null && entry.getValue() > 0L) decoded.put(key, UpkeepAmount.ofMicroUnits(entry.getValue()));
+        }
+        return decoded;
+    }
+
+    private static Map<String, Long> encodeFluidUpkeepAmountMap(Map<FluidKey, UpkeepAmount> amounts) {
+        Map<String, Long> encoded = new LinkedHashMap<>();
+        if (amounts == null) return encoded;
+        for (Map.Entry<FluidKey, UpkeepAmount> entry : amounts.entrySet()) {
+            if (entry.getKey() == null || entry.getValue() == null
+                || entry.getValue()
+                    .isZero())
+                continue;
+            encoded.put(
+                entry.getKey()
+                    .toKey(),
+                entry.getValue()
+                    .microUnitsPerMinute());
+        }
+        return encoded;
+    }
+
+    private static Map<FluidKey, UpkeepAmount> decodeFluidUpkeepAmountMap(Map<String, Long> encoded) {
+        Map<FluidKey, UpkeepAmount> decoded = new LinkedHashMap<>();
+        if (encoded == null || encoded.isEmpty()) return decoded;
+        for (Map.Entry<String, Long> entry : encoded.entrySet()) {
+            FluidKey key = FluidKey.fromName(entry.getKey());
+            if (key != null && entry.getValue() > 0L) decoded.put(key, UpkeepAmount.ofMicroUnits(entry.getValue()));
+        }
+        return decoded;
+    }
+
     static final class AssetJson {
 
         CelestialAsset.ID assetId;
@@ -950,10 +1014,35 @@ public final class FacilityPersistenceManager {
         Integer controllerX;
         Integer controllerY;
         Integer controllerZ;
-        Map<String, Map.Entry<Long, Long>> itemsBounds;
-        Map<String, Map.Entry<Long, Long>> fluidsBounds;
+        Map<String, BoundsJson> itemsBounds;
+        Map<String, BoundsJson> fluidsBounds;
         Map<String, LogisticsConfigJson> logisticsConfig;
         Map<Boolean, List<String>> filters;
+    }
+
+    static final class BoundsJson {
+
+        Long low;
+        Long upper;
+
+        BoundsJson() {}
+
+        BoundsJson(long low, long upper) {
+            this.low = low;
+            this.upper = upper;
+        }
+
+        boolean hasBounds() {
+            return low != null && upper != null;
+        }
+
+        long low() {
+            return low;
+        }
+
+        long upper() {
+            return upper;
+        }
     }
 
     static final class FacilityStateJson {
@@ -965,6 +1054,8 @@ public final class FacilityPersistenceManager {
         List<ModuleJson> modules;
         Map<String, Long> buffer;
         Map<String, Long> fluidBuffer;
+        Map<String, Long> upkeepItemCredits;
+        Map<String, Long> upkeepFluidCredits;
         List<StationTileJson> layoutTiles;
     }
 

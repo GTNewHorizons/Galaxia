@@ -10,8 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import net.minecraft.init.Items;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
@@ -67,7 +66,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
+import com.gtnewhorizons.galaxia.testing.TestFluidStacks;
 
 final class FacilityPersistenceManagerTest {
 
@@ -149,13 +151,10 @@ final class FacilityPersistenceManagerTest {
             .get(1);
         station.setMinerOreBlacklisted(miner, "ore:iron", true);
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
-        AutomatedFacility decoded = new AutomatedFacility(
-            station.assetId,
-            station.celestialObjectId,
-            station.kind,
-            station.status());
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityPersistenceManager.AssetJson encoded = manager.encodeAsset(station);
+        encoded.facility = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = (AutomatedFacility) manager.decodeAsset(encoded);
+        manager.decodeFacilityState(decoded, encoded.facility);
 
         assertTrue(
             decoded.isMinerOreBlacklisted(
@@ -173,13 +172,10 @@ final class FacilityPersistenceManagerTest {
             .component();
         miner.setFocus(MinerFocusTier.III, "ore:iron", 1200);
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
-        AutomatedFacility decoded = new AutomatedFacility(
-            station.assetId,
-            station.celestialObjectId,
-            station.kind,
-            station.status());
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityPersistenceManager.AssetJson encoded = manager.encodeAsset(station);
+        encoded.facility = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = (AutomatedFacility) manager.decodeAsset(encoded);
+        manager.decodeFacilityState(decoded, encoded.facility);
 
         ModuleMiner decodedMiner = (ModuleMiner) decoded.modules()
             .get(1)
@@ -490,7 +486,9 @@ final class FacilityPersistenceManagerTest {
         assets.add(station);
         assets.add(outpost);
 
-        File file = tempDir.resolve("_assets.json")
+        Path dataDir = tempDir.resolve("galaxiadata");
+        Files.createDirectories(dataDir);
+        File file = dataDir.resolve("_assets.json")
             .toFile();
         Files.write(
             file.toPath(),
@@ -498,17 +496,52 @@ final class FacilityPersistenceManagerTest {
                 .getBytes(StandardCharsets.UTF_8));
 
         CelestialAssetStore.clear();
-        Method loadAssets = FacilityPersistenceManager.class.getDeclaredMethod("loadAssets", File.class);
-        loadAssets.setAccessible(true);
-
-        InvocationTargetException thrown = assertThrows(
-            InvocationTargetException.class,
-            () -> loadAssets.invoke(manager, file));
-        assertTrue(thrown.getCause() instanceof IllegalStateException);
+        IllegalStateException thrown = assertThrows(
+            IllegalStateException.class,
+            () -> manager.loadFromSaveDirectory(tempDir.toFile()));
         assertTrue(
-            thrown.getCause()
-                .getMessage()
+            thrown.getMessage()
                 .contains("malformed"));
+    }
+
+    @Test
+    void assetBoundsRoundTripThroughSaveFile(@TempDir Path tempDir) throws Exception {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        UUID teamId = UUID.randomUUID();
+        AutomatedFacility station = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        station.setBound(resource, 48L, true);
+        station.setBound(resource, 96L, false);
+
+        CelestialAssetStore.clear();
+        CelestialAssetStore.registerAsset(teamId, station);
+        FacilityPersistenceManager.AssetJson json = manager.encodeAsset(station);
+        json.facility = manager.encodeFacilityState(station);
+
+        Path dataDir = tempDir.resolve("galaxiadata");
+        Files.createDirectories(dataDir);
+        Files.write(
+            dataDir.resolve("_assets.json"),
+            PERSISTENCE_GSON.toJson(List.of(json))
+                .getBytes(StandardCharsets.UTF_8));
+
+        CelestialAssetStore.clear();
+        assertDoesNotThrow(() -> manager.loadFromSaveDirectory(tempDir.toFile()));
+
+        AutomatedFacility loaded = (AutomatedFacility) CelestialAssetStore.findAsset(station.assetId);
+        assertNotNull(loaded);
+        assertEquals(
+            48L,
+            loaded.getBound(resource)
+                .lowOrDefault());
+        assertEquals(
+            96L,
+            loaded.getBound(resource)
+                .upperOrDefault());
     }
 
     private static FacilityPersistenceManager.AssetJson assetJson(UUID teamId, CelestialAsset.Kind kind,
@@ -1358,7 +1391,55 @@ final class FacilityPersistenceManagerTest {
         assertEquals(4, decodedSlot.orderSize());
     }
 
+    @Test
+    void upkeepCreditsRoundTripThroughPersistence() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        FluidKey coolant = new FluidKey(TEST_FLUID_1, null);
+        station.loadUpkeepCredits(new UpkeepSettlement.Credits(Map.of(), Map.of(coolant, UpkeepAmount.parse("0.25"))));
+
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+        manager.decodeFacilityState(decoded, encoded);
+
+        assertEquals(
+            "0.25",
+            decoded.upkeepCredits()
+                .fluidCredits()
+                .get(coolant)
+                .toDisplayString());
+    }
+
     // ── Helpers ──
+
+    @Test
+    void upkeepReserveSettingsRoundTripThroughPersistence() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
+        station.setUpkeepReserve(resource, 17L);
+        station.setUpkeepAutoOrder(resource, true);
+
+        FacilityPersistenceManager.AssetJson encoded = manager.encodeAsset(station);
+        encoded.facility = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = (AutomatedFacility) manager.decodeAsset(encoded);
+        manager.decodeFacilityState(decoded, encoded.facility);
+
+        assertEquals(17L, decoded.upkeepReserve(resource));
+        assertTrue(decoded.isUpkeepAutoOrderEnabled(resource));
+    }
 
     private static ModuleInstance createAndPlaceModule(AutomatedFacility station, FacilityModuleKind kind,
         Buildable.Status status, ModuleShape shape, ModuleTier tier, StationTileCoord coord) {
@@ -1446,9 +1527,12 @@ final class FacilityPersistenceManagerTest {
             .orElse(null);
     }
 
-    private static String fluidName(FluidStack stack) {
-        return stack.getFluid()
-            .getName();
+    private static FluidStack fluidStack(String fluidName, int amount) throws Exception {
+        return TestFluidStacks.stack(fluidName, amount);
+    }
+
+    private static String fluidName(FluidStack stack) throws Exception {
+        return TestFluidStacks.name(stack);
     }
 
     @Test

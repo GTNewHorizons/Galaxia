@@ -93,7 +93,7 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         PacketUtil.writeInventoryKey(buf, resource);
         buf.writeLong(delta);
         buf.writeBoolean(creativeOnly);
-        if (operation != Operation.DELTA) {
+        if (operation == Operation.SET_BOUND || operation == Operation.CLEAR_BOUND) {
             PacketUtil.writeEnum(buf, boundKind);
         }
     }
@@ -105,7 +105,7 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         resource = PacketUtil.readInventoryKey(buf);
         delta = buf.readLong();
         creativeOnly = buf.readBoolean();
-        if (operation != Operation.DELTA) {
+        if (operation == Operation.SET_BOUND || operation == Operation.CLEAR_BOUND) {
             boundKind = PacketUtil.readEnum(buf, BoundKind.class);
         }
     }
@@ -135,7 +135,6 @@ public final class AssetInventoryUpdatePacket implements IMessage {
             }
             return null;
         }
-
         if (delta > 0 && !creativePlayer) {
             LOG.warn("[Logistics] InventoryDelta rejected: positive delta {} requires creative mode.", delta);
             return null;
@@ -150,15 +149,7 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         }
 
         if (this.resource == null) return null;
-        int intDelta;
-        if (delta > 0) {
-            intDelta = (int) Math.min(delta, Integer.MAX_VALUE);
-        } else if (delta == Long.MIN_VALUE) {
-            intDelta = Integer.MIN_VALUE + 1;
-        } else {
-            intDelta = (int) Math.max(delta, Integer.MIN_VALUE + 1);
-        }
-        final long applied = asset.updateContents(resource, intDelta) * (delta > 0 ? 1 : -1);
+        final long applied = asset.updateContents(resource, delta) * (delta > 0 ? 1 : -1);
         if (applied == 0L) return null;
 
         asset.bumpSyncRevision();
@@ -171,7 +162,15 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         if (boundKind == null) return null;
         if (operation == Operation.SET_BOUND) {
             final boolean low = boundKind == BoundKind.ITEM_LOWER || boundKind == BoundKind.FLUID_LOWER;
-            state.setBound(resource, delta, low);
+            if (!state.trySetBound(resource, delta, low)) {
+                LOG.warn(
+                    "[Logistics] Inventory bound rejected: {} {}={} on outpost {}",
+                    boundKind,
+                    resource.toKey(),
+                    delta,
+                    assetId);
+                return null;
+            }
 
             state.markInventoryBoundDelta(boundKind, resource, true, delta);
             LOG.info(

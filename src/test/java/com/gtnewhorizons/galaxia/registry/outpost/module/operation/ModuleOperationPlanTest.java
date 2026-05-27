@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
 
-import net.minecraft.init.Items;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -18,6 +18,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class ModuleOperationPlanTest {
+
+    private static final Item TEST_ITEM = new Item();
 
     @BeforeAll
     static void init() {
@@ -58,6 +60,6 @@ final class ModuleOperationPlanTest {
     }
 
     private static Map<ItemStackWrapper, Long> cost(long amount) {
-        return Map.of(ItemStackWrapper.of(new ItemStack(Items.diamond)), amount);
+        return Map.of(ItemStackWrapper.of(new ItemStack(TEST_ITEM)), amount);
     }
 }

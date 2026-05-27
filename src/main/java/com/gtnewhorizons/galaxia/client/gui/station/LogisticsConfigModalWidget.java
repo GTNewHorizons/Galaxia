@@ -31,6 +31,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 
@@ -102,7 +103,9 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         addHeaderTooltip(RESERVE_X, CONTROL_GROUP_WIDTH, "Minimum stock kept in station inventory");
         addHeaderTooltip(PACKAGE_X, CONTROL_GROUP_WIDTH, "Items requested per logistics order");
         addHeaderTooltip(IMPORT_X, TOGGLE_WIDTH, "Request this item from other stations");
-        addHeaderTooltip(EXPORT_X, TOGGLE_WIDTH, "Send this item to other stations");
+        if (logisticsAccessMode().canEditSupply()) {
+            addHeaderTooltip(EXPORT_X, TOGGLE_WIDTH, "Send this item to other stations");
+        }
     }
 
     @Override
@@ -210,7 +213,10 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
                 .size(TOGGLE_WIDTH, BUTTON_HEIGHT));
         row.child(
             ModuleConfigModalSupport
-                .button(() -> rowEntry(rowIndex) != null, () -> exportLabel(rowIndex), () -> toggleExport(rowIndex))
+                .button(
+                    () -> logisticsAccessMode().canEditSupply() && rowEntry(rowIndex) != null,
+                    () -> exportLabel(rowIndex),
+                    () -> toggleExport(rowIndex))
                 .pos(EXPORT_X, 6)
                 .size(TOGGLE_WIDTH, BUTTON_HEIGHT));
         row.child(
@@ -251,12 +257,14 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
             HEADER_Y,
             TOGGLE_WIDTH,
             EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-        ModuleConfigModalSupport.drawCenteredLine(
-            "Export",
-            SCROLL_X + EXPORT_X + TOGGLE_WIDTH / 2,
-            HEADER_Y,
-            TOGGLE_WIDTH,
-            EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        if (logisticsAccessMode().canEditSupply()) {
+            ModuleConfigModalSupport.drawCenteredLine(
+                "Export",
+                SCROLL_X + EXPORT_X + TOGGLE_WIDTH / 2,
+                HEADER_Y,
+                TOGGLE_WIDTH,
+                EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        }
     }
 
     private void drawRowText(CelestialAsset asset, Map.Entry<ItemStackWrapper, LogisticsResourceConfig> entry, int x,
@@ -358,11 +366,10 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         ItemStackWrapper wrapper = ItemStackWrapper.of(stack);
         if (wrapper == null) return;
         LogisticsResourceConfig existing = asset.logisticsConfig.get(wrapper);
-        LogisticsResourceConfig config = existing == LogisticsResourceConfig.DEFAULT
-            ? new LogisticsResourceConfig(0, 64, false, false)
-            : existing;
+        LogisticsResourceConfig config = existing == LogisticsResourceConfig.DEFAULT ? defaultConfigForAccessMode()
+            : logisticsAccessMode().sanitize(existing);
         asset.logisticsConfig.set(wrapper, config);
-        CelestialClient.updateLogisticsConfig(asset.assetId, wrapper, config);
+        CelestialClient.updateLogisticsConfig(asset.assetId, wrapper, config, logisticsAccessMode());
     }
 
     private void shiftReserve(int rowIndex, int delta) {
@@ -390,6 +397,7 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
     }
 
     private void toggleExport(int rowIndex) {
+        if (!logisticsAccessMode().canEditSupply()) return;
         Map.Entry<ItemStackWrapper, LogisticsResourceConfig> row = rowEntry(rowIndex);
         CelestialAsset asset = asset();
         if (row == null || asset == null) return;
@@ -408,8 +416,9 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
     }
 
     private void update(CelestialAsset asset, ItemStackWrapper wrapper, LogisticsResourceConfig config) {
+        config = logisticsAccessMode().sanitize(config);
         asset.logisticsConfig.set(wrapper, config);
-        CelestialClient.updateLogisticsConfig(asset.assetId, wrapper, config);
+        CelestialClient.updateLogisticsConfig(asset.assetId, wrapper, config, logisticsAccessMode());
     }
 
     private String importLabel(int rowIndex) {
@@ -476,11 +485,22 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
     private String title() {
         ModuleInstance.ID modId = controller.moduleId();
         ModuleInstance module = modId != null ? ModuleConfigModalSupport.module(assetId, modId) : null;
-        return module == null ? "Logistics" : ModuleConfigModalSupport.moduleTitle(module, "Logistics");
+        if (module != null) return ModuleConfigModalSupport.moduleTitle(module, "Logistics");
+        return logisticsAccessMode() == LogisticsConfigAccessMode.IMPORT_ONLY ? "Core Logistics" : "Logistics";
     }
 
     private CelestialAsset asset() {
         return ModuleConfigModalSupport.celestialAsset(assetId);
+    }
+
+    private LogisticsConfigAccessMode logisticsAccessMode() {
+        return controller.logisticsAccessMode();
+    }
+
+    private LogisticsResourceConfig defaultConfigForAccessMode() {
+        return logisticsAccessMode() == LogisticsConfigAccessMode.IMPORT_ONLY
+            ? new LogisticsResourceConfig(0, 64, true, false)
+            : new LogisticsResourceConfig(0, 64, false, false);
     }
 
     private void addHeaderTooltip(int x, int width, String text) {

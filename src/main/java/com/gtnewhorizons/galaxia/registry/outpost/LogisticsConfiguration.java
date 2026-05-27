@@ -21,6 +21,10 @@ public final class LogisticsConfiguration {
         return cfg != null ? cfg : LogisticsResourceConfig.DEFAULT;
     }
 
+    public boolean hasExplicit(InventoryKey key) {
+        return configs.containsKey(key);
+    }
+
     /** Sets (or replaces) the config for a resource. */
     public void set(InventoryKey key, LogisticsResourceConfig config) {
         if (config == null) {

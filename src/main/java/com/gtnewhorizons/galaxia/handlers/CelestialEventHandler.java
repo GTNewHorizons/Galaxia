@@ -220,8 +220,7 @@ public class CelestialEventHandler {
             if (result.code() != HammerDispatchStatus.Code.READY || plan == null) continue;
 
             if (supplier instanceof AutomatedFacility af) {
-                if (af.updateContents(plan.resource(), -(int) Math.min(plan.sendAmount(), Integer.MAX_VALUE), true)
-                    <= 0L) continue;
+                if (af.updateContents(plan.resource(), -plan.sendAmount(), true) <= 0L) continue;
                 if (!hammer.trySpendShotEnergy(module, af, plan.requiredEnergy())) {
                     throw new IllegalStateException("HAMMER shot energy became inconsistent");
                 }

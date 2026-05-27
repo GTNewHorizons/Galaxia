@@ -28,6 +28,7 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -64,6 +65,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -112,6 +115,7 @@ public final class AssetSyncPacket implements IMessage {
     private String displayName;
     private long energyStored;
     private long stationFeatureSalt;
+    private UpkeepSettlement.Credits upkeepCredits = UpkeepSettlement.Credits.empty();
 
     private List<AssetSyncPacket> fullSyncDeltas;
 
@@ -196,6 +200,7 @@ public final class AssetSyncPacket implements IMessage {
         pkt.planetaryAnchorBodyId = state.planetaryAnchorBodyId;
         pkt.energyStored = state.getEnergyStored();
         pkt.stationFeatureSalt = state.stationFeatureSalt();
+        pkt.upkeepCredits = state.upkeepCredits();
         pkt.fullSyncDeltas = new ArrayList<>();
 
         state.settingsGroups()
@@ -511,6 +516,7 @@ public final class AssetSyncPacket implements IMessage {
                         PacketUtil.writeEnum(buf, planetaryAnchorBodyId);
                         buf.writeLong(energyStored);
                         buf.writeLong(stationFeatureSalt);
+                        writeUpkeepCredits(buf, upkeepCredits);
 
                         buf.writeInt(fullSyncDeltas.size());
                         for (AssetSyncPacket d : fullSyncDeltas) {
@@ -561,6 +567,7 @@ public final class AssetSyncPacket implements IMessage {
                         planetaryAnchorBodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
                         energyStored = buf.readLong();
                         stationFeatureSalt = buf.readLong();
+                        upkeepCredits = readUpkeepCredits(buf);
 
                         int count = buf.readInt();
                         fullSyncDeltas = new ArrayList<>(count);
@@ -1099,6 +1106,45 @@ public final class AssetSyncPacket implements IMessage {
         return new LogisticsResourceConfig(buf.readInt(), buf.readInt(), buf.readBoolean(), buf.readBoolean());
     }
 
+    private static void writeUpkeepCredits(ByteBuf buf, UpkeepSettlement.Credits credits) {
+        UpkeepSettlement.Credits safeCredits = credits == null ? UpkeepSettlement.Credits.empty() : credits;
+        writeUpkeepCreditMap(buf, safeCredits.itemCredits());
+        writeUpkeepCreditMap(buf, safeCredits.fluidCredits());
+    }
+
+    private static <T extends InventoryKey> void writeUpkeepCreditMap(ByteBuf buf, Map<T, UpkeepAmount> credits) {
+        buf.writeInt(credits.size());
+        for (Map.Entry<T, UpkeepAmount> entry : credits.entrySet()) {
+            PacketUtil.writeInventoryKey(buf, entry.getKey());
+            buf.writeLong(
+                entry.getValue()
+                    .microUnitsPerMinute());
+        }
+    }
+
+    private static UpkeepSettlement.Credits readUpkeepCredits(ByteBuf buf) {
+        Map<ItemStackWrapper, UpkeepAmount> itemCredits = new LinkedHashMap<>();
+        int itemCount = buf.readInt();
+        for (int i = 0; i < itemCount; i++) {
+            InventoryKey key = PacketUtil.readInventoryKey(buf);
+            UpkeepAmount amount = UpkeepAmount.ofMicroUnits(buf.readLong());
+            if (key instanceof ItemStackWrapper item) {
+                itemCredits.put(item, amount);
+            }
+        }
+
+        Map<FluidKey, UpkeepAmount> fluidCredits = new LinkedHashMap<>();
+        int fluidCount = buf.readInt();
+        for (int i = 0; i < fluidCount; i++) {
+            InventoryKey key = PacketUtil.readInventoryKey(buf);
+            UpkeepAmount amount = UpkeepAmount.ofMicroUnits(buf.readLong());
+            if (key instanceof FluidKey fluid) {
+                fluidCredits.put(fluid, amount);
+            }
+        }
+        return new UpkeepSettlement.Credits(itemCredits, fluidCredits);
+    }
+
     private static void writeRecipeConfig(ByteBuf buf, ModuleInstance module) {
         if (!(module.component() instanceof IRecipeModule recipeModule)) {
             buf.writeBoolean(false);
@@ -1293,6 +1339,7 @@ public final class AssetSyncPacket implements IMessage {
 
                     state.setEnergyStored(packet.energyStored);
                     state.setStationFeatureSalt(packet.stationFeatureSalt);
+                    state.loadUpkeepCredits(packet.upkeepCredits);
 
                     state.clearModules();
                     state.settingsGroups()
@@ -1362,12 +1409,7 @@ public final class AssetSyncPacket implements IMessage {
                 }
                 case INVENTORY_UPDATE -> {
                     if (packet.resource != null) {
-                        long delta = packet.inventoryDelta;
-                        if (delta > 0) {
-                            asset.updateContents(packet.resource, (int) Math.min(delta, Integer.MAX_VALUE));
-                        } else {
-                            asset.updateContents(packet.resource, (int) Math.max(delta, Integer.MIN_VALUE + 1));
-                        }
+                        asset.updateContents(packet.resource, packet.inventoryDelta);
                     }
                 }
                 case INVENTORY_BOUND_UPDATE -> {
@@ -1384,10 +1426,14 @@ public final class AssetSyncPacket implements IMessage {
                     }
                 }
                 case LOGISTICS_CONFIG_UPDATED -> {
-                    if (packet.resource != null) asset.logisticsConfig.set(packet.resource, packet.logConfig);
+                    if (packet.resource != null) {
+                        asset.logisticsConfig.set(packet.resource, packet.logConfig);
+                    }
                 }
                 case LOGISTICS_CONFIG_REMOVED -> {
-                    if (packet.resource != null) asset.logisticsConfig.reset(packet.resource);
+                    if (packet.resource != null) {
+                        asset.logisticsConfig.reset(packet.resource);
+                    }
                 }
                 case LAYOUT_TILE_UPDATED -> {
                     if (!(asset instanceof AutomatedFacility state)) {
@@ -1448,5 +1494,6 @@ public final class AssetSyncPacket implements IMessage {
                     .addMember(module.groupId(), module.anchor());
             }
         }
+
     }
 }

@@ -30,6 +30,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
@@ -353,7 +354,12 @@ public final class CelestialClient {
 
     public static void updateLogisticsConfig(CelestialAsset.ID assetId, ItemStackWrapper resource,
         LogisticsResourceConfig config) {
-        LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket(assetId, resource, config);
+        updateLogisticsConfig(assetId, resource, config, LogisticsConfigAccessMode.FULL);
+    }
+
+    public static void updateLogisticsConfig(CelestialAsset.ID assetId, ItemStackWrapper resource,
+        LogisticsResourceConfig config, LogisticsConfigAccessMode accessMode) {
+        LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket(assetId, resource, config, accessMode);
         StarmapActionSyncHandler.sendLogisticsConfig(packet);
     }
 

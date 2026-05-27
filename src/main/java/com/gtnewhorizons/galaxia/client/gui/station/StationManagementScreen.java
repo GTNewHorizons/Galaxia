@@ -93,7 +93,10 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 overlayY,
                 tilePickerController,
                 overlayCoordinator);
-            StationInventoryPanelWidget inventoryPanel = new StationInventoryPanelWidget(assetId, overlayCoordinator);
+            StationInventoryPanelWidget inventoryPanel = new StationInventoryPanelWidget(
+                assetId,
+                overlayCoordinator,
+                configController);
             StationMapWidget map = new StationMapWidget(
                 assetId,
                 coord -> ModulePickerScreen.open(assetId, coord, creativeBuildMode),
@@ -145,7 +148,10 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 overlayY,
                 null,
                 overlayCoordinator);
-            StationInventoryPanelWidget inventoryPanel = new StationInventoryPanelWidget(assetId, overlayCoordinator);
+            StationInventoryPanelWidget inventoryPanel = new StationInventoryPanelWidget(
+                assetId,
+                overlayCoordinator,
+                configController);
             panel.child(
                 new StationSidePanelWidget(assetId, null).left(PADDING)
                     .top(PADDING)

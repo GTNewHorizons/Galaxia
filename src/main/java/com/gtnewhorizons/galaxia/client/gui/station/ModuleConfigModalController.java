@@ -5,6 +5,7 @@ import java.util.Objects;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -40,6 +41,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
     private boolean hammerUpgradeVoidRefund;
     private boolean retargetQueued;
     private ModuleInstance.ID queuedRetargetModuleId;
+    private LogisticsConfigAccessMode logisticsAccessMode = LogisticsConfigAccessMode.FULL;
     private ModuleUpgradeSelection moduleUpgradeSelection = ModuleUpgradeSelection
         .hammer(HammerVariant.BASE, ModuleTier.EV);
 
@@ -114,6 +116,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         close();
         this.kind = Kind.LOGISTICS;
         this.moduleId = targetModuleId;
+        this.logisticsAccessMode = LogisticsConfigAccessMode.FULL;
 
         LogisticsConfigModalWidget widget = new LogisticsConfigModalWidget(assetId, this);
         widget.left(x)
@@ -125,11 +128,20 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
     }
 
     void openStationLogistics() {
+        openStationLogistics(LogisticsConfigAccessMode.FULL);
+    }
+
+    void openCoreLogistics() {
+        openStationLogistics(LogisticsConfigAccessMode.IMPORT_ONLY);
+    }
+
+    private void openStationLogistics(LogisticsConfigAccessMode accessMode) {
         if (closeIfSame(Kind.LOGISTICS, null)) return;
         overlayCoordinator.closeOthers(this);
         close();
         this.kind = Kind.LOGISTICS;
         this.moduleId = null;
+        this.logisticsAccessMode = accessMode == null ? LogisticsConfigAccessMode.FULL : accessMode;
 
         LogisticsConfigModalWidget widget = new LogisticsConfigModalWidget(assetId, this);
         widget.left(x)
@@ -204,6 +216,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         this.hammerUpgradeVoidRefund = false;
         this.moduleUpgradeSelection = ModuleUpgradeSelection.hammer(HammerVariant.BASE, ModuleTier.EV);
         this.moduleOperationCancelArmed = false;
+        this.logisticsAccessMode = LogisticsConfigAccessMode.FULL;
     }
 
     @Override
@@ -287,6 +300,10 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         return moduleId;
     }
 
+    LogisticsConfigAccessMode logisticsAccessMode() {
+        return logisticsAccessMode;
+    }
+
     int minerBlacklistPage() {
         return minerBlacklistPage;
     }
@@ -360,6 +377,10 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
     }
 
     private void retargetLogistics(ModuleInstance module) {
+        if (logisticsAccessMode == LogisticsConfigAccessMode.IMPORT_ONLY) {
+            close();
+            return;
+        }
         moduleId = module.id;
         moduleOperationCancelArmed = false;
     }

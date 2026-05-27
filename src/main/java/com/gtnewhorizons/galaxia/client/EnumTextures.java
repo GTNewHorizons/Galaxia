@@ -61,6 +61,9 @@ public enum EnumTextures {
     ICON_WARN_POWERFAIL("textures/gui/outpost_powerfail.png"),
     ICON_WARN_GENERIC("textures/gui/outpost_warning.png"),
     ICON_STATION_CORE_DIRECTION("textures/gui/station/core_direction_arrow.png"),
+    ICON_STATION_ALERT_WARNING("textures/gui/station/alert_warning.png"),
+    ICON_STATION_ALERT_ERROR("textures/gui/station/alert_error.png"),
+    ICON_STATION_ITEM_INTERACTIONS("textures/gui/station/item_interactions.png"),
     ICON_MISSING("textures/gui/asset_panel/missing.png"),
     ICON_TRANSFER_HAMMER("textures/items/module/item_hammer_package.png"),
 

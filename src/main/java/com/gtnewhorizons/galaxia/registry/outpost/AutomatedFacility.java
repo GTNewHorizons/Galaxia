@@ -27,10 +27,12 @@ import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureGenera
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
+import com.gtnewhorizons.galaxia.registry.outpost.module.BlockingReason;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
@@ -47,6 +49,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSetting
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroupRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepLedger;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 
 public final class AutomatedFacility extends CelestialAsset {
 
@@ -60,6 +66,10 @@ public final class AutomatedFacility extends CelestialAsset {
     private final StationLayout layout;
     private final LayoutCacheBundle layoutCache;
     private final SettingsGroupRegistry settingsGroups;
+
+    private final UpkeepLedger upkeepLedger;
+    private UpkeepSettlement.Credits upkeepCredits = UpkeepSettlement.Credits.empty();
+
     private long stationFeatureSalt;
     private final Map<ModuleInstance.ID, ModuleFeatureModifiers> featureModifiersByModule = new LinkedHashMap<>();
     private long featureModifiersLayoutVersion = Long.MIN_VALUE;
@@ -78,6 +88,7 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public static final long MAX_ENERGY = 8_000_000L;
     public static final long BASE_ITEM_CAPACITY = 1000L;
+    public static final int UPKEEP_INTERVAL_TICKS = 20 * 60;
 
     public AutomatedFacility(CelestialAsset.ID assetId, CelestialObjectId celestialBodyId, Kind kind, Status status) {
         super(assetId, celestialBodyId, kind, status, null);
@@ -89,6 +100,7 @@ public final class AutomatedFacility extends CelestialAsset {
         this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
         this.layoutCache = new LayoutCacheBundle(layout);
         this.settingsGroups = new SettingsGroupRegistry();
+        this.upkeepLedger = new UpkeepLedger();
         this.stationFeatureSalt = createStationFeatureSalt(assetId, celestialBodyId);
         this.energyStored = 0;
         this.ticks = 0;
@@ -148,6 +160,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public List<PlanetaryFeatureKey> planetaryFeaturesAt(int dx, int dy) {
+        if (kind != Kind.AUTOMATED_OUTPOST) return Collections.emptyList();
         return GalaxiaCelestialAPI.get(planetaryAnchorBodyId)
             .map(body -> PlanetaryFeatureGenerator.featuresAt(stationFeatureSalt, dx, dy, body))
             .orElse(Collections.emptyList());
@@ -184,6 +197,120 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public LayoutCacheBundle layoutCache() {
         return layoutCache;
+    }
+
+    public UpkeepLedger.UpkeepSummary upkeepSummary() {
+        return upkeepLedger.summary(this);
+    }
+
+    public void setUpkeepReserve(ItemStackWrapper item, long amount) {
+        if (item == null) {
+            throw new IllegalArgumentException("item must not be null");
+        }
+        if (amount < 0L) {
+            throw new IllegalArgumentException("upkeep reserve must be >= 0");
+        }
+        LogisticsResourceConfig current = logisticsConfig.get(item);
+        logisticsConfig.set(item, current.withMinReserve((int) Math.min(Integer.MAX_VALUE, amount)));
+    }
+
+    public long upkeepReserve(ItemStackWrapper item) {
+        if (item == null) return 0L;
+        if (logisticsConfig.hasExplicit(item)) {
+            return logisticsConfig.get(item)
+                .minReserve();
+        }
+        UpkeepAmount perMinute = upkeepSummary().itemsPerMinute()
+            .get(item);
+        if (perMinute == null || perMinute.isZero()) return 0L;
+        return UpkeepAmount.ofMicroUnits(Math.multiplyExact(perMinute.microUnitsPerMinute(), 10L))
+            .wholeUnitsToCoverDeficit();
+    }
+
+    public void setUpkeepAutoOrder(ItemStackWrapper item, boolean enabled) {
+        if (item == null) {
+            throw new IllegalArgumentException("item must not be null");
+        }
+        LogisticsResourceConfig current = logisticsConfig.get(item);
+        if (enabled) {
+            long reserve = upkeepReserve(item);
+            int minReserve = (int) Math.min(Integer.MAX_VALUE, reserve);
+            int orderSize = current == LogisticsResourceConfig.DEFAULT ? 64 : current.orderSize();
+            logisticsConfig.set(item, new LogisticsResourceConfig(minReserve, orderSize, true, false));
+        } else {
+            logisticsConfig.set(
+                item,
+                current.withImportEnabled(false)
+                    .withSupplyEnabled(false));
+        }
+    }
+
+    public boolean isUpkeepAutoOrderEnabled(ItemStackWrapper item) {
+        return item != null && logisticsConfig.get(item)
+            .isImportEnabled();
+    }
+
+    public long effectiveLowerBound(InventoryKey key) {
+        long manualLowerBound = getBound(key).lowOrDefault();
+        if (key instanceof ItemStackWrapper item) {
+            return Math.addExact(manualLowerBound, upkeepReserve(item));
+        }
+        return manualLowerBound;
+    }
+
+    @Override
+    public boolean isAboveLow(InventoryKey key, long amount) {
+        return (resourceAmount(key) - amount) >= effectiveLowerBound(key);
+    }
+
+    private long resourceAmount(InventoryKey key) {
+        if (key instanceof ItemStackWrapper item) return getItemAmount(item);
+        if (key instanceof FluidKey fluid) return getFluidAmount(fluid);
+        return 0L;
+    }
+
+    public UpkeepSettlement.Credits upkeepCredits() {
+        return upkeepCredits;
+    }
+
+    public void loadUpkeepCredits(UpkeepSettlement.Credits upkeepCredits) {
+        this.upkeepCredits = upkeepCredits == null ? UpkeepSettlement.Credits.empty() : upkeepCredits;
+    }
+
+    public UpkeepSettlement.Result settleUpkeep() {
+        UpkeepLedger.UpkeepSummary summary = upkeepSummary();
+        UpkeepSettlement.Result result = UpkeepSettlement.settle(summary.moduleDemands(), upkeepCredits, this);
+        upkeepCredits = result.credits();
+        Set<ModuleInstance.ID> demanded = new HashSet<>();
+        for (UpkeepLedger.ModuleDemand demand : summary.moduleDemands()) {
+            demanded.add(demand.moduleId());
+        }
+        Set<ModuleInstance.ID> paid = result.paidModuleIds();
+        Set<ModuleInstance.ID> unpaid = new HashSet<>(result.unpaidModuleIds());
+        for (ModuleInstance module : modules) {
+            if (unpaid.contains(module.id)) {
+                setModuleUpkeepBlocked(module);
+            } else if (paid.contains(module.id) || !demanded.contains(module.id)) {
+                clearModuleUpkeepBlocked(module);
+            }
+        }
+        return result;
+    }
+
+    private void setModuleUpkeepBlocked(ModuleInstance module) {
+        if (module.blocking() == BlockingReason.UPKEEP_SHORTAGE && module.state() == ModuleState.BLOCKED) return;
+        module.setBlocking(BlockingReason.UPKEEP_SHORTAGE);
+        module.setState(ModuleState.BLOCKED);
+        markModuleDirty(module.id);
+    }
+
+    private void clearModuleUpkeepBlocked(ModuleInstance module) {
+        if (module.blocking() != BlockingReason.UPKEEP_SHORTAGE) return;
+        module.setBlocking(BlockingReason.NONE);
+        if (module.state() == ModuleState.BLOCKED) {
+            module.setState(ModuleState.IDLE);
+        }
+        markModuleDirty(module.id);
     }
 
     public List<ModuleInstance> modules() {
@@ -374,8 +501,8 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         Map<String, Long> deposited = new java.util.LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
-            if (updateContents(material.getKey(), -(int) Math.min(material.getValue(), Integer.MAX_VALUE), true)
-                <= 0L) {
+            long reserved = updateContents(material.getKey(), -material.getValue(), true);
+            if (reserved != material.getValue()) {
                 throw new IllegalStateException(
                     "Operation material reservation became inconsistent for module " + module.id
                         + ", item="
@@ -385,12 +512,26 @@ public final class AutomatedFacility extends CelestialAsset {
             deposited.merge(
                 material.getKey()
                     .toKey(),
-                material.getValue(),
+                reserved,
                 Long::sum);
         }
         module.setOperation(operation.withDepositedResources(mergeAmounts(operation.depositedResources(), deposited)));
         markModuleDirty(module.id);
         return true;
+    }
+
+    public boolean tryConsumeInventory(ItemStackWrapper item, long amount) {
+        if (item == null) return false;
+        if (amount <= 0L) return true;
+        if (getItemAmount(item) < amount) return false;
+        return updateContents(item, -amount, true) == amount;
+    }
+
+    public boolean tryConsumeFluid(FluidKey key, long amount) {
+        if (key == null) return false;
+        if (amount <= 0L) return true;
+        if (getFluidAmount(key) < amount) return false;
+        return updateContents(key, -amount, true) == amount;
     }
 
     public boolean tryReserveAvailableOperationMaterials(ModuleInstance module,
@@ -409,11 +550,12 @@ public final class AutomatedFacility extends CelestialAsset {
             long available = getItemAmount(material.getKey());
             long reserved = Math.min(available, remaining);
             if (reserved <= 0L) continue;
-            if (updateContents(material.getKey(), -(int) Math.min(reserved, Integer.MAX_VALUE), true) <= 0L) {
+            long applied = updateContents(material.getKey(), -reserved, true);
+            if (applied <= 0L) {
                 throw new IllegalStateException(
                     "Operation partial reservation became inconsistent for module " + module.id + ", item=" + itemKey);
             }
-            deposited.merge(itemKey, reserved, Long::sum);
+            deposited.merge(itemKey, applied, Long::sum);
             changed = true;
         }
         if (changed) {
@@ -461,7 +603,7 @@ public final class AutomatedFacility extends CelestialAsset {
         for (Map.Entry<String, Long> entry : operation.refundBuffer()
             .entrySet()) {
             ItemStackWrapper item = requireItemKey(entry.getKey(), module);
-            long accepted = updateItems(item, (int) (long) entry.getValue());
+            long accepted = updateContents(item, entry.getValue(), true);
             if (accepted > 0L) changed = true;
             long leftover = entry.getValue() - accepted;
             if (leftover > 0L) remaining.put(entry.getKey(), leftover);
@@ -792,9 +934,12 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public void tick() {
         ticks++;
+        if (ticks % UPKEEP_INTERVAL_TICKS == 0L) {
+            settleUpkeep();
+        }
         for (ModuleInstance module : modules) {
             boolean moduleTickBlocked = tickModuleOperation(module);
-            if (!moduleTickBlocked) {
+            if (!moduleTickBlocked && module.blocking() != BlockingReason.UPKEEP_SHORTAGE) {
                 module.tick(this);
             }
         }
@@ -881,7 +1026,16 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public int upkeepReductionPercent(ModuleInstance module) {
-        return 100 - featureModifiers(module).upkeepMultiplierPercent();
+        return 100 - upkeepMultiplierPercent(module);
+    }
+
+    public int upkeepMultiplierPercent(ModuleInstance module) {
+        return featureModifiers(module).upkeepMultiplierPercent();
+    }
+
+    public UpkeepDemand effectiveUpkeepDemand(ModuleInstance module, UpkeepDemand baseDemand) {
+        if (baseDemand == null || baseDemand.isEmpty()) return UpkeepDemand.EMPTY;
+        return baseDemand.multiplyPercent(upkeepMultiplierPercent(module));
     }
 
     public long effectivePowerDrawEuPerTick(ModuleInstance module) {
@@ -926,6 +1080,10 @@ public final class AutomatedFacility extends CelestialAsset {
             feature.applyModuleModifiers(
                 new FeatureModuleContext(module, entry.getKey(), entry.getValue(), tiles.length),
                 builder);
+        }
+        for (ModuleInstance source : modules) {
+            source.areaEffects()
+                .forEach(effect -> effect.apply(source, module, builder));
         }
         return builder.build(counts);
     }
@@ -1049,16 +1207,16 @@ public final class AutomatedFacility extends CelestialAsset {
         return fluidFilter;
     }
 
-    public long updateContents(InventoryKey item, int delta, boolean sync) {
+    public long updateContents(InventoryKey item, long delta, boolean sync) {
         final long actual = item instanceof ItemStackWrapper ? updateItems((ItemStackWrapper) item, delta)
             : updateFluids((FluidKey) item, delta);
-        if (actual != 0L && sync) markInventoryDelta(item, delta);
+        if (actual != 0L && sync) markInventoryDelta(item, delta > 0 ? actual : -actual);
         return actual;
     }
 
     @Override
-    public long updateItems(ItemStackWrapper item, int delta) {
-        if (item == null || delta == 0) return 0L;
+    public long updateItems(ItemStackWrapper item, long delta) {
+        if (item == null || delta == 0L) return 0L;
         if (!getItemFilter().test(item)) return 0L;
 
         long current = amounts.getOrDefault(item, 0L);
@@ -1076,8 +1234,8 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     @Override
-    public long updateFluids(FluidKey fluid, int delta) {
-        if (fluid == null || delta == 0) return 0L;
+    public long updateFluids(FluidKey fluid, long delta) {
+        if (fluid == null || delta == 0L) return 0L;
         if (!getFluidFilter().test(fluid)) return 0L;
 
         long current = fluidAmounts.getOrDefault(fluid, 0L);
