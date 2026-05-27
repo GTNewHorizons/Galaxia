@@ -37,6 +37,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -119,30 +120,77 @@ public final class CelestialClient {
 
     public static void createModule(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled,
         @Nullable StationTileCoord tileCoord) {
-        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
-        if (state == null) return;
-        if (!kind.isAllowedOn(state.kind)) return;
-        StarmapActionSyncHandler.sendBuildModule(
+        createModule(
             assetId,
             kind,
             kind.defaultShape(),
             kind.defaultTier(),
+            null,
+            MinerFocusTier.NONE,
+            (short) 0,
             creativeBuildModeEnabled,
             tileCoord);
     }
 
+    public static boolean createModule(ID assetId, FacilityModuleKind kind, ModuleShape shape, ModuleTier tier,
+        @Nullable HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId,
+        boolean creativeBuildModeEnabled, @Nullable StationTileCoord tileCoord) {
+        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
+        if (state == null) return false;
+        if (!kind.isAllowedOn(state.kind)) return false;
+        return StarmapActionSyncHandler.sendBuildModules(
+            assetId,
+            kind,
+            shape,
+            tier,
+            hammerVariant,
+            minerFocusTier,
+            settingsGroupId,
+            creativeBuildModeEnabled,
+            tileCoord == null ? null : List.of(tileCoord));
+    }
+
     public static void createModules(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled,
         List<StationTileCoord> tileCoords) {
-        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
-        if (state == null) return;
-        if (!kind.isAllowedOn(state.kind)) return;
-        StarmapActionSyncHandler.sendBuildModules(
+        createModules(
             assetId,
             kind,
             kind.defaultShape(),
             kind.defaultTier(),
+            null,
+            MinerFocusTier.NONE,
+            (short) 0,
             creativeBuildModeEnabled,
             tileCoords);
+    }
+
+    public static boolean createModules(ID assetId, FacilityModuleKind kind, ModuleShape shape, ModuleTier tier,
+        @Nullable HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId,
+        boolean creativeBuildModeEnabled, List<StationTileCoord> tileCoords) {
+        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
+        if (state == null) return false;
+        if (!kind.isAllowedOn(state.kind)) return false;
+        return StarmapActionSyncHandler.sendBuildModules(
+            assetId,
+            kind,
+            shape,
+            tier,
+            hammerVariant,
+            minerFocusTier,
+            settingsGroupId,
+            creativeBuildModeEnabled,
+            tileCoords);
+    }
+
+    public static boolean copyModule(ID assetId, int sourceModuleIndex, ModuleInstance.ID sourceModuleId,
+        boolean creativeBuildModeEnabled, List<StationTileCoord> tileCoords) {
+        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
+        if (state == null || sourceModuleIndex < 0 || sourceModuleIndex >= state.modules()
+            .size()) {
+            return false;
+        }
+        return StarmapActionSyncHandler
+            .sendCopyModule(assetId, sourceModuleIndex, sourceModuleId, creativeBuildModeEnabled, tileCoords);
     }
 
     public static boolean destroyAsset(ID assetId) {

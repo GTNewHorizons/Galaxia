@@ -347,9 +347,11 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
         ModuleInstance module = selectedModule();
         if (module == null) return null;
         FacilityModuleRegistry.Definition definition = FacilityModuleRegistry.get(module.kind());
-        if (definition == null || slot >= definition.panelActions()
+        if (definition == null) return null;
+        if (slot >= definition.panelActions()
             .size()) {
-            return null;
+            return slot == definition.panelActions()
+                .size() ? ModulePanelAction.COPY_MODULE : null;
         }
         return definition.panelActions()
             .get(slot);
@@ -367,6 +369,8 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
         switch (action) {
             case CONFIG -> openModuleConfig(module, moduleIndex);
             case UPGRADE -> openModuleUpgrade(module, moduleIndex);
+            case COPY_MODULE -> StationManagementScreen
+                .openCopyBuildPicker(assetId, moduleIndex, module.id, StationManagementScreen.pendingCreativeBuildMode());
         }
     }
 

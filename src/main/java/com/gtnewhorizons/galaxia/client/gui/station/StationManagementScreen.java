@@ -20,6 +20,10 @@ import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 
 import cpw.mods.fml.common.FMLCommonHandler;
@@ -51,12 +55,45 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
     }
 
     static void openBuildPicker(CelestialAsset.ID assetId, FacilityModuleKind kind, boolean creativeBuildMode) {
-        pendingBuildPickerRequest = new BuildPickerRequest(assetId, kind, creativeBuildMode);
+        pendingBuildPickerRequest = BuildPickerRequest.create(
+            assetId,
+            kind,
+            kind.defaultShape(),
+            kind.defaultTier(),
+            null,
+            MinerFocusTier.NONE,
+            (short) 0,
+            creativeBuildMode);
+        open(assetId, creativeBuildMode);
+    }
+
+    static void openBuildPicker(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
+        ModuleTier tier, HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId,
+        boolean creativeBuildMode) {
+        pendingBuildPickerRequest = BuildPickerRequest.create(
+            assetId,
+            kind,
+            shape,
+            tier,
+            hammerVariant,
+            minerFocusTier,
+            settingsGroupId,
+            creativeBuildMode);
+        open(assetId, creativeBuildMode);
+    }
+
+    static void openCopyBuildPicker(CelestialAsset.ID assetId, int sourceModuleIndex, ModuleInstance.ID sourceModuleId,
+        boolean creativeBuildMode) {
+        pendingBuildPickerRequest = BuildPickerRequest.copy(assetId, sourceModuleIndex, sourceModuleId, creativeBuildMode);
         open(assetId, creativeBuildMode);
     }
 
     public static @Nullable CelestialAsset.ID pendingAssetId() {
         return pendingAssetId;
+    }
+
+    static boolean pendingCreativeBuildMode() {
+        return pendingCreativeBuildMode;
     }
 
     @Override
@@ -185,16 +222,40 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             .getByAssetId(assetId) instanceof AutomatedFacility facility)) {
             return;
         }
-        FacilityModuleKind kind = request.kind();
-        ModuleShape shape = kind.defaultShape();
+        ModuleInstance copySource = request.copySource(facility);
+        FacilityModuleKind kind = copySource == null ? request.kind() : copySource.kind();
+        ModuleShape shape = copySource == null ? request.shape() : copySource.shape();
+        ModuleTier tier = copySource == null ? request.tier() : copySource.tier();
+        if (kind == null || shape == null || tier == null) return;
         controller.start(
-            "Build " + kind.getDisplayName(),
+            (copySource == null ? "Build " : "Copy ") + kind.getDisplayName(),
             "Confirm",
             (coord, selected) -> ModuleBuildPickerModel
-                .isCompatibleTarget(facility, kind, shape, kind.defaultTier(), coord, selected),
+                .isCompatibleTarget(facility, kind, shape, tier, coord, selected),
             coord -> coord,
-            targets -> com.gtnewhorizons.galaxia.client.CelestialClient
-                .createModules(assetId, kind, request.creativeBuildMode(), targets),
+            targets -> {
+                boolean sent;
+                if (copySource != null) {
+                    sent = com.gtnewhorizons.galaxia.client.CelestialClient.copyModule(
+                        assetId,
+                        request.copySourceModuleIndex(),
+                        request.copySourceModuleId(),
+                        request.creativeBuildMode(),
+                        targets);
+                } else {
+                    sent = com.gtnewhorizons.galaxia.client.CelestialClient.createModules(
+                        assetId,
+                        kind,
+                        shape,
+                        tier,
+                        request.hammerVariant(),
+                        request.minerFocusTier(),
+                        request.settingsGroupId(),
+                        request.creativeBuildMode(),
+                        targets);
+                }
+                if (!sent) StationBuildStatus.notifyFailure("Module build request failed");
+            },
             targets -> ModuleBuildPickerModel.connectedTargets(facility, targets, shape));
         controller.setSelectionFootprint(shape, shape == ModuleShape.QUAD_2x2);
         controller.setPreviewModuleKind(kind);
@@ -266,5 +327,49 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         }
     }
 
-    private record BuildPickerRequest(CelestialAsset.ID assetId, FacilityModuleKind kind, boolean creativeBuildMode) {}
+    private record BuildPickerRequest(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
+        ModuleTier tier, HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId,
+        int copySourceModuleIndex, ModuleInstance.ID copySourceModuleId, boolean creativeBuildMode) {
+
+        static BuildPickerRequest create(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
+            ModuleTier tier, HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId,
+            boolean creativeBuildMode) {
+            return new BuildPickerRequest(
+                assetId,
+                kind,
+                shape,
+                tier,
+                hammerVariant,
+                minerFocusTier == null ? MinerFocusTier.NONE : minerFocusTier,
+                settingsGroupId,
+                -1,
+                null,
+                creativeBuildMode);
+        }
+
+        static BuildPickerRequest copy(CelestialAsset.ID assetId, int sourceModuleIndex,
+            ModuleInstance.ID sourceModuleId, boolean creativeBuildMode) {
+            return new BuildPickerRequest(
+                assetId,
+                null,
+                null,
+                null,
+                null,
+                MinerFocusTier.NONE,
+                (short) 0,
+                sourceModuleIndex,
+                sourceModuleId,
+                creativeBuildMode);
+        }
+
+        @Nullable
+        ModuleInstance copySource(AutomatedFacility facility) {
+            if (facility == null || copySourceModuleIndex < 0 || copySourceModuleId == null) return null;
+            if (copySourceModuleIndex >= facility.modules()
+                .size()) return null;
+            ModuleInstance source = facility.modules()
+                .get(copySourceModuleIndex);
+            return copySourceModuleId.equals(source.id) ? source : null;
+        }
+    }
 }

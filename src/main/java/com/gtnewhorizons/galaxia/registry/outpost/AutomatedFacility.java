@@ -676,6 +676,12 @@ public final class AutomatedFacility extends CelestialAsset {
         attachToSettingsGroup(module, group);
     }
 
+    public boolean canJoinSettingsGroup(FacilityModuleKind kind, short groupId) {
+        if (kind == null || groupId <= 0) return false;
+        SettingsGroup group = settingsGroups.get(groupId);
+        return group != null && group.kind() == kind && group.isJoinable();
+    }
+
     public void leaveSettingsGroup(ModuleInstance module) {
         requireSettingsGroupsSupported(module);
         if (module.groupId() != 0) {

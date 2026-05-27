@@ -16,6 +16,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -78,10 +81,36 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
     @SideOnly(Side.CLIENT)
     public static boolean sendBuildModules(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
         ModuleTier tier, boolean instantBuild, List<StationTileCoord> coords) {
+        return sendBuildModules(assetId, kind, shape, tier, null, MinerFocusTier.NONE, (short) 0, instantBuild, coords);
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static boolean sendBuildModules(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
+        ModuleTier tier, HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId,
+        boolean instantBuild, List<StationTileCoord> coords) {
+        StarmapActionSyncHandler handler = activeClientHandler;
+        if (handler == null || !handler.isValid()) return false;
+        AssetBuildModulePacket packet = AssetBuildModulePacket.createManyWithSpec(
+            assetId,
+            kind,
+            shape,
+            tier,
+            hammerVariant,
+            minerFocusTier,
+            settingsGroupId,
+            instantBuild,
+            coords);
+        handler.syncToServer(REQUEST_BUILD_MODULE, packet::toBytes);
+        return true;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static boolean sendCopyModule(CelestialAsset.ID assetId, int sourceModuleIndex,
+        ModuleInstance.ID sourceModuleId, boolean instantBuild, List<StationTileCoord> coords) {
         StarmapActionSyncHandler handler = activeClientHandler;
         if (handler == null || !handler.isValid()) return false;
         AssetBuildModulePacket packet = AssetBuildModulePacket
-            .createMany(assetId, kind, shape, tier, instantBuild, coords);
+            .copyFromModule(assetId, sourceModuleIndex, sourceModuleId, instantBuild, coords);
         handler.syncToServer(REQUEST_BUILD_MODULE, packet::toBytes);
         return true;
     }
