@@ -4,9 +4,11 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.PacketBuffer;
+import net.minecraft.util.ChatComponentText;
 
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.value.sync.SyncHandler;
@@ -39,6 +41,7 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
     private static final int REQUEST_FILTER_UPDATE = 7;
 
     private static final int RESPONSE_SYNC = 100;
+    private static final int RESPONSE_ACTION_FAILED = 101;
 
     private static StarmapActionSyncHandler activeClientHandler;
 
@@ -183,10 +186,20 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
     @Override
     @SideOnly(Side.CLIENT)
     public void readOnClient(int id, PacketBuffer buf) throws IOException {
-        if (id != RESPONSE_SYNC) return;
-        AssetSyncPacket packet = new AssetSyncPacket();
-        packet.fromBytes(buf);
-        AssetSyncPacket.Handler.handleClientSync(packet);
+        switch (id) {
+            case RESPONSE_SYNC -> {
+                AssetSyncPacket packet = new AssetSyncPacket();
+                packet.fromBytes(buf);
+                AssetSyncPacket.Handler.handleClientSync(packet);
+            }
+            case RESPONSE_ACTION_FAILED -> {
+                Minecraft minecraft = Minecraft.getMinecraft();
+                if (minecraft != null && minecraft.ingameGUI != null) {
+                    minecraft.ingameGUI.getChatGUI()
+                        .printChatMessage(new ChatComponentText("[Galaxia] " + PacketUtil.readString(buf)));
+                }
+            }
+        }
     }
 
     @Override
@@ -212,7 +225,12 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
                 if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.BUILD_MODULE)) return;
                 AssetBuildModulePacket packet = new AssetBuildModulePacket();
                 packet.fromBytes(buf);
-                syncPacket(packet.apply(teamId, creative));
+                AssetSyncPacket sync = packet.apply(teamId, creative);
+                if (sync == null) {
+                    syncFailure("Module build failed");
+                } else {
+                    syncPacket(sync);
+                }
             }
             case REQUEST_MODULE_UPDATE -> {
                 if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.MODIFY_MODULE)) return;
@@ -243,5 +261,9 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
 
     private void syncPacket(AssetSyncPacket packet) {
         if (packet != null) syncToClient(RESPONSE_SYNC, packet::toBytes);
+    }
+
+    private void syncFailure(String message) {
+        syncToClient(RESPONSE_ACTION_FAILED, buf -> PacketUtil.writeString(buf, message));
     }
 }
