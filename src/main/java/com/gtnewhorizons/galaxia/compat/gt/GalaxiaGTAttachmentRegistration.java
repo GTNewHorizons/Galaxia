@@ -4,53 +4,54 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
+import gregtech.api.metatileentity.implementations.MTEHatchDynamo;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.FluidTankInfo;
 
-import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
-import com.gtnewhorizons.galaxia.registry.interfaces.IEnergyHandler;
-import com.gtnewhorizons.galaxia.registry.interfaces.IFluidStorageHandler;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 
 import goodgenerator.blocks.tileEntity.MTEYottaFluidTank;
-import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
 import kekztech.common.tileentities.MTELapotronicSuperCapacitor;
 import kekztech.common.tileentities.MTETankTFFT;
+import tectech.thing.metaTileEntity.hatch.MTEHatchEnergyTunnel;
 
 public final class GalaxiaGTAttachmentRegistration {
 
     private GalaxiaGTAttachmentRegistration() {}
 
+    public static final int stationHatchId = 23050;
+    public static final int stationAutoHatchId = 23051;
+
+    public static MTEHatchStationMaintenance mteHatchStationMaintenance;
+    public static MTEHatchStationMaintenance mteHatchAutoStationMaintenance;
+
     public static void init() {
+        registerHatches();
         registerEnergyHandlers();
         registerFluidHandlers();
     }
 
+    private static void registerHatches() {
+        mteHatchStationMaintenance = new MTEHatchStationMaintenance(
+            stationHatchId,
+            "hatch.station_controller",
+            "Station Controller Hatch",
+            1
+        );
+        mteHatchAutoStationMaintenance = new MTEHatchStationMaintenance(
+            stationAutoHatchId,
+            "hatch.station_controller",
+            "Station Controller Auto Hatch",
+            1,
+            true
+        );
+    }
+
     private static void registerEnergyHandlers() {
-        StationAttachmentRegistry.register(MTELapotronicSuperCapacitor.class, new IEnergyHandler<>() {
-
-            @Override
-            public BlockPos getPosition(MTELapotronicSuperCapacitor attachment) {
-                IGregTechTileEntity base = attachment.getBaseMetaTileEntity();
-                if (base == null) return null;
-                return new BlockPos(base.getXCoord(), base.getYCoord(), base.getZCoord());
-            }
-
-            @Override
-            public void tick(MTELapotronicSuperCapacitor attachment) {}
-
-            @Override
-            public boolean isReady(MTELapotronicSuperCapacitor attachment) {
-                IGregTechTileEntity base = attachment.getBaseMetaTileEntity();
-                return base != null && !base.isDead();
-            }
-
-            @Override
-            public void markDirty(MTELapotronicSuperCapacitor attachment) {
-                attachment.markDirty();
-            }
+        StationAttachmentRegistry.register(MTELapotronicSuperCapacitor.class, new GTEnergyHandler<>() {
 
             @Override
             public BigInteger getEnergyStored(MTELapotronicSuperCapacitor attachment) {
@@ -82,10 +83,7 @@ public final class GalaxiaGTAttachmentRegistration {
             @Override
             public long drawEnergy(MTELapotronicSuperCapacitor attachment, long amount) {
                 BigInteger current = attachment.getStored();
-                long drawn = Math.min(
-                    amount,
-                    current.min(BigInteger.valueOf(Long.MAX_VALUE))
-                        .longValue());
+                long drawn = Math.min(amount, current.min(BigInteger.valueOf(Long.MAX_VALUE)).longValue());
                 attachment.setStored(current.subtract(BigInteger.valueOf(drawn)));
                 return drawn;
             }
@@ -93,30 +91,7 @@ public final class GalaxiaGTAttachmentRegistration {
     }
 
     private static void registerFluidHandlers() {
-        StationAttachmentRegistry.register(MTEYottaFluidTank.class, new IFluidStorageHandler<>() {
-
-            private final ResourceFilter<FluidKey> filter = ResourceFilter.forFluids();
-
-            @Override
-            public BlockPos getPosition(MTEYottaFluidTank attachment) {
-                IGregTechTileEntity base = attachment.getBaseMetaTileEntity();
-                if (base == null) return null;
-                return new BlockPos(base.getXCoord(), base.getYCoord(), base.getZCoord());
-            }
-
-            @Override
-            public void tick(MTEYottaFluidTank attachment) {}
-
-            @Override
-            public boolean isReady(MTEYottaFluidTank attachment) {
-                IGregTechTileEntity base = attachment.getBaseMetaTileEntity();
-                return base != null && !base.isDead();
-            }
-
-            @Override
-            public void markDirty(MTEYottaFluidTank attachment) {
-                attachment.markDirty();
-            }
+        StationAttachmentRegistry.register(MTEYottaFluidTank.class, new GTFluidStorageHandler<>() {
 
             @Override
             public long getFluidStored(MTEYottaFluidTank attachment) {
@@ -151,38 +126,9 @@ public final class GalaxiaGTAttachmentRegistration {
                 if (attachment.mFluid != null && !attachment.mFluid.isFluidEqual(resource)) return 0;
                 return attachment.addFluid(resource.amount, doFill) ? resource.amount : 0;
             }
-
-            @Override
-            public ResourceFilter<FluidKey> getFluidFilter(MTEYottaFluidTank attachment) {
-                if (attachment.mFluid != null) {
-                    filter.add(FluidKey.of(attachment.mFluid));
-                }
-                return filter;
-            }
         });
 
-        StationAttachmentRegistry.register(MTETankTFFT.class, new IFluidStorageHandler<>() {
-
-            @Override
-            public BlockPos getPosition(MTETankTFFT attachment) {
-                IGregTechTileEntity base = attachment.getBaseMetaTileEntity();
-                if (base == null) return null;
-                return new BlockPos(base.getXCoord(), base.getYCoord(), base.getZCoord());
-            }
-
-            @Override
-            public void tick(MTETankTFFT attachment) {}
-
-            @Override
-            public boolean isReady(MTETankTFFT attachment) {
-                IGregTechTileEntity base = attachment.getBaseMetaTileEntity();
-                return base != null && !base.isDead() && base.isActive();
-            }
-
-            @Override
-            public void markDirty(MTETankTFFT attachment) {
-                attachment.markDirty();
-            }
+        StationAttachmentRegistry.register(MTETankTFFT.class, new GTFluidStorageHandler<>() {
 
             @Override
             public long getFluidStored(MTETankTFFT attachment) {
@@ -202,7 +148,7 @@ public final class GalaxiaGTAttachmentRegistration {
             @Override
             public List<FluidStack> getAllFluids(MTETankTFFT attachment) {
                 List<FluidStack> result = new ArrayList<>();
-                net.minecraftforge.fluids.FluidTankInfo[] info = attachment.getTankInfo();
+                FluidTankInfo[] info = attachment.getTankInfo();
                 if (info != null) {
                     for (FluidTankInfo tankInfo : info) {
                         if (tankInfo != null && tankInfo.fluid != null && tankInfo.fluid.amount > 0) {
@@ -223,11 +169,6 @@ public final class GalaxiaGTAttachmentRegistration {
             public long fillFluid(MTETankTFFT attachment, FluidStack resource, boolean doFill) {
                 if (resource == null || resource.amount <= 0) return 0;
                 return attachment.pull(resource, doFill);
-            }
-
-            @Override
-            public ResourceFilter<FluidKey> getFluidFilter(MTETankTFFT attachment) {
-                return ResourceFilter.forFluids();
             }
         });
     }
