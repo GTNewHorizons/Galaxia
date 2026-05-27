@@ -10,9 +10,10 @@ import net.minecraft.network.PacketBuffer;
 
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.value.sync.SyncHandler;
+import com.gtnewhorizons.galaxia.client.gui.station.StationNotificationHelper;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
-import com.gtnewhorizons.galaxia.client.gui.station.StationNotificationHelper;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
@@ -62,15 +63,13 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
 
     @SideOnly(Side.CLIENT)
     public static boolean sendRegisterAsset(CelestialObjectId bodyId, CelestialAsset asset) {
-        StarmapActionSyncHandler handler = activeClientHandler;
-        if (handler == null || !handler.isValid()) return false;
         AssetCreateRequestPacket packet = switch (asset.kind) {
             case STATION -> AssetCreateRequestPacket
                 .createStation(bodyId, asset.displayName(), ((Station) asset).getController());
             case AUTOMATED_OUTPOST, AUTOMATED_STATION -> AssetCreateRequestPacket
                 .createFacility(bodyId, asset.displayName(), asset.kind, asset.isOperational());
         };
-        handler.syncToServer(REQUEST_CREATE_ASSET, packet::toBytes);
+        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
     }
 
@@ -206,10 +205,18 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
 
         switch (id) {
             case REQUEST_CREATE_ASSET -> {
-                if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.CREATE_ASSET)) return;
+                if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.CREATE_ASSET)) {
+                    syncFailure("Asset creation denied");
+                    return;
+                }
                 AssetCreateRequestPacket packet = new AssetCreateRequestPacket();
                 packet.fromBytes(buf);
-                syncPacket(packet.apply(teamId));
+                AssetSyncPacket sync = packet.apply(teamId);
+                if (sync == null) {
+                    syncFailure("Asset creation failed");
+                } else {
+                    syncPacket(sync);
+                }
             }
             case REQUEST_UPDATE_ASSET -> {
                 AssetUpdatePacket packet = new AssetUpdatePacket();

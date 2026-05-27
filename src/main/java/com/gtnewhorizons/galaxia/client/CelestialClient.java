@@ -98,8 +98,8 @@ public final class CelestialClient {
 
     private CelestialClient() {}
 
-    public static void registerAsset(CelestialObjectId celestialObjectId, CelestialAsset asset) {
-        StarmapActionSyncHandler.sendRegisterAsset(celestialObjectId, asset);
+    public static boolean registerAsset(CelestialObjectId celestialObjectId, CelestialAsset asset) {
+        return StarmapActionSyncHandler.sendRegisterAsset(celestialObjectId, asset);
     }
 
     public static void add(CelestialAsset state) {

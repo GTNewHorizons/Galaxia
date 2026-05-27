@@ -241,8 +241,11 @@ public final class AssetManagementSystem {
             if (callbacks.isCreativeBuildModeEnabled()) {
                 CelestialAsset asset = CelestialAsset.create(body.id(), kind, true);
                 asset.setDisplayName(displayName);
-                CelestialClient.registerAsset(body.id(), asset);
-                callbacks.showActionStatus(assetSupport.formatAssetKind(kind) + " created");
+                if (CelestialClient.registerAsset(body.id(), asset)) {
+                    callbacks.showActionStatus(assetSupport.formatAssetKind(kind) + " creation requested");
+                } else {
+                    callbacks.showActionStatus(assetSupport.formatAssetKind(kind) + " creation failed");
+                }
                 return;
             }
             state.pendingAssetCreation = new PendingAssetCreation(
@@ -259,16 +262,24 @@ public final class AssetManagementSystem {
                 CelestialAsset asset = CelestialAsset
                     .create(state.pendingAssetCreation.celestialObjectId(), state.pendingAssetCreation.kind(), true);
                 asset.setDisplayName(state.pendingAssetCreation.displayName());
-                CelestialClient.registerAsset(state.pendingAssetCreation.celestialObjectId(), asset);
+                if (!CelestialClient.registerAsset(state.pendingAssetCreation.celestialObjectId(), asset)) {
+                    callbacks.showActionStatus(
+                        assetSupport.formatAssetKind(state.pendingAssetCreation.kind()) + " creation failed");
+                    return;
+                }
 
-                callbacks
+                callbacks.showActionStatus(
                     // TODO: Localize
-                    .showActionStatus(assetSupport.formatAssetKind(state.pendingAssetCreation.kind()) + " created");
+                    assetSupport.formatAssetKind(state.pendingAssetCreation.kind()) + " creation requested");
             } else {
                 CelestialAsset asset = CelestialAsset
                     .create(state.pendingAssetCreation.celestialObjectId(), state.pendingAssetCreation.kind(), false);
                 asset.setDisplayName(state.pendingAssetCreation.displayName());
-                CelestialClient.registerAsset(state.pendingAssetCreation.celestialObjectId(), asset);
+                if (!CelestialClient.registerAsset(state.pendingAssetCreation.celestialObjectId(), asset)) {
+                    callbacks.showActionStatus(
+                        assetSupport.formatAssetKind(state.pendingAssetCreation.kind()) + " construction failed");
+                    return;
+                }
                 callbacks.showActionStatus(
                     // TODO: Localize
                     assetSupport.formatAssetKind(state.pendingAssetCreation.kind()) + " construction planned");
