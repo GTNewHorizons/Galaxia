@@ -74,6 +74,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private static final int SPEC_FOOTER_Y = PANEL_HEIGHT - PANEL_PADDING - 20;
     private static final int SPEC_BACK_WIDTH = 58;
     private static final int SPEC_BUILD_WIDTH = 72;
+    private static final int HEADER_BUTTON_GAP = 8;
 
     private static volatile @Nullable CelestialAsset.ID pendingAssetId;
     private static volatile @Nullable StationTileCoord pendingCoord;
@@ -120,7 +121,10 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                 .shadow(true)
                 .pos(PANEL_PADDING, PANEL_PADDING));
         panel.child(
-            createMultipleToggle().pos(PANEL_WIDTH - PANEL_PADDING - MULTIPLE_TOGGLE_WIDTH, PANEL_PADDING - 1)
+            createMultipleToggle()
+                .pos(
+                    PANEL_WIDTH - PANEL_PADDING - SPEC_BACK_WIDTH - HEADER_BUTTON_GAP - MULTIPLE_TOGGLE_WIDTH,
+                    PANEL_PADDING - 1)
                 .size(MULTIPLE_TOGGLE_WIDTH, MULTIPLE_TOGGLE_HEIGHT));
 
         AutomatedFacility facility = resolveFacility();
@@ -155,6 +159,10 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                 x += buttonWidth + BUTTON_GAP;
             }
         }
+        panel.child(
+            ModuleConfigModalSupport.button(() -> pendingAssetId != null, "Back", this::backToMap)
+                .pos(PANEL_WIDTH - PANEL_PADDING - SPEC_BACK_WIDTH, PANEL_PADDING - 1)
+                .size(SPEC_BACK_WIDTH, MULTIPLE_TOGGLE_HEIGHT));
         return panel;
     }
 
@@ -302,6 +310,18 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private void backToKinds() {
         pendingSelectedKind = null;
         FACTORY.openClient();
+    }
+
+    private void backToMap() {
+        CelestialAsset.ID assetId = pendingAssetId;
+        boolean instantBuild = pendingInstantBuild;
+        clearPending();
+        if (assetId != null) {
+            StationManagementScreen.open(assetId, instantBuild);
+        } else {
+            Minecraft.getMinecraft()
+                .displayGuiScreen(null);
+        }
     }
 
     private void confirmSelectedBuild() {

@@ -38,6 +38,8 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
 
     private static final int LEFT_PANEL_WIDTH = 216;
     private static final int PADDING = 12;
+    private static final int MAP_ACTION_BUTTON_WIDTH = 128;
+    private static final int MAP_ACTION_BUTTON_HEIGHT = 20;
 
     private static volatile @Nullable CelestialAsset.ID pendingAssetId;
     private static volatile boolean pendingCreativeBuildMode;
@@ -133,7 +135,8 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             StationInventoryPanelWidget inventoryPanel = new StationInventoryPanelWidget(
                 assetId,
                 overlayCoordinator,
-                configController);
+                configController,
+                () -> !tilePickerController.isActive());
             StationMapWidget map = new StationMapWidget(
                 assetId,
                 coord -> ModulePickerScreen.open(assetId, coord, creativeBuildMode),
@@ -170,6 +173,11 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                     .top(PADDING)
                     .width(StationInventoryPanelWidget.PANEL_WIDTH)
                     .height(StationInventoryPanelWidget.PANEL_HEIGHT + StationInventoryPanelWidget.BUTTON_HEIGHT + 4));
+            panel.child(
+                new StationCopyModuleMapButton(assetId, map, tilePickerController, creativeBuildMode)
+                    .left(LEFT_PANEL_WIDTH + PADDING * 2)
+                    .bottom(PADDING)
+                    .size(MAP_ACTION_BUTTON_WIDTH, MAP_ACTION_BUTTON_HEIGHT));
             panel.child(
                 new ModalInputBlocker(overlayCoordinator).left(0)
                     .top(0)

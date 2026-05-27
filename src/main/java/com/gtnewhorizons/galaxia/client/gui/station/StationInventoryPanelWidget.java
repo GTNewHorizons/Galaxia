@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
@@ -106,6 +107,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private @Nullable TextFieldWidget outputBoundField;
     private final StationOverlayCoordinator overlayCoordinator;
     private final @Nullable ModuleConfigModalController configController;
+    private final BooleanSupplier visibleSupplier;
     private boolean open;
     private String rowStructureSignature = "";
     private Map<ItemStackWrapper, Long> cachedItemAmounts = Map.of();
@@ -122,13 +124,19 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
 
     StationInventoryPanelWidget(@Nullable CelestialAsset.ID assetId, StationOverlayCoordinator overlayCoordinator,
         @Nullable ModuleConfigModalController configController) {
+        this(assetId, overlayCoordinator, configController, () -> true);
+    }
+
+    StationInventoryPanelWidget(@Nullable CelestialAsset.ID assetId, StationOverlayCoordinator overlayCoordinator,
+        @Nullable ModuleConfigModalController configController, BooleanSupplier visibleSupplier) {
         this.assetId = assetId;
         this.overlayCoordinator = overlayCoordinator;
         this.configController = configController;
+        this.visibleSupplier = visibleSupplier;
         overlayCoordinator.register(this);
         size(PANEL_WIDTH, PANEL_Y + PANEL_HEIGHT);
         child(
-            ModuleConfigModalSupport.button(() -> assetId != null, this::toggleLabel, this::toggleOpen)
+            ModuleConfigModalSupport.button(() -> isVisible() && assetId != null, this::toggleLabel, this::toggleOpen)
                 .pos(0, 0)
                 .size(BUTTON_WIDTH, BUTTON_HEIGHT));
         child(
@@ -208,16 +216,13 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     @Override
     public void onUpdate() {
         super.onUpdate();
+        if (!isVisible()) {
+            close();
+            disablePanelContent();
+            return;
+        }
         if (!open) {
-            if (panelRoot.isEnabled()) {
-                panelRoot.setEnabled(false);
-                boundEditorRoot.setEnabled(false);
-                itemInteractionRoot.setEnabled(false);
-                selectedInteractionItem = null;
-                rowStructureSignature = "";
-                cachedItemAmounts = Map.of();
-                cachedFluidAmounts = Map.of();
-            }
+            disablePanelContent();
             return;
         }
         IDistributedInventory distributed = distributed();
@@ -244,7 +249,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
 
     @Override
     public boolean canHoverThrough() {
-        return !open;
+        return !isVisible() || !open;
     }
 
     @Override
@@ -271,10 +276,25 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
 
     @Override
     public boolean containsMouse(int mouseX, int mouseY) {
-        if (!open) return false;
+        if (!isVisible() || !open) return false;
         int left = getArea().rx;
         int top = getArea().ry;
         return mouseX >= left && mouseX < left + PANEL_WIDTH && mouseY >= top && mouseY < top + PANEL_Y + PANEL_HEIGHT;
+    }
+
+    private boolean isVisible() {
+        return visibleSupplier.getAsBoolean();
+    }
+
+    private void disablePanelContent() {
+        if (!panelRoot.isEnabled()) return;
+        panelRoot.setEnabled(false);
+        boundEditorRoot.setEnabled(false);
+        itemInteractionRoot.setEnabled(false);
+        selectedInteractionItem = null;
+        rowStructureSignature = "";
+        cachedItemAmounts = Map.of();
+        cachedFluidAmounts = Map.of();
     }
 
     @Override
