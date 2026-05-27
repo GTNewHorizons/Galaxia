@@ -70,7 +70,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private static final int SPEC_BUTTON_WIDTH = 92;
     private static final int SPEC_BUTTON_HEIGHT = 18;
     private static final int SPEC_BUTTON_GAP = 5;
-    private static final int SPEC_SECTION_GAP = 30;
+    private static final int SPEC_SECTION_GAP = 40;
     private static final int SPEC_FOOTER_Y = PANEL_HEIGHT - PANEL_PADDING - 20;
     private static final int SPEC_BACK_WIDTH = 58;
     private static final int SPEC_BUILD_WIDTH = 72;
@@ -315,13 +315,17 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
             return;
         }
         ModuleShape shape = kind.defaultShape();
+        ModuleTier selectedTier = ModuleUpgradeUiModel.normalizeBuildTier(
+            kind,
+            pendingSelectedTier,
+            pendingHammerVariant);
         boolean needsBuildPicker = pendingMultipleBuild || shape != ModuleShape.SINGLE;
         if (needsBuildPicker) {
             StationManagementScreen.openBuildPicker(
                 assetId,
                 kind,
                 shape,
-                pendingSelectedTier,
+                selectedTier,
                 kind == FacilityModuleKind.HAMMER ? pendingHammerVariant : null,
                 kind == FacilityModuleKind.MINER ? pendingMinerFocusTier : MinerFocusTier.NONE,
                 pendingSettingsGroupId,
@@ -331,7 +335,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                 assetId,
                 kind,
                 shape,
-                pendingSelectedTier,
+                selectedTier,
                 kind == FacilityModuleKind.HAMMER ? pendingHammerVariant : null,
                 kind == FacilityModuleKind.MINER ? pendingMinerFocusTier : MinerFocusTier.NONE,
                 pendingSettingsGroupId,
@@ -403,11 +407,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     }
 
     private static void normalizeSelectedTier(FacilityModuleKind kind) {
-        if (kind != FacilityModuleKind.HAMMER || ModuleHammer.supportsTier(pendingHammerVariant, pendingSelectedTier)) {
-            return;
-        }
-        List<ModuleTier> allowed = ModuleUpgradeUiModel.hammerAllowedTiers(pendingHammerVariant);
-        pendingSelectedTier = allowed.isEmpty() ? kind.defaultTier() : allowed.get(0);
+        pendingSelectedTier = ModuleUpgradeUiModel.normalizeBuildTier(kind, pendingSelectedTier, pendingHammerVariant);
     }
 
     private static List<GroupOption> groupOptions(AutomatedFacility facility, FacilityModuleKind kind) {
@@ -607,16 +607,20 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
 
         @Override
         public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
+            ModuleTier selectedTier = ModuleUpgradeUiModel.normalizeBuildTier(
+                kind,
+                pendingSelectedTier,
+                pendingHammerVariant);
             int y = SPEC_TOP;
             y = drawSpecLine("Configure " + kind.getDisplayName(), SPEC_LEFT, y, EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
             y = drawSpecLine(
-                "Target: " + pendingSelectedTier
+                "Target: " + selectedTier
                     + physicalSuffix(kind),
                 SPEC_LEFT,
                 y,
                 EnumColors.MAP_COLOR_TEXT_BODY.getColor());
             ModuleTierData data = FacilityModuleRegistry.get(kind)
-                .getTierData(pendingSelectedTier);
+                .getTierData(selectedTier);
             if (data != null) {
                 y = drawSpecLine(
                     "Build: " + formatTicks(data.buildTicks()) + "  Cost: " + formatCost(data.constructionCost()),

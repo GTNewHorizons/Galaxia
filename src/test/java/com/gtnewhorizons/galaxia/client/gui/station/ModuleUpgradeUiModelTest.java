@@ -51,6 +51,33 @@ final class ModuleUpgradeUiModelTest {
     }
 
     @Test
+    void buildTierFallsBackWhenHammerPendingTierWasCleared() {
+        assertEquals(
+            ModuleTier.LuV,
+            ModuleUpgradeUiModel.normalizeBuildTier(
+                FacilityModuleKind.HAMMER,
+                ModuleTier.NONE,
+                HammerVariant.BIG));
+    }
+
+    @Test
+    void buildTierKeepsValidHammerTier() {
+        assertEquals(
+            ModuleTier.UV,
+            ModuleUpgradeUiModel.normalizeBuildTier(FacilityModuleKind.HAMMER, ModuleTier.UV, HammerVariant.BIG));
+    }
+
+    @Test
+    void buildTierFallsBackToDefaultForInvalidNonHammerTier() {
+        assertEquals(
+            ModuleTier.HV,
+            ModuleUpgradeUiModel.normalizeBuildTier(
+                FacilityModuleKind.MACERATOR,
+                ModuleTier.NONE,
+                HammerVariant.BASE));
+    }
+
+    @Test
     void hammerTierOptionsExposeDisabledBlockedTiers() {
         ModuleUpgradeSelection selection = ModuleUpgradeSelection.hammer(HammerVariant.BIG, ModuleTier.ZPM);
 

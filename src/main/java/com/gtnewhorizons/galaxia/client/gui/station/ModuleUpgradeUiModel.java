@@ -5,6 +5,7 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -77,6 +78,14 @@ final class ModuleUpgradeUiModel {
             throw new IllegalStateException("Hammer variant has no valid tiers: " + variant);
         }
         return allowed.get(0);
+    }
+
+    static ModuleTier normalizeBuildTier(FacilityModuleKind kind, ModuleTier tier, HammerVariant hammerVariant) {
+        if (kind == FacilityModuleKind.HAMMER) {
+            return normalizeHammerTier(hammerVariant, tier);
+        }
+        return kind.allowedTiers()
+            .contains(tier) ? tier : kind.defaultTier();
     }
 
     static HammerVariant hammerVariant(ModuleUpgradeSelection selection) {

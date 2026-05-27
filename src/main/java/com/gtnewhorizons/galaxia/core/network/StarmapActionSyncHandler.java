@@ -89,8 +89,6 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
     public static boolean sendBuildModules(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
         ModuleTier tier, HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId,
         boolean instantBuild, List<StationTileCoord> coords) {
-        StarmapActionSyncHandler handler = activeClientHandler;
-        if (handler == null || !handler.isValid()) return false;
         AssetBuildModulePacket packet = AssetBuildModulePacket.createManyWithSpec(
             assetId,
             kind,
@@ -101,26 +99,22 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
             settingsGroupId,
             instantBuild,
             coords);
-        handler.syncToServer(REQUEST_BUILD_MODULE, packet::toBytes);
+        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
     }
 
     @SideOnly(Side.CLIENT)
     public static boolean sendCopyModule(CelestialAsset.ID assetId, int sourceModuleIndex,
         ModuleInstance.ID sourceModuleId, boolean instantBuild, List<StationTileCoord> coords) {
-        StarmapActionSyncHandler handler = activeClientHandler;
-        if (handler == null || !handler.isValid()) return false;
         AssetBuildModulePacket packet = AssetBuildModulePacket
             .copyFromModule(assetId, sourceModuleIndex, sourceModuleId, instantBuild, coords);
-        handler.syncToServer(REQUEST_BUILD_MODULE, packet::toBytes);
+        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
     }
 
     @SideOnly(Side.CLIENT)
     public static boolean sendUpdateAsset(AssetUpdatePacket packet) {
-        StarmapActionSyncHandler handler = activeClientHandler;
-        if (handler == null || !handler.isValid()) return false;
-        handler.syncToServer(REQUEST_UPDATE_ASSET, packet::toBytes);
+        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
     }
 
@@ -151,33 +145,25 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
 
     @SideOnly(Side.CLIENT)
     public static boolean sendModuleUpdate(AssetModuleUpdatePacket packet) {
-        StarmapActionSyncHandler handler = activeClientHandler;
-        if (handler == null || !handler.isValid()) return false;
-        handler.syncToServer(REQUEST_MODULE_UPDATE, packet::toBytes);
+        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
     }
 
     @SideOnly(Side.CLIENT)
     public static boolean sendInventoryUpdate(AssetInventoryUpdatePacket packet) {
-        StarmapActionSyncHandler handler = activeClientHandler;
-        if (handler == null || !handler.isValid()) return false;
-        handler.syncToServer(REQUEST_INVENTORY_UPDATE, packet::toBytes);
+        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
     }
 
     @SideOnly(Side.CLIENT)
     public static boolean sendLogisticsConfig(LogisticsConfigUpdatePacket packet) {
-        StarmapActionSyncHandler handler = activeClientHandler;
-        if (handler == null || !handler.isValid()) return false;
-        handler.syncToServer(REQUEST_LOGISTICS_CONFIG, packet::toBytes);
+        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
     }
 
     @SideOnly(Side.CLIENT)
     public static boolean sendFilterUpdate(AssetFilterUpdatePacket packet) {
-        StarmapActionSyncHandler handler = activeClientHandler;
-        if (handler == null || !handler.isValid()) return false;
-        handler.syncToServer(REQUEST_FILTER_UPDATE, packet::toBytes);
+        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
     }
 

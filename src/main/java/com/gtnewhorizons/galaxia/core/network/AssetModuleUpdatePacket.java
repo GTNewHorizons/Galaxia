@@ -1256,7 +1256,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
             if (!GTTeamsCompat.hasPermission(player, TeamAction.MODIFY_MODULE)) return null;
             UUID teamId = GTTeamsCompat.getTeam(player);
-            return message.apply(teamId);
+            return message.apply(teamId, player.capabilities.isCreativeMode);
         }
     }
 }
