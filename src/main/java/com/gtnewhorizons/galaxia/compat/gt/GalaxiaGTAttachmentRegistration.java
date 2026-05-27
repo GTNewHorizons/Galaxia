@@ -38,7 +38,8 @@ public final class GalaxiaGTAttachmentRegistration {
             stationHatchId,
             "hatch.station_controller",
             "Station Controller Hatch",
-            1);
+            1,
+            false);
         mteHatchAutoStationMaintenance = new MTEHatchStationMaintenance(
             stationAutoHatchId,
             "hatch.station_controller",

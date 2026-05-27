@@ -106,14 +106,14 @@ public class RoomBehavior implements IStationBehaviorWithAttachments {
                     return false;
                 }, GregTechAPI.sBlockMachines, 0))
             .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
-            .withSearchRadius(ConfigStructures.open.searchRadius)
-            .open()
+            .withSearchRadius(ConfigStructures.enclosed.searchRadius)
+            .enclosed()
             .build();
     }
 
     @Override
     public int getSearchRadius() {
-        return ConfigStructures.open.searchRadius;
+        return ConfigStructures.enclosed.searchRadius;
     }
 
     @Override
