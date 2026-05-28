@@ -69,24 +69,17 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         open(assetId, creativeBuildMode);
     }
 
-    static void openBuildPicker(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
-        ModuleTier tier, HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId,
-        boolean creativeBuildMode) {
-        pendingBuildPickerRequest = BuildPickerRequest.create(
-            assetId,
-            kind,
-            shape,
-            tier,
-            hammerVariant,
-            minerFocusTier,
-            settingsGroupId,
-            creativeBuildMode);
+    static void openBuildPicker(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape, ModuleTier tier,
+        HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId, boolean creativeBuildMode) {
+        pendingBuildPickerRequest = BuildPickerRequest
+            .create(assetId, kind, shape, tier, hammerVariant, minerFocusTier, settingsGroupId, creativeBuildMode);
         open(assetId, creativeBuildMode);
     }
 
     static void openCopyBuildPicker(CelestialAsset.ID assetId, int sourceModuleIndex, ModuleInstance.ID sourceModuleId,
         boolean creativeBuildMode) {
-        pendingBuildPickerRequest = BuildPickerRequest.copy(assetId, sourceModuleIndex, sourceModuleId, creativeBuildMode);
+        pendingBuildPickerRequest = BuildPickerRequest
+            .copy(assetId, sourceModuleIndex, sourceModuleId, creativeBuildMode);
         open(assetId, creativeBuildMode);
     }
 

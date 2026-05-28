@@ -28,17 +28,14 @@ final class StationCopyModuleActionModelTest {
     @Test
     void resolveReturnsSelectedModuleIdentity() {
         AutomatedFacility facility = createFacility();
-        ModuleInstance module = FacilityModuleKind.POWER.create(
-            StationTileCoord.of(1, 0),
-            ModuleShape.SINGLE,
-            ModuleTier.HV);
+        ModuleInstance module = FacilityModuleKind.POWER
+            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.HV);
         facility.addModule(module);
         facility.stationLayout()
             .place(module);
 
-        StationCopyModuleActionModel.Source source = StationCopyModuleActionModel.resolve(
-            facility,
-            StationTileCoord.of(1, 0));
+        StationCopyModuleActionModel.Source source = StationCopyModuleActionModel
+            .resolve(facility, StationTileCoord.of(1, 0));
 
         assertNotNull(source);
         assertEquals(0, source.moduleIndex());

@@ -200,8 +200,8 @@ public final class AssetBuildModulePacket implements IMessage {
         ModuleShape buildShape = copySource == null ? shape : copySource.shape();
         ModuleTier buildTier = copySource == null ? tier : copySource.tier();
         HammerVariant buildHammerVariant = copySource == null ? hammerVariant : hammerVariantFor(copySource);
-        MinerFocusTier buildMinerFocusTier = copySource == null ? normalizedMinerFocusTier() : minerFocusTierFor(
-            copySource);
+        MinerFocusTier buildMinerFocusTier = copySource == null ? normalizedMinerFocusTier()
+            : minerFocusTierFor(copySource);
 
         if (buildKind == null || buildShape == null || buildTier == null) {
             return null;
@@ -312,7 +312,11 @@ public final class AssetBuildModulePacket implements IMessage {
                 return true;
             }
             ModuleInstance preview = kind.create(StationTileCoord.CORE, kind.defaultShape(), copySource.tier());
-            if (!applyPhysicalSpec(preview, copySource.tier(), hammerVariantFor(copySource), minerFocusTierFor(copySource))) {
+            if (!applyPhysicalSpec(
+                preview,
+                copySource.tier(),
+                hammerVariantFor(copySource),
+                minerFocusTierFor(copySource))) {
                 return false;
             }
             try {

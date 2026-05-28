@@ -37,8 +37,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -185,8 +185,9 @@ public final class CelestialClient {
     public static boolean copyModule(ID assetId, int sourceModuleIndex, ModuleInstance.ID sourceModuleId,
         boolean creativeBuildModeEnabled, List<StationTileCoord> tileCoords) {
         AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
-        if (state == null || sourceModuleIndex < 0 || sourceModuleIndex >= state.modules()
-            .size()) {
+        if (state == null || sourceModuleIndex < 0
+            || sourceModuleIndex >= state.modules()
+                .size()) {
             return false;
         }
         return StarmapActionSyncHandler

@@ -39,10 +39,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -88,7 +88,9 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private static final float LIST_CARD_HEIGHT_REL = 72f / (PANEL_HEIGHT - HEADER_HEIGHT - PANEL_PADDING * 2);
     private static final float LIST_CARD_WIDTH_REL = (FULL_REL - LIST_COLUMN_GAP_REL * (BUTTON_COLUMNS - 1))
         / BUTTON_COLUMNS;
-    private static final int HEADER_MULTIPLE_X = PANEL_WIDTH - PANEL_PADDING - SPEC_BACK_WIDTH - HEADER_BUTTON_GAP
+    private static final int HEADER_MULTIPLE_X = PANEL_WIDTH - PANEL_PADDING
+        - SPEC_BACK_WIDTH
+        - HEADER_BUTTON_GAP
         - MULTIPLE_TOGGLE_WIDTH;
     private static final int HEADER_BACK_X = PANEL_WIDTH - PANEL_PADDING - SPEC_BACK_WIDTH;
     private static final int HEADER_CONTROL_Y = PANEL_PADDING - 1;
@@ -147,8 +149,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                 .widthRel(HEADER_TITLE_WIDTH_REL)
                 .heightRel(HEADER_TITLE_HEIGHT_REL));
         panel.child(
-            createMultipleToggle()
-                .pos(HEADER_MULTIPLE_X, HEADER_CONTROL_Y)
+            createMultipleToggle().pos(HEADER_MULTIPLE_X, HEADER_CONTROL_Y)
                 .widthRel(HEADER_MULTIPLE_WIDTH_REL)
                 .heightRel(HEADER_CONTROL_HEIGHT_REL));
 
@@ -267,7 +268,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                         pendingSelectedTier = optionTier;
                         normalizeSelectedTier(kind);
                     }).pos(x, y)
-                    .size(SPEC_BUTTON_WIDTH, SPEC_BUTTON_HEIGHT));
+                        .size(SPEC_BUTTON_WIDTH, SPEC_BUTTON_HEIGHT));
             x += SPEC_BUTTON_WIDTH + SPEC_BUTTON_GAP;
         }
 
@@ -285,7 +286,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                             pendingHammerVariant = optionVariant;
                             normalizeSelectedTier(kind);
                         }).pos(x, y)
-                        .size(SPEC_BUTTON_WIDTH, SPEC_BUTTON_HEIGHT));
+                            .size(SPEC_BUTTON_WIDTH, SPEC_BUTTON_HEIGHT));
                 x += SPEC_BUTTON_WIDTH + SPEC_BUTTON_GAP;
             }
             y += SPEC_SECTION_GAP;
@@ -300,7 +301,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                         () -> true,
                         () -> pendingMinerFocusTier == optionTier,
                         () -> pendingMinerFocusTier = optionTier).pos(x, y)
-                        .size(SPEC_BUTTON_WIDTH, SPEC_BUTTON_HEIGHT));
+                            .size(SPEC_BUTTON_WIDTH, SPEC_BUTTON_HEIGHT));
                 x += SPEC_BUTTON_WIDTH + SPEC_BUTTON_GAP;
             }
             y += SPEC_SECTION_GAP;
@@ -316,7 +317,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                     () -> true,
                     () -> pendingSettingsGroupId == option.groupId(),
                     () -> pendingSettingsGroupId = option.groupId()).pos(x, y)
-                    .size(SPEC_BUTTON_WIDTH + 24, SPEC_BUTTON_HEIGHT));
+                        .size(SPEC_BUTTON_WIDTH + 24, SPEC_BUTTON_HEIGHT));
             x += SPEC_BUTTON_WIDTH + 24 + SPEC_BUTTON_GAP;
             if (x + SPEC_BUTTON_WIDTH > PANEL_WIDTH - PANEL_PADDING) {
                 x = SPEC_LEFT;
@@ -371,10 +372,8 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
             return;
         }
         ModuleShape shape = kind.defaultShape();
-        ModuleTier selectedTier = ModuleUpgradeUiModel.normalizeBuildTier(
-            kind,
-            pendingSelectedTier,
-            pendingHammerVariant);
+        ModuleTier selectedTier = ModuleUpgradeUiModel
+            .normalizeBuildTier(kind, pendingSelectedTier, pendingHammerVariant);
         boolean needsBuildPicker = pendingMultipleBuild || shape != ModuleShape.SINGLE;
         if (needsBuildPicker) {
             StationManagementScreen.openBuildPicker(
@@ -663,15 +662,16 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
 
         @Override
         public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
-            ModuleTier selectedTier = ModuleUpgradeUiModel.normalizeBuildTier(
-                kind,
-                pendingSelectedTier,
-                pendingHammerVariant);
+            ModuleTier selectedTier = ModuleUpgradeUiModel
+                .normalizeBuildTier(kind, pendingSelectedTier, pendingHammerVariant);
             int y = SPEC_TOP;
-            y = drawSpecLine("Configure " + kind.getDisplayName(), SPEC_LEFT, y, EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
             y = drawSpecLine(
-                "Target: " + selectedTier
-                    + physicalSuffix(kind),
+                "Configure " + kind.getDisplayName(),
+                SPEC_LEFT,
+                y,
+                EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
+            y = drawSpecLine(
+                "Target: " + selectedTier + physicalSuffix(kind),
                 SPEC_LEFT,
                 y,
                 EnumColors.MAP_COLOR_TEXT_BODY.getColor());

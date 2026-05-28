@@ -315,12 +315,8 @@ final class StarmapServerActionsTest {
         facility.addModule(source);
         facility.setMinerOreBlacklisted(source, "ore:iron", true);
 
-        AssetBuildModulePacket packet = AssetBuildModulePacket.copyFromModule(
-            facility.assetId,
-            0,
-            source.id,
-            true,
-            List.of(StationTileCoord.of(1, 0)));
+        AssetBuildModulePacket packet = AssetBuildModulePacket
+            .copyFromModule(facility.assetId, 0, source.id, true, List.of(StationTileCoord.of(1, 0)));
 
         AssetSyncPacket result = packet.apply(TEAM, true);
 
