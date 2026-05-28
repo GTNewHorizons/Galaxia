@@ -78,6 +78,13 @@ public enum GalaxiaBlocksEnum {
     RESEARCH_OUTPOST_CASING(new BlockConfigurable("machine/research_outpost_casing")),
     LAUNCHPAD_CASING(new BlockConfigurable("machine/launchpad")),
 
+    // MISC - PLANET DECORATION BLOCKS
+    MOON_ANDESITE_BRICK(new BlockConfigurable("moon/decoration/moon_andesite_bricks")),
+    MOON_BASALT_BRICK(new BlockConfigurable("moon/decoration/moon_basalt_bricks")),
+    MOON_TEKTITE_BRICK(new BlockConfigurable("moon/decoration/moon_tektite_bricks")),
+    MOON_BRECCIA_BRICK(new BlockConfigurable("moon/decoration/moon_breccia_bricks")),
+    MOON_GABBRO_BRICKS(new BlockConfigurable("moon/decoration/moon_gabbro_bricks")),
+
     // MISC - MULTIBLOCK BLOCKS
     RUSTY_SCAFFOLDING(new BlockCasing("rusty_scaffolding").transparent()),
     RUSTY_PANEL(new BlockCasing("rusty_panel")),
