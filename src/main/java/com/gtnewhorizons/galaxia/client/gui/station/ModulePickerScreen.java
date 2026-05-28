@@ -57,8 +57,6 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private static final int PANEL_HEIGHT = 430;
     private static final int HEADER_HEIGHT = 24;
     private static final int PANEL_PADDING = 8;
-    private static final int BUTTON_HEIGHT = 72;
-    private static final int BUTTON_GAP = 5;
     private static final int BUTTON_COLUMNS = 3;
     private static final int BUTTON_TEXT_PADDING = 7;
     private static final int TEXT_BASELINE_OFFSET = 1;
@@ -75,6 +73,32 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private static final int SPEC_BACK_WIDTH = 58;
     private static final int SPEC_BUILD_WIDTH = 72;
     private static final int HEADER_BUTTON_GAP = 8;
+    private static final float FULL_REL = 1f;
+    private static final float PANEL_PADDING_X_REL = (float) PANEL_PADDING / PANEL_WIDTH;
+    private static final float PANEL_PADDING_Y_REL = (float) PANEL_PADDING / PANEL_HEIGHT;
+    private static final float HEADER_CONTROL_HEIGHT_REL = (float) MULTIPLE_TOGGLE_HEIGHT / PANEL_HEIGHT;
+    private static final float HEADER_TITLE_WIDTH_REL = 0.45f;
+    private static final float HEADER_TITLE_HEIGHT_REL = HEADER_CONTROL_HEIGHT_REL;
+    private static final float HEADER_BACK_WIDTH_REL = (float) SPEC_BACK_WIDTH / PANEL_WIDTH;
+    private static final float HEADER_MULTIPLE_WIDTH_REL = (float) MULTIPLE_TOGGLE_WIDTH / PANEL_WIDTH;
+    private static final float LIST_TOP_REL = (float) (HEADER_HEIGHT + PANEL_PADDING) / PANEL_HEIGHT;
+    private static final float LIST_HEIGHT_REL = FULL_REL - LIST_TOP_REL - PANEL_PADDING_Y_REL;
+    private static final float LIST_COLUMN_GAP_REL = 5f / (PANEL_WIDTH - PANEL_PADDING * 2);
+    private static final float LIST_ROW_GAP_REL = 5f / (PANEL_HEIGHT - HEADER_HEIGHT - PANEL_PADDING * 2);
+    private static final float LIST_CARD_HEIGHT_REL = 72f / (PANEL_HEIGHT - HEADER_HEIGHT - PANEL_PADDING * 2);
+    private static final float LIST_CARD_WIDTH_REL = (FULL_REL - LIST_COLUMN_GAP_REL * (BUTTON_COLUMNS - 1))
+        / BUTTON_COLUMNS;
+    private static final int HEADER_MULTIPLE_X = PANEL_WIDTH - PANEL_PADDING - SPEC_BACK_WIDTH - HEADER_BUTTON_GAP
+        - MULTIPLE_TOGGLE_WIDTH;
+    private static final int HEADER_BACK_X = PANEL_WIDTH - PANEL_PADDING - SPEC_BACK_WIDTH;
+    private static final int HEADER_CONTROL_Y = PANEL_PADDING - 1;
+    private static final int LIST_X = PANEL_PADDING;
+    private static final int LIST_Y = HEADER_HEIGHT + PANEL_PADDING;
+    private static final int LIST_WIDTH = PANEL_WIDTH - PANEL_PADDING * 2;
+    private static final int LIST_COLUMN_GAP = 5;
+    private static final int LIST_ROW_GAP = 5;
+    private static final int LIST_CARD_WIDTH = (LIST_WIDTH - LIST_COLUMN_GAP * (BUTTON_COLUMNS - 1)) / BUTTON_COLUMNS;
+    private static final int LIST_CARD_HEIGHT = 72;
 
     private static volatile @Nullable CelestialAsset.ID pendingAssetId;
     private static volatile @Nullable StationTileCoord pendingCoord;
@@ -107,7 +131,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         syncManager.syncValue(StarmapActionSyncHandler.KEY, new StarmapActionSyncHandler());
         ModularPanel panel = ModularPanel.defaultPanel("galaxia_station_module_picker", PANEL_WIDTH, PANEL_HEIGHT);
         ParentWidget<?> backgroundLayer = new PassiveBackgroundLayer().pos(0, 0)
-            .size(PANEL_WIDTH, PANEL_HEIGHT)
+            .sizeRel(FULL_REL, FULL_REL)
             .background(drawable((ctx, x, y, w, h) -> {
                 net.minecraft.client.gui.Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_MODAL_BG.getColor());
                 net.minecraft.client.gui.Gui
@@ -119,20 +143,23 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         panel.child(
             new TextWidget<>(IKey.str("Build module")).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                 .shadow(true)
-                .pos(PANEL_PADDING, PANEL_PADDING));
+                .pos(PANEL_PADDING, PANEL_PADDING)
+                .widthRel(HEADER_TITLE_WIDTH_REL)
+                .heightRel(HEADER_TITLE_HEIGHT_REL));
         panel.child(
             createMultipleToggle()
-                .pos(
-                    PANEL_WIDTH - PANEL_PADDING - SPEC_BACK_WIDTH - HEADER_BUTTON_GAP - MULTIPLE_TOGGLE_WIDTH,
-                    PANEL_PADDING - 1)
-                .size(MULTIPLE_TOGGLE_WIDTH, MULTIPLE_TOGGLE_HEIGHT));
+                .pos(HEADER_MULTIPLE_X, HEADER_CONTROL_Y)
+                .widthRel(HEADER_MULTIPLE_WIDTH_REL)
+                .heightRel(HEADER_CONTROL_HEIGHT_REL));
 
         AutomatedFacility facility = resolveFacility();
         if (facility == null || pendingCoord == null) {
             panel.child(
                 new TextWidget<>(IKey.str("No station selected")).color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
                     .shadow(true)
-                    .pos(PANEL_PADDING, HEADER_HEIGHT + 14));
+                    .pos(PANEL_PADDING, HEADER_HEIGHT + 14)
+                    .widthRel(0.5f)
+                    .heightRel(HEADER_TITLE_HEIGHT_REL));
             return panel;
         }
 
@@ -141,29 +168,38 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
             return panel;
         }
 
-        int buttonWidth = (PANEL_WIDTH - PANEL_PADDING * 2 - BUTTON_GAP * (BUTTON_COLUMNS - 1)) / BUTTON_COLUMNS;
-        int x = PANEL_PADDING;
-        int y = HEADER_HEIGHT + PANEL_PADDING;
         int column = 0;
+        int row = 0;
+        ParentWidget<?> buildListLayer = new ParentWidget<>().pos(LIST_X, LIST_Y)
+            .widthRel(FULL_REL - PANEL_PADDING_X_REL * 2)
+            .heightRel(LIST_HEIGHT_REL);
         for (FacilityModuleKind kind : FacilityModuleKind.values()) {
             if (!kind.isAllowedOn(facility.kind)) continue;
-            panel.child(
-                createKindButton(kind).pos(x, y)
-                    .size(buttonWidth, BUTTON_HEIGHT));
+            buildListLayer.child(
+                createKindButton(kind).pos(listCardX(column), listCardY(row))
+                    .widthRel(LIST_CARD_WIDTH_REL)
+                    .heightRel(LIST_CARD_HEIGHT_REL));
             column++;
             if (column >= BUTTON_COLUMNS) {
                 column = 0;
-                x = PANEL_PADDING;
-                y += BUTTON_HEIGHT + BUTTON_GAP;
-            } else {
-                x += buttonWidth + BUTTON_GAP;
+                row++;
             }
         }
+        panel.child(buildListLayer);
         panel.child(
             ModuleConfigModalSupport.button(() -> pendingAssetId != null, "Back", this::backToMap)
-                .pos(PANEL_WIDTH - PANEL_PADDING - SPEC_BACK_WIDTH, PANEL_PADDING - 1)
-                .size(SPEC_BACK_WIDTH, MULTIPLE_TOGGLE_HEIGHT));
+                .pos(HEADER_BACK_X, HEADER_CONTROL_Y)
+                .widthRel(HEADER_BACK_WIDTH_REL)
+                .heightRel(HEADER_CONTROL_HEIGHT_REL));
         return panel;
+    }
+
+    private static int listCardX(int column) {
+        return column * (LIST_CARD_WIDTH + LIST_COLUMN_GAP);
+    }
+
+    private static int listCardY(int row) {
+        return row * (LIST_CARD_HEIGHT + LIST_ROW_GAP);
     }
 
     private static @Nullable AutomatedFacility resolveFacility() {
