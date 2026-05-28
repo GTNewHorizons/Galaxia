@@ -220,7 +220,7 @@ public interface IDistributedInventory {
         return extracted;
     }
 
-    default long updateFluids(FluidKey fluid, int delta) {
+    default long updateFluids(FluidKey fluid, long delta) {
         if (fluid == null || delta == 0) return 0L;
         if (!getFluidFilter().test(fluid)) return 0L;
         return delta > 0 ? insertFluids(fluid, delta) : extractFluids(fluid, extractionTarget(delta));

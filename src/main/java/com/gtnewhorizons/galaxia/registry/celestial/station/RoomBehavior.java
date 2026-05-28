@@ -62,13 +62,13 @@ public class RoomBehavior implements IStationBehaviorWithAttachments {
                     GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
                     0,
                     MTEStationPlug.ID,
-                    (room, x, y, z) -> room.addStationPlug(x, y, z)))
+                    TileStationBase::addStationPlug))
             .addElement(
                 GalaxiaStructureUtility.<TileStation>stationHatchAdder(
                     GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
                     0,
                     MTEStationPlugMulti.ID,
-                    (room, x, y, z) -> room.addStationPlug(x, y, z)))
+                    TileStationBase::addStationPlug))
             .addElement(
                 GalaxiaStructureUtility.<TileStation>ofBlockPosAdderNoMetaForceCheck(
                     TileStation::addCoolingCoil,

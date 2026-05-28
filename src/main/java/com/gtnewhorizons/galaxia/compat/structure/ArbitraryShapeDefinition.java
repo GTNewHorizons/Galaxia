@@ -1,7 +1,9 @@
 package com.gtnewhorizons.galaxia.compat.structure;
 
 import java.security.InvalidParameterException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -66,7 +68,7 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
     // element.check() is called exactly once per full validation — never during
     // fastRevalidate — so side-effects (e.g. attachment registration) fire
     // predictably and without duplication.
-    private final Map<Block, IStructureElement<T>> interiorElements;
+    private final Map<Block, List<IStructureElement<T>>> interiorElements;
 
     // ── Temporary bitsets — sized to searchRadius, cleared after every check ─
     private DenseBitSet floodVisited;
@@ -101,7 +103,7 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
 
     @SuppressWarnings("unchecked")
     private ArbitraryShapeDefinition(Map<Block, IStructureElement<T>> structureElements,
-        Map<Block, IStructureElement<T>> interiorElements, int searchRadius, boolean enclosed) {
+        Map<Block, List<IStructureElement<T>>> interiorElements, int searchRadius, boolean enclosed) {
 
         if (searchRadius > LocalCoord.MAX_SEARCH_RADIUS) {
             throw new IllegalArgumentException("Search radius too large: " + searchRadius);
@@ -380,9 +382,13 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
                     if (structureBlocks != null && structureBlocks.containsChecked(lx, ly, lz)) continue;
                     if (enclosed && !isInsideStructure(te.xCoord, te.yCoord, te.zCoord)) continue;
 
-                    IStructureElement<T> el = interiorElements.get(world.getBlock(te.xCoord, te.yCoord, te.zCoord));
-                    if (el != null && el.check(tile, world, te.xCoord, te.yCoord, te.zCoord)) {
-                        interiorBlocks.add(lx, ly, lz);
+                    List<IStructureElement<T>> els = interiorElements
+                        .get(world.getBlock(te.xCoord, te.yCoord, te.zCoord));
+                    for (var el : els) {
+                        if (el != null && el.check(tile, world, te.xCoord, te.yCoord, te.zCoord)) {
+                            interiorBlocks.add(lx, ly, lz);
+                            break;
+                        }
                     }
                 }
             }
@@ -714,7 +720,7 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
     public static class Builder<T extends GalaxiaMultiblockBase<T>> {
 
         private final Map<Block, IStructureElement<T>> elements = new HashMap<>();
-        private final Map<Block, IStructureElement<T>> interiorElements = new HashMap<>();
+        private final Map<Block, List<IStructureElement<T>>> interiorElements = new HashMap<>();
         private int searchRadius = LocalCoord.SEARCH_RADIUS;
         private int enclosed = -1;
 
@@ -766,12 +772,8 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
         // block types.
 
         public Builder<T> addInteriorElement(IExtendedStructureElement<T> element) {
-            interiorElements.put(element.getValidBlock(), element);
-            return this;
-        }
-
-        public Builder<T> addInteriorElements(Stream<IExtendedStructureElement<T>> elements) {
-            elements.forEach(e -> interiorElements.put(e.getValidBlock(), e));
+            interiorElements.computeIfAbsent(element.getValidBlock(), e -> new ArrayList<>())
+                .add(element);
             return this;
         }
 
