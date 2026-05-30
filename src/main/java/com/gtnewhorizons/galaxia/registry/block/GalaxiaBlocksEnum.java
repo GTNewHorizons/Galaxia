@@ -80,14 +80,14 @@ public enum GalaxiaBlocksEnum {
 
     // MISC - PLANET DECORATION BLOCKS
     MOON_ANDESITE_BRICK(new BlockConfigurable("moon/decoration/moon_andesite_bricks")),
-    MOON_BASALT_BRICK(new BlockConfigurable("moon/decoration/moon_basalt_bricks")),
-    MOON_TEKTITE_BRICK(new BlockConfigurable("moon/decoration/moon_tektite_bricks")),
-    MOON_BRECCIA_BRICK(new BlockConfigurable("moon/decoration/moon_breccia_bricks")),
-    MOON_GABBRO_BRICKS(new BlockConfigurable("moon/decoration/moon_gabbro_bricks")),
     MOON_ANDESITE_SMOOTH(new BlockConfigurable("moon/decoration/moon_andesite_smooth")),
+    MOON_BASALT_BRICK(new BlockConfigurable("moon/decoration/moon_basalt_bricks")),
     MOON_BASALT_SMOOTH(new BlockConfigurable("moon/decoration/moon_basalt_smooth")),
+    MOON_TEKTITE_BRICK(new BlockConfigurable("moon/decoration/moon_tektite_bricks")),
     MOON_TEKTITE_SMOOTH(new BlockConfigurable("moon/decoration/moon_tektite_smooth")),
+    MOON_BRECCIA_BRICK(new BlockConfigurable("moon/decoration/moon_breccia_bricks")),
     MOON_BRECCIA_SMOOTH(new BlockConfigurable("moon/decoration/moon_breccia_smooth")),
+    MOON_GABBRO_BRICKS(new BlockConfigurable("moon/decoration/moon_gabbro_bricks")),
     MOON_GABBRO_SMOOTH(new BlockConfigurable("moon/decoration/moon_gabbro_smooth")),
 
     // MISC - MULTIBLOCK BLOCKS
