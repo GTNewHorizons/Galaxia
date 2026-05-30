@@ -54,14 +54,24 @@ tile.moon_tektite.name=Moon Tektite
 # Blocks - "Moon Decoration"
 tile.moon_andesite_bricks.name=Moon Andesite Bricks
 tile.moon_andesite_smooth.name=Smooth Moon Andesite
+tile.moon_andesite_tiles.name=Moon Andesite Tiles
+tile.moon_andesite_small_bricks.name=Moon Andesite Small Bricks
 tile.moon_basalt_bricks.name=Moon Basalt Bricks
 tile.moon_basalt_smooth.name=Smooth Moon Basalt
+tile.moon_basalt_tiles.name=Moon Basalt Tiles
+tile.moon_basalt_small_bricks.name=Moon Basalt Small Bricks
 tile.moon_tektite_bricks.name=Moon Tektite Bricks
 tile.moon_tektite_smooth.name=Smooth Moon Tektite
+tile.moon_tektite_tiles.name=Moon Tektite Tiles
+tile.moon_tektite_small_bricks.name=Moon Tektite Small Bricks
 tile.moon_breccia_bricks.name=Moon Breccia Bricks
 tile.moon_breccia_smooth.name=Smooth Moon Breccia
+tile.moon_breccia_tiles.name=Moon Breccia Tiles
+tile.moon_breccia_small_bricks.name=Moon Breccia Small Bricks
 tile.moon_gabbro_bricks.name=Moon Gabbro Bricks
 tile.moon_gabbro_smooth.name=Smooth Moon Gabbro
+tile.moon_gabbro_tiles.name=Moon Gabbro Tiles
+tile.moon_gabbro_small_bricks.name=Moon Gabbro Small Bricks
 
 # Blocks - "Mars"
 tile.mars_andesite.name=Mars Andesite
