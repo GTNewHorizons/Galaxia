@@ -1,11 +1,12 @@
 package com.gtnewhorizons.galaxia.registry.dimension.builder;
 
+import java.util.function.BiFunction;
+
+import net.minecraft.entity.player.EntityPlayer;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import net.minecraft.entity.player.EntityPlayer;
-
-import java.util.function.BiFunction;
 
 /**
  * class to get a list of effects on each planet as required
