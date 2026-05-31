@@ -25,7 +25,6 @@ public class TetherRenderer {
         if (!data.tetherActive) return;
         if (player.worldObj.provider.dimensionId != data.anchorDim) return;
 
-        // Интерполяция позиции игрока
         double px = player.prevPosX + (player.posX - player.prevPosX) * event.partialTicks;
         double py = player.prevPosY + (player.posY - player.prevPosY) * event.partialTicks;
         double pz = player.prevPosZ + (player.posZ - player.prevPosZ) * event.partialTicks;
