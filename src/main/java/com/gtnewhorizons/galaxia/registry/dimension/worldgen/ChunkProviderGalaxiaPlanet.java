@@ -195,7 +195,6 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 }
                 if (showDebug) assignmentTime += System.nanoTime() - assignmentTimeStart;
                 int height = Math.max(1, (int) heightMap[localX + (localZ << 4)]);
-                Block replacementBlock = surfaceReplacementMap[localX + (localZ << 4)];
                 if (caveShape != null) {
                     if (!caveShape.preparedCaveShape()) {
                         caveShape.prepareCaveShape(rand);
@@ -205,82 +204,21 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     }
                 }
                 for (int y = 0; y < Math.max(oceanHeight, height); y++) {
-                    long blockStorageStart = 0;
-                    if (showDebug) blockStorageStart = System.nanoTime();
                     int sy = y >> 4;
                     if (storage[sy] == null) {
                         storage[sy] = new ExtendedBlockStorage(sy << 4, !worldObj.provider.hasNoSky);
                     }
-                    if (showDebug) blockStorageTime += System.nanoTime() - blockStorageStart;
                     Block currentFiller = fillerBlocks.getStrataBlock(y);
                     Block block;
                     if (y >= height - surfaceDepth) {
                         block = topBlock;
-                        if (replacementBlock != null) {
-                            block = replacementBlock;
-                            storage[sy].func_150818_a(localX, y & 15, localZ, block);
-                            continue;
-                        }
                     } else {
                         block = currentFiller;
                     }
-                    if (block == topBlock && y >= snowHeight) {
-                        block = snowBlock;
-                    }
-                    long oceanTimeStart = 0;
-                    if (showDebug) oceanTimeStart = System.nanoTime();
-                    if (y <= oceanHeight) {
-                        if (y > height - 1) {
-                            if (y == oceanHeight - 2 && oceanHeight - height >= 2) {
-                                block = getOceanSurfaceBlock(
-                                    oceanFiller,
-                                    oceanCrackBlock,
-                                    oceanCrackThickness,
-                                    oceanCrackComplexity,
-                                    chunkX * CHUNK_WIDTH + localX,
-                                    chunkZ * CHUNK_WIDTH + localZ);
-                            } else if (y == oceanHeight - 1 && oceanHeight - height >= 2) {
-                                block = getOceanSurfaceBlock(
-                                    oceanFiller,
-                                    oceanCrackBlock,
-                                    oceanCrackThickness,
-                                    oceanCrackComplexity,
-                                    chunkX * CHUNK_WIDTH + localX,
-                                    chunkZ * CHUNK_WIDTH + localZ);
-                                if (block != oceanFiller) {
-                                    block = Blocks.air;
-                                }
-                            } else {
-                                block = oceanFiller;
-                            }
-                        } else if (y == height - 1) {
-                            if (y > seabedHeight) {
-                                block = oceanSurface;
-                            } else {
-                                block = seabed;
-                            }
-                        }
-                    }
-                    long oceanTimeFinish = 0;
-                    if (showDebug) {
-                        oceanTimeFinish = System.nanoTime();
-                        oceanTime += oceanTimeFinish - oceanTimeStart;
-                    }
-                    Block strataBlock = fillerBlocks.getStrataBlock(y);
-                    if (strataBlock != Blocks.bedrock && caveShape != null
-                        && (block == strataBlock || block == topBlock || block == snowBlock)
-                        && caveShape.generateCave(localX, y, localZ, height)) {
-                        block = Blocks.air;
-                    }
-                    long caveGenerationTime = 0;
-                    if (showDebug) {
-                        caveGenerationTime = System.nanoTime();
-                        caveTime += caveGenerationTime - oceanTimeFinish;
-                    }
+                    block = getSpecialBlock(chunkX, chunkZ, block, topBlock, y, snowHeight, snowBlock, oceanHeight, height, oceanFiller, oceanCrackBlock, oceanCrackThickness, oceanCrackComplexity, localX, localZ, seabedHeight, oceanSurface, seabed, currentFiller, caveShape);
                     if (block != null) {
                         storage[sy].func_150818_a(localX, y & 15, localZ, block);
                     }
-                    if (showDebug) placementTime += System.nanoTime() - caveGenerationTime;
                 }
             }
         }
@@ -305,6 +243,55 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             System.out.println("-------- END CHUNK GENERATION --------");
         }
         return chunk;
+    }
+
+    private Block getSpecialBlock(int chunkX, int chunkZ, Block block, Block topBlock, int y, int snowHeight, Block snowBlock, int oceanHeight, int height, Block oceanFiller, Block oceanCrackBlock, float oceanCrackThickness, int oceanCrackComplexity, int localX, int localZ, int seabedHeight, Block oceanSurface, Block seabed, Block currentFiller, CaveShape caveShape) {
+        if (currentFiller == Blocks.bedrock) {
+            return currentFiller;
+        }
+        Block replacementBlock = surfaceReplacementMap[localX + (localZ << 4)];
+        if (replacementBlock != null) {
+            return replacementBlock;
+        }
+        if (block == topBlock && y >= snowHeight) {
+            block = snowBlock;
+        }
+        if (y <= oceanHeight) {
+            if (y > height - 1) {
+                if (y == oceanHeight - 2 && oceanHeight - height >= 2) {
+                    block = getOceanSurfaceBlock(
+                        oceanFiller,
+                        oceanCrackBlock,
+                        oceanCrackThickness,
+                        oceanCrackComplexity,
+                        chunkX * CHUNK_WIDTH + localX,
+                        chunkZ * CHUNK_WIDTH + localZ);
+                } else if (y == oceanHeight - 1 && oceanHeight - height >= 2) {
+                    block = getOceanSurfaceBlock(
+                        oceanFiller,
+                        oceanCrackBlock,
+                        oceanCrackThickness,
+                        oceanCrackComplexity,
+                        chunkX * CHUNK_WIDTH + localX,
+                        chunkZ * CHUNK_WIDTH + localZ);
+                    if (block != oceanFiller) {
+                        block = Blocks.air;
+                    }
+                } else {
+                    block = oceanFiller;
+                }
+            } else if (y == height - 1) {
+                if (y > seabedHeight) {
+                    block = oceanSurface;
+                } else {
+                    block = seabed;
+                }
+            }
+        }
+        if (caveShape != null && (block == currentFiller || block == topBlock || block == snowBlock) && caveShape.generateCave(localX, y, localZ, height)) {
+            block = Blocks.air;
+        }
+        return block;
     }
 
     void computeChunkData(int cx, int cz, double[] outHeightMap, Block[] outSurfaceBlocks, BiomeGenBase[] outBiomes) {
