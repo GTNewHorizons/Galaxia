@@ -67,16 +67,16 @@ public enum GalaxiaItemList {
     OXYGEN_TANK_T1("gear/oxygen_tank_1", () -> new ItemOxygenTank(1000), 1),
     OXYGEN_TANK_T2("gear/oxygen_tank_2", () -> new ItemOxygenTank(4000), 1),
     OXYGEN_TANK_T3("gear/oxygen_tank_3", () -> new ItemOxygenTank(16000), 1),
-    OXYGEN_TANK_T4("gear/oxygen_tank_4", () -> new ItemOxygenTank(Integer.MAX_VALUE), 1),
+    OXYGEN_TANK_INFINITE("gear/oxygen_tank_4", () -> new ItemOxygenTank(Integer.MAX_VALUE), 1),
     THERMAL_PROTECTION_COLD("gear/thermal_protection_cold", () -> new ItemThermalProtection(0, 100), 1),
     THERMAL_PROTECTION_HOT("gear/thermal_protection_hot", () -> new ItemThermalProtection(100, 0), 1),
-    OXYGEN_MASK("gear/oxygen_mask", () -> new ItemOxygenMask(), 1),
-    SPORE_FILTER("gear/spore_filter", () -> new ItemSporeFilter(), 1),
+    OXYGEN_MASK("gear/oxygen_mask", ItemOxygenMask::new, 1),
+    SPORE_FILTER("gear/spore_filter", ItemSporeFilter::new, 1),
     PRESSURE_PROTECTION_HIGH("gear/protection_shield_pressure_high", () -> new ItemProtectionShield(4, 0, 0), 1),
     PRESSURE_PROTECTION_LOW("gear/protection_shield_pressure_low", () -> new ItemProtectionShield(0, 1, 0), 1),
     RADIATION_PROTECTION("gear/protection_shield_radiation", () -> new ItemProtectionShield(0, 0, 10), 1),
-    WITHER_PROTECTION("gear/wither_protection", () -> new ItemWitherProtection(), 1),
-    REACTION_CONTROL_SYSTEM_T1("gear/reaction_control_system", () -> new ItemReactionControlSystem(), 1),
+    WITHER_PROTECTION("gear/wither_protection", ItemWitherProtection::new, 1),
+    REACTION_CONTROL_SYSTEM_T1("gear/reaction_control_system", ItemReactionControlSystem::new, 1),
 
     ; // leave trailing semicolon
 
@@ -85,10 +85,6 @@ public enum GalaxiaItemList {
     private final Supplier<Item> itemFactory;
     private Item itemInstance;
     private final String texturePath;
-    /**
-     * NOT AN ENUM VALE, USED FOR PLANET BLOCK REGISTRATION
-     */
-    public static final GalaxiaItemList DROP_SELF = null;
 
     /**
      * Constructor to initialize factory and registry
@@ -117,7 +113,7 @@ public enum GalaxiaItemList {
     }
 
     /**
-     * Constructor to initalize the registry using default item factory and stack
+     * Constructor to initialize the registry using default item factory and stack
      * size of 64
      *
      * @param registryName Name of the registry
@@ -156,14 +152,5 @@ public enum GalaxiaItemList {
      */
     public Item getItem() {
         return itemInstance;
-    }
-
-    /**
-     * Gets the registry name
-     *
-     * @return Registry name
-     */
-    public String getRegistryName() {
-        return registryName;
     }
 }

@@ -83,6 +83,41 @@ public enum GalaxiaBlocksEnum {
     RESEARCH_OUTPOST_CASING(new BlockConfigurable("machine/research_outpost_casing")),
     LAUNCHPAD_CASING(new BlockConfigurable("machine/launchpad")),
 
+    // MISC - PLANET DECORATION BLOCKS
+
+    // -- MOON --
+    MOON_ANDESITE_BRICK(new BlockConfigurable("moon/decoration/moon_andesite_bricks")),
+    MOON_ANDESITE_SMOOTH(new BlockConfigurable("moon/decoration/moon_andesite_smooth")),
+    MOON_ANDESITE_TILES(new BlockConfigurable("moon/decoration/moon_andesite_tiles")),
+    MOON_ANDESITE_SMALL_BRICK(new BlockConfigurable("moon/decoration/moon_andesite_small_bricks")),
+    MOON_ANDESITE_FANCY_BRICKS(new BlockConfigurable("moon/decoration/moon_andesite_fancy_bricks")),
+    MOON_BASALT_BRICK(new BlockConfigurable("moon/decoration/moon_basalt_bricks")),
+    MOON_BASALT_SMOOTH(new BlockConfigurable("moon/decoration/moon_basalt_smooth")),
+    MOON_BASALT_TILES(new BlockConfigurable("moon/decoration/moon_basalt_tiles")),
+    MOON_BASALT_SMALL_BRICK(new BlockConfigurable("moon/decoration/moon_basalt_small_bricks")),
+    MOON_BASALT_FANCY_BRICKS(new BlockConfigurable("moon/decoration/moon_basalt_fancy_bricks")),
+    MOON_TEKTITE_BRICK(new BlockConfigurable("moon/decoration/moon_tektite_bricks")),
+    MOON_TEKTITE_SMOOTH(new BlockConfigurable("moon/decoration/moon_tektite_smooth")),
+    MOON_TEKTITE_TILES(new BlockConfigurable("moon/decoration/moon_tektite_tiles")),
+    MOON_TEKTITE_SMALL_BRICK(new BlockConfigurable("moon/decoration/moon_tektite_small_bricks")),
+    MOON_TEKTITE_FANCY_BRICKS(new BlockConfigurable("moon/decoration/moon_tektite_fancy_bricks")),
+    MOON_BRECCIA_BRICK(new BlockConfigurable("moon/decoration/moon_breccia_bricks")),
+    MOON_BRECCIA_SMOOTH(new BlockConfigurable("moon/decoration/moon_breccia_smooth")),
+    MOON_BRECCIA_TILES(new BlockConfigurable("moon/decoration/moon_breccia_tiles")),
+    MOON_BRECCIA_SMALL_BRICK(new BlockConfigurable("moon/decoration/moon_breccia_small_bricks")),
+    MOON_BRECCIA_FANCY_BRICKS(new BlockConfigurable("moon/decoration/moon_breccia_fancy_bricks")),
+    MOON_GABBRO_BRICKS(new BlockConfigurable("moon/decoration/moon_gabbro_bricks")),
+    MOON_GABBRO_SMOOTH(new BlockConfigurable("moon/decoration/moon_gabbro_smooth")),
+    MOON_GABBRO_TILES(new BlockConfigurable("moon/decoration/moon_gabbro_tiles")),
+    MOON_GABBRO_SMALL_BRICK(new BlockConfigurable("moon/decoration/moon_gabbro_small_bricks")),
+    MOON_GABBRO_FANCY_BRICKS(new BlockConfigurable("moon/decoration/moon_gabbro_fancy_bricks")),
+    MOON_ANORTHOSITE_BRICKS(new BlockConfigurable("moon/decoration/moon_anorthosite_bricks")),
+    MOON_ANORTHOSITE_SMOOTH(new BlockConfigurable("moon/decoration/moon_anorthosite_smooth")),
+    MOON_ANORTHOSITE_TILES(new BlockConfigurable("moon/decoration/moon_anorthosite_tiles")),
+    MOON_ANORTHOSITE_SMALL_BRICK(new BlockConfigurable("moon/decoration/moon_anorthosite_small_bricks")),
+    MOON_ANORTHOSITE_FANCY_BRICKS(new BlockConfigurable("moon/decoration/moon_anorthosite_fancy_bricks")),
+
+
     // MISC - MULTIBLOCK BLOCKS
     RUSTY_SCAFFOLDING(new BlockCasing("rusty_scaffolding").transparent()),
     RUSTY_PANEL(new BlockCasing("rusty_panel")),
