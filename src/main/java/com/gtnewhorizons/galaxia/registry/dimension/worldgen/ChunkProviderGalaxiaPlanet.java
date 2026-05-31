@@ -266,8 +266,9 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                         oceanTimeFinish = System.nanoTime();
                         oceanTime += oceanTimeFinish - oceanTimeStart;
                     }
-                    if (y > 0 && caveShape != null
-                        && (block == fillerBlocks.getStrataBlock(y) || block == topBlock || block == snowBlock)
+                    Block strataBlock = fillerBlocks.getStrataBlock(y);
+                    if (strataBlock != Blocks.bedrock && caveShape != null
+                        && (block == strataBlock || block == topBlock || block == snowBlock)
                         && caveShape.generateCave(localX, y, localZ, height)) {
                         block = Blocks.air;
                     }
