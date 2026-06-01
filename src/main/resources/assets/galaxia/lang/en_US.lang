@@ -181,6 +181,8 @@ tile.gantry_block.name=Gantry Shaft
 tile.hammer_cannon.name=Hammer Cannon
 tile.gantry_terminal.name=Gantry Terminal
 tile.rocket_trophy.name=Rocket Trophy
+tile.oxygen_collector.name=Oxygen Collector
+tile.oxygen_filler.name=Oxygen Filler
 
 #### Items
 item.galaxia.galaxia_logo.name=Galaxia
