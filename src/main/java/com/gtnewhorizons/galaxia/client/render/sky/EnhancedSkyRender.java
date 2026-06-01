@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.client.render.sky;
 
-import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
-
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
