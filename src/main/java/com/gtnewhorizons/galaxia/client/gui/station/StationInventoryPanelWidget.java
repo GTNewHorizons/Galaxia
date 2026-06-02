@@ -69,7 +69,8 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private static final int UPKEEP_AUTO_ORDER_WIDTH = 18;
     private static final int AMOUNT_INPUT_X = MODE_BUTTON_X - CONTROL_GAP - AMOUNT_INPUT_WIDTH;
     private static final int BOUNDS_X = AMOUNT_INPUT_X - CONTROL_GAP - BOUNDS_WIDTH;
-    private static final int INVENTORY_UPKEEP_X = BOUNDS_X - CONTROL_GAP - 34;
+    private static final int INVENTORY_AMOUNT_X = BOUNDS_X - CONTROL_GAP - 34;
+    private static final int INVENTORY_UPKEEP_X = AMOUNT_X;
     private static final int UPKEEP_USE_X = AMOUNT_X;
     private static final int UPKEEP_STOCK_X = 212;
     private static final int UPKEEP_RESERVE_INPUT_X = 250;
@@ -315,18 +316,25 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             NAME_X + SCROLL_X,
             PANEL_Y + 32,
             EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-        ModuleConfigModalSupport.drawLine(
-            resourceMode == ResourceMode.UPKEEP ? "Use/min" : "Amount",
-            (resourceMode == ResourceMode.UPKEEP ? UPKEEP_USE_X : AMOUNT_X) + SCROLL_X,
-            PANEL_Y + 32,
-            EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
         if (resourceMode == ResourceMode.ITEMS) {
             ModuleConfigModalSupport.drawLine(
                 "Upkeep",
                 INVENTORY_UPKEEP_X + SCROLL_X,
                 PANEL_Y + 32,
                 EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-        } else if (resourceMode == ResourceMode.UPKEEP) {
+            ModuleConfigModalSupport.drawLine(
+                "Amount",
+                INVENTORY_AMOUNT_X + SCROLL_X,
+                PANEL_Y + 32,
+                EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        } else {
+            ModuleConfigModalSupport.drawLine(
+                resourceMode == ResourceMode.UPKEEP ? "Use/min" : "Amount",
+                (resourceMode == ResourceMode.UPKEEP ? UPKEEP_USE_X : AMOUNT_X) + SCROLL_X,
+                PANEL_Y + 32,
+                EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        }
+        if (resourceMode == ResourceMode.UPKEEP) {
             ModuleConfigModalSupport
                 .drawLine("Stock", UPKEEP_STOCK_X + SCROLL_X, PANEL_Y + 32, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
             ModuleConfigModalSupport.drawLine(
@@ -440,7 +448,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             new TextWidget<>(IKey.dynamic(() -> formatAmount(currentAmount(wrapper))))
                 .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                 .shadow(true)
-                .pos(AMOUNT_X, 8));
+                .pos(INVENTORY_AMOUNT_X, 8));
         rowWidget.child(
             new TextWidget<>(IKey.dynamic(() -> formatUpkeepReserve(currentUpkeepReserve(wrapper))))
                 .color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
@@ -469,7 +477,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                 .textureIconButton(
                     () -> isAmountMode(rowKey),
                     EnumTextures.ICON_STATION_INVENTORY_AMOUNT.get(),
-                    "Using entered amount; click to use all available",
+                    "Delete amount",
                     () -> setAmountMode(rowKey, false))
                 .pos(MODE_BUTTON_X, 3)
                 .size(MODE_BUTTON_WIDTH, 18));
@@ -478,7 +486,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                 .textureIconButton(
                     () -> !isAmountMode(rowKey),
                     EnumTextures.ICON_STATION_INVENTORY_ALL.get(),
-                    "Using all available; click to use entered amount",
+                    "Void all",
                     () -> setAmountMode(rowKey, true))
                 .pos(MODE_BUTTON_X, 3)
                 .size(MODE_BUTTON_WIDTH, 18));
@@ -487,7 +495,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                 .textureIconButton(
                     () -> currentAmount(wrapper) > 0L,
                     EnumTextures.ICON_STATION_INVENTORY_VOID.get(),
-                    "Void selected amount",
+                    "Void using the mode on the left",
                     () -> voidRow(wrapper))
                 .pos(VOID_X, 3)
                 .size(VOID_WIDTH, 18));
