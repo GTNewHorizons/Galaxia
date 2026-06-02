@@ -123,6 +123,14 @@ public final class HammerDispatchPlanner {
                         bestBlockedStatus);
                     continue;
                 }
+                long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount, requesterCfg.orderSize());
+                long freeCapacity = destinationFreeItemCapacity(requester);
+                if (sendAmount >= requesterCfg.orderSize() && freeCapacity < sendAmount) {
+                    bestBlockedStatus = prefer(
+                        destinationLacksPackageSpace(hammer, freeCapacity, requesterCfg.orderSize()),
+                        bestBlockedStatus);
+                    continue;
+                }
 
                 Result result = evaluateCandidateFor(
                     supplier,
@@ -180,6 +188,11 @@ public final class HammerDispatchPlanner {
             return Result.simple(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, hammer);
         }
         if (arrivedInbound > 0L) return destinationBlocked(hammer, arrivedInbound, requesterCfg.orderSize());
+        long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount, requesterCfg.orderSize());
+        long freeCapacity = destinationFreeItemCapacity(requester);
+        if (sendAmount >= requesterCfg.orderSize() && freeCapacity < sendAmount) {
+            return destinationLacksPackageSpace(hammer, freeCapacity, requesterCfg.orderSize());
+        }
 
         return evaluateCandidateFor(
             supplier,
@@ -304,6 +317,16 @@ public final class HammerDispatchPlanner {
         return Math.min(Math.min(Math.min(requestedAmount, availableSurplus), orderSize), hammer.maxBatchSize());
     }
 
+    private static Result destinationLacksPackageSpace(ModuleHammer hammer, long freeCapacity, int orderSize) {
+        return new Result(
+            HammerDispatchStatus.Code.DESTINATION_LACKS_PACKAGE_SPACE,
+            0L,
+            hammer.energyStored(),
+            freeCapacity,
+            orderSize,
+            null);
+    }
+
     private static Result destinationBlocked(ModuleHammer hammer, long arrivedAmount, int orderSize) {
         return new Result(
             HammerDispatchStatus.Code.DESTINATION_CAPACITY_BLOCKED,
@@ -312,6 +335,11 @@ public final class HammerDispatchPlanner {
             arrivedAmount,
             orderSize,
             null);
+    }
+
+    private static long destinationFreeItemCapacity(CelestialAsset requester) {
+        if (requester instanceof AutomatedFacility facility) return facility.remainingItemInventoryCapacity();
+        return Long.MAX_VALUE;
     }
 
     private static Result evaluateCandidateFor(CelestialAsset supplier, CelestialAsset requester,

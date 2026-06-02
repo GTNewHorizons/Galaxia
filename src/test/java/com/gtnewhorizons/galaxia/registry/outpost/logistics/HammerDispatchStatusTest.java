@@ -163,6 +163,30 @@ final class HammerDispatchStatusTest {
         assertEquals(64L, result.sendAmount());
     }
 
+    @Test
+    void skipsRequesterWithoutRoomForPackageAndContinuesScanning() {
+        AutomatedFacility supplier = facility(CelestialObjectId.PANSPIRA);
+        AutomatedFacility fullRequester = facility(CelestialObjectId.PANSPIRA);
+        AutomatedFacility validRequester = facility(CelestialObjectId.PANSPIRA);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        ItemStackWrapper filler = new ItemStackWrapper(Items.diamond, 0, null);
+        supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
+        fullRequester.logisticsConfig.set(resource, new LogisticsResourceConfig(128, 64, true, false));
+        validRequester.logisticsConfig.set(resource, new LogisticsResourceConfig(128, 64, true, false));
+        supplier.updateItems(resource, 256);
+        fullRequester.updateItems(filler, fullRequester.totalItemCapacity());
+        ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 1_000_000L);
+
+        HammerDispatchPlanner.Result result = HammerDispatchPlanner
+            .evaluate(supplier, hammerModule(hammer), List.of(fullRequester, validRequester), 0.0);
+
+        assertEquals(HammerDispatchStatus.Code.READY, result.code());
+        HammerDispatchPlanner.Plan plan = result.plan();
+        assertNotNull(plan);
+        assertSame(validRequester, plan.requester());
+        assertEquals(64L, plan.sendAmount());
+    }
+
     private static ModuleHammer hammer(AllowShootingConfig config, HammerVariant variant, long energyStored) {
         return new ModuleHammer(
             FacilityModuleKind.HAMMER,
