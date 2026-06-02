@@ -21,14 +21,14 @@ final class StationCopyModuleMapButton extends ButtonWidget<StationCopyModuleMap
 
     private final @Nullable CelestialAsset.ID assetId;
     private final StationMapWidget map;
-    private final StationTilePickerController tilePickerController;
+    private final StationEditModeController editModeController;
     private final boolean creativeBuildMode;
 
     StationCopyModuleMapButton(@Nullable CelestialAsset.ID assetId, StationMapWidget map,
-        StationTilePickerController tilePickerController, boolean creativeBuildMode) {
+        StationEditModeController editModeController, boolean creativeBuildMode) {
         this.assetId = assetId;
         this.map = map;
-        this.tilePickerController = tilePickerController;
+        this.editModeController = editModeController;
         this.creativeBuildMode = creativeBuildMode;
         background(drawable((ctx, x, y, w, h) -> drawButton(x, y, w, h, false)));
         hoverBackground(drawable((ctx, x, y, w, h) -> drawButton(x, y, w, h, true)));
@@ -69,7 +69,7 @@ final class StationCopyModuleMapButton extends ButtonWidget<StationCopyModuleMap
     }
 
     private @Nullable StationCopyModuleActionModel.Source source() {
-        if (tilePickerController.isActive()) return null;
+        if (editModeController.isActive()) return null;
         if (!(CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility facility)) return null;
         return StationCopyModuleActionModel.resolve(facility, map.selection());
     }

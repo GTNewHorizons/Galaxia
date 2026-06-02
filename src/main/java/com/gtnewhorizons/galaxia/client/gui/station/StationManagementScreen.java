@@ -117,6 +117,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
 
         if (isAutomatedFacility) {
             StationTilePickerController tilePickerController = new StationTilePickerController();
+            StationEditModeController editModeController = new StationEditModeController(tilePickerController);
             int overlayY = PADDING + StationInventoryPanelWidget.BUTTON_HEIGHT + 4;
             ModuleConfigModalController configController = new ModuleConfigModalController(
                 panel,
@@ -129,7 +130,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 assetId,
                 overlayCoordinator,
                 configController,
-                () -> !tilePickerController.isActive());
+                () -> !editModeController.isActive());
             StationMapWidget map = new StationMapWidget(
                 assetId,
                 coord -> ModulePickerScreen.open(assetId, coord, creativeBuildMode),
@@ -147,7 +148,8 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                     .widthRel(1f)
                     .heightRel(1f));
             panel.child(
-                new StationSidePanelWidget(assetId, map, tilePickerController, configController).left(PADDING)
+                new StationSidePanelWidget(assetId, map, tilePickerController, editModeController, configController)
+                    .left(PADDING)
                     .top(PADDING)
                     .width(LEFT_PANEL_WIDTH - PADDING)
                     .heightRelOffset(0.55f, -PADDING * 2));
@@ -157,7 +159,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                     .heightRelOffset(0.45f, -PADDING)
                     .bottom(PADDING));
             panel.child(
-                new StationTilePickerControlsWidget(tilePickerController).left(LEFT_PANEL_WIDTH + PADDING * 2)
+                new StationTilePickerControlsWidget(editModeController).left(LEFT_PANEL_WIDTH + PADDING * 2)
                     .top(PADDING * 2)
                     .width(StationTilePickerControlsWidget.WIDTH)
                     .height(StationTilePickerControlsWidget.HEIGHT));
@@ -167,7 +169,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                     .width(StationInventoryPanelWidget.PANEL_WIDTH)
                     .height(StationInventoryPanelWidget.PANEL_HEIGHT + StationInventoryPanelWidget.BUTTON_HEIGHT + 4));
             panel.child(
-                new StationCopyModuleMapButton(assetId, map, tilePickerController, creativeBuildMode)
+                new StationCopyModuleMapButton(assetId, map, editModeController, creativeBuildMode)
                     .left(LEFT_PANEL_WIDTH + PADDING * 2)
                     .bottom(PADDING)
                     .size(MAP_ACTION_BUTTON_WIDTH, MAP_ACTION_BUTTON_HEIGHT));
@@ -176,7 +178,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                     .top(0)
                     .widthRel(1f)
                     .heightRel(1f));
-            startPendingBuildPicker(assetId, tilePickerController);
+            startPendingBuildPicker(assetId, editModeController);
         } else {
             int overlayY = PADDING + StationInventoryPanelWidget.BUTTON_HEIGHT + 4;
             ModuleConfigModalController configController = new ModuleConfigModalController(
@@ -213,7 +215,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         return panel;
     }
 
-    private static void startPendingBuildPicker(CelestialAsset.ID assetId, StationTilePickerController controller) {
+    private static void startPendingBuildPicker(CelestialAsset.ID assetId, StationEditModeController controller) {
         if (FMLCommonHandler.instance()
             .getEffectiveSide() != Side.CLIENT) return;
         BuildPickerRequest request = pendingBuildPickerRequest;
@@ -228,7 +230,8 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         ModuleShape shape = copySource == null ? request.shape() : copySource.shape();
         ModuleTier tier = copySource == null ? request.tier() : copySource.tier();
         if (kind == null || shape == null || tier == null) return;
-        controller.start(
+        controller.startTileMode(
+            copySource == null ? StationEditModeController.Mode.MASS_BUILD : StationEditModeController.Mode.COPY_MODULE,
             (copySource == null ? "Build " : "Copy ") + kind.getDisplayName(),
             "Confirm",
             (coord, selected) -> ModuleBuildPickerModel
