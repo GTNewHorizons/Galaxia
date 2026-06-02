@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.outpost.logistics;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
@@ -132,6 +133,24 @@ final class HammerDispatchStatusTest {
         assertEquals(HammerDispatchStatus.Code.ORDER_BELOW_PACKAGE_SIZE, status.code());
         assertEquals(16L, status.sendAmount());
         assertEquals(32, status.orderSize());
+    }
+
+    @Test
+    void orderBelowPackageSizeDoesNotConsumeRouteProbe() {
+        AutomatedFacility supplier = facility(CelestialObjectId.FROZEN_BELT);
+        AutomatedFacility requester = facility(CelestialObjectId.PANSPIRA);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
+        requester.logisticsConfig.set(resource, new LogisticsResourceConfig(16, 64, true, false));
+        supplier.updateItems(resource, 128);
+        ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BIG, 1_000_000L);
+        ModuleInstance hammerModule = hammerModule(hammer);
+
+        HammerDispatchPlanner.Result result = HammerDispatchPlanner
+            .evaluate(supplier, hammerModule, requester, resource, 0.0, null);
+
+        assertEquals(HammerDispatchStatus.Code.ORDER_BELOW_PACKAGE_SIZE, result.code());
+        assertTrue(hammer.canPlanRoute(hammerModule));
     }
 
     @Test

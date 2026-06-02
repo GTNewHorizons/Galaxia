@@ -124,8 +124,14 @@ public final class HammerDispatchPlanner {
                     continue;
                 }
                 long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount, requesterCfg.orderSize());
+                if (sendAmount < requesterCfg.orderSize() || sendAmount <= 0L) {
+                    bestBlockedStatus = prefer(
+                        orderBelowPackageSize(hammer, sendAmount, requesterCfg.orderSize()),
+                        bestBlockedStatus);
+                    continue;
+                }
                 long freeCapacity = destinationFreeItemCapacity(requester);
-                if (sendAmount >= requesterCfg.orderSize() && freeCapacity < sendAmount) {
+                if (freeCapacity < sendAmount) {
                     bestBlockedStatus = prefer(
                         destinationLacksPackageSpace(hammer, freeCapacity, requesterCfg.orderSize()),
                         bestBlockedStatus);
@@ -189,8 +195,11 @@ public final class HammerDispatchPlanner {
         }
         if (arrivedInbound > 0L) return destinationBlocked(hammer, arrivedInbound, requesterCfg.orderSize());
         long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount, requesterCfg.orderSize());
+        if (sendAmount < requesterCfg.orderSize() || sendAmount <= 0L) {
+            return orderBelowPackageSize(hammer, sendAmount, requesterCfg.orderSize());
+        }
         long freeCapacity = destinationFreeItemCapacity(requester);
-        if (sendAmount >= requesterCfg.orderSize() && freeCapacity < sendAmount) {
+        if (freeCapacity < sendAmount) {
             return destinationLacksPackageSpace(hammer, freeCapacity, requesterCfg.orderSize());
         }
 
@@ -315,6 +324,16 @@ public final class HammerDispatchPlanner {
 
     public static long dispatchAmount(ModuleHammer hammer, long availableSurplus, long requestedAmount, int orderSize) {
         return Math.min(Math.min(Math.min(requestedAmount, availableSurplus), orderSize), hammer.maxBatchSize());
+    }
+
+    private static Result orderBelowPackageSize(ModuleHammer hammer, long sendAmount, int orderSize) {
+        return new Result(
+            HammerDispatchStatus.Code.ORDER_BELOW_PACKAGE_SIZE,
+            0L,
+            hammer.energyStored(),
+            sendAmount,
+            orderSize,
+            null);
     }
 
     private static Result destinationLacksPackageSpace(ModuleHammer hammer, long freeCapacity, int orderSize) {
