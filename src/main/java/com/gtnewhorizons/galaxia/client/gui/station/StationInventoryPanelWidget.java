@@ -59,15 +59,16 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private static final int NAME_WIDTH = ITEM_INTERACTION_BUTTON_X - NAME_X - 4;
     private static final int ROW_RIGHT_PADDING = 8;
     private static final int CONTROL_GAP = 4;
-    private static final int BOUNDS_WIDTH = 54;
-    private static final int AMOUNT_INPUT_WIDTH = 44;
-    private static final int MODE_BUTTON_WIDTH = 52;
-    private static final int VOID_WIDTH = 42;
+    private static final int BOUNDS_WIDTH = 44;
+    private static final int AMOUNT_INPUT_WIDTH = 40;
+    private static final int MODE_BUTTON_WIDTH = 44;
+    private static final int VOID_WIDTH = 36;
     private static final int VOID_X = SCROLL_WIDTH - ROW_RIGHT_PADDING - VOID_WIDTH;
     private static final int MODE_BUTTON_X = VOID_X - CONTROL_GAP - MODE_BUTTON_WIDTH;
     private static final int UPKEEP_AUTO_ORDER_WIDTH = 18;
     private static final int AMOUNT_INPUT_X = MODE_BUTTON_X - CONTROL_GAP - AMOUNT_INPUT_WIDTH;
     private static final int BOUNDS_X = AMOUNT_INPUT_X - CONTROL_GAP - BOUNDS_WIDTH;
+    private static final int INVENTORY_UPKEEP_X = BOUNDS_X - CONTROL_GAP - 34;
     private static final int UPKEEP_USE_X = AMOUNT_X;
     private static final int UPKEEP_STOCK_X = 212;
     private static final int UPKEEP_RESERVE_INPUT_X = 250;
@@ -232,7 +233,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         }
         cachedItemAmounts = distributed.aggregatedItems();
         cachedFluidAmounts = distributed.aggregatedFluids();
-        List<Map.Entry<ItemStackWrapper, Long>> itemRows = rows(distributed);
+        List<StationInventoryPanelModel.InventoryItemRow> itemRows = rows(distributed);
         List<StationInventoryPanelModel.FluidRow> fluidRows = fluidRows(distributed);
         AutomatedFacility af = af();
         List<StationInventoryPanelModel.UpkeepItemRow> upkeepRows = af == null ? List.of()
@@ -318,7 +319,13 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             (resourceMode == ResourceMode.UPKEEP ? UPKEEP_USE_X : AMOUNT_X) + SCROLL_X,
             PANEL_Y + 32,
             EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-        if (resourceMode == ResourceMode.UPKEEP) {
+        if (resourceMode == ResourceMode.ITEMS) {
+            ModuleConfigModalSupport.drawLine(
+                "Upkeep",
+                INVENTORY_UPKEEP_X + SCROLL_X,
+                PANEL_Y + 32,
+                EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        } else if (resourceMode == ResourceMode.UPKEEP) {
             ModuleConfigModalSupport
                 .drawLine("Stock", UPKEEP_STOCK_X + SCROLL_X, PANEL_Y + 32, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
             ModuleConfigModalSupport.drawLine(
@@ -348,7 +355,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             .drawLine("Output upper", editorX + 10, editorY + 63, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
     }
 
-    private void rebuildPanel(List<Map.Entry<ItemStackWrapper, Long>> itemRows,
+    private void rebuildPanel(List<StationInventoryPanelModel.InventoryItemRow> itemRows,
         List<StationInventoryPanelModel.FluidRow> fluidRows,
         List<StationInventoryPanelModel.UpkeepItemRow> upkeepRows) {
         panelRoot.setEnabled(true);
@@ -368,11 +375,11 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
 
         int y = 0;
         if (resourceMode == ResourceMode.ITEMS) {
-            for (Map.Entry<ItemStackWrapper, Long> row : itemRows) {
-                String rowKey = row.getKey()
+            for (StationInventoryPanelModel.InventoryItemRow row : itemRows) {
+                String rowKey = row.item()
                     .toKey();
                 amountModes.putIfAbsent(rowKey, false);
-                amountInputs.putIfAbsent(rowKey, Long.toString(row.getValue()));
+                amountInputs.putIfAbsent(rowKey, Long.toString(row.amount()));
                 scrollContent.child(buildRow(row).pos(0, y));
                 y += ROW_HEIGHT + ROW_GAP;
             }
@@ -393,8 +400,8 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         panelRoot.scheduleResize();
     }
 
-    private ParentWidget<?> buildRow(Map.Entry<ItemStackWrapper, Long> row) {
-        ItemStackWrapper wrapper = row.getKey();
+    private ParentWidget<?> buildRow(StationInventoryPanelModel.InventoryItemRow row) {
+        ItemStackWrapper wrapper = row.item();
         ItemStack displayStack = wrapper.toStack(1);
         String rowKey = wrapper.toKey();
         ParentWidget<?> rowWidget = new ParentWidget<>().widthRel(1f)
@@ -433,6 +440,17 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                 .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                 .shadow(true)
                 .pos(AMOUNT_X, 8));
+        rowWidget.child(
+            new TextWidget<>(IKey.dynamic(() -> formatUpkeepReserve(currentUpkeepReserve(wrapper))))
+                .color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
+                .shadow(true)
+                .pos(INVENTORY_UPKEEP_X, 8)
+                .tooltipDynamic(t -> {
+                    StationInventoryPanelModel.UpkeepReserveStatus status = upkeepReserveStatus(wrapper);
+                    if (status.level() != StationInventoryPanelModel.UpkeepReserveLevel.NONE) {
+                        t.addLine(status.tooltip());
+                    }
+                }));
         rowWidget.child(
             ModuleConfigModalSupport.button(() -> canEditBounds(wrapper), "Bounds", () -> openBoundEditor(wrapper))
                 .pos(BOUNDS_X, 3)
@@ -861,6 +879,10 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         return af == null ? 0L : af.upkeepReserve(wrapper);
     }
 
+    private static String formatUpkeepReserve(long reserve) {
+        return reserve <= 0L ? "" : formatAmount(reserve);
+    }
+
     private long currentFluidAmount(FluidKey fluid) {
         return cachedFluidAmounts.getOrDefault(fluid, 0L);
     }
@@ -874,7 +896,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         return asset instanceof IDistributedInventory d ? d : null;
     }
 
-    private List<Map.Entry<ItemStackWrapper, Long>> rows(IDistributedInventory distributed) {
+    private List<StationInventoryPanelModel.InventoryItemRow> rows(IDistributedInventory distributed) {
         return StationInventoryPanelModel.inventoryRows(distributed);
     }
 
@@ -882,13 +904,13 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         return StationInventoryPanelModel.fluidRows(distributed);
     }
 
-    private void refreshAmountInputs(List<Map.Entry<ItemStackWrapper, Long>> rows,
+    private void refreshAmountInputs(List<StationInventoryPanelModel.InventoryItemRow> rows,
         List<StationInventoryPanelModel.UpkeepItemRow> upkeepRows) {
-        for (Map.Entry<ItemStackWrapper, Long> row : rows) {
-            String rowKey = row.getKey()
+        for (StationInventoryPanelModel.InventoryItemRow row : rows) {
+            String rowKey = row.item()
                 .toKey();
             if (!isAmountMode(rowKey)) {
-                amountInputs.put(rowKey, Long.toString(row.getValue()));
+                amountInputs.put(rowKey, Long.toString(row.amount()));
             }
         }
         for (StationInventoryPanelModel.UpkeepItemRow row : upkeepRows) {
@@ -961,15 +983,15 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         };
     }
 
-    private String rowStructureSignature(List<Map.Entry<ItemStackWrapper, Long>> itemRows,
+    private String rowStructureSignature(List<StationInventoryPanelModel.InventoryItemRow> itemRows,
         List<StationInventoryPanelModel.FluidRow> fluidRows,
         List<StationInventoryPanelModel.UpkeepItemRow> upkeepRows) {
         StringBuilder signature = new StringBuilder((itemRows.size() + fluidRows.size() + upkeepRows.size()) * 24);
         signature.append(resourceMode)
             .append(':');
-        for (Map.Entry<ItemStackWrapper, Long> row : itemRows) {
+        for (StationInventoryPanelModel.InventoryItemRow row : itemRows) {
             signature.append(
-                row.getKey()
+                row.item()
                     .toKey())
                 .append(';');
         }

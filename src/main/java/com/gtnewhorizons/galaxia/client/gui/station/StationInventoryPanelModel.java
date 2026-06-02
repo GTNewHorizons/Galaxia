@@ -51,11 +51,13 @@ final class StationInventoryPanelModel {
         }
     }
 
-    static List<Map.Entry<ItemStackWrapper, Long>> inventoryRows(IDistributedInventory inventory) {
+    static List<InventoryItemRow> inventoryRows(IDistributedInventory inventory) {
         Map<ItemStackWrapper, Long> rows = new LinkedHashMap<>(inventory.aggregatedItems());
         Set<ItemStackWrapper> upkeepItems = Set.of();
-        if (inventory instanceof AutomatedFacility facility) {
-            upkeepItems = facility.upkeepSummary()
+        AutomatedFacility facility = null;
+        if (inventory instanceof AutomatedFacility af) {
+            facility = af;
+            upkeepItems = af.upkeepSummary()
                 .itemsPerMinute()
                 .keySet();
             for (ItemStackWrapper item : upkeepItems) {
@@ -65,10 +67,18 @@ final class StationInventoryPanelModel {
         Set<ItemStackWrapper> visibleUpkeepItems = upkeepItems;
         rows.entrySet()
             .removeIf(row -> row.getValue() <= 0L && !visibleUpkeepItems.contains(row.getKey()));
-        List<Map.Entry<ItemStackWrapper, Long>> sorted = new ArrayList<>(rows.entrySet());
+        AutomatedFacility facilityForRows = facility;
+        List<InventoryItemRow> sorted = rows.entrySet()
+            .stream()
+            .map(
+                row -> new InventoryItemRow(
+                    row.getKey(),
+                    row.getValue(),
+                    facilityForRows == null ? 0L : facilityForRows.upkeepReserve(row.getKey())))
+            .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         sorted.sort(
             Comparator.comparing(
-                row -> row.getKey()
+                row -> row.item()
                     .toStack(1)
                     .getDisplayName(),
                 String.CASE_INSENSITIVE_ORDER));
@@ -142,6 +152,8 @@ final class StationInventoryPanelModel {
     record UpkeepReserveStatus(long reserve, double minutes, UpkeepReserveLevel level, String tooltip) {}
 
     private record BoundInput(boolean present, long amount, boolean valid) {}
+
+    record InventoryItemRow(ItemStackWrapper item, long amount, long upkeepReserve) {}
 
     record UpkeepItemRow(ItemStackWrapper item, UpkeepAmount perMinute, long stock, long reserve, boolean autoOrder,
         UpkeepReserveStatus status) {}
