@@ -386,7 +386,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                 pendingSettingsGroupId,
                 pendingInstantBuild);
         } else if (coord != null) {
-            boolean sent = CelestialClient.createModule(
+            boolean sent = CelestialClient.createModules(
                 assetId,
                 kind,
                 shape,
@@ -395,7 +395,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                 kind == FacilityModuleKind.MINER ? pendingMinerFocusTier : MinerFocusTier.NONE,
                 pendingSettingsGroupId,
                 pendingInstantBuild,
-                coord);
+                List.of(coord));
             if (!sent) StationNotificationHelper.showFailure("Module build request failed");
             StationManagementScreen.open(assetId, pendingInstantBuild);
         } else {

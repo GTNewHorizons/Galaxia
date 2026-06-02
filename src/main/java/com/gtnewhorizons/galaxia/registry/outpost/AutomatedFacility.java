@@ -467,7 +467,31 @@ public final class AutomatedFacility extends CelestialAsset {
         markSettingsGroupMembersDirty(group);
     }
 
+    public boolean canCopyModuleRuntimeSettings(ModuleInstance source, ModuleInstance target) {
+        try {
+            validateModuleRuntimeSettingsCopy(source, target);
+            return true;
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
     public void copyModuleRuntimeSettings(ModuleInstance source, ModuleInstance target) {
+        SettingsGroup sourceGroup = validateModuleRuntimeSettingsCopy(source, target);
+        if (sourceGroup.isJoinable()) {
+            assignSettingsGroup(target, sourceGroup.id());
+        } else {
+            setPrivateModuleSettings(
+                target,
+                source.component()
+                    .copySettings(source, sourceGroup.settings()));
+        }
+        source.component()
+            .afterSettingsCopied(source, target);
+        markModuleDirty(target.id);
+    }
+
+    private SettingsGroup validateModuleRuntimeSettingsCopy(ModuleInstance source, ModuleInstance target) {
         requireSettingsGroupsSupported(source);
         requireSettingsGroupsSupported(target);
         if (source.kind() != target.kind()) {
@@ -480,17 +504,7 @@ public final class AutomatedFacility extends CelestialAsset {
         SettingsGroup sourceGroup = settingsGroups.require(source.groupId(), source.kind());
         source.component()
             .validateSettingsCopyTarget(source, target);
-        if (sourceGroup.isJoinable()) {
-            assignSettingsGroup(target, sourceGroup.id());
-        } else {
-            setPrivateModuleSettings(
-                target,
-                source.component()
-                    .copySettings(source, sourceGroup.settings()));
-        }
-        source.component()
-            .afterSettingsCopied(source, target);
-        markModuleDirty(target.id);
+        return sourceGroup;
     }
 
     public boolean tryReserveOperationMaterials(ModuleInstance module, Map<ItemStackWrapper, Long> materialCost) {

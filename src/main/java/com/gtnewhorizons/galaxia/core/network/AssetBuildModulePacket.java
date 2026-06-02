@@ -38,9 +38,9 @@ public final class AssetBuildModulePacket implements IMessage {
     private static final int MAX_BUILD_TARGETS = 256;
 
     private CelestialAsset.ID assetId;
-    private FacilityModuleKind moduleKind;
-    private ModuleShape shape;
-    private ModuleTier tier;
+    private FacilityModuleKind moduleKind = FacilityModuleKind.POWER;
+    private ModuleShape shape = ModuleShape.SINGLE;
+    private ModuleTier tier = ModuleTier.HV;
     private HammerVariant hammerVariant;
     private MinerFocusTier minerFocusTier = MinerFocusTier.NONE;
     private short settingsGroupId;
@@ -105,9 +105,9 @@ public final class AssetBuildModulePacket implements IMessage {
     @Override
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
-        writeNullableEnum(buf, moduleKind);
-        writeNullableEnum(buf, shape);
-        writeNullableEnum(buf, tier);
+        PacketUtil.writeEnum(buf, moduleKind == null ? FacilityModuleKind.POWER : moduleKind);
+        PacketUtil.writeEnum(buf, shape == null ? ModuleShape.SINGLE : shape);
+        PacketUtil.writeEnum(buf, tier == null ? ModuleTier.HV : tier);
         buf.writeBoolean(instantBuild);
         if (tileCoords == null) {
             buf.writeInt(-1);
@@ -133,9 +133,9 @@ public final class AssetBuildModulePacket implements IMessage {
     @Override
     public void fromBytes(ByteBuf buf) {
         assetId = PacketUtil.readAssetId(buf);
-        moduleKind = readNullableEnum(buf, FacilityModuleKind.class);
-        shape = readNullableEnum(buf, ModuleShape.class);
-        tier = readNullableEnum(buf, ModuleTier.class);
+        moduleKind = PacketUtil.readEnum(buf, FacilityModuleKind.class);
+        shape = PacketUtil.readEnum(buf, ModuleShape.class);
+        tier = PacketUtil.readEnum(buf, ModuleTier.class);
         instantBuild = buf.readBoolean();
         int targetCount = buf.readInt();
         if (targetCount < 0) {
@@ -203,10 +203,6 @@ public final class AssetBuildModulePacket implements IMessage {
         MinerFocusTier buildMinerFocusTier = copySource == null ? normalizedMinerFocusTier()
             : minerFocusTierFor(copySource);
 
-        if (buildKind == null || buildShape == null || buildTier == null) {
-            return null;
-        }
-
         if (!buildKind.isAllowedOn(asset.kind)) {
             return null;
         }
@@ -238,11 +234,13 @@ public final class AssetBuildModulePacket implements IMessage {
         for (StationTileCoord anchor : anchors) {
             ModuleInstance module = buildKind.create(anchor, buildShape, buildTier);
             if (!applyPhysicalSpec(module, buildTier, buildHammerVariant, buildMinerFocusTier)) return null;
+            boolean copyRuntimeSettings = copySource != null && FacilityModuleRegistry.get(buildKind)
+                .settingsGroups();
+            if (copyRuntimeSettings && !facility.canCopyModuleRuntimeSettings(copySource, module)) return null;
             if (shouldInstantBuild) module.completeConstruction();
 
             facility.addModule(module);
-            if (copySource != null && FacilityModuleRegistry.get(buildKind)
-                .settingsGroups()) {
+            if (copyRuntimeSettings) {
                 facility.copyModuleRuntimeSettings(copySource, module);
             } else if (settingsGroupId > 0) {
                 facility.assignSettingsGroup(module, settingsGroupId);
@@ -307,24 +305,6 @@ public final class AssetBuildModulePacket implements IMessage {
     private boolean validateSettingsSpec(AutomatedFacility facility, FacilityModuleKind kind,
         ModuleInstance copySource) {
         if (copySource != null) {
-            if (!FacilityModuleRegistry.get(kind)
-                .settingsGroups()) {
-                return true;
-            }
-            ModuleInstance preview = kind.create(StationTileCoord.CORE, kind.defaultShape(), copySource.tier());
-            if (!applyPhysicalSpec(
-                preview,
-                copySource.tier(),
-                hammerVariantFor(copySource),
-                minerFocusTierFor(copySource))) {
-                return false;
-            }
-            try {
-                copySource.component()
-                    .validateSettingsCopyTarget(copySource, preview);
-            } catch (RuntimeException ignored) {
-                return false;
-            }
             return true;
         }
         if (settingsGroupId == 0) return true;
@@ -393,17 +373,4 @@ public final class AssetBuildModulePacket implements IMessage {
         return originalTiles.contains(coord) || plannedTiles.contains(coord);
     }
 
-    private static <T extends Enum<T>> void writeNullableEnum(ByteBuf buf, T enumValue) {
-        buf.writeByte(enumValue == null ? -1 : enumValue.ordinal());
-    }
-
-    private static <T extends Enum<T>> T readNullableEnum(ByteBuf buf, Class<T> enumClass) {
-        int ordinal = buf.readByte();
-        if (ordinal < 0) return null;
-        T[] values = enumClass.getEnumConstants();
-        if (ordinal >= values.length) {
-            throw new IllegalArgumentException("Invalid " + enumClass.getSimpleName() + " ordinal: " + ordinal);
-        }
-        return values[ordinal];
-    }
 }

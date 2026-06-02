@@ -115,39 +115,12 @@ public final class CelestialClient {
     }
 
     public static void createModule(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled) {
-        createModule(assetId, kind, creativeBuildModeEnabled, null);
+        createModules(assetId, kind, creativeBuildModeEnabled, null);
     }
 
     public static void createModule(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled,
         @Nullable StationTileCoord tileCoord) {
-        createModule(
-            assetId,
-            kind,
-            kind.defaultShape(),
-            kind.defaultTier(),
-            null,
-            MinerFocusTier.NONE,
-            (short) 0,
-            creativeBuildModeEnabled,
-            tileCoord);
-    }
-
-    public static boolean createModule(ID assetId, FacilityModuleKind kind, ModuleShape shape, ModuleTier tier,
-        @Nullable HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId,
-        boolean creativeBuildModeEnabled, @Nullable StationTileCoord tileCoord) {
-        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
-        if (state == null) return false;
-        if (!kind.isAllowedOn(state.kind)) return false;
-        return StarmapActionSyncHandler.sendBuildModules(
-            assetId,
-            kind,
-            shape,
-            tier,
-            hammerVariant,
-            minerFocusTier,
-            settingsGroupId,
-            creativeBuildModeEnabled,
-            tileCoord == null ? null : List.of(tileCoord));
+        createModules(assetId, kind, creativeBuildModeEnabled, tileCoord == null ? null : List.of(tileCoord));
     }
 
     public static void createModules(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled,
