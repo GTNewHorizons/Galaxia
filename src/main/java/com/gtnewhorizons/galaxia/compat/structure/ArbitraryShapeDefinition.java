@@ -7,13 +7,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
@@ -28,6 +25,7 @@ import com.gtnewhorizon.structurelib.structure.IStructureElementChain;
 import com.gtnewhorizon.structurelib.structure.IStructureWalker;
 import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
+import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
 import com.gtnewhorizons.galaxia.compat.structure.util.DenseBitSet;
 import com.gtnewhorizons.galaxia.compat.structure.util.IntQueue;
@@ -387,8 +385,7 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
                     if (structureBlocks != null && structureBlocks.containsChecked(lx, ly, lz)) continue;
                     if (enclosed && !isInsideStructure(te.xCoord, te.yCoord, te.zCoord)) continue;
 
-                    IStructureElement<T> el = interiorElements
-                        .get(world.getBlock(te.xCoord, te.yCoord, te.zCoord));
+                    IStructureElement<T> el = interiorElements.get(world.getBlock(te.xCoord, te.yCoord, te.zCoord));
                     if (el != null && el.check(tile, world, te.xCoord, te.yCoord, te.zCoord)) {
                         interiorBlocks.add(lx, ly, lz);
                     }
@@ -758,18 +755,17 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
 
         private IStructureElement<T> merge(IStructureElement<T> a, IStructureElement<T> b) {
             List<IStructureElement<T>> all = new ArrayList<>();
-            if (a instanceof IStructureElementChain<T> chain) {
+            if (a instanceof IStructureElementChain<T>chain) {
                 Collections.addAll(all, chain.fallbacks());
             } else {
                 all.add(a);
             }
-            if (b instanceof IStructureElementChain<T> chain) {
+            if (b instanceof IStructureElementChain<T>chain) {
                 Collections.addAll(all, chain.fallbacks());
             } else {
                 all.add(b);
             }
-            return all.size() == 2 ? StructureUtility.ofChain(all.get(0), all.get(1))
-                : StructureUtility.ofChain(all);
+            return all.size() == 2 ? StructureUtility.ofChain(all.get(0), all.get(1)) : StructureUtility.ofChain(all);
         }
 
         private void putElement(Block block, IStructureElement<T> element) {
@@ -839,7 +835,9 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
             for (char c : encodedShape.toCharArray()) {
                 if (c == '+' || c == '-' || c == ' ') continue;
                 IStructureElement<D> element = sourceElements.get(c);
-                if (element instanceof IExtendedStructureElement<D>el && !element.isNavigating()) {
+                if (element instanceof IExtendedStructureElement<D>el) {
+                    if (el.isNavigating()) continue;
+
                     for (Block b : el.getValidBlocks()) {
                         putElement(b, (IStructureElement<T>) element);
                     }

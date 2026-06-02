@@ -52,7 +52,8 @@ public interface IExtendedStructureElement<T> extends IStructureElement<T> {
 
             @Override
             public Block getValidBlock() {
-                return validBlocks.iterator().next();
+                return validBlocks.iterator()
+                    .next();
             }
 
             @Override

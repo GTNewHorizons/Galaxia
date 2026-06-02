@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.celestial.station;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
 import java.util.Set;
@@ -18,6 +19,7 @@ import com.cleanroommc.modularui.factory.PosGuiData;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.gt.MTEStationPlug;
+import com.gtnewhorizons.galaxia.compat.gt.MTEStationPlugMulti;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
@@ -25,7 +27,10 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
 
+import gregtech.api.interfaces.IHatchElement;
+import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
 import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
+import gregtech.api.util.IGTHatchAdder;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import lombok.Getter;
 
@@ -34,6 +39,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
 
     protected @Nullable StationGraph graph;
     protected List<BlockPos> airlocks = new ArrayList<>();
+    @Getter
     protected List<BlockPos> stationPlugs = new ArrayList<>();
     protected BlockPos here;
 
@@ -111,9 +117,9 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
         }
     }
 
-    public void addStationPlug(int x, int y, int z) {
-        if (stationPlugs.size() >= 2) return;
-        BlockPos plug = new BlockPos(x, y, z);
+    public boolean addStationPlug(IGregTechTileEntity gte, short tier) {
+        if (stationPlugs.size() >= 2) return false;
+        BlockPos plug = new BlockPos(gte.getXCoord(), gte.getYCoord(), gte.getZCoord());
         if (!this.stationPlugs.contains(plug)) {
             this.stationPlugs.add(plug);
         }
@@ -122,6 +128,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
             mtePlug.setGraph(graph);
         }
         markDirty();
+        return true;
     }
 
     public boolean isValidDimension(World world) {
@@ -228,6 +235,34 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
         for (TileStationBase<?> room : component) {
             room.sealed = newSealed;
             room.sealedDirty = false;
+        }
+    }
+
+    public enum StationHatchElement implements IHatchElement<TileStationBase<?>> {
+
+        Energy(MTEStationPlug.class, MTEStationPlugMulti.class) {
+
+            @Override
+            public long count(TileStationBase<?> t) {
+                return t.stationPlugs.size();
+            }
+        };
+
+        private final List<? extends Class<? extends IMetaTileEntity>> mteClasses;
+
+        @SafeVarargs
+        StationHatchElement(Class<? extends IMetaTileEntity>... mteClasses) {
+            this.mteClasses = Arrays.asList(mteClasses);
+        }
+
+        @Override
+        public List<? extends Class<? extends IMetaTileEntity>> mteClasses() {
+            return mteClasses;
+        }
+
+        @Override
+        public IGTHatchAdder<? super TileStationBase<?>> adder() {
+            return TileStationBase::addStationPlug;
         }
     }
 }
