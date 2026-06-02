@@ -146,31 +146,31 @@ final class HammerDispatchStatusTest {
     }
 
     @Test
-    void dispatchAmountFillsPackageWhenRequestIsBelowOrderSize() {
+    void dispatchAmountUsesRequestedAmountWhenItIsBelowOrderSize() {
         ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BIG, 1_000_000L);
         HammerDispatchStatus.Candidate candidate = candidate(64, 16, 32, 1.5, 20.0, 120.0);
 
         HammerDispatchStatus.Status status = HammerDispatchStatus.evaluateCandidate(hammer, candidate);
 
         assertEquals(HammerDispatchStatus.Code.READY, status.code());
-        assertEquals(32L, status.sendAmount());
-        assertEquals(32, status.orderSize());
-    }
-
-    @Test
-    void reportsOrderBelowPackageSizeWhenSupplierCannotFillPackage() {
-        ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BIG, 1_000_000L);
-        HammerDispatchStatus.Candidate candidate = candidate(16, 64, 32, 1.5, 20.0, 120.0);
-
-        HammerDispatchStatus.Status status = HammerDispatchStatus.evaluateCandidate(hammer, candidate);
-
-        assertEquals(HammerDispatchStatus.Code.ORDER_BELOW_PACKAGE_SIZE, status.code());
         assertEquals(16L, status.sendAmount());
         assertEquals(32, status.orderSize());
     }
 
     @Test
-    void plannerFillsPackageWhenRequestIsBelowOrderSize() {
+    void dispatchAmountUsesAvailableSurplusWhenItIsBelowOrderSize() {
+        ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BIG, 1_000_000L);
+        HammerDispatchStatus.Candidate candidate = candidate(16, 64, 32, 1.5, 20.0, 120.0);
+
+        HammerDispatchStatus.Status status = HammerDispatchStatus.evaluateCandidate(hammer, candidate);
+
+        assertEquals(HammerDispatchStatus.Code.READY, status.code());
+        assertEquals(16L, status.sendAmount());
+        assertEquals(32, status.orderSize());
+    }
+
+    @Test
+    void plannerSendsRequestedAmountWhenRequestIsBelowOrderSize() {
         AutomatedFacility supplier = facility(CelestialObjectId.FROZEN_BELT);
         AutomatedFacility requester = facility(CelestialObjectId.PANSPIRA);
         ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
@@ -184,7 +184,7 @@ final class HammerDispatchStatusTest {
             .evaluate(supplier, hammerModule, requester, resource, 0.0, null);
 
         assertEquals(HammerDispatchStatus.Code.READY, result.code());
-        assertEquals(64L, result.sendAmount());
+        assertEquals(16L, result.sendAmount());
     }
 
     @Test

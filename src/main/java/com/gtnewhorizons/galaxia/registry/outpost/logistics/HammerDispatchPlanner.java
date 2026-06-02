@@ -126,12 +126,7 @@ public final class HammerDispatchPlanner {
                     continue;
                 }
                 long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount, requesterCfg.orderSize());
-                if (sendAmount < requesterCfg.orderSize() || sendAmount <= 0L) {
-                    bestBlockedStatus = prefer(
-                        orderBelowPackageSize(hammer, sendAmount, requesterCfg.orderSize()),
-                        bestBlockedStatus);
-                    continue;
-                }
+                if (sendAmount <= 0L) continue;
                 long freeCapacity = destinationFreeItemCapacity(requester);
                 if (freeCapacity < sendAmount) {
                     bestBlockedStatus = prefer(
@@ -199,9 +194,7 @@ public final class HammerDispatchPlanner {
         }
         if (arrivedInbound > 0L) return destinationBlocked(hammer, arrivedInbound, requesterCfg.orderSize());
         long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount, requesterCfg.orderSize());
-        if (sendAmount < requesterCfg.orderSize() || sendAmount <= 0L) {
-            return orderBelowPackageSize(hammer, sendAmount, requesterCfg.orderSize());
-        }
+        if (sendAmount <= 0L) return Result.simple(HammerDispatchStatus.Code.NO_SURPLUS_AFTER_RESERVE, hammer);
         long freeCapacity = destinationFreeItemCapacity(requester);
         if (freeCapacity < sendAmount) {
             return destinationLacksPackageSpace(hammer, freeCapacity, requesterCfg.orderSize());
@@ -252,15 +245,7 @@ public final class HammerDispatchPlanner {
         double tofOsu, OrbitalTransferPlanner.TransferRoute route, CelestialAsset supplier,
         ModuleInstance hammerModule) {
         long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount, orderSize);
-        if (sendAmount < orderSize || sendAmount <= 0L) {
-            return new Result(
-                HammerDispatchStatus.Code.ORDER_BELOW_PACKAGE_SIZE,
-                0L,
-                hammer.energyStored(),
-                sendAmount,
-                orderSize,
-                null);
-        }
+        if (sendAmount <= 0L) return Result.simple(HammerDispatchStatus.Code.NO_SURPLUS_AFTER_RESERVE, hammer);
         if (!shareAnchor && hammer.variant() != HammerVariant.BIG) {
             return new Result(
                 HammerDispatchStatus.Code.NEED_BIG_HAMMER,
@@ -327,8 +312,7 @@ public final class HammerDispatchPlanner {
     }
 
     public static long dispatchAmount(ModuleHammer hammer, long availableSurplus, long requestedAmount, int orderSize) {
-        long desiredAmount = Math.max(requestedAmount, orderSize);
-        return Math.min(Math.min(desiredAmount, availableSurplus), hammer.maxBatchSize());
+        return Math.min(Math.min(requestedAmount, availableSurplus), hammer.maxBatchSize());
     }
 
     private static long supplyReserveFor(CelestialAsset supplier, ItemStackWrapper resource,
@@ -347,16 +331,6 @@ public final class HammerDispatchPlanner {
             target = Math.max(target, facility.effectiveLowerBound(resource));
         }
         return target;
-    }
-
-    private static Result orderBelowPackageSize(ModuleHammer hammer, long sendAmount, int orderSize) {
-        return new Result(
-            HammerDispatchStatus.Code.ORDER_BELOW_PACKAGE_SIZE,
-            0L,
-            hammer.energyStored(),
-            sendAmount,
-            orderSize,
-            null);
     }
 
     private static Result destinationLacksPackageSpace(ModuleHammer hammer, long freeCapacity, int orderSize) {
