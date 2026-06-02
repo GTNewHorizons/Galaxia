@@ -134,11 +134,13 @@ public final class StationGraph {
         adjacency.values()
             .forEach(list -> list.remove(pos));
 
-        if (ra.handler()
-            .hasDistributedInventory()) {
-            resolvedInventories.remove(ra);
+        if (ra != null) {
+            if (ra.handler()
+                .hasDistributedInventory()) {
+                resolvedInventories.remove(ra);
+            }
+            onDetached(ra, this);
         }
-        onDetached(ra, this);
         fireListeners(l -> l.onAttachmentDisconnected(pos));
     }
 
