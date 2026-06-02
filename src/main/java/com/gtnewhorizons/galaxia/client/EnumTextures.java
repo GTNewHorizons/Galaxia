@@ -64,6 +64,10 @@ public enum EnumTextures {
     ICON_STATION_ALERT_WARNING("textures/gui/station/alert_warning.png"),
     ICON_STATION_ALERT_ERROR("textures/gui/station/alert_error.png"),
     ICON_STATION_ITEM_INTERACTIONS("textures/gui/station/item_interactions.png"),
+    ICON_STATION_INVENTORY_ALL("textures/gui/station/inventory_all.png"),
+    ICON_STATION_INVENTORY_AMOUNT("textures/gui/station/inventory_amount.png"),
+    ICON_STATION_INVENTORY_BOUNDS("textures/gui/station/inventory_bounds.png"),
+    ICON_STATION_INVENTORY_VOID("textures/gui/station/inventory_void.png"),
     ICON_MISSING("textures/gui/asset_panel/missing.png"),
     ICON_TRANSFER_HAMMER("textures/items/module/item_hammer_package.png"),
 

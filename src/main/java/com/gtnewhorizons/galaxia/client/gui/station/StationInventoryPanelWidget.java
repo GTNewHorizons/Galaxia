@@ -59,10 +59,11 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private static final int NAME_WIDTH = ITEM_INTERACTION_BUTTON_X - NAME_X - 4;
     private static final int ROW_RIGHT_PADDING = 8;
     private static final int CONTROL_GAP = 4;
-    private static final int BOUNDS_WIDTH = 44;
+    private static final int INVENTORY_ACTION_BUTTON_SIZE = 18;
+    private static final int BOUNDS_WIDTH = INVENTORY_ACTION_BUTTON_SIZE;
     private static final int AMOUNT_INPUT_WIDTH = 40;
-    private static final int MODE_BUTTON_WIDTH = 44;
-    private static final int VOID_WIDTH = 36;
+    private static final int MODE_BUTTON_WIDTH = INVENTORY_ACTION_BUTTON_SIZE;
+    private static final int VOID_WIDTH = INVENTORY_ACTION_BUTTON_SIZE;
     private static final int VOID_X = SCROLL_WIDTH - ROW_RIGHT_PADDING - VOID_WIDTH;
     private static final int MODE_BUTTON_X = VOID_X - CONTROL_GAP - MODE_BUTTON_WIDTH;
     private static final int UPKEEP_AUTO_ORDER_WIDTH = 18;
@@ -452,22 +453,42 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                     }
                 }));
         rowWidget.child(
-            ModuleConfigModalSupport.button(() -> canEditBounds(wrapper), "Bounds", () -> openBoundEditor(wrapper))
+            ModuleConfigModalSupport
+                .textureIconButton(
+                    () -> canEditBounds(wrapper),
+                    EnumTextures.ICON_STATION_INVENTORY_BOUNDS.get(),
+                    "Edit inventory bounds",
+                    () -> openBoundEditor(wrapper))
                 .pos(BOUNDS_X, 3)
                 .size(BOUNDS_WIDTH, 18));
         rowWidget.child(
             amountField(rowKey, wrapper).pos(AMOUNT_INPUT_X, 3)
                 .size(AMOUNT_INPUT_WIDTH, 18));
         rowWidget.child(
-            ModuleConfigModalSupport.button(() -> isAmountMode(rowKey), "Amount", () -> setAmountMode(rowKey, false))
+            ModuleConfigModalSupport
+                .textureIconButton(
+                    () -> isAmountMode(rowKey),
+                    EnumTextures.ICON_STATION_INVENTORY_AMOUNT.get(),
+                    "Using entered amount; click to use all available",
+                    () -> setAmountMode(rowKey, false))
                 .pos(MODE_BUTTON_X, 3)
                 .size(MODE_BUTTON_WIDTH, 18));
         rowWidget.child(
-            ModuleConfigModalSupport.button(() -> !isAmountMode(rowKey), "ALL", () -> setAmountMode(rowKey, true))
+            ModuleConfigModalSupport
+                .textureIconButton(
+                    () -> !isAmountMode(rowKey),
+                    EnumTextures.ICON_STATION_INVENTORY_ALL.get(),
+                    "Using all available; click to use entered amount",
+                    () -> setAmountMode(rowKey, true))
                 .pos(MODE_BUTTON_X, 3)
                 .size(MODE_BUTTON_WIDTH, 18));
         rowWidget.child(
-            ModuleConfigModalSupport.button(() -> currentAmount(wrapper) > 0L, "Void", () -> voidRow(wrapper))
+            ModuleConfigModalSupport
+                .textureIconButton(
+                    () -> currentAmount(wrapper) > 0L,
+                    EnumTextures.ICON_STATION_INVENTORY_VOID.get(),
+                    "Void selected amount",
+                    () -> voidRow(wrapper))
                 .pos(VOID_X, 3)
                 .size(VOID_WIDTH, 18));
         return rowWidget;
@@ -552,7 +573,12 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                 .shadow(true)
                 .pos(AMOUNT_X, 8));
         rowWidget.child(
-            ModuleConfigModalSupport.button(() -> canEditBounds(fluidKey), "Bounds", () -> openBoundEditor(fluidKey))
+            ModuleConfigModalSupport
+                .textureIconButton(
+                    () -> canEditBounds(fluidKey),
+                    EnumTextures.ICON_STATION_INVENTORY_BOUNDS.get(),
+                    "Edit fluid bounds",
+                    () -> openBoundEditor(fluidKey))
                 .pos(BOUNDS_X, 3)
                 .size(BOUNDS_WIDTH, 18));
         return rowWidget;
