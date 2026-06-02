@@ -32,14 +32,9 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 
 record ButtonRect(int left, int top, int right, int bottom) {
 
@@ -85,7 +80,7 @@ record PinnedInfoRow(String label, String value, List<ItemStack> items, boolean 
     }
 }
 
-public final class AssetManagementSystem {
+public final class StarmapAssetActions {
 
     public static final class OrbitalAssetSupport {
 
@@ -188,14 +183,14 @@ public final class AssetManagementSystem {
             this.callbacks = callbacks;
         }
 
-        void openAssetManagement(OrbitalAssetUiState state, CelestialObject body) {
+        void openAssetActions(OrbitalAssetUiState state, CelestialObject body) {
             if (body == null || body.objectClass() == CelestialObject.Class.GALAXY) return;
-            state.openAssetManagement(body);
+            state.openAssetActions(body);
             closePendingAssetRename(state);
         }
 
-        void closeAssetManagement(OrbitalAssetUiState state) {
-            state.closeAssetManagement();
+        void closeAssetActions(OrbitalAssetUiState state) {
+            state.closeAssetActions();
             closePendingAssetRename(state);
         }
 
@@ -206,9 +201,9 @@ public final class AssetManagementSystem {
         }
 
         void triggerAssetCreation(OrbitalAssetUiState state, CelestialObject body, CelestialAsset.Kind kind,
-            boolean openManagementFirst) {
+            boolean openActionsFirst) {
             if (body == null) return;
-            if (openManagementFirst) openAssetManagement(state, body);
+            if (openActionsFirst) openAssetActions(state, body);
             CelestialAsset.Location location = getDefaultAssetLocation(kind);
             String displayName = buildDefaultAssetDisplayName(body, kind);
             if (kind == CelestialAsset.Kind.STATION) {
@@ -334,7 +329,7 @@ public final class AssetManagementSystem {
             if (asset == null) return;
             state.pendingResourceTransfer = new PendingResourceTransfer(
                 asset,
-                assetSupport.getTransferTargetsInSystem(root, state.assetManagementBody));
+                assetSupport.getTransferTargetsInSystem(root, state.assetActionsBody));
         }
 
         void dismissPendingResourceTransfer(OrbitalAssetUiState state) {
@@ -343,8 +338,7 @@ public final class AssetManagementSystem {
 
         void sendPendingResourceTransfer(OrbitalAssetUiState state, StationTransferTarget target) {
             if (state.pendingResourceTransfer != null) {
-                callbacks
-                    .createResourceTransfer(state.assetManagementBody, state.pendingResourceTransfer.asset(), target);
+                callbacks.createResourceTransfer(state.assetActionsBody, state.pendingResourceTransfer.asset(), target);
             }
             state.pendingResourceTransfer = null;
         }
@@ -406,15 +400,15 @@ public final class AssetManagementSystem {
 
     public static final class OrbitalAssetUiState {
 
-        CelestialObject assetManagementBody;
+        CelestialObject assetActionsBody;
         PendingAssetCreation pendingAssetCreation;
         PendingAssetDestruction pendingAssetDestruction;
         PendingConstructionCancellation pendingConstructionCancellation;
         PendingResourceTransfer pendingResourceTransfer;
         PendingAssetRename pendingAssetRename;
 
-        boolean isAssetManagementOpen() {
-            return assetManagementBody != null;
+        boolean isAssetActionsOpen() {
+            return assetActionsBody != null;
         }
 
         boolean hasBlockingModal() {
@@ -424,13 +418,13 @@ public final class AssetManagementSystem {
                 || pendingAssetRename != null;
         }
 
-        void openAssetManagement(CelestialObject body) {
-            assetManagementBody = body;
+        void openAssetActions(CelestialObject body) {
+            assetActionsBody = body;
             clearTransientState();
         }
 
-        void closeAssetManagement() {
-            assetManagementBody = null;
+        void closeAssetActions() {
+            assetActionsBody = null;
             clearTransientState();
         }
 
@@ -443,7 +437,7 @@ public final class AssetManagementSystem {
         }
     }
 
-    public static final class OrbitalAssetManagementWidget extends ParentWidget<OrbitalAssetManagementWidget> {
+    public static final class StarmapAssetActionsWidget extends ParentWidget<StarmapAssetActionsWidget> {
 
         interface Callbacks {
 
@@ -475,11 +469,11 @@ public final class AssetManagementSystem {
 
             void drawAssetIcon(CelestialAsset.Kind kind, int x, int y, int size, float alpha);
 
-            void closeAssetManagement();
+            void closeAssetActions();
 
             void createBaseStation(CelestialObject body);
 
-            void triggerAssetCreation(CelestialObject body, CelestialAsset.Kind kind, boolean openManagementFirst);
+            void triggerAssetCreation(CelestialObject body, CelestialAsset.Kind kind, boolean openActionsFirst);
 
             void openPendingAssetRename(CelestialAsset asset);
 
@@ -553,7 +547,7 @@ public final class AssetManagementSystem {
         private int mainContentWidth, mainContentHeight;
         private final List<TextFieldWidget> modalTextFields = new ArrayList<>();
 
-        OrbitalAssetManagementWidget(OrbitalAssetUiState state, Callbacks callbacks) {
+        StarmapAssetActionsWidget(OrbitalAssetUiState state, Callbacks callbacks) {
             this.state = state;
             this.callbacks = callbacks;
             setEnabled(false);
@@ -618,7 +612,7 @@ public final class AssetManagementSystem {
             size(callbacks.getViewportWidth(), callbacks.getViewportHeight());
 
             if (shouldShowPanel()) {
-                int assetListSignature = computeAssetListSignature(state.assetManagementBody);
+                int assetListSignature = computeAssetListSignature(state.assetActionsBody);
                 if (assetListSignature != lastAssetListSignature) {
                     lastAssetListSignature = assetListSignature;
                     markContentDirty();
@@ -627,7 +621,7 @@ public final class AssetManagementSystem {
                 lastAssetListSignature = 0;
             }
 
-            // Consume item picker result Ä‚ËĂ˘â€šÂ¬Ă˘â‚¬ĹĄ works even if the starmap was closed and reopened
+            // Consume item picker results even if the starmap was closed and reopened
             // between the button click and the user returning from the item picker screen.
             if (ItemPickerScreen.hasPendingPickForOutpost()) {
                 CelestialAsset.ID targetId = ItemPickerScreen.getPendingForOutpostId();
@@ -696,11 +690,11 @@ public final class AssetManagementSystem {
         }
 
         private boolean shouldShowOverlay() {
-            return state.isAssetManagementOpen();
+            return state.isAssetActionsOpen();
         }
 
         private boolean shouldShowPanel() {
-            return state.isAssetManagementOpen() && !state.hasBlockingModal();
+            return state.isAssetActionsOpen() && !state.hasBlockingModal();
         }
 
         private void rebuildChildren() {
@@ -708,7 +702,7 @@ public final class AssetManagementSystem {
             activeScrollWidget = null;
             removeAll();
             clearBounds();
-            CelestialObject body = state.assetManagementBody;
+            CelestialObject body = state.assetActionsBody;
             if (body == null) return;
             child(createBackdropButton());
             if (state.hasBlockingModal()) {
@@ -720,7 +714,7 @@ public final class AssetManagementSystem {
         }
 
         private void buildMainPanel(CelestialObject body) {
-            ModalBounds bounds = calculateManagementBounds();
+            ModalBounds bounds = calculateActionsBounds();
             updateModalBounds(bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
             int modalWidth = bounds.right() - bounds.left();
             int modalHeight = bounds.bottom() - bounds.top();
@@ -743,7 +737,7 @@ public final class AssetManagementSystem {
                 modal.child(createBodyText(assetName, EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(assetNameX, 10));
             }
             modal.child(
-                createGlyphButton(AssetManagerButtonGlyph.CLOSE, "Close", true, callbacks::closeAssetManagement)
+                createGlyphButton(AssetManagerButtonGlyph.CLOSE, "Close", true, callbacks::closeAssetActions)
                     .pos(modalWidth - 28, 6));
             modal.child(
                 createAssetKindButton(
@@ -794,7 +788,7 @@ public final class AssetManagementSystem {
         private void refreshMainPanelContent() {
             if (!shouldShowPanel() || mainScrollContent == null || mainScrollWidget == null || mainScrollData == null)
                 return;
-            CelestialObject body = state.assetManagementBody;
+            CelestialObject body = state.assetActionsBody;
             if (body == null) return;
             List<CelestialAsset> assetState = CelestialClient.getState(body.id());
             int contentScrollSize = Math.max(mainContentHeight, computeContentHeight(assetState));
@@ -1035,75 +1029,6 @@ public final class AssetManagementSystem {
             child(modal);
         }
 
-        private String formatAmount(long amount) {
-            if (amount < 1000) return String.valueOf(amount);
-            if (amount < 1000000) return (amount / 1000) + "k";
-            if (amount < 1000000000L) return (amount / 1000000) + "M";
-            if (amount < 1000000000000L) return (amount / 1000000000L) + "B";
-            return (amount / 1000000000000L) + "T";
-        }
-
-        private String buildPowerSummary(AutomatedFacility outpost) {
-            long generationPerTick = 0L;
-            long drawPerTick = 0L;
-            for (ModuleInstance module : outpost.modules()) {
-                if (module.status() != Buildable.Status.OPERATIONAL) continue;
-                long power = module.getDisplayedPowerEuPerTick();
-                if (power < 0) generationPerTick -= power;
-                else drawPerTick += power;
-            }
-            long netPerSecond = (generationPerTick - drawPerTick) * 20L;
-            String sign = netPerSecond >= 0 ? "+" : "";
-            return "Power: " + outpost
-                .getEnergyStored() + "/" + AutomatedFacility.MAX_ENERGY + " " + sign + netPerSecond + "/s";
-        }
-
-        private String buildModuleDescription(FacilityModuleKind kind) {
-            // TODO: Localize
-            return switch (kind) {
-                case HAMMER -> "Balances item reserves and exports excess inventory to other stations.";
-                case MINER -> "Generates one ore per second from this body's available deposits.";
-                case POWER -> "Adds extra power generation to support modules and logistics.";
-                case GEOTHERMAL_GENERATOR -> "Generates power from magma pools.";
-                case STORAGE -> "Increases station item storage capacity. Adjacent modules boost each other.";
-                case TANK -> "Increases station fluid storage capacity. Adjacent modules boost each other.";
-                case BATTERY -> "Increases station energy buffer capacity. Adjacent modules boost each other.";
-                case MAINTENANCE_BAY -> "Passively maintains station systems. Reduces wear over time.";
-                case MACERATOR -> "Processes materials through a macerator.";
-                case CENTRIFUGE -> "Separates materials by density in a centrifuge.";
-                case ELECTROLYZER -> "Breaks down materials using electrical current.";
-                case CHEMICAL_REACTOR -> "Combines materials in a chemical reaction.";
-                case ASSEMBLER -> "Assembles components into complex items.";
-                case DISTILLERY -> "Distills fluids into purer forms.";
-            };
-        }
-
-        private String buildModuleStats(FacilityModuleKind kind) {
-            FacilityModuleRegistry.Definition def = FacilityModuleRegistry.get(kind);
-            ModuleTierData data = def.getTierData(kind.defaultTier());
-            String powerLine = data.powerDrawEuPerTick() < 0 ? "Generates " + (-data.powerDrawEuPerTick()) + " EU/t"
-                : "Consumes " + data.powerDrawEuPerTick() + " EU/t";
-            String restrictionLine = kind == FacilityModuleKind.MINER ? "Only on Automated Outposts" : "Buildable here";
-            return powerLine + " | Cap " + data.baseEnergyCapacity() + " EU | " + restrictionLine;
-        }
-
-        private String buildModuleCost(FacilityModuleKind kind) {
-            FacilityModuleRegistry.Definition def = FacilityModuleRegistry.get(kind);
-            ModuleTierData data = def.getTierData(kind.defaultTier());
-            StringBuilder sb = new StringBuilder("Cost: ");
-            boolean first = true;
-            for (Map.Entry<ItemStack, Long> entry : data.constructionCost()
-                .entrySet()) {
-                ItemStack stack = entry.getKey();
-                if (!first) sb.append(", ");
-                sb.append(entry.getValue())
-                    .append(' ')
-                    .append(stack == null ? entry.getKey() : stack.getDisplayName());
-                first = false;
-            }
-            return sb.toString();
-        }
-
         private void addFooterButtons(ParentWidget<?> modal, ModalBounds bounds, String cancelLabel,
             Runnable cancelAction, String confirmLabel, Runnable confirmAction, boolean confirmDanger) {
             int btnWidth = 110;
@@ -1123,7 +1048,7 @@ public final class AssetManagementSystem {
             }
         }
 
-        private ModalBounds calculateManagementBounds() {
+        private ModalBounds calculateActionsBounds() {
             int availableWidth = getAvailableOverlayWidth();
             int availableHeight = getAvailableOverlayHeight();
             int width = Math.min(MODAL_MAX_WIDTH, availableWidth - MODAL_MARGIN_X);
@@ -1388,132 +1313,8 @@ public final class AssetManagementSystem {
             return createTextButton(label, enabled, action, false);
         }
 
-        private ButtonWidget<?> createTabButton(String label, boolean active, Runnable action) {
-            return createColoredButton(
-                label,
-                true,
-                action,
-                active ? EnumColors.MAP_COLOR_BTN_DISABLED.getColor()
-                    : EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                active ? EnumColors.MAP_COLOR_BTN_DISABLED.getColor()
-                    : EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor(),
-                active ? EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor()
-                    : EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
-        }
-
         private ButtonWidget<?> createDangerFooterButton(String label, Runnable action) {
             return createTextButton(label, true, action, true);
-        }
-
-        private ButtonWidget<?> createConfigureButton(String label, boolean enabled, Runnable action) {
-            return createColoredButton(
-                label,
-                enabled,
-                action,
-                EnumColors.MAP_COLOR_BTN_CONFIGURE_DEFAULT.getColor(),
-                EnumColors.MAP_COLOR_BTN_CONFIGURE_HOVERED.getColor(),
-                EnumColors.MAP_COLOR_BTN_CONFIGURE_BORDER.getColor());
-        }
-
-        private ButtonWidget<?> createDisableButton(String label, boolean enabled, Runnable action) {
-            return createColoredButton(
-                label,
-                enabled,
-                action,
-                EnumColors.MAP_COLOR_BTN_DISABLE_DEFAULT.getColor(),
-                EnumColors.MAP_COLOR_BTN_DISABLE_HOVERED.getColor(),
-                EnumColors.MAP_COLOR_BTN_DISABLE_BORDER.getColor());
-        }
-
-        private ButtonWidget<?> createDestroyModuleButton(boolean enabled, Runnable action) {
-            return createColoredButton(
-                "Destroy",
-                enabled,
-                action,
-                EnumColors.MAP_COLOR_BTN_DESTROY_DEFAULT.getColor(),
-                EnumColors.MAP_COLOR_BTN_DESTROY_HOVERED.getColor(),
-                EnumColors.MAP_COLOR_BTN_DESTROY_BORDER.getColor());
-        }
-
-        private ButtonWidget<?> createTwoStageDestructiveButton(String label, boolean armed, boolean enabled,
-            Runnable action) {
-            if (armed) {
-                return createColoredButton(
-                    label,
-                    enabled,
-                    action,
-                    EnumColors.MAP_COLOR_BTN_DANGER_DEFAULT.getColor(),
-                    EnumColors.MAP_COLOR_BTN_DANGER_HOVERED.getColor(),
-                    EnumColors.MAP_COLOR_BTN_DANGER_BORDER.getColor());
-            }
-            return createColoredButton(
-                label,
-                enabled,
-                action,
-                EnumColors.MAP_COLOR_BTN_DESTROY_DEFAULT.getColor(),
-                EnumColors.MAP_COLOR_BTN_DESTROY_HOVERED.getColor(),
-                EnumColors.MAP_COLOR_BTN_DESTROY_BORDER.getColor());
-        }
-
-        private ButtonWidget<?> createCheckboxButton(boolean checked, Runnable action) {
-            String label = checked ? "X" : "";
-            return new ScrollAwareButtonWidget()
-                .background(
-                    createRectFrameDrawable(
-                        EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                        EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()))
-                .hoverBackground(
-                    createRectFrameDrawable(
-                        EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor(),
-                        EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()))
-                .overlay(drawable((context, x, y, w, h) -> {
-                    org.lwjgl.opengl.GL11.glEnable(org.lwjgl.opengl.GL11.GL_TEXTURE_2D);
-                    com.cleanroommc.modularui.utils.GlStateManager.color(1f, 1f, 1f, 1f);
-                    net.minecraft.client.gui.FontRenderer fr = net.minecraft.client.Minecraft
-                        .getMinecraft().fontRenderer;
-                    int textW = fr.getStringWidth(label);
-                    fr.drawStringWithShadow(
-                        label,
-                        x + (w - textW) / 2,
-                        y + (h - fr.FONT_HEIGHT) / 2 + 1,
-                        EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
-                }))
-                .onMousePressed(mouseButton -> {
-                    if (mouseButton != 0) return true;
-                    action.run();
-                    return true;
-                });
-        }
-
-        private ButtonWidget<?> createColoredButton(String label, boolean enabled, Runnable action, int defaultBg,
-            int hoverBg, int border) {
-            return new ScrollAwareButtonWidget()
-                .background(
-                    createRectFrameDrawable(
-                        enabled ? defaultBg : EnumColors.MAP_COLOR_BTN_DISABLED.getColor(),
-                        enabled ? border : EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor()))
-                .hoverBackground(
-                    createRectFrameDrawable(
-                        enabled ? hoverBg : EnumColors.MAP_COLOR_BTN_DISABLED.getColor(),
-                        enabled ? border : EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor()))
-                .overlay(drawable((context, x, y, w, h) -> {
-                    org.lwjgl.opengl.GL11.glEnable(org.lwjgl.opengl.GL11.GL_TEXTURE_2D);
-                    com.cleanroommc.modularui.utils.GlStateManager.color(1f, 1f, 1f, 1f);
-                    net.minecraft.client.gui.FontRenderer fr = net.minecraft.client.Minecraft
-                        .getMinecraft().fontRenderer;
-                    int textW = fr.getStringWidth(label);
-                    fr.drawStringWithShadow(
-                        label,
-                        x + (w - textW) / 2,
-                        y + (h - fr.FONT_HEIGHT) / 2 + 1,
-                        enabled ? EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor()
-                            : EnumColors.MAP_COLOR_TEXT_BTN_DISABLED.getColor());
-                }))
-                .onMousePressed(mouseButton -> {
-                    if (mouseButton != 0 || !enabled) return true;
-                    action.run();
-                    return true;
-                });
         }
 
         private ButtonWidget<?> createTextButton(String label, boolean enabled, Runnable action, boolean danger) {
@@ -1703,16 +1504,6 @@ public final class AssetManagementSystem {
             modalTextFields.clear();
             mainContentWidth = 0;
             mainContentHeight = 0;
-        }
-
-        private boolean hasFocusedModalTextField() {
-            if (getContext() == null) return false;
-            for (TextFieldWidget field : modalTextFields) {
-                if (field != null && field.isValid() && getContext().isFocused(field)) {
-                    return true;
-                }
-            }
-            return false;
         }
 
         private String trimToWidth(String text, int width) {

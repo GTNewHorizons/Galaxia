@@ -22,7 +22,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
  * <p>
  * Opens via {@link #FACTORY} when the user wants to pick an item for outpost logistics routing.
  * Once the user places an item the stack is stored in {@link #pendingPick}. The caller polls
- * {@link #pollPendingPick()} on the next tick (in {@code OrbitalAssetManagementWidget.onUpdate})
+ * {@link #pollPendingPick()} on the next tick (in {@code StarmapAssetActionsWidget.onUpdate})
  * and adds it to the logistics configuration.
  *
  * <p>

@@ -77,7 +77,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     private final CelestialObject galaxyRoot;
     private final Supplier<CelestialObject> viewRootSupplier;
     private final Supplier<Boolean> openSupplier;
-    private final Consumer<CelestialObject> onAssetSelect;
+    private final Consumer<CelestialAsset.ID> onAssetSelect;
 
     private final ParentWidget<?> panelRoot;
     private ParentWidget<?> rowsContainer;
@@ -97,7 +97,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     private int assetRefreshTicks;
 
     public SolarSystemAssetPanelWidget(CelestialObject galaxyRoot, Supplier<CelestialObject> viewRootSupplier,
-        Supplier<Boolean> openSupplier, Consumer<CelestialObject> onAssetSelect) {
+        Supplier<Boolean> openSupplier, Consumer<CelestialAsset.ID> onAssetSelect) {
         this.galaxyRoot = galaxyRoot;
         this.viewRootSupplier = viewRootSupplier;
         this.openSupplier = openSupplier;
@@ -302,8 +302,8 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
                         .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor())))
             .overlay(drawable((ctx, x, y, w, h) -> drawRowContent(row, displayName, bodyIcon, x, y, h)))
             .onMousePressed(btn -> {
-                if (btn != 0 || onAssetSelect == null || hostBody == null) return false;
-                onAssetSelect.accept(hostBody);
+                if (btn != 0 || onAssetSelect == null) return false;
+                onAssetSelect.accept(row.assetId);
                 return true;
             });
         button.tooltip(t -> {

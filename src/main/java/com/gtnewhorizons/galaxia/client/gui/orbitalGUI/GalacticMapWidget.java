@@ -81,7 +81,7 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
                 .width(1)
                 .height(1));
         child(
-            (IWidget) mapWidget.createAssetManagementWidget()
+            (IWidget) mapWidget.createAssetActionsWidget()
                 .left(0)
                 .top(0)
                 .width(1)
