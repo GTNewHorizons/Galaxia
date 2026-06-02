@@ -59,53 +59,51 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget> im
         }, Blocks.chest, 0), StructureUtility.ofBlock(GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(), 0)))
         .build();
 
+    public static IInventoryStorageHandler<TileHammerTarget> HANDLER = new IInventoryStorageHandler<>() {
+
+        @Override
+        public ResourceFilter<ItemStackWrapper> getItemFilter(TileHammerTarget attachment) {
+            return attachment.filter;
+        }
+
+        @Override
+        public List<IInventory> getInventories(TileHammerTarget attachment) {
+            return attachment.inventory;
+        }
+
+        @Override
+        public BlockPos getPosition(TileHammerTarget attachment) {
+            return attachment.here;
+        }
+
+        @Override
+        public void tick(TileHammerTarget attachment) {}
+
+        @Override
+        public boolean isReady(TileHammerTarget attachment) {
+            return attachment.structureValid && attachment.graph != null;
+        }
+
+        @Override
+        public void onAttached(TileHammerTarget attachment, StationGraph graph) {
+            attachment.graph = graph;
+        }
+
+        @Override
+        public void onDetached(TileHammerTarget attachment, StationGraph graph) {
+            attachment.graph = null;
+        }
+
+        @Override
+        public void markDirty(TileHammerTarget attachment) {
+            attachment.markDirty();
+        }
+    };
+
     private final List<IInventory> inventory = new ArrayList<>();
     private final ResourceFilter<ItemStackWrapper> filter = ResourceFilter.forItems();
     private @Nullable StationGraph graph;
     private final BlockPos here;
-
-    static {
-        StationAttachmentRegistry.register(TileHammerTarget.class, new IInventoryStorageHandler<>() {
-
-            @Override
-            public ResourceFilter<ItemStackWrapper> getItemFilter(TileHammerTarget attachment) {
-                return attachment.filter;
-            }
-
-            @Override
-            public List<IInventory> getInventories(TileHammerTarget attachment) {
-                return attachment.inventory;
-            }
-
-            @Override
-            public BlockPos getPosition(TileHammerTarget attachment) {
-                return attachment.here;
-            }
-
-            @Override
-            public void tick(TileHammerTarget attachment) {}
-
-            @Override
-            public boolean isReady(TileHammerTarget attachment) {
-                return attachment.structureValid && attachment.graph != null;
-            }
-
-            @Override
-            public void onAttached(TileHammerTarget attachment, StationGraph graph) {
-                attachment.graph = graph;
-            }
-
-            @Override
-            public void onDetached(TileHammerTarget attachment, StationGraph graph) {
-                attachment.graph = null;
-            }
-
-            @Override
-            public void markDirty(TileHammerTarget attachment) {
-                attachment.markDirty();
-            }
-        });
-    }
 
     public TileHammerTarget() {
         super();

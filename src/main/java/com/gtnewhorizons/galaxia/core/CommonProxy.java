@@ -27,6 +27,9 @@ import com.gtnewhorizons.galaxia.handlers.TetherEventHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerTarget;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.effects.GalaxiaEffects;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
@@ -117,6 +120,9 @@ public class CommonProxy {
         if (isGregTechLoaded()) {
             GalaxiaGTAttachmentRegistration.init();
         }
+
+        StationAttachmentRegistry.register(TileHammerTarget.class, TileHammerTarget.HANDLER);
+        StationAttachmentRegistry.register(TileHammerCannon.class, TileHammerCannon.HANDLER);
     }
 
     private void registerBaublesSlots() {
