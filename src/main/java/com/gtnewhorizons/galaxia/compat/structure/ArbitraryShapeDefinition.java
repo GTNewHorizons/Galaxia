@@ -2,14 +2,18 @@ package com.gtnewhorizons.galaxia.compat.structure;
 
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
@@ -20,6 +24,7 @@ import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IItemSource;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.IStructureElement;
+import com.gtnewhorizon.structurelib.structure.IStructureElementChain;
 import com.gtnewhorizon.structurelib.structure.IStructureWalker;
 import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
@@ -754,13 +759,47 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
 
         // ── Boundary elements ─────────────────────────────────────────────────
 
+        private IStructureElement<T> merge(IStructureElement<T> a, IStructureElement<T> b) {
+            List<IStructureElement<T>> all = new ArrayList<>();
+            if (a instanceof IStructureElementChain<T> chain) {
+                Collections.addAll(all, chain.fallbacks());
+            } else {
+                all.add(a);
+            }
+            if (b instanceof IStructureElementChain<T> chain) {
+                Collections.addAll(all, chain.fallbacks());
+            } else {
+                all.add(b);
+            }
+            return all.size() == 2 ? StructureUtility.ofChain(all.get(0), all.get(1))
+                : StructureUtility.ofChain(all);
+        }
+
+        private void putElement(Block block, IStructureElement<T> element) {
+            elements.merge(block, element, this::merge);
+        }
+
         public Builder<T> addElement(IExtendedStructureElement<T> element) {
-            elements.put(element.getValidBlock(), element);
+            for (Block b : element.getValidBlocks()) {
+                putElement(b, element);
+            }
+            return this;
+        }
+
+        public Builder<T> addElement(Block validBlock, IStructureElement<T> element) {
+            putElement(validBlock, element);
+            return this;
+        }
+
+        public Builder<T> addElement(Collection<Block> validBlocks, IStructureElement<T> element) {
+            for (Block b : validBlocks) {
+                putElement(b, element);
+            }
             return this;
         }
 
         public Builder<T> addElements(Stream<IExtendedStructureElement<T>> elements) {
-            this.elements.putAll(elements.collect(Collectors.toMap(IExtendedStructureElement::getValidBlock, e -> e)));
+            elements.forEach(this::addElement);
             return this;
         }
 
@@ -772,7 +811,20 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
         // block types.
 
         public Builder<T> addInteriorElement(IExtendedStructureElement<T> element) {
-            interiorElements.computeIfAbsent(element.getValidBlock(), e -> new ArrayList<>())
+            Collection<Block> blocks = element.getValidBlocks();
+            if (!blocks.isEmpty()) {
+                for (Block b : blocks) {
+                    interiorElements.computeIfAbsent(b, e -> new ArrayList<>())
+                        .add(element);
+                }
+            } else {
+                Galaxia.LOG.warn("Interior element {} has no static valid block, ignoring", element);
+            }
+            return this;
+        }
+
+        public Builder<T> addInteriorElement(Block validBlock, IStructureElement<T> element) {
+            interiorElements.computeIfAbsent(validBlock, e -> new ArrayList<>())
                 .add(element);
             return this;
         }
@@ -794,7 +846,9 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
                 if (c == '+' || c == '-' || c == ' ') continue;
                 IStructureElement<D> element = sourceElements.get(c);
                 if (element instanceof IExtendedStructureElement<D>el && !element.isNavigating()) {
-                    this.elements.put(el.getValidBlock(), (IStructureElement<T>) element);
+                    for (Block b : el.getValidBlocks()) {
+                        putElement(b, (IStructureElement<T>) element);
+                    }
                 } else {
                     Galaxia.LOG.error("Trying to embed invalid structure elements, ignoring it");
                 }

@@ -113,15 +113,15 @@ public class GalaxiaStructureUtility {
     }
 
     public static <T> IExtendedStructureElement<T> ofBlock(Block block, int meta) {
-        return ofBlock(block, meta, block, meta);
+        return IExtendedStructureElement.extend(block, StructureUtility.ofBlock(block, meta));
     }
 
     public static <T> IExtendedStructureElement<T> ofBlockAnyMeta(Block block) {
-        return ofBlockAnyMeta(block, block, 0);
+        return IExtendedStructureElement.extend(block, StructureUtility.ofBlockAnyMeta(block));
     }
 
     public static <T> IExtendedStructureElement<T> ofBlockAnyMeta(Block block, int defaultMeta) {
-        return ofBlockAnyMeta(block, block, defaultMeta);
+        return IExtendedStructureElement.extend(block, StructureUtility.ofBlockAnyMeta(block, defaultMeta));
     }
 
     /**
