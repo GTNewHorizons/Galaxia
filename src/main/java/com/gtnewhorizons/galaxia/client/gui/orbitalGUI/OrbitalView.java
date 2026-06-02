@@ -573,8 +573,8 @@ public class OrbitalView {
                     }
 
                     @Override
-                    public void openPendingAssetManagement(CelestialAsset asset) {
-                        assetActionController.openPendingAssetManagement(assetUiState, asset);
+                    public void openStationManagement(CelestialAsset asset) {
+                        assetActionController.openStationManagement(assetUiState, asset);
                         assetManagementWidget.markStructureDirty();
                     }
 
@@ -645,12 +645,6 @@ public class OrbitalView {
                     @Override
                     public void sendPendingResourceTransfer(StationTransferTarget target) {
                         assetActionController.sendPendingResourceTransfer(assetUiState, target);
-                        assetManagementWidget.markStructureDirty();
-                    }
-
-                    @Override
-                    public void closePendingAssetManagement() {
-                        assetActionController.closePendingAssetManagement(assetUiState);
                         assetManagementWidget.markStructureDirty();
                     }
 
