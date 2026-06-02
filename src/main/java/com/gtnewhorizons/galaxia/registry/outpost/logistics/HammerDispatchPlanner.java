@@ -91,7 +91,8 @@ public final class HammerDispatchPlanner {
             if (!supplierCfg.isSupplyEnabled()) continue;
 
             if (!(supplierEntry.getKey() instanceof ItemStackWrapper resource)) continue;
-            long availableSurplus = supplier.getItemAmount(resource) - supplierCfg.minReserve();
+            long availableSurplus = supplier.getItemAmount(resource)
+                - supplyReserveFor(supplier, resource, supplierCfg);
             if (availableSurplus <= 0L) {
                 sawSurplusBlocked = true;
                 continue;
@@ -108,7 +109,8 @@ public final class HammerDispatchPlanner {
                 long requesterStock = CelestialAsset.getItemAmount(requester, resource);
                 long inboundInTransit = LogisticStore.inboundInTransitAmount(requester.assetId, resource);
                 long arrivedInbound = LogisticStore.arrivedInboundAmount(requester.assetId, resource);
-                long requestedAmount = Math.max(0L, requesterCfg.minReserve() - requesterStock - inboundInTransit);
+                long requestedAmount = Math
+                    .max(0L, importTargetFor(requester, resource, requesterCfg) - requesterStock - inboundInTransit);
                 if (requestedAmount <= 0L) {
                     if (arrivedInbound > 0L) {
                         bestBlockedStatus = prefer(
@@ -176,8 +178,9 @@ public final class HammerDispatchPlanner {
             return Result.simple(HammerDispatchStatus.Code.NO_EXPORT_CONFIG, hammer);
         }
 
-        long availableSurplus = (supplier instanceof Station station ? station.getCannonChestItems()
-            .getOrDefault(resource, 0L) : supplier.getItemAmount(resource)) - supplierCfg.minReserve();
+        long supplierStock = supplier instanceof Station station ? station.getCannonChestItems()
+            .getOrDefault(resource, 0L) : supplier.getItemAmount(resource);
+        long availableSurplus = supplierStock - supplyReserveFor(supplier, resource, supplierCfg);
         if (availableSurplus <= 0L) return Result.simple(HammerDispatchStatus.Code.NO_SURPLUS_AFTER_RESERVE, hammer);
 
         LogisticsResourceConfig requesterCfg = requester.logisticsConfig.get(resource);
@@ -188,7 +191,8 @@ public final class HammerDispatchPlanner {
         long requesterStock = requester.getItemAmount(resource);
         long inboundInTransit = LogisticStore.inboundInTransitAmount(requester.assetId, resource);
         long arrivedInbound = LogisticStore.arrivedInboundAmount(requester.assetId, resource);
-        long requestedAmount = Math.max(0L, requesterCfg.minReserve() - requesterStock - inboundInTransit);
+        long requestedAmount = Math
+            .max(0L, importTargetFor(requester, resource, requesterCfg) - requesterStock - inboundInTransit);
         if (requestedAmount <= 0L) {
             if (arrivedInbound > 0L) return destinationBlocked(hammer, arrivedInbound, requesterCfg.orderSize());
             return Result.simple(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, hammer);
@@ -324,6 +328,24 @@ public final class HammerDispatchPlanner {
 
     public static long dispatchAmount(ModuleHammer hammer, long availableSurplus, long requestedAmount, int orderSize) {
         return Math.min(Math.min(Math.min(requestedAmount, availableSurplus), orderSize), hammer.maxBatchSize());
+    }
+
+    private static long supplyReserveFor(CelestialAsset supplier, ItemStackWrapper resource,
+        LogisticsResourceConfig supplierCfg) {
+        long reserve = supplierCfg.minReserve();
+        if (supplier instanceof AutomatedFacility facility) {
+            reserve = Math.max(reserve, facility.effectiveLowerBound(resource));
+        }
+        return reserve;
+    }
+
+    private static long importTargetFor(CelestialAsset requester, ItemStackWrapper resource,
+        LogisticsResourceConfig requesterCfg) {
+        long target = requesterCfg.minReserve();
+        if (requester instanceof AutomatedFacility facility) {
+            target = Math.max(target, facility.effectiveLowerBound(resource));
+        }
+        return target;
     }
 
     private static Result orderBelowPackageSize(ModuleHammer hammer, long sendAmount, int orderSize) {

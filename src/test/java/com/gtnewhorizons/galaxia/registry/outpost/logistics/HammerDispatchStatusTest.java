@@ -99,6 +99,29 @@ final class HammerDispatchStatusTest {
     }
 
     @Test
+    void plannerRequestsPackageUpToRequesterEffectiveLowerBound() {
+        AutomatedFacility supplier = facility(CelestialObjectId.PANSPIRA);
+        AutomatedFacility requester = facility(CelestialObjectId.PANSPIRA);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);
+        supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
+        requester.setBound(resource, 54, true);
+        requester.setUpkeepReserve(resource, 10L);
+        requester.logisticsConfig.set(
+            resource,
+            requester.logisticsConfig.get(resource)
+                .withOrderSize(64)
+                .withImportEnabled(true));
+        supplier.updateItems(resource, 128);
+        ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 1_000_000L);
+
+        HammerDispatchPlanner.Result result = HammerDispatchPlanner
+            .evaluate(supplier, hammerModule(hammer), requester, resource, 0.0, null);
+
+        assertEquals(HammerDispatchStatus.Code.READY, result.code());
+        assertEquals(64L, result.sendAmount());
+    }
+
+    @Test
     void reportsEnergyNeededWhenRouteCostExceedsPrivateBuffer() {
         ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BIG, 500_000L);
         HammerDispatchStatus.Candidate candidate = candidate(64, 64, 32, 1.5, 80.0, 120.0);
