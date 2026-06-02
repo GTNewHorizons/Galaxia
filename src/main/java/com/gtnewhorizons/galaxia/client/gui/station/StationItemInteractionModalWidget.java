@@ -147,8 +147,8 @@ final class StationItemInteractionModalWidget extends ParentWidget<StationItemIn
 
     private static String textFor(StationItemInteractionModel.Entry entry) {
         return switch (entry.role()) {
-            case CORE_IMPORT -> "Core import " + entry.reserve() + " / " + entry.orderSize();
-            case HAMMER_EXPORT -> "Hammer export " + entry.reserve() + " / " + entry.orderSize();
+            case CORE_IMPORT -> "Core import reserve " + entry.reserve();
+            case HAMMER_EXPORT -> "Hammer export reserve " + entry.reserve();
             case CONSUMES -> rolePrefix("Consumes", entry);
             case PRODUCES -> rolePrefix("Produces", entry);
             case UPKEEP -> entry.label() + countSuffix(entry)
