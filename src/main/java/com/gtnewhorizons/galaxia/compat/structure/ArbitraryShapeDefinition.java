@@ -73,7 +73,7 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
     // element.check() is called exactly once per full validation — never during
     // fastRevalidate — so side-effects (e.g. attachment registration) fire
     // predictably and without duplication.
-    private final Map<Block, List<IStructureElement<T>>> interiorElements;
+    private final Map<Block, IStructureElement<T>> interiorElements;
 
     // ── Temporary bitsets — sized to searchRadius, cleared after every check ─
     private DenseBitSet floodVisited;
@@ -108,7 +108,7 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
 
     @SuppressWarnings("unchecked")
     private ArbitraryShapeDefinition(Map<Block, IStructureElement<T>> structureElements,
-        Map<Block, List<IStructureElement<T>>> interiorElements, int searchRadius, boolean enclosed) {
+        Map<Block, IStructureElement<T>> interiorElements, int searchRadius, boolean enclosed) {
 
         if (searchRadius > LocalCoord.MAX_SEARCH_RADIUS) {
             throw new IllegalArgumentException("Search radius too large: " + searchRadius);
@@ -387,13 +387,10 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
                     if (structureBlocks != null && structureBlocks.containsChecked(lx, ly, lz)) continue;
                     if (enclosed && !isInsideStructure(te.xCoord, te.yCoord, te.zCoord)) continue;
 
-                    List<IStructureElement<T>> els = interiorElements
+                    IStructureElement<T> el = interiorElements
                         .get(world.getBlock(te.xCoord, te.yCoord, te.zCoord));
-                    for (var el : els) {
-                        if (el != null && el.check(tile, world, te.xCoord, te.yCoord, te.zCoord)) {
-                            interiorBlocks.add(lx, ly, lz);
-                            break;
-                        }
+                    if (el != null && el.check(tile, world, te.xCoord, te.yCoord, te.zCoord)) {
+                        interiorBlocks.add(lx, ly, lz);
                     }
                 }
             }
@@ -725,7 +722,7 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
     public static class Builder<T extends GalaxiaMultiblockBase<T>> {
 
         private final Map<Block, IStructureElement<T>> elements = new HashMap<>();
-        private final Map<Block, List<IStructureElement<T>>> interiorElements = new HashMap<>();
+        private final Map<Block, IStructureElement<T>> interiorElements = new HashMap<>();
         private int searchRadius = LocalCoord.SEARCH_RADIUS;
         private int enclosed = -1;
 
@@ -810,22 +807,19 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
         // flood, so their block types must not overlap with boundary element
         // block types.
 
+        private void putInteriorElement(Block block, IStructureElement<T> element) {
+            interiorElements.merge(block, element, this::merge);
+        }
+
         public Builder<T> addInteriorElement(IExtendedStructureElement<T> element) {
-            Collection<Block> blocks = element.getValidBlocks();
-            if (!blocks.isEmpty()) {
-                for (Block b : blocks) {
-                    interiorElements.computeIfAbsent(b, e -> new ArrayList<>())
-                        .add(element);
-                }
-            } else {
-                Galaxia.LOG.warn("Interior element {} has no static valid block, ignoring", element);
+            for (Block b : element.getValidBlocks()) {
+                putInteriorElement(b, element);
             }
             return this;
         }
 
         public Builder<T> addInteriorElement(Block validBlock, IStructureElement<T> element) {
-            interiorElements.computeIfAbsent(validBlock, e -> new ArrayList<>())
-                .add(element);
+            putInteriorElement(validBlock, element);
             return this;
         }
 
