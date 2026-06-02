@@ -13,6 +13,7 @@ import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
+import com.gtnewhorizons.galaxia.compat.gt.StationHatchElement;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.compat.structure.IExtendedStructureElement;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
@@ -53,7 +54,7 @@ public class DockBehavior implements IStationBehaviorWithAttachments {
             .addElement(
                 GregTechAPI.sBlockMachines,
                 GTStructureUtility.<TileStation>buildHatchAdder()
-                    .anyOf(TileStationBase.StationHatchElement.Energy)
+                    .anyOf(StationHatchElement.Energy)
                     .casingIndex(1)
                     .hint(1)
                     .exclusive()

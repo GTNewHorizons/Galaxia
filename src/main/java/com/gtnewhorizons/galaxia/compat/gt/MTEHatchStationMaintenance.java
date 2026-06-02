@@ -21,6 +21,8 @@ import lombok.Setter;
 
 public class MTEHatchStationMaintenance extends MTEHatchMaintenance {
 
+    public static final int ID = 23050;
+
     @Getter
     @Setter
     private StationGraph graph;
