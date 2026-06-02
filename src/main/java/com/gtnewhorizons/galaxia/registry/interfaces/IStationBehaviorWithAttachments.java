@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.interfaces;
 
+import java.util.List;
+
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.common.util.Constants;
 
@@ -40,34 +42,16 @@ public interface IStationBehaviorWithAttachments extends IStationBehavior {
         if (graph == null) return;
 
         boolean changed = false;
-        for (BlockPos pos : station.getAttachments()) {
-            ResolvedAttachment<?> ra = resolveAttachment(station, pos);
-            if (ra == null) {
-                if (graph.hasAttachment(pos)) {
-                    graph.removeAttachmentSilently(pos);
-                    changed = true;
-                }
-                continue;
-            }
-            boolean valid = isReady(ra);
-            if (valid) {
-                if (!graph.hasAttachment(pos)) {
-                    graph.registerAttachment(station.getHere(), pos, ra);
-                    changed = true;
-                }
-            } else {
-                if (graph.hasAttachment(pos)) {
-                    graph.removeAttachmentSilently(pos);
-                    changed = true;
-                }
+        // Remove attachments that are no longer structurally valid
+        for (BlockPos pos : List.copyOf(station.getAttachments())) {
+            if (resolveAttachment(station, pos) == null) {
+                graph.removeAttachment(pos);
+                changed = true;
             }
         }
+        // Ensure all remaining station attachments are registered in the graph
+        registerAttachments(station, graph);
         if (changed) station.markDirty();
-    }
-
-    private static <T> boolean isReady(ResolvedAttachment<T> ra) {
-        return ra.handler()
-            .isReady(ra.attachment());
     }
 
     @Override
