@@ -16,6 +16,7 @@ public final class HammerDispatchStatus {
         NO_EXPORT_CONFIG(30),
         NO_SURPLUS_AFTER_RESERVE(40),
         ORDER_BELOW_PACKAGE_SIZE(50),
+        DESTINATION_CAPACITY_BLOCKED(55),
         NEED_BIG_HAMMER(70),
         ROUTE_UNAVAILABLE(60),
         BLOCKED_BY_DV_LIMIT(80),

@@ -107,8 +107,22 @@ public final class HammerDispatchPlanner {
 
                 long requesterStock = CelestialAsset.getItemAmount(requester, resource);
                 long inboundInTransit = LogisticStore.inboundInTransitAmount(requester.assetId, resource);
+                long arrivedInbound = LogisticStore.arrivedInboundAmount(requester.assetId, resource);
                 long requestedAmount = Math.max(0L, requesterCfg.minReserve() - requesterStock - inboundInTransit);
-                if (requestedAmount <= 0L) continue;
+                if (requestedAmount <= 0L) {
+                    if (arrivedInbound > 0L) {
+                        bestBlockedStatus = prefer(
+                            destinationBlocked(hammer, arrivedInbound, requesterCfg.orderSize()),
+                            bestBlockedStatus);
+                    }
+                    continue;
+                }
+                if (arrivedInbound > 0L) {
+                    bestBlockedStatus = prefer(
+                        destinationBlocked(hammer, arrivedInbound, requesterCfg.orderSize()),
+                        bestBlockedStatus);
+                    continue;
+                }
 
                 Result result = evaluateCandidateFor(
                     supplier,
@@ -159,8 +173,13 @@ public final class HammerDispatchPlanner {
 
         long requesterStock = requester.getItemAmount(resource);
         long inboundInTransit = LogisticStore.inboundInTransitAmount(requester.assetId, resource);
+        long arrivedInbound = LogisticStore.arrivedInboundAmount(requester.assetId, resource);
         long requestedAmount = Math.max(0L, requesterCfg.minReserve() - requesterStock - inboundInTransit);
-        if (requestedAmount <= 0L) return Result.simple(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, hammer);
+        if (requestedAmount <= 0L) {
+            if (arrivedInbound > 0L) return destinationBlocked(hammer, arrivedInbound, requesterCfg.orderSize());
+            return Result.simple(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, hammer);
+        }
+        if (arrivedInbound > 0L) return destinationBlocked(hammer, arrivedInbound, requesterCfg.orderSize());
 
         return evaluateCandidateFor(
             supplier,
@@ -283,6 +302,16 @@ public final class HammerDispatchPlanner {
 
     public static long dispatchAmount(ModuleHammer hammer, long availableSurplus, long requestedAmount, int orderSize) {
         return Math.min(Math.min(Math.min(requestedAmount, availableSurplus), orderSize), hammer.maxBatchSize());
+    }
+
+    private static Result destinationBlocked(ModuleHammer hammer, long arrivedAmount, int orderSize) {
+        return new Result(
+            HammerDispatchStatus.Code.DESTINATION_CAPACITY_BLOCKED,
+            0L,
+            hammer.energyStored(),
+            arrivedAmount,
+            orderSize,
+            null);
     }
 
     private static Result evaluateCandidateFor(CelestialAsset supplier, CelestialAsset requester,

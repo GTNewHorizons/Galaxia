@@ -322,10 +322,16 @@ public final class CelestialClient {
     }
 
     public static void planMinerFocusTier(ID assetId, int moduleIndex, MinerFocusTier focusTier) {
+        planMinerFocusTier(assetId, moduleIndex, ModuleTier.NONE, focusTier);
+    }
+
+    public static void planMinerFocusTier(ID assetId, int moduleIndex, ModuleTier targetTier,
+        MinerFocusTier focusTier) {
         sendModuleUpdate(
             assetId,
             moduleIndex,
-            module -> AssetModuleUpdatePacket.minerFocusTierPlan(assetId, moduleIndex, module.id, focusTier));
+            module -> AssetModuleUpdatePacket
+                .minerFocusTierPlan(assetId, moduleIndex, module.id, targetTier, focusTier));
     }
 
     public static void setMinerFocusOre(ID assetId, int moduleIndex, String oreKey) {

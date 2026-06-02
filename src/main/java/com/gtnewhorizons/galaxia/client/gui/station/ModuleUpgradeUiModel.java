@@ -17,6 +17,7 @@ final class ModuleUpgradeUiModel {
 
     static final String GROUP_HAMMER_VARIANT = "hammer.variant";
     static final String GROUP_HAMMER_TIER = "hammer.tier";
+    static final String GROUP_MINER_TIER = "miner.tier";
     static final String GROUP_MINER_FOCUS_TIER = "miner.focusTier";
 
     private ModuleUpgradeUiModel() {}
@@ -31,7 +32,7 @@ final class ModuleUpgradeUiModel {
             return ModuleUpgradeSelection.hammer(hammer.variant(), module.tier());
         }
         if (module.component() instanceof ModuleMiner) {
-            return ModuleUpgradeSelection.minerFocus(MinerFocusUiModel.defaultUpgradeTarget(module));
+            return ModuleUpgradeSelection.miner(module.tier(), MinerFocusUiModel.defaultUpgradeTarget(module));
         }
         throw new IllegalArgumentException("Unsupported upgrade module: " + module.kind());
     }
@@ -48,7 +49,8 @@ final class ModuleUpgradeUiModel {
             return ModuleUpgradeSelection.hammer(variant, normalizeHammerTier(variant, tier));
         }
         if (module.component() instanceof ModuleMiner) {
-            return ModuleUpgradeSelection.minerFocus(minerFocusTier(selection));
+            return ModuleUpgradeSelection
+                .miner(normalizeMinerTier(module, minerTier(selection)), minerFocusTier(selection));
         }
         return selection;
     }
@@ -98,6 +100,11 @@ final class ModuleUpgradeUiModel {
         return raw == null ? ModuleTier.EV : ModuleTier.valueOf(raw);
     }
 
+    static ModuleTier minerTier(ModuleUpgradeSelection selection) {
+        String raw = selection.get(GROUP_MINER_TIER);
+        return raw == null ? ModuleTier.EV : ModuleTier.valueOf(raw);
+    }
+
     static MinerFocusTier minerFocusTier(ModuleUpgradeSelection selection) {
         String raw = selection.get(GROUP_MINER_FOCUS_TIER);
         return raw == null ? MinerFocusTier.I : MinerFocusTier.valueOf(raw);
@@ -129,18 +136,34 @@ final class ModuleUpgradeUiModel {
     }
 
     private static List<ModuleUpgradeGroup> minerGroups(ModuleInstance module, ModuleUpgradeSelection selection) {
-        MinerFocusTier selectedTier = minerFocusTier(selection);
-        List<ModuleUpgradeOption> tiers = new ArrayList<>();
-        tiers.add(
+        ModuleTier selectedModuleTier = minerTier(selection);
+        MinerFocusTier selectedFocusTier = minerFocusTier(selection);
+        List<ModuleUpgradeOption> moduleTiers = new ArrayList<>();
+        for (ModuleTier tier : module.kind()
+            .allowedTiers()) {
+            if (tier == ModuleTier.NONE) continue;
+            moduleTiers.add(new ModuleUpgradeOption(tier.name(), tier.name(), tier == selectedModuleTier, true));
+        }
+
+        List<ModuleUpgradeOption> focusTiers = new ArrayList<>();
+        focusTiers.add(
             new ModuleUpgradeOption(
                 MinerFocusTier.NONE.name(),
                 "None",
-                selectedTier == MinerFocusTier.NONE,
+                selectedFocusTier == MinerFocusTier.NONE,
                 MinerFocusUiModel.canPlanTier(module, MinerFocusTier.NONE)));
         for (MinerFocusTier tier : new MinerFocusTier[] { MinerFocusTier.I, MinerFocusTier.II, MinerFocusTier.III }) {
             boolean enabled = MinerFocusUiModel.canPlanTier(module, tier);
-            tiers.add(new ModuleUpgradeOption(tier.name(), tier.name(), tier == selectedTier, enabled));
+            focusTiers.add(new ModuleUpgradeOption(tier.name(), tier.name(), tier == selectedFocusTier, enabled));
         }
-        return List.of(new ModuleUpgradeGroup(GROUP_MINER_FOCUS_TIER, "Focus Tier", tiers));
+        return List.of(
+            new ModuleUpgradeGroup(GROUP_MINER_TIER, "Tier", moduleTiers),
+            new ModuleUpgradeGroup(GROUP_MINER_FOCUS_TIER, "Focus Tier", focusTiers));
+    }
+
+    private static ModuleTier normalizeMinerTier(ModuleInstance module, ModuleTier tier) {
+        return module.kind()
+            .allowedTiers()
+            .contains(tier) ? tier : module.tier();
     }
 }

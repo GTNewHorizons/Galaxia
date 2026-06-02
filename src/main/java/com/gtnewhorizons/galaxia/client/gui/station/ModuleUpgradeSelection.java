@@ -28,6 +28,15 @@ record ModuleUpgradeSelection(Map<String, String> values) {
         return new ModuleUpgradeSelection(Map.of(ModuleUpgradeUiModel.GROUP_MINER_FOCUS_TIER, tier.name()));
     }
 
+    static ModuleUpgradeSelection miner(ModuleTier tier, MinerFocusTier focusTier) {
+        return new ModuleUpgradeSelection(
+            Map.of(
+                ModuleUpgradeUiModel.GROUP_MINER_TIER,
+                tier.name(),
+                ModuleUpgradeUiModel.GROUP_MINER_FOCUS_TIER,
+                focusTier.name()));
+    }
+
     @Nullable
     String get(String groupId) {
         return values.get(groupId);

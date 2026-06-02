@@ -66,6 +66,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private static final int SPEC_LEFT = PANEL_PADDING;
     private static final int SPEC_TOP = HEADER_HEIGHT + PANEL_PADDING;
     private static final int SPEC_BUTTON_WIDTH = 92;
+    private static final int SPEC_SMALL_BUTTON_WIDTH = SPEC_BUTTON_WIDTH / 2;
     private static final int SPEC_BUTTON_HEIGHT = 18;
     private static final int SPEC_BUTTON_GAP = 5;
     private static final int SPEC_SECTION_GAP = 40;
@@ -268,8 +269,8 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                         pendingSelectedTier = optionTier;
                         normalizeSelectedTier(kind);
                     }).pos(x, y)
-                        .size(SPEC_BUTTON_WIDTH, SPEC_BUTTON_HEIGHT));
-            x += SPEC_BUTTON_WIDTH + SPEC_BUTTON_GAP;
+                        .size(SPEC_SMALL_BUTTON_WIDTH, SPEC_BUTTON_HEIGHT));
+            x += SPEC_SMALL_BUTTON_WIDTH + SPEC_BUTTON_GAP;
         }
 
         y += SPEC_SECTION_GAP;
@@ -301,8 +302,8 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                         () -> true,
                         () -> pendingMinerFocusTier == optionTier,
                         () -> pendingMinerFocusTier = optionTier).pos(x, y)
-                            .size(SPEC_BUTTON_WIDTH, SPEC_BUTTON_HEIGHT));
-                x += SPEC_BUTTON_WIDTH + SPEC_BUTTON_GAP;
+                            .size(SPEC_SMALL_BUTTON_WIDTH, SPEC_BUTTON_HEIGHT));
+                x += SPEC_SMALL_BUTTON_WIDTH + SPEC_BUTTON_GAP;
             }
             y += SPEC_SECTION_GAP;
             x = SPEC_LEFT;
