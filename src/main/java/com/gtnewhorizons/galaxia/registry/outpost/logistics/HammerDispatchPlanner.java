@@ -327,7 +327,8 @@ public final class HammerDispatchPlanner {
     }
 
     public static long dispatchAmount(ModuleHammer hammer, long availableSurplus, long requestedAmount, int orderSize) {
-        return Math.min(Math.min(Math.min(requestedAmount, availableSurplus), orderSize), hammer.maxBatchSize());
+        long desiredAmount = Math.max(requestedAmount, orderSize);
+        return Math.min(Math.min(desiredAmount, availableSurplus), hammer.maxBatchSize());
     }
 
     private static long supplyReserveFor(CelestialAsset supplier, ItemStackWrapper resource,
