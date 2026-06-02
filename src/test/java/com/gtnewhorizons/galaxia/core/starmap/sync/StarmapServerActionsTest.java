@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.core.starmap.sync;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -96,6 +97,29 @@ final class StarmapServerActionsTest {
             facility.modules()
                 .get(0)
                 .anchor());
+    }
+
+    @Test
+    void buildModuleFactoryRejectsMissingModuleSpec() {
+        CelestialAsset.ID assetId = CelestialAsset.ID.create();
+
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> AssetBuildModulePacket
+                .create(assetId, null, ModuleShape.SINGLE, ModuleTier.HV, true, StationTileCoord.of(1, 0)));
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> AssetBuildModulePacket
+                .create(assetId, FacilityModuleKind.STORAGE, null, ModuleTier.HV, true, StationTileCoord.of(1, 0)));
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> AssetBuildModulePacket.create(
+                assetId,
+                FacilityModuleKind.STORAGE,
+                ModuleShape.SINGLE,
+                null,
+                true,
+                StationTileCoord.of(1, 0)));
     }
 
     @Test

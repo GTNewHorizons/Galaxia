@@ -58,6 +58,7 @@ public final class AssetBuildModulePacket implements IMessage {
 
     public static AssetBuildModulePacket createMany(CelestialAsset.ID assetId, FacilityModuleKind kind,
         ModuleShape shape, ModuleTier tier, boolean instantBuild, List<StationTileCoord> tileCoords) {
+        requireBuildSpec(kind, shape, tier);
         if (tileCoords != null && tileCoords.size() > MAX_BUILD_TARGETS) {
             throw new IllegalArgumentException("too many module build targets: " + tileCoords.size());
         }
@@ -105,9 +106,9 @@ public final class AssetBuildModulePacket implements IMessage {
     @Override
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
-        PacketUtil.writeEnum(buf, moduleKind == null ? FacilityModuleKind.POWER : moduleKind);
-        PacketUtil.writeEnum(buf, shape == null ? ModuleShape.SINGLE : shape);
-        PacketUtil.writeEnum(buf, tier == null ? ModuleTier.HV : tier);
+        PacketUtil.writeEnum(buf, moduleKind);
+        PacketUtil.writeEnum(buf, shape);
+        PacketUtil.writeEnum(buf, tier);
         buf.writeBoolean(instantBuild);
         if (tileCoords == null) {
             buf.writeInt(-1);
@@ -203,6 +204,9 @@ public final class AssetBuildModulePacket implements IMessage {
         MinerFocusTier buildMinerFocusTier = copySource == null ? normalizedMinerFocusTier()
             : minerFocusTierFor(copySource);
 
+        if (buildKind == null || buildShape == null || buildTier == null) {
+            return null;
+        }
         if (!buildKind.isAllowedOn(asset.kind)) {
             return null;
         }
@@ -334,6 +338,18 @@ public final class AssetBuildModulePacket implements IMessage {
 
     private boolean isCopyBuild() {
         return copySourceModuleIndex >= 0 || copySourceModuleId != null;
+    }
+
+    private static void requireBuildSpec(FacilityModuleKind kind, ModuleShape shape, ModuleTier tier) {
+        if (kind == null) {
+            throw new IllegalArgumentException("module kind must not be null");
+        }
+        if (shape == null) {
+            throw new IllegalArgumentException("module shape must not be null");
+        }
+        if (tier == null) {
+            throw new IllegalArgumentException("module tier must not be null");
+        }
     }
 
     private ModuleInstance resolveCopySource(AutomatedFacility facility) {
