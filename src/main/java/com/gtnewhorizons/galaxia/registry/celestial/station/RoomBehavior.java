@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.celestial.station;
 
 import java.util.List;
 
+import net.minecraft.block.Block;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
 
@@ -11,32 +12,28 @@ import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
+import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
+import com.gtnewhorizons.galaxia.compat.gt.MTEStationPlug;
+import com.gtnewhorizons.galaxia.compat.gt.MTEStationPlugMulti;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
+import com.gtnewhorizons.galaxia.core.network.StationGraphSyncHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
-import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehavior;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
+import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehaviorWithAttachments;
 
-public class RoomBehavior implements IStationBehavior {
+import gregtech.api.GregTechAPI;
+import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
+import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
 
-    private final ArbitraryShapeDefinition<TileStation> STRUCTURE_DEFINITION = ArbitraryShapeDefinition
-        .<TileStation>builder()
-        .addControllerBlock(GalaxiaBlocksEnum.STATION_CONTROLLER.get())
-        .addElements(
-            TileStationBase.BASE_VALID_BLOCKS.stream()
-                .map(b -> GalaxiaStructureUtility.ofBlock(b, 0)))
-        .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((station, tileEntity) -> {
-            if (tileEntity instanceof TileEntityAirlock airlock) {
-                if (!airlock.isStructureValid()) return false;
-                station.registerAirlock(airlock.xCoord, airlock.yCoord, airlock.zCoord);
-                return true;
-            }
-            return false;
-        }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
-        .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
-        .withSearchRadius(ConfigStructures.enclosed.searchRadius)
-        .enclosed()
-        .build();
+public class RoomBehavior implements IStationBehaviorWithAttachments {
+
+    public static List<Block> ALL_VALID_ROOM_BLOCKS = List.of(
+        GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
+        GalaxiaBlocksEnum.SPACE_STATION_PANEL.get(),
+        GalaxiaBlocksEnum.SPACE_STATION_GLASS.get());
 
     @Override
     public String getUnlocalizedName() {
@@ -44,33 +41,105 @@ public class RoomBehavior implements IStationBehavior {
     }
 
     @Override
-    public IStructureDefinition<TileStation> getStructureDefinition() {
-        return STRUCTURE_DEFINITION;
+    public IStructureDefinition<TileStation> buildStructureDefinition(DimensionDef def) {
+        return ArbitraryShapeDefinition.<TileStation>builder()
+            .addControllerBlock(GalaxiaBlocksEnum.STATION_CONTROLLER.get())
+            .addElements(
+                def.validSpaceStationBlocks()
+                    .stream()
+                    .filter(b -> ALL_VALID_ROOM_BLOCKS.contains(b))
+                    .map(b -> GalaxiaStructureUtility.ofBlock(b, 0)))
+            .addElement(GalaxiaStructureUtility.<TileStation>ofTileAdderCheckHintsAnyMeta((station, tileEntity) -> {
+                if (tileEntity instanceof TileEntityAirlock airlock) {
+                    if (!airlock.isStructureValid()) return false;
+                    station.registerAirlock(airlock.xCoord, airlock.yCoord, airlock.zCoord);
+                    return true;
+                }
+                return false;
+            }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
+            .addElement(
+                GalaxiaStructureUtility.<TileStation>stationHatchAdder(
+                    GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
+                    0,
+                    MTEStationPlug.ID,
+                    TileStationBase::addStationPlug))
+            .addElement(
+                GalaxiaStructureUtility.<TileStation>stationHatchAdder(
+                    GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
+                    0,
+                    MTEStationPlugMulti.ID,
+                    TileStationBase::addStationPlug))
+            .addElement(
+                GalaxiaStructureUtility.<TileStation>ofBlockPosAdderNoMetaForceCheck(
+                    TileStation::addCoolingCoil,
+                    GalaxiaBlocksEnum.COOLING_COIL.get(),
+                    0))
+            .addElement(
+                GalaxiaStructureUtility.<TileStation>ofBlockPosAdderNoMetaForceCheck(
+                    TileStation::addHeatingCoil,
+                    GalaxiaBlocksEnum.HEATING_COIL.get(),
+                    0))
+            .addElement(
+                GalaxiaStructureUtility.<TileStation>ofBlockPosAdderNoMetaForceCheck(
+                    TileStation::addAirPurifier,
+                    GalaxiaBlocksEnum.AIR_PURIFIER.get(),
+                    0))
+            .addElement(
+                GalaxiaStructureUtility.<TileStation>ofBlockPosAdderNoMetaForceCheck(
+                    TileStation::addWitherBlocker,
+                    GalaxiaBlocksEnum.WITHER_BLOCKER.get(),
+                    0))
+            .addElement(
+                GalaxiaStructureUtility.<TileStation>ofBlockPosAdderNoMetaForceCheck(
+                    TileStation::addOxygenator,
+                    GalaxiaBlocksEnum.OXYGENATOR.get(),
+                    0))
+            .addInteriorElement(
+                GalaxiaStructureUtility.<TileStation>ofTileAdderCheckHintsAnyMeta((room, tileEntity) -> {
+                    if (tileEntity instanceof IGregTechTileEntity gtTE) {
+                        IMetaTileEntity mte = gtTE.getMetaTileEntity();
+                        if (mte != null && StationAttachmentRegistry.isFluidStorageHandler(mte.getClass())) {
+                            room.addAttachment(new BlockPos(tileEntity.xCoord, tileEntity.yCoord, tileEntity.zCoord));
+                            return true;
+                        }
+                    }
+                    return false;
+                }, GregTechAPI.sBlockMachines, 0))
+            .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
+            .withSearchRadius(ConfigStructures.enclosed.searchRadius)
+            .enclosed()
+            .build();
     }
 
     @Override
     public int getSearchRadius() {
-        return STRUCTURE_DEFINITION.getSearchRadius();
-    }
-
-    @Override
-    public void onStructureFormed(TileStation station) {
-        station.oxygenLevel = TileStationBase.DEFAULT_OXYGEN_LEVEL;
+        return ConfigStructures.enclosed.searchRadius;
     }
 
     @Override
     public List<Widget<?>> buildBehaviourWidgets(TileStation station, PanelSyncManager syncManager, int yOffset) {
-        BooleanSyncValue oxygenatedSync = new BooleanSyncValue(
-            () -> station.isOxygenated(),
-            () -> station.isOxygenated());
-        syncManager.syncValue("oxygenated", 0, oxygenatedSync);
+        BooleanSyncValue sealedSync = new BooleanSyncValue(() -> station.isSealed(), () -> station.isSealed());
+        syncManager.syncValue("sealed", 0, sealedSync);
 
+        final int fluidRow = yOffset + 14;
         return List.of(new TextWidget<>(IKey.dynamic(() -> {
-            boolean oxy = oxygenatedSync.getBoolValue();
-            String oxygen = StatCollector.translateToLocal("galaxia.gui.station_controller.oxygen");
-            String status = StatCollector.translateToLocal(oxy ? "galaxia.gui.status_yes" : "galaxia.gui.status_no");
-            EnumChatFormatting color = oxy ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;
-            return oxygen + ": " + color + status + EnumChatFormatting.RESET;
-        })).pos(10, yOffset));
+            boolean sealed = sealedSync.getBoolValue();
+            String label = StatCollector.translateToLocal("galaxia.gui.station_controller.sealed");
+            String status = StatCollector.translateToLocal(sealed ? "galaxia.gui.status_yes" : "galaxia.gui.status_no");
+            EnumChatFormatting color = sealed ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;
+            return label + ": " + color + status + EnumChatFormatting.RESET;
+        })).pos(10, yOffset), new TextWidget<>(IKey.dynamic(() -> {
+            var snap = StationGraphSyncHandler.getSnapshot();
+            if (snap.fluidAttachmentCount() == 0) {
+                return StatCollector.translateToLocal("galaxia.gui.station_controller.no_fluid_tanks");
+            }
+            return StatCollector.translateToLocal("galaxia.gui.station_controller.fluid_storage") + ": "
+                + snap.fluidStored()
+                + " / "
+                + snap.fluidCapacity()
+                + " L ("
+                + snap.fluidAttachmentCount()
+                + ")";
+        })).pos(10, fluidRow));
     }
 }

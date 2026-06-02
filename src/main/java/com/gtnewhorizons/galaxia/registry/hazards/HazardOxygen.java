@@ -2,15 +2,18 @@ package com.gtnewhorizons.galaxia.registry.hazards;
 
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.*;
 
+import java.util.Optional;
+
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.DamageSource;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.effects.GalaxiaEffects;
+import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 
-public class HazardOxygen extends EnvironmentalHazard {
+public class HazardOxygen implements IEnvironmentalHazard {
 
     public static final DamageSource noOxygenDamage = new DamageSource("galaxia.noOxygen").setDamageBypassesArmor()
         .setMagicDamage();
@@ -21,14 +24,20 @@ public class HazardOxygen extends EnvironmentalHazard {
     /**
      * Applies the effects of low oxygen to the player
      *
-     * @param def    The EffectDef of the dimension
-     * @param player The player entity
+     * @param def     The EffectDef of the dimension
+     * @param player  The player entity
+     * @param station
      * @return warning
      */
     @Override
-    public HazardWarnings apply(EffectBuilder def, EntityPlayer player) {
-        final int oxygenPercent = def.getOxygenPercent(player);
-        if (GalaxiaAPI.canBreathe(player, def)) return HazardWarnings.FINE;
+    public HazardWarnings apply(EffectBuilder def, EntityPlayer player, Optional<TileStation> station) {
+        final int oxygenPercent = def.getOxygenPercent(player.worldObj);
+        if (oxygenPercent >= 100) return HazardWarnings.FINE;
+
+        if (station.filter(TileStation::isOxygenated)
+            .isPresent()) {
+            return HazardWarnings.FINE;
+        }
 
         final boolean hasMask = hasOxygenmask(player);
         final boolean hasOxygenToDrain = hasMask && checkOxygenAndDrain(player, oxygenPercent);

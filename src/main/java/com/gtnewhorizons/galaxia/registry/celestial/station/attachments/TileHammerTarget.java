@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.celestial.station;
+package com.gtnewhorizons.galaxia.registry.celestial.station.attachments;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,14 +29,13 @@ import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
-import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
-import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
+import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
+import com.gtnewhorizons.galaxia.registry.interfaces.IInventoryStorageHandler;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 
-public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget>
-    implements IGuiHolder<PosGuiData>, IDistributedInventory, IStationAttachment<TileHammerTarget> {
+public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget> implements IGuiHolder<PosGuiData> {
 
     private final static String STRUCTURE_PIECE_MAIN = "main";
     private static final IStructureDefinition<TileHammerTarget> STRUCTURE_DEFINITION = StructureDefinition
@@ -60,10 +59,53 @@ public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget
         }, Blocks.chest, 0), StructureUtility.ofBlock(GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(), 0)))
         .build();
 
-    private final List<IInventory> inventory = new java.util.ArrayList<>();
+    private final List<IInventory> inventory = new ArrayList<>();
     private final ResourceFilter<ItemStackWrapper> filter = ResourceFilter.forItems();
     private @Nullable StationGraph graph;
     private final BlockPos here;
+
+    static {
+        StationAttachmentRegistry.register(TileHammerTarget.class, new IInventoryStorageHandler<>() {
+
+            @Override
+            public ResourceFilter<ItemStackWrapper> getItemFilter(TileHammerTarget attachment) {
+                return attachment.filter;
+            }
+
+            @Override
+            public List<IInventory> getInventories(TileHammerTarget attachment) {
+                return attachment.inventory;
+            }
+
+            @Override
+            public BlockPos getPosition(TileHammerTarget attachment) {
+                return attachment.here;
+            }
+
+            @Override
+            public void tick(TileHammerTarget attachment) {}
+
+            @Override
+            public boolean isReady(TileHammerTarget attachment) {
+                return attachment.structureValid && attachment.graph != null;
+            }
+
+            @Override
+            public void onAttached(TileHammerTarget attachment, StationGraph graph) {
+                attachment.graph = graph;
+            }
+
+            @Override
+            public void onDetached(TileHammerTarget attachment, StationGraph graph) {
+                attachment.graph = null;
+            }
+
+            @Override
+            public void markDirty(TileHammerTarget attachment) {
+                attachment.markDirty();
+            }
+        });
+    }
 
     public TileHammerTarget() {
         super();
@@ -71,44 +113,11 @@ public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget
     }
 
     @Override
-    public BlockPos getPosition() {
-        return here;
-    }
-
-    @Override
-    public void tick() {}
-
-    @Override
     public void onStructureDisformed() {
         super.onStructureDisformed();
         if (graph != null) {
             graph.removeAttachment(here);
         }
-    }
-
-    @Override
-    protected boolean attemptBoot() {
-        return graph != null;
-    }
-
-    @Override
-    public void onAttached(StationGraph graph) {
-        this.graph = graph;
-    }
-
-    @Override
-    public void onDetached(StationGraph graph) {
-        this.graph = null;
-    }
-
-    @Override
-    public List<IInventory> getInventories() {
-        return this.inventory;
-    }
-
-    @Override
-    public ResourceFilter<ItemStackWrapper> getItemFilter() {
-        return filter;
     }
 
     @Override

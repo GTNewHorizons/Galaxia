@@ -8,15 +8,15 @@ import net.minecraft.world.World;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.registry.capabilities.ZeroGMovementProvider;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
+import com.gtnewhorizons.galaxia.registry.interfaces.IZeroGMovementProvider;
 
 import baubles.api.BaubleType;
 import baubles.api.expanded.IBaubleExpanded;
 import baubles.common.container.InventoryBaubles;
 import baubles.common.lib.PlayerHandler;
 
-public class ItemReactionControlSystem extends Item implements IBaubleExpanded, ZeroGMovementProvider {
+public class ItemReactionControlSystem extends Item implements IBaubleExpanded, IZeroGMovementProvider {
 
     public static final String BAUBLE_TYPE_REACTION_CONTROL_SYSTEM = "reaction_control_system";
 
@@ -105,7 +105,7 @@ public class ItemReactionControlSystem extends Item implements IBaubleExpanded, 
         }
 
         EffectBuilder def = GalaxiaAPI.getEffects(player);
-        int oxygen = def.getOxygenPercent((EntityPlayer) player);
+        int oxygen = def.getOxygenPercent(player.worldObj);
 
         // TODO: Adjust for balance
         this.enabled = GalaxiaAPI.checkOxygenAndDrain((EntityPlayer) player, oxygen);

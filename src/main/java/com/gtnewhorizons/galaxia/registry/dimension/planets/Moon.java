@@ -60,6 +60,11 @@ public class Moon extends BasePlanet {
             .radius(0.27)
             .orbitalRadius(1 * earthRadiusToAU)
             .sky(buildSky())
+            .addValidSpaceStationBlocks(
+                GalaxiaBlocksEnum.RUSTY_SCAFFOLDING.get(),
+                GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
+                GalaxiaBlocksEnum.SPACE_STATION_PANEL.get(),
+                GalaxiaBlocksEnum.SPACE_STATION_GLASS.get())
             .effects(
                 EffectBuilder.builder()
                     .baseTemp(225)

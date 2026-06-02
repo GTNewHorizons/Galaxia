@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.dimension.asteroidbelts;
 import net.minecraft.block.Block;
 import net.minecraft.world.WorldProvider;
 
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
@@ -40,12 +41,18 @@ public class FrozenBelt extends BaseAsteroidBelt {
     @Override
     protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
         // super call adds basic asteroid belt stats - add on top as required
-        return super.customizeDimension(builder).effects(
-            EffectBuilder.builder()
-                .baseTemp(67)
-                .oxygenPercent(0)
-                .pressure(1)
-                .build());
+        return super.customizeDimension(builder)
+            .addValidSpaceStationBlocks(
+                GalaxiaBlocksEnum.RUSTY_SCAFFOLDING.get(),
+                GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
+                GalaxiaBlocksEnum.SPACE_STATION_PANEL.get(),
+                GalaxiaBlocksEnum.SPACE_STATION_GLASS.get())
+            .effects(
+                EffectBuilder.builder()
+                    .baseTemp(67)
+                    .oxygenPercent(0)
+                    .pressure(1)
+                    .build());
     }
 
     /**

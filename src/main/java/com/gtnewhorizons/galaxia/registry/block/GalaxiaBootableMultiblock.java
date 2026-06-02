@@ -27,6 +27,12 @@ public abstract class GalaxiaBootableMultiblock<T extends GalaxiaBootableMultibl
         return bootState == BootState.BOOTED;
     }
 
+    protected void reset() {
+        bootState = BootState.UNINITIALIZED;
+        onBootFailed();
+        super.reset();
+    }
+
     @Override
     protected boolean shouldCheckStructure() {
         return bootState != BootState.STRUCTURE_VALID;
