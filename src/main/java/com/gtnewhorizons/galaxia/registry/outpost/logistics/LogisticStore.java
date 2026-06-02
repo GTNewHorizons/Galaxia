@@ -60,6 +60,17 @@ public final class LogisticStore {
         return total;
     }
 
+    public static long arrivedInboundAmount(CelestialAsset.ID toAssetId, ItemStackWrapper resource) {
+        long total = 0L;
+        for (LogisticsDelivery task : activeDeliveries) {
+            if (!toAssetId.equals(task.data.toAssetId())) continue;
+            if (!resource.equals(task.data.resourceId())) continue;
+            if (!task.isArrived()) continue;
+            total += task.data.amount();
+        }
+        return total;
+    }
+
     public static void tickDeliveries() {
         for (int i = activeDeliveries.size() - 1; i >= 0; i--) {
             LogisticsDelivery current = activeDeliveries.get(i);

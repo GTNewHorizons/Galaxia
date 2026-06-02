@@ -575,6 +575,27 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
+    void applyMinerFocusTierPlanCanCarryModuleTierTarget() {
+        AutomatedFacility facility = addMinerFacilityToServer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket
+                .minerFocusTierPlan(facility.assetId, 0, module.id, ModuleTier.IV, MinerFocusTier.I));
+
+        packet.apply(TEAM);
+
+        assertEquals(ModuleTier.EV, module.tier());
+        assertNotNull(module.operationOrNull());
+        MinerFocusOperation spec = (MinerFocusOperation) module.operationOrNull()
+            .plan()
+            .spec();
+        assertEquals(ModuleTier.IV, spec.targetTier());
+        assertEquals("I", spec.targetFocusTierKey());
+    }
+
+    @Test
     void applyMinerFocusOreUpdatesRuntimeConfigAndResetsAlignment() {
         AutomatedFacility facility = addMinerFacilityToServer();
         ModuleInstance module = facility.modules()

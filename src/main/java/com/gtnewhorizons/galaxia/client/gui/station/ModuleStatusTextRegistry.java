@@ -228,6 +228,10 @@ final class ModuleStatusTextRegistry {
             case ORDER_BELOW_PACKAGE_SIZE -> "Dispatch: order below package size " + status.sendAmount()
                 + "/"
                 + status.orderSize();
+            case DESTINATION_LACKS_PACKAGE_SPACE -> "Dispatch: destination lacks package space " + status.sendAmount()
+                + "/"
+                + status.orderSize();
+            case DESTINATION_CAPACITY_BLOCKED -> "Dispatch: destination full, " + status.sendAmount() + " arrived";
             case NEED_BIG_HAMMER -> "Dispatch: need BIG Hammer";
             case ROUTE_UNAVAILABLE -> "Dispatch: route unavailable";
             case BLOCKED_BY_DV_LIMIT -> "Dispatch: blocked by dV limit";

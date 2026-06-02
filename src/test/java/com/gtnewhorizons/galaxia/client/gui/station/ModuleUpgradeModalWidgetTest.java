@@ -24,7 +24,7 @@ final class ModuleUpgradeModalWidgetTest {
 
     @Test
     void hammerOptionGridAndFlagsHaveVisibleGap() {
-        ModuleUpgradeModalWidget.ControlRect lastOptionRow = ModuleUpgradeModalWidget.optionRectForTest(6);
+        ModuleUpgradeModalWidget.ControlRect lastOptionRow = ModuleUpgradeModalWidget.optionRectForTest(1, 4);
         ModuleUpgradeModalWidget.ControlRect reserve = ModuleUpgradeModalWidget.controlRectsForTest()
             .stream()
             .filter(
@@ -34,5 +34,17 @@ final class ModuleUpgradeModalWidgetTest {
             .orElseThrow();
 
         assertTrue(reserve.y() - lastOptionRow.bottom() >= ModuleUpgradeModalWidget.CONTROL_GAP_FOR_TEST);
+    }
+
+    @Test
+    void optionGroupsUseOneRowPerCategory() {
+        ModuleUpgradeModalWidget.ControlRect firstTier = ModuleUpgradeModalWidget.optionRectForTest(0, 0);
+        ModuleUpgradeModalWidget.ControlRect lastTier = ModuleUpgradeModalWidget.optionRectForTest(0, 2);
+        ModuleUpgradeModalWidget.ControlRect firstFocus = ModuleUpgradeModalWidget.optionRectForTest(1, 0);
+        ModuleUpgradeModalWidget.ControlRect lastFocus = ModuleUpgradeModalWidget.optionRectForTest(1, 3);
+
+        assertTrue(firstTier.y() == lastTier.y());
+        assertTrue(firstFocus.y() == lastFocus.y());
+        assertTrue(firstFocus.y() > firstTier.y());
     }
 }

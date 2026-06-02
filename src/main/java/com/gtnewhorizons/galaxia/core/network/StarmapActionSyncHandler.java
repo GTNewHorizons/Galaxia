@@ -10,12 +10,17 @@ import net.minecraft.network.PacketBuffer;
 
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.value.sync.SyncHandler;
+import com.gtnewhorizons.galaxia.client.gui.station.StationNotificationHelper;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -36,6 +41,7 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
     private static final int REQUEST_FILTER_UPDATE = 7;
 
     private static final int RESPONSE_SYNC = 100;
+    private static final int RESPONSE_ACTION_FAILED = 101;
 
     private static StarmapActionSyncHandler activeClientHandler;
 
@@ -57,15 +63,13 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
 
     @SideOnly(Side.CLIENT)
     public static boolean sendRegisterAsset(CelestialObjectId bodyId, CelestialAsset asset) {
-        StarmapActionSyncHandler handler = activeClientHandler;
-        if (handler == null || !handler.isValid()) return false;
         AssetCreateRequestPacket packet = switch (asset.kind) {
             case STATION -> AssetCreateRequestPacket
                 .createStation(bodyId, asset.displayName(), ((Station) asset).getController());
             case AUTOMATED_OUTPOST, AUTOMATED_STATION -> AssetCreateRequestPacket
                 .createFacility(bodyId, asset.displayName(), asset.kind, asset.isOperational());
         };
-        handler.syncToServer(REQUEST_CREATE_ASSET, packet::toBytes);
+        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
     }
 
@@ -78,19 +82,39 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
     @SideOnly(Side.CLIENT)
     public static boolean sendBuildModules(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
         ModuleTier tier, boolean instantBuild, List<StationTileCoord> coords) {
-        StarmapActionSyncHandler handler = activeClientHandler;
-        if (handler == null || !handler.isValid()) return false;
+        return sendBuildModules(assetId, kind, shape, tier, null, MinerFocusTier.NONE, (short) 0, instantBuild, coords);
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static boolean sendBuildModules(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
+        ModuleTier tier, HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId,
+        boolean instantBuild, List<StationTileCoord> coords) {
+        AssetBuildModulePacket packet = AssetBuildModulePacket.createManyWithSpec(
+            assetId,
+            kind,
+            shape,
+            tier,
+            hammerVariant,
+            minerFocusTier,
+            settingsGroupId,
+            instantBuild,
+            coords);
+        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
+        return true;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static boolean sendCopyModule(CelestialAsset.ID assetId, int sourceModuleIndex,
+        ModuleInstance.ID sourceModuleId, boolean instantBuild, List<StationTileCoord> coords) {
         AssetBuildModulePacket packet = AssetBuildModulePacket
-            .createMany(assetId, kind, shape, tier, instantBuild, coords);
-        handler.syncToServer(REQUEST_BUILD_MODULE, packet::toBytes);
+            .copyFromModule(assetId, sourceModuleIndex, sourceModuleId, instantBuild, coords);
+        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
     }
 
     @SideOnly(Side.CLIENT)
     public static boolean sendUpdateAsset(AssetUpdatePacket packet) {
-        StarmapActionSyncHandler handler = activeClientHandler;
-        if (handler == null || !handler.isValid()) return false;
-        handler.syncToServer(REQUEST_UPDATE_ASSET, packet::toBytes);
+        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
     }
 
@@ -121,43 +145,41 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
 
     @SideOnly(Side.CLIENT)
     public static boolean sendModuleUpdate(AssetModuleUpdatePacket packet) {
-        StarmapActionSyncHandler handler = activeClientHandler;
-        if (handler == null || !handler.isValid()) return false;
-        handler.syncToServer(REQUEST_MODULE_UPDATE, packet::toBytes);
+        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
     }
 
     @SideOnly(Side.CLIENT)
     public static boolean sendInventoryUpdate(AssetInventoryUpdatePacket packet) {
-        StarmapActionSyncHandler handler = activeClientHandler;
-        if (handler == null || !handler.isValid()) return false;
-        handler.syncToServer(REQUEST_INVENTORY_UPDATE, packet::toBytes);
+        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
     }
 
     @SideOnly(Side.CLIENT)
     public static boolean sendLogisticsConfig(LogisticsConfigUpdatePacket packet) {
-        StarmapActionSyncHandler handler = activeClientHandler;
-        if (handler == null || !handler.isValid()) return false;
-        handler.syncToServer(REQUEST_LOGISTICS_CONFIG, packet::toBytes);
+        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
     }
 
     @SideOnly(Side.CLIENT)
     public static boolean sendFilterUpdate(AssetFilterUpdatePacket packet) {
-        StarmapActionSyncHandler handler = activeClientHandler;
-        if (handler == null || !handler.isValid()) return false;
-        handler.syncToServer(REQUEST_FILTER_UPDATE, packet::toBytes);
+        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
     }
 
     @Override
     @SideOnly(Side.CLIENT)
     public void readOnClient(int id, PacketBuffer buf) throws IOException {
-        if (id != RESPONSE_SYNC) return;
-        AssetSyncPacket packet = new AssetSyncPacket();
-        packet.fromBytes(buf);
-        AssetSyncPacket.Handler.handleClientSync(packet);
+        switch (id) {
+            case RESPONSE_SYNC -> {
+                AssetSyncPacket packet = new AssetSyncPacket();
+                packet.fromBytes(buf);
+                AssetSyncPacket.Handler.handleClientSync(packet);
+            }
+            case RESPONSE_ACTION_FAILED -> {
+                StationNotificationHelper.showFailure(PacketUtil.readString(buf));
+            }
+        }
     }
 
     @Override
@@ -169,10 +191,18 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
 
         switch (id) {
             case REQUEST_CREATE_ASSET -> {
-                if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.CREATE_ASSET)) return;
+                if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.CREATE_ASSET)) {
+                    syncFailure("Asset creation denied");
+                    return;
+                }
                 AssetCreateRequestPacket packet = new AssetCreateRequestPacket();
                 packet.fromBytes(buf);
-                syncPacket(packet.apply(teamId));
+                AssetSyncPacket sync = packet.apply(teamId);
+                if (sync == null) {
+                    syncFailure("Asset creation failed");
+                } else {
+                    syncPacket(sync);
+                }
             }
             case REQUEST_UPDATE_ASSET -> {
                 AssetUpdatePacket packet = new AssetUpdatePacket();
@@ -183,7 +213,12 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
                 if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.BUILD_MODULE)) return;
                 AssetBuildModulePacket packet = new AssetBuildModulePacket();
                 packet.fromBytes(buf);
-                syncPacket(packet.apply(teamId, creative));
+                AssetSyncPacket sync = packet.apply(teamId, creative);
+                if (sync == null) {
+                    syncFailure("Module build failed");
+                } else {
+                    syncPacket(sync);
+                }
             }
             case REQUEST_MODULE_UPDATE -> {
                 if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.MODIFY_MODULE)) return;
@@ -214,5 +249,9 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
 
     private void syncPacket(AssetSyncPacket packet) {
         if (packet != null) syncToClient(RESPONSE_SYNC, packet::toBytes);
+    }
+
+    private void syncFailure(String message) {
+        syncToClient(RESPONSE_ACTION_FAILED, buf -> PacketUtil.writeString(buf, message));
     }
 }

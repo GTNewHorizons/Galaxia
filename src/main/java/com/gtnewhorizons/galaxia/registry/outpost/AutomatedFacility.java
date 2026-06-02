@@ -466,7 +466,31 @@ public final class AutomatedFacility extends CelestialAsset {
         markSettingsGroupMembersDirty(group);
     }
 
+    public boolean canCopyModuleRuntimeSettings(ModuleInstance source, ModuleInstance target) {
+        try {
+            validateModuleRuntimeSettingsCopy(source, target);
+            return true;
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
     public void copyModuleRuntimeSettings(ModuleInstance source, ModuleInstance target) {
+        SettingsGroup sourceGroup = validateModuleRuntimeSettingsCopy(source, target);
+        if (sourceGroup.isJoinable()) {
+            assignSettingsGroup(target, sourceGroup.id());
+        } else {
+            setPrivateModuleSettings(
+                target,
+                source.component()
+                    .copySettings(source, sourceGroup.settings()));
+        }
+        source.component()
+            .afterSettingsCopied(source, target);
+        markModuleDirty(target.id);
+    }
+
+    private SettingsGroup validateModuleRuntimeSettingsCopy(ModuleInstance source, ModuleInstance target) {
         requireSettingsGroupsSupported(source);
         requireSettingsGroupsSupported(target);
         if (source.kind() != target.kind()) {
@@ -479,17 +503,7 @@ public final class AutomatedFacility extends CelestialAsset {
         SettingsGroup sourceGroup = settingsGroups.require(source.groupId(), source.kind());
         source.component()
             .validateSettingsCopyTarget(source, target);
-        if (sourceGroup.isJoinable()) {
-            assignSettingsGroup(target, sourceGroup.id());
-        } else {
-            setPrivateModuleSettings(
-                target,
-                source.component()
-                    .copySettings(source, sourceGroup.settings()));
-        }
-        source.component()
-            .afterSettingsCopied(source, target);
-        markModuleDirty(target.id);
+        return sourceGroup;
     }
 
     public boolean tryReserveOperationMaterials(ModuleInstance module, Map<ItemStackWrapper, Long> materialCost) {
@@ -673,6 +687,12 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         detachFromSettingsGroup(module);
         attachToSettingsGroup(module, group);
+    }
+
+    public boolean canJoinSettingsGroup(FacilityModuleKind kind, short groupId) {
+        if (kind == null || groupId <= 0) return false;
+        SettingsGroup group = settingsGroups.get(groupId);
+        return group != null && group.kind() == kind && group.isJoinable();
     }
 
     public void leaveSettingsGroup(ModuleInstance module) {

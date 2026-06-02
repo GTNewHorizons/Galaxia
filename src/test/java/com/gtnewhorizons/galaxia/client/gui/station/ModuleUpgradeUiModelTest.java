@@ -51,6 +51,27 @@ final class ModuleUpgradeUiModelTest {
     }
 
     @Test
+    void buildTierFallsBackWhenHammerPendingTierWasCleared() {
+        assertEquals(
+            ModuleTier.LuV,
+            ModuleUpgradeUiModel.normalizeBuildTier(FacilityModuleKind.HAMMER, ModuleTier.NONE, HammerVariant.BIG));
+    }
+
+    @Test
+    void buildTierKeepsValidHammerTier() {
+        assertEquals(
+            ModuleTier.UV,
+            ModuleUpgradeUiModel.normalizeBuildTier(FacilityModuleKind.HAMMER, ModuleTier.UV, HammerVariant.BIG));
+    }
+
+    @Test
+    void buildTierFallsBackToDefaultForInvalidNonHammerTier() {
+        assertEquals(
+            ModuleTier.HV,
+            ModuleUpgradeUiModel.normalizeBuildTier(FacilityModuleKind.MACERATOR, ModuleTier.NONE, HammerVariant.BASE));
+    }
+
+    @Test
     void hammerTierOptionsExposeDisabledBlockedTiers() {
         ModuleUpgradeSelection selection = ModuleUpgradeSelection.hammer(HammerVariant.BIG, ModuleTier.ZPM);
 
@@ -87,7 +108,7 @@ final class ModuleUpgradeUiModelTest {
         ModuleInstance module = minerModule();
         ModuleMiner miner = (ModuleMiner) module.component();
         miner.setFocus(MinerFocusTier.I, "ore:iron", 1200);
-        ModuleUpgradeSelection selection = ModuleUpgradeSelection.minerFocus(MinerFocusTier.NONE);
+        ModuleUpgradeSelection selection = ModuleUpgradeSelection.miner(ModuleTier.EV, MinerFocusTier.NONE);
 
         ModuleUpgradeGroup group = ModuleUpgradeUiModel.groups(module, selection)
             .stream()
@@ -113,7 +134,7 @@ final class ModuleUpgradeUiModelTest {
     @Test
     void minerFocusOptionsExposeDisabledNoneWhenFocusIsNotInstalled() {
         ModuleInstance module = minerModule();
-        ModuleUpgradeSelection selection = ModuleUpgradeSelection.minerFocus(MinerFocusTier.I);
+        ModuleUpgradeSelection selection = ModuleUpgradeSelection.miner(ModuleTier.EV, MinerFocusTier.I);
 
         ModuleUpgradeGroup group = ModuleUpgradeUiModel.groups(module, selection)
             .stream()
@@ -161,7 +182,7 @@ final class ModuleUpgradeUiModelTest {
         ModuleInstance module = minerModule();
         ModuleMiner miner = (ModuleMiner) module.component();
         miner.setFocus(MinerFocusTier.I, "ore:iron", 1200);
-        ModuleUpgradeSelection selection = ModuleUpgradeSelection.minerFocus(MinerFocusTier.III);
+        ModuleUpgradeSelection selection = ModuleUpgradeSelection.miner(ModuleTier.EV, MinerFocusTier.III);
 
         ModuleUpgradeGroup group = ModuleUpgradeUiModel.groups(module, selection)
             .stream()
@@ -207,6 +228,73 @@ final class ModuleUpgradeUiModelTest {
                 .findFirst()
                 .orElseThrow()
                 .enabled());
+    }
+
+    @Test
+    void minerUpgradeOptionsExposeModuleTierAndFocusTier() {
+        ModuleInstance module = minerModule();
+        ModuleUpgradeSelection selection = ModuleUpgradeSelection.miner(ModuleTier.IV, MinerFocusTier.II);
+
+        List<ModuleUpgradeGroup> groups = ModuleUpgradeUiModel.groups(module, selection);
+
+        ModuleUpgradeGroup tierGroup = groups.stream()
+            .filter(
+                group -> group.id()
+                    .equals(ModuleUpgradeUiModel.GROUP_MINER_TIER))
+            .findFirst()
+            .orElseThrow();
+        ModuleUpgradeGroup focusGroup = groups.stream()
+            .filter(
+                group -> group.id()
+                    .equals(ModuleUpgradeUiModel.GROUP_MINER_FOCUS_TIER))
+            .findFirst()
+            .orElseThrow();
+
+        assertEquals(
+            List.of(ModuleTier.EV.name(), ModuleTier.IV.name(), ModuleTier.LuV.name()),
+            tierGroup.options()
+                .stream()
+                .map(ModuleUpgradeOption::id)
+                .toList());
+        assertTrue(
+            tierGroup.options()
+                .stream()
+                .filter(
+                    option -> option.id()
+                        .equals(ModuleTier.EV.name()))
+                .findFirst()
+                .orElseThrow()
+                .enabled());
+        assertTrue(
+            tierGroup.options()
+                .stream()
+                .filter(
+                    option -> option.id()
+                        .equals(ModuleTier.IV.name()))
+                .findFirst()
+                .orElseThrow()
+                .selected());
+        assertTrue(
+            focusGroup.options()
+                .stream()
+                .filter(
+                    option -> option.id()
+                        .equals(MinerFocusTier.II.name()))
+                .findFirst()
+                .orElseThrow()
+                .selected());
+    }
+
+    @Test
+    void minerTierSelectionPreservesFocusSelection() {
+        ModuleInstance module = minerModule();
+        ModuleUpgradeSelection selection = ModuleUpgradeSelection.miner(ModuleTier.EV, MinerFocusTier.III);
+
+        ModuleUpgradeSelection normalized = ModuleUpgradeUiModel
+            .selectOption(module, selection, ModuleUpgradeUiModel.GROUP_MINER_TIER, ModuleTier.IV.name());
+
+        assertEquals(ModuleTier.IV.name(), normalized.get(ModuleUpgradeUiModel.GROUP_MINER_TIER));
+        assertEquals(MinerFocusTier.III.name(), normalized.get(ModuleUpgradeUiModel.GROUP_MINER_FOCUS_TIER));
     }
 
     private static ModuleInstance hammerModule() {
