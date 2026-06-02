@@ -12,13 +12,12 @@ import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 
-@SuppressWarnings("rawtypes")
-public class FluidAttachmentInventory implements IDistributedInventory {
+public class FluidAttachmentInventory<T> implements IDistributedInventory {
 
-    private final IFluidStorageHandler handler;
-    private final Object attachment;
+    private final IFluidStorageHandler<T> handler;
+    private final T attachment;
 
-    public FluidAttachmentInventory(IFluidStorageHandler<?> handler, Object attachment) {
+    public FluidAttachmentInventory(IFluidStorageHandler<T> handler, T attachment) {
         this.handler = handler;
         this.attachment = attachment;
     }

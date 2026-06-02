@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.interfaces;
 
-import java.util.List;
-
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.common.util.Constants;
 
@@ -37,30 +35,39 @@ public interface IStationBehaviorWithAttachments extends IStationBehavior {
     }
 
     @Override
-    @SuppressWarnings("rawtypes")
     default void tickPostBoot(TileStation station) {
         StationGraph graph = station.getGraph();
         if (graph == null) return;
 
         boolean changed = false;
-        List<BlockPos> attachments = station.getAttachments();
-        for (int i = attachments.size(); --i >= 0;) {
-            BlockPos pos = attachments.get(i);
+        for (BlockPos pos : station.getAttachments()) {
             ResolvedAttachment<?> ra = resolveAttachment(station, pos);
-            boolean valid;
             if (ra == null) {
-                valid = false;
-            } else {
-                IAttachmentHandler h = ra.handler();
-                valid = h.isReady(ra.attachment());
+                if (graph.hasAttachment(pos)) {
+                    graph.removeAttachmentSilently(pos);
+                    changed = true;
+                }
+                continue;
             }
-            if (!valid) {
-                graph.removeAttachment(pos);
-                changed = true;
+            boolean valid = isReady(ra);
+            if (valid) {
+                if (!graph.hasAttachment(pos)) {
+                    graph.registerAttachment(station.getHere(), pos, ra);
+                    changed = true;
+                }
+            } else {
+                if (graph.hasAttachment(pos)) {
+                    graph.removeAttachmentSilently(pos);
+                    changed = true;
+                }
             }
         }
-        registerAttachments(station, graph);
         if (changed) station.markDirty();
+    }
+
+    private static <T> boolean isReady(ResolvedAttachment<T> ra) {
+        return ra.handler()
+            .isReady(ra.attachment());
     }
 
     @Override

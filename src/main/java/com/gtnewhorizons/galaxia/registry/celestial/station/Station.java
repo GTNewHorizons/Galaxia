@@ -15,10 +15,8 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
-import com.gtnewhorizons.galaxia.registry.interfaces.IEnergyHandler;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
@@ -82,16 +80,7 @@ public class Station extends CelestialAsset {
         if (ctrl == null) return 0;
         StationGraph graph = ctrl.getGraph();
         if (graph == null) return 0;
-
-        long remaining = maxPowerDraw;
-        for (StationAttachmentRegistry.ResolvedAttachment<?> ra : (Iterable<StationAttachmentRegistry.ResolvedAttachment<?>>) graph
-            .getEnergyAttachments()::iterator) {
-            IEnergyHandler h = StationAttachmentRegistry.asEnergyHandler(ra.handler());
-            long drawn = h.drawEnergy(ra.attachment(), remaining);
-            remaining -= drawn;
-            if (remaining <= 0) return maxPowerDraw;
-        }
-        return maxPowerDraw - remaining;
+        return graph.drawEnergy(maxPowerDraw);
     }
 
     @Override
@@ -100,14 +89,8 @@ public class Station extends CelestialAsset {
         if (ctrl == null) return 0;
         StationGraph graph = ctrl.getGraph();
         if (graph == null) return 0;
-
-        BigInteger total = BigInteger.ZERO;
-        for (StationAttachmentRegistry.ResolvedAttachment<?> ra : (Iterable<StationAttachmentRegistry.ResolvedAttachment<?>>) graph
-            .getEnergyAttachments()::iterator) {
-            IEnergyHandler h = StationAttachmentRegistry.asEnergyHandler(ra.handler());
-            total = total.add(h.getEnergyStored(ra.attachment()));
-        }
-        return total.min(BigInteger.valueOf(Long.MAX_VALUE))
+        return graph.getEnergyStored()
+            .min(BigInteger.valueOf(Long.MAX_VALUE))
             .longValue();
     }
 

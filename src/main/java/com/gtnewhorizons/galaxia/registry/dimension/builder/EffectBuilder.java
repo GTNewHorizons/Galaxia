@@ -1,11 +1,11 @@
 package com.gtnewhorizons.galaxia.registry.dimension.builder;
 
-import lombok.NoArgsConstructor;
 import net.minecraft.world.World;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * class to get a list of effects on each planet as required
@@ -16,17 +16,27 @@ import lombok.Data;
 @NoArgsConstructor
 public class EffectBuilder {
 
-    @Builder.Default private int baseTemp = 273;
-    @Builder.Default private boolean withering = false;
-    @Builder.Default private int oxygenPercent = 100;
-    @Builder.Default private int radiation = 0;
-    @Builder.Default private boolean spores = false;
-    @Builder.Default private int pressure = 1;
+    @Builder.Default
+    private int baseTemp = 273;
+    @Builder.Default
+    private boolean withering = false;
+    @Builder.Default
+    private int oxygenPercent = 100;
+    @Builder.Default
+    private int radiation = 0;
+    @Builder.Default
+    private boolean spores = false;
+    @Builder.Default
+    private int pressure = 1;
 
-    @Builder.Default private Modifier<World> tempModifier = null;
-    @Builder.Default private Modifier<World> oxygenModifier = null;
-    @Builder.Default private Modifier<World> radiationModifier = null;
-    @Builder.Default private Modifier<World> pressureModifier = null;
+    @Builder.Default
+    private Modifier<World> tempModifier = null;
+    @Builder.Default
+    private Modifier<World> oxygenModifier = null;
+    @Builder.Default
+    private Modifier<World> radiationModifier = null;
+    @Builder.Default
+    private Modifier<World> pressureModifier = null;
 
     @FunctionalInterface
     public interface Modifier<T> {

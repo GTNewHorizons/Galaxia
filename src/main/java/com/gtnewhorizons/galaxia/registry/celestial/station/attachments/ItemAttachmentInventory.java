@@ -11,13 +11,12 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 
-@SuppressWarnings("rawtypes")
-public class ItemAttachmentInventory implements IDistributedInventory {
+public class ItemAttachmentInventory<T> implements IDistributedInventory {
 
-    private final IItemStorageHandler handler;
-    private final Object attachment;
+    private final IItemStorageHandler<T> handler;
+    private final T attachment;
 
-    public ItemAttachmentInventory(IItemStorageHandler<?> handler, Object attachment) {
+    public ItemAttachmentInventory(IItemStorageHandler<T> handler, T attachment) {
         this.handler = handler;
         this.attachment = attachment;
     }

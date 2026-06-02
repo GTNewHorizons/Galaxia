@@ -44,7 +44,7 @@ public final class StationAttachmentRegistry {
         return null;
     }
 
-    @SuppressWarnings({ "rawtypes" })
+    @SuppressWarnings("rawtypes")
     private static ResolvedAttachment<?> wrap(Object attachment, IAttachmentHandler<?> handler) {
         return new ResolvedAttachment(attachment, handler);
     }
@@ -53,9 +53,8 @@ public final class StationAttachmentRegistry {
         return handler instanceof IEnergyHandler;
     }
 
-    @SuppressWarnings("rawtypes")
-    public static IEnergyHandler asEnergyHandler(IAttachmentHandler<?> handler) {
-        return (IEnergyHandler) handler;
+    public static <T> IEnergyHandler<T> asEnergyHandler(IAttachmentHandler<T> handler) {
+        return (IEnergyHandler<T>) handler;
     }
 
     public static boolean isFluidStorageHandler(Class<?> mteClass) {
@@ -71,14 +70,12 @@ public final class StationAttachmentRegistry {
         return handler instanceof IItemStorageHandler;
     }
 
-    @SuppressWarnings("rawtypes")
-    public static IFluidStorageHandler asFluidStorageHandler(IAttachmentHandler<?> handler) {
-        return (IFluidStorageHandler) handler;
+    public static <T> IFluidStorageHandler<T> asFluidStorageHandler(IAttachmentHandler<T> handler) {
+        return (IFluidStorageHandler<T>) handler;
     }
 
-    @SuppressWarnings("rawtypes")
-    public static IItemStorageHandler asItemStorageHandler(IAttachmentHandler<?> handler) {
-        return (IItemStorageHandler) handler;
+    public static <T> IItemStorageHandler<T> asItemStorageHandler(IAttachmentHandler<T> handler) {
+        return (IItemStorageHandler<T>) handler;
     }
 
     public static boolean isRegisteredMTE(Class<?> mteClass) {
