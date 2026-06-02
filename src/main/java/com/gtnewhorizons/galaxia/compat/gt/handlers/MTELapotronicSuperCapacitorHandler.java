@@ -35,13 +35,11 @@ public class MTELapotronicSuperCapacitorHandler extends GTEnergyHandler<MTELapot
             .avgLong();
     }
 
+    // TODO: Make it count towards the running average, maybe with station plugs/dynamo hatches
     @Override
     public long drawEnergy(MTELapotronicSuperCapacitor attachment, long amount) {
         BigInteger current = attachment.getStored();
-        long drawn = Math.min(
-            amount,
-            current.min(BigInteger.valueOf(Long.MAX_VALUE))
-                .longValue());
+        long drawn = Math.min(amount, attachment.maxEUOutput());
         attachment.setStored(current.subtract(BigInteger.valueOf(drawn)));
         return drawn;
     }
