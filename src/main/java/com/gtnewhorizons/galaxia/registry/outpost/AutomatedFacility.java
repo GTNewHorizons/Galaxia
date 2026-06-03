@@ -57,8 +57,7 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private static final Logger LOG = LogManager.getLogger(AutomatedFacility.class);
 
-    private final Map<ItemStackWrapper, Long> amounts = new LinkedHashMap<>();
-    private final Map<FluidKey, Long> fluidAmounts = new LinkedHashMap<>();
+    private final FacilityInventoryState inventoryState = new FacilityInventoryState();
 
     private final List<ModuleInstance> modules;
     private final StationLayout layout;
@@ -76,7 +75,6 @@ public final class AutomatedFacility extends CelestialAsset {
     private long energyStored;
     private final Set<ModuleInstance.ID> dirtyModuleIds = new HashSet<>();
     private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
-    private final Map<InventoryKey, Long> dirtyInventoryDeltas = new LinkedHashMap<>();
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
     private final Set<String> dirtyMinerVoidChanceOreKeys = new HashSet<>();
     private long ticks;
@@ -829,7 +827,7 @@ public final class AutomatedFacility extends CelestialAsset {
     public boolean isDirty() {
         return super.isDirty() || !dirtyModuleIds.isEmpty()
             || !dirtyRemovedIds.isEmpty()
-            || !dirtyInventoryDeltas.isEmpty();
+            || inventoryState.hasDirtyDeltas();
     }
 
     @Override
@@ -853,9 +851,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public Map<InventoryKey, Long> drainDirtyInventoryDeltas() {
-        Map<InventoryKey, Long> result = new LinkedHashMap<>(dirtyInventoryDeltas);
-        dirtyInventoryDeltas.clear();
-        return result;
+        return inventoryState.drainDirtyDeltas();
     }
 
     public List<ModuleInstance.ID> drainRemovedIds() {
@@ -865,12 +861,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     private void markInventoryDelta(InventoryKey item, long delta) {
-        if (item == null || delta == 0L) return;
-        dirtyInventoryDeltas.merge(item, delta, Long::sum);
-        if (dirtyInventoryDeltas.getOrDefault(item, 0L) == 0L) {
-            dirtyInventoryDeltas.remove(item);
-        }
-        bumpSyncRevision();
+        inventoryState.markDelta(item, delta, this::bumpSyncRevision);
     }
 
     public long getEnergyStored() {
@@ -1140,12 +1131,12 @@ public final class AutomatedFacility extends CelestialAsset {
 
     @Override
     public Map<ItemStackWrapper, Long> getItemAmounts() {
-        return amounts;
+        return inventoryState.itemAmounts();
     }
 
     @Override
     public Map<FluidKey, Long> getFluidAmounts() {
-        return fluidAmounts;
+        return inventoryState.fluidAmounts();
     }
 
     @Override
@@ -1219,49 +1210,25 @@ public final class AutomatedFacility extends CelestialAsset {
     /// ----------------------------------------------------------------------------------
 
     public Map<ItemStackWrapper, Long> itemSnapshot() {
-        Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
-        for (Map.Entry<ItemStackWrapper, Long> e : amounts.entrySet()) {
-            result.put(e.getKey(), e.getValue());
-        }
-        return Collections.unmodifiableMap(result);
+        return inventoryState.itemSnapshot();
     }
 
     public Map<String, Long> fluidSnapshot() {
-        Map<String, Long> result = new LinkedHashMap<>();
-        for (Map.Entry<FluidKey, Long> e : fluidAmounts.entrySet()) {
-            result.put(
-                e.getKey()
-                    .fluid()
-                    .getName(),
-                e.getValue());
-        }
-        return Collections.unmodifiableMap(result);
+        return inventoryState.fluidSnapshot();
     }
 
     public void loadFromSnapshot(Map<ItemStackWrapper, Long> snapshot) {
-        amounts.clear();
-        for (Map.Entry<ItemStackWrapper, Long> e : snapshot.entrySet()) {
-            if (e.getValue() > 0) {
-                amounts.put(e.getKey(), e.getValue());
-            }
-        }
+        inventoryState.loadFromSnapshot(snapshot);
     }
 
     public void loadFluidSnapshot(Map<String, Long> snapshot) {
-        fluidAmounts.clear();
-        for (Map.Entry<String, Long> e : snapshot.entrySet()) {
-            if (e.getKey() == null || e.getKey()
-                .isEmpty() || e.getValue() <= 0) continue;
-            FluidKey key = FluidKey.fromName(e.getKey());
-            if (key != null) fluidAmounts.put(key, e.getValue());
-        }
+        inventoryState.loadFluidSnapshot(snapshot);
     }
 
     @Override
     public void clear() {
         super.clear();
-        amounts.clear();
-        fluidAmounts.clear();
+        inventoryState.clearAmounts();
     }
 
     public void addFilter(String key, boolean item) {
