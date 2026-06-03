@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.client.gui.station.layer;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +27,8 @@ public final class ConnectionLayerRenderer {
     private static final float INTERNAL_HORIZONTAL_U1 = 0.58f;
     private static final float INTERNAL_VERTICAL_V0 = 0.42f;
     private static final float INTERNAL_VERTICAL_V1 = 0.58f;
+    private static final ConnectorQuadBatch HORIZONTAL_QUADS = new ConnectorQuadBatch();
+    private static final ConnectorQuadBatch VERTICAL_QUADS = new ConnectorQuadBatch();
 
     private ConnectionLayerRenderer() {}
 
@@ -41,8 +42,8 @@ public final class ConnectionLayerRenderer {
         ResourceLocation verticalTexture = StationTextureRegistry.connectorTexture(ConnectorKind.VERTICAL);
         boolean hasHorizontalTexture = StationTextureRegistry.hasTexture(horizontalTexture);
         boolean hasVerticalTexture = StationTextureRegistry.hasTexture(verticalTexture);
-        List<ConnectorQuad> horizontalQuads = new ArrayList<>();
-        List<ConnectorQuad> verticalQuads = new ArrayList<>();
+        HORIZONTAL_QUADS.clear();
+        VERTICAL_QUADS.clear();
 
         for (Map.Entry<StationTileCoord, PlacedTile> e : tiles.entrySet()) {
             StationTileCoord coord = e.getKey();
@@ -67,7 +68,7 @@ public final class ConnectionLayerRenderer {
                     connH,
                     connectorActive(tile, rightTile),
                     hasHorizontalTexture,
-                    horizontalQuads);
+                    HORIZONTAL_QUADS);
             }
 
             StationTileCoord down = StationTileCoord.of(coord.dx(), coord.dy() + 1);
@@ -81,12 +82,19 @@ public final class ConnectionLayerRenderer {
                 int cx = StationMapViewport.tileLeftX(coord, widgetWidth, contentLeft, contentRightPadding, panX)
                     + (tileSize - connW) / 2;
                 int cy = StationMapViewport.connectorTopY(coord, widgetHeight, contentVerticalPadding, panY);
-                drawConnector(cx, cy, connW, connH, connectorActive(tile, downTile), hasVerticalTexture, verticalQuads);
+                drawConnector(
+                    cx,
+                    cy,
+                    connW,
+                    connH,
+                    connectorActive(tile, downTile),
+                    hasVerticalTexture,
+                    VERTICAL_QUADS);
             }
         }
 
-        drawTextureBatch(horizontalTexture, horizontalQuads);
-        drawTextureBatch(verticalTexture, verticalQuads);
+        drawTextureBatch(horizontalTexture, HORIZONTAL_QUADS);
+        drawTextureBatch(verticalTexture, VERTICAL_QUADS);
     }
 
     private static void drawInternalBridge(int x, int y, int w, int h, PlacedTile tile, boolean horizontal) {
@@ -106,9 +114,9 @@ public final class ConnectionLayerRenderer {
     }
 
     private static void drawConnector(int x, int y, int w, int h, boolean active, boolean hasTexture,
-        List<ConnectorQuad> textureQuads) {
+        ConnectorQuadBatch textureQuads) {
         if (active && hasTexture) {
-            textureQuads.add(new ConnectorQuad(x, y, w, h));
+            textureQuads.add(x, y, w, h);
             return;
         }
 
@@ -117,7 +125,7 @@ public final class ConnectionLayerRenderer {
         Gui.drawRect(x, y, x + w, y + h, color);
     }
 
-    private static void drawTextureBatch(ResourceLocation texture, List<ConnectorQuad> quads) {
+    private static void drawTextureBatch(ResourceLocation texture, ConnectorQuadBatch quads) {
         if (texture == null || quads.isEmpty()) return;
         Minecraft.getMinecraft()
             .getTextureManager()
@@ -129,7 +137,8 @@ public final class ConnectionLayerRenderer {
 
         Tessellator tess = Tessellator.instance;
         tess.startDrawingQuads();
-        for (ConnectorQuad quad : quads) {
+        for (int i = 0; i < quads.size(); i++) {
+            ConnectorQuad quad = quads.get(i);
             tess.addVertexWithUV(quad.x, quad.y + quad.h, 0, 0, 1);
             tess.addVertexWithUV(quad.x + quad.w, quad.y + quad.h, 0, 1, 1);
             tess.addVertexWithUV(quad.x + quad.w, quad.y, 0, 1, 0);
@@ -173,16 +182,50 @@ public final class ConnectionLayerRenderer {
 
     private static final class ConnectorQuad {
 
-        private final int x;
-        private final int y;
-        private final int w;
-        private final int h;
+        private int x;
+        private int y;
+        private int w;
+        private int h;
 
-        private ConnectorQuad(int x, int y, int w, int h) {
+        private void set(int x, int y, int w, int h) {
             this.x = x;
             this.y = y;
             this.w = w;
             this.h = h;
+        }
+    }
+
+    private static final class ConnectorQuadBatch {
+
+        private final List<ConnectorQuad> quads = new java.util.ArrayList<>();
+        private int size;
+
+        private void clear() {
+            size = 0;
+        }
+
+        private boolean isEmpty() {
+            return size == 0;
+        }
+
+        private int size() {
+            return size;
+        }
+
+        private ConnectorQuad get(int index) {
+            return quads.get(index);
+        }
+
+        private void add(int x, int y, int w, int h) {
+            ConnectorQuad quad;
+            if (size < quads.size()) {
+                quad = quads.get(size);
+            } else {
+                quad = new ConnectorQuad();
+                quads.add(quad);
+            }
+            quad.set(x, y, w, h);
+            size++;
         }
     }
 }

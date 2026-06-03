@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.client.gui.station.layer;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +25,8 @@ public final class CapacityConnectorLayer {
     private static final int COLOR_ALPHA_ACTIVE = 0xFF;
     private static final int COLOR_ALPHA_INACTIVE = 0x66;
     private static final int RGB_CHANNEL_MASK = 0x00FFFFFF;
+    private static final CapacityConnectorQuadBatch HORIZONTAL_QUADS = new CapacityConnectorQuadBatch();
+    private static final CapacityConnectorQuadBatch VERTICAL_QUADS = new CapacityConnectorQuadBatch();
 
     private CapacityConnectorLayer() {}
 
@@ -39,8 +40,8 @@ public final class CapacityConnectorLayer {
         ResourceLocation verticalTexture = StationTextureRegistry.connectorTexture(ConnectorKind.VERTICAL);
         boolean hasHorizontalTexture = StationTextureRegistry.hasTexture(horizontalTexture);
         boolean hasVerticalTexture = StationTextureRegistry.hasTexture(verticalTexture);
-        List<CapacityConnectorQuad> horizontalQuads = new ArrayList<>();
-        List<CapacityConnectorQuad> verticalQuads = new ArrayList<>();
+        HORIZONTAL_QUADS.clear();
+        VERTICAL_QUADS.clear();
 
         for (Map.Entry<StationTileCoord, PlacedTile> e : tiles.entrySet()) {
             StationTileCoord coord = e.getKey();
@@ -55,7 +56,7 @@ public final class CapacityConnectorLayer {
                 int cx = StationMapViewport.connectorLeftX(coord, widgetWidth, contentLeft, contentRightPadding, panX);
                 int cy = StationMapViewport.tileTopY(coord, widgetHeight, contentVerticalPadding, panY)
                     + (tileSize - connH) / 2;
-                addConnector(cx, cy, connW, connH, kindA, hasHorizontalTexture, horizontalQuads);
+                addConnector(cx, cy, connW, connH, kindA, hasHorizontalTexture, HORIZONTAL_QUADS);
             }
 
             // Check down neighbor
@@ -65,12 +66,12 @@ public final class CapacityConnectorLayer {
                 int cx = StationMapViewport.tileLeftX(coord, widgetWidth, contentLeft, contentRightPadding, panX)
                     + (tileSize - connW) / 2;
                 int cy = StationMapViewport.connectorTopY(coord, widgetHeight, contentVerticalPadding, panY);
-                addConnector(cx, cy, connW, connH, kindA, hasVerticalTexture, verticalQuads);
+                addConnector(cx, cy, connW, connH, kindA, hasVerticalTexture, VERTICAL_QUADS);
             }
         }
 
-        drawColoredBatch(horizontalTexture, horizontalQuads);
-        drawColoredBatch(verticalTexture, verticalQuads);
+        drawColoredBatch(horizontalTexture, HORIZONTAL_QUADS);
+        drawColoredBatch(verticalTexture, VERTICAL_QUADS);
     }
 
     private static FacilityModuleKind moduleKindOf(PlacedTile tile) {
@@ -92,19 +93,19 @@ public final class CapacityConnectorLayer {
     }
 
     private static void addConnector(int x, int y, int w, int h, FacilityModuleKind kind, boolean hasTexture,
-        List<CapacityConnectorQuad> textureQuads) {
+        CapacityConnectorQuadBatch textureQuads) {
         int alpha = hasTexture ? COLOR_ALPHA_ACTIVE : COLOR_ALPHA_INACTIVE;
         int color = connectorColor(kind);
         int argb = (alpha << 24) | (color & RGB_CHANNEL_MASK);
 
         if (hasTexture) {
-            textureQuads.add(new CapacityConnectorQuad(x, y, w, h, argb));
+            textureQuads.add(x, y, w, h, argb);
         } else {
             Gui.drawRect(x, y, x + w, y + h, argb);
         }
     }
 
-    private static void drawColoredBatch(ResourceLocation texture, List<CapacityConnectorQuad> quads) {
+    private static void drawColoredBatch(ResourceLocation texture, CapacityConnectorQuadBatch quads) {
         if (texture == null || quads.isEmpty()) return;
         Minecraft.getMinecraft()
             .getTextureManager()
@@ -115,7 +116,8 @@ public final class CapacityConnectorLayer {
 
         Tessellator tess = Tessellator.instance;
         tess.startDrawingQuads();
-        for (CapacityConnectorQuad quad : quads) {
+        for (int i = 0; i < quads.size(); i++) {
+            CapacityConnectorQuad quad = quads.get(i);
             // Modulate the texture with the per-kind color
             float r = ((quad.argb >> 16) & 0xFF) / 255f;
             float g = ((quad.argb >> 8) & 0xFF) / 255f;
@@ -142,18 +144,52 @@ public final class CapacityConnectorLayer {
 
     private static final class CapacityConnectorQuad {
 
-        private final int x;
-        private final int y;
-        private final int w;
-        private final int h;
-        private final int argb;
+        private int x;
+        private int y;
+        private int w;
+        private int h;
+        private int argb;
 
-        private CapacityConnectorQuad(int x, int y, int w, int h, int argb) {
+        private void set(int x, int y, int w, int h, int argb) {
             this.x = x;
             this.y = y;
             this.w = w;
             this.h = h;
             this.argb = argb;
+        }
+    }
+
+    private static final class CapacityConnectorQuadBatch {
+
+        private final List<CapacityConnectorQuad> quads = new java.util.ArrayList<>();
+        private int size;
+
+        private void clear() {
+            size = 0;
+        }
+
+        private boolean isEmpty() {
+            return size == 0;
+        }
+
+        private int size() {
+            return size;
+        }
+
+        private CapacityConnectorQuad get(int index) {
+            return quads.get(index);
+        }
+
+        private void add(int x, int y, int w, int h, int argb) {
+            CapacityConnectorQuad quad;
+            if (size < quads.size()) {
+                quad = quads.get(size);
+            } else {
+                quad = new CapacityConnectorQuad();
+                quads.add(quad);
+            }
+            quad.set(x, y, w, h, argb);
+            size++;
         }
     }
 }
