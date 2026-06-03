@@ -273,6 +273,39 @@ final class StationPacketRoundTripTest {
     }
 
     @Test
+    void fullSyncInternsRepeatedRecipeSnapshotsWithinRecipeConfigPayload() {
+        RecipeSnapshot snapshot = recipeSnapshot(832);
+        AutomatedFacility repeated = facilityWithRecipeConfig(snapshot, snapshot);
+        AutomatedFacility distinct = facilityWithRecipeConfig(snapshot, recipeSnapshot(833));
+
+        int repeatedBytes = encodedSize(AssetSyncPacket.fullSync(repeated));
+        int distinctBytes = encodedSize(AssetSyncPacket.fullSync(distinct));
+
+        assertTrue(
+            repeatedBytes < distinctBytes,
+            "repeated RecipeSnapshot payloads should be interned inside one RecipeConfig payload");
+
+        AutomatedFacility client = createFacility();
+        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(repeated)));
+
+        SavedRecipeList clientRecipes = ((IRecipeModule) client.modules()
+            .get(0)
+            .component()).getRecipeConfig()
+                .savedRecipes();
+        assertEquals(2, clientRecipes.size());
+        assertEquals(
+            snapshot.contentHash(),
+            clientRecipes.get(0)
+                .recipe()
+                .contentHash());
+        assertEquals(
+            snapshot.contentHash(),
+            clientRecipes.get(1)
+                .recipe()
+                .contentHash());
+    }
+
+    @Test
     void moduleAddedDeltaPlacesLayoutTileOnClient() {
         // Server: facility with 1 module, create FULL_SYNC for client baseline
         AutomatedFacility server = buildFacilityWithModules(1);
@@ -377,6 +410,12 @@ final class StationPacketRoundTripTest {
         return decoded;
     }
 
+    private static int encodedSize(AssetSyncPacket pkt) {
+        var buf = Unpooled.buffer();
+        pkt.toBytes(buf);
+        return buf.writerIndex();
+    }
+
     private static AutomatedFacility createFacility() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
@@ -385,6 +424,31 @@ final class StationPacketRoundTripTest {
             Buildable.Status.OPERATIONAL);
         CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
         return facility;
+    }
+
+    private static AutomatedFacility facilityWithRecipeConfig(RecipeSnapshot... snapshots) {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance module = buildModule(facility, FacilityModuleKind.CENTRIFUGE, StationTileCoord.of(1, 0));
+        SavedRecipeList slots = new SavedRecipeList();
+        for (RecipeSnapshot snapshot : snapshots) {
+            slots.add(new SavedRecipe(snapshot, true, 0L, (byte) 1, (byte) 1));
+        }
+        ((IRecipeModule) module.component()).setRecipeConfig(
+            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
+        return facility;
+    }
+
+    private static RecipeSnapshot recipeSnapshot(int recipeIndex) {
+        Item item = Items.diamond;
+        return RecipeSnapshot.resolved(
+            (byte) 1,
+            recipeIndex,
+            new ItemStack[] { new ItemStack(item, 2, 0) },
+            new ItemStack[] { new ItemStack(item, 3, 0) },
+            null,
+            null,
+            200,
+            480);
     }
 
     private static AutomatedFacility buildFacilityWithModules(int count) {

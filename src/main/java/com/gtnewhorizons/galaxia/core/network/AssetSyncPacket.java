@@ -1170,13 +1170,27 @@ public final class AssetSyncPacket implements IMessage {
 
         List<SavedRecipe> slots = config.savedRecipes()
             .toList();
-        buf.writeByte(slots.size());
+        Map<RecipeSnapshotRef, Integer> snapshotIndexes = new LinkedHashMap<>();
+        List<RecipeSnapshot> snapshots = new ArrayList<>();
         for (SavedRecipe slot : slots) {
             RecipeSnapshot snap = slot.recipe();
+            RecipeSnapshotRef ref = RecipeSnapshotRef.of(snap);
+            if (!snapshotIndexes.containsKey(ref)) {
+                snapshotIndexes.put(ref, snapshots.size());
+                snapshots.add(snap);
+            }
+        }
+        buf.writeByte(slots.size());
+        buf.writeByte(snapshots.size());
+        for (RecipeSnapshot snap : snapshots) {
             buf.writeByte(snap.recipeMapOrdinal());
             buf.writeInt(snap.recipeIndex());
             buf.writeLong(snap.contentHash());
             writeRecipeSnapshot(buf, snap);
+        }
+        for (SavedRecipe slot : slots) {
+            RecipeSnapshot snap = slot.recipe();
+            buf.writeByte(snapshotIndexes.get(RecipeSnapshotRef.of(snap)));
             buf.writeBoolean(slot.enabled());
             buf.writeLong(slot.requestAmount());
             buf.writeByte(slot.priority());
@@ -1211,13 +1225,23 @@ public final class AssetSyncPacket implements IMessage {
         int slotCount = Byte.toUnsignedInt(buf.readByte());
         if (slotCount < 0 || slotCount > SavedRecipeList.MAX_SAVED_RECIPES) return null;
 
-        RecipeConfig config = new RecipeConfig(new SavedRecipeList(), mode, policy, orderCursor, orderRemaining);
+        int snapshotCount = Byte.toUnsignedInt(buf.readByte());
+        if (snapshotCount < 0 || snapshotCount > SavedRecipeList.MAX_SAVED_RECIPES) return null;
 
-        for (int i = 0; i < slotCount; i++) {
+        List<RecipeSnapshot> snapshots = new ArrayList<>(snapshotCount);
+        for (int i = 0; i < snapshotCount; i++) {
             byte mapOrdinal = buf.readByte();
             int recipeIndex = buf.readInt();
             long contentHash = buf.readLong();
-            RecipeSnapshot snapshot = readRecipeSnapshot(buf, mapOrdinal, recipeIndex, contentHash);
+            snapshots.add(readRecipeSnapshot(buf, mapOrdinal, recipeIndex, contentHash));
+        }
+
+        RecipeConfig config = new RecipeConfig(new SavedRecipeList(), mode, policy, orderCursor, orderRemaining);
+
+        for (int i = 0; i < slotCount; i++) {
+            int snapshotIndex = Byte.toUnsignedInt(buf.readByte());
+            if (snapshotIndex >= snapshots.size()) return null;
+            RecipeSnapshot snapshot = snapshots.get(snapshotIndex);
             boolean enabled = buf.readBoolean();
             long requestAmount = buf.readLong();
             byte priority = buf.readByte();
@@ -1230,6 +1254,13 @@ public final class AssetSyncPacket implements IMessage {
         }
 
         return config;
+    }
+
+    private record RecipeSnapshotRef(byte recipeMapOrdinal, int recipeIndex, long contentHash) {
+
+        private static RecipeSnapshotRef of(RecipeSnapshot snapshot) {
+            return new RecipeSnapshotRef(snapshot.recipeMapOrdinal(), snapshot.recipeIndex(), snapshot.contentHash());
+        }
     }
 
     public AssetSyncPacket withSyncRevision(int rev) {
