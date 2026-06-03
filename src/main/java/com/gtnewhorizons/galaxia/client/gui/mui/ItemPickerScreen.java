@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.client.gui.mui;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.item.ItemStack;
 
@@ -12,8 +14,10 @@ import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.utils.item.ItemStackHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
+import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 
 /**
@@ -70,10 +74,34 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
     }
 
     public static void setPendingForSidebarDebug() {
-        pendingReturnScreen = Minecraft.getMinecraft().currentScreen;
+        setPendingForSidebarDebug(Minecraft.getMinecraft().currentScreen);
+    }
+
+    public static void setPendingForSidebarDebugWithoutReturnScreen() {
+        setPendingForSidebarDebug(null);
+    }
+
+    public static void setPendingForSidebarDebug(GuiScreen returnScreen) {
+        pendingReturnScreen = returnScreen;
         pendingForOutpostId = null;
         pendingModuleIndex = -1;
         pendingContext = PickContext.SIDEBAR_DEBUG;
+    }
+
+    public static GuiScreen cancelPendingPick() {
+        if (pendingPick == null && pendingForOutpostId == null
+            && pendingModuleIndex < 0
+            && pendingContext == null
+            && pendingReturnScreen == null) {
+            return null;
+        }
+        GuiScreen returnScreen = pendingReturnScreen;
+        pendingPick = null;
+        pendingForOutpostId = null;
+        pendingModuleIndex = -1;
+        pendingContext = null;
+        pendingReturnScreen = null;
+        return returnScreen;
     }
 
     public static CelestialAsset.ID getPendingForOutpostId() {
@@ -90,6 +118,10 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
 
     public static boolean hasPendingPickForSidebarDebug() {
         return pendingPick != null && pendingContext == PickContext.SIDEBAR_DEBUG;
+    }
+
+    public static boolean hasPendingPicker() {
+        return pendingContext != null;
     }
 
     public static int getPendingModuleIndex() {
@@ -167,7 +199,37 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
             new PhantomItemSlot().slot(slot)
                 .pos(78, 56)
                 .size(20, 20));
+        panel.child(
+            cancelButton().pos(116, 8)
+                .size(52, 18));
 
         return panel;
+    }
+
+    private static ButtonWidget<?> cancelButton() {
+        return new ButtonWidget<>()
+            .background(
+                (ctx, x, y, w, h, theme) -> Gui
+                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor()))
+            .hoverBackground(
+                (ctx, x, y, w, h, theme) -> Gui
+                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor()))
+            .overlay((ctx, x, y, w, h, theme) -> {
+                FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
+                String text = "Cancel";
+                int textW = fr.getStringWidth(text);
+                fr.drawStringWithShadow(
+                    text,
+                    x + (w - textW) / 2,
+                    y + (h - fr.FONT_HEIGHT) / 2 + 1,
+                    EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
+            })
+            .onMousePressed(mouseButton -> {
+                if (mouseButton != 0) return false;
+                Minecraft.getMinecraft()
+                    .displayGuiScreen(cancelPendingPick());
+                return true;
+            })
+            .tooltipDynamic(t -> t.addLine("Return without picking an item"));
     }
 }

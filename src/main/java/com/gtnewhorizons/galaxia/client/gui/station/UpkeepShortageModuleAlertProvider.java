@@ -7,7 +7,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.BlockingReason;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepLedger;
-import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 
 final class UpkeepShortageModuleAlertProvider implements StationModuleAlertProvider {
 
@@ -17,19 +16,20 @@ final class UpkeepShortageModuleAlertProvider implements StationModuleAlertProvi
 
     @Override
     public List<StationModuleAlert> alerts(AutomatedFacility facility, ModuleInstance module) {
+        return alerts(StationModuleAlertRegistry.Context.create(facility), module);
+    }
+
+    @Override
+    public List<StationModuleAlert> alerts(StationModuleAlertRegistry.Context context, ModuleInstance module) {
         if (module.blocking() == BlockingReason.UPKEEP_SHORTAGE) {
             return List.of(
                 StationModuleAlert
                     .critical("Upkeep", "Missing upkeep resources.", EnumTextures.ICON_STATION_ALERT_ERROR.get()));
         }
-        UpkeepLedger.ModuleDemand demand = demandFor(facility, module);
+        UpkeepLedger.ModuleDemand demand = demandFor(context, module);
         if (demand == null) return List.of();
-        UpkeepSettlement.Result result = UpkeepSettlement.preview(
-            facility.upkeepSummary()
-                .moduleDemands(),
-            facility.upkeepCredits(),
-            facility);
-        return result.unpaidModuleIds()
+        return context.upkeepPreview()
+            .unpaidModuleIds()
             .contains(module.id)
                 ? List.of(
                     StationModuleAlert
@@ -37,9 +37,10 @@ final class UpkeepShortageModuleAlertProvider implements StationModuleAlertProvi
                 : List.of();
     }
 
-    private static UpkeepLedger.ModuleDemand demandFor(AutomatedFacility facility, ModuleInstance module) {
-        if (facility == null || module == null) return null;
-        for (UpkeepLedger.ModuleDemand demand : facility.upkeepSummary()
+    private static UpkeepLedger.ModuleDemand demandFor(StationModuleAlertRegistry.Context context,
+        ModuleInstance module) {
+        if (context == null || module == null) return null;
+        for (UpkeepLedger.ModuleDemand demand : context.upkeepSummary()
             .moduleDemands()) {
             if (module.id.equals(demand.moduleId()) && !demand.demand()
                 .isEmpty()) {
