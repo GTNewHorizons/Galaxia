@@ -464,22 +464,17 @@ public final class FacilityPersistenceManager {
     }
 
     FacilityStateJson encodeFacilityState(AutomatedFacility state) {
+        FacilitySnapshot snapshot = FacilitySnapshot.from(state);
         FacilityStateJson out = new FacilityStateJson();
-        out.energyStored = state.getEnergyStored();
-        out.stationFeatureSalt = state.stationFeatureSalt();
-        state.syncRecipeSettingsGroupsFromModules();
-        out.settingsGroupsNextId = state.settingsGroups()
-            .nextGroupId();
+        out.energyStored = snapshot.energyStored();
+        out.stationFeatureSalt = snapshot.stationFeatureSalt();
+        out.settingsGroupsNextId = snapshot.settingsGroupsNextId();
         out.settingsGroups = new ArrayList<>();
-        state.settingsGroups()
-            .groups()
-            .values()
-            .stream()
-            .sorted(java.util.Comparator.comparingInt(SettingsGroup::id))
+        snapshot.settingsGroups()
             .forEach(group -> out.settingsGroups.add(encodeSettingsGroup(group)));
         out.modules = new ArrayList<>();
         int moduleCount = 0;
-        for (ModuleInstance m : state.modules()) {
+        for (ModuleInstance m : snapshot.modules()) {
             moduleCount++;
             ModuleJson mj = new ModuleJson();
             mj.moduleId = m.id.toString();
@@ -536,22 +531,22 @@ public final class FacilityPersistenceManager {
         LOG.info("[PERSIST] SAVE ENCODE: facility {} has {} module(s) in state", state.assetId, moduleCount);
 
         out.buffer = new LinkedHashMap<>();
-        for (Map.Entry<ItemStackWrapper, Long> e : state.itemSnapshot()
+        for (Map.Entry<ItemStackWrapper, Long> e : snapshot.itemBuffer()
             .entrySet()) {
             out.buffer.put(
                 e.getKey()
                     .toKey(),
                 e.getValue());
         }
-        out.fluidBuffer = toFluidBuffer(state);
+        out.fluidBuffer = snapshot.fluidBuffer();
         out.upkeepItemCredits = encodeItemUpkeepAmountMap(
-            state.upkeepCredits()
+            snapshot.upkeepCredits()
                 .itemCredits());
         out.upkeepFluidCredits = encodeFluidUpkeepAmountMap(
-            state.upkeepCredits()
+            snapshot.upkeepCredits()
                 .fluidCredits());
         out.layoutTiles = new ArrayList<>();
-        StationLayout layout = state.stationLayout();
+        StationLayout layout = snapshot.layout();
         int anchorCount = 0;
         if (layout != null) {
             for (Map.Entry<StationTileCoord, PlacedTile> entry : layout.snapshot()
@@ -925,10 +920,6 @@ public final class FacilityPersistenceManager {
             decoded.put(key, new InventoryBounds(value.low(), value.upper()));
         }
         return decoded;
-    }
-
-    private static Map<String, Long> toFluidBuffer(AutomatedFacility state) {
-        return new LinkedHashMap<>(state.fluidSnapshot());
     }
 
     private static Map<String, Long> toFluidBounds(Map<FluidKey, Long> bounds) {

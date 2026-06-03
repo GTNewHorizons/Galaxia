@@ -112,6 +112,24 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
+    void stationFeatureSaltRoundTripsThroughPersistence() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = createStationWithFullLayout();
+        station.setStationFeatureSalt(0x5EED_1234_ABCDL);
+
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+
+        manager.decodeFacilityState(decoded, encoded);
+
+        assertEquals(station.stationFeatureSalt(), decoded.stationFeatureSalt());
+    }
+
+    @Test
     void hammerVariantRoundTripsThroughPersistence() {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = createStationWithFullLayout();
