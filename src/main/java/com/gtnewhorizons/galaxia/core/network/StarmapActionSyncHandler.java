@@ -36,7 +36,6 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
     private static final int REQUEST_UPDATE_ASSET = 2;
     private static final int REQUEST_BUILD_MODULE = 3;
     private static final int REQUEST_MODULE_UPDATE = 4;
-    private static final int REQUEST_INVENTORY_UPDATE = 5;
     private static final int REQUEST_LOGISTICS_CONFIG = 6;
     private static final int REQUEST_FILTER_UPDATE = 7;
 
@@ -223,12 +222,6 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
             case REQUEST_MODULE_UPDATE -> {
                 if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.MODIFY_MODULE)) return;
                 AssetModuleUpdatePacket packet = new AssetModuleUpdatePacket();
-                packet.fromBytes(buf);
-                syncPacket(packet.apply(teamId, creative));
-            }
-            case REQUEST_INVENTORY_UPDATE -> {
-                if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.MANAGE_INVENTORY)) return;
-                AssetInventoryUpdatePacket packet = new AssetInventoryUpdatePacket();
                 packet.fromBytes(buf);
                 syncPacket(packet.apply(teamId, creative));
             }
