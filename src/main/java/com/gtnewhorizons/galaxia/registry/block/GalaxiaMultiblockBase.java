@@ -19,12 +19,16 @@ import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import cpw.mods.fml.common.Optional;
 import gregtech.api.interfaces.tileentity.IMachineBlockUpdateable;
 import lombok.Getter;
+import lombok.Setter;
 
 @Optional.Interface(iface = "gregtech.api.interfaces.tileentity.IMachineBlockUpdateable", modid = "gregtech")
 public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> extends TileEntity
     implements ISurvivalConstructable, IMachineBlockUpdateable {
 
+    @Setter
+    @Getter
     protected ForgeDirection placedFacing = ForgeDirection.NORTH;
+    @Getter
     protected ExtendedFacing currentFacing = ExtendedFacing.DEFAULT;
     protected int mCheckTimer = 0;
     protected boolean updated = true;
@@ -268,18 +272,6 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
     public void onChunkUnload() {
         super.onChunkUnload();
         isChunkUnloading = true;
-    }
-
-    public ForgeDirection getPlacedFacing() {
-        return placedFacing;
-    }
-
-    public void setPlacedFacing(ForgeDirection dir) {
-        placedFacing = dir;
-    }
-
-    public ExtendedFacing getCurrentFacing() {
-        return currentFacing;
     }
 
     @Override

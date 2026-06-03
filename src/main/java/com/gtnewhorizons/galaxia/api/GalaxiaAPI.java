@@ -361,6 +361,7 @@ public final class GalaxiaAPI {
         for (var assetId : assets) {
             CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
             if (!(asset instanceof Station station)) continue;
+            if (station.isDisabled()) continue;
             BlockPos pos = station.getController();
             if (pos == null) continue;
             if (!(world.getTileEntity(pos.x(), pos.y(), pos.z()) instanceof TileStation tileStation)) continue;
