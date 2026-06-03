@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -464,17 +465,17 @@ public final class FacilityPersistenceManager {
     }
 
     FacilityStateJson encodeFacilityState(AutomatedFacility state) {
-        FacilitySnapshot snapshot = FacilitySnapshot.from(state);
+        state.syncRecipeSettingsGroupsFromModules();
         FacilityStateJson out = new FacilityStateJson();
-        out.energyStored = snapshot.energyStored();
-        out.stationFeatureSalt = snapshot.stationFeatureSalt();
-        out.settingsGroupsNextId = snapshot.settingsGroupsNextId();
+        out.energyStored = state.getEnergyStored();
+        out.stationFeatureSalt = state.stationFeatureSalt();
+        out.settingsGroupsNextId = state.settingsGroups()
+            .nextGroupId();
         out.settingsGroups = new ArrayList<>();
-        snapshot.settingsGroups()
-            .forEach(group -> out.settingsGroups.add(encodeSettingsGroup(group)));
+        sortedSettingsGroups(state).forEach(group -> out.settingsGroups.add(encodeSettingsGroup(group)));
         out.modules = new ArrayList<>();
         int moduleCount = 0;
-        for (ModuleInstance m : snapshot.modules()) {
+        for (ModuleInstance m : state.modules()) {
             moduleCount++;
             ModuleJson mj = new ModuleJson();
             mj.moduleId = m.id.toString();
@@ -531,22 +532,22 @@ public final class FacilityPersistenceManager {
         LOG.info("[PERSIST] SAVE ENCODE: facility {} has {} module(s) in state", state.assetId, moduleCount);
 
         out.buffer = new LinkedHashMap<>();
-        for (Map.Entry<ItemStackWrapper, Long> e : snapshot.itemBuffer()
+        for (Map.Entry<ItemStackWrapper, Long> e : state.itemSnapshot()
             .entrySet()) {
             out.buffer.put(
                 e.getKey()
                     .toKey(),
                 e.getValue());
         }
-        out.fluidBuffer = snapshot.fluidBuffer();
+        out.fluidBuffer = new LinkedHashMap<>(state.fluidSnapshot());
         out.upkeepItemCredits = encodeItemUpkeepAmountMap(
-            snapshot.upkeepCredits()
+            state.upkeepCredits()
                 .itemCredits());
         out.upkeepFluidCredits = encodeFluidUpkeepAmountMap(
-            snapshot.upkeepCredits()
+            state.upkeepCredits()
                 .fluidCredits());
         out.layoutTiles = new ArrayList<>();
-        StationLayout layout = snapshot.layout();
+        StationLayout layout = state.stationLayout();
         int anchorCount = 0;
         if (layout != null) {
             for (Map.Entry<StationTileCoord, PlacedTile> entry : layout.snapshot()
@@ -575,6 +576,15 @@ public final class FacilityPersistenceManager {
             LOG.info("[PERSIST] SAVE ENCODE: facility {} has no layout", state.assetId);
         }
         return out;
+    }
+
+    private static List<SettingsGroup> sortedSettingsGroups(AutomatedFacility state) {
+        return state.settingsGroups()
+            .groups()
+            .values()
+            .stream()
+            .sorted(Comparator.comparingInt(SettingsGroup::id))
+            .toList();
     }
 
     AutomatedFacility decodeFacilityState(CelestialAsset asset, FacilityStateJson json) {
