@@ -562,6 +562,39 @@ final class FacilityPersistenceManagerTest {
                 .upperOrDefault());
     }
 
+    @Test
+    void assetFiltersLoadFromSaveFile(@TempDir Path tempDir) throws Exception {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        FacilityPersistenceManager.AssetJson json = assetJson(
+            UUID.randomUUID(),
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            CelestialObjectId.PANSPIRA);
+        json.filters = new LinkedHashMap<>();
+        json.filters.put(true, List.of("ore:iron", "ore:copper"));
+        json.filters.put(false, List.of("ore:tin"));
+
+        Path dataDir = tempDir.resolve("galaxiadata");
+        Files.createDirectories(dataDir);
+        Files.write(
+            dataDir.resolve("_assets.json"),
+            PERSISTENCE_GSON.toJson(List.of(json))
+                .getBytes(StandardCharsets.UTF_8));
+
+        CelestialAssetStore.clear();
+        assertDoesNotThrow(() -> manager.loadFromSaveDirectory(tempDir.toFile()));
+
+        AutomatedFacility loaded = (AutomatedFacility) CelestialAssetStore.findAsset(json.assetId);
+        assertNotNull(loaded);
+        assertEquals(
+            List.of("ore:iron", "ore:copper"),
+            loaded.filtersSnapshot()
+                .get(true));
+        assertEquals(
+            List.of("ore:tin"),
+            loaded.filtersSnapshot()
+                .get(false));
+    }
+
     private static FacilityPersistenceManager.AssetJson assetJson(UUID teamId, CelestialAsset.Kind kind,
         CelestialObjectId body) {
         FacilityPersistenceManager.AssetJson json = new FacilityPersistenceManager.AssetJson();
