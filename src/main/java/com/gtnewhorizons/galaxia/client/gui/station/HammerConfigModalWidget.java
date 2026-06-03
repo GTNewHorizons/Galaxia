@@ -308,9 +308,6 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
             case WAITING_FOR_REQUEST -> "Dispatch: waiting for request";
             case NO_EXPORT_CONFIG -> "Dispatch: export disabled";
             case NO_SURPLUS_AFTER_RESERVE -> "Dispatch: no surplus after reserve";
-            case ORDER_BELOW_PACKAGE_SIZE -> "Dispatch: order below package size " + status.sendAmount()
-                + "/"
-                + status.orderSize();
             case DESTINATION_LACKS_PACKAGE_SPACE -> "Dispatch: destination lacks package space " + status.sendAmount()
                 + "/"
                 + status.orderSize();

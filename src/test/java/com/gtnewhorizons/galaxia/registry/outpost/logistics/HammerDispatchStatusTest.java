@@ -3,7 +3,6 @@ package com.gtnewhorizons.galaxia.registry.outpost.logistics;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
@@ -62,14 +61,14 @@ final class HammerDispatchStatusTest {
     }
 
     @Test
-    void sendsOneConfiguredPackageWhenMoreItemsAreRequested() {
+    void dispatchAmountFillsRequestedAmountWhenItExceedsOrderSize() {
         ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BIG, 1_000_000L);
         HammerDispatchStatus.Candidate candidate = candidate(64, 64, 32, 1.5, 20.0, 120.0);
 
         HammerDispatchStatus.Status status = HammerDispatchStatus.evaluateCandidate(hammer, candidate);
 
         assertEquals(HammerDispatchStatus.Code.READY, status.code());
-        assertEquals(32L, status.sendAmount());
+        assertEquals(64L, status.sendAmount());
     }
 
     @Test
@@ -92,10 +91,33 @@ final class HammerDispatchStatusTest {
         assertSame(supplier, plan.supplier());
         assertSame(requester, plan.requester());
         assertEquals(resource, plan.resource());
-        assertEquals(32L, plan.sendAmount());
+        assertEquals(64L, plan.sendAmount());
         assertEquals(10_000L, plan.requiredEnergy());
         assertEquals(LogisticSignal.Scope.PLANETARY, plan.deliveryScope());
         assertEquals(1, plan.travelTimeTicks());
+    }
+
+    @Test
+    void plannerRequestsPackageUpToRequesterEffectiveLowerBound() {
+        AutomatedFacility supplier = facility(CelestialObjectId.PANSPIRA);
+        AutomatedFacility requester = facility(CelestialObjectId.PANSPIRA);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);
+        supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
+        requester.setBound(resource, 54, true);
+        requester.setUpkeepReserve(resource, 10L);
+        requester.logisticsConfig.set(
+            resource,
+            requester.logisticsConfig.get(resource)
+                .withOrderSize(64)
+                .withImportEnabled(true));
+        supplier.updateItems(resource, 128);
+        ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 1_000_000L);
+
+        HammerDispatchPlanner.Result result = HammerDispatchPlanner
+            .evaluate(supplier, hammerModule(hammer), requester, resource, 0.0, null);
+
+        assertEquals(HammerDispatchStatus.Code.READY, result.code());
+        assertEquals(64L, result.sendAmount());
     }
 
     @Test
@@ -124,19 +146,31 @@ final class HammerDispatchStatusTest {
     }
 
     @Test
-    void reportsOrderBelowPackageSizeBeforeSpendingEnergy() {
+    void dispatchAmountUsesRequestedAmountWhenItIsBelowOrderSize() {
         ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BIG, 1_000_000L);
         HammerDispatchStatus.Candidate candidate = candidate(64, 16, 32, 1.5, 20.0, 120.0);
 
         HammerDispatchStatus.Status status = HammerDispatchStatus.evaluateCandidate(hammer, candidate);
 
-        assertEquals(HammerDispatchStatus.Code.ORDER_BELOW_PACKAGE_SIZE, status.code());
+        assertEquals(HammerDispatchStatus.Code.READY, status.code());
         assertEquals(16L, status.sendAmount());
         assertEquals(32, status.orderSize());
     }
 
     @Test
-    void orderBelowPackageSizeDoesNotConsumeRouteProbe() {
+    void dispatchAmountUsesAvailableSurplusWhenItIsBelowOrderSize() {
+        ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BIG, 1_000_000L);
+        HammerDispatchStatus.Candidate candidate = candidate(16, 64, 32, 1.5, 20.0, 120.0);
+
+        HammerDispatchStatus.Status status = HammerDispatchStatus.evaluateCandidate(hammer, candidate);
+
+        assertEquals(HammerDispatchStatus.Code.READY, status.code());
+        assertEquals(16L, status.sendAmount());
+        assertEquals(32, status.orderSize());
+    }
+
+    @Test
+    void plannerSendsRequestedAmountWhenRequestIsBelowOrderSize() {
         AutomatedFacility supplier = facility(CelestialObjectId.FROZEN_BELT);
         AutomatedFacility requester = facility(CelestialObjectId.PANSPIRA);
         ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
@@ -149,8 +183,8 @@ final class HammerDispatchStatusTest {
         HammerDispatchPlanner.Result result = HammerDispatchPlanner
             .evaluate(supplier, hammerModule, requester, resource, 0.0, null);
 
-        assertEquals(HammerDispatchStatus.Code.ORDER_BELOW_PACKAGE_SIZE, result.code());
-        assertTrue(hammer.canPlanRoute(hammerModule));
+        assertEquals(HammerDispatchStatus.Code.READY, result.code());
+        assertEquals(16L, result.sendAmount());
     }
 
     @Test

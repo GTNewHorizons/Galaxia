@@ -28,6 +28,7 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
 import com.gtnewhorizons.galaxia.core.profiling.HammerTrajectoryLoadSample;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
@@ -370,11 +371,11 @@ public class OrbitalView {
         private final OrbitalContextMenuState contextMenuState = new OrbitalContextMenuState();
         private String actionStatusMessage = "";
         private long actionStatusExpiresAt = 0L;
-        private final AssetManagementSystem.OrbitalAssetSupport assetSupport = new AssetManagementSystem.OrbitalAssetSupport();
+        private final StarmapAssetActions.OrbitalAssetSupport assetSupport = new StarmapAssetActions.OrbitalAssetSupport();
         private final InterplanetaryTransferSystem.OrbitalTransferSupport transferSupport = new InterplanetaryTransferSystem.OrbitalTransferSupport();
-        private final AssetManagementSystem.OrbitalAssetActionController assetActionController;
-        private final AssetManagementSystem.OrbitalAssetUiState assetUiState = new AssetManagementSystem.OrbitalAssetUiState();
-        private final AssetManagementSystem.OrbitalAssetManagementWidget assetManagementWidget;
+        private final StarmapAssetActions.OrbitalAssetActionController assetActionController;
+        private final StarmapAssetActions.OrbitalAssetUiState assetUiState = new StarmapAssetActions.OrbitalAssetUiState();
+        private final StarmapAssetActions.StarmapAssetActionsWidget assetActionsWidget;
         private final InterplanetaryTransferSystem.OrbitalTransferState transferState = new InterplanetaryTransferSystem.OrbitalTransferState();
         private final InterplanetaryTransferSystem.OrbitalTransferRenderer transferRenderer;
         private final InterplanetaryTransferSystem.OrbitalTransferTooltipWidget transferTooltipWidget;
@@ -421,9 +422,9 @@ public class OrbitalView {
             this.root = root;
             this.viewRoot = root;
             this.initialLayer = root;
-            this.assetActionController = new AssetManagementSystem.OrbitalAssetActionController(
+            this.assetActionController = new StarmapAssetActions.OrbitalAssetActionController(
                 assetSupport,
-                new AssetManagementSystem.OrbitalAssetActionController.Callbacks() {
+                new StarmapAssetActions.OrbitalAssetActionController.Callbacks() {
 
                     @Override
                     public boolean isCreativeBuildModeEnabled() {
@@ -459,9 +460,9 @@ public class OrbitalView {
                         OrbitalMapWidget.this.createResourceTransfer(sourceBody, sourceAsset, target);
                     }
                 });
-            this.assetManagementWidget = new AssetManagementSystem.OrbitalAssetManagementWidget(
+            this.assetActionsWidget = new StarmapAssetActions.StarmapAssetActionsWidget(
                 assetUiState,
-                new AssetManagementSystem.OrbitalAssetManagementWidget.Callbacks() {
+                new StarmapAssetActions.StarmapAssetActionsWidget.Callbacks() {
 
                     @Override
                     public int getViewportWidth() {
@@ -474,10 +475,10 @@ public class OrbitalView {
                     }
 
                     @Override
-                    public void closeAssetManagement() {
-                        assetActionController.closeAssetManagement(assetUiState);
+                    public void closeAssetActions() {
+                        assetActionController.closeAssetActions(assetUiState);
                         transferSimulatorState.resetSelection();
-                        assetManagementWidget.markStructureDirty();
+                        assetActionsWidget.markStructureDirty();
                     }
 
                     @Override
@@ -543,121 +544,115 @@ public class OrbitalView {
                     @Override
                     public void createBaseStation(CelestialObject body) {
                         assetActionController.createBaseStation(body);
-                        assetManagementWidget.markContentDirty();
+                        assetActionsWidget.markContentDirty();
                     }
 
                     @Override
                     public void triggerAssetCreation(CelestialObject body, CelestialAsset.Kind kind,
-                        boolean openManagementFirst) {
-                        assetActionController.triggerAssetCreation(assetUiState, body, kind, openManagementFirst);
-                        assetManagementWidget.markStructureDirty();
-                        assetManagementWidget.markContentDirty();
+                        boolean openActionsFirst) {
+                        assetActionController.triggerAssetCreation(assetUiState, body, kind, openActionsFirst);
+                        assetActionsWidget.markStructureDirty();
+                        assetActionsWidget.markContentDirty();
                     }
 
                     @Override
                     public void openPendingAssetRename(CelestialAsset asset) {
                         assetActionController.openPendingAssetRename(assetUiState, asset);
-                        assetManagementWidget.markStructureDirty();
+                        assetActionsWidget.markStructureDirty();
                     }
 
                     @Override
                     public void openPendingConstructionCancellation(CelestialAsset asset) {
                         assetActionController.openPendingConstructionCancellation(assetUiState, asset);
-                        assetManagementWidget.markStructureDirty();
+                        assetActionsWidget.markStructureDirty();
                     }
 
                     @Override
                     public void openPendingResourceTransfer(CelestialAsset asset) {
                         assetActionController.openPendingResourceTransfer(assetUiState, root, asset);
-                        assetManagementWidget.markStructureDirty();
+                        assetActionsWidget.markStructureDirty();
                     }
 
                     @Override
-                    public void openPendingAssetManagement(CelestialAsset asset) {
-                        assetActionController.openPendingAssetManagement(assetUiState, asset);
-                        assetManagementWidget.markStructureDirty();
+                    public void openStationManagement(CelestialAsset asset) {
+                        assetActionController.openStationManagement(assetUiState, asset);
+                        assetActionsWidget.markStructureDirty();
                     }
 
                     @Override
                     public void openPendingAssetDestruction(CelestialAsset asset) {
                         assetActionController.openPendingAssetDestruction(assetUiState, asset);
-                        assetManagementWidget.markStructureDirty();
+                        assetActionsWidget.markStructureDirty();
                     }
 
                     @Override
                     public void confirmPendingAssetCreation() {
                         assetActionController.confirmPendingAssetCreation(assetUiState);
-                        assetManagementWidget.markStructureDirty();
-                        assetManagementWidget.markContentDirty();
+                        assetActionsWidget.markStructureDirty();
+                        assetActionsWidget.markContentDirty();
                     }
 
                     @Override
                     public void dismissPendingAssetCreation() {
                         assetActionController.dismissPendingAssetCreation(assetUiState);
-                        assetManagementWidget.markStructureDirty();
+                        assetActionsWidget.markStructureDirty();
                     }
 
                     @Override
                     public void closePendingAssetRename() {
                         assetActionController.closePendingAssetRename(assetUiState);
-                        assetManagementWidget.markStructureDirty();
+                        assetActionsWidget.markStructureDirty();
                     }
 
                     @Override
                     public void confirmPendingAssetRename() {
                         assetActionController.confirmPendingAssetRename(assetUiState);
-                        assetManagementWidget.markStructureDirty();
-                        assetManagementWidget.markContentDirty();
+                        assetActionsWidget.markStructureDirty();
+                        assetActionsWidget.markContentDirty();
                     }
 
                     @Override
                     public void dismissPendingAssetDestruction() {
                         assetActionController.dismissPendingAssetDestruction(assetUiState);
-                        assetManagementWidget.markStructureDirty();
+                        assetActionsWidget.markStructureDirty();
                     }
 
                     @Override
                     public void advancePendingAssetDestruction() {
                         assetActionController.advancePendingAssetDestruction(assetUiState);
-                        assetManagementWidget.markStructureDirty();
-                        assetManagementWidget.markContentDirty();
+                        assetActionsWidget.markStructureDirty();
+                        assetActionsWidget.markContentDirty();
                     }
 
                     @Override
                     public void dismissPendingConstructionCancellation() {
                         assetActionController.dismissPendingConstructionCancellation(assetUiState);
-                        assetManagementWidget.markStructureDirty();
+                        assetActionsWidget.markStructureDirty();
                     }
 
                     @Override
                     public void confirmPendingConstructionCancellation() {
                         assetActionController.confirmPendingConstructionCancellation(assetUiState);
-                        assetManagementWidget.markStructureDirty();
-                        assetManagementWidget.markContentDirty();
+                        assetActionsWidget.markStructureDirty();
+                        assetActionsWidget.markContentDirty();
                     }
 
                     @Override
                     public void dismissPendingResourceTransfer() {
                         assetActionController.dismissPendingResourceTransfer(assetUiState);
-                        assetManagementWidget.markStructureDirty();
+                        assetActionsWidget.markStructureDirty();
                     }
 
                     @Override
                     public void sendPendingResourceTransfer(StationTransferTarget target) {
                         assetActionController.sendPendingResourceTransfer(assetUiState, target);
-                        assetManagementWidget.markStructureDirty();
-                    }
-
-                    @Override
-                    public void closePendingAssetManagement() {
-                        assetActionController.closePendingAssetManagement(assetUiState);
-                        assetManagementWidget.markStructureDirty();
+                        assetActionsWidget.markStructureDirty();
                     }
 
                     @Override
                     public void dismissPendingModalByOutsideClick() {
                         assetActionController.dismissPendingModalByOutsideClick(assetUiState);
-                        assetManagementWidget.markStructureDirty();
+                        assetActionsWidget.markStructureDirty();
                     }
 
                     @Override
@@ -897,23 +892,23 @@ public class OrbitalView {
                     }
 
                     @Override
-                    public void openAssetManagement(CelestialObject body) {
-                        assetActionController.openAssetManagement(assetUiState, body);
-                        assetManagementWidget.markStructureDirty();
+                    public void openAssetActions(CelestialObject body) {
+                        assetActionController.openAssetActions(assetUiState, body);
+                        assetActionsWidget.markStructureDirty();
                     }
 
                     @Override
                     public void createBaseStation(CelestialObject body) {
                         assetActionController.createBaseStation(body);
-                        assetManagementWidget.markContentDirty();
+                        assetActionsWidget.markContentDirty();
                     }
 
                     @Override
                     public void triggerAssetCreation(CelestialObject body, CelestialAsset.Kind kind,
-                        boolean openManagementFirst) {
-                        assetActionController.triggerAssetCreation(assetUiState, body, kind, openManagementFirst);
-                        assetManagementWidget.markStructureDirty();
-                        assetManagementWidget.markContentDirty();
+                        boolean openActionsFirst) {
+                        assetActionController.triggerAssetCreation(assetUiState, body, kind, openActionsFirst);
+                        assetActionsWidget.markStructureDirty();
+                        assetActionsWidget.markContentDirty();
                     }
 
                     @Override
@@ -955,10 +950,7 @@ public class OrbitalView {
                 root,
                 () -> this.viewRoot,
                 () -> this.assetsPanelOpen,
-                body -> {
-                    assetActionController.openAssetManagement(assetUiState, body);
-                    assetManagementWidget.markStructureDirty();
-                });
+                assetId -> StationManagementScreen.open(assetId, isCreativeBuildModeEnabled()));
         }
 
         public OrbitalMapWidget withInitialLayer(CelestialObject layerRoot) {
@@ -976,8 +968,8 @@ public class OrbitalView {
             return this;
         }
 
-        public AssetManagementSystem.OrbitalAssetManagementWidget createAssetManagementWidget() {
-            return assetManagementWidget;
+        public StarmapAssetActions.StarmapAssetActionsWidget createAssetActionsWidget() {
+            return assetActionsWidget;
         }
 
         public OrbitalPinnedInfoContentBuilder.OrbitalPinnedInfoWidget createPinnedInfoWidget() {
@@ -1033,7 +1025,7 @@ public class OrbitalView {
             if (this.viewRoot == targetLayer) return;
             clearLayerSwitchState();
             closeContextMenu();
-            assetActionController.closeAssetManagement(assetUiState);
+            assetActionController.closeAssetActions(assetUiState);
             transferSimulatorState.resetSelection();
             CelestialObject anchorBody = null;
             if (this.viewRoot == root && targetLayer.objectClass() == CelestialObject.Class.STAR)
@@ -1133,7 +1125,7 @@ public class OrbitalView {
                     pressedBodyCandidate = null;
                     return false;
                 }
-                if (assetUiState.isAssetManagementOpen()) {
+                if (assetUiState.isAssetActionsOpen()) {
                     clickCandidate = false;
                     dragging = false;
                     dragEnabledForCurrentPress = false;
@@ -1189,7 +1181,7 @@ public class OrbitalView {
                     pressedBodyCandidate = null;
                     return false;
                 }
-                if (assetUiState.isAssetManagementOpen()) {
+                if (assetUiState.isAssetActionsOpen()) {
                     clickCandidate = false;
                     dragging = false;
                     dragEnabledForCurrentPress = false;
@@ -1283,9 +1275,9 @@ public class OrbitalView {
             int sign = dir.isUp() ? 1 : dir.isDown() ? -1 : 0;
             if (sign == 0) return false;
             if (signalsWidget.isPointInPanel(mx, my)) return false;
-            if (assetUiState.isAssetManagementOpen()) {
+            if (assetUiState.isAssetActionsOpen()) {
                 if (assetUiState.hasBlockingModal()) return true;
-                return !assetManagementWidget.isPointInScrollViewport(mx, my);
+                return !assetActionsWidget.isPointInScrollViewport(mx, my);
             }
             double oldScale = getScale();
             viewState.zoomLevel = Math.max(-7000.0, Math.min(14000.0, viewState.zoomLevel + sign * 0.78));
@@ -1305,12 +1297,12 @@ public class OrbitalView {
 
         private boolean handleMouseDragged(int mx, int my, int button, long time) {
             if (button != 0) return false;
-            if (assetUiState.isAssetManagementOpen()) return false;
+            if (assetUiState.isAssetActionsOpen()) return false;
             return true;
         }
 
         private void updateManualDragging() {
-            if (assetUiState.isAssetManagementOpen() || transitionState.hasPending()
+            if (assetUiState.isAssetActionsOpen() || transitionState.hasPending()
                 || isLayerSwitchActive()
                 || transferSimulatorState.isWaitingForPick()) return;
             if (!Mouse.isButtonDown(0)) return;
@@ -1948,7 +1940,7 @@ public class OrbitalView {
             if (transfersHidden || dragging
                 || viewRoot.objectClass() != CelestialObject.Class.STAR
                 || viewState.isometricProgress > 0.95
-                || assetUiState.isAssetManagementOpen()
+                || assetUiState.isAssetActionsOpen()
                 || contextMenuState.isOpen()) {
                 transferState.updateHoveredTransfer(null, localMouseX, localMouseY);
                 clientSimulatedTransferState.updateHoveredTransfer(null, localMouseX, localMouseY);
@@ -2024,7 +2016,7 @@ public class OrbitalView {
 
         private InterplanetaryTransferJob findTransferAtLocal(int mouseX, int mouseY) {
             if (viewRoot.objectClass() != CelestialObject.Class.STAR || viewState.isometricProgress > 0.95
-                || assetUiState.isAssetManagementOpen()
+                || assetUiState.isAssetActionsOpen()
                 || contextMenuState.isOpen()
                 || transferSimulatorState.isWaitingForPick()) return null;
             InterplanetaryTransferJob simulatedTransfer = transferRenderer
@@ -2389,7 +2381,7 @@ public class OrbitalView {
 
         private void updateRenameFieldLayout() {
             if (renameField == null) return;
-            ButtonRect layout = assetManagementWidget.getRenameInputBounds();
+            ButtonRect layout = assetActionsWidget.getRenameInputBounds();
             if (layout == null) {
                 renameField.top(-1000);
                 if (renameField.isEnabled()) renameField.setEnabled(false);
