@@ -62,7 +62,7 @@ public final class AutomatedFacility extends CelestialAsset {
     private final List<ModuleInstance> modules;
     private final StationLayout layout;
     private final LayoutCacheBundle layoutCache;
-    private final SettingsGroupRegistry settingsGroups;
+    private final FacilitySettingsGroupState settingsGroupState;
 
     private final UpkeepLedger upkeepLedger;
     private final FacilityUpkeepState upkeepState = new FacilityUpkeepState();
@@ -95,7 +95,7 @@ public final class AutomatedFacility extends CelestialAsset {
         this.modules = new ArrayList<>();
         this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
         this.layoutCache = new LayoutCacheBundle(layout);
-        this.settingsGroups = new SettingsGroupRegistry();
+        this.settingsGroupState = new FacilitySettingsGroupState();
         this.upkeepLedger = new UpkeepLedger();
         this.stationFeatureSalt = createStationFeatureSalt(assetId, celestialBodyId);
         this.energyStored = 0;
@@ -129,7 +129,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public SettingsGroupRegistry settingsGroups() {
-        return settingsGroups;
+        return settingsGroupState.registry();
     }
 
     public long stationFeatureSalt() {
@@ -171,24 +171,11 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void applySettingsGroupsToModules() {
-        for (SettingsGroup group : settingsGroups.groups()
-            .values()) {
-            applyRecipeSettingsToGroup(group);
-        }
+        settingsGroupState.applyGroupsToModules(modules);
     }
 
     public void syncRecipeSettingsGroupsFromModules() {
-        for (SettingsGroup group : settingsGroups.groups()
-            .values()) {
-            if (!(group.settings() instanceof RecipeModuleSettings recipeSettings)) continue;
-            for (StationTileCoord coord : group.members()) {
-                ModuleInstance module = moduleAtAnchor(coord);
-                if (module != null && module.component() instanceof IRecipeModule recipeModule) {
-                    recipeSettings.setConfig(recipeModule.getRecipeConfig());
-                    break;
-                }
-            }
-        }
+        settingsGroupState.syncRecipeGroupsFromModules(modules);
     }
 
     public LayoutCacheBundle layoutCache() {
@@ -291,10 +278,7 @@ public final class AutomatedFacility extends CelestialAsset {
             return;
         }
         modules.add(module);
-        if (FacilityModuleRegistry.get(module.kind())
-            .settingsGroups() && module.groupId() == 0) {
-            attachToSettingsGroup(module, settingsGroups.create(module.kind(), privateSettingsFor(module)));
-        }
+        settingsGroupState.attachPrivateGroupIfSupported(module, this::markModuleDirty);
         dirtyModuleIds.add(module.id);
         bumpSyncRevision();
         LOG.debug(
@@ -315,7 +299,7 @@ public final class AutomatedFacility extends CelestialAsset {
     public void removeModule(int index) {
         ModuleInstance removed = modules.remove(index);
         if (removed != null) {
-            detachFromSettingsGroup(removed);
+            settingsGroupState.detach(removed);
             dirtyRemovedIds.add(removed.id);
             dirtyModuleIds.remove(removed.id);
             bumpSyncRevision();
@@ -368,7 +352,8 @@ public final class AutomatedFacility extends CelestialAsset {
         if (module.groupId() == 0) {
             throw new IllegalStateException("Miner module " + module.id + " has no settings group");
         }
-        SettingsGroup group = settingsGroups.require(module.groupId(), FacilityModuleKind.MINER);
+        SettingsGroup group = settingsGroupState.registry()
+            .require(module.groupId(), FacilityModuleKind.MINER);
         if (!(group.settings() instanceof MinerSettings settings)) {
             throw new IllegalStateException(
                 "Miner settings group " + module.groupId() + " has non-miner settings for module " + module.id);
@@ -382,7 +367,11 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public void setMinerOreBlacklisted(ModuleInstance module, String oreKey, boolean blacklisted) {
         if (minerSettings(module).setOreBlacklisted(oreKey, blacklisted)) {
-            markSettingsGroupMembersDirty(settingsGroups.require(module.groupId(), FacilityModuleKind.MINER));
+            settingsGroupState.markMembersDirty(
+                settingsGroupState.registry()
+                    .require(module.groupId(), FacilityModuleKind.MINER),
+                modules,
+                this::markModuleDirty);
         }
     }
 
@@ -398,7 +387,8 @@ public final class AutomatedFacility extends CelestialAsset {
         if (module.groupId() == 0) {
             throw new IllegalStateException("Recipe module " + module.id + " has no settings group");
         }
-        SettingsGroup group = settingsGroups.require(module.groupId(), module.kind());
+        SettingsGroup group = settingsGroupState.registry()
+            .require(module.groupId(), module.kind());
         if (!(group.settings() instanceof RecipeModuleSettings settings)) {
             throw new IllegalStateException(
                 "Recipe settings group " + module.groupId() + " has non-recipe settings for module " + module.id);
@@ -419,16 +409,21 @@ public final class AutomatedFacility extends CelestialAsset {
             return;
         }
         if (module.groupId() == 0) {
-            attachToSettingsGroup(module, settingsGroups.create(module.kind(), new RecipeModuleSettings(normalized)));
+            settingsGroupState.attach(
+                module,
+                settingsGroupState.registry()
+                    .create(module.kind(), new RecipeModuleSettings(normalized)),
+                this::markModuleDirty);
         }
-        SettingsGroup group = settingsGroups.require(module.groupId(), module.kind());
+        SettingsGroup group = settingsGroupState.registry()
+            .require(module.groupId(), module.kind());
         if (!(group.settings() instanceof RecipeModuleSettings settings)) {
             throw new IllegalStateException(
                 "Recipe settings group " + module.groupId() + " has non-recipe settings for module " + module.id);
         }
         settings.setConfig(normalized);
-        applyRecipeSettingsToGroup(group);
-        markSettingsGroupMembersDirty(group);
+        settingsGroupState.applySettingsToGroup(group, modules);
+        settingsGroupState.markMembersDirty(group, modules, this::markModuleDirty);
     }
 
     public boolean canCopyModuleRuntimeSettings(ModuleInstance source, ModuleInstance target) {
@@ -456,8 +451,8 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     private SettingsGroup validateModuleRuntimeSettingsCopy(ModuleInstance source, ModuleInstance target) {
-        requireSettingsGroupsSupported(source);
-        requireSettingsGroupsSupported(target);
+        FacilitySettingsGroupState.requireSupported(source);
+        FacilitySettingsGroupState.requireSupported(target);
         if (source.kind() != target.kind()) {
             throw new IllegalStateException(
                 "Module settings copy target kind mismatch: " + source.kind() + " -> " + target.kind());
@@ -465,7 +460,8 @@ public final class AutomatedFacility extends CelestialAsset {
         if (source.id.equals(target.id)) {
             throw new IllegalStateException("Module settings copy target must be different from source: " + source.id);
         }
-        SettingsGroup sourceGroup = settingsGroups.require(source.groupId(), source.kind());
+        SettingsGroup sourceGroup = settingsGroupState.registry()
+            .require(source.groupId(), source.kind());
         source.component()
             .validateSettingsCopyTarget(source, target);
         return sourceGroup;
@@ -599,9 +595,10 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public SettingsGroup createSettingsGroupForModule(ModuleInstance module, String displayName) {
-        requireSettingsGroupsSupported(module);
+        FacilitySettingsGroupState.requireSupported(module);
         if (module.groupId() != 0) {
-            SettingsGroup current = settingsGroups.require(module.groupId(), module.kind());
+            SettingsGroup current = settingsGroupState.registry()
+                .require(module.groupId(), module.kind());
             if (current.members()
                 .size() == 1) {
                 if (displayName != null) {
@@ -614,10 +611,11 @@ public final class AutomatedFacility extends CelestialAsset {
                 return current;
             }
         }
-        ModuleSettings settings = copySettings(module);
-        detachFromSettingsGroup(module);
-        SettingsGroup group = settingsGroups.create(module.kind(), displayName, true, settings);
-        attachToSettingsGroup(module, group);
+        ModuleSettings settings = settingsGroupState.copySettings(module);
+        settingsGroupState.detach(module);
+        SettingsGroup group = settingsGroupState.registry()
+            .create(module.kind(), displayName, true, settings);
+        settingsGroupState.attach(module, group, this::markModuleDirty);
         return group;
     }
 
@@ -625,13 +623,14 @@ public final class AutomatedFacility extends CelestialAsset {
         if (module == null) {
             throw new IllegalArgumentException("renameSettingsGroupForModule: module must not be null");
         }
-        requireSettingsGroupsSupported(module);
-        SettingsGroup group = settingsGroups.require(groupId, module.kind());
+        FacilitySettingsGroupState.requireSupported(module);
+        SettingsGroup group = settingsGroupState.registry()
+            .require(groupId, module.kind());
         if (!group.isJoinable()) {
             throw new IllegalStateException("Settings group " + groupId + " is private and cannot be renamed");
         }
         group.setDisplayName(displayName);
-        markSettingsGroupMembersDirty(group);
+        settingsGroupState.markMembersDirty(group, modules, this::markModuleDirty);
         if (group.members()
             .isEmpty()) {
             bumpSyncRevision();
@@ -640,30 +639,33 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void assignSettingsGroup(ModuleInstance module, short groupId) {
-        requireSettingsGroupsSupported(module);
+        FacilitySettingsGroupState.requireSupported(module);
         if (module.groupId() == groupId) return;
         if (groupId == 0) {
             leaveSettingsGroup(module);
             return;
         }
-        SettingsGroup group = settingsGroups.require(groupId, module.kind());
+        SettingsGroup group = settingsGroupState.registry()
+            .require(groupId, module.kind());
         if (!group.isJoinable()) {
             throw new IllegalStateException("Settings group " + groupId + " is private and cannot be joined");
         }
-        detachFromSettingsGroup(module);
-        attachToSettingsGroup(module, group);
+        settingsGroupState.detach(module);
+        settingsGroupState.attach(module, group, this::markModuleDirty);
     }
 
     public boolean canJoinSettingsGroup(FacilityModuleKind kind, short groupId) {
         if (kind == null || groupId <= 0) return false;
-        SettingsGroup group = settingsGroups.get(groupId);
+        SettingsGroup group = settingsGroupState.registry()
+            .get(groupId);
         return group != null && group.kind() == kind && group.isJoinable();
     }
 
     public void leaveSettingsGroup(ModuleInstance module) {
-        requireSettingsGroupsSupported(module);
+        FacilitySettingsGroupState.requireSupported(module);
         if (module.groupId() != 0) {
-            SettingsGroup current = settingsGroups.require(module.groupId(), module.kind());
+            SettingsGroup current = settingsGroupState.registry()
+                .require(module.groupId(), module.kind());
             if (current.members()
                 .size() == 1) {
                 current.setJoinable(false);
@@ -671,9 +673,13 @@ public final class AutomatedFacility extends CelestialAsset {
                 return;
             }
         }
-        ModuleSettings settings = copySettings(module);
-        detachFromSettingsGroup(module);
-        attachToSettingsGroup(module, settingsGroups.create(module.kind(), settings));
+        ModuleSettings settings = settingsGroupState.copySettings(module);
+        settingsGroupState.detach(module);
+        settingsGroupState.attach(
+            module,
+            settingsGroupState.registry()
+                .create(module.kind(), settings),
+            this::markModuleDirty);
         markModuleDirty(module.id);
     }
 
@@ -683,84 +689,22 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private void setPrivateModuleSettings(ModuleInstance module, ModuleSettings settings) {
         if (module.groupId() != 0) {
-            SettingsGroup current = settingsGroups.require(module.groupId(), module.kind());
+            SettingsGroup current = settingsGroupState.registry()
+                .require(module.groupId(), module.kind());
             if (!current.isJoinable() && current.members()
                 .size() == 1) {
                 current.setSettings(settings);
-                applySettingsToModule(settings, module);
+                FacilitySettingsGroupState.applySettingsToModule(settings, module);
                 markModuleDirty(module.id);
                 return;
             }
         }
-        detachFromSettingsGroup(module);
-        attachToSettingsGroup(module, settingsGroups.create(module.kind(), settings));
-    }
-
-    private ModuleSettings copySettings(ModuleInstance module) {
-        requireSettingsGroupsSupported(module);
-        if (module.groupId() != 0) {
-            SettingsGroup group = settingsGroups.require(module.groupId(), module.kind());
-            return module.component()
-                .copySettings(module, group.settings());
-        }
-        return module.component()
-            .createPrivateSettings(module);
-    }
-
-    private ModuleSettings privateSettingsFor(ModuleInstance module) {
-        requireSettingsGroupsSupported(module);
-        return module.component()
-            .createPrivateSettings(module);
-    }
-
-    private static void requireSettingsGroupsSupported(ModuleInstance module) {
-        if (module == null) {
-            throw new IllegalArgumentException("Settings group module must not be null");
-        }
-        if (!FacilityModuleRegistry.get(module.kind())
-            .settingsGroups()) {
-            throw new IllegalStateException("Settings groups are not supported for module kind " + module.kind());
-        }
-    }
-
-    private void attachToSettingsGroup(ModuleInstance module, SettingsGroup group) {
-        settingsGroups.require(group.id(), module.kind());
-        settingsGroups.addMember(group.id(), module.anchor());
-        module.setGroupId(group.id());
-        applySettingsToModule(group.settings(), module);
-        markModuleDirty(module.id);
-    }
-
-    private void detachFromSettingsGroup(ModuleInstance module) {
-        if (module.groupId() == 0) return;
-        short oldGroupId = module.groupId();
-        settingsGroups.removeMember(oldGroupId, module.anchor());
-        module.setGroupId((short) 0);
-    }
-
-    private void markSettingsGroupMembersDirty(SettingsGroup group) {
-        for (StationTileCoord coord : group.members()) {
-            for (ModuleInstance module : modules) {
-                if (coord.equals(module.anchorOrNull())) {
-                    markModuleDirty(module.id);
-                }
-            }
-        }
-    }
-
-    private void applyRecipeSettingsToGroup(SettingsGroup group) {
-        for (StationTileCoord coord : group.members()) {
-            for (ModuleInstance module : modules) {
-                if (coord.equals(module.anchorOrNull())) {
-                    applySettingsToModule(group.settings(), module);
-                }
-            }
-        }
-    }
-
-    private static void applySettingsToModule(ModuleSettings settings, ModuleInstance module) {
-        module.component()
-            .applySettings(module, settings);
+        settingsGroupState.detach(module);
+        settingsGroupState.attach(
+            module,
+            settingsGroupState.registry()
+                .create(module.kind(), settings),
+            this::markModuleDirty);
     }
 
     private ModuleOperationState requireWaitingOperation(ModuleInstance module) {
