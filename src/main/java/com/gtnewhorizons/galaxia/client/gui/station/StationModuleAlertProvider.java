@@ -9,8 +9,4 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 public interface StationModuleAlertProvider {
 
     List<StationModuleAlert> alerts(AutomatedFacility facility, ModuleInstance module);
-
-    default List<StationModuleAlert> alerts(StationModuleAlertRegistry.Context context, ModuleInstance module) {
-        return alerts(context.facility(), module);
-    }
 }

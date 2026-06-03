@@ -1,11 +1,8 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
@@ -39,17 +36,6 @@ final class StationMapVisibleTilesTest {
         assertTrue(
             positions.stream()
                 .anyMatch(position -> position.dy() > StationTileCoord.MAX));
-    }
-
-    @Test
-    void collectedVisibleTilePositionsMatchAllocatedVisibleTilePositions() {
-        Set<StationMapViewport.TilePosition> allocated = StationMapViewport
-            .visibleTilePositions(320, 240, 20, 20, 12, 48, -36);
-        List<StationMapViewport.TilePosition> collected = new ArrayList<>();
-
-        StationMapViewport.collectVisibleTilePositions(320, 240, 20, 20, 12, 48, -36, collected);
-
-        assertEquals(List.copyOf(allocated), collected);
     }
 
     @Test

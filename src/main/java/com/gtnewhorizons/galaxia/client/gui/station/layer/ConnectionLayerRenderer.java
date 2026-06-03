@@ -27,8 +27,8 @@ public final class ConnectionLayerRenderer {
     private static final float INTERNAL_HORIZONTAL_U1 = 0.58f;
     private static final float INTERNAL_VERTICAL_V0 = 0.42f;
     private static final float INTERNAL_VERTICAL_V1 = 0.58f;
-    private static final ConnectorQuadBatch HORIZONTAL_QUADS = new ConnectorQuadBatch();
-    private static final ConnectorQuadBatch VERTICAL_QUADS = new ConnectorQuadBatch();
+    private static final List<ConnectorQuad> HORIZONTAL_QUADS = new java.util.ArrayList<>();
+    private static final List<ConnectorQuad> VERTICAL_QUADS = new java.util.ArrayList<>();
 
     private ConnectionLayerRenderer() {}
 
@@ -114,9 +114,9 @@ public final class ConnectionLayerRenderer {
     }
 
     private static void drawConnector(int x, int y, int w, int h, boolean active, boolean hasTexture,
-        ConnectorQuadBatch textureQuads) {
+        List<ConnectorQuad> textureQuads) {
         if (active && hasTexture) {
-            textureQuads.add(x, y, w, h);
+            textureQuads.add(new ConnectorQuad(x, y, w, h));
             return;
         }
 
@@ -125,7 +125,7 @@ public final class ConnectionLayerRenderer {
         Gui.drawRect(x, y, x + w, y + h, color);
     }
 
-    private static void drawTextureBatch(ResourceLocation texture, ConnectorQuadBatch quads) {
+    private static void drawTextureBatch(ResourceLocation texture, List<ConnectorQuad> quads) {
         if (texture == null || quads.isEmpty()) return;
         Minecraft.getMinecraft()
             .getTextureManager()
@@ -137,12 +137,11 @@ public final class ConnectionLayerRenderer {
 
         Tessellator tess = Tessellator.instance;
         tess.startDrawingQuads();
-        for (int i = 0; i < quads.size(); i++) {
-            ConnectorQuad quad = quads.get(i);
-            tess.addVertexWithUV(quad.x, quad.y + quad.h, 0, 0, 1);
-            tess.addVertexWithUV(quad.x + quad.w, quad.y + quad.h, 0, 1, 1);
-            tess.addVertexWithUV(quad.x + quad.w, quad.y, 0, 1, 0);
-            tess.addVertexWithUV(quad.x, quad.y, 0, 0, 0);
+        for (ConnectorQuad quad : quads) {
+            tess.addVertexWithUV(quad.x(), quad.y() + quad.h(), 0, 0, 1);
+            tess.addVertexWithUV(quad.x() + quad.w(), quad.y() + quad.h(), 0, 1, 1);
+            tess.addVertexWithUV(quad.x() + quad.w(), quad.y(), 0, 1, 0);
+            tess.addVertexWithUV(quad.x(), quad.y(), 0, 0, 0);
         }
         tess.draw();
     }
@@ -180,52 +179,5 @@ public final class ConnectionLayerRenderer {
         };
     }
 
-    private static final class ConnectorQuad {
-
-        private int x;
-        private int y;
-        private int w;
-        private int h;
-
-        private void set(int x, int y, int w, int h) {
-            this.x = x;
-            this.y = y;
-            this.w = w;
-            this.h = h;
-        }
-    }
-
-    private static final class ConnectorQuadBatch {
-
-        private final List<ConnectorQuad> quads = new java.util.ArrayList<>();
-        private int size;
-
-        private void clear() {
-            size = 0;
-        }
-
-        private boolean isEmpty() {
-            return size == 0;
-        }
-
-        private int size() {
-            return size;
-        }
-
-        private ConnectorQuad get(int index) {
-            return quads.get(index);
-        }
-
-        private void add(int x, int y, int w, int h) {
-            ConnectorQuad quad;
-            if (size < quads.size()) {
-                quad = quads.get(size);
-            } else {
-                quad = new ConnectorQuad();
-                quads.add(quad);
-            }
-            quad.set(x, y, w, h);
-            size++;
-        }
-    }
+    private record ConnectorQuad(int x, int y, int w, int h) {}
 }

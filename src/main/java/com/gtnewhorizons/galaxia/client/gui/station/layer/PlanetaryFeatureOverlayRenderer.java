@@ -29,7 +29,6 @@ public final class PlanetaryFeatureOverlayRenderer {
         StationMapViewport.TILE_SIZE,
         StationMapViewport.TILE_SIZE);
     private static final Map<String, TextureSize> textureSizeCache = new HashMap<>();
-    private static final Map<List<PlanetaryFeatureKey>, List<PlanetaryFeatureDefinition>> definitionOrderCache = new HashMap<>();
 
     private PlanetaryFeatureOverlayRenderer() {}
 
@@ -40,35 +39,10 @@ public final class PlanetaryFeatureOverlayRenderer {
         }
     }
 
-    static List<PlanetaryFeatureDefinition> sortedDefinitions(Iterable<PlanetaryFeatureKey> features) {
-        List<PlanetaryFeatureKey> keys = featureKeyList(features);
-        if (keys.isEmpty()) return List.of();
-        return definitionOrderCache.computeIfAbsent(keys, PlanetaryFeatureOverlayRenderer::resolveSortedDefinitions);
-    }
-
-    private static List<PlanetaryFeatureKey> featureKeyList(Iterable<PlanetaryFeatureKey> features) {
-        if (features instanceof List<?>) {
-            @SuppressWarnings("unchecked")
-            List<PlanetaryFeatureKey> keys = (List<PlanetaryFeatureKey>) features;
-            for (PlanetaryFeatureKey key : keys) {
-                if (key == null) return filteredFeatureKeyList(features);
-            }
-            return List.copyOf(keys);
-        }
-        return filteredFeatureKeyList(features);
-    }
-
-    private static List<PlanetaryFeatureKey> filteredFeatureKeyList(Iterable<PlanetaryFeatureKey> features) {
-        List<PlanetaryFeatureKey> keys = new ArrayList<>();
+    private static List<PlanetaryFeatureDefinition> sortedDefinitions(Iterable<PlanetaryFeatureKey> features) {
+        List<PlanetaryFeatureDefinition> definitions = new ArrayList<>();
         for (PlanetaryFeatureKey key : features) {
-            if (key != null) keys.add(key);
-        }
-        return List.copyOf(keys);
-    }
-
-    private static List<PlanetaryFeatureDefinition> resolveSortedDefinitions(List<PlanetaryFeatureKey> keys) {
-        List<PlanetaryFeatureDefinition> definitions = new ArrayList<>(keys.size());
-        for (PlanetaryFeatureKey key : keys) {
+            if (key == null) continue;
             PlanetaryFeatureDefinition definition = PlanetaryFeatureRegistry.get(key);
             if (definition != null) definitions.add(definition);
         }
@@ -76,7 +50,7 @@ public final class PlanetaryFeatureOverlayRenderer {
             Comparator.comparingInt(
                 definition -> definition.layer()
                     .drawOrder()));
-        return List.copyOf(definitions);
+        return definitions;
     }
 
     public static void drawIcon(ResourceLocation texture, int x, int y, int size) {
