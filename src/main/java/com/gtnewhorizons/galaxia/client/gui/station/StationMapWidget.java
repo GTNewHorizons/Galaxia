@@ -33,8 +33,6 @@ import com.gtnewhorizons.galaxia.client.gui.station.layer.PlanetaryFeatureOverla
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureDefinition;
-import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
-import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
@@ -54,6 +52,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
     private final StationVisionLayer visionLayer;
     private final BiPredicate<Integer, Integer> inputBlocked;
     private final @Nullable StationTilePickerController tilePickerController;
+    private final StationFeatureSurface featureSurface = new StationFeatureSurface();
 
     private @Nullable StationTileCoord selected;
     private @Nullable StationTileCoord hovered;
@@ -646,12 +645,8 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             panX,
             panY);
         if (coord == null) return;
-        hoveredFeatureDefinitions.clear();
-        for (PlanetaryFeatureKey key : facility.planetaryFeaturesAt(coord.dx(), coord.dy())) {
-            PlanetaryFeatureDefinition definition = PlanetaryFeatureRegistry.get(key);
-            if (definition != null) hoveredFeatureDefinitions.add(definition);
-        }
-        List<PlanetaryFeatureDefinition> features = hoveredFeatureDefinitions;
+        List<PlanetaryFeatureDefinition> features = featureSurface
+            .hoverDefinitions(facility, coord, hoveredFeatureDefinitions);
         if (features.isEmpty()) return;
 
         FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
