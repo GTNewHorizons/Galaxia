@@ -58,6 +58,7 @@ public final class AutomatedFacility extends CelestialAsset {
     private static final Logger LOG = LogManager.getLogger(AutomatedFacility.class);
 
     private final FacilityInventoryState inventoryState = new FacilityInventoryState();
+    private final FacilityFilterState filterState = new FacilityFilterState();
 
     private final List<ModuleInstance> modules;
     private final StationLayout layout;
@@ -78,9 +79,6 @@ public final class AutomatedFacility extends CelestialAsset {
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
     private final Set<String> dirtyMinerVoidChanceOreKeys = new HashSet<>();
     private long ticks;
-
-    private final ResourceFilter<ItemStackWrapper> itemFilter = ResourceFilter.forItems();
-    private final ResourceFilter<FluidKey> fluidFilter = ResourceFilter.forFluids();
 
     public static final long MAX_ENERGY = 8_000_000L;
     public static final long BASE_ITEM_CAPACITY = 1000L;
@@ -1095,12 +1093,12 @@ public final class AutomatedFacility extends CelestialAsset {
 
     @Override
     public ResourceFilter<ItemStackWrapper> getItemFilter() {
-        return itemFilter;
+        return filterState.itemFilter();
     }
 
     @Override
     public ResourceFilter<FluidKey> getFluidFilter() {
-        return fluidFilter;
+        return filterState.fluidFilter();
     }
 
     public long updateContents(InventoryKey item, long delta, boolean sync) {
@@ -1176,38 +1174,22 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void addFilter(String key, boolean item) {
-        if (key == null) return;
-        if (item) itemFilter.add(key);
-        else fluidFilter.add(key);
-        markDirty();
+        filterState.add(key, item, this::markDirty);
     }
 
     public void removeFilter(String key, boolean item) {
-        if (key == null) return;
-        if (item) itemFilter.remove(key);
-        else fluidFilter.remove(key);
-        markDirty();
+        filterState.remove(key, item, this::markDirty);
     }
 
     public Map<Boolean, List<String>> filtersSnapshot() {
-        Map<Boolean, List<String>> result = new LinkedHashMap<>();
-        List<String> itemSerialized = itemFilter.serialize();
-        if (!itemSerialized.isEmpty()) result.put(true, itemSerialized);
-        List<String> fluidSerialized = fluidFilter.serialize();
-        if (!fluidSerialized.isEmpty()) result.put(false, fluidSerialized);
-        return result;
+        return filterState.snapshot();
     }
 
     public void setFilters(List<String> filters, boolean item) {
-        if (filters == null) return;
-        if (item) itemFilter.load(filters);
-        else fluidFilter.load(filters);
-        markDirty();
+        filterState.set(filters, item, this::markDirty);
     }
 
     public void clearFilters(boolean item) {
-        if (item) itemFilter.clear();
-        else fluidFilter.clear();
-        markDirty();
+        filterState.clear(item, this::markDirty);
     }
 }
