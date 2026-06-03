@@ -113,8 +113,8 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
     }
 
     public boolean addStationPlug(IGregTechTileEntity gte, short tier) {
-        if (stationPlugs.size() >= 2) return false;
         BlockPos plug = new BlockPos(gte.getXCoord(), gte.getYCoord(), gte.getZCoord());
+        if (stationPlugs.size() >= 2) return this.stationPlugs.contains(plug);
         if (!this.stationPlugs.contains(plug)) {
             this.stationPlugs.add(plug);
         }

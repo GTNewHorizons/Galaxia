@@ -143,10 +143,6 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
 
     protected void onStructureDisformed() {}
 
-    protected boolean shouldCheckStructure() {
-        return true;
-    }
-
     protected void onStructureChecked() {}
 
     protected void reset() {
@@ -167,16 +163,14 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
             if (this.updated) {
                 this.updated = false;
 
-                if (shouldCheckStructure()) {
-                    final boolean valid = checkStructure();
-                    if (valid != structureValid) {
-                        structureValid = valid;
-                        if (valid) onStructureFormed();
-                        else onStructureDisformed();
+                final boolean valid = checkStructure();
+                if (valid != structureValid) {
+                    structureValid = valid;
+                    if (valid) onStructureFormed();
+                    else onStructureDisformed();
 
-                        markDirty();
-                        worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-                    }
+                    markDirty();
+                    worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
                 }
 
                 onStructureChecked();

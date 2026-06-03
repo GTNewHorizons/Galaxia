@@ -31,7 +31,7 @@ public class MTEYottaFluidTankHandler extends GTFluidStorageHandler<MTEYottaFlui
 
     @Override
     public FluidStack drainFluid(MTEYottaFluidTank attachment, FluidStack fluid, boolean doDrain) {
-        if (attachment.mFluid == null || attachment.mFluid.isFluidEqual(fluid)) return null;
+        if (attachment.mFluid == null || !attachment.mFluid.isFluidEqual(fluid)) return null;
         long drained = Math.min(fluid.amount, attachment.mStorageCurrent.longValue());
         if (drained <= 0) return null;
         if (doDrain && !attachment.reduceFluid(drained)) return null;
