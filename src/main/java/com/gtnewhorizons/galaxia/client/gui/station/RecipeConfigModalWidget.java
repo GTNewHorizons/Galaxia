@@ -107,7 +107,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
-    private final @Nullable StationTilePickerController tilePickerController;
+    private final @Nullable StationEditModeController editModeController;
     private final ModuleSettingsGroupSelectorWidget settingsGroupSelector;
     private int page;
     private int boundsSlotIndex = -1;
@@ -119,10 +119,10 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private @Nullable TextFieldWidget recipeNameField;
 
     RecipeConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller,
-        @Nullable StationTilePickerController tilePickerController) {
+        @Nullable StationEditModeController editModeController) {
         this.assetId = assetId;
         this.controller = controller;
-        this.tilePickerController = tilePickerController;
+        this.editModeController = editModeController;
         this.settingsGroupSelector = new ModuleSettingsGroupSelectorWidget(assetId, controller, () -> {
             ModuleInstance module = selectedModule();
             return module != null ? module.kind() : null;
@@ -342,7 +342,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private boolean canCopySettings() {
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         ModuleInstance module = selectedModule();
-        return tilePickerController != null && canConfigureRecipes()
+        return editModeController != null && canConfigureRecipes()
             && !settingsGroupSelector.isBlockingModuleControls()
             && facility != null
             && facility.stationLayout() != null
@@ -475,11 +475,12 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         ModuleInstance source = selectedModule();
         int sourceModuleIndex = controller.moduleIndex();
-        if (facility == null || source == null || tilePickerController == null || sourceModuleIndex < 0) return;
+        if (facility == null || source == null || editModeController == null || sourceModuleIndex < 0) return;
         settingsGroupSelector.closeMenu();
         closeRecipeRename();
         controller.close();
-        tilePickerController.start(
+        editModeController.startTileMode(
+            StationEditModeController.Mode.COPY_MODULE,
             "Copy module settings",
             "Copy",
             coord -> ModuleSettingsCopyPickerModel.isCompatibleTarget(facility, source, coord),

@@ -59,13 +59,13 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
-    private final @Nullable StationTilePickerController tilePickerController;
+    private final @Nullable StationEditModeController editModeController;
 
     ModuleUpgradeModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller,
-        @Nullable StationTilePickerController tilePickerController) {
+        @Nullable StationEditModeController editModeController) {
         this.assetId = assetId;
         this.controller = controller;
-        this.tilePickerController = tilePickerController;
+        this.editModeController = editModeController;
         for (int slot = 0; slot < OPTION_BUTTONS; slot++) {
             int col = slot % OPTION_COLUMNS;
             int row = slot / OPTION_COLUMNS;
@@ -262,7 +262,7 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
 
     private boolean canConfirmMultiple() {
         ModuleInstance module = selectedModule();
-        return tilePickerController != null && module != null
+        return editModeController != null && module != null
             && module.component() instanceof ModuleHammer
             && canConfirm();
     }
@@ -302,7 +302,7 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
         ModuleInstance source = selectedModule();
         int sourceModuleIndex = controller.moduleIndex();
         if (facility == null || source == null
-            || tilePickerController == null
+            || editModeController == null
             || !(source.component() instanceof ModuleHammer)
             || sourceModuleIndex < 0) return;
         ModuleTier targetTier = ModuleUpgradeUiModel.hammerTier(controller.moduleUpgradeSelection());
@@ -310,7 +310,8 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
         boolean reserveItems = controller.hammerUpgradeReserveItems();
         boolean voidCompletionRefund = controller.hammerUpgradeVoidRefund();
         controller.close();
-        tilePickerController.start(
+        editModeController.startTileMode(
+            StationEditModeController.Mode.MODULE_UPGRADE,
             "Upgrade modules",
             "Upgrade",
             coord -> ModuleUpgradePickerModel.isCompatibleTarget(facility, source, targetTier, targetVariant, coord),

@@ -19,6 +19,7 @@ final class StationEditModeController {
         IDLE,
         COPY_MODULE,
         MASS_BUILD,
+        MODULE_UPGRADE,
         MASS_DECONSTRUCT,
         DESTROY
     }
