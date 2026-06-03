@@ -325,6 +325,30 @@ public final class StarmapAssetActions {
             callbacks.showActionStatus("Construction cancellation failed");
         }
 
+        void handleConstructionAction(OrbitalAssetUiState state, CelestialAsset asset) {
+            if (asset.status() == CelestialAsset.Status.DECONSTRUCTION) {
+                openPendingResourceTransfer(state, state.assetActionsBody, asset);
+                return;
+            }
+            if (callbacks.isCreativeBuildModeEnabled()) {
+                cancelConstruction(asset);
+                return;
+            }
+            if (assetSupport.hasStoredConstructionResources(asset)) {
+                openPendingConstructionCancellation(state, asset);
+                return;
+            }
+            cancelConstruction(asset);
+        }
+
+        private void cancelConstruction(CelestialAsset asset) {
+            if (CelestialClient.cancelConstruction(asset.assetId)) {
+                callbacks.showActionStatus("Construction canceled");
+            } else {
+                callbacks.showActionStatus("Construction cancel failed");
+            }
+        }
+
         void openPendingResourceTransfer(OrbitalAssetUiState state, CelestialObject root, CelestialAsset asset) {
             if (asset == null) return;
             state.pendingResourceTransfer = new PendingResourceTransfer(
@@ -500,6 +524,8 @@ public final class StarmapAssetActions {
             void dismissPendingConstructionCancellation();
 
             void confirmPendingConstructionCancellation();
+
+            void handleConstructionAction(CelestialAsset asset);
 
             void dismissPendingResourceTransfer();
 
@@ -1519,27 +1545,7 @@ public final class StarmapAssetActions {
         }
 
         private void handleConstructionAction(CelestialAsset asset) {
-            if (asset.status() == CelestialAsset.Status.DECONSTRUCTION) {
-                callbacks.openPendingResourceTransfer(asset);
-                return;
-            }
-            if (callbacks.isCreativeBuildModeEnabled()) {
-                if (CelestialClient.cancelConstruction(asset.assetId)) {
-                    callbacks.showActionStatus("Construction canceled");
-                } else {
-                    callbacks.showActionStatus("Construction cancel failed");
-                }
-                return;
-            }
-            if (callbacks.hasStoredConstructionResources(asset)) {
-                callbacks.openPendingConstructionCancellation(asset);
-                return;
-            }
-            if (CelestialClient.cancelConstruction(asset.assetId)) {
-                callbacks.showActionStatus("Construction canceled");
-            } else {
-                callbacks.showActionStatus("Construction cancel failed");
-            }
+            callbacks.handleConstructionAction(asset);
         }
 
         private void updateModalBounds(int left, int top, int right, int bottom) {

@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -204,41 +205,46 @@ public final class AssetSyncPacket implements IMessage {
         pkt.energyStored = state.getEnergyStored();
         pkt.stationFeatureSalt = state.stationFeatureSalt();
         pkt.upkeepCredits = state.upkeepCredits();
-        pkt.fullSyncDeltas = new ArrayList<>();
+        pkt.fullSyncDeltas = automatedFacilityDeltas(state);
+
+        return pkt;
+    }
+
+    private static List<AssetSyncPacket> automatedFacilityDeltas(AutomatedFacility state) {
+        List<AssetSyncPacket> deltas = new ArrayList<>();
 
         state.settingsGroups()
             .groups()
             .values()
             .stream()
-            .sorted(java.util.Comparator.comparingInt(SettingsGroup::id))
-            .forEach(group -> pkt.fullSyncDeltas.add(settingsGroupUpdated(state.assetId, group)));
+            .sorted(Comparator.comparingInt(SettingsGroup::id))
+            .forEach(group -> deltas.add(settingsGroupUpdated(state.assetId, group)));
 
         for (Map.Entry<Boolean, List<String>> e : state.filtersSnapshot()
             .entrySet()) {
-            pkt.fullSyncDeltas.add(filterUpdated(state.assetId, e.getKey(), e.getValue()));
+            deltas.add(filterUpdated(state.assetId, e.getKey(), e.getValue()));
         }
 
         List<ModuleInstance> modules = state.modules();
         for (int i = 0; i < modules.size(); i++) {
-            pkt.fullSyncDeltas.add(moduleAdded(state.assetId, i, modules.get(i)));
+            deltas.add(moduleAdded(state.assetId, i, modules.get(i)));
         }
 
         for (Map.Entry<ItemStackWrapper, Long> e : state.itemSnapshot()
             .entrySet()) {
-            pkt.fullSyncDeltas.add(inventoryUpdate(state.assetId, e.getKey(), e.getValue()));
+            deltas.add(inventoryUpdate(state.assetId, e.getKey(), e.getValue()));
         }
-        AssetSyncPacket boundsSnapshot = inventoryBoundsSnapshot(
-            state.assetId,
-            state.getBounds(true),
-            state.getBounds(false));
-        if (!boundsSnapshot.inventoryBoundSnapshot.isEmpty()) {
-            pkt.fullSyncDeltas.add(boundsSnapshot);
+
+        Map<? extends InventoryKey, InventoryBounds> itemBounds = state.getBounds(true);
+        Map<? extends InventoryKey, InventoryBounds> fluidBounds = state.getBounds(false);
+        if (!itemBounds.isEmpty() || !fluidBounds.isEmpty()) {
+            deltas.add(inventoryBoundsSnapshot(state.assetId, itemBounds, fluidBounds));
         }
 
         for (Map.Entry<InventoryKey, LogisticsResourceConfig> e : state.logisticsConfig.snapshot()
             .entrySet()) {
             LogisticsResourceConfig cfg = e.getValue();
-            pkt.fullSyncDeltas.add(
+            deltas.add(
                 logisticsConfigUpdated(
                     state.assetId,
                     e.getKey(),
@@ -252,11 +258,11 @@ public final class AssetSyncPacket implements IMessage {
         if (layout != null) {
             for (Map.Entry<StationTileCoord, PlacedTile> e : layout.snapshot()
                 .entrySet()) {
-                pkt.fullSyncDeltas.add(layoutTileUpdated(state.assetId, e.getKey(), e.getValue()));
+                deltas.add(layoutTileUpdated(state.assetId, e.getKey(), e.getValue()));
             }
         }
 
-        return pkt;
+        return deltas;
     }
 
     public static AssetSyncPacket clear() {
@@ -321,7 +327,7 @@ public final class AssetSyncPacket implements IMessage {
         return pkt;
     }
 
-    private static AssetSyncPacket inventoryBoundsSnapshot(CelestialAsset.ID assetId,
+    static AssetSyncPacket inventoryBoundsSnapshot(CelestialAsset.ID assetId,
         Map<? extends InventoryKey, InventoryBounds> itemBounds,
         Map<? extends InventoryKey, InventoryBounds> fluidBounds) {
         AssetSyncPacket pkt = new AssetSyncPacket();

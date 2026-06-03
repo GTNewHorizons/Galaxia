@@ -242,6 +242,36 @@ final class StationPacketRoundTripTest {
     }
 
     @Test
+    void fullSyncOrdersSettingsGroupsBeforeGroupedModules() {
+        AutomatedFacility server = createFacility();
+        ModuleInstance miner = buildModule(server, FacilityModuleKind.MINER, StationTileCoord.of(1, 0));
+        server.setMinerOreBlacklisted(miner, "ore:iron", true);
+        short groupId = server.createSettingsGroupForModule(miner, "Shared miners")
+            .id();
+
+        AssetSyncPacket full = AssetSyncPacket.fullSync(server);
+
+        int firstGroup = firstFullSyncDeltaIndex(full, AssetSyncPacket.SETTINGS_GROUP_UPDATED);
+        int firstModule = firstFullSyncDeltaIndex(full, AssetSyncPacket.MODULE_ADDED);
+        assertTrue(firstGroup >= 0, "full sync must include settings groups for grouped modules");
+        assertTrue(firstModule >= 0, "full sync must include grouped modules");
+        assertTrue(firstGroup < firstModule, "settings groups must replay before modules that reference them");
+
+        AutomatedFacility client = createFacility();
+        applyFullSyncFromPacket(client, roundTrip(full));
+        assertEquals(
+            groupId,
+            client.modules()
+                .get(0)
+                .groupId());
+        assertTrue(
+            client.isMinerOreBlacklisted(
+                client.modules()
+                    .get(0),
+                "ore:iron"));
+    }
+
+    @Test
     void fullSyncRoundTripPreservesRecipeSnapshotPayload() {
         AutomatedFacility server = createFacility();
         ModuleInstance centrifuge = buildModule(server, FacilityModuleKind.CENTRIFUGE, StationTileCoord.of(1, 0));
@@ -463,6 +493,17 @@ final class StationPacketRoundTripTest {
         var buf = Unpooled.buffer();
         pkt.toBytes(buf);
         return buf.writerIndex();
+    }
+
+    private static int firstFullSyncDeltaIndex(AssetSyncPacket pkt, byte syncType) {
+        List<AssetSyncPacket> deltas = pkt.fullSyncDeltas();
+        for (int i = 0; i < deltas.size(); i++) {
+            if (deltas.get(i)
+                .syncType() == syncType) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private static AutomatedFacility createFacility() {

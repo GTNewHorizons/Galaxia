@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import net.minecraft.client.Minecraft;
@@ -78,6 +79,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     private final Supplier<CelestialObject> viewRootSupplier;
     private final Supplier<Boolean> openSupplier;
     private final Consumer<CelestialAsset.ID> onAssetSelect;
+    private final Function<CelestialObject, List<CelestialAsset>> assetProvider;
 
     private final ParentWidget<?> panelRoot;
     private ParentWidget<?> rowsContainer;
@@ -98,10 +100,22 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
 
     public SolarSystemAssetPanelWidget(CelestialObject galaxyRoot, Supplier<CelestialObject> viewRootSupplier,
         Supplier<Boolean> openSupplier, Consumer<CelestialAsset.ID> onAssetSelect) {
+        this(
+            galaxyRoot,
+            viewRootSupplier,
+            openSupplier,
+            onAssetSelect,
+            viewRoot -> CelestialClient.listAssetsInSystem(viewRoot.id()));
+    }
+
+    SolarSystemAssetPanelWidget(CelestialObject galaxyRoot, Supplier<CelestialObject> viewRootSupplier,
+        Supplier<Boolean> openSupplier, Consumer<CelestialAsset.ID> onAssetSelect,
+        Function<CelestialObject, List<CelestialAsset>> assetProvider) {
         this.galaxyRoot = galaxyRoot;
         this.viewRootSupplier = viewRootSupplier;
         this.openSupplier = openSupplier;
         this.onAssetSelect = onAssetSelect;
+        this.assetProvider = assetProvider;
         this.panelRoot = new ParentWidget<>().pos(0, 0)
             .size(PANEL_W, 0);
         this.panelRoot.setEnabled(false);
@@ -118,7 +132,6 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
             if (panelRoot.isEnabled()) hidePanel();
             return;
         }
-        if (panelRoot.isEnabled()) hidePanel();
         refreshRowsIfNeeded(viewRoot);
         String signature = buildStructureSignature();
         boolean structureChanged = !signature.equals(lastStructureSignature) || viewRoot != lastViewRoot
@@ -180,7 +193,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
 
     private void refreshRows(CelestialObject viewRoot) {
         visibleRows.clear();
-        List<CelestialAsset> assets = CelestialClient.listAssetsInSystem(viewRoot.id());
+        List<CelestialAsset> assets = new ArrayList<>(assetProvider.apply(viewRoot));
         assets.sort(currentSort.comparator());
         for (CelestialAsset asset : assets) {
             if (currentFilter.accepts(asset)) visibleRows.add(new SystemAssetRowView(asset));

@@ -115,7 +115,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private String boundAmountInput = "";
     private @Nullable TextFieldWidget boundAmountField;
     private int renameSlotIndex = -1;
-    private String recipeNameInput = "";
+    private final RecipeRenameFormModel recipeRenameForm = new RecipeRenameFormModel();
     private @Nullable TextFieldWidget recipeNameField;
 
     RecipeConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller,
@@ -657,8 +657,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         if (slotIndex < 0 || slot == null) return;
         settingsGroupSelector.closeMenu();
         renameSlotIndex = slotIndex;
-        recipeNameInput = slot.displayName() == null || slot.displayName()
-            .isBlank() ? RecipeSlotUiModel.slotTitle(slot) : slot.displayName();
+        recipeRenameForm.open(slot);
         syncRecipeNameFieldText();
         focusRecipeNameField();
     }
@@ -668,27 +667,28 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private boolean canSaveRecipeName() {
-        return isRecipeRenameOpen() && !currentRecipeNameInput().trim()
-            .isEmpty();
+        recipeRenameForm.setInput(currentRecipeNameInput());
+        return isRecipeRenameOpen() && recipeRenameForm.canSave();
     }
 
     private void saveRecipeName() {
         SavedRecipe slot = renameSlot();
         if (slot == null) return;
-        updateSlotIndex(renameSlotIndex, slot.withDisplayName(currentRecipeNameInput()));
+        recipeRenameForm.setInput(currentRecipeNameInput());
+        updateSlotIndex(renameSlotIndex, recipeRenameForm.save(slot));
         closeRecipeRename();
     }
 
     private void clearRecipeName() {
         SavedRecipe slot = renameSlot();
         if (slot == null) return;
-        updateSlotIndex(renameSlotIndex, slot.withDisplayName(""));
+        updateSlotIndex(renameSlotIndex, recipeRenameForm.clear(slot));
         closeRecipeRename();
     }
 
     private void closeRecipeRename() {
         renameSlotIndex = -1;
-        recipeNameInput = "";
+        recipeRenameForm.close();
         syncRecipeNameFieldText();
     }
 
@@ -711,17 +711,17 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
                     EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
                     EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
             }))
-            .value(new StringValue.Dynamic(() -> recipeNameInput, text -> recipeNameInput = text == null ? "" : text))
+            .value(new StringValue.Dynamic(recipeRenameForm::input, recipeRenameForm::setInput))
             .setFocusOnGuiOpen(false)
             .setEnabledIf(w -> isRecipeRenameOpen());
     }
 
     private String currentRecipeNameInput() {
-        return recipeNameField != null ? recipeNameField.getText() : recipeNameInput;
+        return recipeNameField != null ? recipeNameField.getText() : recipeRenameForm.input();
     }
 
     private void syncRecipeNameFieldText() {
-        if (recipeNameField != null) recipeNameField.setText(recipeNameInput);
+        if (recipeNameField != null) recipeNameField.setText(recipeRenameForm.input());
     }
 
     private void focusRecipeNameField() {
