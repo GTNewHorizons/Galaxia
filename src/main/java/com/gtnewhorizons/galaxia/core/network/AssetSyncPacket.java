@@ -94,8 +94,10 @@ public final class AssetSyncPacket implements IMessage {
     public static final byte FILTER_UPDATED = 13;
     public static final byte FILTER_REMOVED = 14;
     public static final byte CLEAR = 15;
+    public static final byte INVENTORY_BOUNDS_SNAPSHOT = 16;
 
     private static final int MAX_OPERATION_MAP_ENTRIES = 256;
+    private static final int MAX_INVENTORY_BOUND_SNAPSHOT_ENTRIES = 4096;
     private static final int MAX_RECIPE_STACKS = 64;
     private static final byte OPERATION_SPEC_TIER = 1;
     private static final byte OPERATION_SPEC_HAMMER = 2;
@@ -130,6 +132,7 @@ public final class AssetSyncPacket implements IMessage {
     private BoundKind inventoryBoundKind;
     private boolean inventoryBoundPresent;
     private long inventoryBoundAmount;
+    private Map<InventoryKey, InventoryBounds> inventoryBoundSnapshot;
     private LogisticsResourceConfig logConfig;
 
     private StationTileCoord tileCoord;
@@ -224,50 +227,12 @@ public final class AssetSyncPacket implements IMessage {
             .entrySet()) {
             pkt.fullSyncDeltas.add(inventoryUpdate(state.assetId, e.getKey(), e.getValue()));
         }
-        // TODO: This is HORRIBLE, rework it when optimizing the packets
-        for (Map.Entry<InventoryKey, InventoryBounds> e : state.getBounds(true)
-            .entrySet()) {
-            pkt.fullSyncDeltas.add(
-                inventoryBoundUpdate(
-                    state.assetId,
-                    BoundKind.ITEM_LOWER,
-                    e.getKey(),
-                    true,
-                    e.getValue()
-                        .low()));
-        }
-        for (Map.Entry<InventoryKey, InventoryBounds> e : state.getBounds(true)
-            .entrySet()) {
-            pkt.fullSyncDeltas.add(
-                inventoryBoundUpdate(
-                    state.assetId,
-                    BoundKind.ITEM_UPPER,
-                    e.getKey(),
-                    true,
-                    e.getValue()
-                        .upper()));
-        }
-        for (Map.Entry<InventoryKey, InventoryBounds> e : state.getBounds(false)
-            .entrySet()) {
-            pkt.fullSyncDeltas.add(
-                inventoryBoundUpdate(
-                    state.assetId,
-                    BoundKind.FLUID_LOWER,
-                    e.getKey(),
-                    true,
-                    e.getValue()
-                        .low()));
-        }
-        for (Map.Entry<InventoryKey, InventoryBounds> e : state.getBounds(false)
-            .entrySet()) {
-            pkt.fullSyncDeltas.add(
-                inventoryBoundUpdate(
-                    state.assetId,
-                    BoundKind.FLUID_UPPER,
-                    e.getKey(),
-                    true,
-                    e.getValue()
-                        .upper()));
+        AssetSyncPacket boundsSnapshot = inventoryBoundsSnapshot(
+            state.assetId,
+            state.getBounds(true),
+            state.getBounds(false));
+        if (!boundsSnapshot.inventoryBoundSnapshot.isEmpty()) {
+            pkt.fullSyncDeltas.add(boundsSnapshot);
         }
 
         for (Map.Entry<InventoryKey, LogisticsResourceConfig> e : state.logisticsConfig.snapshot()
@@ -354,6 +319,26 @@ public final class AssetSyncPacket implements IMessage {
         pkt.inventoryBoundPresent = present;
         pkt.inventoryBoundAmount = amount;
         return pkt;
+    }
+
+    private static AssetSyncPacket inventoryBoundsSnapshot(CelestialAsset.ID assetId,
+        Map<? extends InventoryKey, InventoryBounds> itemBounds,
+        Map<? extends InventoryKey, InventoryBounds> fluidBounds) {
+        AssetSyncPacket pkt = new AssetSyncPacket();
+        pkt.assetId = assetId;
+        pkt.syncType = INVENTORY_BOUNDS_SNAPSHOT;
+        pkt.inventoryBoundSnapshot = new LinkedHashMap<>();
+        copyInventoryBounds(pkt.inventoryBoundSnapshot, itemBounds);
+        copyInventoryBounds(pkt.inventoryBoundSnapshot, fluidBounds);
+        return pkt;
+    }
+
+    private static void copyInventoryBounds(Map<InventoryKey, InventoryBounds> target,
+        Map<? extends InventoryKey, InventoryBounds> source) {
+        for (Map.Entry<? extends InventoryKey, InventoryBounds> e : source.entrySet()) {
+            InventoryBounds bounds = e.getValue();
+            target.put(e.getKey(), new InventoryBounds(bounds.low(), bounds.upper()));
+        }
     }
 
     public static AssetSyncPacket logisticsConfigUpdated(CelestialAsset.ID assetId, InventoryKey resource,
@@ -606,6 +591,7 @@ public final class AssetSyncPacket implements IMessage {
                 buf.writeBoolean(inventoryBoundPresent);
                 buf.writeLong(inventoryBoundAmount);
             }
+            case INVENTORY_BOUNDS_SNAPSHOT -> writeInventoryBoundsSnapshot(buf, inventoryBoundSnapshot);
             case LOGISTICS_CONFIG_UPDATED -> {
                 PacketUtil.writeInventoryKey(buf, resource);
                 writeLogisticsConfig(buf, logConfig);
@@ -657,6 +643,7 @@ public final class AssetSyncPacket implements IMessage {
                 inventoryBoundPresent = buf.readBoolean();
                 inventoryBoundAmount = buf.readLong();
             }
+            case INVENTORY_BOUNDS_SNAPSHOT -> inventoryBoundSnapshot = readInventoryBoundsSnapshot(buf);
             case LOGISTICS_CONFIG_UPDATED -> {
                 resource = PacketUtil.readInventoryKey(buf);
                 logConfig = readLogisticsConfig(buf);
@@ -1145,6 +1132,35 @@ public final class AssetSyncPacket implements IMessage {
         return new UpkeepSettlement.Credits(itemCredits, fluidCredits);
     }
 
+    private static void writeInventoryBoundsSnapshot(ByteBuf buf, Map<InventoryKey, InventoryBounds> bounds) {
+        int size = bounds == null ? 0 : bounds.size();
+        buf.writeInt(size);
+        if (bounds == null) return;
+        for (Map.Entry<InventoryKey, InventoryBounds> e : bounds.entrySet()) {
+            InventoryBounds value = e.getValue();
+            PacketUtil.writeInventoryKey(buf, e.getKey());
+            buf.writeLong(value.low());
+            buf.writeLong(value.upper());
+        }
+    }
+
+    private static Map<InventoryKey, InventoryBounds> readInventoryBoundsSnapshot(ByteBuf buf) {
+        int count = buf.readInt();
+        if (count < 0 || count > MAX_INVENTORY_BOUND_SNAPSHOT_ENTRIES) {
+            throw new IllegalArgumentException("Invalid inventory bounds snapshot size: " + count);
+        }
+        Map<InventoryKey, InventoryBounds> bounds = new LinkedHashMap<>();
+        for (int i = 0; i < count; i++) {
+            InventoryKey key = PacketUtil.readInventoryKey(buf);
+            long low = buf.readLong();
+            long upper = buf.readLong();
+            if (key != null) {
+                bounds.put(key, new InventoryBounds(low, upper));
+            }
+        }
+        return bounds;
+    }
+
     private static void writeRecipeConfig(ByteBuf buf, ModuleInstance module) {
         if (!(module.component() instanceof IRecipeModule recipeModule)) {
             buf.writeBoolean(false);
@@ -1170,13 +1186,27 @@ public final class AssetSyncPacket implements IMessage {
 
         List<SavedRecipe> slots = config.savedRecipes()
             .toList();
-        buf.writeByte(slots.size());
+        Map<RecipeSnapshotRef, Integer> snapshotIndexes = new LinkedHashMap<>();
+        List<RecipeSnapshot> snapshots = new ArrayList<>();
         for (SavedRecipe slot : slots) {
             RecipeSnapshot snap = slot.recipe();
+            RecipeSnapshotRef ref = RecipeSnapshotRef.of(snap);
+            if (!snapshotIndexes.containsKey(ref)) {
+                snapshotIndexes.put(ref, snapshots.size());
+                snapshots.add(snap);
+            }
+        }
+        buf.writeByte(slots.size());
+        buf.writeByte(snapshots.size());
+        for (RecipeSnapshot snap : snapshots) {
             buf.writeByte(snap.recipeMapOrdinal());
             buf.writeInt(snap.recipeIndex());
             buf.writeLong(snap.contentHash());
             writeRecipeSnapshot(buf, snap);
+        }
+        for (SavedRecipe slot : slots) {
+            RecipeSnapshot snap = slot.recipe();
+            buf.writeByte(snapshotIndexes.get(RecipeSnapshotRef.of(snap)));
             buf.writeBoolean(slot.enabled());
             buf.writeLong(slot.requestAmount());
             buf.writeByte(slot.priority());
@@ -1211,13 +1241,23 @@ public final class AssetSyncPacket implements IMessage {
         int slotCount = Byte.toUnsignedInt(buf.readByte());
         if (slotCount < 0 || slotCount > SavedRecipeList.MAX_SAVED_RECIPES) return null;
 
-        RecipeConfig config = new RecipeConfig(new SavedRecipeList(), mode, policy, orderCursor, orderRemaining);
+        int snapshotCount = Byte.toUnsignedInt(buf.readByte());
+        if (snapshotCount < 0 || snapshotCount > SavedRecipeList.MAX_SAVED_RECIPES) return null;
 
-        for (int i = 0; i < slotCount; i++) {
+        List<RecipeSnapshot> snapshots = new ArrayList<>(snapshotCount);
+        for (int i = 0; i < snapshotCount; i++) {
             byte mapOrdinal = buf.readByte();
             int recipeIndex = buf.readInt();
             long contentHash = buf.readLong();
-            RecipeSnapshot snapshot = readRecipeSnapshot(buf, mapOrdinal, recipeIndex, contentHash);
+            snapshots.add(readRecipeSnapshot(buf, mapOrdinal, recipeIndex, contentHash));
+        }
+
+        RecipeConfig config = new RecipeConfig(new SavedRecipeList(), mode, policy, orderCursor, orderRemaining);
+
+        for (int i = 0; i < slotCount; i++) {
+            int snapshotIndex = Byte.toUnsignedInt(buf.readByte());
+            if (snapshotIndex >= snapshots.size()) return null;
+            RecipeSnapshot snapshot = snapshots.get(snapshotIndex);
             boolean enabled = buf.readBoolean();
             long requestAmount = buf.readLong();
             byte priority = buf.readByte();
@@ -1230,6 +1270,13 @@ public final class AssetSyncPacket implements IMessage {
         }
 
         return config;
+    }
+
+    private record RecipeSnapshotRef(byte recipeMapOrdinal, int recipeIndex, long contentHash) {
+
+        private static RecipeSnapshotRef of(RecipeSnapshot snapshot) {
+            return new RecipeSnapshotRef(snapshot.recipeMapOrdinal(), snapshot.recipeIndex(), snapshot.contentHash());
+        }
     }
 
     public AssetSyncPacket withSyncRevision(int rev) {
@@ -1422,6 +1469,20 @@ public final class AssetSyncPacket implements IMessage {
                     } else {
                         if (packet.resource != null) {
                             asset.clearBound(packet.resource, isLow);
+                        }
+                    }
+                }
+                case INVENTORY_BOUNDS_SNAPSHOT -> {
+                    if (packet.inventoryBoundSnapshot != null) {
+                        for (Map.Entry<InventoryKey, InventoryBounds> e : packet.inventoryBoundSnapshot.entrySet()) {
+                            InventoryKey key = e.getKey();
+                            InventoryBounds bounds = e.getValue();
+                            if (bounds.hasLow()) {
+                                asset.setBound(key, bounds.low(), true);
+                            }
+                            if (bounds.hasUpper()) {
+                                asset.setBound(key, bounds.upper(), false);
+                            }
                         }
                     }
                 }

@@ -17,19 +17,17 @@ final class UpkeepShortageModuleAlertProvider implements StationModuleAlertProvi
 
     @Override
     public List<StationModuleAlert> alerts(AutomatedFacility facility, ModuleInstance module) {
+        if (facility == null || module == null) return List.of();
         if (module.blocking() == BlockingReason.UPKEEP_SHORTAGE) {
             return List.of(
                 StationModuleAlert
                     .critical("Upkeep", "Missing upkeep resources.", EnumTextures.ICON_STATION_ALERT_ERROR.get()));
         }
-        UpkeepLedger.ModuleDemand demand = demandFor(facility, module);
+        UpkeepLedger.UpkeepSummary summary = facility.upkeepSummary();
+        UpkeepLedger.ModuleDemand demand = demandFor(summary, module);
         if (demand == null) return List.of();
-        UpkeepSettlement.Result result = UpkeepSettlement.preview(
-            facility.upkeepSummary()
-                .moduleDemands(),
-            facility.upkeepCredits(),
-            facility);
-        return result.unpaidModuleIds()
+        return UpkeepSettlement.preview(summary.moduleDemands(), facility.upkeepCredits(), facility)
+            .unpaidModuleIds()
             .contains(module.id)
                 ? List.of(
                     StationModuleAlert
@@ -37,10 +35,9 @@ final class UpkeepShortageModuleAlertProvider implements StationModuleAlertProvi
                 : List.of();
     }
 
-    private static UpkeepLedger.ModuleDemand demandFor(AutomatedFacility facility, ModuleInstance module) {
-        if (facility == null || module == null) return null;
-        for (UpkeepLedger.ModuleDemand demand : facility.upkeepSummary()
-            .moduleDemands()) {
+    private static UpkeepLedger.ModuleDemand demandFor(UpkeepLedger.UpkeepSummary summary, ModuleInstance module) {
+        if (summary == null || module == null) return null;
+        for (UpkeepLedger.ModuleDemand demand : summary.moduleDemands()) {
             if (module.id.equals(demand.moduleId()) && !demand.demand()
                 .isEmpty()) {
                 return demand;

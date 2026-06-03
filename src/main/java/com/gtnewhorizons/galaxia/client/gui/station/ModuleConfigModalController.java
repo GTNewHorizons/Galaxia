@@ -28,7 +28,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
     private final CelestialAsset.ID assetId;
     private final int x;
     private final int y;
-    private final StationTilePickerController tilePickerController;
+    private final StationEditModeController editModeController;
     private final StationOverlayCoordinator overlayCoordinator;
 
     private ParentWidget<?> modal;
@@ -50,17 +50,12 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
     }
 
     ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y,
-        StationTilePickerController tilePickerController) {
-        this(host, assetId, x, y, tilePickerController, new StationOverlayCoordinator());
-    }
-
-    ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y,
-        StationTilePickerController tilePickerController, StationOverlayCoordinator overlayCoordinator) {
+        StationEditModeController editModeController, StationOverlayCoordinator overlayCoordinator) {
         this.host = host;
         this.assetId = assetId;
         this.x = x;
         this.y = y;
-        this.tilePickerController = tilePickerController;
+        this.editModeController = editModeController;
         this.overlayCoordinator = overlayCoordinator;
         overlayCoordinator.register(this);
     }
@@ -99,7 +94,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         this.hammerUpgradeVoidRefund = false;
         this.moduleOperationCancelArmed = false;
 
-        ModuleUpgradeModalWidget widget = new ModuleUpgradeModalWidget(assetId, this, tilePickerController);
+        ModuleUpgradeModalWidget widget = new ModuleUpgradeModalWidget(assetId, this, editModeController);
         widget.left(x)
             .top(y)
             .width(ModuleUpgradeModalWidget.WIDTH)
@@ -164,10 +159,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         this.settingsGroupMenuOpen = false;
         this.moduleOperationCancelArmed = false;
 
-        MinerBlacklistConfigModalWidget widget = new MinerBlacklistConfigModalWidget(
-            assetId,
-            this,
-            tilePickerController);
+        MinerBlacklistConfigModalWidget widget = new MinerBlacklistConfigModalWidget(assetId, this, editModeController);
         widget.left(x)
             .top(y)
             .width(MinerBlacklistConfigModalWidget.WIDTH)
@@ -185,7 +177,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         this.kind = Kind.RECIPE_CONFIG;
         this.moduleId = module.id;
 
-        RecipeConfigModalWidget widget = new RecipeConfigModalWidget(assetId, this, tilePickerController);
+        RecipeConfigModalWidget widget = new RecipeConfigModalWidget(assetId, this, editModeController);
         widget.left(x)
             .top(y)
             .width(RecipeConfigModalWidget.WIDTH)

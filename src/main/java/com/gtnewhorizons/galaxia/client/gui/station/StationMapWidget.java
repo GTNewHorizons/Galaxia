@@ -58,6 +58,8 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
     private @Nullable StationTileCoord selected;
     private @Nullable StationTileCoord hovered;
     private @Nullable StationTileCoord pressedTile;
+    private final List<StationMapViewport.TilePosition> visibleFeatureTiles = new ArrayList<>();
+    private final List<PlanetaryFeatureDefinition> hoveredFeatureDefinitions = new ArrayList<>();
     private final Set<StationTileCoord> expansionSlots = new LinkedHashSet<>();
     private @Nullable StationLayout cachedExpansionLayout;
     private long cachedExpansionLayoutVersion = -1L;
@@ -587,15 +589,16 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
     }
 
     private void drawFeatureOverlay(AutomatedFacility facility) {
-        Set<StationMapViewport.TilePosition> candidates = StationMapViewport.visibleTilePositions(
+        StationMapViewport.collectVisibleTilePositions(
             getArea().width,
             getArea().height,
             contentLeft,
             contentRightPadding,
             contentVerticalPadding,
             panX,
-            panY);
-        for (StationMapViewport.TilePosition coord : candidates) {
+            panY,
+            visibleFeatureTiles);
+        for (StationMapViewport.TilePosition coord : visibleFeatureTiles) {
             PlanetaryFeatureOverlayRenderer.draw(
                 tileLocalX(coord.dx()),
                 tileLocalY(coord.dy()),
@@ -643,11 +646,12 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             panX,
             panY);
         if (coord == null) return;
-        List<PlanetaryFeatureDefinition> features = new ArrayList<>();
+        hoveredFeatureDefinitions.clear();
         for (PlanetaryFeatureKey key : facility.planetaryFeaturesAt(coord.dx(), coord.dy())) {
             PlanetaryFeatureDefinition definition = PlanetaryFeatureRegistry.get(key);
-            if (definition != null) features.add(definition);
+            if (definition != null) hoveredFeatureDefinitions.add(definition);
         }
+        List<PlanetaryFeatureDefinition> features = hoveredFeatureDefinitions;
         if (features.isEmpty()) return;
 
         FontRenderer fr = Minecraft.getMinecraft().fontRenderer;

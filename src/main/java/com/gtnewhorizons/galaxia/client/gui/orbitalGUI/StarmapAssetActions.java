@@ -775,7 +775,7 @@ public final class StarmapAssetActions {
                         .pos(assetNameX, PANEL_TITLE_Y));
             }
             modal.child(
-                createGlyphButton(AssetManagerButtonGlyph.CLOSE, "Close", true, callbacks::closeAssetActions)
+                createGlyphButton(StarmapActionGlyph.CLOSE, "Close", true, callbacks::closeAssetActions)
                     .pos(modalWidth - CLOSE_BUTTON_RIGHT_INSET, CLOSE_BUTTON_TOP));
             modal.child(
                 createAssetKindButton(
@@ -1164,7 +1164,7 @@ public final class StarmapAssetActions {
                         .width(textWidth));
             row.child(
                 createGlyphButton(
-                    deconstruction ? AssetManagerButtonGlyph.SEND : AssetManagerButtonGlyph.CANCEL,
+                    deconstruction ? StarmapActionGlyph.SEND : StarmapActionGlyph.CANCEL,
                     deconstruction ? "Send To..." : "Cancel Build",
                     // TODO: Localize
                     true,
@@ -1197,7 +1197,7 @@ public final class StarmapAssetActions {
             if (manageable) {
                 row.child(
                     createGlyphButton(
-                        AssetManagerButtonGlyph.MANAGE,
+                        StarmapActionGlyph.MANAGE,
                         // TODO: Localize
                         "Manage",
                         true,
@@ -1206,7 +1206,7 @@ public final class StarmapAssetActions {
             }
             row.child(
                 createGlyphButton(
-                    AssetManagerButtonGlyph.DESTROY,
+                    StarmapActionGlyph.DESTROY,
                     // TODO: Localize
                     "Destroy",
                     asset.kind == CelestialAsset.Kind.STATION ? callbacks.isCreativeBuildModeEnabled() : true,
@@ -1344,16 +1344,16 @@ public final class StarmapAssetActions {
 
         private ButtonWidget<?> createAssetKindButton(CelestialAsset.Kind kind, String tooltip, boolean enabled,
             Runnable action) {
-            return createIconButton(kind, AssetManagerButtonGlyph.NONE, tooltip, enabled, action);
+            return createIconButton(kind, StarmapActionGlyph.NONE, tooltip, enabled, action);
         }
 
-        private ButtonWidget<?> createGlyphButton(AssetManagerButtonGlyph glyph, String tooltip, boolean enabled,
+        private ButtonWidget<?> createGlyphButton(StarmapActionGlyph glyph, String tooltip, boolean enabled,
             Runnable action) {
             return createIconButton(null, glyph, tooltip, enabled, action);
         }
 
-        private ButtonWidget<?> createIconButton(CelestialAsset.Kind iconKind, AssetManagerButtonGlyph glyph,
-            String tooltip, boolean enabled, Runnable action) {
+        private ButtonWidget<?> createIconButton(CelestialAsset.Kind iconKind, StarmapActionGlyph glyph, String tooltip,
+            boolean enabled, Runnable action) {
             ButtonWidget<?> button = new ScrollAwareButtonWidget().size(ICON_BUTTON_SIZE, ICON_BUTTON_SIZE)
                 .background(createButtonBackground(enabled, false))
                 .hoverBackground(createButtonBackground(enabled, true))
@@ -1446,7 +1446,7 @@ public final class StarmapAssetActions {
             return createAssetIconDrawable(kind, alpha).asWidget();
         }
 
-        private IDrawable createGlyphDrawable(AssetManagerButtonGlyph glyph, int color) {
+        private IDrawable createGlyphDrawable(StarmapActionGlyph glyph, int color) {
             return drawable((context, x, y, width, height) -> drawGlyph(x, y, width, height, glyph, color));
         }
 
@@ -1462,7 +1462,7 @@ public final class StarmapAssetActions {
             }).asWidget();
         }
 
-        private void drawGlyph(int x, int y, int width, int height, AssetManagerButtonGlyph glyph, int color) {
+        private void drawGlyph(int x, int y, int width, int height, StarmapActionGlyph glyph, int color) {
             int centerX = x + width / 2;
             int centerY = y + height / 2;
             switch (glyph) {
@@ -1585,7 +1585,7 @@ public final class StarmapAssetActions {
             return (context, x, y, width, height, widgetTheme) -> drawCommand.draw(context, x, y, width, height);
         }
 
-        private enum AssetManagerButtonGlyph {
+        private enum StarmapActionGlyph {
             NONE,
             CLOSE,
             CANCEL,

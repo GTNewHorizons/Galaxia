@@ -124,7 +124,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 assetId,
                 overlayX,
                 overlayY,
-                tilePickerController,
+                editModeController,
                 overlayCoordinator);
             StationInventoryPanelWidget inventoryPanel = new StationInventoryPanelWidget(
                 assetId,

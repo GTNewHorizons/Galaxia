@@ -7,6 +7,7 @@ import java.util.Map;
 
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.Fluid;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.BlockingReason;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -34,6 +36,7 @@ final class AutomatedFacilityUpkeepTest {
 
     private static final ItemStack UPKEEP_STACK = new ItemStack(new Item());
     private static final ItemStackWrapper UPKEEP_ITEM = ItemStackWrapper.of(UPKEEP_STACK);
+    private static final FluidKey UPKEEP_FLUID = new FluidKey(new Fluid("galaxia.test.upkeep_coolant"), null);
 
     @BeforeAll
     static void initRegistries() {
@@ -78,6 +81,27 @@ final class AutomatedFacilityUpkeepTest {
     }
 
     @Test
+    void minuteTickConsumesWholeFluidAndStoresFractionalCredit() {
+        AutomatedFacility facility = facilityWithModules(moduleWithFluidUpkeep(ModulePriority.NORMAL, "0.25"));
+        facility.updateFluids(UPKEEP_FLUID, 1);
+
+        tickUpkeepMinute(facility);
+
+        assertEquals(0L, facility.getFluidAmount(UPKEEP_FLUID));
+        assertEquals(
+            "0.75",
+            facility.upkeepCredits()
+                .fluidCredits()
+                .get(UPKEEP_FLUID)
+                .toDisplayString());
+        assertEquals(
+            BlockingReason.NONE,
+            facility.modules()
+                .get(0)
+                .blocking());
+    }
+
+    @Test
     void shortageBlocksOnlyUnpaidModulesWithoutItemDebt() {
         ModuleInstance high = moduleWithUpkeep(ModulePriority.HIGH, "0.6");
         ModuleInstance normal = moduleWithUpkeep(ModulePriority.NORMAL, "0.6");
@@ -100,6 +124,44 @@ final class AutomatedFacilityUpkeepTest {
                 .toDisplayString());
     }
 
+    @Test
+    void blockedModuleRecoversOnNextPaidUpkeepSettlement() {
+        ModuleInstance module = moduleWithUpkeep(ModulePriority.NORMAL, "1");
+        AutomatedFacility facility = facilityWithModules(module);
+
+        tickUpkeepMinute(facility);
+
+        assertEquals(BlockingReason.UPKEEP_SHORTAGE, module.blocking());
+        assertEquals(ModuleState.BLOCKED, module.state());
+
+        facility.updateItems(UPKEEP_ITEM, 1);
+        tickUpkeepMinute(facility);
+
+        assertEquals(BlockingReason.NONE, module.blocking());
+        assertEquals(ModuleState.IDLE, module.state());
+        assertEquals(0L, facility.getItemAmount(UPKEEP_ITEM));
+    }
+
+    @Test
+    void upkeepBlockingAndRecoveryMarkModuleDirtyForSync() {
+        ModuleInstance module = moduleWithUpkeep(ModulePriority.NORMAL, "1");
+        AutomatedFacility facility = facilityWithModules(module);
+        facility.drainDirtyModules();
+
+        tickUpkeepMinute(facility);
+
+        List<ModuleInstance> blockedDirtyModules = facility.drainDirtyModules();
+        assertEquals(1, blockedDirtyModules.size());
+        assertEquals(module.id, blockedDirtyModules.get(0).id);
+
+        facility.updateItems(UPKEEP_ITEM, 1);
+        tickUpkeepMinute(facility);
+
+        List<ModuleInstance> recoveredDirtyModules = facility.drainDirtyModules();
+        assertEquals(1, recoveredDirtyModules.size());
+        assertEquals(module.id, recoveredDirtyModules.get(0).id);
+    }
+
     private static void tickUpkeepMinute(AutomatedFacility facility) {
         for (int i = 0; i < AutomatedFacility.UPKEEP_INTERVAL_TICKS; i++) {
             facility.tick();
@@ -119,13 +181,26 @@ final class AutomatedFacilityUpkeepTest {
     }
 
     private static ModuleInstance moduleWithUpkeep(ModulePriority priority, String itemAmount) {
-        ModuleTierData tierData = ModuleTierData.builder()
+        ModuleTierData tierData = tierDataBuilder().upkeepItem(UPKEEP_STACK, itemAmount)
+            .build();
+        return moduleWithTierData(priority, tierData);
+    }
+
+    private static ModuleInstance moduleWithFluidUpkeep(ModulePriority priority, String fluidAmount) {
+        ModuleTierData tierData = tierDataBuilder().upkeepFluid(UPKEEP_FLUID, UpkeepAmount.parse(fluidAmount))
+            .build();
+        return moduleWithTierData(priority, tierData);
+    }
+
+    private static ModuleTierData.Builder tierDataBuilder() {
+        return ModuleTierData.builder()
             .addedEnergyCapacity(0L)
             .powerDraw(0L)
             .cooldown(20)
-            .cost(Map.of(new ItemStack(new Item()), 1L))
-            .upkeepItem(UPKEEP_STACK, itemAmount)
-            .build();
+            .cost(Map.of(new ItemStack(new Item()), 1L));
+    }
+
+    private static ModuleInstance moduleWithTierData(ModulePriority priority, ModuleTierData tierData) {
         FacilityModuleRegistry.Definition definition = new FacilityModuleRegistry.Definition(
             FacilityModuleKind.POWER,
             Map.of(ModuleTier.NONE, tierData),
