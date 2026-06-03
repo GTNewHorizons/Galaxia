@@ -638,6 +638,13 @@ public class OrbitalView {
                     }
 
                     @Override
+                    public void handleConstructionAction(CelestialAsset asset) {
+                        assetActionController.handleConstructionAction(assetUiState, asset);
+                        assetActionsWidget.markStructureDirty();
+                        assetActionsWidget.markContentDirty();
+                    }
+
+                    @Override
                     public void dismissPendingResourceTransfer() {
                         assetActionController.dismissPendingResourceTransfer(assetUiState);
                         assetActionsWidget.markStructureDirty();
