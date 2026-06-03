@@ -204,57 +204,7 @@ public final class AssetSyncPacket implements IMessage {
         pkt.energyStored = state.getEnergyStored();
         pkt.stationFeatureSalt = state.stationFeatureSalt();
         pkt.upkeepCredits = state.upkeepCredits();
-        pkt.fullSyncDeltas = new ArrayList<>();
-
-        state.settingsGroups()
-            .groups()
-            .values()
-            .stream()
-            .sorted(java.util.Comparator.comparingInt(SettingsGroup::id))
-            .forEach(group -> pkt.fullSyncDeltas.add(settingsGroupUpdated(state.assetId, group)));
-
-        for (Map.Entry<Boolean, List<String>> e : state.filtersSnapshot()
-            .entrySet()) {
-            pkt.fullSyncDeltas.add(filterUpdated(state.assetId, e.getKey(), e.getValue()));
-        }
-
-        List<ModuleInstance> modules = state.modules();
-        for (int i = 0; i < modules.size(); i++) {
-            pkt.fullSyncDeltas.add(moduleAdded(state.assetId, i, modules.get(i)));
-        }
-
-        for (Map.Entry<ItemStackWrapper, Long> e : state.itemSnapshot()
-            .entrySet()) {
-            pkt.fullSyncDeltas.add(inventoryUpdate(state.assetId, e.getKey(), e.getValue()));
-        }
-        AssetSyncPacket boundsSnapshot = inventoryBoundsSnapshot(
-            state.assetId,
-            state.getBounds(true),
-            state.getBounds(false));
-        if (!boundsSnapshot.inventoryBoundSnapshot.isEmpty()) {
-            pkt.fullSyncDeltas.add(boundsSnapshot);
-        }
-
-        for (Map.Entry<InventoryKey, LogisticsResourceConfig> e : state.logisticsConfig.snapshot()
-            .entrySet()) {
-            LogisticsResourceConfig cfg = e.getValue();
-            pkt.fullSyncDeltas.add(
-                logisticsConfigUpdated(
-                    state.assetId,
-                    e.getKey(),
-                    cfg.minReserve(),
-                    cfg.orderSize(),
-                    cfg.isImportEnabled(),
-                    cfg.isSupplyEnabled()));
-        }
-
-        StationLayout layout = state.stationLayout();
-        if (layout != null) {
-            for (Map.Entry<StationTileCoord, PlacedTile> e : layout.snapshot()
-                .entrySet()) {
-                pkt.fullSyncDeltas.add(layoutTileUpdated(state.assetId, e.getKey(), e.getValue()));
-            }
-        }
+        pkt.fullSyncDeltas = SyncSnapshotBuilder.automatedFacilityDeltas(state);
 
         return pkt;
     }
@@ -321,7 +271,7 @@ public final class AssetSyncPacket implements IMessage {
         return pkt;
     }
 
-    private static AssetSyncPacket inventoryBoundsSnapshot(CelestialAsset.ID assetId,
+    static AssetSyncPacket inventoryBoundsSnapshot(CelestialAsset.ID assetId,
         Map<? extends InventoryKey, InventoryBounds> itemBounds,
         Map<? extends InventoryKey, InventoryBounds> fluidBounds) {
         AssetSyncPacket pkt = new AssetSyncPacket();
