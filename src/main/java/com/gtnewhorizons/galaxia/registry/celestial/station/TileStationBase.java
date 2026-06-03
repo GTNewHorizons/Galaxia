@@ -78,7 +78,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
 
             if (!teLock.trackStationController(this.here)) {
                 Galaxia.LOG.warn(
-                    "Airlock at %s cannot track more than %d controllers",
+                    "Airlock at {} cannot track more than {} controllers",
                     airlock,
                     TileEntityAirlock.MAX_CONNECTIONS);
             }
