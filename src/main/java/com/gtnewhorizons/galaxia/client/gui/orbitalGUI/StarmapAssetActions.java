@@ -510,16 +510,49 @@ public final class StarmapAssetActions {
             void showActionStatus(String message);
         }
 
-        private static final int MODAL_MAX_WIDTH = 620;
-        private static final int MODAL_MAX_HEIGHT = 440;
-        private static final int MODAL_MARGIN_X = 80;
-        private static final int MODAL_MARGIN_Y = 60;
+        private static final String PANEL_TITLE = "Manage Assets";
+        private static final float ACTIONS_MODAL_WIDTH_REL = 0.70f;
+        private static final float ACTIONS_MODAL_HEIGHT_REL = 0.70f;
+        private static final float ACTIONS_MODAL_CENTER_REL = 0.50f;
+        private static final float ACTIONS_MODAL_CENTER_ANCHOR = 0.50f;
+        private static final float ACTIONS_MODAL_LEFT_REL = (1f - ACTIONS_MODAL_WIDTH_REL) / 2f;
+        private static final float ACTIONS_MODAL_TOP_REL = (1f - ACTIONS_MODAL_HEIGHT_REL) / 2f;
         private static final int HEADER_HEIGHT = 28;
         private static final int CONTENT_TOP = 54;
         private static final int CONTENT_PADDING = 10;
         private static final int CONTENT_SCROLLBAR_GAP = 14;
+        private static final int CONTENT_BOTTOM_PADDING = 12;
+        private static final int PANEL_TITLE_X = 12;
+        private static final int PANEL_TITLE_Y = 10;
+        private static final int PANEL_CONTEXT_TEXT_GAP = 12;
+        private static final int PANEL_RIGHT_PADDING = 40;
+        private static final int PANEL_TITLE_CONTEXT_GAP = 24;
+        private static final int CLOSE_BUTTON_RIGHT_INSET = 28;
+        private static final int CLOSE_BUTTON_TOP = 6;
+        private static final int CREATE_BUTTON_TOP = 30;
+        private static final int CREATE_BUTTON_LEFT = 14;
+        private static final int CREATE_BUTTON_GAP = 28;
         private static final int ROW_HEIGHT = 42;
         private static final int ROW_SPACING = 6;
+        private static final int ROW_LEFT_PADDING = 4;
+        private static final int ROW_WIDTH_INSET = 8;
+        private static final int SECTION_HEADER_HEIGHT = 16;
+        private static final int SECTION_BOTTOM_GAP = 4;
+        private static final int EMPTY_ROW_TEXT_X = 8;
+        private static final int ROW_ICON_X = 10;
+        private static final int ROW_ICON_Y = 9;
+        private static final int ROW_ICON_SLOT_SIZE = 16;
+        private static final int ROW_ICON_DRAW_SIZE = 14;
+        private static final int ROW_TEXT_LEFT = 32;
+        private static final int ROW_NAME_Y = 4;
+        private static final int ROW_DETAIL_Y = 18;
+        private static final int ROW_TEXT_RIGHT_GAP = 16;
+        private static final int ROW_ACTION_BUTTON_GAP = 4;
+        private static final int ROW_ACTION_BUTTON_RIGHT_INSET = 34;
+        private static final int ROW_SECONDARY_ACTION_OFFSET = 28;
+        private static final int NAME_BUTTON_MIN_WIDTH = 8;
+        private static final int NAME_BUTTON_HEIGHT = 12;
+        private static final int TEXT_BASELINE_OFFSET = 1;
         private static final int ICON_BUTTON_SIZE = 22;
         private static final int FOOTER_BUTTON_HEIGHT = 20;
         private static final int RENAME_INPUT_HEIGHT = 22;
@@ -718,57 +751,63 @@ public final class StarmapAssetActions {
             updateModalBounds(bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
             int modalWidth = bounds.right() - bounds.left();
             int modalHeight = bounds.bottom() - bounds.top();
-            int contentHeight = modalHeight - CONTENT_TOP - 12;
+            int contentTop = CONTENT_TOP + SECTION_HEADER_HEIGHT;
+            int contentHeight = modalHeight - contentTop - CONTENT_BOTTOM_PADDING;
             int contentWidth = modalWidth - (CONTENT_PADDING * 2) - CONTENT_SCROLLBAR_GAP;
             scrollLeft = bounds.left() + CONTENT_PADDING;
-            scrollTop = bounds.top() + CONTENT_TOP;
+            scrollTop = bounds.top() + contentTop;
             scrollRight = scrollLeft + contentWidth;
             scrollBottom = scrollTop + contentHeight;
             mainContentWidth = contentWidth;
             mainContentHeight = contentHeight;
-            ParentWidget<?> modal = createModalRoot(bounds);
-            modal.child(createTitleText("Manage Assets").pos(12, 10));
-            int titleRight = 12 + Minecraft.getMinecraft().fontRenderer.getStringWidth("Manage Assets");
-            int assetNameMaxWidth = Math.max(0, modalWidth - 40 - (titleRight + 24));
+            ParentWidget<?> modal = createActionsModalRoot();
+            modal.child(createTitleText(PANEL_TITLE).pos(PANEL_TITLE_X, PANEL_TITLE_Y));
+            int titleRight = PANEL_TITLE_X + Minecraft.getMinecraft().fontRenderer.getStringWidth(PANEL_TITLE);
+            int assetNameMaxWidth = Math
+                .max(0, modalWidth - PANEL_RIGHT_PADDING - (titleRight + PANEL_TITLE_CONTEXT_GAP));
             if (assetNameMaxWidth > 0) {
                 String assetName = trimToWidth(body.displayName(), assetNameMaxWidth);
                 int assetNameWidth = Minecraft.getMinecraft().fontRenderer.getStringWidth(assetName);
-                int assetNameX = Math.max(titleRight + 12, modalWidth - 40 - assetNameWidth);
-                modal.child(createBodyText(assetName, EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(assetNameX, 10));
+                int assetNameX = Math
+                    .max(titleRight + PANEL_CONTEXT_TEXT_GAP, modalWidth - PANEL_RIGHT_PADDING - assetNameWidth);
+                modal.child(
+                    createBodyText(assetName, EnumColors.MAP_COLOR_TEXT_BODY.getColor())
+                        .pos(assetNameX, PANEL_TITLE_Y));
             }
             modal.child(
                 createGlyphButton(AssetManagerButtonGlyph.CLOSE, "Close", true, callbacks::closeAssetActions)
-                    .pos(modalWidth - 28, 6));
+                    .pos(modalWidth - CLOSE_BUTTON_RIGHT_INSET, CLOSE_BUTTON_TOP));
             modal.child(
                 createAssetKindButton(
                     CelestialAsset.Kind.STATION,
                     "Create Station",
                     callbacks.canCreateBaseStation(body),
-                    () -> callbacks.createBaseStation(body)).pos(14, 30));
+                    () -> callbacks.createBaseStation(body)).pos(CREATE_BUTTON_LEFT, CREATE_BUTTON_TOP));
             modal.child(
                 createAssetKindButton(
                     CelestialAsset.Kind.AUTOMATED_STATION,
                     "Create Automated Station",
                     callbacks.canCreateAutomatedStation(body),
                     () -> callbacks.triggerAssetCreation(body, CelestialAsset.Kind.AUTOMATED_STATION, false))
-                        .pos(42, 30));
+                        .pos(CREATE_BUTTON_LEFT + CREATE_BUTTON_GAP, CREATE_BUTTON_TOP));
             modal.child(
                 createAssetKindButton(
                     CelestialAsset.Kind.AUTOMATED_OUTPOST,
                     "Create Automated Outpost",
                     callbacks.canCreateAutomatedFacility(body),
                     () -> callbacks.triggerAssetCreation(body, CelestialAsset.Kind.AUTOMATED_OUTPOST, false))
-                        .pos(70, 30));
+                        .pos(CREATE_BUTTON_LEFT + CREATE_BUTTON_GAP * 2, CREATE_BUTTON_TOP));
             if (!callbacks.isGT5AutomationAvailable()) {
                 modal.child(
                     createBodyText("GT5U required for automated assets", EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
-                        .pos(104, 36));
+                        .pos(CREATE_BUTTON_LEFT + CREATE_BUTTON_GAP * 3 + PANEL_CONTEXT_TEXT_GAP, 36));
             }
+            modal.child(createSectionText("Assets").pos(CONTENT_PADDING + ROW_LEFT_PADDING, CONTENT_TOP));
             VerticalScrollData scrollData = new VerticalScrollData();
             mainScrollData = scrollData;
-            ScrollWidget<?> scroll = new ScrollWidget<>(scrollData).pos(CONTENT_PADDING, CONTENT_TOP)
+            ScrollWidget<?> scroll = new ScrollWidget<>(scrollData).pos(CONTENT_PADDING, contentTop)
                 .widthRelOffset(1f, -(CONTENT_PADDING * 2) - CONTENT_SCROLLBAR_GAP)
-                .heightRelOffset(1f, -(CONTENT_TOP + 12))
+                .heightRelOffset(1f, -(contentTop + CONTENT_BOTTOM_PADDING))
                 .background(
                     drawable(
                         (context, x, y, width, height) -> Gui
@@ -1051,10 +1090,10 @@ public final class StarmapAssetActions {
         private ModalBounds calculateActionsBounds() {
             int availableWidth = getAvailableOverlayWidth();
             int availableHeight = getAvailableOverlayHeight();
-            int width = Math.min(MODAL_MAX_WIDTH, availableWidth - MODAL_MARGIN_X);
-            int height = Math.min(MODAL_MAX_HEIGHT, availableHeight - MODAL_MARGIN_Y);
-            int left = (availableWidth - width) / 2;
-            int top = (availableHeight - height) / 2;
+            int left = Math.round(availableWidth * ACTIONS_MODAL_LEFT_REL);
+            int top = Math.round(availableHeight * ACTIONS_MODAL_TOP_REL);
+            int width = Math.round(availableWidth * ACTIONS_MODAL_WIDTH_REL);
+            int height = Math.round(availableHeight * ACTIONS_MODAL_HEIGHT_REL);
             return new ModalBounds(left, top, left + width, top + height);
         }
 
@@ -1073,7 +1112,6 @@ public final class StarmapAssetActions {
                 y += construction.size() * ROW_HEIGHT + Math.max(0, construction.size() - 1) * ROW_SPACING;
                 y += 4;
             }
-            y += 16;
             if (deployed.isEmpty()) y += 24;
             else y += deployed.size() * ROW_HEIGHT + Math.max(0, deployed.size() - 1) * ROW_SPACING + 8;
             return y;
@@ -1084,46 +1122,45 @@ public final class StarmapAssetActions {
             List<CelestialAsset> deployed = getOperationalAssets(assetState);
             int y = 0;
             if (!construction.isEmpty()) {
-                content.child(createSectionText("Construction").pos(4, y));
-                y += 16;
+                content.child(createSectionText("Construction").pos(ROW_LEFT_PADDING, y));
+                y += SECTION_HEADER_HEIGHT;
                 for (CelestialAsset a : construction) {
-                    content.child(createConstructionRow(a, contentWidth - 8).pos(4, y));
+                    content.child(createConstructionRow(a, contentWidth - ROW_WIDTH_INSET).pos(ROW_LEFT_PADDING, y));
                     y += ROW_HEIGHT + ROW_SPACING;
                 }
-                y += 4;
+                y += SECTION_BOTTOM_GAP;
             }
-            content.child(createSectionText("Assets").pos(4, y));
-            y += 16;
             if (deployed.isEmpty()) {
-                content
-                    .child(createBodyText("No deployed assets", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(8, y));
+                content.child(
+                    createBodyText("No deployed assets", EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
+                        .pos(EMPTY_ROW_TEXT_X, y));
                 return;
             }
             for (CelestialAsset a : deployed) {
-                content.child(createAssetRow(a, contentWidth - 8).pos(4, y));
+                content.child(createAssetRow(a, contentWidth - ROW_WIDTH_INSET).pos(ROW_LEFT_PADDING, y));
                 y += ROW_HEIGHT + ROW_SPACING;
             }
         }
 
         private ParentWidget<?> createConstructionRow(CelestialAsset asset, int rowWidth) {
-            ParentWidget<?> row = new PassiveRow().widthRelOffset(1f, -8)
+            ParentWidget<?> row = new PassiveRow().widthRelOffset(1f, -ROW_WIDTH_INSET)
                 .height(ROW_HEIGHT)
                 .background(
                     drawable(
                         (context, x, y, width, height) -> Gui
                             .drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_ROW_BG.getColor())));
             row.child(
-                createAssetIconWidget(asset.kind, 1.0f).pos(10, 9)
-                    .size(16, 16));
+                createAssetIconWidget(asset.kind, 1.0f).pos(ROW_ICON_X, ROW_ICON_Y)
+                    .size(ROW_ICON_SLOT_SIZE, ROW_ICON_SLOT_SIZE));
             boolean deconstruction = asset.status() == CelestialAsset.Status.DECONSTRUCTION;
             int actionButtonsWidth = ICON_BUTTON_SIZE;
-            int textWidth = rowWidth - 32 - actionButtonsWidth - 16;
-            row.child(createNameButton(asset, textWidth).pos(32, 4));
+            int textWidth = rowWidth - ROW_TEXT_LEFT - actionButtonsWidth - ROW_TEXT_RIGHT_GAP;
+            row.child(createNameButton(asset, textWidth).pos(ROW_TEXT_LEFT, ROW_NAME_Y));
             row.child(
                 createBodyText(
                     // TODO: Localize
                     (deconstruction ? "Stored: " : "Inventory: ") + callbacks.buildConstructionInventorySummary(asset),
-                    EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(32, 18)
+                    EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(ROW_TEXT_LEFT, ROW_DETAIL_Y)
                         .width(textWidth));
             row.child(
                 createGlyphButton(
@@ -1131,32 +1168,32 @@ public final class StarmapAssetActions {
                     deconstruction ? "Send To..." : "Cancel Build",
                     // TODO: Localize
                     true,
-                    () -> handleConstructionAction(asset)).pos(rowWidth - 34, 9));
+                    () -> handleConstructionAction(asset)).pos(rowWidth - ROW_ACTION_BUTTON_RIGHT_INSET, ROW_ICON_Y));
             return row;
         }
 
         private ParentWidget<?> createAssetRow(CelestialAsset asset, int rowWidth) {
-            ParentWidget<?> row = new PassiveRow().widthRelOffset(1f, -8)
+            ParentWidget<?> row = new PassiveRow().widthRelOffset(1f, -ROW_WIDTH_INSET)
                 .height(ROW_HEIGHT)
                 .background(
                     drawable(
                         (context, x, y, width, height) -> Gui
                             .drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_ROW_BG.getColor())));
             row.child(
-                createAssetIconWidget(asset.kind, 1.0f).pos(10, 9)
-                    .size(16, 16));
+                createAssetIconWidget(asset.kind, 1.0f).pos(ROW_ICON_X, ROW_ICON_Y)
+                    .size(ROW_ICON_SLOT_SIZE, ROW_ICON_SLOT_SIZE));
             boolean manageable = callbacks.isManageableStationAsset(asset);
-            int actionButtonsWidth = manageable ? (ICON_BUTTON_SIZE * 2 + 4) : ICON_BUTTON_SIZE;
-            int textWidth = rowWidth - 32 - actionButtonsWidth - 16;
-            row.child(createNameButton(asset, textWidth).pos(32, 4));
+            int actionButtonsWidth = manageable ? (ICON_BUTTON_SIZE * 2 + ROW_ACTION_BUTTON_GAP) : ICON_BUTTON_SIZE;
+            int textWidth = rowWidth - ROW_TEXT_LEFT - actionButtonsWidth - ROW_TEXT_RIGHT_GAP;
+            row.child(createNameButton(asset, textWidth).pos(ROW_TEXT_LEFT, ROW_NAME_Y));
             row.child(
                 createBodyText(
                     trimToWidth(
                         callbacks.formatAssetKind(asset.kind) + " | " + callbacks.formatAssetLocation(asset.location),
                         textWidth),
-                    EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(32, 16)
+                    EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(ROW_TEXT_LEFT, ROW_DETAIL_Y)
                         .width(textWidth));
-            int buttonX = rowWidth - 34;
+            int buttonX = rowWidth - ROW_ACTION_BUTTON_RIGHT_INSET;
             if (manageable) {
                 row.child(
                     createGlyphButton(
@@ -1164,7 +1201,8 @@ public final class StarmapAssetActions {
                         // TODO: Localize
                         "Manage",
                         true,
-                        () -> callbacks.openStationManagement(asset)).pos(buttonX - 28, 9));
+                        () -> callbacks.openStationManagement(asset))
+                            .pos(buttonX - ROW_SECONDARY_ACTION_OFFSET, ROW_ICON_Y));
             }
             row.child(
                 createGlyphButton(
@@ -1172,13 +1210,14 @@ public final class StarmapAssetActions {
                     // TODO: Localize
                     "Destroy",
                     asset.kind == CelestialAsset.Kind.STATION ? callbacks.isCreativeBuildModeEnabled() : true,
-                    () -> callbacks.openPendingAssetDestruction(asset)).pos(buttonX, 9));
+                    () -> callbacks.openPendingAssetDestruction(asset)).pos(buttonX, ROW_ICON_Y));
             return row;
         }
 
         private ButtonWidget<?> createNameButton(CelestialAsset asset, int width) {
-            String text = trimToWidth(callbacks.formatAssetDisplayName(asset), Math.max(8, width));
-            return new ScrollAwareButtonWidget().size(Math.max(8, width), 12)
+            int buttonWidth = Math.max(NAME_BUTTON_MIN_WIDTH, width);
+            String text = trimToWidth(callbacks.formatAssetDisplayName(asset), buttonWidth);
+            return new ScrollAwareButtonWidget().size(buttonWidth, NAME_BUTTON_HEIGHT)
                 .background(IDrawable.EMPTY)
                 .hoverBackground(IDrawable.EMPTY)
                 .overlay(drawable((context, x, y, w, h) -> {
@@ -1187,7 +1226,7 @@ public final class StarmapAssetActions {
                     fr.drawStringWithShadow(
                         text,
                         x,
-                        y + (h - fr.FONT_HEIGHT) / 2 + 1,
+                        y + (h - fr.FONT_HEIGHT) / 2 + TEXT_BASELINE_OFFSET,
                         EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
                 }))
                 .hoverOverlay(drawable((context, x, y, w, h) -> {
@@ -1196,7 +1235,7 @@ public final class StarmapAssetActions {
                     fr.drawStringWithShadow(
                         text,
                         x,
-                        y + (h - fr.FONT_HEIGHT) / 2 + 1,
+                        y + (h - fr.FONT_HEIGHT) / 2 + TEXT_BASELINE_OFFSET,
                         EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
                 }))
                 .onMousePressed(mouseButton -> {
@@ -1217,6 +1256,15 @@ public final class StarmapAssetActions {
                 .background(IDrawable.EMPTY)
                 .hoverBackground(IDrawable.EMPTY)
                 .onMousePressed(mouseButton -> true);
+        }
+
+        private ParentWidget<?> createActionsModalRoot() {
+            return createRelativeModalRoot(
+                ACTIONS_MODAL_WIDTH_REL,
+                ACTIONS_MODAL_HEIGHT_REL,
+                EnumColors.MAP_COLOR_MODAL_BG.getColor(),
+                EnumColors.MAP_COLOR_MODAL_ACCENT.getColor(),
+                EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
         }
 
         private ParentWidget<?> createModalRoot(ModalBounds bounds) {
@@ -1255,13 +1303,28 @@ public final class StarmapAssetActions {
             int accentColor, int headerColor) {
             ParentWidget<?> modal = new ParentWidget<>().pos(left, top)
                 .size(right - left, bottom - top);
+            addModalFrame(modal, backgroundColor, accentColor, headerColor);
+            return modal;
+        }
+
+        private ParentWidget<?> createRelativeModalRoot(float width, float height, int backgroundColor, int accentColor,
+            int headerColor) {
+            ParentWidget<?> modal = new ParentWidget<>()
+                .leftRel(ACTIONS_MODAL_CENTER_REL, 0, ACTIONS_MODAL_CENTER_ANCHOR)
+                .topRel(ACTIONS_MODAL_CENTER_REL, 0, ACTIONS_MODAL_CENTER_ANCHOR)
+                .widthRel(width)
+                .heightRel(height);
+            addModalFrame(modal, backgroundColor, accentColor, headerColor);
+            return modal;
+        }
+
+        private void addModalFrame(ParentWidget<?> modal, int backgroundColor, int accentColor, int headerColor) {
             PassiveLayer backgroundLayer = new PassiveLayer().pos(0, 0)
                 .widthRel(1f)
                 .heightRel(1f)
                 .background(createModalBackgroundDrawable(backgroundColor, headerColor));
             modal.child(backgroundLayer);
             modal.child(WidgetOutline.create(backgroundLayer, 3, accentColor));
-            return modal;
         }
 
         private TextWidget<?> createTitleText(String text) {
@@ -1328,7 +1391,11 @@ public final class StarmapAssetActions {
                     int textW = fr.getStringWidth(label);
                     int color = enabled ? EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor()
                         : EnumColors.MAP_COLOR_TEXT_BTN_DISABLED.getColor();
-                    fr.drawStringWithShadow(label, x + (w - textW) / 2, y + (h - fr.FONT_HEIGHT) / 2 + 1, color);
+                    fr.drawStringWithShadow(
+                        label,
+                        x + (w - textW) / 2,
+                        y + (h - fr.FONT_HEIGHT) / 2 + TEXT_BASELINE_OFFSET,
+                        color);
                 }))
                 .onMousePressed(mouseButton -> {
                     if (mouseButton != 0 || !enabled) return true;
@@ -1367,8 +1434,12 @@ public final class StarmapAssetActions {
 
         private IDrawable createAssetIconDrawable(CelestialAsset.Kind kind, float alpha) {
             return drawable(
-                (context, x, y, width, height) -> callbacks
-                    .drawAssetIcon(kind, x + (width - 14) / 2, y + (height - 14) / 2, 14, alpha));
+                (context, x, y, width, height) -> callbacks.drawAssetIcon(
+                    kind,
+                    x + (width - ROW_ICON_DRAW_SIZE) / 2,
+                    y + (height - ROW_ICON_DRAW_SIZE) / 2,
+                    ROW_ICON_DRAW_SIZE,
+                    alpha));
         }
 
         private Widget<?> createAssetIconWidget(CelestialAsset.Kind kind, float alpha) {
