@@ -32,7 +32,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
@@ -67,7 +66,7 @@ public final class AutomatedFacility extends CelestialAsset {
     private final SettingsGroupRegistry settingsGroups;
 
     private final UpkeepLedger upkeepLedger;
-    private UpkeepSettlement.Credits upkeepCredits = UpkeepSettlement.Credits.empty();
+    private final FacilityUpkeepState upkeepState = new FacilityUpkeepState();
 
     private long stationFeatureSalt;
     private final Map<ModuleInstance.ID, ModuleFeatureModifiers> featureModifiersByModule = new LinkedHashMap<>();
@@ -269,47 +268,15 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public UpkeepSettlement.Credits upkeepCredits() {
-        return upkeepCredits;
+        return upkeepState.credits();
     }
 
     public void loadUpkeepCredits(UpkeepSettlement.Credits upkeepCredits) {
-        this.upkeepCredits = upkeepCredits == null ? UpkeepSettlement.Credits.empty() : upkeepCredits;
+        upkeepState.loadCredits(upkeepCredits);
     }
 
     public UpkeepSettlement.Result settleUpkeep() {
-        UpkeepLedger.UpkeepSummary summary = upkeepSummary();
-        UpkeepSettlement.Result result = UpkeepSettlement.settle(summary.moduleDemands(), upkeepCredits, this);
-        upkeepCredits = result.credits();
-        Set<ModuleInstance.ID> demanded = new HashSet<>();
-        for (UpkeepLedger.ModuleDemand demand : summary.moduleDemands()) {
-            demanded.add(demand.moduleId());
-        }
-        Set<ModuleInstance.ID> paid = result.paidModuleIds();
-        Set<ModuleInstance.ID> unpaid = new HashSet<>(result.unpaidModuleIds());
-        for (ModuleInstance module : modules) {
-            if (unpaid.contains(module.id)) {
-                setModuleUpkeepBlocked(module);
-            } else if (paid.contains(module.id) || !demanded.contains(module.id)) {
-                clearModuleUpkeepBlocked(module);
-            }
-        }
-        return result;
-    }
-
-    private void setModuleUpkeepBlocked(ModuleInstance module) {
-        if (module.blocking() == BlockingReason.UPKEEP_SHORTAGE && module.state() == ModuleState.BLOCKED) return;
-        module.setBlocking(BlockingReason.UPKEEP_SHORTAGE);
-        module.setState(ModuleState.BLOCKED);
-        markModuleDirty(module.id);
-    }
-
-    private void clearModuleUpkeepBlocked(ModuleInstance module) {
-        if (module.blocking() != BlockingReason.UPKEEP_SHORTAGE) return;
-        module.setBlocking(BlockingReason.NONE);
-        if (module.state() == ModuleState.BLOCKED) {
-            module.setState(ModuleState.IDLE);
-        }
-        markModuleDirty(module.id);
+        return upkeepState.settle(upkeepSummary(), modules, this, this::markModuleDirty);
     }
 
     public List<ModuleInstance> modules() {
