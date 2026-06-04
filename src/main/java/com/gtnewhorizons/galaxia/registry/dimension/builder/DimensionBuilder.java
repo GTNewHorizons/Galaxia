@@ -1,9 +1,11 @@
 package com.gtnewhorizons.galaxia.registry.dimension.builder;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import net.minecraft.block.Block;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.WorldProvider;
 import net.minecraftforge.common.DimensionManager;
@@ -57,6 +59,7 @@ public class DimensionBuilder {
     private EffectBuilder effects;
     private EnumTiers tier = EnumTiers.TIER_1;
     private ResourceLocation[] skyboxTexture = null;
+    private List<Block> validSpaceStationBlocks = new ArrayList<>();
 
     /**
      * Sets the name and ID based on the ENUM provided
@@ -242,6 +245,20 @@ public class DimensionBuilder {
     }
 
     /**
+     * @param blocks each block must be registered as a machine block
+     * @return Configured builder
+     */
+    public final DimensionBuilder addValidSpaceStationBlocks(Block... blocks) {
+        this.validSpaceStationBlocks.addAll(List.of(blocks));
+        return this;
+    }
+
+    public DimensionBuilder addValidSpaceStationBlock(Block block) {
+        this.validSpaceStationBlocks.add(block);
+        return this;
+    }
+
+    /**
      * Builds a dimension definition based on fields set in previous methods
      *
      * @return DimensionDef containing fields set from this builder
@@ -269,7 +286,8 @@ public class DimensionBuilder {
             orbitalRadius,
             radius,
             tier,
-            skyboxTexture);
+            skyboxTexture,
+            validSpaceStationBlocks);
 
         // Add dimension to hashmaps
         BY_NAME.put(name.toLowerCase(), def);

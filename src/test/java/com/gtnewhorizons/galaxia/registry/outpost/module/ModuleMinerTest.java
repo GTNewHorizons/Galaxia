@@ -235,6 +235,23 @@ final class ModuleMinerTest {
     }
 
     @Test
+    void runtimeSettingsCopyRejectsMinerTargetWithoutRequiredFocusTier() {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance source = createMiner(StationTileCoord.of(1, 0));
+        ModuleInstance target = createMiner(StationTileCoord.of(2, 0));
+        facility.addModule(source);
+        facility.addModule(target);
+        ModuleMiner sourceMiner = (ModuleMiner) source.component();
+        ModuleMiner targetMiner = (ModuleMiner) target.component();
+        sourceMiner.setFocus(MinerFocusTier.II, "ore:iron", 1200);
+        targetMiner.setFocus(MinerFocusTier.NONE, null, 0);
+
+        assertFalse(facility.canCopyModuleRuntimeSettings(source, target));
+        assertThrows(IllegalStateException.class, () -> facility.copyModuleRuntimeSettings(source, target));
+        assertNull(targetMiner.focusOreKeyOrNull());
+    }
+
+    @Test
     void privateSettingsGroupCannotBeJoinedDirectly() {
         AutomatedFacility facility = createFacility();
         ModuleInstance source = createMiner(StationTileCoord.of(1, 0));

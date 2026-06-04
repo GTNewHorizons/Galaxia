@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -154,11 +155,26 @@ public final class StationMapViewport {
     public static Set<TilePosition> visibleTilePositions(int width, int height, int contentLeft,
         int contentRightPadding, int contentVerticalPadding, int panX, int panY) {
         Set<TilePosition> result = new LinkedHashSet<>();
+        collectVisibleTilePositions(
+            width,
+            height,
+            contentLeft,
+            contentRightPadding,
+            contentVerticalPadding,
+            panX,
+            panY,
+            result);
+        return result;
+    }
+
+    public static void collectVisibleTilePositions(int width, int height, int contentLeft, int contentRightPadding,
+        int contentVerticalPadding, int panX, int panY, Collection<TilePosition> result) {
+        result.clear();
         int left = contentLeft;
         int right = width - contentRightPadding;
         int top = contentVerticalPadding;
         int bottom = height - contentVerticalPadding;
-        if (right <= left || bottom <= top) return result;
+        if (right <= left || bottom <= top) return;
 
         int originX = originLocalX(width, contentLeft, contentRightPadding, panX);
         int originY = originLocalY(height, contentVerticalPadding, panY);
@@ -172,6 +188,5 @@ public final class StationMapViewport {
                 result.add(new TilePosition(dx, dy));
             }
         }
-        return result;
     }
 }

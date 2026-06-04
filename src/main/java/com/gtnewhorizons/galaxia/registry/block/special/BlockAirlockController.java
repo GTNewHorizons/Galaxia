@@ -8,12 +8,12 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.IIcon;
-import net.minecraft.util.MathHelper;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.registry.block.PlacementHelper;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockOpenable;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
 
@@ -84,12 +84,10 @@ public class BlockAirlockController extends BlockOpenable implements ITileEntity
         TileEntity te = world.getTileEntity(x, y, z);
 
         if (!(te instanceof TileEntityAirlock airlock)) return;
+        ForgeDirection facing = PlacementHelper.placeInEveryDirection(placer);
 
-        int f = MathHelper.floor_double((placer.rotationYaw * 4.0F / 360.0F) + 0.5D) & 3;
-        ForgeDirection[] dirs = { ForgeDirection.NORTH, ForgeDirection.EAST, ForgeDirection.SOUTH,
-            ForgeDirection.WEST };
-        airlock.setPlacedFacing(dirs[f]);
-        airlock.setFacing(dirs[f]);
+        airlock.setPlacedFacing(facing);
+        airlock.setFacing(facing);
     }
 
     @Override

@@ -53,14 +53,14 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
-    private final StationTilePickerController tilePickerController;
+    private final StationEditModeController editModeController;
     private final ModuleSettingsGroupSelectorWidget settingsGroupSelector;
 
     MinerBlacklistConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller,
-        StationTilePickerController tilePickerController) {
+        StationEditModeController editModeController) {
         this.assetId = assetId;
         this.controller = controller;
-        this.tilePickerController = tilePickerController;
+        this.editModeController = editModeController;
         this.settingsGroupSelector = new ModuleSettingsGroupSelectorWidget(
             assetId,
             controller,
@@ -217,7 +217,7 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
     private boolean canCopySettings() {
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         ModuleInstance module = selectedModule();
-        return tilePickerController != null && controller.isMinerBlacklistOpen()
+        return editModeController != null && controller.isMinerBlacklistOpen()
             && !settingsGroupSelector.isBlockingModuleControls()
             && facility != null
             && facility.stationLayout() != null
@@ -229,9 +229,10 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         ModuleInstance source = selectedModule();
         int sourceModuleIndex = controller.moduleIndex();
-        if (facility == null || source == null || tilePickerController == null || sourceModuleIndex < 0) return;
+        if (facility == null || source == null || editModeController == null || sourceModuleIndex < 0) return;
         controller.close();
-        tilePickerController.start(
+        editModeController.startTileMode(
+            StationEditModeController.Mode.COPY_MODULE,
             "Copy miner settings",
             "Copy",
             coord -> ModuleSettingsCopyPickerModel.isCompatibleTarget(facility, source, coord),

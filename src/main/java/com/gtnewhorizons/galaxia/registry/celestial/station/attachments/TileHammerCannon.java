@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.celestial.station;
+package com.gtnewhorizons.galaxia.registry.celestial.station.attachments;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,11 +29,10 @@ import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
-import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
+import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
-import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
+import com.gtnewhorizons.galaxia.registry.interfaces.IAttachmentHandler;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -46,8 +45,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import lombok.Getter;
 
-public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon>
-    implements IGuiHolder<PosGuiData>, IDistributedInventory, IStationAttachment<TileHammerCannon> {
+public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> implements IGuiHolder<PosGuiData> {
 
     private static final String NBT_FILTER = "filter";
     private static final String NBT_HAMMER_VARIANT = "hammerVariant";
@@ -91,6 +89,47 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
     @Getter
     private final ModuleHammer hammer;
 
+    static {
+        StationAttachmentRegistry.register(TileHammerCannon.class, new IAttachmentHandler<>() {
+
+            @Override
+            public BlockPos getPosition(TileHammerCannon attachment) {
+                return attachment.here;
+            }
+
+            @Override
+            public void tick(TileHammerCannon attachment) {
+                if (attachment.graph == null) return;
+
+                attachment.moduleInstance.tick(
+                    attachment.graph.getController()
+                        .getBackingStation());
+            }
+
+            @Override
+            public boolean isReady(TileHammerCannon attachment) {
+                return attachment.structureValid && attachment.graph != null;
+            }
+
+            @Override
+            public void onAttached(TileHammerCannon attachment, StationGraph graph) {
+                attachment.graph = graph;
+                attachment.moduleInstance.updateStatus(Buildable.Status.OPERATIONAL);
+            }
+
+            @Override
+            public void onDetached(TileHammerCannon attachment, StationGraph graph) {
+                attachment.graph = null;
+                attachment.moduleInstance.updateStatus(Buildable.Status.DISABLED);
+            }
+
+            @Override
+            public void markDirty(TileHammerCannon attachment) {
+                attachment.markDirty();
+            }
+        });
+    }
+
     public List<IInventory> getChestInventories() {
         return inventory;
     }
@@ -108,20 +147,6 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
     }
 
     @Override
-    public BlockPos getPosition() {
-        return here;
-    }
-
-    @Override
-    public void tick() {
-        if (graph == null) return;
-        moduleInstance.tick(
-            CelestialAssetStore.findAsset(
-                graph.getController()
-                    .getBackingStation()));
-    }
-
-    @Override
     public void onStructureFormed() {
         super.onStructureFormed();
         here = new BlockPos(xCoord, yCoord, zCoord);
@@ -133,31 +158,6 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
         if (graph != null) {
             graph.removeAttachment(here);
         }
-    }
-
-    @Override
-    protected boolean attemptBoot() {
-        return graph != null;
-    }
-
-    @Override
-    protected void onBootComplete() {
-        moduleInstance.updateStatus(Buildable.Status.OPERATIONAL);
-    }
-
-    @Override
-    protected void onBootFailed() {
-        moduleInstance.updateStatus(Buildable.Status.DISABLED);
-    }
-
-    @Override
-    public void onAttached(StationGraph graph) {
-        this.graph = graph;
-    }
-
-    @Override
-    public void onDetached(StationGraph graph) {
-        this.graph = null;
     }
 
     @Override

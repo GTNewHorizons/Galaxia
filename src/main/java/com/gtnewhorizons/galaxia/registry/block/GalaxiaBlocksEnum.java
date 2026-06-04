@@ -21,9 +21,9 @@ import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenCol
 import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenFiller;
 import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenPylon;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
-import com.gtnewhorizons.galaxia.registry.celestial.station.TileHammerCannon;
-import com.gtnewhorizons.galaxia.registry.celestial.station.TileHammerTarget;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerTarget;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.BlockRocketTrophy;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityRocketTrophy;
@@ -64,6 +64,11 @@ public enum GalaxiaBlocksEnum {
     // NON-TE
     SPACE_STATION_GLASS(new BlockCasing("space_station/space_station_glass").glass(), "space_station_glass"),
     AIRLOCK_DOOR(new BlockAirlockDoor(), "airlock_door"),
+    COOLING_COIL(new BlockCasing("space_station/cooling_coil"), "cooling_coil"),
+    HEATING_COIL(new BlockCasing("space_station/heating_coil"), "heating_coil"),
+    AIR_PURIFIER(new BlockCasing("space_station/air_purifier"), "air_purifier"),
+    WITHER_BLOCKER(new BlockCasing("space_station/wither_blocker"), "wither_blocker"),
+    OXYGENATOR(new BlockCasing("space_station/oxygenator"), "oxygenator"),
 
     // MISC
     BLOCK_OF_PYRITE(new BlockConfigurable("resource/block_of_pyrite")),

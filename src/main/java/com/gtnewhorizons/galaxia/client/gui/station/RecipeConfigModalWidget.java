@@ -107,7 +107,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
-    private final @Nullable StationTilePickerController tilePickerController;
+    private final @Nullable StationEditModeController editModeController;
     private final ModuleSettingsGroupSelectorWidget settingsGroupSelector;
     private int page;
     private int boundsSlotIndex = -1;
@@ -115,14 +115,14 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private String boundAmountInput = "";
     private @Nullable TextFieldWidget boundAmountField;
     private int renameSlotIndex = -1;
-    private String recipeNameInput = "";
+    private final RecipeRenameFormModel recipeRenameForm = new RecipeRenameFormModel();
     private @Nullable TextFieldWidget recipeNameField;
 
     RecipeConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller,
-        @Nullable StationTilePickerController tilePickerController) {
+        @Nullable StationEditModeController editModeController) {
         this.assetId = assetId;
         this.controller = controller;
-        this.tilePickerController = tilePickerController;
+        this.editModeController = editModeController;
         this.settingsGroupSelector = new ModuleSettingsGroupSelectorWidget(assetId, controller, () -> {
             ModuleInstance module = selectedModule();
             return module != null ? module.kind() : null;
@@ -342,7 +342,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private boolean canCopySettings() {
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         ModuleInstance module = selectedModule();
-        return tilePickerController != null && canConfigureRecipes()
+        return editModeController != null && canConfigureRecipes()
             && !settingsGroupSelector.isBlockingModuleControls()
             && facility != null
             && facility.stationLayout() != null
@@ -475,11 +475,12 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         ModuleInstance source = selectedModule();
         int sourceModuleIndex = controller.moduleIndex();
-        if (facility == null || source == null || tilePickerController == null || sourceModuleIndex < 0) return;
+        if (facility == null || source == null || editModeController == null || sourceModuleIndex < 0) return;
         settingsGroupSelector.closeMenu();
         closeRecipeRename();
         controller.close();
-        tilePickerController.start(
+        editModeController.startTileMode(
+            StationEditModeController.Mode.COPY_MODULE,
             "Copy module settings",
             "Copy",
             coord -> ModuleSettingsCopyPickerModel.isCompatibleTarget(facility, source, coord),
@@ -656,8 +657,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         if (slotIndex < 0 || slot == null) return;
         settingsGroupSelector.closeMenu();
         renameSlotIndex = slotIndex;
-        recipeNameInput = slot.displayName() == null || slot.displayName()
-            .isBlank() ? RecipeSlotUiModel.slotTitle(slot) : slot.displayName();
+        recipeRenameForm.open(slot);
         syncRecipeNameFieldText();
         focusRecipeNameField();
     }
@@ -667,27 +667,28 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private boolean canSaveRecipeName() {
-        return isRecipeRenameOpen() && !currentRecipeNameInput().trim()
-            .isEmpty();
+        recipeRenameForm.setInput(currentRecipeNameInput());
+        return isRecipeRenameOpen() && recipeRenameForm.canSave();
     }
 
     private void saveRecipeName() {
         SavedRecipe slot = renameSlot();
         if (slot == null) return;
-        updateSlotIndex(renameSlotIndex, slot.withDisplayName(currentRecipeNameInput()));
+        recipeRenameForm.setInput(currentRecipeNameInput());
+        updateSlotIndex(renameSlotIndex, recipeRenameForm.save(slot));
         closeRecipeRename();
     }
 
     private void clearRecipeName() {
         SavedRecipe slot = renameSlot();
         if (slot == null) return;
-        updateSlotIndex(renameSlotIndex, slot.withDisplayName(""));
+        updateSlotIndex(renameSlotIndex, recipeRenameForm.clear(slot));
         closeRecipeRename();
     }
 
     private void closeRecipeRename() {
         renameSlotIndex = -1;
-        recipeNameInput = "";
+        recipeRenameForm.close();
         syncRecipeNameFieldText();
     }
 
@@ -710,17 +711,17 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
                     EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
                     EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
             }))
-            .value(new StringValue.Dynamic(() -> recipeNameInput, text -> recipeNameInput = text == null ? "" : text))
+            .value(new StringValue.Dynamic(recipeRenameForm::input, recipeRenameForm::setInput))
             .setFocusOnGuiOpen(false)
             .setEnabledIf(w -> isRecipeRenameOpen());
     }
 
     private String currentRecipeNameInput() {
-        return recipeNameField != null ? recipeNameField.getText() : recipeNameInput;
+        return recipeNameField != null ? recipeNameField.getText() : recipeRenameForm.input();
     }
 
     private void syncRecipeNameFieldText() {
-        if (recipeNameField != null) recipeNameField.setText(recipeNameInput);
+        if (recipeNameField != null) recipeNameField.setText(recipeRenameForm.input());
     }
 
     private void focusRecipeNameField() {

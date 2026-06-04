@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.client.gui.station.layer;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +25,8 @@ public final class CapacityConnectorLayer {
     private static final int COLOR_ALPHA_ACTIVE = 0xFF;
     private static final int COLOR_ALPHA_INACTIVE = 0x66;
     private static final int RGB_CHANNEL_MASK = 0x00FFFFFF;
+    private static final List<CapacityConnectorQuad> HORIZONTAL_QUADS = new java.util.ArrayList<>();
+    private static final List<CapacityConnectorQuad> VERTICAL_QUADS = new java.util.ArrayList<>();
 
     private CapacityConnectorLayer() {}
 
@@ -39,8 +40,8 @@ public final class CapacityConnectorLayer {
         ResourceLocation verticalTexture = StationTextureRegistry.connectorTexture(ConnectorKind.VERTICAL);
         boolean hasHorizontalTexture = StationTextureRegistry.hasTexture(horizontalTexture);
         boolean hasVerticalTexture = StationTextureRegistry.hasTexture(verticalTexture);
-        List<CapacityConnectorQuad> horizontalQuads = new ArrayList<>();
-        List<CapacityConnectorQuad> verticalQuads = new ArrayList<>();
+        HORIZONTAL_QUADS.clear();
+        VERTICAL_QUADS.clear();
 
         for (Map.Entry<StationTileCoord, PlacedTile> e : tiles.entrySet()) {
             StationTileCoord coord = e.getKey();
@@ -55,7 +56,7 @@ public final class CapacityConnectorLayer {
                 int cx = StationMapViewport.connectorLeftX(coord, widgetWidth, contentLeft, contentRightPadding, panX);
                 int cy = StationMapViewport.tileTopY(coord, widgetHeight, contentVerticalPadding, panY)
                     + (tileSize - connH) / 2;
-                addConnector(cx, cy, connW, connH, kindA, hasHorizontalTexture, horizontalQuads);
+                addConnector(cx, cy, connW, connH, kindA, hasHorizontalTexture, HORIZONTAL_QUADS);
             }
 
             // Check down neighbor
@@ -65,12 +66,12 @@ public final class CapacityConnectorLayer {
                 int cx = StationMapViewport.tileLeftX(coord, widgetWidth, contentLeft, contentRightPadding, panX)
                     + (tileSize - connW) / 2;
                 int cy = StationMapViewport.connectorTopY(coord, widgetHeight, contentVerticalPadding, panY);
-                addConnector(cx, cy, connW, connH, kindA, hasVerticalTexture, verticalQuads);
+                addConnector(cx, cy, connW, connH, kindA, hasVerticalTexture, VERTICAL_QUADS);
             }
         }
 
-        drawColoredBatch(horizontalTexture, horizontalQuads);
-        drawColoredBatch(verticalTexture, verticalQuads);
+        drawColoredBatch(horizontalTexture, HORIZONTAL_QUADS);
+        drawColoredBatch(verticalTexture, VERTICAL_QUADS);
     }
 
     private static FacilityModuleKind moduleKindOf(PlacedTile tile) {
@@ -117,16 +118,16 @@ public final class CapacityConnectorLayer {
         tess.startDrawingQuads();
         for (CapacityConnectorQuad quad : quads) {
             // Modulate the texture with the per-kind color
-            float r = ((quad.argb >> 16) & 0xFF) / 255f;
-            float g = ((quad.argb >> 8) & 0xFF) / 255f;
-            float b = (quad.argb & 0xFF) / 255f;
-            float a = ((quad.argb >> 24) & 0xFF) / 255f;
+            float r = ((quad.argb() >> 16) & 0xFF) / 255f;
+            float g = ((quad.argb() >> 8) & 0xFF) / 255f;
+            float b = (quad.argb() & 0xFF) / 255f;
+            float a = ((quad.argb() >> 24) & 0xFF) / 255f;
             tess.setColorRGBA_F(r, g, b, a);
 
-            tess.addVertexWithUV(quad.x, quad.y + quad.h, 0, 0, 1);
-            tess.addVertexWithUV(quad.x + quad.w, quad.y + quad.h, 0, 1, 1);
-            tess.addVertexWithUV(quad.x + quad.w, quad.y, 0, 1, 0);
-            tess.addVertexWithUV(quad.x, quad.y, 0, 0, 0);
+            tess.addVertexWithUV(quad.x(), quad.y() + quad.h(), 0, 0, 1);
+            tess.addVertexWithUV(quad.x() + quad.w(), quad.y() + quad.h(), 0, 1, 1);
+            tess.addVertexWithUV(quad.x() + quad.w(), quad.y(), 0, 1, 0);
+            tess.addVertexWithUV(quad.x(), quad.y(), 0, 0, 0);
         }
         tess.draw();
     }
@@ -140,20 +141,5 @@ public final class CapacityConnectorLayer {
         };
     }
 
-    private static final class CapacityConnectorQuad {
-
-        private final int x;
-        private final int y;
-        private final int w;
-        private final int h;
-        private final int argb;
-
-        private CapacityConnectorQuad(int x, int y, int w, int h, int argb) {
-            this.x = x;
-            this.y = y;
-            this.w = w;
-            this.h = h;
-            this.argb = argb;
-        }
-    }
+    private record CapacityConnectorQuad(int x, int y, int w, int h, int argb) {}
 }

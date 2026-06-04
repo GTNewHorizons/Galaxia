@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
@@ -18,6 +19,11 @@ public class Overworld extends BasePlanet {
             .effects(
                 EffectBuilder.builder()
                     .build())
+            .addValidSpaceStationBlocks(
+                GalaxiaBlocksEnum.RUSTY_SCAFFOLDING.get(),
+                GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
+                GalaxiaBlocksEnum.SPACE_STATION_PANEL.get(),
+                GalaxiaBlocksEnum.SPACE_STATION_GLASS.get())
             .tier(EnumTiers.TIER_1);
     }
 }

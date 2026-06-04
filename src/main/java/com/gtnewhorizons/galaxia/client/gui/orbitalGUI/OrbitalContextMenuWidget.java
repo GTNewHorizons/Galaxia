@@ -47,11 +47,11 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
 
         boolean canCreateAutomatedFacility(CelestialObject body);
 
-        void openAssetManagement(CelestialObject body);
+        void openAssetActions(CelestialObject body);
 
         void createBaseStation(CelestialObject body);
 
-        void triggerAssetCreation(CelestialObject body, CelestialAsset.Kind kind, boolean openManagementFirst);
+        void triggerAssetCreation(CelestialObject body, CelestialAsset.Kind kind, boolean openActionsFirst);
 
         void closeContextMenu();
     }
@@ -203,7 +203,7 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
 
     private void handleAction(CelestialObject body, ContextMenuActionType actionType) {
         switch (actionType) {
-            case MANAGE_ASSETS -> callbacks.openAssetManagement(body);
+            case MANAGE_ASSETS -> callbacks.openAssetActions(body);
             case CREATE_STATION -> callbacks.createBaseStation(body);
             case OPEN_AUTOMATED_STATION_CONFIRM -> callbacks
                 .triggerAssetCreation(body, CelestialAsset.Kind.AUTOMATED_STATION, true);

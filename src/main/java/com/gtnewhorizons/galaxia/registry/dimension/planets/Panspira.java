@@ -4,6 +4,7 @@ import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
@@ -45,6 +46,11 @@ public class Panspira extends BasePlanet {
             .radius(1.5)
             .gravity(2.25)
             .airResistance(1)
+            .addValidSpaceStationBlocks(
+                GalaxiaBlocksEnum.RUSTY_SCAFFOLDING.get(),
+                GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
+                GalaxiaBlocksEnum.SPACE_STATION_PANEL.get(),
+                GalaxiaBlocksEnum.SPACE_STATION_GLASS.get())
             .effects(
                 EffectBuilder.builder()
                     .baseTemp(423)

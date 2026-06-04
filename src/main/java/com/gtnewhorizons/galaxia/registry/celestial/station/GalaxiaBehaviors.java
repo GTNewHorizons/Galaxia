@@ -11,7 +11,8 @@ import lombok.Getter;
 public enum GalaxiaBehaviors {
 
     ROOM(0, new RoomBehavior()),
-    DOCK(1, new DockBehavior());
+    DOCK(1, new DockBehavior()),
+    POWER_ROOM(2, new PowerRoomBehavior());
 
     @Getter
     private final int id;

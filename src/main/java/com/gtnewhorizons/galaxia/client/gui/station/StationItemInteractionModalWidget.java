@@ -32,6 +32,12 @@ final class StationItemInteractionModalWidget extends ParentWidget<StationItemIn
     private static final int CONTENT_Y = 52;
     private static final int CONTENT_WIDTH = WIDTH - 16;
     private static final int CONTENT_HEIGHT = HEIGHT - CONTENT_Y - 8;
+    private static final int CONTENT_TEXT_X = 8;
+    private static final int ENTRY_ICON_X = CONTENT_TEXT_X + 2;
+    private static final int ENTRY_TEXT_X = CONTENT_TEXT_X + 26;
+    private static final int ACTION_BUTTON_WIDTH = 20;
+    private static final int ACTION_BUTTON_X = CONTENT_WIDTH - ACTION_BUTTON_WIDTH - 2;
+    private static final int ENTRY_TEXT_WIDTH = ACTION_BUTTON_X - ENTRY_TEXT_X - 4;
     private static final ItemStack ACTION_ICON = new ItemStack(Items.book);
     private static final ItemStack CLOSE_ICON = new ItemStack(Items.redstone);
 
@@ -74,8 +80,8 @@ final class StationItemInteractionModalWidget extends ParentWidget<StationItemIn
             scrollContent.child(
                 ModuleConfigModalSupport
                     .iconButton(() -> canOpen(line.entry()), ACTION_ICON, "Open config", () -> openEntry(line.entry()))
-                    .pos(CONTENT_WIDTH - 22, line.y() - 2)
-                    .size(20, 18));
+                    .pos(ACTION_BUTTON_X, line.y() - 2)
+                    .size(ACTION_BUTTON_WIDTH, 18));
         }
     }
 
@@ -93,24 +99,24 @@ final class StationItemInteractionModalWidget extends ParentWidget<StationItemIn
     private void drawContent(int x, int y) {
         if (lines.isEmpty()) {
             ModuleConfigModalSupport
-                .drawLine("No interactions.", x + 2, y + 2, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+                .drawLine("No interactions.", x + CONTENT_TEXT_X, y + 2, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
             return;
         }
         for (Line line : lines) {
             int rowY = y + line.y();
             if (line.header() != null) {
                 ModuleConfigModalSupport
-                    .drawLine(line.header(), x + 2, rowY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+                    .drawLine(line.header(), x + CONTENT_TEXT_X, rowY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
                 continue;
             }
             StationItemInteractionModel.Entry entry = line.entry();
             if (entry == null) continue;
-            ModuleConfigModalSupport.renderItemIcon(iconFor(entry), x + 4, rowY - 4);
+            ModuleConfigModalSupport.renderItemIcon(iconFor(entry), x + ENTRY_ICON_X, rowY - 4);
             ModuleConfigModalSupport.drawTrimmedLine(
                 textFor(entry),
-                x + 26,
+                x + ENTRY_TEXT_X,
                 rowY,
-                CONTENT_WIDTH - 54,
+                ENTRY_TEXT_WIDTH,
                 EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         }
     }
@@ -141,8 +147,8 @@ final class StationItemInteractionModalWidget extends ParentWidget<StationItemIn
 
     private static String textFor(StationItemInteractionModel.Entry entry) {
         return switch (entry.role()) {
-            case CORE_IMPORT -> "Core import " + entry.reserve() + " / " + entry.orderSize();
-            case HAMMER_EXPORT -> "Hammer export " + entry.reserve() + " / " + entry.orderSize();
+            case CORE_IMPORT -> "Core import reserve " + entry.reserve();
+            case HAMMER_EXPORT -> "Hammer export reserve " + entry.reserve();
             case CONSUMES -> rolePrefix("Consumes", entry);
             case PRODUCES -> rolePrefix("Produces", entry);
             case UPKEEP -> entry.label() + countSuffix(entry)

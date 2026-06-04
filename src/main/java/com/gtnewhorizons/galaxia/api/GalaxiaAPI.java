@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.function.ToIntFunction;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import net.minecraft.block.Block;
 import net.minecraft.entity.Entity;
@@ -20,11 +21,9 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 import net.minecraftforge.common.MinecraftForge;
 
-import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
-import com.gtnewhorizons.galaxia.registry.capabilities.ZeroGMovementProvider;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -34,6 +33,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.hazards.HazardTemperature;
+import com.gtnewhorizons.galaxia.registry.interfaces.IZeroGMovementProvider;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield;
@@ -79,6 +79,12 @@ public final class GalaxiaAPI {
     public static EffectBuilder getEffects(Entity e) {
         if (e == null || e.worldObj == null) return new EffectBuilder();
         DimensionDef def = SolarSystemRegistry.getById(e.dimension);
+        if (def == null) return new EffectBuilder();
+        return def.effects();
+    }
+
+    public static EffectBuilder getEffects(int dimension) {
+        DimensionDef def = SolarSystemRegistry.getById(dimension);
         if (def == null) return new EffectBuilder();
         return def.effects();
     }
@@ -140,7 +146,7 @@ public final class GalaxiaAPI {
         EffectBuilder def = SolarSystemRegistry.getById(player.dimension)
             .effects();
 
-        int temp = def.getTemperature(player);
+        int temp = def.getTemperature(player.worldObj);
         int acceptableMaxTemp = HazardTemperature.getAcceptableMaxTemp(player);
         int acceptableMinTemp = HazardTemperature.getAcceptableMinTemp(player);
 
@@ -226,13 +232,13 @@ public final class GalaxiaAPI {
             item -> highPressure ? item.getPressureProtectionHigh() : item.getPressureProtectionLow());
     }
 
-    private static ZeroGMovementProvider getZeroGMovementProvider(EntityPlayer player) {
+    private static IZeroGMovementProvider getZeroGMovementProvider(EntityPlayer player) {
         IInventory baubles = BaublesApi.getBaubles(player);
         if (baubles == null) return null;
 
         for (int slot : Galaxia.rcsSlot) {
             ItemStack stack = baubles.getStackInSlot(slot);
-            if (stack != null && stack.getItem() instanceof ZeroGMovementProvider provider) {
+            if (stack != null && stack.getItem() instanceof IZeroGMovementProvider provider) {
                 return provider;
             }
         }
@@ -240,7 +246,7 @@ public final class GalaxiaAPI {
     }
 
     public static void setZeroGMovement(@Nonnull EntityPlayer player, boolean enabled) {
-        ZeroGMovementProvider provider = getZeroGMovementProvider(player);
+        IZeroGMovementProvider provider = getZeroGMovementProvider(player);
         if (provider != null) provider.setEnabled(enabled);
     }
 
@@ -248,7 +254,7 @@ public final class GalaxiaAPI {
         if (ConfigPlayer.ConfigPlayerGlobal.applyZeroGravityMovement && player.capabilities.isCreativeMode) {
             return true;
         }
-        ZeroGMovementProvider provider = getZeroGMovementProvider(player);
+        IZeroGMovementProvider provider = getZeroGMovementProvider(player);
         return provider != null && provider.isEnabled();
     }
 
@@ -347,34 +353,22 @@ public final class GalaxiaAPI {
         return Loader.isModLoaded("gregtech");
     }
 
-    public static boolean canBreathe(@Nonnull EntityPlayer player) {
-        return canBreathe(
-            player,
-            SolarSystemRegistry.getById(player.dimension)
-                .effects());
-    }
+    public static @Nullable TileStation getStationAround(@Nonnull World world, int dim, int x, int y, int z) {
+        CelestialObjectId id = GalaxiaCelestialAPI.getObjectFromDimension(dim);
+        if (id == CelestialObjectId.INVALID) return null;
 
-    public static boolean canBreathe(@Nonnull EntityPlayer player, EffectBuilder def) {
-        final int oxygenPercent = def.getOxygenPercent(player);
-        if (oxygenPercent >= 100) return true;
+        Set<CelestialAsset.ID> assets = CelestialAssetStore.getAssetsOnBody(id);
+        for (var assetId : assets) {
+            CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
+            if (!(asset instanceof Station station)) continue;
+            BlockPos pos = station.getController();
+            if (pos == null) continue;
+            if (!(world.getTileEntity(pos.x(), pos.y(), pos.z()) instanceof TileStation tileStation)) continue;
 
-        CelestialObjectId id = GalaxiaCelestialAPI.getObjectFromDimension(player.dimension);
-        if (id == CelestialObjectId.INVALID) return false;
-        Set<CelestialAsset> teamAssets = CelestialAssetStore.getTeamAssets(GTTeamsCompat.getTeam(player), id);
-        for (CelestialAsset asset : teamAssets) {
-            if (asset instanceof Station station) {
-                BlockPos pos = station.getController();
-                if (pos == null) continue;
-
-                TileStation controller = (TileStation) player.worldObj.getTileEntity(pos.x(), pos.y(), pos.z());
-
-                if (controller.hasOxygen((int) player.posX, (int) player.posY, (int) player.posZ)) {
-                    return true;
-                }
-            }
+            if (tileStation.isInside(x, y, z)) return tileStation;
         }
 
-        return false;
+        return null;
     }
 
     public static boolean isMachineBlock(Block block, int blockMetadata) {
