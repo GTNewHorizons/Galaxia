@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.rocketmodules.client.render.RocketEntityTest;
 
 import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.nbt.NBTTagCompound;
@@ -34,6 +35,10 @@ public class EntityTest extends Entity {
     public static int restoreSolidUProgram = 0;
     public static int restoreSolidVProgram = 0;
     public static int restoreSolidWProgram = 0;
+    public static int blellochUpProgram = 0;
+    public static int blellochDownProgram = 0;
+    public static int countFillProgram = 0;
+    public static int particleSeparationProgram = 0;
 
     public static int moveProgram = 0;
     public static int exhaustProgram = 0;
@@ -51,6 +56,8 @@ public class EntityTest extends Entity {
     public int ssboWW;
     public int ssboOUTCount;
     public int ssboDebug;
+    public int ssboCount;
+    public int ssboSortedParticle;
 
     final int width = 10 * 8;
     final int height = 8 * 12;
@@ -60,10 +67,9 @@ public class EntityTest extends Entity {
     final int maxWidth = width * cubeLength;
     final int maxHeight = height * cubeLength;
     final int wxh = maxWidth * maxHeight;
-
-    final int[] powers = {
-        1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288
-    };
+    final int particleXSize = 128;
+    final int particleYSize = 64;
+    final int particleZSize = 64;
 
     public static final ByteBuffer zero = BufferUtils.createByteBuffer(4);
 
@@ -96,6 +102,8 @@ public class EntityTest extends Entity {
             GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, 10, ssboWW);
             GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, 11, ssboOUTCount);
             GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, 12, ssboDebug);
+            GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, 13, ssboCount);
+            GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, 14, ssboSortedParticle);
 
             GL42.glBindImageTexture(2, RenderEntityTest.rocketmask1, 0, false, 0, GL15.GL_READ_ONLY, GL11.GL_RGBA8);
 
@@ -151,6 +159,8 @@ public class EntityTest extends Entity {
 
         moveParticles(); // move particles dT (0.05 because 20tps)
 
+        separateParticles();
+
         resetCellVelocities(); // set all velocities and their weights to 0
 
         // set all cells to either solid or air
@@ -193,6 +203,85 @@ public class EntityTest extends Entity {
         System.out.println(GL33.glGetQueryObjectui64(1021, GL15.GL_QUERY_RESULT));
     }
 
+    private void separateParticles() {
+        final int localParticleX = 8;
+        final int localParticleY = 8;
+        final int localParticleZ = 8;
+
+        GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, 0);
+
+        // first we compute prefix sums of our counted particles
+
+        // the particle hashing counts are zeroed before the movement process where we write to the count array
+
+        // count is sparsely placed at its exact index, therefore we ALWAYS need to prefix sum 2^23 (the closest power of 2 to our grid size)
+        int countInt = 8388608; // 2^23
+        int maxInt = width * width * height * perCube;
+
+        // upsweep
+        GL20.glUseProgram(blellochUpProgram);
+
+        for (int stride = 1; stride < countInt; stride *= 2) {
+            GL30.glUniform1ui(GL20.glGetUniformLocation(blellochUpProgram, "stride"), stride);
+            GL30.glUniform1ui(GL20.glGetUniformLocation(blellochUpProgram, "countInt"), countInt);
+
+            // total threads required is half of countInt at stride = 1, divide by 256 because local workgroup is 256
+            GL43.glDispatchCompute(Math.max(1, (countInt / (stride * 2)) / 256), 1, 1);
+
+            GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
+        }
+
+        GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, ssboCount);
+        GL15.glBufferSubData(GL43.GL_SHADER_STORAGE_BUFFER, (countInt - 1) * 4L, zero); // multiply by 4 because 4 bytes per int
+
+        // downsweep
+        GL20.glUseProgram(blellochDownProgram);
+
+        for (int stride = countInt / 2; stride >= 1; stride /= 2) {
+            GL30.glUniform1ui(GL20.glGetUniformLocation(blellochDownProgram, "stride"), stride);
+            GL30.glUniform1ui(GL20.glGetUniformLocation(blellochDownProgram, "countInt"), countInt);
+
+            // total threads required is initially 1 and grows until its countInt / 2 (stride = 1)
+            GL43.glDispatchCompute(Math.max(1, (countInt / (stride * 2)) / 256), 1, 1);
+
+            GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
+        }
+
+        // then we place the particles in the correct position so they are ordered by their hash (the prefix sums are used for this count sort)
+        // This is The Part Where I Count Sort You.
+
+        GL20.glUseProgram(countFillProgram);
+
+        GL30.glUniform1ui(GL20.glGetUniformLocation(countFillProgram, "width"), particleXSize);
+        GL30.glUniform1ui(GL20.glGetUniformLocation(countFillProgram, "height"), particleYSize);
+
+        GL20.glUniform1i(GL20.glGetUniformLocation(countFillProgram, "maxWidth"), maxWidth);
+        GL20.glUniform1i(GL20.glGetUniformLocation(countFillProgram, "maxHeight"), maxHeight);
+
+        GL43.glDispatchCompute(particleXSize / localParticleX, particleYSize / localParticleY, particleZSize / localParticleZ);
+
+        GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
+
+        // then we separate all the particles in not O(N^2)!
+        // i use a jacobi approach for collision resolution, the accumulation array is our existing non-sorted particles overwritten!
+
+        GL20.glUseProgram(particleSeparationProgram);
+
+        GL30.glUniform1ui(GL20.glGetUniformLocation(particleSeparationProgram, "width"), particleXSize);
+        GL30.glUniform1ui(GL20.glGetUniformLocation(particleSeparationProgram, "height"), particleYSize);
+
+        GL20.glUniform1i(GL20.glGetUniformLocation(particleSeparationProgram, "maxWidth"), maxWidth);
+        GL20.glUniform1i(GL20.glGetUniformLocation(particleSeparationProgram, "maxHeight"), maxHeight);
+        GL20.glUniform1i(GL20.glGetUniformLocation(particleSeparationProgram, "wxh"), maxWidth * maxHeight);
+
+        // max int is used in a min() statement and not a >= statement so -1
+        GL20.glUniform1i(GL20.glGetUniformLocation(particleSeparationProgram, "maxInt"), maxInt - 1);
+
+        GL43.glDispatchCompute(particleXSize / localParticleX, particleYSize / localParticleY, particleZSize / localParticleZ);
+
+        GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
+    }
+
     private void createCellFlags() {
         final int localX = 32;
         final int localY = 2;
@@ -210,17 +299,21 @@ public class EntityTest extends Entity {
     }
 
     private void fillFluidCells() {
+        final int localParticleX = 8;
+        final int localParticleY = 8;
+        final int localParticleZ = 8;
+
         GL20.glUseProgram(cellFluidFillProgram);
 
-        GL30.glUniform1ui(GL20.glGetUniformLocation(cellFluidFillProgram, "width"), 10 * 8);
-        GL30.glUniform1ui(GL20.glGetUniformLocation(cellFluidFillProgram, "height"), 10 * 8);
+        GL30.glUniform1ui(GL20.glGetUniformLocation(cellFluidFillProgram, "width"), particleXSize);
+        GL30.glUniform1ui(GL20.glGetUniformLocation(cellFluidFillProgram, "height"), particleYSize);
         GL20.glUniform1i(GL20.glGetUniformLocation(cellFluidFillProgram, "maxWidth"), maxWidth);
         GL20.glUniform1i(GL20.glGetUniformLocation(cellFluidFillProgram, "maxHeight"), maxHeight);
         GL20.glUniform1i(GL20.glGetUniformLocation(cellFluidFillProgram, "wxh"), wxh);
 
         GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, ssboS);
 
-        GL43.glDispatchCompute(10, 10, 10);
+        GL43.glDispatchCompute(particleXSize / localParticleX, particleYSize / localParticleY, particleZSize / localParticleZ);
 
         GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
     }
@@ -242,9 +335,9 @@ public class EntityTest extends Entity {
     }
 
     private void project() {
-        final int localX = 32;
-        final int localY = 4;
-        final int localZ = 4;
+        final int localX = 80;
+        final int localY = 1;
+        final int localZ = 1;
 
         GL20.glUseProgram(projectionProgram);
 
@@ -258,28 +351,32 @@ public class EntityTest extends Entity {
         GL20.glUniform1i(GL20.glGetUniformLocation(projectionProgram, "w1xh"), ((maxWidth) + 1) * (maxHeight));
         GL20.glUniform1i(GL20.glGetUniformLocation(projectionProgram, "wxh1"), (maxWidth) * ((maxHeight) + 1));
 
-        for (int i = 0; i < 30; i++) {
+        for (int i = 0; i < 20; i++) {
             GL20.glUniform1i(rb, 0);
 
-            GL43.glDispatchCompute(maxWidth / localX, maxHeight / localY, maxWidth / localZ);
+            GL43.glDispatchCompute(maxWidth / localX * 2, maxHeight / localY, maxWidth / localZ);
 
             GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
 
             GL20.glUniform1i(rb, 1);
 
-            GL43.glDispatchCompute(maxWidth / localX, maxHeight / localY, maxWidth / localZ);
+            GL43.glDispatchCompute(maxWidth / localX * 2, maxHeight / localY, maxWidth / localZ);
 
             GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
         }
     }
 
     private void transferToParticles() {
+        final int localParticleX = 8;
+        final int localParticleY = 8;
+        final int localParticleZ = 8;
+
         // 3 different programs for each component
         GL20.glUseProgram(toParticleUProgram);
 
         // same thread width as before for particles
-        GL30.glUniform1ui(GL20.glGetUniformLocation(toParticleUProgram, "width"), 10 * 8);
-        GL30.glUniform1ui(GL20.glGetUniformLocation(toParticleUProgram, "height"), 10 * 8);
+        GL30.glUniform1ui(GL20.glGetUniformLocation(toParticleUProgram, "width"), particleXSize);
+        GL30.glUniform1ui(GL20.glGetUniformLocation(toParticleUProgram, "height"), particleYSize);
 
         // various uniforms to be precomputed outside the loop (more details in the shader code)
         GL20.glUniform1i(GL20.glGetUniformLocation(toParticleUProgram, "maxWidth"), maxWidth);
@@ -290,13 +387,13 @@ public class EntityTest extends Entity {
         GL20.glUniform1f(GL20.glGetUniformLocation(toParticleUProgram, "maxWidthDPos"), (maxWidth) + 1);
         GL20.glUniform1f(GL20.glGetUniformLocation(toParticleUProgram, "wxh"), ((maxWidth) + 1) * (maxHeight));
 
-        GL43.glDispatchCompute(10, 10, 10);
+        GL43.glDispatchCompute(particleXSize / localParticleX, particleYSize / localParticleY, particleZSize / localParticleZ);
 
 
         GL20.glUseProgram(toParticleVProgram);
 
-        GL30.glUniform1ui(GL20.glGetUniformLocation(toParticleVProgram, "width"), 10 * 8);
-        GL30.glUniform1ui(GL20.glGetUniformLocation(toParticleVProgram, "height"), 10 * 8);
+        GL30.glUniform1ui(GL20.glGetUniformLocation(toParticleVProgram, "width"), particleXSize);
+        GL30.glUniform1ui(GL20.glGetUniformLocation(toParticleVProgram, "height"), particleYSize);
 
         GL20.glUniform1i(GL20.glGetUniformLocation(toParticleVProgram, "maxWidth"), maxWidth);
         GL20.glUniform1i(GL20.glGetUniformLocation(toParticleVProgram, "maxHeight"), maxHeight);
@@ -306,13 +403,13 @@ public class EntityTest extends Entity {
         GL20.glUniform1f(GL20.glGetUniformLocation(toParticleVProgram, "maxHeightDPos"), (maxHeight) + 1);
         GL20.glUniform1f(GL20.glGetUniformLocation(toParticleVProgram, "wxh"), (maxWidth) * ((maxHeight) + 1));
 
-        GL43.glDispatchCompute(10, 10, 10);
+        GL43.glDispatchCompute(particleXSize / localParticleX, particleYSize / localParticleY, particleZSize / localParticleZ);
 
 
         GL20.glUseProgram(toParticleWProgram);
 
-        GL30.glUniform1ui(GL20.glGetUniformLocation(toParticleWProgram, "width"), 10 * 8);
-        GL30.glUniform1ui(GL20.glGetUniformLocation(toParticleWProgram, "height"), 10 * 8);
+        GL30.glUniform1ui(GL20.glGetUniformLocation(toParticleWProgram, "width"), particleXSize);
+        GL30.glUniform1ui(GL20.glGetUniformLocation(toParticleWProgram, "height"), particleYSize);
 
         GL20.glUniform1i(GL20.glGetUniformLocation(toParticleWProgram, "maxWidth"), maxWidth);
         GL20.glUniform1i(GL20.glGetUniformLocation(toParticleWProgram, "maxHeight"), maxHeight);
@@ -321,18 +418,22 @@ public class EntityTest extends Entity {
         GL20.glUniform1f(GL20.glGetUniformLocation(toParticleWProgram, "maxHeightDNeg"), (maxHeight) - 1);
         GL20.glUniform1f(GL20.glGetUniformLocation(toParticleWProgram, "wxh"), wxh);
 
-        GL43.glDispatchCompute(10, 10, 10);
+        GL43.glDispatchCompute(particleXSize / localParticleX, particleYSize / localParticleY, particleZSize / localParticleZ);
 
         GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
     }
 
     private void transferToCells() {
+        final int localParticleX = 8;
+        final int localParticleY = 8;
+        final int localParticleZ = 8;
+
         // 3 different programs for each component
         GL20.glUseProgram(toCellUProgram);
 
         // same thread width as before for particles
-        GL30.glUniform1ui(GL20.glGetUniformLocation(toCellUProgram, "width"), 10 * 8);
-        GL30.glUniform1ui(GL20.glGetUniformLocation(toCellUProgram, "height"), 10 * 8);
+        GL30.glUniform1ui(GL20.glGetUniformLocation(toCellUProgram, "width"), particleXSize);
+        GL30.glUniform1ui(GL20.glGetUniformLocation(toCellUProgram, "height"), particleYSize);
 
         // various uniforms to be precomputed outside the loop (more details in the shader code)
         GL20.glUniform1i(GL20.glGetUniformLocation(toCellUProgram, "maxWidth"), maxWidth);
@@ -343,13 +444,13 @@ public class EntityTest extends Entity {
         GL20.glUniform1f(GL20.glGetUniformLocation(toCellUProgram, "maxWidthDPos"), (maxWidth) + 1);
         GL20.glUniform1f(GL20.glGetUniformLocation(toCellUProgram, "wxh"), ((maxWidth) + 1) * (maxHeight));
 
-        GL43.glDispatchCompute(10, 10, 10);
+        GL43.glDispatchCompute(particleXSize / localParticleX, particleYSize / localParticleY, particleZSize / localParticleZ);
 
 
         GL20.glUseProgram(toCellVProgram);
 
-        GL30.glUniform1ui(GL20.glGetUniformLocation(toCellVProgram, "width"), 10 * 8);
-        GL30.glUniform1ui(GL20.glGetUniformLocation(toCellVProgram, "height"), 10 * 8);
+        GL30.glUniform1ui(GL20.glGetUniformLocation(toCellVProgram, "width"), particleXSize);
+        GL30.glUniform1ui(GL20.glGetUniformLocation(toCellVProgram, "height"), particleYSize);
 
         GL20.glUniform1i(GL20.glGetUniformLocation(toCellVProgram, "maxWidth"), maxWidth);
         GL20.glUniform1i(GL20.glGetUniformLocation(toCellVProgram, "maxHeight"), maxHeight);
@@ -359,13 +460,13 @@ public class EntityTest extends Entity {
         GL20.glUniform1f(GL20.glGetUniformLocation(toCellVProgram, "maxHeightDPos"), (maxHeight) + 1);
         GL20.glUniform1f(GL20.glGetUniformLocation(toCellVProgram, "wxh"), (maxWidth) * ((maxHeight) + 1));
 
-        GL43.glDispatchCompute(10, 10, 10);
+        GL43.glDispatchCompute(particleXSize / localParticleX, particleYSize / localParticleY, particleZSize / localParticleZ);
 
 
         GL20.glUseProgram(toCellWProgram);
 
-        GL30.glUniform1ui(GL20.glGetUniformLocation(toCellWProgram, "width"), 10 * 8);
-        GL30.glUniform1ui(GL20.glGetUniformLocation(toCellWProgram, "height"), 10 * 8);
+        GL30.glUniform1ui(GL20.glGetUniformLocation(toCellWProgram, "width"), particleXSize);
+        GL30.glUniform1ui(GL20.glGetUniformLocation(toCellWProgram, "height"), particleYSize);
 
         GL20.glUniform1i(GL20.glGetUniformLocation(toCellWProgram, "maxWidth"), maxWidth);
         GL20.glUniform1i(GL20.glGetUniformLocation(toCellWProgram, "maxHeight"), maxHeight);
@@ -374,7 +475,7 @@ public class EntityTest extends Entity {
         GL20.glUniform1f(GL20.glGetUniformLocation(toCellWProgram, "maxHeightDNeg"), (maxHeight) - 1);
         GL20.glUniform1f(GL20.glGetUniformLocation(toCellWProgram, "wxh"), wxh);
 
-        GL43.glDispatchCompute(10, 10, 10);
+        GL43.glDispatchCompute(particleXSize / localParticleX, particleYSize / localParticleY, particleZSize / localParticleZ);
 
         GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
 
@@ -443,17 +544,30 @@ public class EntityTest extends Entity {
     }
 
     private void moveParticles() {
+        final int localParticleX = 8;
+        final int localParticleY = 8;
+        final int localParticleZ = 8;
+
+        GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, ssboCount);
+        GL43.glClearBufferData(GL43.GL_SHADER_STORAGE_BUFFER, GL30.GL_R32I, GL30.GL_RED_INTEGER, GL11.GL_INT, zero); // zero the hashing counts before we write to them
+
+        GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, 0);
+
         GL20.glUseProgram(moveProgram);
 
+        // TODO: rewrite this old comment under here
         // passing precomputed thread width and height values,
         // I dispatch x = 10 and y = 10. internally the local size of
         // the shader is 8x8x8, so thread width = 10 * 8
         // and thread height = 10 * 8
-        GL30.glUniform1ui(GL20.glGetUniformLocation(moveProgram, "width"), 10 * 8);
-        GL30.glUniform1ui(GL20.glGetUniformLocation(moveProgram, "height"), 10 * 8);
+        GL30.glUniform1ui(GL20.glGetUniformLocation(moveProgram, "width"), particleXSize);
+        GL30.glUniform1ui(GL20.glGetUniformLocation(moveProgram, "height"), particleYSize);
+
+        GL20.glUniform1i(GL20.glGetUniformLocation(moveProgram, "maxWidth"), maxWidth);
+        GL20.glUniform1i(GL20.glGetUniformLocation(moveProgram, "maxHeight"), maxHeight);
 
         // unknown array size (local 8x8x8, total 512000 max particles)
-        GL43.glDispatchCompute(10, 10, 10);
+        GL43.glDispatchCompute(particleXSize / localParticleX, particleYSize / localParticleY, particleZSize / localParticleZ);
 
         GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
     }
@@ -462,9 +576,9 @@ public class EntityTest extends Entity {
         GL20.glUseProgram(exhaustProgram);
 
         // currently arbitrary 50, when the movement tracking is added based on a start pos, this needs to move with it
-        GL20.glUniform1f(GL20.glGetUniformLocation(exhaustProgram, "xPos"), 50);
+        GL20.glUniform1f(GL20.glGetUniformLocation(exhaustProgram, "xPos"), 40);
         GL20.glUniform1f(GL20.glGetUniformLocation(exhaustProgram, "yPos"), 80);
-        GL20.glUniform1f(GL20.glGetUniformLocation(exhaustProgram, "zPos"), 50);
+        GL20.glUniform1f(GL20.glGetUniformLocation(exhaustProgram, "zPos"), 40);
 
         GL20.glUniform1f(GL20.glGetUniformLocation(exhaustProgram, "seed"), (float)Math.random());
 
@@ -488,6 +602,8 @@ public class EntityTest extends Entity {
         ssboWW = GL15.glGenBuffers();
         ssboOUTCount = GL15.glGenBuffers();
         ssboDebug = GL15.glGenBuffers();
+        ssboCount = GL15.glGenBuffers();
+        ssboSortedParticle = GL15.glGenBuffers();
 
         // spotless:off
 
@@ -533,7 +649,7 @@ public class EntityTest extends Entity {
         GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, ssboParticle);
         GL15.glBufferData(
             GL43.GL_SHADER_STORAGE_BUFFER,
-            10 * 10 * 10 * 8 * 8 * 8 * 6 * 4, // 512000 max particles
+            particleXSize * particleYSize * particleZSize * 6 * 4, // 2^19 (524288) max particles
             GL15.GL_DYNAMIC_COPY); // particle data
 
         GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, ssboParticleCount);
@@ -573,6 +689,18 @@ public class EntityTest extends Entity {
             GL43.GL_SHADER_STORAGE_BUFFER,
             width * width * height * perCube * 4,
             GL15.GL_DYNAMIC_COPY); // debug data
+
+        GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, ssboCount);
+        GL15.glBufferData(
+            GL43.GL_SHADER_STORAGE_BUFFER,
+            8388608 * 4 + 4, // each cell has its own count of particles, it also needs to be the nearest power of 2 for the blelloch scan (one extra entry for bound safety)
+            GL15.GL_DYNAMIC_COPY); // particle count data
+
+        GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, ssboSortedParticle);
+        GL15.glBufferData(
+            GL43.GL_SHADER_STORAGE_BUFFER,
+            particleXSize * particleYSize * particleZSize * 6 * 4, // 2^19 (524288) max particles
+            GL15.GL_DYNAMIC_COPY); // particle count data
 
         // spotless:on
     }
@@ -646,6 +774,18 @@ public class EntityTest extends Entity {
         }
         if (restoreSolidWProgram == 0) {
             restoreSolidWProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/restore_solid_cell_w.comp");
+        }
+        if (blellochUpProgram == 0) {
+            blellochUpProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/blelloch_upsweep.comp");
+        }
+        if (blellochDownProgram == 0) {
+            blellochDownProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/blelloch_downsweep.comp");
+        }
+        if (countFillProgram == 0) {
+            countFillProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/count_fill.comp");
+        }
+        if (particleSeparationProgram == 0) {
+            particleSeparationProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/particle_separation.comp");
         }
     }
 

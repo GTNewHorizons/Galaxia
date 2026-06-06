@@ -13,7 +13,7 @@ struct Particle {
 };
 
 layout(std430, binding = 6) buffer p {
-    Particle P[];
+    coherent restrict readonly Particle P[];
 };
 
 layout(std430, binding = 7) buffer n {
@@ -21,7 +21,11 @@ layout(std430, binding = 7) buffer n {
 };
 
 layout(std430, binding = 13) buffer co {
-    int count[];
+    coherent restrict int count[];
+};
+
+layout(std430, binding = 14) buffer ps {
+    coherent restrict writeonly Particle PS[];
 };
 
 uniform uint width;
@@ -29,14 +33,6 @@ uniform uint height;
 
 uniform int maxWidth;
 uniform int maxHeight;
-
-const float dT = 0.05; // standard minecraft tick delta time
-const float gravity = -0.81;
-
-const float dens = 1.22;
-const float dragCoeff = 0.47;
-const float crossSection = 0.2;
-const float form = 0.5 * dens * crossSection * dragCoeff;
 
 void main() {
     // width and height are given through uniforms for optimsation's sake
@@ -46,18 +42,13 @@ void main() {
 
     if (current < index) {
         Particle particle = P[current];
-        particle.u -= (abs(particle.u) * particle.u) * form * dT;
-        particle.v -= (abs(particle.v) * particle.v) * form * dT;
-        particle.w -= (abs(particle.w) * particle.w) * form * dT;
-        //particle.v += gravity * dT;
-        particle.x += particle.u * dT;
-        particle.y += ((particle.v) * dT);
-        particle.z += particle.w * dT;
 
         int cellIndex = int(particle.x) + (int(particle.y) * maxWidth) + (int(particle.z) * maxWidth * maxHeight);
 
-        P[current] = particle;
+        // The Part Where She Count Sorts You.
 
-        atomicAdd(count[cellIndex], 1);
+        int particleIndex = (atomicAdd(count[cellIndex + 1], -1) - 1);
+
+        PS[particleIndex] = particle; // This is The Part Where She Count Sorts Us.
     }
 }
