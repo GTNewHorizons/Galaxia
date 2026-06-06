@@ -11,10 +11,13 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemReactionControlSystem;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemGalacticMap;
+import com.gtnewhorizons.galaxia.registry.items.special.ItemKineticTether;
+import com.gtnewhorizons.galaxia.registry.items.special.ItemRocketSchematic;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemTeleporter;
 
 import cpw.mods.fml.common.registry.GameRegistry;
@@ -33,13 +36,15 @@ public enum GalaxiaItemList {
     // TOOLS
     ITEM_TELEPORTER("tool/teleporter", ItemTeleporter::new, 1),
     ITEM_GALACTIC_MAP("tool/galactic_map", ItemGalacticMap::new, 1),
+    ITEM_ROCKET_SCHEMATIC("tool/schematic", ItemRocketSchematic::new, 1),
+    ITEM_KINETIC_TETHER("tool/kinetic_tether", ItemKineticTether::new, 1),
 
     // Worldgen dust & ores
-    DUST_THEIA("ore/theia_dust"),
-    THEIA_TEKTITE_SHARD("ore/theia_tektite_shard"),
-    DUST_HEMATERIA("ore/hemateria_dust"),
-    HEMATERIA_TEKTITE_SHARD("ore/hemateria_tektite_shard"),
-    HEMATERIA_ICE_CUBES("ore/hemateria_ice_cubes"),
+    DUST_MOON("ore/moon_dust"),
+    MOON_TEKTITE_SHARD("ore/moon_tektite_shard"),
+    DUST_MARS("ore/mars_dust"),
+    MARS_TEKTITE_SHARD("ore/mars_tektite_shard"),
+    MARS_ICE_CUBES("ore/mars_ice_cubes"),
 
     CINNABAR_SCALE("ore/cinnabar_scale"),
     ENCHANTED_CINNABAR_SCALE("ore/enchanted_cinnabar_scale"),
@@ -55,22 +60,23 @@ public enum GalaxiaItemList {
 
     // PARTS
     HEAVY_DUTY_PLATE_BASE("parts/heavy_duty_plate_base"),
-    satellite_dish("parts/satellite_dish"),
+    SATELLITE_DISH("parts/satellite_dish"),
     BOROSILICATE_GLASS_BAR("parts/borosilicate_glass_bar"),
 
     // GEAR
     OXYGEN_TANK_T1("gear/oxygen_tank_1", () -> new ItemOxygenTank(1000), 1),
     OXYGEN_TANK_T2("gear/oxygen_tank_2", () -> new ItemOxygenTank(4000), 1),
     OXYGEN_TANK_T3("gear/oxygen_tank_3", () -> new ItemOxygenTank(16000), 1),
-    OXYGEN_TANK_T4("gear/oxygen_tank_4", () -> new ItemOxygenTank(Integer.MAX_VALUE), 1),
+    OXYGEN_TANK_INFINITE("gear/oxygen_tank_4", () -> new ItemOxygenTank(Integer.MAX_VALUE), 1),
     THERMAL_PROTECTION_COLD("gear/thermal_protection_cold", () -> new ItemThermalProtection(0, 100), 1),
     THERMAL_PROTECTION_HOT("gear/thermal_protection_hot", () -> new ItemThermalProtection(100, 0), 1),
-    OXYGEN_MASK("gear/oxygen_mask", () -> new ItemOxygenMask(), 1),
-    SPORE_FILTER("gear/spore_filter", () -> new ItemSporeFilter(), 1),
+    OXYGEN_MASK("gear/oxygen_mask", ItemOxygenMask::new, 1),
+    SPORE_FILTER("gear/spore_filter", ItemSporeFilter::new, 1),
     PRESSURE_PROTECTION_HIGH("gear/protection_shield_pressure_high", () -> new ItemProtectionShield(4, 0, 0), 1),
     PRESSURE_PROTECTION_LOW("gear/protection_shield_pressure_low", () -> new ItemProtectionShield(0, 1, 0), 1),
     RADIATION_PROTECTION("gear/protection_shield_radiation", () -> new ItemProtectionShield(0, 0, 10), 1),
-    WITHER_PROTECTION("gear/wither_protection", () -> new ItemWitherProtection(), 1),
+    WITHER_PROTECTION("gear/wither_protection", ItemWitherProtection::new, 1),
+    REACTION_CONTROL_SYSTEM_T1("gear/reaction_control_system", ItemReactionControlSystem::new, 1),
 
     ; // leave trailing semicolon
 
@@ -79,10 +85,6 @@ public enum GalaxiaItemList {
     private final Supplier<Item> itemFactory;
     private Item itemInstance;
     private final String texturePath;
-    /**
-     * NOT AN ENUM VALE, USED FOR PLANET BLOCK REGISTRATION
-     */
-    public static final GalaxiaItemList DROP_SELF = null;
 
     /**
      * Constructor to initialize factory and registry
@@ -111,7 +113,7 @@ public enum GalaxiaItemList {
     }
 
     /**
-     * Constructor to initalize the registry using default item factory and stack
+     * Constructor to initialize the registry using default item factory and stack
      * size of 64
      *
      * @param registryName Name of the registry
@@ -150,14 +152,5 @@ public enum GalaxiaItemList {
      */
     public Item getItem() {
         return itemInstance;
-    }
-
-    /**
-     * Gets the registry name
-     *
-     * @return Registry name
-     */
-    public String getRegistryName() {
-        return registryName;
     }
 }

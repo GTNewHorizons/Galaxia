@@ -7,22 +7,24 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.gtnewhorizons.galaxia.Tags;
-import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
-import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
-import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.SidedProxy;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
+import cpw.mods.fml.common.event.FMLInterModComms;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.network.simpleimpl.SimpleNetworkWrapper;
-import cpw.mods.fml.relauncher.Side;
 
-@Mod(modid = Galaxia.MODID, name = Galaxia.NAME, version = Tags.VERSION, acceptedMinecraftVersions = "[1.7.10]")
+@Mod(
+    modid = Galaxia.MODID,
+    name = Galaxia.NAME,
+    version = Tags.VERSION,
+    acceptedMinecraftVersions = "[1.7.10]",
+    dependencies = "after:gregtech;after:gtnhlib")
 public final class Galaxia {
 
     // spotless:off
@@ -44,6 +46,7 @@ public final class Galaxia {
     public static int[] sporeFilterSlots;
     public static int[] thermalSlot;
     public static int[] witherSlots;
+    public static int[] rcsSlot;
 
     @SidedProxy(clientSide = "com.gtnewhorizons.galaxia.core.ClientProxy", serverSide = "com.gtnewhorizons.galaxia.core.CommonProxy")
     public static CommonProxy proxy;
@@ -56,8 +59,9 @@ public final class Galaxia {
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
-        registerNetwork();
         proxy.init(event);
+        FMLInterModComms
+            .sendMessage("Waila", "register", "com.gtnewhorizons.galaxia.compat.WailaRocketProvider.register");
     }
 
     @Mod.EventHandler
@@ -73,17 +77,6 @@ public final class Galaxia {
         proxy.serverStarting(event);
     }
 
-    // spotless:off
-    private static void registerNetwork() {
-        int id = 0;
-        GALAXIA_NETWORK.registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, id++,
-                Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(OxygenSyncPacket.Handler.class, OxygenSyncPacket.class, id++, Side.CLIENT);
-        GALAXIA_NETWORK.registerMessage(DestinationSetPacket.Handler.class, DestinationSetPacket.class, id++,
-                Side.SERVER);
-    }
-    // spotless:on
-
     public static final CreativeTabs creativeTab = new CreativeTabs(MODID) {
 
         @Override
@@ -91,4 +84,5 @@ public final class Galaxia {
             return GalaxiaItemList.GALAXIA_LOGO.getItem();
         }
     };
+
 }

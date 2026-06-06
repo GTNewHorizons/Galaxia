@@ -1,10 +1,12 @@
 package com.gtnewhorizons.galaxia.registry.dimension.builder;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import net.minecraft.block.Block;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.WorldProvider;
 import net.minecraftforge.common.DimensionManager;
 
@@ -12,7 +14,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.CelestialBody;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumTiers;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
 
 /**
  * Builder class to configure dimensions properly
@@ -53,9 +55,11 @@ public class DimensionBuilder {
     private double gravity = 1;
     private double air_resistance = 1;
     private boolean removeSpeedCancelation = false;
-    private List<CelestialBody> celestialBodies = Collections.emptyList();
+    private List<CelestialBody> celestialBodies = List.of();
     private EffectBuilder effects;
     private EnumTiers tier = EnumTiers.TIER_1;
+    private ResourceLocation[] skyboxTexture = null;
+    private List<Block> validSpaceStationBlocks = new ArrayList<>();
 
     /**
      * Sets the name and ID based on the ENUM provided
@@ -199,6 +203,37 @@ public class DimensionBuilder {
     }
 
     /**
+     * Sets a static cubemap skybox from 6 individual face textures.
+     * Order: +Y (top), -Y (bottom), +Z (south), -Z (north), +X (east), -X (west)
+     *
+     * @param top    +Y face
+     * @param bottom -Y face
+     * @param south  +Z face
+     * @param north  -Z face
+     * @param east   +X face
+     * @param west   -X face
+     */
+    public DimensionBuilder skybox(ResourceLocation top, ResourceLocation bottom, ResourceLocation south,
+        ResourceLocation north, ResourceLocation east, ResourceLocation west) {
+        skybox(new ResourceLocation[] { top, bottom, south, north, east, west });
+        return this;
+    }
+
+    /**
+     * Sets a static cubemap skybox from 6 individual face textures from a list of resource locations.
+     * Order: +Y (top), -Y (bottom), +Z (south), -Z (north), +X (east), -X (west)
+     */
+    public DimensionBuilder skybox(ResourceLocation[] skyboxTexture) {
+        this.skyboxTexture = skyboxTexture;
+        return this;
+    }
+
+    // overload for all 6
+    public DimensionBuilder skybox(ResourceLocation all) {
+        return skybox(all, all, all, all, all, all);
+    }
+
+    /**
      * Sets the effect builder for the dimension
      *
      * @param effects The effect builder required for the planet
@@ -206,6 +241,20 @@ public class DimensionBuilder {
      */
     public DimensionBuilder effects(EffectBuilder effects) {
         this.effects = effects;
+        return this;
+    }
+
+    /**
+     * @param blocks each block must be registered as a machine block
+     * @return Configured builder
+     */
+    public final DimensionBuilder addValidSpaceStationBlocks(Block... blocks) {
+        this.validSpaceStationBlocks.addAll(List.of(blocks));
+        return this;
+    }
+
+    public DimensionBuilder addValidSpaceStationBlock(Block block) {
+        this.validSpaceStationBlocks.add(block);
         return this;
     }
 
@@ -221,9 +270,6 @@ public class DimensionBuilder {
 
         // Register the dimension
         DimensionManager.registerProviderType(id, providerClass, keepLoaded);
-        if (!DimensionManager.isDimensionRegistered(id)) {
-            DimensionManager.registerDimension(id, id);
-        }
 
         // Create DEF with given fields
         DimensionDef def = new DimensionDef(
@@ -239,7 +285,9 @@ public class DimensionBuilder {
             mass,
             orbitalRadius,
             radius,
-            tier);
+            tier,
+            skyboxTexture,
+            validSpaceStationBlocks);
 
         // Add dimension to hashmaps
         BY_NAME.put(name.toLowerCase(), def);

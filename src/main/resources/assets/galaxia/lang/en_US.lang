@@ -1,22 +1,5 @@
 ## Galaxia English (US) translation file
 
-## Before you commit war crime please read:
-## Strings marked with [?] = Need correct name, currently placeholder
-## Use StatCollector and localized enum Colors
-## Have "§r" (color reset) at the end of colored string
-## Keep the lang file nice and clean '='
-#
-## Sort like:
-# Creative tab
-# Baubles
-# Block
-# Items
-# Elements
- #- Gui
- #- Tooltip
- #- Other
-# Config
-
 #### Creative tab
 itemGroup.galaxia=§9Galaxia§r
 
@@ -24,207 +7,450 @@ itemGroup.galaxia=§9Galaxia§r
 galaxia.nei.multiblock.name=Multiblock Structure
 
 #### Baubles
-slot.oxygen_tank=Oxygen Tank
-slot.thermal_protection=Thermal Protection
-slot.protection_shield=Protection Shielding
-slot.wither_protection=Wither Protection
-slot.spore_filter=Spore Filter
 slot.oxygen_mask=Oxygen Mask
+slot.oxygen_tank=Oxygen Tank
+slot.protection_shield=Protection Shielding
+slot.spore_filter=Spore Filter
+slot.thermal_protection=Thermal Protection
+slot.wither_protection=Wither Protection
+slot.reaction_control_system=Reaction Control System
+
+#### Dimensions
+galaxia.dimension.frozen_belt=Frozen Belt
+galaxia.dimension.mars=Mars
+galaxia.dimension.panspira=Panspira
+galaxia.dimension.tenebrae=Tenebrae
+galaxia.dimension.moon=Moon
+galaxia.dimension.overworld_orbit=Overworld Orbit Stations
+
+#### Celestial Bodies
+galaxia.celestial.novum_caelum=Novum Caelum
+galaxia.celestial.vael=Vael
+galaxia.celestial.ilia=Ilia
+galaxia.celestial.proxima_centauri=Proxima Centauri
+galaxia.celestial.romulus=Romulus
+galaxia.celestial.remus=Remus
+galaxia.celestial.egora=Egora
+galaxia.celestial.panspira=Panspira
+galaxia.celestial.mars=Mars
+galaxia.celestial.moon=Moon
+galaxia.celestial.frozen_belt=Frozen Belt
+galaxia.celestial.ambergris_fragment=Ambergris Fragment
+galaxia.celestial.overworld_orbit=Overworld Orbit
+galaxia.celestial.overworld=Overworld
 
 #### Blocks
+# Blocks - "Moon"
+tile.moon_andesite.name=Moon Andesite
+tile.moon_anorthosite.name=Moon Anorthosite
+tile.moon_basalt.name=Moon Basalt
+tile.moon_breccia.name=Moon Breccia
+tile.moon_gabbro.name=Moon Gabbro
+tile.moon_magma.name=Moon Magma
+tile.moon_obsidian.name=Moon Obsidian
+tile.moon_regolith.name=Moon Regolith
+tile.moon_tektite.name=Moon Tektite
 
-# Blocks Theia
-tile.theia_regolith.name=Theia Regolith
-tile.theia_magma.name=Theia Magma
-tile.theia_gabbro.name=Theia Gabbro
-tile.theia_breccia.name=Theia Breccia
-tile.theia_basalt.name=Theia Basalt
-tile.theia_anorthosite.name=Theia Anorthosite
-tile.theia_andesite.name=Theia Andesite
-tile.theia_tektite.name=Theia Tektite
-tile.theia_obsidian.name=Theia Obsidian
+# Blocks - "Moon Decoration"
+tile.moon_andesite_bricks.name=Moon Andesite Bricks
+tile.moon_andesite_smooth.name=Smooth Moon Andesite
+tile.moon_andesite_tiles.name=Moon Andesite Tiles
+tile.moon_andesite_small_bricks.name=Small Moon Andesite Bricks
+tile.moon_andesite_fancy_bricks.name=Fancy Moon Andesite Bricks
+tile.moon_basalt_bricks.name=Moon Basalt Bricks
+tile.moon_basalt_smooth.name=Smooth Moon Basalt
+tile.moon_basalt_tiles.name=Moon Basalt Tiles
+tile.moon_basalt_small_bricks.name=Small Moon Basalt Bricks
+tile.moon_basalt_fancy_bricks.name=Fancy Moon Basalt Bricks
+tile.moon_tektite_bricks.name=Moon Tektite Bricks
+tile.moon_tektite_smooth.name=Smooth Moon Tektite
+tile.moon_tektite_tiles.name=Moon Tektite Tiles
+tile.moon_tektite_small_bricks.name=Small Moon Tektite Bricks
+tile.moon_tektite_fancy_bricks.name=Fancy Moon Tektite Bricks
+tile.moon_breccia_bricks.name=Moon Breccia Bricks
+tile.moon_breccia_smooth.name=Smooth Moon Breccia
+tile.moon_breccia_tiles.name=Moon Breccia Tiles
+tile.moon_breccia_small_bricks.name=Small Moon Breccia Bricks
+tile.moon_breccia_fancy_bricks.name=Fancy Moon Breccia Bricks
+tile.moon_gabbro_bricks.name=Moon Gabbro Bricks
+tile.moon_gabbro_smooth.name=Smooth Moon Gabbro
+tile.moon_gabbro_tiles.name=Moon Gabbro Tiles
+tile.moon_gabbro_small_bricks.name=Small Moon Gabbro Bricks
+tile.moon_gabbro_fancy_bricks.name=Fancy Moon Gabbro Bricks
+tile.moon_anorthosite_bricks.name=Moon Anorthosite Bricks
+tile.moon_anorthosite_smooth.name=Smooth Moon Anorthosite 
+tile.moon_anorthosite_tiles.name=Moon Anorthosite Tiles
+tile.moon_anorthosite_small_bricks.name=Small Moon Anorthosite Bricks
+tile.moon_anorthosite_fancy_bricks.name=Fancy Moon Anorthosite Bricks
 
-# Blocks Hemateria
-tile.hemateria_regolith.name=Hemateria Regolith
-tile.hemateria_andesite.name=Hemateria Andesite
-tile.hemateria_basalt.name=Hemateria Basalt
-tile.hemateria_snow.name=Hemateria Snow
-tile.hemateria_magma.name=Hemateria Magma
-tile.hemateria_rhyolite.name=Hemateria Rhyolite
-tile.hemateria_ice.name=Hemateria Ice
-tile.hemateria_dense_ice.name=Hemateria Dense Ice
-tile.hemateria_peridotite.name=Hemateria Peridotite
-tile.hemateria_sand.name=Hemateria Sand
-tile.hemateria_sandstone.name=Hemateria Sandstone
-tile.hemateria_tuff.name=Hemateria Tuff
-tile.hemateria_tektite.name=Hemateria Tektite
 
-# Blocks Frozen Belt
-tile.frozen_belt_ice.name=Frozen Belt Ice
-tile.frozen_belt_breccia.name=Frozen Belt Breccia
-tile.frozen_belt_gabbro.name=Frozen Belt Gabbro
-tile.frozen_belt_basalt.name=Frozen Belt Basalt
+# Blocks - "Mars"
+tile.mars_andesite.name=Mars Andesite
+tile.mars_anorthosite.name=Mars Anorthosite
+tile.mars_basalt.name=Mars Basalt
+tile.mars_dense_ice.name=Mars Dense Ice
+tile.mars_ice.name=Mars Ice
+tile.mars_magma.name=Mars Magma
+tile.mars_peridotite.name=Mars Peridotite
+tile.mars_regolith.name=Mars Regolith
+tile.mars_rhyolite.name=Mars Rhyolite
+tile.mars_sand.name=Mars Sand
+tile.mars_sandstone.name=Mars Sandstone
+tile.mars_snow.name=Mars Snow
+tile.mars_tektite.name=Mars Tektite
+tile.mars_tuff.name=Mars Tuff
+
+# Blocks - "Frozen Belt"
 tile.frozen_belt_andesite.name=Frozen Belt Andesite
 tile.frozen_belt_anorthosite.name=Frozen Belt Anorthosite
+tile.frozen_belt_basalt.name=Frozen Belt Basalt
+tile.frozen_belt_breccia.name=Frozen Belt Breccia
+tile.frozen_belt_gabbro.name=Frozen Belt Gabbro
+tile.frozen_belt_ice.name=Frozen Belt Ice
 
-# Blocks Panspira
-tile.panspira_regolith.name=Panspira Regolith
+# Blocks - "Panspira"
 tile.panspira_andesite.name=Panspira Andesite
-tile.panspira_snow.name=Panspira Snow
-tile.panspira_stone.name=Panspira Stone
-tile.panspira_soil.name=Panspira Soil
 tile.panspira_magma.name=Panspira Magma
-tile.fumarole.name=Fumarole
+tile.panspira_regolith.name=Panspira Regolith
+tile.panspira_snow.name=Panspira Snow
+tile.panspira_soil.name=Panspira Soil
+tile.panspira_stone.name=Panspira Stone
 
-# Blocks Tenebrae
-tile.tenebrae_basalt.name=Tenebrae Basalt
-tile.tenebrae_magma.name=Tenebrae Magma
+# Blocks - "Tenebrae"
 tile.tenebrae_andesite.name=Tenebrae Andesite
-tile.tenebrae_regolith.name=Tenebrae Regolith
 tile.tenebrae_ash.name=Tenebrae Ash
-tile.tenebrae_pyrite_regolith.name=Tenebrae Pyrite Regolith
-tile.tenebrae_sulfuric_regolith.name=Tenebrae Sulfuric Regolith
-tile.tenebrae_rhyolite.name=Tenebrae Rhyolite
-tile.tenebrae_latite.name=Tenebrae Latite
+tile.tenebrae_basalt.name=Tenebrae Basalt
 tile.tenebrae_brimstone.name=Tenebrae Brimstone
-tile.tenebrae_fumarole.name=Tenebrae Fumarole
+tile.tenebrae_latite.name=Tenebrae Latite
+tile.tenebrae_magma.name=Tenebrae Magma
+tile.tenebrae_pyrite_regolith.name=Tenebrae Pyrite Regolith
+tile.tenebrae_regolith.name=Tenebrae Regolith
+tile.tenebrae_rhyolite.name=Tenebrae Rhyolite
+tile.tenebrae_sulfuric_regolith.name=Tenebrae Sulfuric Regolith
 
-# Asteroid Belt
-
+# Blocks - "Asteroid Belt"
+tile.black_asteroid_shell.name=Black Asteroid Shell
+tile.frozen_asteroid_shell.name=Frozen Asteroid Shell
+tile.grey_asteroid_shell.name=Grey Asteroid Shell
 tile.naquadah_asteroid_shell.name=Naquadah Asteroid Shell
 tile.olivine_asteroid_shell.name=Olivine Asteroid Shell
-tile.frozen_asteroid_shell.name=Frozen Asteroid Shell
-tile.red_asteroid_shell.name=[?]Red Asteroid Shell
-tile.black_asteroid_shell.name=[?]Black Asteroid Shell
+tile.red_asteroid_shell.name=Red Asteroid Shell
 tile.rocky_asteroid_shell.name=Rocky Asteroid Shell
-tile.grey_asteroid_shell.name=[?]Grey Asteroid Shell
 tile.silver_asteroid_shell.name=Silver Asteroid Shell
 
-# Blocks Space Station
+# Blocks - "Space Station"
+tile.space_air.name=Space Air
 tile.space_station_block.name=Space Insulation Block
 tile.space_station_glass.name=Space glass
-tile.nodule_controller.name=Station Module Controller
-tile.space_air.name=Space Air
-tile.module_assembler_controller.name=Module Assembler
-tile.silo_controller.name=Rocket Silo
 tile.space_station_panel.name=Space Station Panel
-tile.gantry_block.name=Gantry Shaft
-tile.gantry_terminal.name=Gantry Terminal
 
-# Miscellaneous / Resource blocks
-tile.block_of_pyrite.name=Block of Pyrite
+# Blocks - "Space Station Airlock"
+tile.airlock_controller.name=AirLock Controller
+tile.airlock_door.name=AirLock Door
+tile.airlock_casing.name=AirLock Casing
+
+# Blocks - "Miscellaneous / Resource blocks"
+tile.bleeding_obsidian.name=Bleeding Obsidian
 tile.block_of_cheese.name=Block of Cheese
 tile.block_of_cinnabar.name=Block of Cinnabar
+tile.block_of_pyrite.name=Block of Pyrite
+tile.enchanted_block_of_cinnabar.name=Enchanted Block of Cinnabar
+tile.launchpad.name=Launchpad Casing
 tile.meteoric_iron_block.name=Meteoric Iron Block
 tile.raw_sulfur_block.name=Raw Sulfur Block
-tile.enchanted_block_of_cinnabar.name=Enchanted Block of Cinnabar
-tile.rusty_iron_block.name=Rusty Iron Block
-tile.bleeding_obsidian.name=Bleeding Obsidian
-tile.rusty_scaffolding.name=Rusty Scaffolding
-tile.rusty_panel.name=Rusty Panel
-tile.rusty_sheetmetal.name=Rusty Sheetmetal
-tile.launchpad.name=Launchpad Casing
 tile.research_outpost_casing.name=Research Outpost Casing
+tile.rusty_iron_block.name=Rusty Iron Block
+tile.rusty_panel.name=Rusty Panel
+tile.rusty_scaffolding.name=Rusty Scaffolding
+tile.rusty_sheetmetal.name=Rusty Sheetmetal
+
+# Blocks - "Liquid blocks"
+tile.lahar.name=Lahar
+tile.liquid_mercury.name=Liquid Mercury
+tile.molten_resin.name=Molten Resin
+tile.tenebrae_lava.name=Tenebrae Lava
+
+# Blocks - "Tile Entities"
+tile.module_controller.name=Station Module Controller
+tile.station_controller.name=Station Controller
+tile.station_room.name=Station Room
+tile.silo_controller.name=Rocket Silo
+tile.module_assembler_controller.name=Module Assembler
+tile.tenebrae_fumarole.name=Fumarole
+tile.gantry_block.name=Gantry Shaft
+tile.hammer_cannon.name=Hammer Cannon
+tile.gantry_terminal.name=Gantry Terminal
+tile.rocket_trophy.name=Rocket Trophy
 
 #### Items
-item.galaxia.galaxia_logo.name=Galaxia Logo
-
-# Tools
-item.galaxia.teleporter.name=Teleporter
+item.galaxia.galaxia_logo.name=Galaxia
+# Items - "Tools"
 item.galaxia.galactic_map.name=Galactic Map
-item.galaxia.linking_tool.name=Linking tool
+item.galaxia.teleporter.name=Teleporter
 
-# Worldgen / Ores
-item.galaxia.theia_dust.name=Theia Dust
-item.galaxia.theia_tektite_shard.name=Theia Tektite Shard
+# Items - Tools - "Rocket Schematic"
+item.galaxia.schematic.name=Rocket Schematic
+item.galaxia.rocket_schematic.saved_name_none=Unnamed Schematic
+item.galaxia.rocket_schematic.empty=Empty schematic
+item.galaxia.rocket_schematic.modules=Modules: %d
+item.galaxia.rocket_schematic.height=Height: %.1fm
+item.galaxia.rocket_schematic.width=Width: %.1fm
 
-item.galaxia.hemateria_dust.name=Hemateria Dust
-item.galaxia.hemateria_tektite_shard.name=Hemateria Tektite Shard
-item.galaxia.hemateria_ice_cubes.name=Hemateria Ice Cubes
-
+# Items - "Worldgen / Ores"
+item.galaxia.amber_shard.name=Amber Shard
 item.galaxia.cinnabar_scale.name=Cinnabar Scale
 item.galaxia.enchanted_cinnabar_scale.name=Enchanted Cinnabar Scale
-item.galaxia.meteoric_iron_shard.name=Meteoric Iron Shard
-item.galaxia.meteoric_iron_ingot.name=Meteoric Iron Ingot
-item.galaxia.raw_meteoric_iron.name=Raw Meteoric Iron
+item.galaxia.mars_dust.name=Mars Dust
+item.galaxia.mars_ice_cubes.name=Mars Ice Cubes
+item.galaxia.mars_tektite_shard.name=Mars Tektite Shard
 item.galaxia.hematite_dust.name=Hematite Dust
 item.galaxia.hematite_ingot.name=Hematite Ingot
-item.galaxia.amber_shard.name=Amber Shard
-item.galaxia.psychedelic_amber_shard.name=[?] Enchanted Amber Shard
+item.galaxia.meteoric_iron_ingot.name=Meteoric Iron Ingot
+item.galaxia.meteoric_iron_shard.name=Meteoric Iron Shard
+item.galaxia.psychedelic_amber_shard.name=Enchanted Amber Shard
 item.galaxia.pyrite_cubes.name=Pyrite Cubes
+item.galaxia.raw_meteoric_iron.name=Raw Meteoric Iron
+item.galaxia.moon_dust.name=Moon Dust
+item.galaxia.moon_tektite_shard.name=Moon Tektite Shard
 
-# Armor
+# Items - "Armor"
 item.galaxia.spacesuit_helmet.name=Space Suit Helmet
 item.galaxia.spacesuit_chestplate.name=Space Suit Chestplate
 item.galaxia.spacesuit_leggings.name=Space Suit Leggings
 item.galaxia.spacesuit_boots.name=Space Suit Boots
 
-# Gear / Baubles
+# Items - "Gear"
 item.galaxia.oxygen_tank_1.name=Small Oxygen Tank
 item.galaxia.oxygen_tank_2.name=Medium Oxygen Tank
 item.galaxia.oxygen_tank_3.name=Large Oxygen Tank
-item.galaxia.oxygen_tank_4.name=§6Creative Oxygen Tank§r
-item.galaxia.oxygen_tank.desc=Capacity: %s / %s
-item.galaxia.oxygen_tank.infinite=Capacity: §cInfinite§r
+item.galaxia.oxygen_tank_4.name=Creative Oxygen Tank
+item.galaxia.oxygen_mask.name=Oxygen Mask
 item.galaxia.thermal_protection_cold.name=Cold Thermal Protection
 item.galaxia.thermal_protection_hot.name=Hot Thermal Protection
-item.galaxia.thermal_protection.desc.cold=Frost Protection: +%s
-item.galaxia.thermal_protection.desc.hot=Heat Protection: +%s
 item.galaxia.protection_shield_radiation.name=Radiation Shielding
 item.galaxia.protection_shield_pressure_high.name=High Pressure Shielding
 item.galaxia.protection_shield_pressure_low.name=Low Pressure Shielding
-item.galaxia.protection_shield_radiation.desc=Radiation Shielding: +%s
-item.galaxia.protection_shield_pressure.desc.low=Low Pressure Shielding: +%s
-item.galaxia.protection_shield_pressure.desc.high=High Pressure Shielding: +%s
-item.galaxia.oxygen_mask.name=Oxygen Mask
-item.galaxia.oxygen_mask.desc=Allows the use of oxygen tanks to breathe in low oxygen environments
 item.galaxia.spore_filter.name=Spore Filter
-item.galaxia.spore_filter.desc=Filters out any atmospheric spores
 item.galaxia.wither_protection.name=Wither Protection
-item.galaxia.wither_protection.desc=Provides protection from atmospheric withering effects
+item.galaxia.reaction_control_system.name=Reaction Control System
 
-
-
-# Parts
+# Items - "Parts"
 item.galaxia.borosilicate_glass_bar.name=Borosilicate Glass Bar
 item.galaxia.heavy_duty_plate_base.name=Heavy Duty Plate
 item.galaxia.satellite_dish.name=Satellite Transmitter Dish
 
 #### Liquids
-
-# buckets
+# Liquids - "Buckets"
 item.lahar_bucket.name=Bucket of Lahar
 item.molten_resin_bucket.name=Bucket of Molten Resin
 item.tenebrae_lava_bucket.name=Bucket of Tenebrae Lava
 item.liquid_mercury_bucket.name=Bucket of Liquid Mercury
 
-# liquid blocks
-tile.lahar.name=Lahar
-tile.molten_resin.name=Molten Resin
-tile.tenebrae_lava.name=Tenebrae Lava
-tile.liquid_mercury.name=Liquid Mercury
+#### Elements
+# Elements - "GUI"
+# Elements - GUI - "Planet Teleporter"
+galaxia.gui.planet_teleporter.title=Planet Teleporter
+galaxia.gui.planet_teleporter.teleport=Teleport
+galaxia.gui.planet_teleporter.selected=Selected: %s
+
+# Elements - GUI - "Orbital GUI"
+galaxia.gui.orbital.search=Search
+galaxia.gui.orbital.search.placeholder=Enter name...
+
+# Elements - GUI - "Rocket Silo"
+galaxia.gui.rocket_silo.title=Rocket Silo
+galaxia.gui.rocket_silo.assembler_none=No Module Assembler linked
+galaxia.gui.rocket_silo.build=Build Rocket
+galaxia.gui.rocket_silo.launch=Launch Rocket
+galaxia.gui.rocket_silo.save=Save Schematic
+galaxia.gui.rocket_silo.builder.return_modules=Return Modules
+galaxia.gui.rocket_silo.builder.enter_rocket=Enter Rocket
+galaxia.gui.rocket_silo.builder.schematic_save=Save build to schematic
+galaxia.gui.rocket_silo.builder.schematic_text=Schematic Name:
+galaxia.gui.rocket_silo.button.overworld=Overworld
+galaxia.gui.rocket_silo.not_formed=Rocket Silo not properly formed!
+
+# Elements - GUI - "Rocket Silo Validator"
+galaxia.gui.rocket_silo.validator.lander_none=Requires a Lander module
+galaxia.gui.rocket_silo.validator.too_heavy=This rocket is too heavy to lift off
+galaxia.gui.rocket_silo.validator.capsule_none=Requires at least one Capsule module
+galaxia.gui.rocket_silo.validator.too_many_modules=Only %d %s supported in a %s rocket
+galaxia.gui.rocket_silo.validator.multi_core=Only one rocket core per rocket
+galaxia.gui.rocket_silo.validator.engine_tank_ratio=Requires 1 engine per fuel tank stack
+galaxia.gui.rocket_silo.validator.destination_none=Destination not selected
+galaxia.gui.rocket_silo.validator.wrong_tier=Rocket of tier %d cannot reach %s (Tier %d)
+
+# Elements - GUI - "Module Controller"
+galaxia.gui.module_controller.title=Module Controller
+galaxia.gui.module_controller.button.repressurize=Repressurize
+
+# Elements - GUI - "Rocket Trophy"
+galaxia.gui.rocket_trophy.title=Rocket Trophy Positioning
+galaxia.gui.rocket_trophy.schematic_loaded=Schematic loaded!
+galaxia.gui.rocket_trophy.schematic_none=No schematic to load
+galaxia.gui.rocket_trophy.position=Render Position:
+galaxia.gui.rocket_trophy.yaw=Yaw
+galaxia.gui.rocket_trophy.pitch=Pitch
+galaxia.gui.rocket_trophy.scale=Scale
+
+# Elements - GUI - "Module Assembler"
+galaxia.gui.module_assembler.not_formed=Module Assembler not properly formed!
+
+# Elements - GUI - "Station Controller"
+galaxia.gui.station_controller.title=Station Controller
+galaxia.gui.station_controller.oxygen=Oxygen
+galaxia.gui.station_controller.structure=Structure
+
+galaxia.gui.station_controller.targets=Targets
+
+galaxia.gui.station_controller.refresh=Refresh
+
+galaxia.gui.station_controller.no_fluid_tanks=No fluid tanks
+
+galaxia.gui.station_controller.fluid_storage=Fluid Storage
+
+galaxia.gui.behavior=Behavior
+galaxia.gui.role=Role
+galaxia.gui.role.main=Main
+galaxia.gui.role.secondary=Secondary
+
+# Elements - GUI - "Station Monitor"
+galaxia.gui.station_monitor.title=Station Monitor
+galaxia.gui.station_monitor.structure=Structure
+galaxia.gui.station_monitor.oxygen=Oxygen
+galaxia.gui.station_monitor.refresh=Refresh
+
+# Elements - GUI - "Station Status"
+galaxia.gui.status_valid=Valid
+galaxia.gui.status_invalid=Invalid
+galaxia.gui.status_yes=Yes
+galaxia.gui.status_no=No
+
+# Elements - "Tooltip"
+galaxia.tooltip.oxygen_mask.desc=Allows the use of oxygen tanks to breathe in low oxygen environments
+galaxia.tooltip.spore_filter.desc=Filters out any atmospheric spores
+galaxia.tooltip.wither_protection.desc=Provides protection from atmospheric withering effects
+galaxia.tooltip.oxygen_tank.desc=Capacity: %s / %s
+galaxia.tooltip.oxygen_tank.desc.infinite=Capacity: %s
+galaxia.tooltip.oxygen_tank.infinite.value=Infinite
+galaxia.tooltip.thermal_protection.cold=Frost Protection: +%s
+galaxia.tooltip.thermal_protection.hot=Heat Protection: +%s
+galaxia.tooltip.protection_shield_radiation.desc=Radiation Shielding: +%s
+galaxia.tooltip.protection_shield_radiation.low=Low Pressure Shielding: +%s
+galaxia.tooltip.protection_shield_radiation.high=High Pressure Shielding: +%s
+
+galaxia.tooltip.rocket_silo.builder.return_modules=Disassemble Rocket
+galaxia.tooltip.rocket_silo.builder.modules_none=Add some modules first
+
+### Chat
+# Chat - "Rocket"
+galaxia.chat.rocket.rocket_full=Rocket is currently full! Add more RiderModules!
+
+# Outpost Modules
+galaxia.outpost.module.hammer=HAMMER
+galaxia.outpost.module.big_hammer=BIG HAMMER
+galaxia.outpost.module.miner=MINER
+galaxia.outpost.module.power=POWER
+galaxia.outpost.module.geothermal_generator=GEOTHERMAL GENERATOR
+galaxia.outpost.module.storage=STORAGE
+galaxia.outpost.module.tank=TANK
+galaxia.outpost.module.battery=BATTERY
+galaxia.outpost.module.kind.station=STATION
+galaxia.outpost.module.kind.automated_station=AUTOMATED STATION
+galaxia.outpost.module.kind.automated_outpost=AUTOMATED OUTPOST
+galaxia.outpost.module.location.orbit=ORBIT
+galaxia.outpost.module.location.surface=SURFACE
+galaxia.outpost.module.maintenance_bay=MAINTENANCE BAY
+galaxia.outpost.module.macerator=Macerator
+galaxia.outpost.module.centrifuge=Centrifuge
+galaxia.outpost.module.electrolyzer=Electrolyzer
+galaxia.outpost.module.chemical_reactor=Chemical Reactor
+galaxia.outpost.module.assembler=Assembler
+galaxia.outpost.module.distillery=Distillery
+
+# Elements - "Other"
+# Elements - Other - "Effect"
+galaxia.effect.low_oxygen=Low Oxygen
+galaxia.effect.overheating=Overheating
+galaxia.effect.freezing=Freezing
+
+# Elements - Other - "Hazards"
+galaxia.hazard.fine=No warnings
+galaxia.hazard.freezing=Freezing
+galaxia.hazard.burning=Burning
+galaxia.hazard.low_pressure=Low Pressure
+galaxia.hazard.high_pressure=High Pressure
+galaxia.hazard.high_radiation=High Radiation
+galaxia.hazard.spores=Spores Detected
+galaxia.hazard.wither=Withering
+galaxia.hazard.low_oxygen=Low Oxygen
+galaxia.hazard.no_oxygen=Oxygen Depleted
+galaxia.hazard.no_zerog_movement=No Movement Controls
+
+# Elements - Other - "Death Messages"
+death.attack.galaxia.temperature=%1$s succumbed to extreme temperature
+death.attack.galaxia.noOxygen=%1$s ran out of oxygen
+death.attack.galaxia.radiation=%1$s died from radiation exposure
+
+# Elements - Other - "Schematic Labels"
+galaxia.item.schematic.label.name=Name: %s
+galaxia.item.schematic.label.tier=Tier: %d
+galaxia.item.schematic.label.modules=Modules: %d
+galaxia.item.schematic.label.height=Height: %dm
+galaxia.item.schematic.label.width=Width: %dm
+galaxia.item.schematic.label.weight=Weight: %dkg
+galaxia.item.schematic.label.thrust=Thrust: %dN
+
+### Entities
+# Entities - "Rocket"
+entity.galaxia.EntityRocket.lander=Lander
+entity.galaxia.EntityRocket.name=Rocket
+
 
 #### Config
 
-### Config - "Rocket"
+# Config - "Structures"
+galaxia.config.category.structures=Structures
+galaxia.config.category.structures.tooltip=Settings for ArbitraryShapeDefinition structures
+galaxia.config.category.structures_enclosed=Enclosed
+galaxia.config.category.structures_enclosed.tooltip=Settings for enclosed structures (controllers, rooms)
+galaxia.config.structures.enclosed_radius=Search radius
+galaxia.config.structures.enclosed_radius.tooltip=Search radius for structure boundaries (be careful, large structures could become very laggy!)
+galaxia.config.category.structures_open=Open
+galaxia.config.category.structures_open.tooltip=Settings for open structures (docks)
+galaxia.config.structures.open_radius=Search radius
+galaxia.config.structures.open_radius.tooltip=Search radius for structure boundaries
+
+# Config - "Player"
+galaxia.config.category.player=Player
+galaxia.config.category.player.tooltip=Settings for the player
+galaxia.config.category.player_global=Global
+galaxia.config.category.player_global.tooltip=Global settings for the player
+galaxia.config.player.debuff_creative=Debuffs to creative mode players
+galaxia.config.player.zero_g_movement=Ignore Zero Gravity movement in creative mode
+galaxia.config.player.debuff_creative.tooltip=Apply environmental debuffs when in creative mode
+galaxia.config.player.max_zerog_speed=Max speed in zero gravity
+galaxia.config.player.max_zerog_speed.tooltip=Maximum speed reachable in any direction for zero gravity movement
+galaxia.config.player.rcs_zerog_recoil=Recoil when zero gravity gear equipped
+galaxia.config.player.rcs_zerog_recoil.tooltip=Enable recoil from throwing, dropping or shooting when zero gravity gear is equipped
+
+# Config - "Rocket"
 galaxia.config.category.rocket=Rocket
 galaxia.config.category.rocket.tooltip=Settings for the Galaxia rockets
 
-### Config - Rocket - "Global"
+# Config - Rocket - "Global"
 galaxia.config.category.rocket_global=Global
 galaxia.config.category.rocket_global.tooltip=Global settings for the Galaxia rockets
-
 galaxia.config.rocket.camera_distance=Third person view distance
 galaxia.config.rocket.camera_distance.tooltip=Defines distance in third person view when sitting in rocket
 
-### Config - "Overlay"
+# Config - "Overlay"
 galaxia.config.category.overlay=Overlay
 galaxia.config.category.overlay.tooltip=Settings for the Galaxia HUD overlays
 
-### Config - Overlay - "Global"
+# Config - Overlay - "Global"
 galaxia.config.category.overlay_global=Global
 galaxia.config.category.overlay_global.tooltip=Global overlay settings for the Galaxia HUD
-
 galaxia.config.overlay.show_in_creative=Display bars in creative
 galaxia.config.overlay.show_in_creative.tooltip=Defines if bars will be displayed in creative mode
 galaxia.config.overlay.horizontal_offset=Global bars horizontal offset
@@ -236,10 +462,9 @@ galaxia.config.overlay.pulse.speed.tooltip=Pulse speed factor for bars (higher v
 galaxia.config.overlay.pulse.amplitude=Global bars pulse amplitude
 galaxia.config.overlay.pulse.amplitude.tooltip=Pulse intensity for bars, used to dim the bar
 
-### Config - Overlay - "Oxygen Bar"
+# Config - Overlay - "Oxygen Bar"
 galaxia.config.category.overlay_oxygen_bar=Oxygen Bar
 galaxia.config.category.overlay_oxygen_bar.tooltip=Overlay settings for the Oxygen Bar
-
 galaxia.config.overlay.show_oxygen_bar=Oxygen bar display
 galaxia.config.overlay.show_oxygen_bar.tooltip=Enable or disable rendering of the oxygen bar
 galaxia.config.overlay.oxygen_bar_horizontal_offset=Oxygen bar horizontal offset
@@ -253,10 +478,9 @@ galaxia.config.overlay.texture.oxygen_bar_width.tooltip=Oxygen bar texture width
 galaxia.config.overlay.texture.oxygen_bar_height=Oxygen bar texture height
 galaxia.config.overlay.texture.oxygen_bar_height.tooltip=Oxygen bar texture height in pixels
 
-### Config - Overlay - "Temperature Bar"
+# Config - Overlay - "Temperature Bar"
 galaxia.config.category.overlay_temperature_bar=Temperature Bar
 galaxia.config.category.overlay_temperature_bar.tooltip=Overlay settings for the Temperature Bar
-
 galaxia.config.overlay.show_temperature_bar=Temperature bar display
 galaxia.config.overlay.show_temperature_bar.tooltip=Enable or disable rendering of the temperature bar
 galaxia.config.overlay.temperature_bar_horizontal_offset=Temperature bar horizontal offset
@@ -272,23 +496,78 @@ galaxia.config.overlay.texture.temperature_bar_width.tooltip=Temperature bar tex
 galaxia.config.overlay.texture.temperature_bar_height=Temperature bar texture height
 galaxia.config.overlay.texture.temperature_bar_height.tooltip=Temperature bar texture height in pixels
 
-#### GUI
+# Config - Overlay - "Warnings"
+galaxia.config.category.overlay_hazard=Hazard Warning Overlay
+galaxia.config.category.overlay_hazard.tooltip=Overlay setting for the environmental hazard warnings
+galaxia.config.category.show_hazard_warnings=Show Warnings
+galaxia.config.category.show_hazard_warnings.tooltip=Make the overlay show environmental hazard warnings
+galaxia.config.category.hazard_horizontal_offset=Horizontal Offset
+galaxia.config.category.hazard_horizontal_offset.tooltip=Horizontal offset from the left\positive = right
+galaxia.config.category.hazard_vertical_offset=Vertical Offset
+galaxia.config.category.hazard_vertical_offset.tooltip=Vertical offset from the center\npositive = down
+galaxia.config.category.hazard_scale=Pulse Scaling Coefficient
+galaxia.config.category.hazard_scale.tooltip=How much to scale the warnings when pulsing
+galaxia.config.category.hazard_pulse=Enable Pulse
+galaxia.config.category.hazard_pulse.tooltip=Enable pulse animation
 
-# Linking Tool messages
-galaxia.linking_tool.not_linkable_master=§cThis block cannot be a master.§r
-galaxia.linking_tool.not_master=§c%s cannot be a master.§r
-galaxia.linking_tool.bound=§a%s §7@ %d,%d,%d §abound as master.§r
-galaxia.linking_tool.no_master=§eNo master bound. Shift+Right-click a master block first.§r
-galaxia.linking_tool.not_linkable_slave=§cThis block cannot be linked.§r
-galaxia.linking_tool.not_slave=§c%s cannot be a slave.§r
-galaxia.linking_tool.master_gone=§cBound master is gone. Please re-bind.§r
-galaxia.linking_tool.incompatible=§c%s is not compatible with %s.§r
-galaxia.linking_tool.linked=§a%s §7@ %d,%d,%d §alinked to §7%s §a@ %d,%d,%d.§r
-galaxia.linking_tool.cleared=§7Master binding cleared.§r
+galaxia.gui.orbital.status=Zoom: x%.2f   Speed: %s
+galaxia.gui.orbital.paused=PAUSED
+galaxia.gui.orbital.speed_multiplier=x%.1f
 
-item.galaxia.linking_tool.desc.usage=§7Used to link machines together§r
-item.galaxia.linking_tool.desc.shift_rmb_air=§8Shift+RMB on air§7 - unbind§r
-item.galaxia.linking_tool.desc.shift_rmb=§8Shift+RMB§7 - bind master§r
-item.galaxia.linking_tool.desc.rmb=§8RMB§7 - connect slave§r
-item.galaxia.linking_tool.desc.bound_to=§7Bound to: §a%s §8[%d, %d, %d]§r
-item.galaxia.linking_tool.desc.not_bound=§8Not bound§r
+galaxia.system_asset.title=Assets - %s system
+galaxia.system_asset.empty=No assets in this system.
+galaxia.system_asset.filter.all=All
+galaxia.system_asset.filter.stations=Stations
+galaxia.station.vision_layer.base=Base
+galaxia.station.vision_layer.energy=Energy
+galaxia.system_asset.filter.outposts=Outposts
+galaxia.system_asset.filter.construction=Construction
+galaxia.system_asset.filter.mining=Mining
+galaxia.system_asset.filter.production=Production
+galaxia.system_asset.filter.warnings=Warnings
+galaxia.system_asset.sort.by_body=Body
+galaxia.system_asset.sort.by_kind=Kind
+galaxia.system_asset.sort.by_name=Name
+galaxia.system_asset.sort.by_warnings_first=Warnings first
+galaxia.system_asset.label.filter=Filter: %s
+galaxia.system_asset.label.sort=Sort: %s
+galaxia.system_asset.tooltip.body=Body: %s
+galaxia.system_asset.tooltip.status=Status: %s
+galaxia.system_asset.tooltip.warning=Warning: %s
+galaxia.system_asset.tooltip.construction=Construction: %d%%
+
+#### Machine GUI
+# Oxygen Collector GUI
+galaxia.gui.oxygen_collector.title=Oxygen Collector
+galaxia.gui.oxygen_collector.leaves_in_range=Leaves in range: %s
+
+# Oxygen Filler GUI
+galaxia.gui.oxygen_filler.title=Oxygen Filler
+
+# Oxygen Pylon GUI
+galaxia.gui.oxygen_pylon.title=Oxygen Pylon
+galaxia.gui.oxygen_pylon.radius=Radius: %s
+galaxia.gui.oxygen_pylon.players_charged=Players Charged: %s
+
+# Team Permissions GUI
+galaxia.gui.team_config.title=Team Configuration
+galaxia.gui.team_config.color=Team Color
+galaxia.gui.team_config.action.create_asset=Create Asset
+galaxia.gui.team_config.action.build_module=Build Module
+galaxia.gui.team_config.action.modify_module=Modify Module
+galaxia.gui.team_config.action.configure_logistics=Configure Logistics
+galaxia.gui.team_config.action.manage_inventory=Manage Inventory
+galaxia.gui.team_config.action.rename_asset=Rename Asset
+galaxia.gui.team_config.action.destroy_asset=Destroy Asset
+galaxia.gui.team_config.action.deconstruct_asset=Deconstruct Asset
+galaxia.gui.team_config.button=Team config
+
+# Team Info
+galaxia.gui.team_info.team=Team: %s
+galaxia.gui.team_info.members=Members: %s
+
+# Common
+galaxia.gui.common.generating=Generating
+galaxia.gui.common.filling=Filling
+galaxia.gui.common.active=Active
+galaxia.gui.common.idle=Idle

@@ -2,16 +2,17 @@ package com.gtnewhorizons.galaxia.registry.items.baubles;
 
 import java.util.List;
 
+import javax.annotation.Nonnull;
+
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
-
-import org.jetbrains.annotations.NotNull;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
 
@@ -144,7 +145,7 @@ public class ItemOxygenTank extends Item implements IBaubleExpanded {
         p_150895_3_.add(getStack(oxygenStorage));
     }
 
-    public @NotNull ItemStack getStack(int amount) {
+    public @Nonnull ItemStack getStack(int amount) {
         ItemStack stack = new ItemStack(this, 1);
 
         NBTTagCompound tag = new NBTTagCompound();
@@ -204,10 +205,16 @@ public class ItemOxygenTank extends Item implements IBaubleExpanded {
     @Override
     public void addInformation(ItemStack stack, EntityPlayer player, List<String> tooltip, boolean p_77624_4_) {
         super.addInformation(stack, player, tooltip, p_77624_4_);
-        if (isInfinite()) tooltip.add(StatCollector.translateToLocal("item.galaxia.oxygen_tank.infinite"));
-        else tooltip.add(
+        if (isInfinite()) {
+            tooltip.add(
+                StatCollector.translateToLocalFormatted(
+                    "galaxia.tooltip.oxygen_tank.desc.infinite",
+                    EnumChatFormatting.RED
+                        + StatCollector.translateToLocal("galaxia.tooltip.oxygen_tank.infinite.value")
+                        + EnumChatFormatting.RESET));
+        } else tooltip.add(
             StatCollector
-                .translateToLocalFormatted("item.galaxia.oxygen_tank.desc", getCurrentOxygen(stack), oxygenStorage));
+                .translateToLocalFormatted("galaxia.tooltip.oxygen_tank.desc", getCurrentOxygen(stack), oxygenStorage));
     }
 
     @Override

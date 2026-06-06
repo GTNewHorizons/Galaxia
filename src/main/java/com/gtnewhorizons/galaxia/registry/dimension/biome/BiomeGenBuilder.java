@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.dimension.biome;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import net.minecraft.block.Block;
@@ -10,11 +9,12 @@ import net.minecraft.world.biome.BiomeGenBase.FlowerEntry;
 import net.minecraft.world.biome.BiomeGenBase.Height;
 import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
 
+import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaCave;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaSurface;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaWall;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaWall;
 
 /**
  * The builder for biome generation
@@ -37,23 +37,23 @@ public class BiomeGenBuilder {
     Block oceanSurface = stone;
     Block seabed = stone;
     Block snowBlock = stone;
-    List<WorldGenGalaxiaSurface> surfaceFeatures = new ArrayList<>();
-    List<WorldGenGalaxiaCave> caveFeatures = new ArrayList<>();
-    List<WorldGenGalaxiaWall> wallFeatures = new ArrayList<>();
+    List<LocationRuleGalaxiaSurface> surfaceFeatures = new ArrayList<>();
+    List<LocationRuleGalaxiaCave> caveFeatures = new ArrayList<>();
+    List<LocationRuleGalaxiaWall> wallFeatures = new ArrayList<>();
     List<Block> topBlockMetas = new ArrayList<>();
-    boolean generateCaves = false;
     int surfaceThickness = 1;
     boolean enableRain = false;
     Block oceanCrackBlock;
     float oceanCrackThickness;
     int oceanCrackComplexity;
     StratificationPreset fillerBlocks;
+    CaveShape caveShape;
 
-    List<FlowerEntry> flowers = Collections.emptyList();
-    List<SpawnListEntry> mobsWater = Collections.emptyList();
-    List<SpawnListEntry> mobsCave = Collections.emptyList();
-    List<SpawnListEntry> mobsGeneral = Collections.emptyList();
-    List<SpawnListEntry> mobsMonster = Collections.emptyList();
+    List<FlowerEntry> flowers = List.of();
+    List<SpawnListEntry> mobsWater = List.of();
+    List<SpawnListEntry> mobsCave = List.of();
+    List<SpawnListEntry> mobsGeneral = List.of();
+    List<SpawnListEntry> mobsMonster = List.of();
 
     /**
      * Instantiates a builder for a given biome ID
@@ -176,23 +176,23 @@ public class BiomeGenBuilder {
         return this;
     }
 
-    public BiomeGenBuilder surfaceFeature(WorldGenGalaxiaSurface feature) {
+    public BiomeGenBuilder surfaceFeature(LocationRuleGalaxiaSurface feature) {
         surfaceFeatures.add(feature);
         return this;
     }
 
-    public BiomeGenBuilder caveFeature(WorldGenGalaxiaCave feature) {
+    public BiomeGenBuilder caveFeature(LocationRuleGalaxiaCave feature) {
         caveFeatures.add(feature);
         return this;
     }
 
-    public BiomeGenBuilder wallFeature(WorldGenGalaxiaWall feature) {
+    public BiomeGenBuilder wallFeature(LocationRuleGalaxiaWall feature) {
         wallFeatures.add(feature);
         return this;
     }
 
-    public BiomeGenBuilder generateCaves(boolean generateCaves) {
-        this.generateCaves = generateCaves;
+    public BiomeGenBuilder caveShape(CaveShape caveShape) {
+        this.caveShape = caveShape;
         return this;
     }
 

@@ -35,3 +35,6 @@ addon.local.gradle.kts
 addon.late.local.gradle
 addon.late.local.gradle.kts
 layout.json
+/com
+/libs/freecam-1.0.7-dev.jar
+/.worktrees/

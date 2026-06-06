@@ -1,9 +1,10 @@
 package com.gtnewhorizons.galaxia.handlers;
 
-import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.getPlayerOxygenLevel;
-import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.getPlayerTemperature;
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.getPlayerOxygenLevel;
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.getPlayerTemperature;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.entity.player.EntityPlayer;
@@ -12,10 +13,12 @@ import net.minecraftforge.client.event.RenderGameOverlayEvent;
 
 import org.lwjgl.opengl.GL11;
 
-import com.github.bsideup.jabel.Desugar;
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.client.HazardWarningClient;
 import com.gtnewhorizons.galaxia.core.config.ConfigOverlay;
-import com.gtnewhorizons.galaxia.utility.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.registry.hazards.HazardWarnings;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
@@ -30,9 +33,8 @@ public class GalaxiaOverlayHandler {
     private static final int ABOVE_HOTBAR_BASE_Y = 49; // screenHeight - 49
 
     @SubscribeEvent
-    public void onRenderOverlay(RenderGameOverlayEvent.Post event) {
+    public void onRenderHUD(RenderGameOverlayEvent.Post event) {
         if (event.type != RenderGameOverlayEvent.ElementType.ALL) return;
-        if (mc.currentScreen != null) return;
 
         EntityPlayer player = mc.thePlayer;
         if (player == null) return;
@@ -91,6 +93,38 @@ public class GalaxiaOverlayHandler {
                 if (fillPercent > 0f) {
                     drawBar(x, y, fillPercent, EnumTextures.TEMP_BG.get(), EnumTextures.TEMP_FILL_COLD.get(), w, h);
                 }
+            }
+        }
+
+        if (ConfigOverlay.ConfigOverlayHazards.showHazards) {
+            if (HazardWarningClient.hasWarnings()) {
+                FontRenderer fr = mc.fontRenderer;
+
+                int baseX = 10 + ConfigOverlay.ConfigOverlayGlobal.hudOffsetX
+                    + ConfigOverlay.ConfigOverlayHazards.hazardOffsetX;
+                int baseY = (screenHeight - ABOVE_HOTBAR_BASE_Y - 20) + ConfigOverlay.ConfigOverlayGlobal.hudOffsetY
+                    + ConfigOverlay.ConfigOverlayHazards.hazardOffsetY;
+
+                float scale = (float) ConfigOverlay.ConfigOverlayHazards.hazardScale;
+                if (ConfigOverlay.ConfigOverlayHazards.pulse) {
+                    double time = System.currentTimeMillis();
+                    double pulse = Math.sin(time / ConfigOverlay.ConfigOverlayGlobal.pulseSpeed)
+                        * ConfigOverlay.ConfigOverlayGlobal.pulseAmplitude;
+                    scale += (float) pulse * 0.25f;
+                }
+
+                GL11.glPushMatrix();
+                GL11.glScalef(scale, scale, 1.0F);
+
+                int x = (int) (baseX / scale);
+                int y = (int) (baseY / scale);
+
+                for (HazardWarnings warning : HazardWarningClient.iterable()) {
+                    fr.drawStringWithShadow(warning.message, x, y, EnumColors.Warning.getColor());
+                    y += fr.FONT_HEIGHT + 4;
+                }
+
+                GL11.glPopMatrix();
             }
         }
 
@@ -180,6 +214,5 @@ public class GalaxiaOverlayHandler {
         t.draw();
     }
 
-    @Desugar
     private record BarScreenPositions(int oxygenX, int oxygenY, int temperatureX, int temperatureY) {}
 }

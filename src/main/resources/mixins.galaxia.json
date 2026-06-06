@@ -3,16 +3,21 @@
   "package": "com.gtnewhorizons.galaxia.mixin",
   "compatibilityLevel": "JAVA_8",
   "mixins": [
-    "RenderGlobalSkyMixin",
-    "GravityAirResistanceMixin",
-    "ParticleGravityMixin",
-    "UnifiedGravityMixin",
     "FallDamageMixin",
+    "GravityAirResistanceMixin",
     "JumpMixin",
-    "RelativeMovementMixin"
+    "MixinEntityArrow",
+    "MixinEntityPlayer",
+    "MixinEntityThrowable",
+    "MixinThrowRecoil",
+    "ParticleGravityMixin",
+    "RelativeMovementMixin",
+    "UnifiedGravityMixin"
   ],
   "client": [
-    "MixinEntityRenderer"
+    "MixinEntityRenderer",
+    "RenderGlobalSkyMixin",
+    "RenderStarsMixin"
   ],
   "server": [
   ]

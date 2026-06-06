@@ -3,11 +3,11 @@ package com.gtnewhorizons.galaxia.core.nei;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.annotation.Nonnull;
+
 import net.minecraft.block.Block;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
-
-import org.jetbrains.annotations.NotNull;
 
 import com.gtnewhorizon.structurelib.alignment.constructable.IConstructable;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
@@ -35,7 +35,7 @@ public class GalaxiaMultiblockHandler extends MultiblockHandler {
     }
 
     @Override
-    public @NotNull ItemStack getConstructableStack(IConstructable multiblock) {
+    public @Nonnull ItemStack getConstructableStack(IConstructable multiblock) {
         if (multiblock instanceof GalaxiaMultiblockBase<?>base) {
             return new ItemStack(base.getControllerBlock());
         }
@@ -43,7 +43,7 @@ public class GalaxiaMultiblockHandler extends MultiblockHandler {
     }
 
     @Override
-    protected @NotNull ObjectSet<IConstructable> tryLoadingMultiblocks(ItemStack candidate) {
+    protected @Nonnull ObjectSet<IConstructable> tryLoadingMultiblocks(ItemStack candidate) {
         ObjectSet<IConstructable> result = new ObjectOpenHashSet<>();
         if (candidate == null) return result;
         Block block = Block.getBlockFromItem(candidate.getItem());

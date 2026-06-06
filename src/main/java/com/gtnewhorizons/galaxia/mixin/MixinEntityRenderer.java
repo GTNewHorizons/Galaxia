@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.mixin;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.EntityRenderer;
+import net.minecraft.entity.Entity;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -9,8 +10,10 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.OrbitalView.RenderTickState;
 import com.gtnewhorizons.galaxia.core.config.ConfigRocket;
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.entities.EntityRocket;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocketSeat;
 
 @Mixin(EntityRenderer.class)
 public abstract class MixinEntityRenderer {
@@ -24,12 +27,15 @@ public abstract class MixinEntityRenderer {
 
     @Inject(method = "setupCameraTransform", at = @At("HEAD"))
     private void galaxia$adjustRocketCamera(float partialTicks, int pass, CallbackInfo ci) {
+        RenderTickState.setLastPartialTicks(partialTicks);
         Minecraft mc = Minecraft.getMinecraft();
         if (mc.thePlayer == null) return;
 
-        boolean isInRocket = mc.thePlayer.ridingEntity instanceof EntityRocket;
+        Entity riddenEntity = mc.thePlayer.ridingEntity;
+        boolean isInRocket = riddenEntity instanceof EntityRocket || riddenEntity instanceof EntityRocketSeat;
 
-        // save original values passed into the method to not accidentally override other mixins
+        // save original values passed into the method to not accidentally override
+        // other mixins
         if (isInRocket) {
             if (originalThirdPersonDistance < 0) {
                 originalThirdPersonDistance = this.thirdPersonDistance;

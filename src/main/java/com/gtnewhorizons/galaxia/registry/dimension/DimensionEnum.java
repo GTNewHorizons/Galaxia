@@ -6,19 +6,23 @@ package com.gtnewhorizons.galaxia.registry.dimension;
 public enum DimensionEnum {
 
     // Format: ENUMNAME(int ID, String name)
-    VITRIS_SPACE(-19, "Vitris_Space_Stations"),
-    THEIA(20, "Theia"),
-    HEMATERIA(21, "Hemateria"),
-    FROZEN_BELT(22, "Frozen_Belt"),
-    PANSPIRA(23, "Panspira"),
-    TENEBRAE(24, "Tenebrae");
+    // This is just the overworld
+    OVERWORLD(0, "Overworld", "galaxia.dimension.overworld"),
+    OVERWORLD_ORBIT(-19, "Overworld_Orbit_Stations", "galaxia.dimension.overworld_orbit"),
+    MOON(20, "Moon", "galaxia.dimension.moon"),
+    MARS(21, "Mars", "galaxia.dimension.mars"),
+    FROZEN_BELT(22, "Frozen_Belt", "galaxia.dimension.frozen_belt"),
+    PANSPIRA(23, "Panspira", "galaxia.dimension.panspira"),
+    TENEBRAE(24, "Tenebrae", "galaxia.dimension.tenebrae");
 
     final int id;
     final String name;
+    final String translationKey;
 
-    DimensionEnum(int id, String name) {
+    DimensionEnum(int id, String name, String translationKey) {
         this.id = id;
         this.name = name;
+        this.translationKey = translationKey;
     }
 
     public String getName() {
@@ -29,4 +33,15 @@ public enum DimensionEnum {
         return this.id;
     }
 
+    public String getTranslationKey() {
+        return this.translationKey;
+    }
+
+    public static DimensionEnum fromId(int id) {
+        for (DimensionEnum e : values()) {
+            if (e.id == id) return e;
+        }
+
+        return null;
+    }
 }

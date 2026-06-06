@@ -1,19 +1,22 @@
 package com.gtnewhorizons.galaxia.registry.dimension;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import net.minecraftforge.common.DimensionManager;
 
 import com.gtnewhorizons.galaxia.registry.dimension.asteroidbelts.FrozenBelt;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
-import com.gtnewhorizons.galaxia.registry.dimension.planets.Hemateria;
+import com.gtnewhorizons.galaxia.registry.dimension.planets.Mars;
+import com.gtnewhorizons.galaxia.registry.dimension.planets.Moon;
+import com.gtnewhorizons.galaxia.registry.dimension.planets.Overworld;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.Panspira;
-import com.gtnewhorizons.galaxia.registry.dimension.planets.Theia;
 
 import cpw.mods.fml.common.FMLLog;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 /**
  * A registry class for storing all dimensions in the solar system
@@ -21,9 +24,9 @@ import cpw.mods.fml.common.FMLLog;
 public final class SolarSystemRegistry {
 
     private static final List<BasePlanet> BODIES = new ArrayList<>();
-    private static final Map<Integer, BasePlanet> BY_ID = new HashMap<>();
-    private static final Map<String, BasePlanet> BY_NAME = new HashMap<>();
-    public static final List<Integer> GALAXIA_DIMENSIONS = new ArrayList<>();
+    private static final Int2ObjectOpenHashMap<BasePlanet> BY_ID = new Int2ObjectOpenHashMap<>();
+    private static final Object2ObjectOpenHashMap<String, BasePlanet> BY_NAME = new Object2ObjectOpenHashMap<>();
+    public static final IntSet GALAXIA_DIMENSIONS = new IntOpenHashSet();
 
     private static boolean registered = false;
 
@@ -35,10 +38,11 @@ public final class SolarSystemRegistry {
         registered = true;
 
         registerDimensions(new SpaceStation());
-        registerDimensions(new Theia());
-        registerDimensions(new Hemateria());
+        registerDimensions(new Moon());
+        registerDimensions(new Mars());
         registerDimensions(new FrozenBelt());
         registerDimensions(new Panspira());
+        registerDimensions(new Overworld());
 
         FMLLog.info("[Galaxia] Registered %d celestial bodies", BODIES.size());
     }
