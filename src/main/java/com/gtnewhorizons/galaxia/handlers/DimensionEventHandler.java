@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import com.gtnewhorizons.galaxia.core.GalaxiaPlayerProperties;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
@@ -30,6 +31,8 @@ import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.PlayerEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
+
+import javax.annotation.Nonnull;
 
 /**
  * A Handler class to deal with effects of entering a new Galaxia dimension
@@ -87,6 +90,7 @@ public class DimensionEventHandler {
         EntityPlayerMP player = (EntityPlayerMP) event.player;
         if (GalaxiaAPI.isInGalaxiaDimension(player)) return;
         Galaxia.GALAXIA_NETWORK.sendTo(new HazardWarningPacket(new ArrayList<>()), player);
+        GalaxiaPlayerProperties.get(event.player).lowOxygenDuration = 0;
     }
 
     /**
@@ -99,6 +103,7 @@ public class DimensionEventHandler {
         EntityPlayerMP player = (EntityPlayerMP) event.player;
         if (GalaxiaAPI.isInGalaxiaDimension(player)) return;
         Galaxia.GALAXIA_NETWORK.sendTo(new HazardWarningPacket(new ArrayList<>()), player);
+        GalaxiaPlayerProperties.get(event.player).lowOxygenDuration = 0;
     }
 
     /**
@@ -111,6 +116,7 @@ public class DimensionEventHandler {
         EntityPlayerMP player = (EntityPlayerMP) event.player;
         if (GalaxiaAPI.isInGalaxiaDimension(player)) return;
         Galaxia.GALAXIA_NETWORK.sendTo(new HazardWarningPacket(new ArrayList<>()), player);
+        GalaxiaPlayerProperties.get(event.player).lowOxygenDuration = 0;
     }
 
     /**
