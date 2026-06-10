@@ -24,12 +24,18 @@ public class GalaxiaPlayerProperties implements IExtendedEntityProperties {
 
     @Override
     public void loadNBTData(NBTTagCompound compound) {
-        // todo
+        NBTTagCompound data = (NBTTagCompound) compound.getTag(propertyId);
+
+        lowOxygenDuration = data.getInteger("lowOxygenDuration");
     }
 
     @Override
     public void saveNBTData(NBTTagCompound compound) {
-        // todo
+        // save stuff as a nested nbt tag to avoid potential conflicts
+        NBTTagCompound data = new NBTTagCompound();
+        compound.setTag(propertyId, data);
+
+        data.setInteger("lowOxygenDuration", lowOxygenDuration);
     }
 
     // convenience method for getting the instance tied to a player
