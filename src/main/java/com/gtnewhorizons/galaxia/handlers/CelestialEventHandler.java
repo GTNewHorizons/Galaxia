@@ -19,6 +19,7 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.SatelliteSyncPacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -37,6 +38,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.satellite.PlanetarySatelliteStore;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
@@ -96,6 +98,9 @@ public class CelestialEventHandler {
                 // Wait until next sync just to be sure this gets first, otherwise it could easily become a race
                 continue;
             }
+            Galaxia.GALAXIA_NETWORK.sendTo(
+                SatelliteSyncPacket.fullForTeam(playerTeam, PlanetarySatelliteStore.SERVER.snapshotTeam(playerTeam)),
+                player);
             Map<CelestialObjectId, Set<CelestialAsset>> teamAssets = CelestialAssetStore.getTeamAssets(playerTeam);
             if (teamAssets == null) continue;
             Set<CelestialAsset> aggregatedAssets = teamAssets.values()
