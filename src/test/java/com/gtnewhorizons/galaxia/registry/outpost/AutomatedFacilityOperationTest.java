@@ -514,10 +514,6 @@ final class AutomatedFacilityOperationTest {
         return facility;
     }
 
-    private static AutomatedFacility facilityWithMiner() {
-        return facilityWithMiner(CelestialObjectId.PANSPIRA);
-    }
-
     private static AutomatedFacility facilityWithMiner(CelestialObjectId bodyId) {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
