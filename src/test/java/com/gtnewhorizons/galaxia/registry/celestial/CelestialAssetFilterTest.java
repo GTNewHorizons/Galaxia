@@ -30,7 +30,7 @@ final class CelestialAssetFilterTest {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
         facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_OUTPOST,
             Buildable.Status.OPERATIONAL);
     }

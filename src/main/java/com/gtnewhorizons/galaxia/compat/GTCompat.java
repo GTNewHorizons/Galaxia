@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.oredict.OreDictionary;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
 
@@ -27,8 +26,8 @@ import gregtech.common.OreMixBuilder;
 
 public final class GTCompat {
 
-    private static final Map<String, ItemStack> RAW_ORE_CACHE = new HashMap<>();
-    private static final Set<String> RAW_ORE_FAILURES = new HashSet<>();
+    private static final Map<String, ItemStack> GT_ORE_CACHE = new HashMap<>();
+    private static final Set<String> GT_ORE_FAILURES = new HashSet<>();
 
     private GTCompat() {}
 
@@ -37,8 +36,8 @@ public final class GTCompat {
 
         OreMixes oreMix = null;
         for (OreMixes mix : OreMixes.values()) {
-            if (mix.name()
-                .equals(veinId)) {
+            OreMixBuilder builder = mix.oreMixBuilder;
+            if (builder != null && veinId.equals(builder.oreMixName)) {
                 oreMix = mix;
                 break;
             }
@@ -69,22 +68,23 @@ public final class GTCompat {
         return material.toString();
     }
 
-    public static List<ItemStack> getRawOres(@Nonnull String... veinIDs) {
+    public static List<ItemStack> getGtVeinOreStacks(@Nonnull String... veinIDs) {
         return Arrays.stream(veinIDs)
             .filter(id -> id != null && !id.isEmpty())
             .map(GTCompat::getGtVeinOres)
             .flatMap(
                 ores -> ores.stream()
-                    .map(GTCompat::getRawOreStack))
+                    .map(GTCompat::getGtOreStack))
+            .filter(stack -> stack != null)
             .collect(Collectors.toList());
     }
 
-    public static List<ItemStack> getRawOreStacks(@Nonnull String... materialNames) {
+    public static List<ItemStack> getGtOreStacks(@Nonnull String... materialNames) {
         List<ItemStack> pool = new ArrayList<>(materialNames.length);
         for (String materialName : materialNames) {
             ItemStack stack;
             try {
-                stack = getRawOreStack(materialName);
+                stack = getGtOreStack(materialName);
             } catch (ClassCastException ignored) {
                 stack = null;
             }
@@ -96,48 +96,33 @@ public final class GTCompat {
         return pool;
     }
 
-    public static ItemStack getRawOreStack(String materialName) {
+    public static ItemStack getGtOreStack(String materialName) {
         if (!isGregTechLoaded()) return null;
         if (materialName == null || materialName.isEmpty()) return null;
 
-        ItemStack cached = RAW_ORE_CACHE.get(materialName);
+        ItemStack cached = GT_ORE_CACHE.get(materialName);
         if (cached != null) return cached.copy();
-        if (RAW_ORE_FAILURES.contains(materialName)) return null;
+        if (GT_ORE_FAILURES.contains(materialName)) return null;
 
         ItemStack unified = getUnifiedGtStack(materialName);
         if (unified != null) {
-            return cacheResolvedRawOre(materialName, unified, "GT_OreDictUnificator prefix rawOre");
+            return cacheResolvedGtOre(materialName, unified, "GT_OreDictUnificator prefix ore");
         }
 
-        String materialKey = sanitizeMaterialKey(materialName);
-        String[] oreDictKeys = new String[] { "rawOre" + materialKey };
-        for (String oreDictKey : oreDictKeys) {
-            List<ItemStack> matches = OreDictionary.getOres(oreDictKey, false);
-            if (matches == null || matches.isEmpty()) continue;
-            ItemStack match = matches.get(0);
-            if (match != null) {
-                return cacheResolvedRawOre(materialName, match, "OreDictionary key " + oreDictKey);
-            }
-        }
-
-        RAW_ORE_FAILURES.add(materialName);
-        Galaxia.LOG.warn("Failed to resolve GT raw ore stack for material {}", materialName);
+        GT_ORE_FAILURES.add(materialName);
+        Galaxia.LOG.warn("Failed to resolve GT ore stack for material {}", materialName);
         return null;
     }
 
-    private static String sanitizeMaterialKey(String materialName) {
-        return materialName.replaceAll("[^A-Za-z0-9]", "");
-    }
-
-    private static ItemStack cacheResolvedRawOre(String materialName, ItemStack stack, String resolutionPath) {
+    private static ItemStack cacheResolvedGtOre(String materialName, ItemStack stack, String resolutionPath) {
         ItemStack cached = stack.copy();
-        RAW_ORE_CACHE.put(materialName, cached);
-        RAW_ORE_FAILURES.remove(materialName);
-        Galaxia.LOG.info("Resolved GT raw ore material {} via {}", materialName, resolutionPath);
+        GT_ORE_CACHE.put(materialName, cached);
+        GT_ORE_FAILURES.remove(materialName);
+        Galaxia.LOG.info("Resolved GT ore material {} via {}", materialName, resolutionPath);
         return cached.copy();
     }
 
     private static ItemStack getUnifiedGtStack(String materialName) {
-        return GTOreDictUnificator.get(OrePrefixes.rawOre, Materials.get(materialName), 1);
+        return GTOreDictUnificator.get(OrePrefixes.ore, Materials.get(materialName), 1);
     }
 }
