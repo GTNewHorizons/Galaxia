@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
-import static com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet.earthRadiusToAU;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -16,14 +14,22 @@ import javax.annotation.Nonnull;
 import net.minecraft.init.Blocks;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.dimension.PlayableDimensionProfile;
+import com.gtnewhorizons.galaxia.registry.dimension.SpaceStation;
+import com.gtnewhorizons.galaxia.registry.dimension.asteroidbelts.FrozenBelt;
+import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
 
 /*
  * TODO: Figure out if there is a need to merge this with SolarSystemRegistry, and if so, how to do it
  * TODO: Make registration happen in 2 steps: calling ores() definitions right now must wait after GT registration
  */
 public final class CelestialRegistry {
+
+    private static final double EARTH_RADIUS_TO_AU = 23481;
 
     private static final Map<CelestialObjectId, CelestialObject> REGISTRATIONS = new LinkedHashMap<>();
     private static final Map<DimensionEnum, CelestialObjectId> IDS_BY_DIMENSION = new EnumMap<>(DimensionEnum.class);
@@ -38,6 +44,22 @@ public final class CelestialRegistry {
     private static double seededPhase(@Nonnull String id) {
         long hash = id.hashCode() & 0xFFFFFFFFL;
         return (hash / (double) 0xFFFFFFFFL) * Math.PI * 2.0;
+    }
+
+    private static EffectBuilder dimensionEffects(int baseTemp, int oxygenPercent, int pressure) {
+        return EffectBuilder.builder()
+            .baseTemp(baseTemp)
+            .oxygenPercent(oxygenPercent)
+            .pressure(pressure)
+            .build();
+    }
+
+    private static PlayableDimensionProfile.Builder stationBuildable(PlayableDimensionProfile.Builder builder) {
+        return builder.addValidSpaceStationBlocks(
+            GalaxiaBlocksEnum.RUSTY_SCAFFOLDING.get(),
+            GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
+            GalaxiaBlocksEnum.SPACE_STATION_PANEL.get(),
+            GalaxiaBlocksEnum.SPACE_STATION_GLASS.get());
     }
 
     public static void registerDefaults() {
@@ -100,7 +122,7 @@ public final class CelestialRegistry {
             CelestialObjectId.ROMULUS,
             builder -> builder.parent(CelestialObjectId.ILIA)
                 .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(0.296 * earthRadiusToAU, 0.00031, seededPhase("ilia_romulus"))
+                .circularOrbit(0.296 * EARTH_RADIUS_TO_AU, 0.00031, seededPhase("ilia_romulus"))
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.24)
                 .properties(
@@ -124,7 +146,7 @@ public final class CelestialRegistry {
             CelestialObjectId.REMUS,
             builder -> builder.parent(CelestialObjectId.ILIA)
                 .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(0.726 * earthRadiusToAU, 0.00018, seededPhase("ilia_remus"))
+                .circularOrbit(0.726 * EARTH_RADIUS_TO_AU, 0.00018, seededPhase("ilia_remus"))
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.19)
                 .properties(
@@ -146,7 +168,7 @@ public final class CelestialRegistry {
             CelestialObjectId.EGORA,
             builder -> builder.parent(CelestialObjectId.VAEL)
                 .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(0.92 * earthRadiusToAU, 0.00022, seededPhase("egora"))
+                .circularOrbit(0.92 * EARTH_RADIUS_TO_AU, 0.00022, seededPhase("egora"))
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.18)
                 .properties(
@@ -175,7 +197,7 @@ public final class CelestialRegistry {
             DimensionEnum.PANSPIRA,
             builder -> builder.parent(CelestialObjectId.VAEL)
                 .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(0.60 * earthRadiusToAU, 0.00057, seededPhase("panspira"))
+                .circularOrbit(0.60 * EARTH_RADIUS_TO_AU, 0.00057, seededPhase("panspira"))
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.75)
                 .properties(
@@ -188,6 +210,15 @@ public final class CelestialRegistry {
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
                         .ores(Blocks.iron_ore, Blocks.gold_ore, Blocks.redstone_ore, Blocks.emerald_ore))
+                .playableDimensionProfile(
+                    stationBuildable(
+                        PlayableDimensionProfile.builder(DimensionEnum.PANSPIRA)
+                            .mass(3.0)
+                            .orbitalRadius(0.6 * EARTH_RADIUS_TO_AU)
+                            .radius(1.5)
+                            .gravity(2.25)
+                            .airResistance(1.0)
+                            .effects(dimensionEffects(423, 0, 300))).build())
                 .featureTileChance(0.26)
                 .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 2.0)
                 .feature(PlanetaryFeatureRegistry.MAGMA_POOL, 0.4)
@@ -202,7 +233,7 @@ public final class CelestialRegistry {
             DimensionEnum.MARS,
             builder -> builder.parent(CelestialObjectId.VAEL)
                 .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(1.52 * earthRadiusToAU, 0.00011, seededPhase("mars"))
+                .circularOrbit(1.52 * EARTH_RADIUS_TO_AU, 0.00011, seededPhase("mars"))
                 .texture(EnumTextures.ICON_MARS.get())
                 .spriteSize(0.825)
                 .properties(
@@ -215,6 +246,16 @@ public final class CelestialRegistry {
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
                         .ores(Blocks.coal_ore, Blocks.iron_ore, Blocks.gold_ore, Blocks.lapis_ore, Blocks.diamond_ore))
+                .playableDimensionProfile(
+                    stationBuildable(
+                        PlayableDimensionProfile.builder(DimensionEnum.MARS)
+                            .mass(0.25)
+                            .orbitalRadius(1.52 * EARTH_RADIUS_TO_AU)
+                            .radius(0.53)
+                            .gravity(0.25)
+                            .airResistance(0.1)
+                            .effects(dimensionEffects(67, 0, 1))
+                            .tier(EnumTiers.TIER_2)).build())
                 .featureTileChance(0.16)
                 .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 4.0)
                 .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 2.0)
@@ -224,7 +265,7 @@ public final class CelestialRegistry {
             DimensionEnum.MOON,
             builder -> builder.parent(CelestialObjectId.MARS)
                 .objectClass(CelestialObject.Class.MOON)
-                .circularOrbit(0.27 * earthRadiusToAU, 0.00145, seededPhase("moon"))
+                .circularOrbit(0.27 * EARTH_RADIUS_TO_AU, 0.00145, seededPhase("moon"))
                 .texture(EnumTextures.ICON_MOON.get())
                 .spriteSize(0.06)
                 .properties(
@@ -237,6 +278,16 @@ public final class CelestialRegistry {
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
                         .ores(Blocks.coal_ore, Blocks.iron_ore, Blocks.gold_ore))
+                .playableDimensionProfile(
+                    stationBuildable(
+                        PlayableDimensionProfile.builder(DimensionEnum.MOON)
+                            .mass(0.012)
+                            .orbitalRadius(EARTH_RADIUS_TO_AU)
+                            .radius(0.27)
+                            .gravity(0.25)
+                            .airResistance(0.01)
+                            .effects(dimensionEffects(225, 0, 0))
+                            .tier(EnumTiers.TIER_1)).build())
                 .featureTileChance(0.14)
                 .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 5.0)
                 .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 2.0)
@@ -246,7 +297,7 @@ public final class CelestialRegistry {
             CelestialObjectId.FROZEN_BELT,
             builder -> builder.parent(CelestialObjectId.VAEL)
                 .objectClass(CelestialObject.Class.ASTEROID_BELT)
-                .circularOrbit(2.30 * earthRadiusToAU, 0.00005, seededPhase("frozen_belt"))
+                .circularOrbit(2.30 * EARTH_RADIUS_TO_AU, 0.00005, seededPhase("frozen_belt"))
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.60)
                 .properties(
@@ -259,6 +310,13 @@ public final class CelestialRegistry {
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
                         .metadata("minorBodies", "enabled"))
+                .playableDimensionProfile(
+                    stationBuildable(
+                        PlayableDimensionProfile.builder(DimensionEnum.FROZEN_BELT)
+                            .provider(FrozenBelt.WorldProviderFrozenBelt.class)
+                            .gravity(0.0)
+                            .airResistance(0.0)
+                            .effects(dimensionEffects(67, 0, 1))).build())
                 .featureTileChance(0.34)
                 .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 4.0)
                 .feature(PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION, 1.2)
@@ -269,7 +327,7 @@ public final class CelestialRegistry {
             CelestialObjectId.AMBERGRIS_FRAGMENT,
             builder -> builder.parent(CelestialObjectId.FROZEN_BELT)
                 .objectClass(CelestialObject.Class.ASTEROID)
-                .circularOrbit(0.18 * earthRadiusToAU, 0.00091, seededPhase("ambergris_fragment"))
+                .circularOrbit(0.18 * EARTH_RADIUS_TO_AU, 0.00091, seededPhase("ambergris_fragment"))
                 .texture(EnumTextures.ICON_AMBERGRIS.get())
                 .spriteSize(0.05)
                 .properties(
@@ -287,7 +345,7 @@ public final class CelestialRegistry {
             CelestialObjectId.OVERWORLD,
             builder -> builder.parent(CelestialObjectId.VAEL)
                 .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(0.45 * earthRadiusToAU, 0.00022, seededPhase("vitris"))
+                .circularOrbit(0.45 * EARTH_RADIUS_TO_AU, 0.00022, seededPhase("vitris"))
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.18)
                 .properties(
@@ -306,13 +364,21 @@ public final class CelestialRegistry {
                             Blocks.iron_ore,
                             Blocks.gold_ore,
                             Blocks.redstone_ore,
-                            Blocks.diamond_ore)));
+                            Blocks.diamond_ore))
+                .playableDimensionProfile(
+                    stationBuildable(
+                        PlayableDimensionProfile.builder(DimensionEnum.OVERWORLD)
+                            .orbitalRadius(EARTH_RADIUS_TO_AU)
+                            .effects(
+                                EffectBuilder.builder()
+                                    .build())
+                            .tier(EnumTiers.TIER_1)).build()));
 
         register(
             DimensionEnum.OVERWORLD_ORBIT,
             builder -> builder.parent(CelestialObjectId.OVERWORLD)
                 .objectClass(CelestialObject.Class.STATION)
-                .circularOrbit(0.04 * earthRadiusToAU, 0.00260, seededPhase("overworld_orbit"))
+                .circularOrbit(0.04 * EARTH_RADIUS_TO_AU, 0.00260, seededPhase("overworld_orbit"))
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.08)
                 .properties(
@@ -322,7 +388,15 @@ public final class CelestialRegistry {
                         .canCreateOutpost(false)
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
-                        .metadata("stationRole", "orbital_logistics")));
+                        .metadata("stationRole", "orbital_logistics"))
+                .playableDimensionProfile(
+                    PlayableDimensionProfile.builder(DimensionEnum.OVERWORLD_ORBIT)
+                        .provider(SpaceStation.WorldProviderSpaceStation.class)
+                        .gravity(0.0)
+                        .airResistance(0.0)
+                        .effects(dimensionEffects(67, 0, 1))
+                        .tier(EnumTiers.TIER_1)
+                        .build()));
     }
 
     public static void register(CelestialObjectId id, @Nonnull Consumer<CelestialObject.Builder> registrationBuilder) {
@@ -371,6 +445,14 @@ public final class CelestialRegistry {
 
     public static List<CelestialObject> getAll() {
         return Collections.unmodifiableList(new ArrayList<>(REGISTRATIONS.values()));
+    }
+
+    public static List<CelestialObject> getPlayableBodies() {
+        registerDefaults();
+        return REGISTRATIONS.values()
+            .stream()
+            .filter(body -> body.playableDimensionProfile() != null)
+            .toList();
     }
 
     public static List<CelestialObject> getRoots() {

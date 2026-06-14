@@ -9,6 +9,7 @@ import net.minecraft.util.StatCollector;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.dimension.PlayableDimensionProfile;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureDefinition;
@@ -18,7 +19,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureProfil
 public record CelestialObject(CelestialObjectId id, String name, String nameKey, CelestialObjectId parentId,
     DimensionEnum dimensionEnum, Class objectClass, OrbitalParams orbitalParams,
     OrbitalMechanics.AbsolutePosition absolutePosition, ResourceLocation texture, double spriteSize,
-    CelestialBodyProperties properties, PlanetaryFeatureProfile featureProfile) {
+    CelestialBodyProperties properties, PlanetaryFeatureProfile featureProfile,
+    PlayableDimensionProfile playableDimensionProfile) {
 
     public enum Class {
         GALAXY,
@@ -113,6 +115,7 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
         private CelestialBodyProperties properties = CelestialBodyProperties.builder()
             .build();
         private PlanetaryFeatureProfile featureProfile = PlanetaryFeatureProfile.NONE;
+        private PlayableDimensionProfile playableDimensionProfile;
 
         public Builder() {}
 
@@ -130,11 +133,15 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
             this.spriteSize = source.spriteSize;
             this.properties = source.properties;
             this.featureProfile = source.featureProfile;
+            this.playableDimensionProfile = source.playableDimensionProfile;
         }
 
         public Builder id(CelestialObjectId value) {
             this.id = value;
             this.name = value.displayName();
+            if (value != null && value.dimension() != null) {
+                this.dimensionEnum = value.dimension();
+            }
             return this;
         }
 
@@ -170,6 +177,11 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
 
         public Builder dimensionEnum(DimensionEnum value) {
             this.dimensionEnum = value;
+            return this;
+        }
+
+        public Builder playableDimensionProfile(PlayableDimensionProfile value) {
+            this.playableDimensionProfile = value;
             return this;
         }
 
@@ -280,7 +292,8 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
                 texture,
                 spriteSize,
                 properties,
-                featureProfile);
+                featureProfile,
+                playableDimensionProfile);
         }
     }
 }
