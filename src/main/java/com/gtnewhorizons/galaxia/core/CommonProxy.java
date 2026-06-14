@@ -64,6 +64,7 @@ public class CommonProxy {
         // Forge bus registering
         ForgeBusRegister(new FacilityPersistenceManager());
         ForgeBusRegister(new TeamEventHandler());
+        ForgeBusRegister(new GalaxiaPlayerProperties.PlayerEventHandler());
 
         // GTNH Teams custom data
         TeamDataRegistry.register(GalaxiaTeamData.ID, GalaxiaTeamData::new);
