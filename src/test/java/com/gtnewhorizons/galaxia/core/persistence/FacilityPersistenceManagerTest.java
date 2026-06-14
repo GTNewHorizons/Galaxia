@@ -533,7 +533,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.AssetJson outpost = assetJson(
             teamId,
             CelestialAsset.Kind.AUTOMATED_OUTPOST,
-            CelestialObjectId.PANSPIRA);
+            CelestialObjectId.OVERWORLD);
         outpost.facility = malformedFacilityState();
 
         List<FacilityPersistenceManager.AssetJson> assets = new ArrayList<>();
@@ -564,7 +564,7 @@ final class FacilityPersistenceManagerTest {
         UUID teamId = UUID.randomUUID();
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
@@ -604,7 +604,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.AssetJson json = assetJson(
             UUID.randomUUID(),
             CelestialAsset.Kind.AUTOMATED_STATION,
-            CelestialObjectId.PANSPIRA);
+            CelestialObjectId.OVERWORLD);
         json.filters = new LinkedHashMap<>();
         json.filters.put(true, List.of("ore:iron", "ore:copper"));
         json.filters.put(false, List.of("ore:tin"));
@@ -678,7 +678,7 @@ final class FacilityPersistenceManagerTest {
     private static AutomatedFacility createStationWithFullLayout() {
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         station.setEnergyStored(245_760L);
@@ -748,7 +748,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
 
@@ -866,7 +866,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
 
@@ -974,7 +974,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         FluidKey bufferKey = new FluidKey(TEST_FLUID_1, null);
@@ -997,7 +997,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
 
@@ -1231,7 +1231,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
 
@@ -1310,7 +1310,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
 
@@ -1398,7 +1398,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
 
@@ -1483,7 +1483,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         FluidKey coolant = new FluidKey(TEST_FLUID_1, null);
@@ -1512,7 +1512,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
@@ -1681,7 +1681,7 @@ final class FacilityPersistenceManagerTest {
         legacy.buffer = new LinkedHashMap<>();
         AutomatedFacility decoded = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         assertThrows(IllegalStateException.class, () -> manager.decodeFacilityState(decoded, legacy));
@@ -1692,7 +1692,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility before = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
 

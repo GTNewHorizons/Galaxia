@@ -18,7 +18,6 @@ slot.reaction_control_system=Reaction Control System
 #### Dimensions
 galaxia.dimension.frozen_belt=Frozen Belt
 galaxia.dimension.mars=Mars
-galaxia.dimension.panspira=Panspira
 galaxia.dimension.tenebrae=Tenebrae
 galaxia.dimension.moon=Moon
 galaxia.dimension.overworld_orbit=Overworld Orbit Stations
@@ -31,7 +30,6 @@ galaxia.celestial.proxima_centauri=Proxima Centauri
 galaxia.celestial.romulus=Romulus
 galaxia.celestial.remus=Remus
 galaxia.celestial.egora=Egora
-galaxia.celestial.panspira=Panspira
 galaxia.celestial.mars=Mars
 galaxia.celestial.moon=Moon
 galaxia.celestial.frozen_belt=Frozen Belt
@@ -107,14 +105,6 @@ tile.frozen_belt_basalt.name=Frozen Belt Basalt
 tile.frozen_belt_breccia.name=Frozen Belt Breccia
 tile.frozen_belt_gabbro.name=Frozen Belt Gabbro
 tile.frozen_belt_ice.name=Frozen Belt Ice
-
-# Blocks - "Panspira"
-tile.panspira_andesite.name=Panspira Andesite
-tile.panspira_magma.name=Panspira Magma
-tile.panspira_regolith.name=Panspira Regolith
-tile.panspira_snow.name=Panspira Snow
-tile.panspira_soil.name=Panspira Soil
-tile.panspira_stone.name=Panspira Stone
 
 # Blocks - "Tenebrae"
 tile.tenebrae_andesite.name=Tenebrae Andesite

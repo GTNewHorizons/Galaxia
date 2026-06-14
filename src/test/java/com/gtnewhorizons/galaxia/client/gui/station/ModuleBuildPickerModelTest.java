@@ -29,7 +29,7 @@ final class ModuleBuildPickerModelTest {
     void compatibleBuildTargetMustBeEmptyAdjacentTile() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
 
@@ -60,7 +60,7 @@ final class ModuleBuildPickerModelTest {
     void incompatibleModuleKindOrTierCannotBePicked() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
 
@@ -77,7 +77,7 @@ final class ModuleBuildPickerModelTest {
     void selectedBuildTargetsUnlockAdjacentTiles() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
 
@@ -109,7 +109,7 @@ final class ModuleBuildPickerModelTest {
     void selectedMultiTileBuildTargetsUnlockAdjacentFootprints() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_OUTPOST,
             Buildable.Status.OPERATIONAL);
 
@@ -201,7 +201,7 @@ final class ModuleBuildPickerModelTest {
     void disconnectedBuildTargetsArePrunedAfterSelectionChanges() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
 
@@ -224,7 +224,7 @@ final class ModuleBuildPickerModelTest {
     void geothermalGeneratorRequiresMagmaPoolUnderCenterAnchor() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_OUTPOST,
             Buildable.Status.OPERATIONAL);
         StationTileCoord center = StationTileCoord.of(2, 0);

@@ -509,7 +509,7 @@ final class StationPacketRoundTripTest {
     private static AutomatedFacility createFacility() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);

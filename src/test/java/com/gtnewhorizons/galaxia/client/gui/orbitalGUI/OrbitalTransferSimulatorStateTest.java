@@ -15,7 +15,7 @@ final class OrbitalTransferSimulatorStateTest {
     @Test
     void closingPanelPreservesRouteForGuiReopen() {
         InterplanetaryTransferSystem.OrbitalTransferSimulatorState state = new InterplanetaryTransferSystem.OrbitalTransferSimulatorState();
-        CelestialObject origin = body(CelestialObjectId.PANSPIRA);
+        CelestialObject origin = body(CelestialObjectId.OVERWORLD);
         CelestialObject destination = body(CelestialObjectId.MARS);
 
         state.open();
@@ -35,7 +35,7 @@ final class OrbitalTransferSimulatorStateTest {
     @Test
     void resetSelectionClearsPersistedRoute() {
         InterplanetaryTransferSystem.OrbitalTransferSimulatorState state = new InterplanetaryTransferSystem.OrbitalTransferSimulatorState();
-        CelestialObject origin = body(CelestialObjectId.PANSPIRA);
+        CelestialObject origin = body(CelestialObjectId.OVERWORLD);
 
         state.open();
         state.beginPick(InterplanetaryTransferSystem.TransferPickMode.ORIGIN);

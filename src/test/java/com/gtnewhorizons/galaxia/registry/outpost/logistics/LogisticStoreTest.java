@@ -187,7 +187,7 @@ final class LogisticStoreTest {
     private static AutomatedFacility facility() {
         return new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
     }
