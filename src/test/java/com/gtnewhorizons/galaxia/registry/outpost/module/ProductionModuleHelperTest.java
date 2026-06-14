@@ -136,7 +136,7 @@ final class ProductionModuleHelperTest {
     void executeConsumesAndProducesFluidSnapshotAmounts() throws Exception {
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         FluidKey inputKey = new FluidKey(TEST_FLUID_1, null);
@@ -169,7 +169,7 @@ final class ProductionModuleHelperTest {
     void executeDoesNotProduceWhenDuplicateItemInputsWouldOverdrawStock() {
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         Item inputItem = Items.diamond;
@@ -196,7 +196,7 @@ final class ProductionModuleHelperTest {
     void executeKeepsInputLowerBoundAfterConsumingRecipeCost() {
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         Item inputItem = Items.diamond;
@@ -224,7 +224,7 @@ final class ProductionModuleHelperTest {
     void executeKeepsInputAboveManualLowerBoundPlusUpkeepReserve() {
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         Item inputItem = Items.diamond;
@@ -392,7 +392,7 @@ final class ProductionModuleHelperTest {
     private static AutomatedFacility station() {
         return new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
     }

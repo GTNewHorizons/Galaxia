@@ -493,7 +493,7 @@ final class AutomatedFacilityOperationTest {
     private static AutomatedFacility facilityWithHammer() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         StationTileCoord coord = StationTileCoord.of(1, 0);
@@ -506,7 +506,7 @@ final class AutomatedFacilityOperationTest {
     private static AutomatedFacility facilityWithMiner() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_OUTPOST,
             Buildable.Status.OPERATIONAL);
         StationTileCoord coord = StationTileCoord.of(1, 0);
@@ -519,7 +519,7 @@ final class AutomatedFacilityOperationTest {
     private static AutomatedFacility facilityWithStorage() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         StationTileCoord coord = StationTileCoord.of(1, 0);

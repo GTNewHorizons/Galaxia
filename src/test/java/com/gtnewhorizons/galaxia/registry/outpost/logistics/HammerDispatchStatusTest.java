@@ -73,8 +73,8 @@ final class HammerDispatchStatusTest {
 
     @Test
     void plannerReturnsReadyDispatchPlanForServerExecution() {
-        AutomatedFacility supplier = facility(CelestialObjectId.PANSPIRA);
-        AutomatedFacility requester = facility(CelestialObjectId.PANSPIRA);
+        AutomatedFacility supplier = facility(CelestialObjectId.OVERWORLD);
+        AutomatedFacility requester = facility(CelestialObjectId.OVERWORLD);
         ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
         supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(32, 32, false, true));
         requester.logisticsConfig.set(resource, new LogisticsResourceConfig(64, 32, true, false));
@@ -99,8 +99,8 @@ final class HammerDispatchStatusTest {
 
     @Test
     void plannerRequestsPackageUpToRequesterEffectiveLowerBound() {
-        AutomatedFacility supplier = facility(CelestialObjectId.PANSPIRA);
-        AutomatedFacility requester = facility(CelestialObjectId.PANSPIRA);
+        AutomatedFacility supplier = facility(CelestialObjectId.OVERWORLD);
+        AutomatedFacility requester = facility(CelestialObjectId.OVERWORLD);
         ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);
         supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
         requester.setBound(resource, 54, true);
@@ -172,7 +172,7 @@ final class HammerDispatchStatusTest {
     @Test
     void plannerSendsRequestedAmountWhenRequestIsBelowOrderSize() {
         AutomatedFacility supplier = facility(CelestialObjectId.FROZEN_BELT);
-        AutomatedFacility requester = facility(CelestialObjectId.PANSPIRA);
+        AutomatedFacility requester = facility(CelestialObjectId.OVERWORLD);
         ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
         supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
         requester.logisticsConfig.set(resource, new LogisticsResourceConfig(16, 64, true, false));
@@ -189,8 +189,8 @@ final class HammerDispatchStatusTest {
 
     @Test
     void reportsArrivedDeliveryBlockedAtDestinationBeforePackageSize() {
-        AutomatedFacility supplier = facility(CelestialObjectId.PANSPIRA);
-        AutomatedFacility requester = facility(CelestialObjectId.PANSPIRA);
+        AutomatedFacility supplier = facility(CelestialObjectId.OVERWORLD);
+        AutomatedFacility requester = facility(CelestialObjectId.OVERWORLD);
         ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
         supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
         requester.logisticsConfig.set(resource, new LogisticsResourceConfig(122, 64, true, false));
@@ -218,9 +218,9 @@ final class HammerDispatchStatusTest {
 
     @Test
     void skipsRequesterWithoutRoomForPackageAndContinuesScanning() {
-        AutomatedFacility supplier = facility(CelestialObjectId.PANSPIRA);
-        AutomatedFacility fullRequester = facility(CelestialObjectId.PANSPIRA);
-        AutomatedFacility validRequester = facility(CelestialObjectId.PANSPIRA);
+        AutomatedFacility supplier = facility(CelestialObjectId.OVERWORLD);
+        AutomatedFacility fullRequester = facility(CelestialObjectId.OVERWORLD);
+        AutomatedFacility validRequester = facility(CelestialObjectId.OVERWORLD);
         ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
         ItemStackWrapper filler = new ItemStackWrapper(Items.diamond, 0, null);
         supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));

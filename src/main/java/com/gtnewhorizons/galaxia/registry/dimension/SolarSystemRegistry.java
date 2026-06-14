@@ -10,7 +10,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.Mars;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.Moon;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.Overworld;
-import com.gtnewhorizons.galaxia.registry.dimension.planets.Panspira;
 
 import cpw.mods.fml.common.FMLLog;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -41,7 +40,6 @@ public final class SolarSystemRegistry {
         registerDimensions(new Moon());
         registerDimensions(new Mars());
         registerDimensions(new FrozenBelt());
-        registerDimensions(new Panspira());
         registerDimensions(new Overworld());
 
         FMLLog.info("[Galaxia] Registered %d celestial bodies", BODIES.size());

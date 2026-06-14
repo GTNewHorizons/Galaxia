@@ -171,32 +171,6 @@ public final class CelestialRegistry {
                 .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 1.5)
                 .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 2.0)
                 .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.2));
-        register(
-            DimensionEnum.PANSPIRA,
-            builder -> builder.parent(CelestialObjectId.VAEL)
-                .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(0.60 * earthRadiusToAU, 0.00057, seededPhase("panspira"))
-                .texture(EnumTextures.ICON_EGORA.get())
-                .spriteSize(0.75)
-                .properties(
-                    b -> b.withGravity(1.4e7, 3600.0)
-                        .visitable(true)
-                        .canCreateStation(true)
-                        .canCreateOutpost(true)
-                        .temperature(423)
-                        .radiation(0.20)
-                        .oreProfile("undefined")
-                        .metadata("surface", "undefined")
-                        .ores(Blocks.iron_ore, Blocks.gold_ore, Blocks.redstone_ore, Blocks.emerald_ore))
-                .featureTileChance(0.26)
-                .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 2.0)
-                .feature(PlanetaryFeatureRegistry.MAGMA_POOL, 0.4)
-                .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.5)
-                .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 1.0)
-                .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0)
-                .feature(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET, 0.8)
-                .feature(PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION, 0.8)
-                .feature(PlanetaryFeatureRegistry.THERMAL_SINK_ZONE, 0.8));
 
         register(
             DimensionEnum.MARS,

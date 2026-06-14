@@ -67,7 +67,7 @@ final class SystemAssetPanelStressTest {
 
     @Test
     void openPanelDoesNotRefreshRowsEveryUpdate() {
-        CelestialObject star = star(CelestialObjectId.PANSPIRA, "Vael");
+        CelestialObject star = star(CelestialObjectId.OVERWORLD, "Vael");
         AtomicInteger refreshes = new AtomicInteger();
         SolarSystemAssetPanelWidget panel = new SolarSystemAssetPanelWidget(
             star,
@@ -90,7 +90,7 @@ final class SystemAssetPanelStressTest {
             asset(
                 "Alpha Station",
                 CelestialAsset.Kind.AUTOMATED_STATION,
-                CelestialObjectId.PANSPIRA,
+                CelestialObjectId.OVERWORLD,
                 Buildable.Status.OPERATIONAL,
                 WarningPriority.NONE,
                 false,
@@ -98,7 +98,7 @@ final class SystemAssetPanelStressTest {
             asset(
                 "Beta Station",
                 CelestialAsset.Kind.AUTOMATED_STATION,
-                CelestialObjectId.PANSPIRA,
+                CelestialObjectId.OVERWORLD,
                 Buildable.Status.OPERATIONAL,
                 WarningPriority.NO_POWER,
                 false,
@@ -106,7 +106,7 @@ final class SystemAssetPanelStressTest {
             asset(
                 "Gamma Outpost",
                 CelestialAsset.Kind.AUTOMATED_OUTPOST,
-                CelestialObjectId.PANSPIRA,
+                CelestialObjectId.OVERWORLD,
                 Buildable.Status.OPERATIONAL,
                 WarningPriority.NONE,
                 false,
@@ -114,7 +114,7 @@ final class SystemAssetPanelStressTest {
             asset(
                 "Delta Station Build",
                 CelestialAsset.Kind.STATION,
-                CelestialObjectId.PANSPIRA,
+                CelestialObjectId.OVERWORLD,
                 Buildable.Status.IN_CONSTRUCTION,
                 WarningPriority.IDLE,
                 false,
@@ -122,7 +122,7 @@ final class SystemAssetPanelStressTest {
             asset(
                 "Epsilon Outpost",
                 CelestialAsset.Kind.AUTOMATED_OUTPOST,
-                CelestialObjectId.PANSPIRA,
+                CelestialObjectId.OVERWORLD,
                 Buildable.Status.DISABLED,
                 WarningPriority.NONE,
                 true,
