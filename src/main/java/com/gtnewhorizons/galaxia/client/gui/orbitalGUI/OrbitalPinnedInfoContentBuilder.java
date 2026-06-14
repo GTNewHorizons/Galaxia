@@ -10,7 +10,6 @@ import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.oredict.OreDictionary;
 
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
@@ -37,17 +36,12 @@ public final class OrbitalPinnedInfoContentBuilder {
         rows.add(new PinnedInfoRow("Dangers", buildDangerSummary(body)));
         if (body.objectClass() != CelestialObject.Class.STAR && body.objectClass() != CelestialObject.Class.GALAXY) {
             rows.add(new PinnedInfoRow("Surface", formatSurfaceType(body)));
-            if (body.properties()
-                .ores()
-                .isEmpty()) {
+            List<ItemStack> gtOres = body.properties()
+                .getResolvedGtVeinOreStacks();
+            if (gtOres.isEmpty()) {
                 rows.add(new PinnedInfoRow("Ores", "Undefined"));
             } else {
-                rows.add(
-                    new PinnedInfoRow(
-                        "Ores",
-                        "",
-                        body.properties()
-                            .ores()));
+                rows.add(new PinnedInfoRow("Ores", "", gtOres));
             }
         }
         return rows;
@@ -85,32 +79,14 @@ public final class OrbitalPinnedInfoContentBuilder {
             .get("surface");
         signature.append('|')
             .append(surfaceType == null ? "" : surfaceType);
-        List<String> gtOreVeinOres = body.properties()
-            .gtOreVeinOres();
+        List<String> gtOreVeinIds = body.properties()
+            .gtOreVeinIds();
         signature.append('|')
-            .append(gtOreVeinOres.size());
-        for (String oreName : gtOreVeinOres) {
+            .append(gtOreVeinIds.size());
+        for (String veinId : gtOreVeinIds) {
             signature.append('|')
-                .append(oreName)
+                .append(veinId)
                 .append(',');
-        }
-        List<ItemStack> ores = body.properties()
-            .ores();
-        signature.append('|')
-            .append(ores.size());
-        for (ItemStack stack : ores) {
-            if (stack == null || stack.getItem() == null) {
-                signature.append("|null");
-                continue;
-            }
-            signature.append('|')
-                .append(
-                    stack.getItem()
-                        .getUnlocalizedName())
-                .append(':')
-                .append(stack.getItemDamage())
-                .append(':')
-                .append(stack.stackSize);
         }
     }
 
@@ -161,28 +137,6 @@ public final class OrbitalPinnedInfoContentBuilder {
                 .append(part.substring(1));
         }
         return out.toString();
-    }
-
-    private List<ItemStack> resolveGtVeinDisplayItems(String oreName) {
-        List<ItemStack> items = new ArrayList<>();
-        if (oreName == null || oreName.isEmpty()) return items;
-        ItemStack stack = resolveGtOreDisplayStack(oreName);
-        if (stack != null) items.add(stack);
-        return items;
-    }
-
-    private ItemStack resolveGtOreDisplayStack(String oreName) {
-        if (oreName == null || oreName.isEmpty()) return null;
-        String materialKey = oreName.replaceAll("[^A-Za-z0-9]", "");
-        String[] oreDictKeys = new String[] { "ore" + materialKey, "gem" + materialKey, "dust" + materialKey,
-            "dustImpure" + materialKey, "crushed" + materialKey };
-        for (String oreDictKey : oreDictKeys) {
-            List<ItemStack> matches = OreDictionary.getOres(oreDictKey, false);
-            if (matches == null || matches.isEmpty()) continue;
-            ItemStack match = matches.getFirst();
-            if (match != null) return match.copy();
-        }
-        return null;
     }
 
     public static final class OrbitalPinnedInfoWidget extends ParentWidget<OrbitalPinnedInfoWidget> {

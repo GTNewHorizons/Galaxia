@@ -11,8 +11,6 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
 
-import net.minecraft.init.Blocks;
-
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
@@ -135,8 +133,7 @@ public final class CelestialRegistry {
                         .radiation(0.08)
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
-                        .metadata("status", "placeholder_colony_world")
-                        .ores(Blocks.iron_ore, Blocks.gold_ore, Blocks.redstone_ore, Blocks.diamond_ore))
+                        .metadata("status", "placeholder_colony_world"))
                 .featureTileChance(0.18)
                 .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 3.0)
                 .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 2.0)
@@ -158,8 +155,7 @@ public final class CelestialRegistry {
                         .temperature(182)
                         .radiation(0.14)
                         .oreProfile("undefined")
-                        .metadata("surface", "undefined")
-                        .ores(Blocks.coal_ore, Blocks.iron_ore, Blocks.lapis_ore, Blocks.redstone_ore))
+                        .metadata("surface", "undefined"))
                 .featureTileChance(0.24)
                 .feature(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET, 4.0)
                 .feature(PlanetaryFeatureRegistry.THERMAL_SINK_ZONE, 2.0)
@@ -182,13 +178,7 @@ public final class CelestialRegistry {
                         .oreProfile("undefined")
                         .gtOreVeinIds("ore.mix.lapis", "ore.mix.iron", "ore.mix.redstone")
                         .metadata("surface", "undefined")
-                        .metadata("status", "placeholder_homeworld")
-                        .ores(
-                            Blocks.coal_ore,
-                            Blocks.iron_ore,
-                            Blocks.gold_ore,
-                            Blocks.redstone_ore,
-                            Blocks.diamond_ore))
+                        .metadata("status", "placeholder_homeworld"))
                 .featureTileChance(0.20)
                 .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 2.0)
                 .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 1.5)
@@ -209,8 +199,7 @@ public final class CelestialRegistry {
                         .temperature(423)
                         .radiation(0.20)
                         .oreProfile("undefined")
-                        .metadata("surface", "undefined")
-                        .ores(Blocks.iron_ore, Blocks.gold_ore, Blocks.redstone_ore, Blocks.emerald_ore))
+                        .metadata("surface", "undefined"))
                 .playableDimensionProfile(
                     stationBuildable(
                         PlayableDimensionProfile.builder(DimensionEnum.PANSPIRA)
@@ -246,8 +235,7 @@ public final class CelestialRegistry {
                         .temperature(67)
                         .radiation(0.10)
                         .oreProfile("undefined")
-                        .metadata("surface", "undefined")
-                        .ores(Blocks.coal_ore, Blocks.iron_ore, Blocks.gold_ore, Blocks.lapis_ore, Blocks.diamond_ore))
+                        .metadata("surface", "undefined"))
                 .playableDimensionProfile(
                     stationBuildable(
                         PlayableDimensionProfile.builder(DimensionEnum.MARS)
@@ -279,8 +267,7 @@ public final class CelestialRegistry {
                         .temperature(225)
                         .radiation(0.18)
                         .oreProfile("undefined")
-                        .metadata("surface", "undefined")
-                        .ores(Blocks.coal_ore, Blocks.iron_ore, Blocks.gold_ore))
+                        .metadata("surface", "undefined"))
                 .playableDimensionProfile(
                     stationBuildable(
                         PlayableDimensionProfile.builder(DimensionEnum.MOON)
@@ -366,13 +353,7 @@ public final class CelestialRegistry {
                         .oreProfile("undefined")
                         .gtOreVeinIds("ore.mix.lapis", "ore.mix.iron", "ore.mix.redstone")
                         .metadata("surface", "undefined")
-                        .metadata("status", "placeholder_homeworld")
-                        .ores(
-                            Blocks.coal_ore,
-                            Blocks.iron_ore,
-                            Blocks.gold_ore,
-                            Blocks.redstone_ore,
-                            Blocks.diamond_ore))
+                        .metadata("status", "placeholder_homeworld"))
                 .playableDimensionProfile(
                     stationBuildable(
                         PlayableDimensionProfile.builder(DimensionEnum.OVERWORLD)
