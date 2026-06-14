@@ -167,7 +167,7 @@ final class ModuleUpgradePickerModelTest {
     private static TestFacility twoModuleFacility(FacilityModuleKind kind, ModuleTier tier) {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         ModuleInstance source = kind.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, tier);

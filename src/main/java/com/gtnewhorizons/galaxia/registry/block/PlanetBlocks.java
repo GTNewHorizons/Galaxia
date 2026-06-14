@@ -169,50 +169,6 @@ public final class PlanetBlocks {
             .build();
 
     /*
-     * PANSPIRA blocks
-     */
-    public static final Block PANSPIRA_REGOLITH = PlanetBlockBuilder.create("panspira/panspira_regolith")
-            .falling()
-            .dropSelf()
-            .hardness(0.5F)
-            .shovel()
-            .harvest(0)
-            .build();
-
-    public static final Block PANSPIRA_ANDESITE = PlanetBlockBuilder.create("panspira/panspira_andesite")
-            .dropSelf()
-            .hardness(1.5F)
-            .harvest(1)
-            .build();
-
-    public static final Block PANSPIRA_SNOW = PlanetBlockBuilder.create("panspira/panspira_snow")
-            .falling()
-            .dropSelf()
-            .hardness(0.1F)
-            .shovel()
-            .harvest(0)
-            .build();
-
-    public static final Block PANSPIRA_STONE = PlanetBlockBuilder.create("panspira/panspira_stone")
-            .dropSelf()
-            .hardness(1.5F)
-            .harvest(1)
-            .build();
-
-    public static final Block PANSPIRA_SOIL = PlanetBlockBuilder.create("panspira/panspira_soil")
-            .dropSelf()
-            .hardness(0.6F)
-            .shovel()
-            .harvest(0)
-            .build();
-
-    public static final Block PANSPIRA_MAGMA = PlanetBlockBuilder.create("panspira/panspira_magma")
-            .dropSelf()
-            .hardness(0.5F)
-            .harvest(0)
-            .build();
-
-    /*
      * TENEBRAE blocks
      */
 

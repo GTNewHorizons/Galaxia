@@ -171,7 +171,7 @@ final class AutomatedFacilityUpkeepTest {
     private static AutomatedFacility facilityWithModules(ModuleInstance... modules) {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         for (ModuleInstance module : modules) {

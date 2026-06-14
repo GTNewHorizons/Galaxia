@@ -32,7 +32,6 @@ final class CelestialPlayableDimensionProfileTest {
 
         assertEquals(
             Set.of(
-                DimensionEnum.PANSPIRA,
                 DimensionEnum.MARS,
                 DimensionEnum.MOON,
                 DimensionEnum.FROZEN_BELT,
@@ -84,18 +83,6 @@ final class CelestialPlayableDimensionProfileTest {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
 
         Set<ExpectedDimension> expectedDimensions = Set.of(
-            new ExpectedDimension(
-                DimensionEnum.PANSPIRA,
-                WorldProviderSpace.class,
-                2.25,
-                1.0,
-                3.0,
-                0.6 * 23481,
-                1.5,
-                EnumTiers.TIER_1,
-                423,
-                0,
-                300),
             new ExpectedDimension(
                 DimensionEnum.MARS,
                 WorldProviderSpace.class,
