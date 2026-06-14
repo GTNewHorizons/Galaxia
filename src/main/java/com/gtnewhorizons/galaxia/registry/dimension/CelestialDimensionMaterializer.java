@@ -1,12 +1,22 @@
 package com.gtnewhorizons.galaxia.registry.dimension;
 
+import java.util.List;
+
 import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 
 public final class CelestialDimensionMaterializer {
 
     private CelestialDimensionMaterializer() {}
+
+    public static List<DimensionDef> materializePlayableDefinitions() {
+        return CelestialRegistry.getPlayableBodies()
+            .stream()
+            .map(CelestialDimensionMaterializer::materializeDefinition)
+            .toList();
+    }
 
     public static DimensionDef materializeDefinition(@Nonnull CelestialObject body) {
         PlayableDimensionProfile profile = body.playableDimensionProfile();

@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.api;
 
 import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
-import static com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry.GALAXIA_DIMENSIONS;
 
 import java.util.Collections;
 import java.util.List;
@@ -313,7 +312,7 @@ public final class GalaxiaAPI {
     }
 
     public static boolean isInGalaxiaDimension(Entity e) {
-        return GALAXIA_DIMENSIONS.contains(e.dimension);
+        return e != null && SolarSystemRegistry.getById(e.dimension) != null;
     }
 
     /**

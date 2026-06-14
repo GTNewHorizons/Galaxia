@@ -23,10 +23,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
 
-/*
- * TODO: Figure out if there is a need to merge this with SolarSystemRegistry, and if so, how to do it
- * TODO: Make registration happen in 2 steps: calling ores() definitions right now must wait after GT registration
- */
+// TODO: Make registration happen in 2 steps: calling ores() definitions right now must wait after GT registration
 public final class CelestialRegistry {
 
     private static final double EARTH_RADIUS_TO_AU = 23481;
