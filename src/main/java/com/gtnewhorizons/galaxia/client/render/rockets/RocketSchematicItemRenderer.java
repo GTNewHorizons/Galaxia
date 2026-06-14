@@ -33,7 +33,11 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
 
     @Override
     public boolean handleRenderType(ItemStack stack, ItemRenderType type) {
-        return type == ItemRenderType.FIRST_PERSON_MAP || (type == ItemRenderType.ENTITY && RenderItem.renderInFrame);
+        return switch (type) {
+            case FIRST_PERSON_MAP, EQUIPPED, EQUIPPED_FIRST_PERSON -> true;
+            case ENTITY -> RenderItem.renderInFrame;
+            default -> false;
+        };
     }
 
     @Override
@@ -43,10 +47,40 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
 
     @Override
     public void renderItem(ItemRenderType type, ItemStack stack, Object... data) {
-        if (type == ItemRenderType.FIRST_PERSON_MAP) {
-            renderSchematic(stack, Minecraft.getMinecraft().renderEngine);
-        } else if (type == ItemRenderType.ENTITY && RenderItem.renderInFrame) {
-            renderSchematicInFrame(stack, RenderManager.instance);
+        // TODO fix y-flip for first person view
+        switch (type) {
+            case FIRST_PERSON_MAP:
+                GL11.glPushMatrix();
+                GL11.glRotatef(180F, 0F, 0F, 1F); // mirror
+                GL11.glScalef(0.01F, 0.01F, 0.01F);
+                renderSchematic(stack, Minecraft.getMinecraft().renderEngine);
+                GL11.glPopMatrix();
+                break;
+
+            case EQUIPPED_FIRST_PERSON:
+                GL11.glPushMatrix();
+                GL11.glRotatef(0F, 180F, 0F, 1F); // mirror
+                GL11.glScalef(0.01F, 0.01F, 0.01F);
+                renderSchematic(stack, Minecraft.getMinecraft().renderEngine);
+                GL11.glPopMatrix();
+                break;
+
+            case EQUIPPED:
+                GL11.glPushMatrix();
+                GL11.glRotatef(180F, 0F, 0F, 1F);
+                GL11.glTranslatef(-1.60F, -1.0F, 0.0F);
+                GL11.glScalef(0.01F, 0.01F, 0.01F);
+                renderSchematic(stack, Minecraft.getMinecraft().renderEngine);
+                GL11.glPopMatrix();
+                break;
+
+            case ENTITY:
+                if (RenderItem.renderInFrame) {
+                    GL11.glPushMatrix();
+                    renderSchematicInFrame(stack, RenderManager.instance);
+                    GL11.glPopMatrix();
+                }
+                break;
         }
     }
 
@@ -104,13 +138,11 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
 
         for (RocketPartInstance part : parts) {
             ResourceLocation tex = part.def()
-                .textureLocation();
+                .spriteLocation();
             if (tex == null) tex = MISSING_TEXTURE;
 
             float x = PADDING + (usable - totalWidth * pixelsPerCell) / 2f + (part.x() - minX) * pixelsPerCell;
-            float y = SIZE - PADDING
-                - ((part.y() - minY) + part.def()
-                    .height()) * pixelsPerCell;
+            float y = PADDING + (usable - totalHeight * pixelsPerCell) / 2f + (part.y() - minY) * pixelsPerCell;
             float w = part.def()
                 .width() * pixelsPerCell;
             float h = part.def()
