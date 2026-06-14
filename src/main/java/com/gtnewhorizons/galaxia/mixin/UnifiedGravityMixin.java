@@ -1,9 +1,16 @@
 package com.gtnewhorizons.galaxia.mixin;
 
+import net.minecraft.client.particle.EntityFX;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.item.EntityBoat;
 import net.minecraft.entity.item.EntityFallingBlock;
 import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.item.EntityMinecart;
 import net.minecraft.entity.item.EntityTNTPrimed;
+import net.minecraft.entity.item.EntityXPOrb;
+import net.minecraft.entity.projectile.EntityFireball;
+import net.minecraft.entity.projectile.EntityFishHook;
+import net.minecraft.entity.projectile.EntityThrowable;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.Constant;
@@ -14,7 +21,8 @@ import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 /**
  * Mixin to unify gravity for miscellaneous entities such as TNT
  */
-@Mixin({ EntityItem.class, EntityFallingBlock.class, EntityTNTPrimed.class })
+@Mixin({ EntityItem.class, EntityTNTPrimed.class, EntityFishHook.class, EntityMinecart.class, EntityFallingBlock.class,
+    EntityBoat.class, EntityThrowable.class, EntityFX.class, EntityXPOrb.class, EntityFireball.class })
 public abstract class UnifiedGravityMixin {
 
     /**

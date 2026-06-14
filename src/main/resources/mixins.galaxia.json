@@ -10,7 +10,6 @@
     "MixinEntityPlayer",
     "MixinEntityThrowable",
     "MixinThrowRecoil",
-    "ParticleGravityMixin",
     "RelativeMovementMixin",
     "UnifiedGravityMixin"
   ],
