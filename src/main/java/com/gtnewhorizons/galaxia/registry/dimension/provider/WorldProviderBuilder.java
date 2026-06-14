@@ -30,6 +30,10 @@ public class WorldProviderBuilder {
         return new WorldProviderBuilder(provider);
     }
 
+    public WorldProviderSpace provider() {
+        return provider;
+    }
+
     /**
      * Sets whether the provider should have a sky
      *

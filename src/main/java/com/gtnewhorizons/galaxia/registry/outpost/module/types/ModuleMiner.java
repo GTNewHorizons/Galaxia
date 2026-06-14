@@ -96,14 +96,11 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
         return GalaxiaCelestialAPI.get(facility.celestialObjectId)
             .map(registration -> {
                 var properties = registration.properties();
-                List<ItemStack> ores = properties.ores();
-                List<ItemStack> veinOres = properties.getResolvedGtVeinOreStacks();
+                List<ItemStack> bodyOres = properties.getResolvedGtVeinOreStacks();
                 List<ItemStack> candidates = new java.util.ArrayList<>(
-                    ores.size() + veinOres.size()
-                        + featureEffects.candidates()
-                            .size());
-                candidates.addAll(ores);
-                candidates.addAll(veinOres);
+                    bodyOres.size() + featureEffects.candidates()
+                        .size());
+                candidates.addAll(bodyOres);
                 candidates.addAll(featureEffects.candidates());
                 return List.copyOf(candidates);
             })
