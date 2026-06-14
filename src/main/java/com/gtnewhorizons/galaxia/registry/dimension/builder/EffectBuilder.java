@@ -5,6 +5,7 @@ import net.minecraft.world.World;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * class to get a list of effects on each planet as required
@@ -12,29 +13,35 @@ import lombok.Data;
 @Data
 @Builder
 @AllArgsConstructor
+@NoArgsConstructor
 public class EffectBuilder {
 
-    private int baseTemp;
-    private boolean withering;
-    private int oxygenPercent;
-    private int radiation;
-    private boolean spores;
-    private int pressure;
+    @Builder.Default
+    private int baseTemp = 273;
+    @Builder.Default
+    private boolean withering = false;
+    @Builder.Default
+    private int oxygenPercent = 100;
+    @Builder.Default
+    private int radiation = 0;
+    @Builder.Default
+    private boolean spores = false;
+    @Builder.Default
+    private int pressure = 1;
 
-    private Modifier<World> tempModifier;
-    private Modifier<World> oxygenModifier;
-    private Modifier<World> radiationModifier;
-    private Modifier<World> pressureModifier;
+    @Builder.Default
+    private Modifier<World> tempModifier = null;
+    @Builder.Default
+    private Modifier<World> oxygenModifier = null;
+    @Builder.Default
+    private Modifier<World> radiationModifier = null;
+    @Builder.Default
+    private Modifier<World> pressureModifier = null;
 
     @FunctionalInterface
     public interface Modifier<T> {
 
         int apply(T target, int base);
-    }
-
-    /** Default constructor - Overworld values */
-    public EffectBuilder() {
-        this(273, false, 100, 0, false, 1, null, null, null, null);
     }
 
     private static <T> int apply(Modifier<T> mod, int base, T target) {
@@ -75,9 +82,5 @@ public class EffectBuilder {
             float time = world.getCelestialAngle(freq);
             return base + (int) (Math.sin(time) * amp);
         }
-    }
-
-    public static EffectBuilderBuilder builder() {
-        return new EffectBuilderBuilder();
     }
 }

@@ -68,4 +68,24 @@ final class PlanetaryFeatureBehaviorTest {
                 .bonusRolls() > 0);
     }
 
+    @Test
+    void rareCrystalFeatureDoesNotFallbackToVanillaGemsWhenGtStacksAreMissing() {
+        PlanetaryFeature feature = PlanetaryFeatureRegistry
+            .feature(PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION.key());
+        ModuleInstance module = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.MINER,
+            StationTileCoord.of(0, 0),
+            ModuleShape.QUAD_2x2,
+            ModuleTier.HV);
+        MiningFeatureEffects.Builder builder = MiningFeatureEffects.builder();
+
+        feature.applyMiningEffects(new FeatureMiningContext(module, feature.key(), 3, 4), builder);
+
+        assertTrue(
+            builder.build()
+                .candidates()
+                .isEmpty());
+    }
+
 }

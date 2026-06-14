@@ -33,8 +33,6 @@ import com.gtnewhorizons.galaxia.client.gui.station.layer.PlanetaryFeatureOverla
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureDefinition;
-import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
-import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
@@ -54,10 +52,13 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
     private final StationVisionLayer visionLayer;
     private final BiPredicate<Integer, Integer> inputBlocked;
     private final @Nullable StationTilePickerController tilePickerController;
+    private final StationFeatureSurface featureSurface = new StationFeatureSurface();
 
     private @Nullable StationTileCoord selected;
     private @Nullable StationTileCoord hovered;
     private @Nullable StationTileCoord pressedTile;
+    private final List<StationMapViewport.TilePosition> visibleFeatureTiles = new ArrayList<>();
+    private final List<PlanetaryFeatureDefinition> hoveredFeatureDefinitions = new ArrayList<>();
     private final Set<StationTileCoord> expansionSlots = new LinkedHashSet<>();
     private @Nullable StationLayout cachedExpansionLayout;
     private long cachedExpansionLayoutVersion = -1L;
@@ -587,15 +588,16 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
     }
 
     private void drawFeatureOverlay(AutomatedFacility facility) {
-        Set<StationMapViewport.TilePosition> candidates = StationMapViewport.visibleTilePositions(
+        StationMapViewport.collectVisibleTilePositions(
             getArea().width,
             getArea().height,
             contentLeft,
             contentRightPadding,
             contentVerticalPadding,
             panX,
-            panY);
-        for (StationMapViewport.TilePosition coord : candidates) {
+            panY,
+            visibleFeatureTiles);
+        for (StationMapViewport.TilePosition coord : visibleFeatureTiles) {
             PlanetaryFeatureOverlayRenderer.draw(
                 tileLocalX(coord.dx()),
                 tileLocalY(coord.dy()),
@@ -643,11 +645,8 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             panX,
             panY);
         if (coord == null) return;
-        List<PlanetaryFeatureDefinition> features = new ArrayList<>();
-        for (PlanetaryFeatureKey key : facility.planetaryFeaturesAt(coord.dx(), coord.dy())) {
-            PlanetaryFeatureDefinition definition = PlanetaryFeatureRegistry.get(key);
-            if (definition != null) features.add(definition);
-        }
+        List<PlanetaryFeatureDefinition> features = featureSurface
+            .hoverDefinitions(facility, coord, hoveredFeatureDefinitions);
         if (features.isEmpty()) return;
 
         FontRenderer fr = Minecraft.getMinecraft().fontRenderer;

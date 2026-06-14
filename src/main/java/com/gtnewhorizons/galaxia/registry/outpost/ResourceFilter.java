@@ -31,6 +31,7 @@ public final class ResourceFilter<T> implements Predicate<T> {
 
     /** Exact match against a raw string. */
     public void add(String value) {
+        if (serialized.contains(value)) return;
         stringPredicates.add(s -> s.equals(value));
         serialized.add(value);
     }

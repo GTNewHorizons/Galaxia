@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.client.render.sky;
 
-import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
-
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,7 +18,7 @@ import jss.util.RandomXoshiro256StarStar;
 public final class EnhancedSkyRender {
 
     /**
-     * One global preset used for now. Later this can become dimension-specific.
+     * Fallback preset if none are selected
      */
     public static final SkyPreset DEFAULT_PRESET = new SkyPreset("default");
 
@@ -33,15 +31,6 @@ public final class EnhancedSkyRender {
      * Fallback seed so generated sky content stays stable.
      */
     private static final long BASE_SEED = 10842L;
-
-    static {
-        DEFAULT_PRESET
-            .billboardLayer(
-                new BillboardLayer(LocationGalaxia("textures/sky/nebula_01.png"), 22, 6.0f, 0.20f, 0.15f, 0.95f))
-            .billboardLayer(
-                new BillboardLayer(LocationGalaxia("textures/sky/quasar_01.png"), 5, 1.8f, 0.45f, 0.35f, 1.00f))
-            .domeLayer(new DomeLayer(LocationGalaxia("textures/sky/milky_way.png"), 1.0f, 0.20f, 0.55f));
-    }
 
     /**
      * Registers a preset for a specific dimension id.
@@ -196,8 +185,8 @@ public final class EnhancedSkyRender {
         for (int y = 0; y < lat; ++y) {
             float vA = (float) y / (float) lat;
             float vB = (float) (y + 1) / (float) lat;
-            float thetaA = (float) (vA * Math.PI * 0.5D);
-            float thetaB = (float) (vB * Math.PI * 0.5D);
+            float thetaA = (float) ((vA - 0.5D) * Math.PI);
+            float thetaB = (float) ((vB - 0.5D) * Math.PI);
             float sinA = MathHelper.sin(thetaA), cosA = MathHelper.cos(thetaA);
             float sinB = MathHelper.sin(thetaB), cosB = MathHelper.cos(thetaB);
 
@@ -356,7 +345,7 @@ public final class EnhancedSkyRender {
         final boolean allowDayVisible;
 
         public DomeLayer(ResourceLocation texture, float opacity, float minVisibility, float maxVisibility) {
-            this(texture, opacity, minVisibility, maxVisibility, 120.0f, 48, 24, 0.0f, false);
+            this(texture, opacity, minVisibility, maxVisibility, 120.0f, 48, 48, 0.0f, false);
         }
 
         public DomeLayer(ResourceLocation texture, float opacity, float minVisibility, float maxVisibility,

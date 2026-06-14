@@ -6,19 +6,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class SystemAssetPanelStressTest {
+
+    @BeforeAll
+    static void init() {
+        GalaxiaTestBootstrap.ensureCelestialRegistry();
+    }
 
     @Test
     void filtersMultipleStationsAndOutpostsInOneSystem() {
@@ -54,6 +63,26 @@ final class SystemAssetPanelStressTest {
             assets.get(2)
                 .warningPriority()
                 .isWarning());
+    }
+
+    @Test
+    void openPanelDoesNotRefreshRowsEveryUpdate() {
+        CelestialObject star = star(CelestialObjectId.PANSPIRA, "Vael");
+        AtomicInteger refreshes = new AtomicInteger();
+        SolarSystemAssetPanelWidget panel = new SolarSystemAssetPanelWidget(
+            star,
+            () -> star,
+            () -> true,
+            id -> {},
+            ignored -> {
+                refreshes.incrementAndGet();
+                return List.of();
+            });
+
+        panel.onUpdate();
+        panel.onUpdate();
+
+        assertEquals(1, refreshes.get());
     }
 
     private static List<CelestialAsset> stressAssets() {
@@ -98,6 +127,14 @@ final class SystemAssetPanelStressTest {
                 WarningPriority.NONE,
                 true,
                 false));
+    }
+
+    private static CelestialObject star(CelestialObjectId id, String name) {
+        return CelestialObject.builder()
+            .id(id)
+            .name(name)
+            .objectClass(CelestialObject.Class.STAR)
+            .build();
     }
 
     private static List<String> namesAcceptedBy(List<CelestialAsset> assets, SystemAssetFilter filter) {

@@ -12,7 +12,7 @@ import net.minecraftforge.common.util.ForgeDirection;
 import com.cleanroommc.modularui.factory.GuiFactories;
 import com.gtnewhorizons.galaxia.registry.block.PlacementHelper;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
-import com.gtnewhorizons.galaxia.registry.celestial.station.TileHammerCannon;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
 
 public class BlockHammerCannon extends BlockUpdatable implements ITileEntityProvider {
 

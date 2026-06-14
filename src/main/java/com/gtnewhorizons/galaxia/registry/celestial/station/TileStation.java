@@ -25,12 +25,12 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.network.StationGraphSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
+import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializer;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
-import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehavior;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehaviorWithAttachments;
 
@@ -55,9 +55,18 @@ public class TileStation extends TileStationBase<TileStation> {
 
     private IStationBehavior behavior = GalaxiaBehaviors.ROOM.get();
 
+    private StationGraphSyncHandler activeGraphSyncHandler;
+
+    public void clearActiveGraphSyncHandler(StationGraphSyncHandler handler) {
+        if (activeGraphSyncHandler == handler) {
+            activeGraphSyncHandler = null;
+        }
+    }
+
     @Getter
     @Setter
     private UUID owner;
+    private boolean proximityBlocked;
     private Role controllerFlag = Role.UNDEFINED;
 
     private CelestialAsset.ID backingStation;
@@ -128,10 +137,14 @@ public class TileStation extends TileStationBase<TileStation> {
         this.behavior = newBehavior;
         markStructureDirty();
         markDirty();
+        if (activeGraphSyncHandler != null) {
+            activeGraphSyncHandler.forceDirty();
+            activeGraphSyncHandler.triggerFullSync();
+        }
         if (worldObj != null) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
         }
-        DEFINITION = null;
+        reset();
     }
 
     public void addAttachment(BlockPos pos) {
@@ -144,7 +157,9 @@ public class TileStation extends TileStationBase<TileStation> {
     public IStructureDefinition<TileStation> getStructureDefinition() {
         if (DEFINITION != null) return DEFINITION;
 
-        DEFINITION = behavior.buildStructureDefinition(SolarSystemRegistry.getById(worldObj.provider.dimensionId));
+        DEFINITION = behavior.buildStructureDefinition(
+            CelestialDimensionMaterializer.findDefinitionById(worldObj.provider.dimensionId)
+                .orElse(null));
         return DEFINITION;
     }
 
@@ -156,6 +171,11 @@ public class TileStation extends TileStationBase<TileStation> {
     @Override
     public void onStructureFormed() {
         super.onStructureFormed();
+        if (overlapsForeignStation()) {
+            proximityBlocked = true;
+            return;
+        }
+        proximityBlocked = false;
         behavior.onStructureFormed(this);
     }
 
@@ -189,6 +209,7 @@ public class TileStation extends TileStationBase<TileStation> {
     protected boolean attemptBoot() {
         if (controllerFlag == Role.MAIN) {
             initController();
+            super.attemptBoot();
             return true;
         }
 
@@ -202,17 +223,20 @@ public class TileStation extends TileStationBase<TileStation> {
                     this.graph = base.graph;
                     graph.connectPiece(here);
                     controllerFlag = Role.SECONDARY;
+                    super.attemptBoot();
                     return true;
                 }
             }
         }
 
         if (controllerFlag == Role.SECONDARY) {
+            super.attemptBoot();
             return false;
         }
 
         controllerFlag = Role.MAIN;
         initController();
+        super.attemptBoot();
         return true;
     }
 
@@ -239,13 +263,53 @@ public class TileStation extends TileStationBase<TileStation> {
         CelestialAssetStore.registerAsset(owner, station);
     }
 
+    private boolean overlapsForeignStation() {
+        if (owner == null) return false;
+
+        CelestialObjectId bodyId = GalaxiaCelestialAPI.getObjectFromDimension(worldObj.provider.dimensionId);
+        if (bodyId == CelestialObjectId.INVALID) return false;
+
+        for (CelestialAsset.ID otherId : CelestialAssetStore.getAssetsOnBody(bodyId)) {
+            CelestialAsset other = CelestialAssetStore.findAsset(otherId);
+            if (!(other instanceof Station otherStation)) continue;
+            if (otherStation.getController() != null && otherStation.getController()
+                .equals(here)) continue;
+            UUID otherTeam = CelestialAssetStore.getTeamId(otherId);
+            if (otherTeam != null && otherTeam.equals(owner)) continue;
+
+            TileStation otherTile = otherStation.getTileController();
+            if (otherTile == null || !otherTile.structureValid) continue;
+
+            if (piecesOverlap(this, otherTile)) return true;
+
+            StationGraph otherGraph = otherTile.getGraph();
+            if (otherGraph != null) {
+                for (TileStationBase<?> piece : otherGraph.iterateOver(TileStationBase.class)) {
+                    if (piecesOverlap(this, piece)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean piecesOverlap(TileStationBase<?> a, TileStationBase<?> b) {
+        int dist = (a.getSearchRadius() + b.getSearchRadius()) * 2;
+        int dx = Math.abs(a.here.x() - b.here.x());
+        int dy = Math.abs(a.here.y() - b.here.y());
+        int dz = Math.abs(a.here.z() - b.here.z());
+        return dx < dist && dy < dist && dz < dist;
+    }
+
     @Override
     protected void tickPostBoot() {
+        if (proximityBlocked) return;
         behavior.tickPostBoot(this);
     }
 
     @Override
     public void tick() {
+        if (!structureValid || proximityBlocked) return;
+
         super.tick();
         if (getBackingStation().tryConsumeEnergy(
             oxygenators.size() * OXYGENATOR_EUT + coolingCoils.size() * COIL_COOLING_EUT
@@ -266,8 +330,7 @@ public class TileStation extends TileStationBase<TileStation> {
         for (TileStationBase<?> secondary : graph.iterateOver(TileStationBase.class)) {
             secondary.tick();
         }
-        graph.getAttachments()
-            .forEach(IStationAttachment::tick);
+        graph.tickAttachments();
     }
 
     public boolean isMainController() {
@@ -397,6 +460,12 @@ public class TileStation extends TileStationBase<TileStation> {
             return structure + ": " + color + status + EnumChatFormatting.RESET;
         })).pos(10, structY));
 
+        // Register station graph sync handler for all behaviors to consume
+        StationGraphSyncHandler graphSyncHandler = new StationGraphSyncHandler();
+        graphSyncHandler.setStation(this);
+        syncManager.syncValue(StationGraphSyncHandler.KEY, graphSyncHandler);
+        activeGraphSyncHandler = graphSyncHandler;
+
         // Behavior-specific widgets
         int behaviorY = isCtrl ? 60 : 78;
         List<Widget<?>> behaviourWidgets = behavior.buildBehaviourWidgets(this, syncManager, behaviorY);
@@ -452,12 +521,16 @@ public class TileStation extends TileStationBase<TileStation> {
                     .getLeastSignificantBits());
         }
         nbt.setDouble("oxygenLevel", oxygenLevel);
+        nbt.setBoolean("proximityBlocked", proximityBlocked);
         behavior.writeToNBT(this, nbt);
     }
 
     @Override
     public void readFromNBT(NBTTagCompound nbt) {
         super.readFromNBT(nbt);
+        if (nbt.hasKey("proximityBlocked")) {
+            this.proximityBlocked = nbt.getBoolean("proximityBlocked");
+        }
 
         if (nbt.hasKey("controllerFlag")) {
             controllerFlag = Role.fromId(nbt.getByte("controllerFlag"));
@@ -547,7 +620,6 @@ public class TileStation extends TileStationBase<TileStation> {
             bootState = BootState.UNINITIALIZED;
         }
         graph = null;
-        controllerFlag = Role.UNDEFINED;
     }
 
     @Override
@@ -556,6 +628,7 @@ public class TileStation extends TileStationBase<TileStation> {
         if (controller.getGraph() != null) {
             graph = controller.getGraph();
         }
+        if (proximityBlocked || overlapsForeignStation()) return;
         behavior.onGraphRebuilt(this);
         if (behavior instanceof IStationBehaviorWithAttachments attacher && graph != null) {
             attacher.registerAttachments(this, graph);
@@ -563,7 +636,7 @@ public class TileStation extends TileStationBase<TileStation> {
     }
 
     @Override
-    public void onAttachmentConnected(BlockPos pos, IStationAttachment<?> attachment) {
+    public void onAttachmentConnected(BlockPos pos, Object attachment) {
         if (!(behavior instanceof IStationBehaviorWithAttachments attacher)) return;
         if (!attachments.contains(pos)) {
             attachments.add(pos);
@@ -594,6 +667,13 @@ public class TileStation extends TileStationBase<TileStation> {
     @Override
     protected int getControllerOffsetZ() {
         return 0;
+    }
+
+    protected void reset() {
+        DEFINITION = null;
+        controllerFlag = Role.UNDEFINED;
+        graph = null;
+        super.reset();
     }
 
     public enum Role {

@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.api;
 
 import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
-import static com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry.GALAXIA_DIMENSIONS;
 
 import java.util.Collections;
 import java.util.List;
@@ -29,8 +28,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
+import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializer;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
-import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.hazards.HazardTemperature;
 import com.gtnewhorizons.galaxia.registry.interfaces.IZeroGMovementProvider;
@@ -64,7 +63,8 @@ public final class GalaxiaAPI {
      */
     public static double getGravity(Entity e) {
         if (e == null || e.worldObj == null) return 1.0;
-        DimensionDef def = SolarSystemRegistry.getById(e.dimension);
+        DimensionDef def = CelestialDimensionMaterializer.findDefinitionById(e.dimension)
+            .orElse(null);
         if (def == null) return 1.0;
         return def.gravity();
         // for some cases clamping might be required
@@ -78,13 +78,15 @@ public final class GalaxiaAPI {
      */
     public static EffectBuilder getEffects(Entity e) {
         if (e == null || e.worldObj == null) return new EffectBuilder();
-        DimensionDef def = SolarSystemRegistry.getById(e.dimension);
+        DimensionDef def = CelestialDimensionMaterializer.findDefinitionById(e.dimension)
+            .orElse(null);
         if (def == null) return new EffectBuilder();
         return def.effects();
     }
 
     public static EffectBuilder getEffects(int dimension) {
-        DimensionDef def = SolarSystemRegistry.getById(dimension);
+        DimensionDef def = CelestialDimensionMaterializer.findDefinitionById(dimension)
+            .orElse(null);
         if (def == null) return new EffectBuilder();
         return def.effects();
     }
@@ -97,7 +99,8 @@ public final class GalaxiaAPI {
      */
     public static double getAirResistance(Entity e) {
         if (e == null || e.worldObj == null) return 1.0;
-        DimensionDef def = SolarSystemRegistry.getById(e.dimension);
+        DimensionDef def = CelestialDimensionMaterializer.findDefinitionById(e.dimension)
+            .orElse(null);
         if (def == null) return 1.0;
         return def.airResistance();
     }
@@ -110,7 +113,8 @@ public final class GalaxiaAPI {
      */
     public static boolean getSpeedCancelation(Entity e) {
         if (e == null || e.worldObj == null) return false;
-        DimensionDef def = SolarSystemRegistry.getById(e.dimension);
+        DimensionDef def = CelestialDimensionMaterializer.findDefinitionById(e.dimension)
+            .orElse(null);
         if (def == null) return false;
         return def.removeSpeedCancelation();
     }
@@ -143,7 +147,8 @@ public final class GalaxiaAPI {
         if (!isInGalaxiaDimension(player)) {
             return .5f;
         }
-        EffectBuilder def = SolarSystemRegistry.getById(player.dimension)
+        EffectBuilder def = CelestialDimensionMaterializer.findDefinitionById(player.dimension)
+            .orElseThrow()
             .effects();
 
         int temp = def.getTemperature(player.worldObj);
@@ -313,7 +318,8 @@ public final class GalaxiaAPI {
     }
 
     public static boolean isInGalaxiaDimension(Entity e) {
-        return GALAXIA_DIMENSIONS.contains(e.dimension);
+        return e != null && CelestialDimensionMaterializer.findDefinitionById(e.dimension)
+            .isPresent();
     }
 
     /**
@@ -361,6 +367,7 @@ public final class GalaxiaAPI {
         for (var assetId : assets) {
             CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
             if (!(asset instanceof Station station)) continue;
+            if (station.isDisabled()) continue;
             BlockPos pos = station.getController();
             if (pos == null) continue;
             if (!(world.getTileEntity(pos.x(), pos.y(), pos.z()) instanceof TileStation tileStation)) continue;

@@ -12,7 +12,7 @@ public interface IGraphListener {
 
     default void onGraphRebuilt(TileStation controller) {}
 
-    default void onAttachmentConnected(BlockPos pos, IStationAttachment<?> attachment) {}
+    default void onAttachmentConnected(BlockPos pos, Object attachment) {}
 
     default void onAttachmentDisconnected(BlockPos pos) {}
 }

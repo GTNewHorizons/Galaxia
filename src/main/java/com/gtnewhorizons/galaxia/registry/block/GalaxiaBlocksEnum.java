@@ -21,9 +21,9 @@ import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenCol
 import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenFiller;
 import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenPylon;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
-import com.gtnewhorizons.galaxia.registry.celestial.station.TileHammerCannon;
-import com.gtnewhorizons.galaxia.registry.celestial.station.TileHammerTarget;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerTarget;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.BlockRocketTrophy;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityRocketTrophy;

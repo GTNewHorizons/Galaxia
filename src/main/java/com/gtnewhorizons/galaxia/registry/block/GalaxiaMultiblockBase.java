@@ -18,16 +18,22 @@ import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 
 import cpw.mods.fml.common.Optional;
 import gregtech.api.interfaces.tileentity.IMachineBlockUpdateable;
+import lombok.Getter;
+import lombok.Setter;
 
 @Optional.Interface(iface = "gregtech.api.interfaces.tileentity.IMachineBlockUpdateable", modid = "gregtech")
 public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> extends TileEntity
     implements ISurvivalConstructable, IMachineBlockUpdateable {
 
+    @Setter
+    @Getter
     protected ForgeDirection placedFacing = ForgeDirection.NORTH;
+    @Getter
     protected ExtendedFacing currentFacing = ExtendedFacing.DEFAULT;
     protected int mCheckTimer = 0;
     protected boolean updated = true;
 
+    @Getter
     protected boolean structureValid = false;
     protected boolean isChunkUnloading = false;
     protected boolean reloadHappened = false;
@@ -45,10 +51,6 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
     }
 
     public abstract Block getControllerBlock();
-
-    public boolean isStructureValid() {
-        return structureValid;
-    }
 
     public void markStructureDirty() {
         updated = true;
@@ -141,11 +143,13 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
 
     protected void onStructureDisformed() {}
 
-    protected boolean shouldCheckStructure() {
-        return true;
-    }
-
     protected void onStructureChecked() {}
+
+    protected void reset() {
+        structureValid = false;
+        updated = true;
+        onStructureDisformed();
+    }
 
     @Override
     public void updateEntity() {
@@ -159,16 +163,14 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
             if (this.updated) {
                 this.updated = false;
 
-                if (shouldCheckStructure()) {
-                    final boolean valid = checkStructure();
-                    if (valid != structureValid) {
-                        structureValid = valid;
-                        if (valid) onStructureFormed();
-                        else onStructureDisformed();
+                final boolean valid = checkStructure();
+                if (valid != structureValid) {
+                    structureValid = valid;
+                    if (valid) onStructureFormed();
+                    else onStructureDisformed();
 
-                        markDirty();
-                        worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-                    }
+                    markDirty();
+                    worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
                 }
 
                 onStructureChecked();
@@ -264,18 +266,6 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
     public void onChunkUnload() {
         super.onChunkUnload();
         isChunkUnloading = true;
-    }
-
-    public ForgeDirection getPlacedFacing() {
-        return placedFacing;
-    }
-
-    public void setPlacedFacing(ForgeDirection dir) {
-        placedFacing = dir;
-    }
-
-    public ExtendedFacing getCurrentFacing() {
-        return currentFacing;
     }
 
     @Override
