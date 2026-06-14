@@ -8,7 +8,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenSpace;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeIdOffsetter;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
-import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenAsteroid;
 
 /**
@@ -71,17 +70,6 @@ public final class FrozenBelt {
                     builder.provider().worldObj.getSeed(),
                     asteroids))
             .build();
-    }
-
-    /**
-     * Static class to hold world provider for frozen belt
-     */
-    public static class WorldProviderFrozenBelt extends WorldProviderSpace {
-
-        /**
-         * Creates the world provider used in generation of this dimension
-         */
-        public WorldProviderFrozenBelt() {}
     }
 
     /**

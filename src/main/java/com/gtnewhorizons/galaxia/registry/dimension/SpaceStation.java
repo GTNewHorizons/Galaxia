@@ -4,7 +4,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenSpace;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeIdOffsetter;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
-import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
 
 public final class SpaceStation {
 
@@ -19,17 +18,6 @@ public final class SpaceStation {
             .cloudHeight(Integer.MIN_VALUE)
             .chunkGen(() -> new ChunkProviderSpaceStation(builder.provider().worldObj))
             .build();
-    }
-
-    /**
-     * Static class to hold world provider for frozen belt
-     */
-    public static class WorldProviderSpaceStation extends WorldProviderSpace {
-
-        /**
-         * Creates the world provider used in generation of this dimension
-         */
-        public WorldProviderSpaceStation() {}
     }
 
     /**

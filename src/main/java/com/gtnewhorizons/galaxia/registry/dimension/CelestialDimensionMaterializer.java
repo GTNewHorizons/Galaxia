@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension;
 
-import java.util.List;
 import java.util.Optional;
 
 import javax.annotation.Nonnull;
@@ -18,13 +17,6 @@ public final class CelestialDimensionMaterializer {
     private static boolean registered;
 
     private CelestialDimensionMaterializer() {}
-
-    public static List<DimensionDef> materializePlayableDefinitions() {
-        return CelestialRegistry.getPlayableBodies()
-            .stream()
-            .map(CelestialDimensionMaterializer::materializeDefinition)
-            .toList();
-    }
 
     public static Optional<DimensionDef> findDefinitionById(int dimensionId) {
         DimensionEnum dimension = DimensionEnum.fromId(dimensionId);

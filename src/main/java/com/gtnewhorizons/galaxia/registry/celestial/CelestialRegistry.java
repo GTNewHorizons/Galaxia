@@ -24,6 +24,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.planets.Mars;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.Moon;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.Panspira;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
+import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
 
@@ -319,7 +320,7 @@ public final class CelestialRegistry {
                 .playableDimensionProfile(
                     stationBuildable(
                         PlayableDimensionProfile.builder(DimensionEnum.FROZEN_BELT)
-                            .provider(FrozenBelt.WorldProviderFrozenBelt.class)
+                            .provider(WorldProviderSpace.class)
                             .gravity(0.0)
                             .airResistance(0.0)
                             .effects(dimensionEffects(67, 0, 1))
@@ -399,7 +400,7 @@ public final class CelestialRegistry {
                         .metadata("stationRole", "orbital_logistics"))
                 .playableDimensionProfile(
                     PlayableDimensionProfile.builder(DimensionEnum.OVERWORLD_ORBIT)
-                        .provider(SpaceStation.WorldProviderSpaceStation.class)
+                        .provider(WorldProviderSpace.class)
                         .gravity(0.0)
                         .airResistance(0.0)
                         .effects(dimensionEffects(67, 0, 1))

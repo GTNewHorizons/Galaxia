@@ -13,8 +13,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializ
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.PlayableDimensionProfile;
-import com.gtnewhorizons.galaxia.registry.dimension.SpaceStation;
-import com.gtnewhorizons.galaxia.registry.dimension.asteroidbelts.FrozenBelt;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
@@ -124,7 +122,7 @@ final class CelestialPlayableDimensionProfileTest {
                 0),
             new ExpectedDimension(
                 DimensionEnum.FROZEN_BELT,
-                FrozenBelt.WorldProviderFrozenBelt.class,
+                WorldProviderSpace.class,
                 0.0,
                 0.0,
                 0.0,
@@ -148,7 +146,7 @@ final class CelestialPlayableDimensionProfileTest {
                 1),
             new ExpectedDimension(
                 DimensionEnum.OVERWORLD_ORBIT,
-                SpaceStation.WorldProviderSpaceStation.class,
+                WorldProviderSpace.class,
                 0.0,
                 0.0,
                 0.0,
