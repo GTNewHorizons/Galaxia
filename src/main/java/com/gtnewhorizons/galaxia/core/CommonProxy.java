@@ -30,7 +30,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerTarget;
-import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
+import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializer;
 import com.gtnewhorizons.galaxia.registry.effects.GalaxiaEffects;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -53,7 +53,7 @@ public class CommonProxy {
     // etc, and register them with the
     // GameRegistry." (Remove if not needed)
     public void preInit(FMLPreInitializationEvent event) {
-        SolarSystemRegistry.registerAll();
+        CelestialDimensionMaterializer.registerPlayableDimensions();
 
         // FML bus registering
         FMLBusRegister(new DimensionEventHandler());

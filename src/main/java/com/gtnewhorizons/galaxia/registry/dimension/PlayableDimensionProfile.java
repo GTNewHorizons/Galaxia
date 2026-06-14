@@ -16,13 +16,15 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
 public record PlayableDimensionProfile(DimensionEnum dimension, Class<? extends WorldProvider> provider,
     boolean keepLoaded, double gravity, double airResistance, boolean removeSpeedCancelation,
     List<CelestialBody> celestialBodies, EffectBuilder effects, double mass, double orbitalRadius, double radius,
-    EnumTiers tier, ResourceLocation[] skyboxTexture, List<Block> validSpaceStationBlocks) {
+    EnumTiers tier, ResourceLocation[] skyboxTexture, List<Block> validSpaceStationBlocks,
+    WorldGenerationAdapter worldGenerationAdapter) {
 
     public PlayableDimensionProfile {
         if (dimension == null) throw new IllegalStateException("Playable dimension requires a dimension enum");
         if (provider == null) throw new IllegalStateException("Playable dimension requires a world provider");
         if (effects == null) throw new IllegalStateException("Playable dimension requires effects");
         if (tier == null) throw new IllegalStateException("Playable dimension requires a tier");
+        if (worldGenerationAdapter == null) throw new IllegalStateException("Playable dimension requires worldgen");
         celestialBodies = celestialBodies == null ? List.of() : Collections.unmodifiableList(celestialBodies);
         skyboxTexture = skyboxTexture == null ? null : skyboxTexture.clone();
         validSpaceStationBlocks = validSpaceStationBlocks == null ? List.of()
@@ -54,6 +56,7 @@ public record PlayableDimensionProfile(DimensionEnum dimension, Class<? extends 
         private EnumTiers tier = EnumTiers.TIER_1;
         private ResourceLocation[] skyboxTexture;
         private final List<Block> validSpaceStationBlocks = new ArrayList<>();
+        private WorldGenerationAdapter worldGenerationAdapter = WorldGenerationAdapter.none();
 
         private Builder(DimensionEnum dimension) {
             this.dimension = dimension;
@@ -124,6 +127,11 @@ public record PlayableDimensionProfile(DimensionEnum dimension, Class<? extends 
             return this;
         }
 
+        public Builder worldGeneration(WorldGenerationAdapter value) {
+            this.worldGenerationAdapter = value;
+            return this;
+        }
+
         public PlayableDimensionProfile build() {
             return new PlayableDimensionProfile(
                 dimension,
@@ -139,7 +147,8 @@ public record PlayableDimensionProfile(DimensionEnum dimension, Class<? extends 
                 radius,
                 tier,
                 skyboxTexture,
-                validSpaceStationBlocks);
+                validSpaceStationBlocks,
+                worldGenerationAdapter);
         }
     }
 }

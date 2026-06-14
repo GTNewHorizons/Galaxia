@@ -16,7 +16,7 @@ import com.gtnewhorizons.galaxia.core.GalaxiaPlayerProperties;
 import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
 import com.gtnewhorizons.galaxia.core.network.HazardWarningPacket;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
-import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
+import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializer;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.hazards.HazardOxygen;
 import com.gtnewhorizons.galaxia.registry.hazards.HazardPressure;
@@ -72,7 +72,8 @@ public class DimensionEventHandler {
             if (!isInGalaxiaDimension(player)) continue;
             if (player.ticksExisted % 20 != 0) continue;
             applyEffects(
-                SolarSystemRegistry.getById(player.dimension)
+                CelestialDimensionMaterializer.findDefinitionById(player.dimension)
+                    .orElseThrow()
                     .effects(),
                 player);
         }

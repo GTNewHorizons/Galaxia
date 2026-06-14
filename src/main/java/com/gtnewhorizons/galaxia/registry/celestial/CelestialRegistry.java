@@ -20,6 +20,10 @@ import com.gtnewhorizons.galaxia.registry.dimension.PlayableDimensionProfile;
 import com.gtnewhorizons.galaxia.registry.dimension.SpaceStation;
 import com.gtnewhorizons.galaxia.registry.dimension.asteroidbelts.FrozenBelt;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
+import com.gtnewhorizons.galaxia.registry.dimension.planets.Mars;
+import com.gtnewhorizons.galaxia.registry.dimension.planets.Moon;
+import com.gtnewhorizons.galaxia.registry.dimension.planets.Panspira;
+import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
 
@@ -215,7 +219,8 @@ public final class CelestialRegistry {
                             .radius(1.5)
                             .gravity(2.25)
                             .airResistance(1.0)
-                            .effects(dimensionEffects(423, 0, 300))).build())
+                            .effects(dimensionEffects(423, 0, 300))
+                            .worldGeneration(Panspira::configureWorldProvider)).build())
                 .featureTileChance(0.26)
                 .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 2.0)
                 .feature(PlanetaryFeatureRegistry.MAGMA_POOL, 0.4)
@@ -252,7 +257,8 @@ public final class CelestialRegistry {
                             .gravity(0.25)
                             .airResistance(0.1)
                             .effects(dimensionEffects(67, 0, 1))
-                            .tier(EnumTiers.TIER_2)).build())
+                            .tier(EnumTiers.TIER_2)
+                            .worldGeneration(Mars::configureWorldProvider)).build())
                 .featureTileChance(0.16)
                 .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 4.0)
                 .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 2.0)
@@ -283,8 +289,12 @@ public final class CelestialRegistry {
                             .radius(0.27)
                             .gravity(0.25)
                             .airResistance(0.01)
+                            .celestialBodies(
+                                Moon.buildSky()
+                                    .build())
                             .effects(dimensionEffects(225, 0, 0))
-                            .tier(EnumTiers.TIER_1)).build())
+                            .tier(EnumTiers.TIER_1)
+                            .worldGeneration(Moon::configureWorldProvider)).build())
                 .featureTileChance(0.14)
                 .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 5.0)
                 .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 2.0)
@@ -313,7 +323,8 @@ public final class CelestialRegistry {
                             .provider(FrozenBelt.WorldProviderFrozenBelt.class)
                             .gravity(0.0)
                             .airResistance(0.0)
-                            .effects(dimensionEffects(67, 0, 1))).build())
+                            .effects(dimensionEffects(67, 0, 1))
+                            .worldGeneration(FrozenBelt::configureWorldProvider)).build())
                 .featureTileChance(0.34)
                 .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 4.0)
                 .feature(PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION, 1.2)
@@ -369,7 +380,8 @@ public final class CelestialRegistry {
                             .effects(
                                 EffectBuilder.builder()
                                     .build())
-                            .tier(EnumTiers.TIER_1)).build()));
+                            .tier(EnumTiers.TIER_1)
+                            .worldGeneration(CelestialRegistry::configureOverworldProvider)).build()));
 
         register(
             DimensionEnum.OVERWORLD_ORBIT,
@@ -393,7 +405,13 @@ public final class CelestialRegistry {
                         .airResistance(0.0)
                         .effects(dimensionEffects(67, 0, 1))
                         .tier(EnumTiers.TIER_1)
+                        .worldGeneration(SpaceStation::configureWorldProvider)
                         .build()));
+    }
+
+    private static void configureOverworldProvider(WorldProviderBuilder builder) {
+        builder.sky(true)
+            .name(DimensionEnum.OVERWORLD);
     }
 
     public static void register(CelestialObjectId id, @Nonnull Consumer<CelestialObject.Builder> registrationBuilder) {
