@@ -179,6 +179,7 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
         }
 
         public Builder orbitalParams(@Nonnull OrbitalParams value) {
+            this.orbitalParams = value;
             return this;
         }
 

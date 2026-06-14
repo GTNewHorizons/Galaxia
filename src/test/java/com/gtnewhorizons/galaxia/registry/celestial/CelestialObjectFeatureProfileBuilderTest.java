@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
@@ -37,6 +38,18 @@ final class CelestialObjectFeatureProfileBuilderTest {
             object.featureProfile()
                 .weights()
                 .get(PlanetaryFeatureRegistry.MINERAL_VEIN.key()));
+    }
+
+    @Test
+    void builderUsesExplicitOrbitalParams() {
+        OrbitalParams orbit = OrbitalParams.circular(42.0, 0.25, 1.5);
+
+        CelestialObject object = CelestialObject.builder()
+            .id(CelestialObjectId.EGORA)
+            .orbitalParams(orbit)
+            .build();
+
+        assertEquals(orbit, object.orbitalParams());
     }
 
     @Test
