@@ -20,7 +20,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.asteroidbelts.FrozenBelt;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.Mars;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.Moon;
-import com.gtnewhorizons.galaxia.registry.dimension.planets.Panspira;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
