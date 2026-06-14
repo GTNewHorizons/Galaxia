@@ -160,6 +160,7 @@ public final class OrbitalPinnedInfoContentBuilder {
         private static final int ROW_GAP = 6;
         private static final int ICON_SIZE = 16;
         private static final int ICON_GAP = 2;
+        private static final int GT_ORE_STACKS_PER_VEIN = 4;
         private static final int INLINE_ICON_SIZE = 12;
         private static final int INLINE_ICON_GAP = 1;
         private final Callbacks callbacks;
@@ -257,7 +258,7 @@ public final class OrbitalPinnedInfoContentBuilder {
                     .pos(PANEL_PADDING, y));
             if (!row.items()
                 .isEmpty()) {
-                buildItemGrid(root, row.items(), PANEL_PADDING, y + 12, contentWidth);
+                buildItemGrid(root, row, PANEL_PADDING, y + 12, contentWidth);
                 return;
             }
             List<String> wrappedLines = wrapValue(mc, row.value(), contentWidth);
@@ -271,16 +272,17 @@ public final class OrbitalPinnedInfoContentBuilder {
             }
         }
 
-        private void buildItemGrid(ParentWidget<?> root, List<ItemStack> items, int x, int y, int contentWidth) {
+        private void buildItemGrid(ParentWidget<?> root, PinnedInfoRow row, int x, int y, int contentWidth) {
+            List<ItemStack> items = row.items();
             if (items == null || items.isEmpty()) return;
-            int itemsPerRow = Math.max(1, contentWidth / (ICON_SIZE + ICON_GAP));
+            int itemsPerRow = itemGridColumns(row, contentWidth);
             for (int i = 0; i < items.size(); i++) {
                 ItemStack stack = items.get(i);
                 if (stack == null) continue;
                 int col = i % itemsPerRow;
-                int row = i / itemsPerRow;
+                int rowIndex = i / itemsPerRow;
                 int itemX = x + col * (ICON_SIZE + ICON_GAP);
-                int itemY = y + row * (ICON_SIZE + ICON_GAP);
+                int itemY = y + rowIndex * (ICON_SIZE + ICON_GAP);
                 root.child(
                     createItemWidget(stack, ICON_SIZE).pos(itemX, itemY)
                         .size(ICON_SIZE, ICON_SIZE));
@@ -344,7 +346,7 @@ public final class OrbitalPinnedInfoContentBuilder {
             if (row.inlineItems()) return Math.max(height, INLINE_ICON_SIZE);
             if (!row.items()
                 .isEmpty()) {
-                int itemsPerRow = Math.max(1, contentWidth / (ICON_SIZE + ICON_GAP));
+                int itemsPerRow = itemGridColumns(row, contentWidth);
                 int itemRows = (row.items()
                     .size() + itemsPerRow
                     - 1) / itemsPerRow;
@@ -353,6 +355,12 @@ public final class OrbitalPinnedInfoContentBuilder {
             List<String> wrappedLines = wrapValue(mc, row.value(), contentWidth);
             if (wrappedLines.isEmpty()) return height;
             return height + 4 + wrappedLines.size() * TEXT_LINE_HEIGHT;
+        }
+
+        private int itemGridColumns(PinnedInfoRow row, int contentWidth) {
+            int columns = Math.max(1, contentWidth / (ICON_SIZE + ICON_GAP));
+            if ("Ores".equals(row.label())) return Math.min(GT_ORE_STACKS_PER_VEIN, columns);
+            return columns;
         }
 
         private List<String> wrapValue(Minecraft mc, String value, int width) {
