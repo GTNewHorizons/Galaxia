@@ -5,11 +5,5 @@ import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilde
 @FunctionalInterface
 public interface WorldGenerationAdapter {
 
-    WorldGenerationAdapter NONE = builder -> {};
-
-    static WorldGenerationAdapter none() {
-        return NONE;
-    }
-
     void configure(WorldProviderBuilder builder);
 }

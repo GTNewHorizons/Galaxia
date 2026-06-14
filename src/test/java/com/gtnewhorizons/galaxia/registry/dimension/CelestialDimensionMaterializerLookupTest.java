@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.dimension;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import net.minecraft.util.Vec3;
@@ -62,6 +63,13 @@ final class CelestialDimensionMaterializerLookupTest {
 
         WorldProviderSpace overworld = configuredProvider(DimensionEnum.OVERWORLD);
         assertEquals(DimensionEnum.OVERWORLD.getName(), overworld.getDimensionName());
+    }
+
+    @Test
+    void worldProviderRejectsUnregisteredDimensionConfiguration() {
+        WorldProviderSpace provider = new WorldProviderSpace();
+
+        assertThrows(IllegalStateException.class, () -> provider.setDimension(DimensionEnum.TENEBRAE.getId()));
     }
 
     private static WorldProviderSpace configuredProvider(DimensionEnum dimension) {

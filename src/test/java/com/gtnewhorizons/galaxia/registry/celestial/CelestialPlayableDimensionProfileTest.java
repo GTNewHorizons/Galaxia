@@ -1,9 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -13,8 +12,8 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializer;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.dimension.PlayableDimensionProfile;
 import com.gtnewhorizons.galaxia.registry.dimension.SpaceStation;
-import com.gtnewhorizons.galaxia.registry.dimension.WorldGenerationAdapter;
 import com.gtnewhorizons.galaxia.registry.dimension.asteroidbelts.FrozenBelt;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
@@ -43,18 +42,14 @@ final class CelestialPlayableDimensionProfileTest {
                 DimensionEnum.OVERWORLD_ORBIT),
             playableDimensions);
 
-        CelestialRegistry.getPlayableBodies()
-            .forEach(
-                body -> assertNotNull(
-                    body.playableDimensionProfile()
-                        .worldGenerationAdapter()));
+    }
 
-        CelestialRegistry.getPlayableBodies()
-            .forEach(
-                body -> assertNotSame(
-                    WorldGenerationAdapter.none(),
-                    body.playableDimensionProfile()
-                        .worldGenerationAdapter()));
+    @Test
+    void playableDimensionProfileRequiresWorldGeneration() {
+        assertThrows(
+            IllegalStateException.class,
+            () -> PlayableDimensionProfile.builder(DimensionEnum.MARS)
+                .build());
     }
 
     @Test

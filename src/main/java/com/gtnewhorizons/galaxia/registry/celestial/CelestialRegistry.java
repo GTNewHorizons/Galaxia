@@ -27,7 +27,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilde
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
 
-// TODO: Make registration happen in 2 steps: calling ores() definitions right now must wait after GT registration
 public final class CelestialRegistry {
 
     private static final double EARTH_RADIUS_TO_AU = 23481;

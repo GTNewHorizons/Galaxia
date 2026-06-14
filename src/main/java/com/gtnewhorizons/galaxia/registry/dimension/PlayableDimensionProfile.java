@@ -56,7 +56,7 @@ public record PlayableDimensionProfile(DimensionEnum dimension, Class<? extends 
         private EnumTiers tier = EnumTiers.TIER_1;
         private ResourceLocation[] skyboxTexture;
         private final List<Block> validSpaceStationBlocks = new ArrayList<>();
-        private WorldGenerationAdapter worldGenerationAdapter = WorldGenerationAdapter.none();
+        private WorldGenerationAdapter worldGenerationAdapter;
 
         private Builder(DimensionEnum dimension) {
             this.dimension = dimension;
