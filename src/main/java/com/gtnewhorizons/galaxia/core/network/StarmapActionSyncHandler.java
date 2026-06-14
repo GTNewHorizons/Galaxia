@@ -166,6 +166,12 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
         return true;
     }
 
+    @SideOnly(Side.CLIENT)
+    public static boolean sendSatelliteDebugMutation(SatelliteDebugMutationPacket packet) {
+        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
+        return true;
+    }
+
     @Override
     @SideOnly(Side.CLIENT)
     public void readOnClient(int id, PacketBuffer buf) throws IOException {
