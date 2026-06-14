@@ -81,11 +81,13 @@ public class WorldProviderSpace extends WorldProvider {
         super.setDimension(dimensionId);
 
         Consumer<WorldProviderBuilder> config = CONFIGS.get(dimensionId);
-        if (config != null) {
-            WorldProviderBuilder builder = WorldProviderBuilder.configure(this);
-            config.accept(builder);
-            builder.build();
+        if (config == null) {
+            throw new IllegalStateException("No world provider configuration registered for dimension " + dimensionId);
         }
+
+        WorldProviderBuilder builder = WorldProviderBuilder.configure(this);
+        config.accept(builder);
+        builder.build();
     }
 
     /**

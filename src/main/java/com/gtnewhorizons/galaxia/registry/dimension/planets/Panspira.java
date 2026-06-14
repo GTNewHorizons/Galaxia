@@ -4,13 +4,10 @@ import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
-import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeIdOffsetter;
-import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
-import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
@@ -19,48 +16,11 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
 /**
  * The class holding all data related to the dimension Panspira
  */
-public class Panspira extends BasePlanet {
+public final class Panspira {
 
-    public static final DimensionEnum ENUM = DimensionEnum.PANSPIRA;
+    private Panspira() {}
 
-    /**
-     * Getter for dimension Enum
-     *
-     * @return Dimension Enum
-     */
-    @Override
-    public DimensionEnum getPlanetEnum() {
-        return ENUM;
-    }
-
-    /**
-     * The configuration of the DimensionBuilder to configure the dimension
-     *
-     * @param builder The dimension builder to chain on
-     * @return The dimension Builder with all properties assigned
-     */
-    @Override
-    protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
-        return builder.mass(3)
-            .orbitalRadius(0.6 * earthRadiusToAU)
-            .radius(1.5)
-            .gravity(2.25)
-            .airResistance(1)
-            .addValidSpaceStationBlocks(
-                GalaxiaBlocksEnum.RUSTY_SCAFFOLDING.get(),
-                GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
-                GalaxiaBlocksEnum.SPACE_STATION_PANEL.get(),
-                GalaxiaBlocksEnum.SPACE_STATION_GLASS.get())
-            .effects(
-                EffectBuilder.builder()
-                    .baseTemp(423)
-                    .oxygenPercent(0)
-                    .pressure(300)
-                    .build());
-    }
-
-    @Override
-    protected void configureProvider(WorldProviderBuilder builder) {
+    public static void configureWorldProvider(WorldProviderBuilder builder) {
         builder.sky(true)
             .fog(0.15f, 0.1f, 0.3f)
             .avgGround(50)
@@ -122,7 +82,7 @@ public class Panspira extends BasePlanet {
                         .build()),
                 1,
                 1)
-            .name(ENUM)
+            .name(DimensionEnum.PANSPIRA)
             .build();
     }
 

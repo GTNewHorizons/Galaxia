@@ -23,7 +23,6 @@ import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.value.sync.StringSyncValue;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
-import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
@@ -33,7 +32,6 @@ import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
-import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemRocketSchematic;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAssembly;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.assembly.RocketBuildOrder;
@@ -392,18 +390,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
                             md -> {
                                 if (md.mouseButton == 0 && !worldObj.isRemote) captureSchematic(data.getPlayer());
                             })));
-    }
-
-    private ToggleButton createDestinationButton(BasePlanet dim) {
-        return new ToggleButton().size(48, 20)
-            .overlay(
-                IKey.str(
-                    dim.getPlanetEnum()
-                        .getName()))
-            .valueWrapped(
-                selectedDim,
-                dim.getPlanetEnum()
-                    .getId());
     }
 
     private void enterRocket(PosGuiData data) {

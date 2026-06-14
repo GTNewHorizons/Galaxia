@@ -29,7 +29,7 @@ import com.gtnewhorizons.galaxia.core.network.StationGraphSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
+import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializer;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehavior;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehaviorWithAttachments;
@@ -157,7 +157,9 @@ public class TileStation extends TileStationBase<TileStation> {
     public IStructureDefinition<TileStation> getStructureDefinition() {
         if (DEFINITION != null) return DEFINITION;
 
-        DEFINITION = behavior.buildStructureDefinition(SolarSystemRegistry.getById(worldObj.provider.dimensionId));
+        DEFINITION = behavior.buildStructureDefinition(
+            CelestialDimensionMaterializer.findDefinitionById(worldObj.provider.dimensionId)
+                .orElse(null));
         return DEFINITION;
     }
 
