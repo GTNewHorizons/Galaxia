@@ -490,6 +490,17 @@ final class AutomatedFacilityOperationTest {
                 .buildSpeedModifierPercent());
     }
 
+    @Test
+    void gtConfiguredMinerHasNoBodyOreOutputsWhenGtStacksAreMissing() {
+        AutomatedFacility facility = facilityWithMiner(CelestialObjectId.EGORA);
+        ModuleInstance module = facility.modules()
+            .get(0);
+
+        assertTrue(
+            ModuleMiner.possibleOutputs(module, facility)
+                .isEmpty());
+    }
+
     private static AutomatedFacility facilityWithHammer() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
@@ -504,13 +515,17 @@ final class AutomatedFacilityOperationTest {
     }
 
     private static AutomatedFacility facilityWithMiner() {
+        return facilityWithMiner(CelestialObjectId.PANSPIRA);
+    }
+
+    private static AutomatedFacility facilityWithMiner(CelestialObjectId bodyId) {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.OVERWORLD,
+            bodyId,
             CelestialAsset.Kind.AUTOMATED_OUTPOST,
             Buildable.Status.OPERATIONAL);
         StationTileCoord coord = StationTileCoord.of(1, 0);
-        useNeutralBuildFeatureSalt(facility, coord);
+        useFeaturelessSalt(facility, coord);
         ModuleInstance module = FacilityModuleKind.MINER.create(coord, ModuleShape.SINGLE, ModuleTier.EV);
         facility.addModule(module);
         return facility;
@@ -539,6 +554,17 @@ final class AutomatedFacilityOperationTest {
             }
         }
         throw new AssertionError("Could not find neutral station salt");
+    }
+
+    private static void useFeaturelessSalt(AutomatedFacility facility, StationTileCoord coord) {
+        for (long salt = 0; salt < 10_000L; salt++) {
+            facility.setStationFeatureSalt(salt);
+            if (facility.planetaryFeaturesAt(coord)
+                .isEmpty()) {
+                return;
+            }
+        }
+        throw new AssertionError("Could not find featureless station salt");
     }
 
     private static AutomatedFacility facilityWithStorageOnFeature(PlanetaryFeatureKey required,

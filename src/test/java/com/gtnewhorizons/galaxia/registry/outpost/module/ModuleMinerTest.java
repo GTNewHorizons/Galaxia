@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
-import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -334,20 +333,15 @@ final class ModuleMinerTest {
     }
 
     @Test
-    void rareCrystalAddsGemMiningCandidates() {
+    void rareCrystalDoesNotAddVanillaGemCandidatesWhenGtStacksAreMissing() {
         AutomatedFacility facility = createFeatureFacility();
         ModuleInstance miner = createMiner(
             findMinerAnchorWithFeature(facility, PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION.key()));
-        List<ItemStack> candidates = new java.util.ArrayList<>();
-        candidates.add(new ItemStack(Items.iron_ingot));
 
-        candidates.addAll(
-            ModuleMiner.featureMiningEffects(miner, facility)
-                .candidates());
+        List<ItemStack> candidates = ModuleMiner.featureMiningEffects(miner, facility)
+            .candidates();
 
-        assertTrue(
-            candidates.stream()
-                .anyMatch(stack -> stack.getItem() == Items.diamond || stack.getItem() == Items.emerald));
+        assertTrue(candidates.isEmpty());
     }
 
     private static AutomatedFacility createFacility() {
