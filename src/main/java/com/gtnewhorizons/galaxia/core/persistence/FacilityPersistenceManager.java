@@ -8,6 +8,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,6 +88,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleS
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
+import com.gtnewhorizons.galaxia.registry.satellite.PlanetarySatelliteStore;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import sun.misc.Unsafe;
@@ -98,6 +101,7 @@ public final class FacilityPersistenceManager {
     private static final String DATA_DIR = "galaxiadata";
     private static final String ASSETS_FILE = "_assets.json";
     private static final String TASKS_FILE = "_tasks.json";
+    private static final String SATELLITES_FILE = "_satellites.json";
 
     private final Gson gson;
     private static final Gson PURE_GSON = new GsonBuilder().create();
@@ -123,9 +127,15 @@ public final class FacilityPersistenceManager {
     public void loadFromSaveDirectory(File worldSaveDir) {
         this.worldSaveDir = worldSaveDir;
         CelestialAssetStore.clear();
+        PlanetarySatelliteStore.SERVER.clear();
         LogisticStore.clearDeliveries();
         HammerTrajectoryLoadTracker.reset();
         loadAll();
+    }
+
+    void saveToSaveDirectory(File worldSaveDir) {
+        this.worldSaveDir = worldSaveDir;
+        saveAll();
     }
 
     @SubscribeEvent
@@ -142,6 +152,7 @@ public final class FacilityPersistenceManager {
         if (event.world.provider.dimensionId != 0) return;
         if (worldSaveDir != null) saveAll();
         CelestialAssetStore.clear();
+        PlanetarySatelliteStore.SERVER.clear();
         LogisticStore.clearDeliveries();
         HammerTrajectoryLoadTracker.reset();
         worldSaveDir = null;
@@ -156,6 +167,7 @@ public final class FacilityPersistenceManager {
         LOG.info("[PERSIST] LOAD START: reading from {}", galaxiaRoot);
         loadAssets(new File(galaxiaRoot, ASSETS_FILE));
         loadTasks(new File(galaxiaRoot, TASKS_FILE));
+        loadSatellites(new File(galaxiaRoot, SATELLITES_FILE));
     }
 
     private void saveAll() {
@@ -164,6 +176,7 @@ public final class FacilityPersistenceManager {
         LOG.info("[PERSIST] SAVE START: writing to {}", galaxiaRoot);
         saveAssets(new File(galaxiaRoot, ASSETS_FILE));
         saveTasks(new File(galaxiaRoot, TASKS_FILE));
+        saveSatellites(new File(galaxiaRoot, SATELLITES_FILE));
     }
 
     private void loadAssets(File file) {
@@ -257,6 +270,66 @@ public final class FacilityPersistenceManager {
             totalModules,
             totalAnchors);
         writeJson(file, list);
+    }
+
+    private void loadSatellites(File file) {
+        if (!file.exists()) {
+            LOG.info("[PERSIST] LOAD: no satellite file at {}, skipping", file);
+            return;
+        }
+        List<SatelliteRow> rows;
+        try (FileReader reader = new FileReader(file)) {
+            Type listType = new TypeToken<List<SatelliteRow>>() {}.getType();
+            rows = gson.fromJson(reader, listType);
+        } catch (IOException | JsonParseException e) {
+            throw new IllegalStateException(
+                "[PERSIST] LOAD FAILED: satellite registry " + file + " could not be read",
+                e);
+        }
+        if (rows == null) {
+            throw new IllegalStateException(
+                "[PERSIST] LOAD FAILED: satellite registry " + file + " contained no satellite list");
+        }
+
+        int loadedCount = 0;
+        for (SatelliteRow row : rows) {
+            if (row == null || row.count <= 0) continue;
+            UUID teamId = UUID.fromString(row.teamId);
+            CelestialObjectId bodyId = Objects.requireNonNull(
+                safeValueOf(CelestialObjectId.class, row.bodyId),
+                "[PERSIST] Satellite row has invalid body id: " + row.bodyId);
+            SatelliteKind kind = Objects.requireNonNull(
+                safeValueOf(SatelliteKind.class, row.kind),
+                "[PERSIST] Satellite row has invalid kind: " + row.kind);
+            PlanetarySatelliteStore.SERVER.set(teamId, bodyId, kind, row.count);
+            loadedCount++;
+        }
+        LOG.info("[PERSIST] LOAD END: {} satellite count row(s) loaded", loadedCount);
+    }
+
+    private void saveSatellites(File file) {
+        List<SatelliteRow> rows = new ArrayList<>();
+        for (Map.Entry<UUID, Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>>> teamEntry : PlanetarySatelliteStore.SERVER
+            .snapshot()
+            .entrySet()) {
+            for (Map.Entry<CelestialObjectId, EnumMap<SatelliteKind, Integer>> bodyEntry : teamEntry.getValue()
+                .entrySet()) {
+                for (Map.Entry<SatelliteKind, Integer> kindEntry : bodyEntry.getValue()
+                    .entrySet()) {
+                    if (kindEntry.getValue() <= 0) continue;
+                    rows.add(
+                        new SatelliteRow(
+                            teamEntry.getKey()
+                                .toString(),
+                            bodyEntry.getKey()
+                                .name(),
+                            kindEntry.getKey()
+                                .name(),
+                            kindEntry.getValue()));
+                }
+            }
+        }
+        writeJson(file, rows);
     }
 
     private void loadTasks(File file) {
@@ -1135,6 +1208,21 @@ public final class FacilityPersistenceManager {
         String toBodyId;
         double departureOrbitalTime;
         double tofOrbitalSeconds;
+    }
+
+    static final class SatelliteRow {
+
+        String teamId;
+        String bodyId;
+        String kind;
+        int count;
+
+        SatelliteRow(String teamId, String bodyId, String kind, int count) {
+            this.teamId = teamId;
+            this.bodyId = bodyId;
+            this.kind = kind;
+            this.count = count;
+        }
     }
 
     private static void writeRecipeSnapshot(JsonObject slotObj, RecipeSnapshot snapshot) {
