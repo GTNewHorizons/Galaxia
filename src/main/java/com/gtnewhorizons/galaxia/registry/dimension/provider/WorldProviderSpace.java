@@ -9,21 +9,28 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.ChunkCoordinates;
 import net.minecraft.util.Vec3;
+import net.minecraft.world.World;
 import net.minecraft.world.WorldProvider;
 import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraftforge.client.IRenderHandler;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import com.cardinalstar.cubicchunks.api.worldgen.IWorldGenerator;
+import com.cardinalstar.cubicchunks.world.ICubicWorldProvider;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.ChunkProviderGalaxiaPlanet;
 
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.CubicChunkProviderGalaxiaPlanet;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
 /**
  * An abstract version of the WorldProvider to be used on Galaxia Planets
  */
-public class WorldProviderSpace extends WorldProvider {
+public class WorldProviderSpace extends WorldProvider implements ICubicWorldProvider {
 
     private static final Map<Integer, Consumer<WorldProviderBuilder>> CONFIGS = new ConcurrentHashMap<>();
 
@@ -109,6 +116,21 @@ public class WorldProviderSpace extends WorldProvider {
             return new ChunkProviderGalaxiaPlanet(worldObj, dimension);
         }
         return chunkGenSupplier.get();
+    }
+
+    @Override
+    public @Nullable IWorldGenerator createCubeGenerator() {
+        return new CubicChunkProviderGalaxiaPlanet(worldObj, dimension);
+    }
+
+    @Override
+    public int getOriginalActualHeight() {
+        return 256;
+    }
+
+    @Override
+    public World getWorld() {
+        return worldObj;
     }
 
     /**
