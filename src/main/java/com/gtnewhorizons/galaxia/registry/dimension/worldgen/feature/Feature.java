@@ -9,6 +9,7 @@ import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.ChunkProviderGalaxiaPlanet;
 
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.GalaxiaPlanetGenerator;
 import it.unimi.dsi.fastutil.longs.LongCollection;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
@@ -38,18 +39,13 @@ public abstract class Feature {
         if (!world.getChunkProvider()
             .chunkExists(cx, cz)) {
 
-            ChunkProviderGalaxiaPlanet provider = ChunkProviderGalaxiaPlanet.of(world);
+            GalaxiaPlanetGenerator provider = GalaxiaPlanetGenerator.of(world);
             if (provider != null) {
-                provider.queueDeferredWrite(cx, cz, x & 15, y, z & 15, block, meta);
+                provider.queueDeferredWrite(x, y, z, block, meta);
             }
             return;
         }
 
         world.setBlock(x, y, z, block, meta, 2);
-    }
-
-    public void drainUpdateCoordinatesTo(LongCollection sink) {
-        sink.addAll(updateCoordinates);
-        updateCoordinates.clear();
     }
 }
