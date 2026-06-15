@@ -215,7 +215,27 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     } else {
                         block = currentFiller;
                     }
-                    block = getSpecialBlock(chunkX, chunkZ, block, topBlock, y, snowHeight, snowBlock, oceanHeight, height, oceanFiller, oceanCrackBlock, oceanCrackThickness, oceanCrackComplexity, localX, localZ, seabedHeight, oceanSurface, seabed, currentFiller, caveShape);
+                    block = getSpecialBlock(
+                        chunkX,
+                        chunkZ,
+                        block,
+                        topBlock,
+                        y,
+                        snowHeight,
+                        snowBlock,
+                        oceanHeight,
+                        height,
+                        oceanFiller,
+                        oceanCrackBlock,
+                        oceanCrackThickness,
+                        oceanCrackComplexity,
+                        localX,
+                        localZ,
+                        seabedHeight,
+                        oceanSurface,
+                        seabed,
+                        currentFiller,
+                        caveShape);
                     if (block != null) {
                         storage[sy].func_150818_a(localX, y & 15, localZ, block);
                     }
@@ -245,7 +265,10 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         return chunk;
     }
 
-    private Block getSpecialBlock(int chunkX, int chunkZ, Block block, Block topBlock, int y, int snowHeight, Block snowBlock, int oceanHeight, int height, Block oceanFiller, Block oceanCrackBlock, float oceanCrackThickness, int oceanCrackComplexity, int localX, int localZ, int seabedHeight, Block oceanSurface, Block seabed, Block currentFiller, CaveShape caveShape) {
+    private Block getSpecialBlock(int chunkX, int chunkZ, Block block, Block topBlock, int y, int snowHeight,
+        Block snowBlock, int oceanHeight, int height, Block oceanFiller, Block oceanCrackBlock,
+        float oceanCrackThickness, int oceanCrackComplexity, int localX, int localZ, int seabedHeight,
+        Block oceanSurface, Block seabed, Block currentFiller, CaveShape caveShape) {
         if (currentFiller == Blocks.bedrock) {
             return currentFiller;
         }
@@ -288,7 +311,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 }
             }
         }
-        if (caveShape != null && (block == currentFiller || block == topBlock || block == snowBlock) && caveShape.generateCave(localX, y, localZ, height)) {
+        if (caveShape != null && (block == currentFiller || block == topBlock || block == snowBlock)
+            && caveShape.generateCave(localX, y, localZ, height)) {
             block = Blocks.air;
         }
         return block;
