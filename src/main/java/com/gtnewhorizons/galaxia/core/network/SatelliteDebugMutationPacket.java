@@ -5,8 +5,8 @@ import java.util.UUID;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.satellite.PlanetarySatelliteStore;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
@@ -75,14 +75,14 @@ public final class SatelliteDebugMutationPacket implements IMessage {
         buf.writeInt(amount);
     }
 
-    public void apply(PlanetarySatelliteStore store) {
+    public void apply(CelestialAssetStore store) {
         switch (operation) {
             case ADD -> {
                 if (amount <= 0) throw new IllegalArgumentException("Satellite ADD amount must be positive: " + amount);
-                store.add(teamId, bodyId, kind, amount);
+                store.addSatellites(teamId, bodyId, kind, amount);
             }
-            case SET -> store.set(teamId, bodyId, kind, amount);
-            case DELETE_ALL -> store.deleteAll(teamId, bodyId, kind);
+            case SET -> store.setSatelliteCount(teamId, bodyId, kind, amount);
+            case DELETE_ALL -> store.deleteSatellites(teamId, bodyId, kind);
         }
     }
 
@@ -100,9 +100,9 @@ public final class SatelliteDebugMutationPacket implements IMessage {
             if (player == null) return null;
             if (!isAuthorized(isPlayerOp(player), player.capabilities.isCreativeMode)) return null;
 
-            packet.apply(PlanetarySatelliteStore.SERVER);
+            packet.apply(CelestialAssetStore.SERVER);
             return SatelliteSyncPacket
-                .fullForTeam(packet.teamId, PlanetarySatelliteStore.SERVER.snapshotTeam(packet.teamId));
+                .fullForTeam(packet.teamId, CelestialAssetStore.SERVER.snapshotSatelliteCounts(packet.teamId));
         }
     }
 }

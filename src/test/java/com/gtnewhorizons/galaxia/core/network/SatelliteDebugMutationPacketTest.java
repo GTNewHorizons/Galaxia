@@ -8,8 +8,8 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.satellite.PlanetarySatelliteStore;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 import io.netty.buffer.ByteBuf;
@@ -21,19 +21,23 @@ final class SatelliteDebugMutationPacketTest {
 
     @Test
     void setAddAndDeleteAllMutateSelectedKindOnly() {
-        PlanetarySatelliteStore store = new PlanetarySatelliteStore();
+        CelestialAssetStore.SERVER.clearInternal();
 
         SatelliteDebugMutationPacket.set(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, 4)
-            .apply(store);
+            .apply(CelestialAssetStore.SERVER);
         SatelliteDebugMutationPacket.add(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, 2)
-            .apply(store);
+            .apply(CelestialAssetStore.SERVER);
         SatelliteDebugMutationPacket.set(TEAM, CelestialObjectId.MARS, SatelliteKind.PROSPECTING, 7)
-            .apply(store);
+            .apply(CelestialAssetStore.SERVER);
         SatelliteDebugMutationPacket.deleteAll(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION)
-            .apply(store);
+            .apply(CelestialAssetStore.SERVER);
 
-        assertEquals(0, store.count(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION));
-        assertEquals(7, store.count(TEAM, CelestialObjectId.MARS, SatelliteKind.PROSPECTING));
+        assertEquals(
+            0,
+            CelestialAssetStore.SERVER.satelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION));
+        assertEquals(
+            7,
+            CelestialAssetStore.SERVER.satelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.PROSPECTING));
     }
 
     @Test
@@ -55,9 +59,11 @@ final class SatelliteDebugMutationPacketTest {
         SatelliteDebugMutationPacket decoded = new SatelliteDebugMutationPacket();
         decoded.fromBytes(buf);
 
-        PlanetarySatelliteStore store = new PlanetarySatelliteStore();
-        decoded.apply(store);
+        CelestialAssetStore.SERVER.clearInternal();
+        decoded.apply(CelestialAssetStore.SERVER);
 
-        assertEquals(9, store.count(TEAM, CelestialObjectId.MOON, SatelliteKind.PROSPECTING));
+        assertEquals(
+            9,
+            CelestialAssetStore.SERVER.satelliteCount(TEAM, CelestialObjectId.MOON, SatelliteKind.PROSPECTING));
     }
 }

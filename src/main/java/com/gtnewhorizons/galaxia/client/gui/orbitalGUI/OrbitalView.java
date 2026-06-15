@@ -39,13 +39,13 @@ import com.gtnewhorizons.galaxia.core.network.SatelliteDebugMutationPacket;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.core.profiling.HammerTrajectoryLoadSample;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
-import com.gtnewhorizons.galaxia.registry.satellite.PlanetarySatelliteStore;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 public class OrbitalView {
@@ -2372,7 +2372,7 @@ public class OrbitalView {
                 CelestialObject body = state.body();
                 if (body == null || body.objectClass() == CelestialObject.Class.GALAXY
                     || body.objectClass() == CelestialObject.Class.STAR
-                    || PlanetarySatelliteStore.CLIENT.count(teamId, body.id(), SatelliteKind.COMMUNICATION) <= 0) {
+                    || CelestialAssetStore.CLIENT.satelliteCount(teamId, body.id(), SatelliteKind.COMMUNICATION) <= 0) {
                     continue;
                 }
                 satelliteNetworkWorldStates.put(body.id(), state);
@@ -2911,7 +2911,7 @@ public class OrbitalView {
         private int satelliteCount(CelestialObject body, SatelliteKind kind) {
             UUID teamId = currentTeamId();
             if (teamId == null || body == null || kind == null) return 0;
-            return PlanetarySatelliteStore.CLIENT.count(teamId, body.id(), kind);
+            return CelestialAssetStore.CLIENT.satelliteCount(teamId, body.id(), kind);
         }
 
         private float getInteractionRadius(CelestialObject body) {

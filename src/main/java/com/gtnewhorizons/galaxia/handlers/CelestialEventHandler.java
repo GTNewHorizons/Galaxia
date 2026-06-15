@@ -38,7 +38,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
-import com.gtnewhorizons.galaxia.registry.satellite.PlanetarySatelliteStore;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
@@ -99,7 +98,8 @@ public class CelestialEventHandler {
                 continue;
             }
             Galaxia.GALAXIA_NETWORK.sendTo(
-                SatelliteSyncPacket.fullForTeam(playerTeam, PlanetarySatelliteStore.SERVER.snapshotTeam(playerTeam)),
+                SatelliteSyncPacket
+                    .fullForTeam(playerTeam, CelestialAssetStore.SERVER.snapshotSatelliteCounts(playerTeam)),
                 player);
             Map<CelestialObjectId, Set<CelestialAsset>> teamAssets = CelestialAssetStore.getTeamAssets(playerTeam);
             if (teamAssets == null) continue;

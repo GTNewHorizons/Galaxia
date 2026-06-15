@@ -5,8 +5,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.satellite.PlanetarySatelliteStore;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
@@ -66,8 +66,8 @@ public final class SatelliteSyncPacket implements IMessage {
         }
     }
 
-    public void applyTo(PlanetarySatelliteStore store) {
-        store.replaceTeam(teamId, counts);
+    public void applyTo(CelestialAssetStore store) {
+        store.replaceTeamSatelliteCounts(teamId, counts);
     }
 
     private static Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> copyCounts(
@@ -84,7 +84,7 @@ public final class SatelliteSyncPacket implements IMessage {
 
         @Override
         public IMessage onMessage(SatelliteSyncPacket packet, MessageContext ctx) {
-            packet.applyTo(PlanetarySatelliteStore.CLIENT);
+            packet.applyTo(CelestialAssetStore.CLIENT);
             return null;
         }
     }

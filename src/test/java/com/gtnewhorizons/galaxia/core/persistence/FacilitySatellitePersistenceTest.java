@@ -9,8 +9,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.satellite.PlanetarySatelliteStore;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 final class FacilitySatellitePersistenceTest {
@@ -19,47 +19,52 @@ final class FacilitySatellitePersistenceTest {
 
     @AfterEach
     void clearStores() {
-        PlanetarySatelliteStore.SERVER.clear();
+        CelestialAssetStore.SERVER.clearInternal();
     }
 
     @Test
     void satelliteCountsRoundTripThroughStarmapPersistence(@TempDir Path tempDir) {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         manager.loadFromSaveDirectory(tempDir.toFile());
-        PlanetarySatelliteStore.SERVER.set(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, 3);
-        PlanetarySatelliteStore.SERVER.set(TEAM, CelestialObjectId.MARS, SatelliteKind.PROSPECTING, 2);
-        PlanetarySatelliteStore.SERVER.set(TEAM, CelestialObjectId.MOON, SatelliteKind.COMMUNICATION, 5);
+        CelestialAssetStore.SERVER.setSatelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, 3);
+        CelestialAssetStore.SERVER.setSatelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.PROSPECTING, 2);
+        CelestialAssetStore.SERVER.setSatelliteCount(TEAM, CelestialObjectId.MOON, SatelliteKind.COMMUNICATION, 5);
         manager.saveToSaveDirectory(tempDir.toFile());
-        PlanetarySatelliteStore.SERVER.clear();
+        CelestialAssetStore.SERVER.clearInternal();
 
         FacilityPersistenceManager reloaded = new FacilityPersistenceManager();
         reloaded.loadFromSaveDirectory(tempDir.toFile());
 
         assertEquals(
             3,
-            PlanetarySatelliteStore.SERVER.count(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION));
-        assertEquals(2, PlanetarySatelliteStore.SERVER.count(TEAM, CelestialObjectId.MARS, SatelliteKind.PROSPECTING));
+            CelestialAssetStore.SERVER.satelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION));
+        assertEquals(
+            2,
+            CelestialAssetStore.SERVER.satelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.PROSPECTING));
         assertEquals(
             5,
-            PlanetarySatelliteStore.SERVER.count(TEAM, CelestialObjectId.MOON, SatelliteKind.COMMUNICATION));
+            CelestialAssetStore.SERVER.satelliteCount(TEAM, CelestialObjectId.MOON, SatelliteKind.COMMUNICATION));
     }
 
     @Test
     void deletedSatelliteKindDoesNotRoundTripAsPhantomCount(@TempDir Path tempDir) {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         manager.loadFromSaveDirectory(tempDir.toFile());
-        PlanetarySatelliteStore.SERVER.set(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, 3);
-        PlanetarySatelliteStore.SERVER.set(TEAM, CelestialObjectId.MARS, SatelliteKind.PROSPECTING, 2);
-        PlanetarySatelliteStore.SERVER.deleteAll(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION);
+        CelestialAssetStore.SERVER.setSatelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, 3);
+        CelestialAssetStore.SERVER.setSatelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.PROSPECTING, 2);
+        CelestialAssetStore.SERVER.deleteSatellites(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION);
         manager.saveToSaveDirectory(tempDir.toFile());
-        PlanetarySatelliteStore.SERVER.clear();
+        CelestialAssetStore.SERVER.clearInternal();
 
         FacilityPersistenceManager reloaded = new FacilityPersistenceManager();
         reloaded.loadFromSaveDirectory(tempDir.toFile());
 
         assertEquals(
             0,
-            PlanetarySatelliteStore.SERVER.count(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION));
-        assertEquals(2, PlanetarySatelliteStore.SERVER.count(TEAM, CelestialObjectId.MARS, SatelliteKind.PROSPECTING));
+            CelestialAssetStore.SERVER.satelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION));
+        assertEquals(
+            2,
+            CelestialAssetStore.SERVER.satelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.PROSPECTING));
     }
+
 }

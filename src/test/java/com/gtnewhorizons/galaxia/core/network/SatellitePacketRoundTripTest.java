@@ -6,8 +6,8 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.satellite.PlanetarySatelliteStore;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 import io.netty.buffer.ByteBuf;
@@ -19,12 +19,14 @@ final class SatellitePacketRoundTripTest {
 
     @Test
     void syncPacketRoundTripsSatelliteRows() {
-        PlanetarySatelliteStore source = new PlanetarySatelliteStore();
-        source.set(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, 3);
-        source.set(TEAM, CelestialObjectId.MARS, SatelliteKind.PROSPECTING, 2);
-        source.set(TEAM, CelestialObjectId.MOON, SatelliteKind.COMMUNICATION, 5);
+        CelestialAssetStore.SERVER.clearInternal();
+        CelestialAssetStore.CLIENT.clearInternal();
+        CelestialAssetStore.SERVER.setSatelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, 3);
+        CelestialAssetStore.SERVER.setSatelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.PROSPECTING, 2);
+        CelestialAssetStore.SERVER.setSatelliteCount(TEAM, CelestialObjectId.MOON, SatelliteKind.COMMUNICATION, 5);
 
-        SatelliteSyncPacket original = SatelliteSyncPacket.fullForTeam(TEAM, source.snapshotTeam(TEAM));
+        SatelliteSyncPacket original = SatelliteSyncPacket
+            .fullForTeam(TEAM, CelestialAssetStore.SERVER.snapshotSatelliteCounts(TEAM));
 
         ByteBuf buf = Unpooled.buffer();
         original.toBytes(buf);
@@ -32,11 +34,16 @@ final class SatellitePacketRoundTripTest {
         SatelliteSyncPacket decoded = new SatelliteSyncPacket();
         decoded.fromBytes(buf);
 
-        PlanetarySatelliteStore target = new PlanetarySatelliteStore();
-        decoded.applyTo(target);
+        decoded.applyTo(CelestialAssetStore.CLIENT);
 
-        assertEquals(3, target.count(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION));
-        assertEquals(2, target.count(TEAM, CelestialObjectId.MARS, SatelliteKind.PROSPECTING));
-        assertEquals(5, target.count(TEAM, CelestialObjectId.MOON, SatelliteKind.COMMUNICATION));
+        assertEquals(
+            3,
+            CelestialAssetStore.CLIENT.satelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION));
+        assertEquals(
+            2,
+            CelestialAssetStore.CLIENT.satelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.PROSPECTING));
+        assertEquals(
+            5,
+            CelestialAssetStore.CLIENT.satelliteCount(TEAM, CelestialObjectId.MOON, SatelliteKind.COMMUNICATION));
     }
 }

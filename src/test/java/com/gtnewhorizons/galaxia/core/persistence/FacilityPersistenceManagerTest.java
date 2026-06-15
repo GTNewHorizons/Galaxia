@@ -125,10 +125,7 @@ final class FacilityPersistenceManagerTest {
 
         Path dataDir = tempDir.resolve("galaxiadata");
         Files.createDirectories(dataDir);
-        Files.write(
-            dataDir.resolve("_assets.json"),
-            PERSISTENCE_GSON.toJson(List.of(json))
-                .getBytes(StandardCharsets.UTF_8));
+        Files.write(dataDir.resolve("_assets.json"), assetRegistryBytes(List.of(json)));
 
         CelestialAssetStore.clear();
         assertDoesNotThrow(() -> manager.loadFromSaveDirectory(tempDir.toFile()));
@@ -544,10 +541,7 @@ final class FacilityPersistenceManagerTest {
         Files.createDirectories(dataDir);
         File file = dataDir.resolve("_assets.json")
             .toFile();
-        Files.write(
-            file.toPath(),
-            GSON.toJson(assets)
-                .getBytes(StandardCharsets.UTF_8));
+        Files.write(file.toPath(), assetRegistryBytes(assets));
 
         CelestialAssetStore.clear();
         IllegalStateException thrown = assertThrows(
@@ -578,10 +572,7 @@ final class FacilityPersistenceManagerTest {
 
         Path dataDir = tempDir.resolve("galaxiadata");
         Files.createDirectories(dataDir);
-        Files.write(
-            dataDir.resolve("_assets.json"),
-            PERSISTENCE_GSON.toJson(List.of(json))
-                .getBytes(StandardCharsets.UTF_8));
+        Files.write(dataDir.resolve("_assets.json"), assetRegistryBytes(List.of(json)));
 
         CelestialAssetStore.clear();
         assertDoesNotThrow(() -> manager.loadFromSaveDirectory(tempDir.toFile()));
@@ -611,10 +602,7 @@ final class FacilityPersistenceManagerTest {
 
         Path dataDir = tempDir.resolve("galaxiadata");
         Files.createDirectories(dataDir);
-        Files.write(
-            dataDir.resolve("_assets.json"),
-            PERSISTENCE_GSON.toJson(List.of(json))
-                .getBytes(StandardCharsets.UTF_8));
+        Files.write(dataDir.resolve("_assets.json"), assetRegistryBytes(List.of(json)));
 
         CelestialAssetStore.clear();
         assertDoesNotThrow(() -> manager.loadFromSaveDirectory(tempDir.toFile()));
@@ -645,6 +633,14 @@ final class FacilityPersistenceManagerTest {
         json.requiredResources = new LinkedHashMap<>();
         json.constructionInventory = new LinkedHashMap<>();
         return json;
+    }
+
+    private static byte[] assetRegistryBytes(List<FacilityPersistenceManager.AssetJson> assets) {
+        FacilityPersistenceManager.AssetRegistryJson registry = new FacilityPersistenceManager.AssetRegistryJson();
+        registry.assets = assets;
+        registry.satellites = new ArrayList<>();
+        return PERSISTENCE_GSON.toJson(registry)
+            .getBytes(StandardCharsets.UTF_8);
     }
 
     private static FacilityPersistenceManager.FacilityStateJson malformedFacilityState() {

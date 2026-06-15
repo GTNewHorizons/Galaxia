@@ -88,7 +88,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleS
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
-import com.gtnewhorizons.galaxia.registry.satellite.PlanetarySatelliteStore;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -101,7 +100,6 @@ public final class FacilityPersistenceManager {
     private static final String DATA_DIR = "galaxiadata";
     private static final String ASSETS_FILE = "_assets.json";
     private static final String TASKS_FILE = "_tasks.json";
-    private static final String SATELLITES_FILE = "_satellites.json";
 
     private final Gson gson;
     private static final Gson PURE_GSON = new GsonBuilder().create();
@@ -127,7 +125,6 @@ public final class FacilityPersistenceManager {
     public void loadFromSaveDirectory(File worldSaveDir) {
         this.worldSaveDir = worldSaveDir;
         CelestialAssetStore.clear();
-        PlanetarySatelliteStore.SERVER.clear();
         LogisticStore.clearDeliveries();
         HammerTrajectoryLoadTracker.reset();
         loadAll();
@@ -152,7 +149,6 @@ public final class FacilityPersistenceManager {
         if (event.world.provider.dimensionId != 0) return;
         if (worldSaveDir != null) saveAll();
         CelestialAssetStore.clear();
-        PlanetarySatelliteStore.SERVER.clear();
         LogisticStore.clearDeliveries();
         HammerTrajectoryLoadTracker.reset();
         worldSaveDir = null;
@@ -167,7 +163,6 @@ public final class FacilityPersistenceManager {
         LOG.info("[PERSIST] LOAD START: reading from {}", galaxiaRoot);
         loadAssets(new File(galaxiaRoot, ASSETS_FILE));
         loadTasks(new File(galaxiaRoot, TASKS_FILE));
-        loadSatellites(new File(galaxiaRoot, SATELLITES_FILE));
     }
 
     private void saveAll() {
@@ -176,7 +171,6 @@ public final class FacilityPersistenceManager {
         LOG.info("[PERSIST] SAVE START: writing to {}", galaxiaRoot);
         saveAssets(new File(galaxiaRoot, ASSETS_FILE));
         saveTasks(new File(galaxiaRoot, TASKS_FILE));
-        saveSatellites(new File(galaxiaRoot, SATELLITES_FILE));
     }
 
     private void loadAssets(File file) {
@@ -184,18 +178,18 @@ public final class FacilityPersistenceManager {
             LOG.info("[PERSIST] LOAD: no file at {}, skipping", file);
             return;
         }
-        List<AssetJson> list;
+        AssetRegistryJson registry;
         try (FileReader reader = new FileReader(file)) {
-            Type listType = new TypeToken<List<AssetJson>>() {}.getType();
-            list = gson.fromJson(reader, listType);
+            registry = gson.fromJson(reader, AssetRegistryJson.class);
         } catch (IOException | JsonParseException e) {
             throw new IllegalStateException("[PERSIST] LOAD FAILED: read error " + file + ": " + e.getMessage(), e);
         }
-        if (list == null) {
+        if (registry == null || registry.assets == null) {
             throw new IllegalStateException(
                 "[PERSIST] LOAD FAILED: asset registry " + file + " contained no asset list");
         }
 
+        List<AssetJson> list = registry.assets;
         LOG.info("[PERSIST] LOAD: found {} asset(s) in JSON", list.size());
         int loadedCount = 0;
         for (AssetJson json : list) {
@@ -221,6 +215,7 @@ public final class FacilityPersistenceManager {
             loadedCount++;
         }
         LOG.info("[PERSIST] LOAD END: {} asset(s) loaded", loadedCount);
+        loadSatelliteRows(file, registry.satellites);
     }
 
     private static <T extends Enum<T>> T safeValueOf(Class<T> cls, String name) {
@@ -234,7 +229,9 @@ public final class FacilityPersistenceManager {
     }
 
     private void saveAssets(File file) {
-        List<AssetJson> list = new ArrayList<>();
+        AssetRegistryJson registry = new AssetRegistryJson();
+        registry.assets = new ArrayList<>();
+        registry.satellites = encodeSatelliteRows();
         int totalAssets = 0;
         int totalModules = 0;
         int totalAnchors = 0;
@@ -262,33 +259,20 @@ public final class FacilityPersistenceManager {
                     asset.kind,
                     asset.status());
             }
-            list.add(json);
+            registry.assets.add(json);
         }
         LOG.info(
             "[PERSIST] SAVE: {} asset(s) total, {} modules, {} anchor tiles across all assets",
             totalAssets,
             totalModules,
             totalAnchors);
-        writeJson(file, list);
+        writeJson(file, registry);
     }
 
-    private void loadSatellites(File file) {
-        if (!file.exists()) {
-            LOG.info("[PERSIST] LOAD: no satellite file at {}, skipping", file);
-            return;
-        }
-        List<SatelliteRow> rows;
-        try (FileReader reader = new FileReader(file)) {
-            Type listType = new TypeToken<List<SatelliteRow>>() {}.getType();
-            rows = gson.fromJson(reader, listType);
-        } catch (IOException | JsonParseException e) {
-            throw new IllegalStateException(
-                "[PERSIST] LOAD FAILED: satellite registry " + file + " could not be read",
-                e);
-        }
+    private void loadSatelliteRows(File file, List<SatelliteRow> rows) {
         if (rows == null) {
-            throw new IllegalStateException(
-                "[PERSIST] LOAD FAILED: satellite registry " + file + " contained no satellite list");
+            LOG.info("[PERSIST] LOAD: no satellite rows in {}, skipping", file);
+            return;
         }
 
         int loadedCount = 0;
@@ -301,16 +285,16 @@ public final class FacilityPersistenceManager {
             SatelliteKind kind = Objects.requireNonNull(
                 safeValueOf(SatelliteKind.class, row.kind),
                 "[PERSIST] Satellite row has invalid kind: " + row.kind);
-            PlanetarySatelliteStore.SERVER.set(teamId, bodyId, kind, row.count);
+            CelestialAssetStore.SERVER.setSatelliteCount(teamId, bodyId, kind, row.count);
             loadedCount++;
         }
         LOG.info("[PERSIST] LOAD END: {} satellite count row(s) loaded", loadedCount);
     }
 
-    private void saveSatellites(File file) {
+    private List<SatelliteRow> encodeSatelliteRows() {
         List<SatelliteRow> rows = new ArrayList<>();
-        for (Map.Entry<UUID, Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>>> teamEntry : PlanetarySatelliteStore.SERVER
-            .snapshot()
+        for (Map.Entry<UUID, Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>>> teamEntry : CelestialAssetStore.SERVER
+            .snapshotSatelliteCounts()
             .entrySet()) {
             for (Map.Entry<CelestialObjectId, EnumMap<SatelliteKind, Integer>> bodyEntry : teamEntry.getValue()
                 .entrySet()) {
@@ -329,7 +313,7 @@ public final class FacilityPersistenceManager {
                 }
             }
         }
-        writeJson(file, rows);
+        return rows;
     }
 
     private void loadTasks(File file) {
@@ -1069,6 +1053,12 @@ public final class FacilityPersistenceManager {
             if (key != null && entry.getValue() > 0L) decoded.put(key, UpkeepAmount.ofMicroUnits(entry.getValue()));
         }
         return decoded;
+    }
+
+    static final class AssetRegistryJson {
+
+        List<AssetJson> assets;
+        List<SatelliteRow> satellites;
     }
 
     static final class AssetJson {

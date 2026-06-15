@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaSatelliteAPI;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 
 final class GalaxiaSatelliteAPITest {
@@ -17,14 +18,14 @@ final class GalaxiaSatelliteAPITest {
 
     @BeforeEach
     void resetStore() {
-        PlanetarySatelliteStore.SERVER.clear();
+        CelestialAssetStore.SERVER.clearInternal();
     }
 
     @Test
     void apiReadsTeamScopedCountsAndEffects() {
-        PlanetarySatelliteStore.SERVER.set(TEAM_A, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, 3);
-        PlanetarySatelliteStore.SERVER.set(TEAM_A, CelestialObjectId.MARS, SatelliteKind.PROSPECTING, 2);
-        PlanetarySatelliteStore.SERVER.set(TEAM_B, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, 7);
+        CelestialAssetStore.SERVER.setSatelliteCount(TEAM_A, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, 3);
+        CelestialAssetStore.SERVER.setSatelliteCount(TEAM_A, CelestialObjectId.MARS, SatelliteKind.PROSPECTING, 2);
+        CelestialAssetStore.SERVER.setSatelliteCount(TEAM_B, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, 7);
 
         assertEquals(3, GalaxiaSatelliteAPI.count(TEAM_A, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION));
         assertEquals(7, GalaxiaSatelliteAPI.count(TEAM_B, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION));
@@ -34,10 +35,10 @@ final class GalaxiaSatelliteAPITest {
 
     @Test
     void deleteAllClearsOnlySelectedKind() {
-        PlanetarySatelliteStore.SERVER.set(TEAM_A, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, 4);
-        PlanetarySatelliteStore.SERVER.set(TEAM_A, CelestialObjectId.MARS, SatelliteKind.PROSPECTING, 5);
+        CelestialAssetStore.SERVER.setSatelliteCount(TEAM_A, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, 4);
+        CelestialAssetStore.SERVER.setSatelliteCount(TEAM_A, CelestialObjectId.MARS, SatelliteKind.PROSPECTING, 5);
 
-        PlanetarySatelliteStore.SERVER.deleteAll(TEAM_A, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION);
+        CelestialAssetStore.SERVER.deleteSatellites(TEAM_A, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION);
 
         assertEquals(0, GalaxiaSatelliteAPI.count(TEAM_A, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION));
         assertEquals(5, GalaxiaSatelliteAPI.count(TEAM_A, CelestialObjectId.MARS, SatelliteKind.PROSPECTING));
