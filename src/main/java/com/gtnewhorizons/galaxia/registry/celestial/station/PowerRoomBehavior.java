@@ -10,11 +10,12 @@ import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
+import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
-import com.gtnewhorizons.galaxia.compat.gt.MTEStationPlug;
-import com.gtnewhorizons.galaxia.compat.gt.MTEStationPlugMulti;
+import com.gtnewhorizons.galaxia.compat.gt.StationHatchElement;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
+import com.gtnewhorizons.galaxia.compat.structure.IExtendedStructureElement;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.core.network.StationGraphSyncHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
@@ -25,6 +26,7 @@ import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehaviorWithAttachm
 import gregtech.api.GregTechAPI;
 import gregtech.api.enums.MetaTileEntityIDs;
 import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
+import gregtech.api.util.GTStructureUtility;
 
 public class PowerRoomBehavior implements IStationBehaviorWithAttachments {
 
@@ -46,8 +48,8 @@ public class PowerRoomBehavior implements IStationBehaviorWithAttachments {
                 def.validSpaceStationBlocks()
                     .stream()
                     .filter(b -> ALL_VALID_POWER_ROOM_BLOCKS.contains(b))
-                    .map(b -> GalaxiaStructureUtility.ofBlock(b, 0)))
-            .addInteriorElement(GalaxiaStructureUtility.<TileStation>ofTileAdderCheckHints((room, tileEntity) -> {
+                    .map(b -> IExtendedStructureElement.extend(b, StructureUtility.ofBlock(b, 0))))
+            .addInteriorElement(GalaxiaStructureUtility.ofTileAdderCheckHints((room, tileEntity) -> {
                 if (tileEntity instanceof IGregTechTileEntity gtTE) {
                     if (StationAttachmentRegistry.isRegisteredMTE(
                         gtTE.getMetaTileEntity()
@@ -59,18 +61,14 @@ public class PowerRoomBehavior implements IStationBehaviorWithAttachments {
                 return false;
             }, GregTechAPI.sBlockMachines, MetaTileEntityIDs.lsc.ID))
             .addElement(
-                GalaxiaStructureUtility.<TileStation>stationHatchAdder(
-                    GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
-                    0,
-                    MTEStationPlug.ID,
-                    TileStation::addStationPlug))
-            .addElement(
-                GalaxiaStructureUtility.<TileStation>stationHatchAdder(
-                    GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
-                    0,
-                    MTEStationPlugMulti.ID,
-                    TileStation::addStationPlug))
-            .addElement(GalaxiaStructureUtility.<TileStation>ofTileAdderCheckHintsAnyMeta((room, tileEntity) -> {
+                GregTechAPI.sBlockMachines,
+                GTStructureUtility.buildHatchAdder(TileStation.class)
+                    .anyOf(StationHatchElement.Energy)
+                    .casingIndex(1)
+                    .hint(1)
+                    .exclusive()
+                    .build())
+            .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((room, tileEntity) -> {
                 if (tileEntity instanceof TileEntityAirlock airlock) {
                     if (!airlock.isStructureValid()) return false;
                     room.registerAirlock(airlock.xCoord, airlock.yCoord, airlock.zCoord);

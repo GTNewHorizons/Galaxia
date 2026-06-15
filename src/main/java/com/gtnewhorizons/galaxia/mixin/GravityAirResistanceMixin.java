@@ -9,8 +9,8 @@ import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaEffectAPI;
+import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializer;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
-import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 
 /**
  * Mixin to deal with gravity and air resistance
@@ -29,7 +29,8 @@ public abstract class GravityAirResistanceMixin {
         int dim = self.dimension;
         if (dim != galaxia$cachedDim) {
             galaxia$cachedDim = dim;
-            galaxia$cachedDef = SolarSystemRegistry.getById(dim);
+            galaxia$cachedDef = CelestialDimensionMaterializer.findDefinitionById(dim)
+                .orElse(null);
         }
         return galaxia$cachedDef;
     }

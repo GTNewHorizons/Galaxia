@@ -10,9 +10,11 @@
     "MixinEntityPlayer",
     "MixinEntityThrowable",
     "MixinThrowRecoil",
-    "ParticleGravityMixin",
     "RelativeMovementMixin",
-    "UnifiedGravityMixin"
+    "UnifiedGravityMixin$ArrowEntities",
+    "UnifiedGravityMixin$NormalEntities",
+    "UnifiedGravityMixin$ParticleGravityMixin",
+    "UnifiedGravityMixin$ThrowableEntities"
   ],
   "client": [
     "MixinEntityRenderer",

@@ -75,6 +75,45 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
         }, Blocks.chest, 0), StructureUtility.ofBlock(GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(), 0)))
         .build();
 
+    public static final IAttachmentHandler<TileHammerCannon> HANDLER = new IAttachmentHandler<>() {
+
+        @Override
+        public BlockPos getPosition(TileHammerCannon attachment) {
+            return attachment.here;
+        }
+
+        @Override
+        public void tick(TileHammerCannon attachment) {
+            if (attachment.graph == null) return;
+
+            attachment.moduleInstance.tick(
+                attachment.graph.getController()
+                    .getBackingStation());
+        }
+
+        @Override
+        public boolean isReady(TileHammerCannon attachment) {
+            return attachment.structureValid && attachment.graph != null;
+        }
+
+        @Override
+        public void onAttached(TileHammerCannon attachment, StationGraph graph) {
+            attachment.graph = graph;
+            attachment.moduleInstance.updateStatus(Buildable.Status.OPERATIONAL);
+        }
+
+        @Override
+        public void onDetached(TileHammerCannon attachment, StationGraph graph) {
+            attachment.graph = null;
+            attachment.moduleInstance.updateStatus(Buildable.Status.DISABLED);
+        }
+
+        @Override
+        public void markDirty(TileHammerCannon attachment) {
+            attachment.markDirty();
+        }
+    };
+
     // Internal inventory only available for firing hammer packages
     private final List<IInventory> inventory = new ArrayList<>();
 
@@ -88,47 +127,6 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
 
     @Getter
     private final ModuleHammer hammer;
-
-    static {
-        StationAttachmentRegistry.register(TileHammerCannon.class, new IAttachmentHandler<>() {
-
-            @Override
-            public BlockPos getPosition(TileHammerCannon attachment) {
-                return attachment.here;
-            }
-
-            @Override
-            public void tick(TileHammerCannon attachment) {
-                if (attachment.graph == null) return;
-
-                attachment.moduleInstance.tick(
-                    attachment.graph.getController()
-                        .getBackingStation());
-            }
-
-            @Override
-            public boolean isReady(TileHammerCannon attachment) {
-                return attachment.structureValid && attachment.graph != null;
-            }
-
-            @Override
-            public void onAttached(TileHammerCannon attachment, StationGraph graph) {
-                attachment.graph = graph;
-                attachment.moduleInstance.updateStatus(Buildable.Status.OPERATIONAL);
-            }
-
-            @Override
-            public void onDetached(TileHammerCannon attachment, StationGraph graph) {
-                attachment.graph = null;
-                attachment.moduleInstance.updateStatus(Buildable.Status.DISABLED);
-            }
-
-            @Override
-            public void markDirty(TileHammerCannon attachment) {
-                attachment.markDirty();
-            }
-        });
-    }
 
     public List<IInventory> getChestInventories() {
         return inventory;

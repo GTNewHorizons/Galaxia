@@ -48,6 +48,18 @@ public class MTEStationPlug extends MTEHatchDynamo {
         }
     }
 
+    // TODO: these are the methods to overwrite to give new textures to the station plugs
+    @Override
+    public ITexture[] getTexturesActive(ITexture aBaseTexture) {
+        return super.getTexturesActive(aBaseTexture);
+    }
+
+    // TODO: these are the methods to overwrite to give new textures to the station plugs
+    @Override
+    public ITexture[] getTexturesInactive(ITexture aBaseTexture) {
+        return super.getTexturesInactive(aBaseTexture);
+    }
+
     @Override
     public void saveNBTData(NBTTagCompound tag) {
         super.saveNBTData(tag);

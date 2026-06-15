@@ -10,16 +10,20 @@ import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
+import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
-import com.gtnewhorizons.galaxia.compat.gt.MTEStationPlug;
-import com.gtnewhorizons.galaxia.compat.gt.MTEStationPlugMulti;
+import com.gtnewhorizons.galaxia.compat.gt.StationHatchElement;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
+import com.gtnewhorizons.galaxia.compat.structure.IExtendedStructureElement;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehaviorWithAttachments;
+
+import gregtech.api.GregTechAPI;
+import gregtech.api.util.GTStructureUtility;
 
 public class DockBehavior implements IStationBehaviorWithAttachments {
 
@@ -38,7 +42,7 @@ public class DockBehavior implements IStationBehaviorWithAttachments {
                 def.validSpaceStationBlocks()
                     .stream()
                     .filter(b -> ALL_VALID_DOCK_BLOCKS.contains(b))
-                    .map(b -> GalaxiaStructureUtility.ofBlock(b, 0)))
+                    .map(b -> IExtendedStructureElement.extend(b, StructureUtility.ofBlock(b, 0))))
             .addElement(GalaxiaStructureUtility.<TileStation>ofTileAdderCheckHintsAnyMeta((dock, tileEntity) -> {
                 if (tileEntity instanceof TileEntityAirlock airlock) {
                     if (!airlock.isStructureValid()) return false;
@@ -48,17 +52,13 @@ public class DockBehavior implements IStationBehaviorWithAttachments {
                 return false;
             }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
             .addElement(
-                GalaxiaStructureUtility.<TileStation>stationHatchAdder(
-                    GalaxiaBlocksEnum.RUSTY_SCAFFOLDING.get(),
-                    0,
-                    MTEStationPlug.ID,
-                    (dock, x, y, z) -> dock.addStationPlug(x, y, z)))
-            .addElement(
-                GalaxiaStructureUtility.<TileStation>stationHatchAdder(
-                    GalaxiaBlocksEnum.RUSTY_SCAFFOLDING.get(),
-                    0,
-                    MTEStationPlugMulti.ID,
-                    (dock, x, y, z) -> dock.addStationPlug(x, y, z)))
+                GregTechAPI.sBlockMachines,
+                GTStructureUtility.<TileStation>buildHatchAdder()
+                    .anyOf(StationHatchElement.Energy)
+                    .casingIndex(1)
+                    .hint(1)
+                    .exclusive()
+                    .build())
             .addInteriorElement(
                 GalaxiaStructureUtility.<TileStation>ofTileAdderCheckHintsAnyMeta((dock, tileEntity) -> {
                     if (StationAttachmentRegistry.isRegisteredTileEntity(tileEntity)) {

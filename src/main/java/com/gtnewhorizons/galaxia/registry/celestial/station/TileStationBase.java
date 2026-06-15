@@ -34,6 +34,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
 
     protected @Nullable StationGraph graph;
     protected List<BlockPos> airlocks = new ArrayList<>();
+    @Getter
     protected List<BlockPos> stationPlugs = new ArrayList<>();
     protected BlockPos here;
 
@@ -77,7 +78,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
 
             if (!teLock.trackStationController(this.here)) {
                 Galaxia.LOG.warn(
-                    "Airlock at %s cannot track more than %d controllers",
+                    "Airlock at {} cannot track more than {} controllers",
                     airlock,
                     TileEntityAirlock.MAX_CONNECTIONS);
             }
@@ -111,9 +112,9 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
         }
     }
 
-    public void addStationPlug(int x, int y, int z) {
-        if (stationPlugs.size() >= 2) return;
-        BlockPos plug = new BlockPos(x, y, z);
+    public boolean addStationPlug(IGregTechTileEntity gte, short tier) {
+        BlockPos plug = new BlockPos(gte.getXCoord(), gte.getYCoord(), gte.getZCoord());
+        if (stationPlugs.size() >= 2) return this.stationPlugs.contains(plug);
         if (!this.stationPlugs.contains(plug)) {
             this.stationPlugs.add(plug);
         }
@@ -122,6 +123,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
             mtePlug.setGraph(graph);
         }
         markDirty();
+        return true;
     }
 
     public boolean isValidDimension(World world) {
@@ -230,4 +232,5 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
             room.sealedDirty = false;
         }
     }
+
 }

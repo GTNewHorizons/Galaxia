@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.celestial.station;
 
+import java.math.BigInteger;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -87,12 +88,28 @@ public final class StationGraph {
     public long drawEnergy(long maxPowerDraw) {
         long remaining = maxPowerDraw;
         for (StationAttachmentRegistry.ResolvedAttachment<?> ra : (Iterable<StationAttachmentRegistry.ResolvedAttachment<?>>) getEnergyAttachments()::iterator) {
-            IEnergyHandler h = StationAttachmentRegistry.asEnergyHandler(ra.handler());
-            long drawn = h.drawEnergy(ra.attachment(), remaining);
-            remaining -= drawn;
+            remaining -= drawFromAttachment(ra, remaining);
             if (remaining <= 0) return maxPowerDraw;
         }
         return maxPowerDraw - remaining;
+    }
+
+    private <T> long drawFromAttachment(StationAttachmentRegistry.ResolvedAttachment<T> ra, long amount) {
+        IEnergyHandler<T> h = StationAttachmentRegistry.asEnergyHandler(ra.handler());
+        return h.drawEnergy(ra.attachment(), amount);
+    }
+
+    public BigInteger getEnergyStored() {
+        BigInteger total = BigInteger.ZERO;
+        for (StationAttachmentRegistry.ResolvedAttachment<?> ra : (Iterable<StationAttachmentRegistry.ResolvedAttachment<?>>) getEnergyAttachments()::iterator) {
+            total = total.add(energyStoredFromAttachment(ra));
+        }
+        return total;
+    }
+
+    private <T> BigInteger energyStoredFromAttachment(StationAttachmentRegistry.ResolvedAttachment<T> ra) {
+        return StationAttachmentRegistry.asEnergyHandler(ra.handler())
+            .getEnergyStored(ra.attachment());
     }
 
     public @Nonnull Stream<IDistributedInventory> connectedInventories() {
@@ -109,37 +126,50 @@ public final class StationGraph {
         attachments.put(pos, ra);
         if (ra.handler()
             .hasDistributedInventory()) {
-            if (StationAttachmentRegistry.isFluidStorageHandler(ra.handler())) {
-                resolvedInventories.put(
-                    ra,
-                    new FluidAttachmentInventory(
-                        StationAttachmentRegistry.asFluidStorageHandler(ra.handler()),
-                        ra.attachment()));
-            } else if (StationAttachmentRegistry.isItemStorageHandler(ra.handler())) {
-                resolvedInventories.put(
-                    ra,
-                    new ItemAttachmentInventory(
-                        StationAttachmentRegistry.asItemStorageHandler(ra.handler()),
-                        ra.attachment()));
-            } else {
-                throw new IllegalStateException("[StationGraph] Trying to register unknown inventory handler");
-            }
+            resolvedInventories.put(ra, resolveDistributedInventory(ra));
         }
         onAttached(ra, this);
         fireListeners(l -> l.onAttachmentConnected(pos, ra.attachment()));
     }
 
+    private <T> IDistributedInventory resolveDistributedInventory(StationAttachmentRegistry.ResolvedAttachment<T> ra) {
+        if (StationAttachmentRegistry.isFluidStorageHandler(ra.handler())) {
+            return new FluidAttachmentInventory<>(
+                StationAttachmentRegistry.asFluidStorageHandler(ra.handler()),
+                ra.attachment());
+        } else if (StationAttachmentRegistry.isItemStorageHandler(ra.handler())) {
+            return new ItemAttachmentInventory<>(
+                StationAttachmentRegistry.asItemStorageHandler(ra.handler()),
+                ra.attachment());
+        }
+        throw new IllegalStateException("[StationGraph] Trying to register unknown inventory handler");
+    }
+
+    public boolean hasAttachment(BlockPos pos) {
+        return attachments.containsKey(pos);
+    }
+
     public void removeAttachment(BlockPos pos) {
+        removeAttachmentInternal(pos);
+        fireListeners(l -> l.onAttachmentDisconnected(pos));
+    }
+
+    public void removeAttachmentSilently(BlockPos pos) {
+        removeAttachmentInternal(pos);
+    }
+
+    private void removeAttachmentInternal(BlockPos pos) {
         StationAttachmentRegistry.ResolvedAttachment<?> ra = attachments.remove(pos);
         adjacency.values()
             .forEach(list -> list.remove(pos));
 
-        if (ra.handler()
-            .hasDistributedInventory()) {
-            resolvedInventories.remove(ra);
+        if (ra != null) {
+            if (ra.handler()
+                .hasDistributedInventory()) {
+                resolvedInventories.remove(ra);
+            }
+            onDetached(ra, this);
         }
-        onDetached(ra, this);
-        fireListeners(l -> l.onAttachmentDisconnected(pos));
     }
 
     private static <T> boolean isReady(StationAttachmentRegistry.ResolvedAttachment<T> ra) {
