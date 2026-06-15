@@ -20,7 +20,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.asteroidbelts.FrozenBelt;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.Mars;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.Moon;
-import com.gtnewhorizons.galaxia.registry.dimension.planets.Panspira;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
@@ -184,41 +183,6 @@ public final class CelestialRegistry {
                 .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 1.5)
                 .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 2.0)
                 .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.2));
-        register(
-            DimensionEnum.PANSPIRA,
-            builder -> builder.parent(CelestialObjectId.VAEL)
-                .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(0.60 * EARTH_RADIUS_TO_AU, 0.00057, seededPhase("panspira"))
-                .texture(EnumTextures.ICON_EGORA.get())
-                .spriteSize(0.75)
-                .properties(
-                    b -> b.withGravity(1.4e7, 3600.0)
-                        .visitable(true)
-                        .canCreateStation(true)
-                        .canCreateOutpost(true)
-                        .temperature(423)
-                        .radiation(0.20)
-                        .oreProfile("undefined")
-                        .metadata("surface", "undefined"))
-                .playableDimensionProfile(
-                    stationBuildable(
-                        PlayableDimensionProfile.builder(DimensionEnum.PANSPIRA)
-                            .mass(3.0)
-                            .orbitalRadius(0.6 * EARTH_RADIUS_TO_AU)
-                            .radius(1.5)
-                            .gravity(2.25)
-                            .airResistance(1.0)
-                            .effects(dimensionEffects(423, 0, 300))
-                            .worldGeneration(Panspira::configureWorldProvider)).build())
-                .featureTileChance(0.26)
-                .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 2.0)
-                .feature(PlanetaryFeatureRegistry.MAGMA_POOL, 0.4)
-                .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.5)
-                .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 1.0)
-                .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0)
-                .feature(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET, 0.8)
-                .feature(PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION, 0.8)
-                .feature(PlanetaryFeatureRegistry.THERMAL_SINK_ZONE, 0.8));
 
         register(
             DimensionEnum.MARS,

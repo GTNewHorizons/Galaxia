@@ -97,7 +97,7 @@ final class UpkeepSettlementTest {
     private static AutomatedFacility facilityWithInventory(int available) {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         facility.updateItems(GOLD, available);

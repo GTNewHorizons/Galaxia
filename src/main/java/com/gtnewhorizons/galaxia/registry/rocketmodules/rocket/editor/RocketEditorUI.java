@@ -12,12 +12,15 @@ import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.value.sync.IntSyncValue;
+import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.core.network.CommitBlueprintAndOrderPacket;
+import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.assembly.RocketBuildStatus;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
@@ -63,6 +66,9 @@ public class RocketEditorUI {
         panel.child(createClearSelectionButton(selectedPartId).pos(548, 396));
         panel.child(createClearBlueprintButton(workingBlueprint, selectedPartId, silo).pos(548, 424));
         panel.child(createOrderModulesButton(silo, workingBlueprint, buildStatusSync).pos(548, 452));
+        panel.child(createDestinationRow(silo).pos(548, 500));
+        panel.child(createEnterRocketButton(silo, data).pos(548, 580));
+        panel.child(createSaveSchematicButton(silo, data).pos(548, 608));
 
         panel.onCloseAction(() -> {
             if (silo.getBuildStatus()
@@ -239,5 +245,69 @@ public class RocketEditorUI {
                 return "Selected: " + (def != null ? def.name() : "Unknown");
             })
                 .asWidget());
+    }
+
+    private static ButtonWidget<?> createEnterRocketButton(TileEntitySilo silo, PosGuiData data) {
+        return new ButtonWidget<>().size(160, 20)
+            .background(EnumTextures.SELECTION_FRAME.getImage())
+            .overlay(IKey.dynamic(() -> {
+                if (!silo.getBuildStatus()
+                    .canLaunch()) return EnumChatFormatting.DARK_GRAY + "Enter Rocket";
+                return EnumChatFormatting.GREEN + "Enter Rocket";
+            })
+                .alignment(Alignment.Center))
+            .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
+                if (md.mouseButton == 0 && !silo.getWorldObj().isRemote) {
+                    silo.enterRocket(data);
+                }
+            }));
+    }
+
+    private static ButtonWidget<?> createSaveSchematicButton(TileEntitySilo silo, PosGuiData data) {
+        return new ButtonWidget<>().size(160, 20)
+            .background(EnumTextures.SELECTION_FRAME.getImage())
+            .overlay(
+                IKey.str("Save Schematic")
+                    .alignment(Alignment.Center))
+            .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
+                if (md.mouseButton == 0 && !silo.getWorldObj().isRemote) {
+                    silo.captureSchematic(data.getPlayer());
+                }
+            }));
+    }
+
+    private static ParentWidget<?> createDestinationRow(TileEntitySilo silo) {
+
+        Flow row = Flow.row()
+            .coverChildren()
+            .margin(2);
+
+        for (DimensionEnum dim : DimensionEnum.values()) {
+            row.child(
+                new ButtonWidget<>().size(70, 20)
+                    .background(EnumTextures.SELECTION_FRAME.getImage())
+                    .overlay(IKey.dynamic(() -> {
+
+                        boolean selected = silo.getDestination() == dim.getId();
+
+                        return (selected ? EnumChatFormatting.GREEN : EnumChatFormatting.WHITE) + dim.getName();
+
+                    })
+                        .alignment(Alignment.Center))
+                    .onMousePressed(mouseButton -> {
+                        if (mouseButton == 0) {
+
+                            GALAXIA_NETWORK.sendToServer(
+                                new DestinationSetPacket(silo.xCoord, silo.yCoord, silo.zCoord, dim.getId()));
+
+                            return true;
+                        }
+                        return false;
+                    }));
+        }
+
+        return new ParentWidget<>().size(160, 120)
+            .background(EnumTextures.SELECTION_FRAME.getImage())
+            .child(row.pos(4, 4));
     }
 }

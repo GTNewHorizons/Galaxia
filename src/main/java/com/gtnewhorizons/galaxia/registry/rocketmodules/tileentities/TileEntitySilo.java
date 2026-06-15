@@ -7,24 +7,14 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumChatFormatting;
-import net.minecraft.util.StatCollector;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
-import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
-import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.value.IntValue;
-import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import com.cleanroommc.modularui.value.sync.StringSyncValue;
-import com.cleanroommc.modularui.widget.ParentWidget;
-import com.cleanroommc.modularui.widgets.ButtonWidget;
-import com.cleanroommc.modularui.widgets.layout.Flow;
-import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
@@ -44,20 +34,29 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRo
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.GantryAPI;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
+import lombok.Getter;
+import lombok.Setter;
+
 public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     implements IGuiHolder<PosGuiData>, IRocketControllerTE {
 
     private EntityRocket entityRocket;
     public boolean shouldRender = true;
 
+    @Getter
     private int destination = -1;
+
     private final IntValue.Dynamic selectedDim = new IntValue.Dynamic(() -> destination, v -> {
         destination = v;
         GALAXIA_NETWORK.sendToServer(new DestinationSetPacket(xCoord, yCoord, zCoord, v));
     });
 
+    @Getter
+    @Setter
     private String pendingSchematicName = "";
 
+    @Getter
+    @Setter
     private TileEntityGantryTerminal gantryTerminal;
     public TileEntityModuleAssembler moduleAssembler;
     private int[] pendingAssemblerCoords;
@@ -73,12 +72,14 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     private static final String STRUCTURE_PIECE_MAIN = "main";
 
     /** What the player has drawn in the editor. Mutable only while canEdit(). */
+    @Getter
     private RocketBlueprint designBlueprint = new RocketBlueprint();
 
     /**
      * Immutable snapshot created at order time. Drives the assembler's work list.
      * Null when not in ASSEMBLING state.
      */
+    @Getter
     private RocketBuildOrder currentBuildOrder = null;
 
     /**
@@ -87,15 +88,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
      */
     private RocketBlueprint assembledBlueprint = new RocketBlueprint();
 
+    @Getter
     private RocketBuildStatus buildStatus = RocketBuildStatus.IDLE;
-
-    public RocketBlueprint getDesignBlueprint() {
-        return designBlueprint;
-    }
-
-    public RocketBuildOrder getCurrentBuildOrder() {
-        return currentBuildOrder;
-    }
 
     /**
      * Returns the assembled blueprint only when the rocket is actually built or
@@ -105,10 +99,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     public RocketBlueprint getBuiltBlueprint() {
         return buildStatus == RocketBuildStatus.READY || buildStatus == RocketBuildStatus.LAUNCHED ? assembledBlueprint
             : new RocketBlueprint();
-    }
-
-    public RocketBuildStatus getBuildStatus() {
-        return buildStatus;
     }
 
     /**
@@ -332,67 +322,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         return RocketEditorUI.build(data, syncManager, settings);
     }
 
-    private ParentWidget<?> buildBuildPage(Flow moduleRow) {
-        return new ParentWidget<>().size(240, 160)
-            .child(moduleRow)
-            .child(
-                new ButtonWidget<>().size(220, 30)
-                    .pos(10, 80)
-                    .overlay(
-                        IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.builder.return_modules"))
-                            .alignment(Alignment.Center))
-                    .syncHandler(
-                        new InteractionSyncHandler().setOnMousePressed(
-                            md -> { if (md.mouseButton == 0 && !worldObj.isRemote) returnModules(); })));
-    }
-
-    private ParentWidget<?> buildLaunchPage(Flow destRow, PosGuiData data) {
-        return new ParentWidget<>().size(240, 160)
-            .child(destRow)
-            .child(
-                new ButtonWidget<>().size(220, 30)
-                    .pos(10, 120)
-                    .overlay(
-                        IKey.dynamic(
-                            () -> (EnumChatFormatting.GREEN)
-                                + StatCollector.translateToLocal("galaxia.gui.rocket_silo.builder.enter_rocket")
-                                + EnumChatFormatting.RESET)
-                            .alignment(Alignment.CENTER))
-                    .tooltipAutoUpdate(true)
-                    .syncHandler(
-                        new InteractionSyncHandler().setOnMousePressed(
-                            md -> { if (md.mouseButton == 0 && !worldObj.isRemote) enterRocket(data); })));
-    }
-
-    private ParentWidget<?> buildSchematicPage(StringSyncValue nameSync, PosGuiData data) {
-        return new ParentWidget<>().size(240, 160)
-            .child(
-                IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.builder.schematic_text"))
-                    .asWidget()
-                    .pos(10, 40))
-            .child(
-                new TextFieldWidget().size(220, 30)
-                    .pos(10, 60)
-                    .setMaxLength(64)
-                    .value(nameSync)
-                    .autoUpdateOnChange(true))
-            .child(
-                new ButtonWidget<>().size(220, 30)
-                    .pos(10, 120)
-                    .overlay(
-                        IKey.str(
-                            EnumChatFormatting.GREEN
-                                + StatCollector.translateToLocal("galaxia.gui.rocket_silo.builder.schematic_save")
-                                + EnumChatFormatting.RESET)
-                            .alignment(Alignment.CENTER))
-                    .syncHandler(
-                        new InteractionSyncHandler().setOnMousePressed(
-                            md -> {
-                                if (md.mouseButton == 0 && !worldObj.isRemote) captureSchematic(data.getPlayer());
-                            })));
-    }
-
-    private void enterRocket(PosGuiData data) {
+    public void enterRocket(PosGuiData data) {
         if (!buildStatus.canLaunch() || assembledBlueprint.isEmpty()) return;
 
         EntityRocket rocket = getOrCreateEntityRocket();
@@ -406,7 +336,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         sync();
 
         rocket.interactFirst(data.getPlayer());
-        if (!rocket.shouldRender()) rocket.launch();
+        rocket.launch();
     }
 
     public void returnModules() {
@@ -540,22 +470,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     public void setDestination(int dim) {
         this.destination = dim;
         markDirty();
-    }
-
-    public void setGantryTerminal(TileEntityGantryTerminal terminal) {
-        this.gantryTerminal = terminal;
-    }
-
-    public TileEntityGantryTerminal getGantryTerminal() {
-        return gantryTerminal;
-    }
-
-    public String getPendingSchematicName() {
-        return pendingSchematicName;
-    }
-
-    public void setPendingSchematicName(String name) {
-        this.pendingSchematicName = name;
     }
 
     // IRocketControllerTE
