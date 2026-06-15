@@ -17,17 +17,17 @@ import io.netty.buffer.ByteBuf;
 public final class SatelliteSyncPacket implements IMessage {
 
     private UUID teamId;
-    private Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> counts = new LinkedHashMap<>();
+    private Map<CelestialObjectId, Map<SatelliteKind, Integer>> counts = new LinkedHashMap<>();
 
     public SatelliteSyncPacket() {}
 
-    private SatelliteSyncPacket(UUID teamId, Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> counts) {
+    private SatelliteSyncPacket(UUID teamId, Map<CelestialObjectId, Map<SatelliteKind, Integer>> counts) {
         this.teamId = teamId;
-        this.counts = copyCounts(counts);
+        this.counts = counts;
     }
 
     public static SatelliteSyncPacket fullForTeam(UUID teamId,
-        Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> counts) {
+        Map<CelestialObjectId, Map<SatelliteKind, Integer>> counts) {
         return new SatelliteSyncPacket(teamId, counts);
     }
 
@@ -53,7 +53,7 @@ public final class SatelliteSyncPacket implements IMessage {
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, teamId);
         buf.writeInt(counts.size());
-        for (Map.Entry<CelestialObjectId, EnumMap<SatelliteKind, Integer>> bodyEntry : counts.entrySet()) {
+        for (Map.Entry<CelestialObjectId, Map<SatelliteKind, Integer>> bodyEntry : counts.entrySet()) {
             PacketUtil.writeEnum(buf, bodyEntry.getKey());
             buf.writeInt(
                 bodyEntry.getValue()
@@ -68,16 +68,6 @@ public final class SatelliteSyncPacket implements IMessage {
 
     public void applyTo(CelestialAssetStore store) {
         store.replaceTeamSatelliteCounts(teamId, counts);
-    }
-
-    private static Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> copyCounts(
-        Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> source) {
-        Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> copy = new LinkedHashMap<>();
-        if (source == null) return copy;
-        for (Map.Entry<CelestialObjectId, EnumMap<SatelliteKind, Integer>> entry : source.entrySet()) {
-            copy.put(entry.getKey(), new EnumMap<>(entry.getValue()));
-        }
-        return copy;
     }
 
     public static final class Handler implements IMessageHandler<SatelliteSyncPacket, IMessage> {

@@ -18,7 +18,7 @@ final class SatellitePacketRoundTripTest {
     private static final UUID TEAM = UUID.fromString("00000000-0000-0000-0000-000000000234");
 
     @Test
-    void syncPacketRoundTripsSatelliteRows() {
+    void syncPacketRoundTripsSatelliteCounts() {
         CelestialAssetStore.SERVER.clearInternal();
         CelestialAssetStore.CLIENT.clearInternal();
         CelestialAssetStore.SERVER.setSatelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, 3);

@@ -8,7 +8,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -215,7 +214,11 @@ public final class FacilityPersistenceManager {
             loadedCount++;
         }
         LOG.info("[PERSIST] LOAD END: {} asset(s) loaded", loadedCount);
-        loadSatelliteRows(file, registry.satellites);
+        if (registry.satellites == null) {
+            throw new IllegalStateException(
+                "[PERSIST] LOAD FAILED: asset registry " + file + " contained no satellite count map");
+        }
+        CelestialAssetStore.SERVER.replaceSatelliteCounts(registry.satellites);
     }
 
     private static <T extends Enum<T>> T safeValueOf(Class<T> cls, String name) {
@@ -231,7 +234,7 @@ public final class FacilityPersistenceManager {
     private void saveAssets(File file) {
         AssetRegistryJson registry = new AssetRegistryJson();
         registry.assets = new ArrayList<>();
-        registry.satellites = encodeSatelliteRows();
+        registry.satellites = CelestialAssetStore.SERVER.snapshotSatelliteCounts();
         int totalAssets = 0;
         int totalModules = 0;
         int totalAnchors = 0;
@@ -267,53 +270,6 @@ public final class FacilityPersistenceManager {
             totalModules,
             totalAnchors);
         writeJson(file, registry);
-    }
-
-    private void loadSatelliteRows(File file, List<SatelliteRow> rows) {
-        if (rows == null) {
-            LOG.info("[PERSIST] LOAD: no satellite rows in {}, skipping", file);
-            return;
-        }
-
-        int loadedCount = 0;
-        for (SatelliteRow row : rows) {
-            if (row == null || row.count <= 0) continue;
-            UUID teamId = UUID.fromString(row.teamId);
-            CelestialObjectId bodyId = Objects.requireNonNull(
-                safeValueOf(CelestialObjectId.class, row.bodyId),
-                "[PERSIST] Satellite row has invalid body id: " + row.bodyId);
-            SatelliteKind kind = Objects.requireNonNull(
-                safeValueOf(SatelliteKind.class, row.kind),
-                "[PERSIST] Satellite row has invalid kind: " + row.kind);
-            CelestialAssetStore.SERVER.setSatelliteCount(teamId, bodyId, kind, row.count);
-            loadedCount++;
-        }
-        LOG.info("[PERSIST] LOAD END: {} satellite count row(s) loaded", loadedCount);
-    }
-
-    private List<SatelliteRow> encodeSatelliteRows() {
-        List<SatelliteRow> rows = new ArrayList<>();
-        for (Map.Entry<UUID, Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>>> teamEntry : CelestialAssetStore.SERVER
-            .snapshotSatelliteCounts()
-            .entrySet()) {
-            for (Map.Entry<CelestialObjectId, EnumMap<SatelliteKind, Integer>> bodyEntry : teamEntry.getValue()
-                .entrySet()) {
-                for (Map.Entry<SatelliteKind, Integer> kindEntry : bodyEntry.getValue()
-                    .entrySet()) {
-                    if (kindEntry.getValue() <= 0) continue;
-                    rows.add(
-                        new SatelliteRow(
-                            teamEntry.getKey()
-                                .toString(),
-                            bodyEntry.getKey()
-                                .name(),
-                            kindEntry.getKey()
-                                .name(),
-                            kindEntry.getValue()));
-                }
-            }
-        }
-        return rows;
     }
 
     private void loadTasks(File file) {
@@ -1058,7 +1014,7 @@ public final class FacilityPersistenceManager {
     static final class AssetRegistryJson {
 
         List<AssetJson> assets;
-        List<SatelliteRow> satellites;
+        Map<UUID, Map<CelestialObjectId, Map<SatelliteKind, Integer>>> satellites;
     }
 
     static final class AssetJson {
@@ -1198,21 +1154,6 @@ public final class FacilityPersistenceManager {
         String toBodyId;
         double departureOrbitalTime;
         double tofOrbitalSeconds;
-    }
-
-    static final class SatelliteRow {
-
-        String teamId;
-        String bodyId;
-        String kind;
-        int count;
-
-        SatelliteRow(String teamId, String bodyId, String kind, int count) {
-            this.teamId = teamId;
-            this.bodyId = bodyId;
-            this.kind = kind;
-            this.count = count;
-        }
     }
 
     private static void writeRecipeSnapshot(JsonObject slotObj, RecipeSnapshot snapshot) {

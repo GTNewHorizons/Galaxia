@@ -53,7 +53,11 @@ final class SatelliteNetworkGraph {
         if (nodes == null || nodes.size() < 2 || maxEdgesPerNode <= 0) return List.of();
         List<Node> validNodes = nodes.stream()
             .filter(node -> node != null)
-            .sorted(NODE_ORDER)
+            .sorted(
+                Comparator.comparingDouble(Node::orbitalOrder)
+                    .thenComparingInt(
+                        node -> node.bodyId()
+                            .ordinal()))
             .toList();
         int[] components = new int[validNodes.size()];
         for (int i = 0; i < components.length; i++) components[i] = i;
@@ -100,19 +104,13 @@ final class SatelliteNetworkGraph {
                 candidates.add(new Candidate(from, to, edgeDistance(validNodes.get(from), validNodes.get(to))));
             }
         }
-        candidates.sort(CANDIDATE_ORDER);
+        candidates.sort(
+            Comparator.comparingDouble(Candidate::distance)
+                .thenComparingDouble(candidate -> Math.abs(candidate.fromIndex() - candidate.toIndex()))
+                .thenComparingInt(Candidate::fromIndex)
+                .thenComparingInt(Candidate::toIndex));
         return candidates;
     }
-
-    private static final Comparator<Node> NODE_ORDER = Comparator.comparingDouble(Node::orbitalOrder)
-        .thenComparingInt(
-            node -> node.bodyId()
-                .ordinal());
-
-    private static final Comparator<Candidate> CANDIDATE_ORDER = Comparator.comparingDouble(Candidate::distance)
-        .thenComparingDouble(candidate -> Math.abs(candidate.fromIndex() - candidate.toIndex()))
-        .thenComparingInt(Candidate::fromIndex)
-        .thenComparingInt(Candidate::toIndex);
 
     private static int nodeIndex(List<Node> nodes, CelestialObjectId bodyId) {
         if (bodyId == null) return -1;

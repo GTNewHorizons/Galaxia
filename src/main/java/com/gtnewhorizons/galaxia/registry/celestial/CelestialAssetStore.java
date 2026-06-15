@@ -359,8 +359,8 @@ public final class CelestialAssetStore {
         if (teamCounts.isEmpty()) satelliteCounts.remove(teamId);
     }
 
-    public Map<UUID, Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>>> snapshotSatelliteCounts() {
-        Map<UUID, Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>>> snapshot = new LinkedHashMap<>();
+    public Map<UUID, Map<CelestialObjectId, Map<SatelliteKind, Integer>>> snapshotSatelliteCounts() {
+        Map<UUID, Map<CelestialObjectId, Map<SatelliteKind, Integer>>> snapshot = new LinkedHashMap<>();
         for (Map.Entry<UUID, Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>>> teamEntry : satelliteCounts
             .entrySet()) {
             snapshot.put(teamEntry.getKey(), copySatelliteBodyCounts(teamEntry.getValue()));
@@ -368,7 +368,7 @@ public final class CelestialAssetStore {
         return snapshot;
     }
 
-    public Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> snapshotSatelliteCounts(UUID teamId) {
+    public Map<CelestialObjectId, Map<SatelliteKind, Integer>> snapshotSatelliteCounts(UUID teamId) {
         if (teamId == null) throw new IllegalArgumentException("Satellite team id is required");
         Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> teamCounts = satelliteCounts.get(teamId);
         if (teamCounts == null) return new LinkedHashMap<>();
@@ -376,12 +376,12 @@ public final class CelestialAssetStore {
     }
 
     public void replaceTeamSatelliteCounts(UUID teamId,
-        Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> replacement) {
+        Map<CelestialObjectId, Map<SatelliteKind, Integer>> replacement) {
         if (teamId == null) throw new IllegalArgumentException("Satellite team id is required");
         Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> current = satelliteCounts.remove(teamId);
         if (current != null) current.clear();
         if (replacement == null || replacement.isEmpty()) return;
-        for (Map.Entry<CelestialObjectId, EnumMap<SatelliteKind, Integer>> bodyEntry : replacement.entrySet()) {
+        for (Map.Entry<CelestialObjectId, Map<SatelliteKind, Integer>> bodyEntry : replacement.entrySet()) {
             if (bodyEntry.getValue() == null) continue;
             for (Map.Entry<SatelliteKind, Integer> kindEntry : bodyEntry.getValue()
                 .entrySet()) {
@@ -390,6 +390,14 @@ public final class CelestialAssetStore {
                     setSatelliteCount(teamId, bodyEntry.getKey(), kindEntry.getKey(), count);
                 }
             }
+        }
+    }
+
+    public void replaceSatelliteCounts(Map<UUID, Map<CelestialObjectId, Map<SatelliteKind, Integer>>> replacement) {
+        satelliteCounts.clear();
+        if (replacement == null || replacement.isEmpty()) return;
+        for (Map.Entry<UUID, Map<CelestialObjectId, Map<SatelliteKind, Integer>>> teamEntry : replacement.entrySet()) {
+            replaceTeamSatelliteCounts(teamEntry.getKey(), teamEntry.getValue());
         }
     }
 
@@ -404,9 +412,9 @@ public final class CelestialAssetStore {
         }
     }
 
-    private static Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> copySatelliteBodyCounts(
+    private static Map<CelestialObjectId, Map<SatelliteKind, Integer>> copySatelliteBodyCounts(
         Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> source) {
-        Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> copy = new LinkedHashMap<>();
+        Map<CelestialObjectId, Map<SatelliteKind, Integer>> copy = new LinkedHashMap<>();
         for (Map.Entry<CelestialObjectId, EnumMap<SatelliteKind, Integer>> bodyEntry : source.entrySet()) {
             copy.put(bodyEntry.getKey(), new EnumMap<>(bodyEntry.getValue()));
         }
