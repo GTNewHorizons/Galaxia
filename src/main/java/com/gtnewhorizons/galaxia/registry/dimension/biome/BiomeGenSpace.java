@@ -2,38 +2,41 @@ package com.gtnewhorizons.galaxia.registry.dimension.biome;
 
 import java.util.List;
 
-import net.minecraft.block.Block;
 import net.minecraft.world.biome.BiomeGenBase;
 
+import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationFunction;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationLayers;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaWall;
+import lombok.Getter;
 
 /**
  * The class holding all generation fields for Biome generation
  */
-public class BiomeGenSpace extends BiomeGenBase {
+@Getter
+public class BiomeGenSpace extends BiomeGenBase implements BiomeBlockPalette {
 
-    private final List<Block> topBlockMetas;
+    private final ImmutableBlockMeta topBlock;
     private final TerrainConfiguration terrain;
     private final int snowHeight;
-    private final Block snowBlock;
+    private final ImmutableBlockMeta snowBlock;
     private final int oceanHeight;
     private final int seabedHeight;
-    private final Block oceanFiller;
-    private final Block oceanSurface;
-    private final Block seabed;
+    private final ImmutableBlockMeta oceanFiller;
+    private final ImmutableBlockMeta oceanSurface;
+    private final ImmutableBlockMeta seabed;
     private final List<LocationRuleGalaxiaSurface> surfaceFeatures;
     private final List<LocationRuleGalaxiaCave> caveFeatures;
     private final List<LocationRuleGalaxiaWall> wallFeatures;
     private final int surfaceThickness;
-    private final Block oceanCrackBlock;
+    private final ImmutableBlockMeta oceanCrackBlock;
     private final float oceanCrackThickness;
     private final int oceanCrackComplexity;
-    private final StratificationPreset fillerBlocks;
+    private final StratificationFunction fillerBlocks;
     private final CaveShape caveShape;
 
     /**
@@ -52,7 +55,7 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.enableRain = b.enableRain;
 
         this.fillerBlocks = b.fillerBlocks;
-        this.topBlockMetas = b.topBlockMetas;
+        this.topBlock = b.topBlock;
         this.snowBlock = b.snowBlock;
         this.snowHeight = b.snowHeight;
         this.oceanHeight = b.oceanHeight;
@@ -79,122 +82,5 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.terrain = b.terrain != null ? b.terrain
             : TerrainConfiguration.builder()
                 .build();
-    }
-
-    public CaveShape getCaveShape() {
-        return caveShape;
-    }
-
-    public StratificationPreset getFillerBlocks() {
-        return fillerBlocks;
-    }
-
-    /**
-     * Getter for top block meta
-     *
-     * @return the top block meta
-     */
-    public List<Block> getTopBlockMetas() {
-        return topBlockMetas;
-    }
-
-    /**
-     * Getter for terrain configuration
-     *
-     * @return the terrain configuration
-     */
-    public TerrainConfiguration getTerrain() {
-        return terrain;
-    }
-
-    /**
-     * Getter for the snow block
-     *
-     * @return the snow block
-     */
-    public Block getSnowBlock() {
-        return snowBlock;
-    }
-
-    /**
-     * Getter for snow height
-     *
-     * @return the snow height
-     */
-    public int getSnowHeight() {
-        return snowHeight;
-    }
-
-    /**
-     * Getter for ocean height
-     *
-     * @return the ocean height
-     */
-    public int getOceanHeight() {
-        return oceanHeight;
-    }
-
-    /**
-     * Getter for ocean filler block
-     *
-     * @return the ocean filler block
-     */
-    public Block getOceanFiller() {
-        return oceanFiller;
-    }
-
-    /**
-     * Getter for ocean surface block
-     *
-     * @return the ocean surface block
-     */
-    public Block getOceanSurface() {
-        return oceanSurface;
-    }
-
-    /**
-     * Getter for seabed block
-     *
-     * @return the seabed block
-     */
-    public Block getSeabed() {
-        return seabed;
-    }
-
-    /**
-     * Getter for seabed height
-     *
-     * @return the seabed height
-     */
-    public int getSeabedHeight() {
-        return seabedHeight;
-    }
-
-    public int getSurfaceThickness() {
-        return surfaceThickness;
-    }
-
-    public List<LocationRuleGalaxiaSurface> getSurfaceFeatures() {
-        return surfaceFeatures;
-    }
-
-    public List<LocationRuleGalaxiaCave> getCaveFeatures() {
-        return caveFeatures;
-    }
-
-    public List<LocationRuleGalaxiaWall> getWallFeatures() {
-        return wallFeatures;
-    }
-
-    public Block getOceanCrackBlock() {
-        return oceanCrackBlock;
-    }
-
-    public float getOceanCrackThickness() {
-        return oceanCrackThickness;
-    }
-
-    public int getOceanCrackComplexity() {
-        return oceanCrackComplexity;
     }
 }

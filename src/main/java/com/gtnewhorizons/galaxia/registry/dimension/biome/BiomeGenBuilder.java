@@ -9,8 +9,11 @@ import net.minecraft.world.biome.BiomeGenBase.FlowerEntry;
 import net.minecraft.world.biome.BiomeGenBase.Height;
 import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
 
+import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
+import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationFunction;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationLayers;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
@@ -23,7 +26,7 @@ public class BiomeGenBuilder {
 
     // Setting basic fields for generation
     private final int id;
-    private final Block stone = Blocks.stone;
+    private final ImmutableBlockMeta stone = new BlockMeta(Blocks.stone, 0);
 
     String name = "unset";
     Height height = new Height(0, 0);
@@ -33,20 +36,20 @@ public class BiomeGenBuilder {
     int snowHeight = 512;
     int oceanHeight = 0;
     int seabedHeight = 0;
-    Block oceanFiller = stone;
-    Block oceanSurface = stone;
-    Block seabed = stone;
-    Block snowBlock = stone;
+    ImmutableBlockMeta oceanFiller = stone;
+    ImmutableBlockMeta oceanSurface = stone;
+    ImmutableBlockMeta seabed = stone;
+    ImmutableBlockMeta snowBlock = stone;
     List<LocationRuleGalaxiaSurface> surfaceFeatures = new ArrayList<>();
     List<LocationRuleGalaxiaCave> caveFeatures = new ArrayList<>();
     List<LocationRuleGalaxiaWall> wallFeatures = new ArrayList<>();
-    List<Block> topBlockMetas = new ArrayList<>();
+    ImmutableBlockMeta topBlock = stone;
     int surfaceThickness = 1;
     boolean enableRain = false;
-    Block oceanCrackBlock;
+    ImmutableBlockMeta oceanCrackBlock;
     float oceanCrackThickness;
     int oceanCrackComplexity;
-    StratificationPreset fillerBlocks;
+    StratificationFunction fillerBlocks;
     CaveShape caveShape;
 
     List<FlowerEntry> flowers = List.of();
@@ -116,11 +119,11 @@ public class BiomeGenBuilder {
      * @return Configured builder
      */
     public BiomeGenBuilder topBlock(Block block) {
-        this.topBlockMetas.add(block);
+        this.topBlock = new BlockMeta(block);
         return this;
     }
 
-    public BiomeGenBuilder fillerBlocks(StratificationPreset fillerBlocks) {
+    public BiomeGenBuilder fillerBlocks(StratificationFunction fillerBlocks) {
         this.fillerBlocks = fillerBlocks;
         return this;
     }
@@ -133,7 +136,7 @@ public class BiomeGenBuilder {
      * @return Configured builder
      */
     public BiomeGenBuilder snowBlock(Block blockMeta, int snowHeight) {
-        this.snowBlock = blockMeta;
+        this.snowBlock = new BlockMeta(blockMeta);
         this.snowHeight = snowHeight;
         return this;
     }
@@ -150,17 +153,17 @@ public class BiomeGenBuilder {
      */
     public BiomeGenBuilder ocean(Block oceanFiller, Block oceanSurface, int oceanHeight, Block seabed,
         int seabedHeight) {
-        this.oceanFiller = oceanFiller;
-        this.oceanSurface = oceanSurface;
+        this.oceanFiller = new BlockMeta(oceanFiller);
+        this.oceanSurface = new BlockMeta(oceanSurface);
         this.oceanHeight = oceanHeight;
-        this.seabed = seabed;
+        this.seabed = new BlockMeta(seabed);
         this.seabedHeight = seabedHeight;
         return this;
     }
 
     public BiomeGenBuilder oceanCracks(float oceanCrackThickness, Block oceanCrackBlock, int oceanCrackComplexity) {
         this.oceanCrackThickness = oceanCrackThickness;
-        this.oceanCrackBlock = oceanCrackBlock;
+        this.oceanCrackBlock = new BlockMeta(oceanCrackBlock);
         this.oceanCrackComplexity = oceanCrackComplexity;
         return this;
     }

@@ -4,6 +4,8 @@ import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
+import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
+import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenSpace;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
@@ -23,7 +25,7 @@ public final class HeightOracle {
     private static final class ChunkData {
 
         final double[] heightmap = new double[CHUNK_AREA];
-        final Block[] surfaceBlocks = new Block[CHUNK_AREA];
+        final ImmutableBlockMeta[] surfaceBlocks = new ImmutableBlockMeta[CHUNK_AREA];
         final BiomeGenBase[] biomes = new BiomeGenBase[CHUNK_AREA];
     }
 
@@ -58,32 +60,34 @@ public final class HeightOracle {
         return true;
     }
 
-    public Block getPredictedBlock(int worldX, int worldY, int worldZ) {
+    private static final ImmutableBlockMeta STONE = new BlockMeta(Blocks.stone);
+    private static final ImmutableBlockMeta AIR = new BlockMeta(Blocks.air);
+
+    public ImmutableBlockMeta getPredictedBlock(int worldX, int worldY, int worldZ) {
         ChunkData data = getOrCompute(worldX >> 4, worldZ >> 4);
         int local = (worldX & 15) + ((worldZ & 15) << 4);
         int h = (int) data.heightmap[local];
         BiomeGenBase b = data.biomes[local];
         if (worldY < h) {
             if (worldY == h - 1) {
-                Block surf = data.surfaceBlocks[local];
+                ImmutableBlockMeta surf = data.surfaceBlocks[local];
                 if (surf != null) return surf;
-                if (b instanceof BiomeGenSpace bgs && !bgs.getTopBlockMetas()
-                    .isEmpty()) {
-                    return bgs.getTopBlockMetas()
-                        .getFirst();
+
+                if (b instanceof BiomeGenSpace bgs) {
+                    return bgs.getTopBlock();
                 }
-                return Blocks.stone;
+                return STONE;
             }
             if (b instanceof BiomeGenSpace bgs) {
                 return bgs.getFillerBlocks()
                     .getStrataBlock(worldY);
             }
-            return Blocks.stone;
+            return STONE;
         }
         if (b instanceof BiomeGenSpace bgs) {
             int oceanHeight = bgs.getOceanHeight();
             if (worldY <= oceanHeight) return bgs.getOceanFiller();
         }
-        return Blocks.air;
+        return AIR;
     }
 }

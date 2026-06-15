@@ -4,6 +4,7 @@ import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
+import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
@@ -16,7 +17,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeCracks;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeTubes;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationLayers;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CraterFeature;
@@ -238,14 +239,20 @@ public class Moon extends BasePlanet {
      * @return The BiomeGenBase used to generated biomes of that type
      */
     protected static BiomeGenBase createLandBiome(String name, TerrainConfiguration terrainConfiguration) {
+        BlockMeta andesite = new BlockMeta(PlanetBlocks.MOON_ANDESITE);
+        BlockMeta anorthosite = new BlockMeta(PlanetBlocks.MOON_ANORTHOSITE);
+        BlockMeta bedrock = new BlockMeta(Blocks.bedrock);
+
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)
             .topBlock(PlanetBlocks.MOON_REGOLITH)
-            .fillerBlocks(
-                new StratificationPreset(PlanetBlocks.MOON_ANDESITE).addStrataLayer(Blocks.bedrock, 0, 0)
-                    .addStrataLayer(PlanetBlocks.MOON_ANORTHOSITE, 1, 32))
+            .fillerBlocks(height -> {
+                if (height == 0) return bedrock;
+                if (height <= 32) return anorthosite;
+                return andesite;
+            })
             .caveShape(new CaveShapeCracks())
             .surfaceFeature(
                 new LocationRuleGalaxiaSurface(
@@ -301,7 +308,7 @@ public class Moon extends BasePlanet {
             .rainfall(0.99F)
             .topBlock(PlanetBlocks.MOON_BASALT)
             .fillerBlocks(
-                new StratificationPreset(PlanetBlocks.MOON_BASALT).addStrataLayer(Blocks.bedrock, 0, 0)
+                new StratificationLayers(PlanetBlocks.MOON_BASALT).addStrataLayer(Blocks.bedrock, 0, 0)
                     .addStrataLayer(PlanetBlocks.MOON_GABBRO, 1, 32))
             .caveShape(new CaveShapeTubes((byte) 16, (byte) 4, (short) 100))
             .surfaceFeature(

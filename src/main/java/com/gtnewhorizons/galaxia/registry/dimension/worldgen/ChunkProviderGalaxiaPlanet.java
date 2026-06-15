@@ -18,14 +18,22 @@ import net.minecraft.world.gen.ChunkProviderServer;
 import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
 import com.gtnewhorizon.gtnhlib.util.StdLCG;
+import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
+import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeBlockPalette;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenSpace;
+import com.gtnewhorizons.galaxia.registry.dimension.biome.DefaultBlockPalette;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldChunkManagerSpace;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaWall;
 
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NoiseSampler;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NormalizedSampler;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.OctavesSampler;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.ScaledNoise;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
@@ -40,16 +48,19 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
     private static final int CHUNK_WIDTH = 16;
     public static final int HEIGHT_LIMIT = 256;
     private static final double ALLOWED_DIVERGENCE = 0.25;
-    private static final StratificationPreset DEFAULT_STONE_FILLER = new StratificationPreset(Blocks.stone).freeze();
+
+    private static final DefaultBlockPalette DEFAULT_PALETTE = new DefaultBlockPalette();
+
+    private static final ImmutableBlockMeta AIR = new BlockMeta(Blocks.air);
 
     private final DimensionEnum dimension;
     private final World worldObj;
     private final Random rand;
-    private final NoiseGeneratorOctaves crackNoise;
+    private final NoiseSampler crackNoise1, crackNoise2;
     private final NoiseGeneratorOctaves baseNoise;
     private final boolean showDebug = false;
 
-    private final Block[] surfaceReplacementMap = new Block[CHUNK_AREA];
+    private final ImmutableBlockMeta[] surfaceReplacementMap = new ImmutableBlockMeta[CHUNK_AREA];
     private final BiomeGenBase[] chunkBiomes = new BiomeGenBase[CHUNK_AREA];
     private final Reference2IntOpenHashMap<BiomeGenBase> biomeIdxOf = new Reference2IntOpenHashMap<>();
     private final List<BiomeGenBase> biomeList = new ArrayList<>();
@@ -110,7 +121,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
         this.rand = new StdLCG(world.getSeed());
         this.baseNoise = new NoiseGeneratorOctaves(rand, 4);
-        this.crackNoise = new NoiseGeneratorOctaves(rand, 2);
+        this.crackNoise1 = new NormalizedSampler(new ScaledNoise(new OctavesSampler(rand, 2), 0.05));
+        this.crackNoise2 = new NormalizedSampler(new ScaledNoise(new OctavesSampler(rand, 2), 0.05));
         if (showDebug) writeDebug();
     }
 
@@ -150,19 +162,9 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         // Generate blocks
         long defaultVariableStart = 0;
         if (showDebug) defaultVariableStart = System.nanoTime();
-        Block topBlock = Blocks.grass;
-        StratificationPreset fillerBlocks = DEFAULT_STONE_FILLER;
-        Block snowBlock = Blocks.snow;
-        Block oceanFiller = Blocks.water;
-        Block oceanSurface = Blocks.sand;
-        Block seabed = Blocks.gravel;
-        Block oceanCrackBlock = Blocks.lava;
-        int surfaceDepth = 1;
-        int snowHeight = 512;
-        int oceanHeight = 0;
-        int seabedHeight = 0;
-        int oceanCrackComplexity = 1;
-        float oceanCrackThickness = 0.5F;
+
+        BiomeBlockPalette palette = DEFAULT_PALETTE;
+
         long assignmentTime = 0;
         long oceanTime = 0;
         long caveTime = 0;
@@ -178,31 +180,20 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             for (int localZ = 0; localZ < CHUNK_WIDTH; localZ++) {
                 long assignmentTimeStart = 0;
                 if (showDebug) assignmentTimeStart = System.nanoTime();
+
                 BiomeGenBase localBiome = chunkBiomes[localX + localZ * CHUNK_WIDTH];
+
                 if (localBiome instanceof BiomeGenSpace spaceBiome) {
-                    topBlock = getSurfaceBlock(
-                        spaceBiome.getTopBlockMetas(),
-                        chunkX * CHUNK_WIDTH + localX,
-                        chunkZ * CHUNK_WIDTH + localZ);
-                    fillerBlocks = spaceBiome.getFillerBlocks();
-                    snowHeight = spaceBiome.getSnowHeight();
-                    snowBlock = spaceBiome.getSnowBlock();
-                    oceanHeight = spaceBiome.getOceanHeight();
-                    oceanFiller = spaceBiome.getOceanFiller();
-                    oceanSurface = spaceBiome.getOceanSurface();
-                    seabed = spaceBiome.getSeabed();
-                    seabedHeight = spaceBiome.getSeabedHeight();
-                    surfaceDepth = spaceBiome.getSurfaceThickness();
-                    oceanCrackBlock = spaceBiome.getOceanCrackBlock();
-                    oceanCrackThickness = spaceBiome.getOceanCrackThickness();
-                    oceanCrackComplexity = spaceBiome.getOceanCrackComplexity();
+                    palette = spaceBiome;
                     if (caveShape == null || !caveShape.equals(spaceBiome.getCaveShape())) {
                         caveShape = spaceBiome.getCaveShape();
                     }
                 }
+
                 if (showDebug) assignmentTime += System.nanoTime() - assignmentTimeStart;
-                int height = Math.max(1, (int) heightMap[localX + (localZ << 4)]);
-                Block replacementBlock = surfaceReplacementMap[localX + (localZ << 4)];
+
+                int terrainHeight = Math.max(1, (int) heightMap[localX + (localZ << 4)]);
+
                 if (caveShape != null) {
                     if (!caveShape.preparedCaveShape()) {
                         caveShape.prepareCaveShape(rand);
@@ -211,85 +202,105 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                         caveShape.prepareCaveCache(chunkX, chunkZ);
                     }
                 }
-                for (int y = 0; y < Math.max(oceanHeight, height); y++) {
+
+                for (int y = 0; y < Math.max(palette.getOceanHeight(), terrainHeight); y++) {
                     long blockStorageStart = 0;
                     if (showDebug) blockStorageStart = System.nanoTime();
+
                     int sy = y >> 4;
+
                     if (storage[sy] == null) {
                         storage[sy] = new ExtendedBlockStorage(sy << 4, !worldObj.provider.hasNoSky);
                     }
+
                     if (showDebug) blockStorageTime += System.nanoTime() - blockStorageStart;
-                    Block currentFiller = fillerBlocks.getStrataBlock(y);
-                    Block block;
-                    if (y >= height - surfaceDepth) {
-                        block = topBlock;
+
+                    // True when voxel is terrain and can be carved (e.g. by caves)
+                    boolean isTerrain = true;
+
+                    ImmutableBlockMeta block;
+
+                    if (y >= terrainHeight - palette.getSurfaceThickness()) {
+                        ImmutableBlockMeta replacementBlock = surfaceReplacementMap[localX + (localZ << 4)];
+
                         if (replacementBlock != null) {
                             block = replacementBlock;
-                            storage[sy].func_150818_a(localX, y & 15, localZ, block);
-                            continue;
+                        } else {
+                            block = y >= palette.getSnowHeight() ? palette.getSnowBlock() : palette.getTopBlock();
                         }
                     } else {
-                        block = currentFiller;
+                        block = palette.getFillerBlocks().getStrataBlock(y);
                     }
-                    if (block == topBlock && y >= snowHeight) {
-                        block = snowBlock;
-                    }
+
                     long oceanTimeStart = 0;
                     if (showDebug) oceanTimeStart = System.nanoTime();
+
+                    int oceanHeight = palette.getOceanHeight();
+
                     if (y <= oceanHeight) {
-                        if (y > height - 1) {
-                            if (y == oceanHeight - 2 && oceanHeight - height >= 2) {
-                                block = getOceanSurfaceBlock(
-                                    oceanFiller,
-                                    oceanCrackBlock,
-                                    oceanCrackThickness,
-                                    oceanCrackComplexity,
-                                    chunkX * CHUNK_WIDTH + localX,
-                                    chunkZ * CHUNK_WIDTH + localZ);
-                            } else if (y == oceanHeight - 1 && oceanHeight - height >= 2) {
-                                block = getOceanSurfaceBlock(
-                                    oceanFiller,
-                                    oceanCrackBlock,
-                                    oceanCrackThickness,
-                                    oceanCrackComplexity,
-                                    chunkX * CHUNK_WIDTH + localX,
-                                    chunkZ * CHUNK_WIDTH + localZ);
-                                if (block != oceanFiller) {
-                                    block = Blocks.air;
-                                }
+                        if (y == terrainHeight - 1) {
+                            if (y > palette.getSeabedHeight()) {
+                                block = palette.getOceanSurface();
+                                isTerrain = false;
                             } else {
-                                block = oceanFiller;
+                                block = palette.getSeabed();
                             }
-                        } else if (y == height - 1) {
-                            if (y > seabedHeight) {
-                                block = oceanSurface;
+                        } else if (y > terrainHeight - 1) {
+                            isTerrain = false;
+
+                            int oceanDepth = oceanHeight - terrainHeight;
+
+                            boolean topTwoLayers = y == oceanHeight - 1 || y == oceanHeight - 2;
+
+                            boolean isCrack = oceanDepth >= 2 && palette.hasCracks() && topTwoLayers && isCrackBlock(
+                                palette.getOceanCrackThickness(),
+                                palette.getOceanCrackComplexity(),
+                                chunkX * CHUNK_WIDTH + localX,
+                                chunkZ * CHUNK_WIDTH + localZ);
+
+                            if (isCrack) {
+                                // The top layer should always be air and the lower blocks should be the crack blocks
+                                block = y == oceanHeight - 1 ? AIR : palette.getOceanCrackBlock();
                             } else {
-                                block = seabed;
+                                if (y == oceanHeight) {
+                                    block = palette.getOceanSurface();
+                                } else {
+                                    block = palette.getOceanFiller();
+                                }
                             }
                         }
                     }
+
                     long oceanTimeFinish = 0;
                     if (showDebug) {
                         oceanTimeFinish = System.nanoTime();
                         oceanTime += oceanTimeFinish - oceanTimeStart;
                     }
-                    if (caveShape != null
-                        && (block == fillerBlocks.getStrataBlock(y) || block == topBlock || block == snowBlock)
-                        && caveShape.generateCave(localX, y, localZ, height)) {
-                        block = Blocks.air;
+
+                    if (caveShape != null && isTerrain && caveShape.generateCave(localX, y, localZ, terrainHeight)) {
+                        block = AIR;
                     }
+
                     long caveGenerationTime = 0;
                     if (showDebug) {
                         caveGenerationTime = System.nanoTime();
                         caveTime += caveGenerationTime - oceanTimeFinish;
                     }
+
                     if (block != null) {
-                        storage[sy].func_150818_a(localX, y & 15, localZ, block);
+                        if (block.getBlock() != Blocks.air) {
+                            storage[sy].func_150818_a(localX, y & 15, localZ, block.getBlock());
+                        }
+                        if (block.getBlockMeta() != 0) {
+                            storage[sy].setExtBlockMetadata(localX, y & 15, localZ, block.getBlockMeta());
+                        }
                     }
+
                     if (showDebug) placementTime += System.nanoTime() - caveGenerationTime;
                 }
             }
         }
+
         long blockGenerationTime = 0;
         if (showDebug) {
             System.out.println("Time for assigning biome variables: " + (assignmentTime));
@@ -303,17 +314,21 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             blockGenerationTime = System.nanoTime();
             System.out.println("Time for generating blocks: " + (blockGenerationTime - terrainFeatureTime));
         }
+
         drainDeferredWrites(chunkX, chunkZ, storage);
+
         chunk.generateSkylightMap();
+
         if (showDebug) {
             long lightGenerationTime = System.nanoTime();
             System.out.println("Time for generating light: " + (lightGenerationTime - blockGenerationTime));
             System.out.println("-------- END CHUNK GENERATION --------");
         }
+
         return chunk;
     }
 
-    void computeChunkData(int cx, int cz, double[] outHeightMap, Block[] outSurfaceBlocks, BiomeGenBase[] outBiomes) {
+    void computeChunkData(int cx, int cz, double[] outHeightMap, ImmutableBlockMeta[] outSurfaceBlocks, BiomeGenBase[] outBiomes) {
         Arrays.fill(outHeightMap, 8.0);
         Arrays.fill(outSurfaceBlocks, null);
         Arrays.fill(outBiomes, null);
@@ -381,40 +396,11 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         }
     }
 
-    private Block getSurfaceBlock(List<Block> blocks, int x, int z) {
-        int surfaceBlockCount = blocks.size();
-        if (surfaceBlockCount == 1) {
-            return blocks.getFirst();
-        }
-        Block surfaceBlock;
-        double noise = baseNoise.generateNoiseOctaves(new double[1], z, x, 1, 1, 0.2, 0.2, 0)[0];
-        noise += 8;
-        noise *= surfaceBlockCount;
-        noise /= 16;
-        int pickedSurface = (int) Math.floor(noise);
-        if (pickedSurface >= surfaceBlockCount) {
-            pickedSurface = surfaceBlockCount - 1;
-        } else if (pickedSurface < 0) {
-            pickedSurface = 0;
-        }
-        surfaceBlock = blocks.get(pickedSurface);
-        return surfaceBlock;
-    }
+    private boolean isCrackBlock(float crackThickness, int oceanCrackComplexity, int x, int z) {
+        double a = crackNoise1.sample(x, z);
+        double b = crackNoise2.sample(x, z);
 
-    private Block getOceanSurfaceBlock(Block mainBlock, Block crackBlock, float crackThickness,
-        int oceanCrackComplexity, int x, int z) {
-        if (crackBlock == null || crackThickness == 0) {
-            return mainBlock;
-        }
-        double noise = 0;
-        for (int octave = 0; octave < oceanCrackComplexity; octave++) {
-            double octaveExponent = Math.pow(2, octave);
-            noise += Math.abs(
-                crackNoise
-                    .generateNoiseOctaves(new double[1], z, x, 1, 1, 0.2 / octaveExponent, 0.2 / octaveExponent, 0)[0]
-                    / octaveExponent);
-        }
-        return noise < crackThickness ? crackBlock : mainBlock;
+        return a * a + b * b < crackThickness;
     }
 
     /**

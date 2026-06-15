@@ -6,6 +6,7 @@ import net.minecraft.block.Block;
 import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
 import com.gtnewhorizon.gtnhlib.util.StdLCG;
+import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 
 /**
@@ -27,7 +28,7 @@ public final class TerrainFeatureApplier {
      * @param rand             Random instance
      * @param terrainRelevance Matrix holding the terrain precedence
      */
-    public static void applyToHeightmap(TerrainFeature feature, double[] heightMap, Block[] surfaceReplacementMap,
+    public static void applyToHeightmap(TerrainFeature feature, double[] heightMap, ImmutableBlockMeta[] surfaceReplacementMap,
         int chunkX, int chunkZ, Random rand, double[] terrainRelevance, DimensionEnum dimension) {
         if (generationNoise == null) {
             generationNoise = new NoiseGeneratorOctaves(rand, 4);
@@ -35,7 +36,7 @@ public final class TerrainFeatureApplier {
         TerrainPreset preset = feature.preset();
         double height = feature.height();
         double width = feature.width();
-        Block replacementBlock = feature.replacementBlock();
+        ImmutableBlockMeta replacementBlock = feature.replacementBlock();
         long seed = (chunkX * 341873128712L + chunkZ * 132897987541L) ^ rand.nextLong();
         Random localRand = new StdLCG(seed);
 
@@ -278,7 +279,7 @@ public final class TerrainFeatureApplier {
      * @param terrainRelevance Matrix holding the terrain precedence
      */
     private static void applyShieldVolcanoes(double[] hm, double height, double width, int chunkX, int chunkZ,
-        double[] terrainRelevance, Block[] surfaceReplacementMap, Block replacementBlock) {
+        double[] terrainRelevance, ImmutableBlockMeta[] surfaceReplacementMap, ImmutableBlockMeta replacementBlock) {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
         final double craterThreshold = 0.75;
         final double lavaThreshold = 0.85;

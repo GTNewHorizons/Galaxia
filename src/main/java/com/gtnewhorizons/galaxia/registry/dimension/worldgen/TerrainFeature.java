@@ -5,11 +5,13 @@ import java.util.Map;
 
 import net.minecraft.block.Block;
 
+import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
+
 /**
  * Data record holding terrain features
  */
 public record TerrainFeature(TerrainPreset preset, double height, double width, Map<String, Object> customParams,
-    Block replacementBlock) {
+                             ImmutableBlockMeta replacementBlock) {
 
     public TerrainFeature {
         customParams = Collections.unmodifiableMap(customParams);

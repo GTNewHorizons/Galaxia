@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,23 +8,26 @@ import java.util.Map;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 
+import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
+import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
+import lombok.Getter;
+
 /**
  * Class to hold config info on terrain features
  */
+@Getter
 public final class TerrainConfiguration {
 
-    private final List<TerrainFeature> allFeatures;
-    private final List<TerrainFeature> macro;
-    private final List<TerrainFeature> meso;
-    private final List<TerrainFeature> micro;
+    private final TerrainFeature[] allFeatures;
+    private final TerrainFeature[] macroFeatures;
+    private final TerrainFeature[] mesoFeatures;
+    private final TerrainFeature[] microFeatures;
 
     /**
      * Constructor to initalize terrain feature lists
-     *
-     * @param features
      */
     private TerrainConfiguration(List<TerrainFeature> features) {
-        this.allFeatures = Collections.unmodifiableList(new ArrayList<>(features));
+        this.allFeatures = features.toArray(new TerrainFeature[0]);
 
         List<TerrainFeature> m = new ArrayList<>();
         List<TerrainFeature> me = new ArrayList<>();
@@ -45,45 +47,9 @@ public final class TerrainConfiguration {
             }
         }
 
-        this.macro = Collections.unmodifiableList(m);
-        this.meso = Collections.unmodifiableList(me);
-        this.micro = Collections.unmodifiableList(mi);
-    }
-
-    /**
-     * Getter for all features of any type
-     *
-     * @return List of all features
-     */
-    public List<TerrainFeature> getAllFeatures() {
-        return allFeatures;
-    }
-
-    /**
-     * Getter for macro features of any type
-     *
-     * @return List of macro features
-     */
-    public List<TerrainFeature> getMacroFeatures() {
-        return macro;
-    }
-
-    /**
-     * Getter for meso features of any type
-     *
-     * @return List of meso features
-     */
-    public List<TerrainFeature> getMesoFeatures() {
-        return meso;
-    }
-
-    /**
-     * Getter for micro features of any type
-     *
-     * @return List of micro features
-     */
-    public List<TerrainFeature> getMicroFeatures() {
-        return micro;
+        this.macroFeatures = m.toArray(new TerrainFeature[0]);
+        this.mesoFeatures = me.toArray(new TerrainFeature[0]);
+        this.microFeatures = mi.toArray(new TerrainFeature[0]);
     }
 
     /**
@@ -134,7 +100,7 @@ public final class TerrainConfiguration {
         private double width = -1;
         private double scaleMultiplier = 1.0;
         private final Map<String, Object> custom = new HashMap<>();
-        private Block replacementBlock = Blocks.stone;
+        private ImmutableBlockMeta replacementBlock = new BlockMeta(Blocks.stone);
 
         /**
          * Constructs with a parent builder and a preset
@@ -193,7 +159,7 @@ public final class TerrainConfiguration {
         }
 
         public FeatureConfigurator replacementBlock(Block replacementBlock) {
-            this.replacementBlock = replacementBlock;
+            this.replacementBlock = new BlockMeta(replacementBlock);
             return this;
         }
 
