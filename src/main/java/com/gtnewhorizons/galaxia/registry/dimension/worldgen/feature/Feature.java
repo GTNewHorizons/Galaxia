@@ -18,8 +18,6 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
  */
 public abstract class Feature {
 
-    private final LongOpenHashSet updateCoordinates = new LongOpenHashSet();
-
     public abstract void generateFeature(World world, Random random, int x, int y, int z, Block[] surfaceRequirements);
 
     /**
@@ -47,24 +45,7 @@ public abstract class Feature {
             return;
         }
 
-        Chunk chunk = world.getChunkFromChunkCoords(cx, cz);
-        ExtendedBlockStorage[] storage = chunk.getBlockStorageArray();
-        int sectionY = y >> 4;
-
-        ExtendedBlockStorage currentBlockStorage = storage[sectionY];
-        if (currentBlockStorage == null) {
-            currentBlockStorage = storage[sectionY] = new ExtendedBlockStorage(sectionY << 4, !world.provider.hasNoSky);
-        }
-
-        int lx = x & 15;
-        int ly = y & 15;
-        int lz = z & 15;
-
-        currentBlockStorage.func_150818_a(lx, ly, lz, block);
-        currentBlockStorage.setExtBlockMetadata(lx, ly, lz, meta);
-        chunk.isModified = true;
-
-        updateCoordinates.add(((long) cx << 32) | (cz & 0xFFFFFFFFL));
+        world.setBlock(x, y, z, block, meta, 2);
     }
 
     public void drainUpdateCoordinatesTo(LongCollection sink) {

@@ -434,7 +434,6 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         // Get local biome
         BiomeGenBase localBiome = worldObj.getWorldChunkManager()
             .getBiomeGenAt(x, z);
-        final LongOpenHashSet updateCoordinates = new LongOpenHashSet();
         if (localBiome instanceof BiomeGenSpace spaceBiome) {
             if (spaceBiome.getSurfaceFeatures()
                 .isEmpty()) {
@@ -450,8 +449,6 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 }
                 int localY = heightOracle.getColumnHeight(localX, localZ);
                 feature.generate(worldObj, rand, localX, localY, localZ);
-                feature.getFeature()
-                    .drainUpdateCoordinatesTo(updateCoordinates);
             }
             // Generate cave features
             for (LocationRuleGalaxiaCave feature : spaceBiome.getCaveFeatures()) {
@@ -469,8 +466,6 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                         + minimumHeight;
                     feature.generate(worldObj, rand, localX, localY, localZ);
                 }
-                feature.getFeature()
-                    .drainUpdateCoordinatesTo(updateCoordinates);
             }
             // Generate wall features
             for (LocationRuleGalaxiaWall feature : spaceBiome.getWallFeatures()) {
@@ -489,25 +484,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 localY += rand.nextInt(
                     Math.max(1, Math.min(feature.getMaximumHeight() - minimumHeight, localHeight - minimumHeight)));
                 feature.generate(worldObj, rand, localX, localY, localZ);
-                feature.getFeature()
-                    .drainUpdateCoordinatesTo(updateCoordinates);
             }
-        }
-
-        final IChunkProvider chunkProvider = worldObj.getChunkProvider();
-        final LongIterator it = updateCoordinates.iterator();
-        while (it.hasNext()) {
-            long packed = it.nextLong();
-            final int chunkXCoord = (int) (packed >> 32);
-            final int chunkZCoord = (int) packed;
-            if (!chunkProvider.chunkExists(chunkXCoord, chunkZCoord)) continue;
-            final Chunk touched = worldObj.getChunkFromChunkCoords(chunkXCoord, chunkZCoord);
-            touched.generateSkylightMap();
-            int localX = chunkXCoord << 4;
-            int localZ = chunkZCoord << 4;
-            Block originalBlock = worldObj.getBlock(localX, 0, localZ);
-            int originalMeta = worldObj.getBlockMetadata(localX, 0, localZ);
-            worldObj.setBlock(localX, 0, localZ, originalBlock, originalMeta, 3);
         }
     }
 
