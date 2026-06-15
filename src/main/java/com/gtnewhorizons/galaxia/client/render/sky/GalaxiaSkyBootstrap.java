@@ -138,7 +138,7 @@ public final class GalaxiaSkyBootstrap {
                     true,
                     0x456789ABL))
 
-            .domeLayer(new DomeLayer(LocationGalaxia("textures/environment/galaxy/img.png"), 1.0f, 0.0f, 0.55f));
+            .domeLayer(new DomeLayer(LocationGalaxia("textures/environment/galaxy/large_galaxy.png"), 1.0f, 0.0f, 0.55f));
 
         EnhancedSkyRender.registerPreset(milkyWayPreset, 0, DimensionEnum.MOON.getId());
     }
