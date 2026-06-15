@@ -134,6 +134,13 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         // Get local biomes + compute heightmap (shared with HeightOracle)
         double[] heightMap = heightMapBuf;
         computeChunkData(chunkX, chunkZ, heightMap, surfaceReplacementMap, chunkBiomes);
+
+        var biomeOut = chunk.getBiomeArray();
+
+        for (int i = 0; i < 256; i++) {
+            biomeOut[i] = (byte) chunkBiomes[i].biomeID;
+        }
+
         long terrainFeatureTime = 0;
         if (showDebug) {
             terrainFeatureTime = System.nanoTime();
