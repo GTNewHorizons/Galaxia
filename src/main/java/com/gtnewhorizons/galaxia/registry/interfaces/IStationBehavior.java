@@ -8,12 +8,13 @@ import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.Widget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 
 public interface IStationBehavior {
 
     String getUnlocalizedName();
 
-    IStructureDefinition<TileStation> getStructureDefinition();
+    IStructureDefinition<TileStation> buildStructureDefinition(DimensionDef def);
 
     int getSearchRadius();
 

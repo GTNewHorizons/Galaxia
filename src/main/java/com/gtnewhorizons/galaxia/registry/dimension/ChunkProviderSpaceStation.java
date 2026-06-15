@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.registry.dimension;
 
 import java.util.List;
 
-import net.minecraft.block.Block;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.util.IProgressUpdate;
 import net.minecraft.world.ChunkPosition;
@@ -44,15 +43,6 @@ public class ChunkProviderSpaceStation implements IChunkProvider {
     public Chunk provideChunk(int chunkX, int chunkZ) {
         Chunk chunk = new Chunk(worldObj, chunkX, chunkZ);
         chunk.isModified = true;
-
-        // fill with space air
-        for (int x = 0; x < 16; x++) {
-            for (int y = 0; y < 256; y++) {
-                for (int z = 0; z < 16; z++) {
-                    chunk.func_150807_a(x, y, z, Block.getBlockFromName("galaxia:space_air"), 0);
-                }
-            }
-        }
 
         chunk.generateSkylightMap();
         return chunk;

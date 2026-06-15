@@ -1,172 +1,86 @@
 package com.gtnewhorizons.galaxia.registry.dimension.builder;
 
-import java.util.function.BiFunction;
+import net.minecraft.world.World;
 
-import net.minecraft.entity.player.EntityPlayer;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
- * Record + Builder class to get a list of effects on each planet as required
- *
- * @param baseTemp          The temperature of the planet (in Kelvin)
- * @param withering         Whether withering is enabled on the planet
- * @param oxygenPercent     The relative oxygen level of the planet (Overworld =
- *                          100)
- * @param radiation         The relative radiation level of the planet
- *                          (Overworld = 0)
- * @param spores            Whether fungal spores are present in the atmosphere
- * @param pressure          The relative atmospheric pressure on the planet
- *                          (Overworld = 1)
- * @param tempModifier      Optional modifier for temperature (can be null)
- * @param oxygenModifier    Optional modifier for oxygen (can be null)
- * @param radiationModifier Optional modifier for radiation (can be null)
- * @param pressureModifier  Optional modifier for pressure (can be null)
+ * class to get a list of effects on each planet as required
  */
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+public class EffectBuilder {
 
-public record EffectBuilder(int baseTemp, boolean withering, int oxygenPercent, int radiation, boolean spores,
-    int pressure,
+    @Builder.Default
+    private int baseTemp = 273;
+    @Builder.Default
+    private boolean withering = false;
+    @Builder.Default
+    private int oxygenPercent = 100;
+    @Builder.Default
+    private int radiation = 0;
+    @Builder.Default
+    private boolean spores = false;
+    @Builder.Default
+    private int pressure = 1;
 
-    BiFunction<Integer, EntityPlayer, Integer> tempModifier, BiFunction<Integer, EntityPlayer, Integer> oxygenModifier,
-    BiFunction<Integer, EntityPlayer, Integer> radiationModifier,
-    BiFunction<Integer, EntityPlayer, Integer> pressureModifier) {
+    @Builder.Default
+    private Modifier<World> tempModifier = null;
+    @Builder.Default
+    private Modifier<World> oxygenModifier = null;
+    @Builder.Default
+    private Modifier<World> radiationModifier = null;
+    @Builder.Default
+    private Modifier<World> pressureModifier = null;
 
-    /** Constructor without modifiers */
-    public EffectBuilder(int baseTemp, boolean withering, int oxygenPercent, int radiation, boolean spores,
-        int pressure) {
-        this(baseTemp, withering, oxygenPercent, radiation, spores, pressure, null, null, null, null);
+    @FunctionalInterface
+    public interface Modifier<T> {
+
+        int apply(T target, int base);
     }
 
-    /** Default constructor without values, defaults to Overworld */
-    public EffectBuilder() {
-        this(273, false, 100, 0, false, 1, null, null, null, null);
+    private static <T> int apply(Modifier<T> mod, int base, T target) {
+        return mod != null ? mod.apply(target, base) : base;
     }
 
-    /** Convenient static builder */
-    public static Builder builder() {
-        return new Builder();
+    public int getTemperature(World world) {
+        return apply(tempModifier, baseTemp, world);
     }
 
-    private static int apply(BiFunction<Integer, EntityPlayer, Integer> mod, int base, EntityPlayer player) {
-        return mod != null ? mod.apply(base, player) : base;
+    public int getOxygenPercent(World world) {
+        return apply(oxygenModifier, oxygenPercent, world);
     }
 
-    public int getTemperature(EntityPlayer player) {
-        return apply(tempModifier, baseTemp, player);
+    public int getRadiation(World world) {
+        return apply(radiationModifier, radiation, world);
     }
 
-    public int getOxygenPercent(EntityPlayer player) {
-        return apply(oxygenModifier, oxygenPercent, player);
+    public int getPressure(World world) {
+        return apply(pressureModifier, pressure, world);
     }
 
-    public int getRadiation(EntityPlayer player) {
-        return apply(radiationModifier, radiation, player);
-    }
-
-    public int getPressure(EntityPlayer player) {
-        return apply(pressureModifier, pressure, player);
-    }
-
-    public boolean getSpore(EntityPlayer player) {
+    public boolean getSpore(World world) {
         return spores;
     }
 
-    public boolean getWithering(EntityPlayer player) {
+    public boolean getWithering(World world) {
         return withering;
     }
 
     /**
      * Sine Wave example of a modifier.
-     *
-     * @param freq frequency is a multiplier on the world's clock cycle
-     * @param amp  amplitude is the magnitude of the effect
      */
-
-    public record ModifierSineWave(float freq, int amp) implements BiFunction<Integer, EntityPlayer, Integer> {
+    public record ModifierSineWave(float freq, int amp) implements Modifier<World> {
 
         @Override
-        public Integer apply(Integer base, EntityPlayer player) {
-            float time = player.worldObj.getCelestialAngle(freq);
+        public int apply(World world, int base) {
+            float time = world.getCelestialAngle(freq);
             return base + (int) (Math.sin(time) * amp);
-        }
-    }
-
-    // ====================== BUILDER ======================
-
-    public static final class Builder {
-
-        private int baseTemp = 273;
-        private boolean withering = false;
-        private int oxygenPercent = 100;
-        private int radiation = 0;
-        private boolean spores = false;
-        private int pressure = 1;
-
-        private BiFunction<Integer, EntityPlayer, Integer> tempMod;
-        private BiFunction<Integer, EntityPlayer, Integer> oxygenMod;
-        private BiFunction<Integer, EntityPlayer, Integer> radiationMod;
-        private BiFunction<Integer, EntityPlayer, Integer> pressureMod;
-
-        public Builder baseTemp(int v) {
-            baseTemp = v;
-            return this;
-        }
-
-        public Builder withering(boolean v) {
-            withering = v;
-            return this;
-        }
-
-        public Builder oxygenPercent(int v) {
-            oxygenPercent = v;
-            return this;
-        }
-
-        public Builder radiation(int v) {
-            radiation = v;
-            return this;
-        }
-
-        public Builder spores(boolean v) {
-            spores = v;
-            return this;
-        }
-
-        public Builder pressure(int v) {
-            pressure = v;
-            return this;
-        }
-
-        public Builder tempMod(BiFunction<Integer, EntityPlayer, Integer> m) {
-            tempMod = m;
-            return this;
-        }
-
-        public Builder oxygenMod(BiFunction<Integer, EntityPlayer, Integer> m) {
-            oxygenMod = m;
-            return this;
-        }
-
-        public Builder radiationMod(BiFunction<Integer, EntityPlayer, Integer> m) {
-            radiationMod = m;
-            return this;
-        }
-
-        public Builder pressureMod(BiFunction<Integer, EntityPlayer, Integer> m) {
-            pressureMod = m;
-            return this;
-        }
-
-        public EffectBuilder build() {
-            return new EffectBuilder(
-                baseTemp,
-                withering,
-                oxygenPercent,
-                radiation,
-                spores,
-                pressure,
-                tempMod,
-                oxygenMod,
-                radiationMod,
-                pressureMod);
         }
     }
 }

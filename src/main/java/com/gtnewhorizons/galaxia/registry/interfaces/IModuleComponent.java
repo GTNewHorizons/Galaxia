@@ -7,6 +7,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
 
 public interface IModuleComponent {
 
@@ -49,6 +50,10 @@ public interface IModuleComponent {
     }
 
     default void tickOperational(ModuleInstance module, CelestialAsset outpost) {}
+
+    default UpkeepDemand upkeepFor(ModuleInstance module) {
+        return UpkeepDemand.EMPTY;
+    }
 
     default IllegalStateException unsupportedSettingsGroups(ModuleInstance module) {
         return new IllegalStateException(

@@ -16,6 +16,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
 
 public class ModuleInstance implements Buildable {
 
@@ -92,6 +93,10 @@ public class ModuleInstance implements Buildable {
 
     public Map<ModuleTier, ModuleTierData> allTierData() {
         return definition.tierData();
+    }
+
+    public java.util.List<ModuleAreaEffect> areaEffects() {
+        return definition.areaEffects();
     }
 
     @Override
@@ -260,6 +265,10 @@ public class ModuleInstance implements Buildable {
 
     public Map<ItemStack, Long> getConstructionCost() {
         return currentTierData().constructionCost();
+    }
+
+    public UpkeepDemand currentTierUpkeepDemand() {
+        return currentTierData().upkeepDemand();
     }
 
     @Override

@@ -16,7 +16,9 @@ import net.minecraft.util.RegistryNamespaced;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 
+import cpw.mods.fml.common.LoadController;
 import cpw.mods.fml.common.Loader;
+import cpw.mods.fml.relauncher.Side;
 import sun.misc.Unsafe;
 
 public final class GalaxiaTestBootstrap {
@@ -60,10 +62,18 @@ public final class GalaxiaTestBootstrap {
             Loader fakeLoader = (Loader) unsafe.allocateInstance(Loader.class);
             setField(fakeLoader, "mods", new ArrayList<>());
             setField(fakeLoader, "namedMods", new HashMap<>());
+            setField(fakeLoader, "modController", new LoadController(fakeLoader));
 
             Field instanceField = Loader.class.getDeclaredField("instance");
             instanceField.setAccessible(true);
             instanceField.set(null, fakeLoader);
+
+            Field logSide = Class.forName("cpw.mods.fml.relauncher.FMLRelaunchLog")
+                .getDeclaredField("side");
+            logSide.setAccessible(true);
+            if (logSide.get(null) == null) {
+                logSide.set(null, Side.SERVER);
+            }
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Failed to install fake FML Loader for tests", e);
         }

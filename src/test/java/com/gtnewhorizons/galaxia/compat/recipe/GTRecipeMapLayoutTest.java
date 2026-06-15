@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.compat.recipe;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.function.IntFunction;
 
@@ -12,7 +11,6 @@ import com.gtnewhorizons.modularui.api.math.Pos2d;
 import com.gtnewhorizons.modularui.api.math.Size;
 
 import gregtech.api.recipe.BasicUIProperties;
-import sun.misc.Unsafe;
 
 final class GTRecipeMapLayoutTest {
 
@@ -78,31 +76,18 @@ final class GTRecipeMapLayoutTest {
         int maxFluidOutputs, IntFunction<List<Pos2d>> itemInputs, IntFunction<List<Pos2d>> itemOutputs,
         IntFunction<List<Pos2d>> fluidInputs, IntFunction<List<Pos2d>> fluidOutputs, Pos2d progressPos,
         Size progressSize) throws Exception {
-        BasicUIProperties props = (BasicUIProperties) unsafe().allocateInstance(BasicUIProperties.class);
-        set(props, "maxItemInputs", maxItemInputs);
-        set(props, "maxItemOutputs", maxItemOutputs);
-        set(props, "maxFluidInputs", maxFluidInputs);
-        set(props, "maxFluidOutputs", maxFluidOutputs);
-        set(props, "itemInputPositionsGetter", itemInputs);
-        set(props, "itemOutputPositionsGetter", itemOutputs);
-        set(props, "fluidInputPositionsGetter", fluidInputs);
-        set(props, "fluidOutputPositionsGetter", fluidOutputs);
-        set(props, "progressBarPos", progressPos);
-        set(props, "progressBarSize", progressSize);
-        set(props, "useProgressBar", true);
-        return props;
-    }
-
-    private static void set(Object target, String fieldName, Object value) throws Exception {
-        Field field = target.getClass()
-            .getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(target, value);
-    }
-
-    private static Unsafe unsafe() throws Exception {
-        Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
-        unsafeField.setAccessible(true);
-        return (Unsafe) unsafeField.get(null);
+        return BasicUIProperties.builder()
+            .maxItemInputs(maxItemInputs)
+            .maxItemOutputs(maxItemOutputs)
+            .maxFluidInputs(maxFluidInputs)
+            .maxFluidOutputs(maxFluidOutputs)
+            .itemInputPositionsGetter(itemInputs)
+            .itemOutputPositionsGetter(itemOutputs)
+            .fluidInputPositionsGetter(fluidInputs)
+            .fluidOutputPositionsGetter(fluidOutputs)
+            .progressBarPos(progressPos)
+            .progressBarSize(progressSize)
+            .useProgressBar(true)
+            .build();
     }
 }

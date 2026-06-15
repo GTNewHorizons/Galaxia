@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.core.starmap.sync;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -28,9 +29,13 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class StarmapServerActionsTest {
@@ -92,6 +97,29 @@ final class StarmapServerActionsTest {
             facility.modules()
                 .get(0)
                 .anchor());
+    }
+
+    @Test
+    void buildModuleFactoryRejectsMissingModuleSpec() {
+        CelestialAsset.ID assetId = CelestialAsset.ID.create();
+
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> AssetBuildModulePacket
+                .create(assetId, null, ModuleShape.SINGLE, ModuleTier.HV, true, StationTileCoord.of(1, 0)));
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> AssetBuildModulePacket
+                .create(assetId, FacilityModuleKind.STORAGE, null, ModuleTier.HV, true, StationTileCoord.of(1, 0)));
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> AssetBuildModulePacket.create(
+                assetId,
+                FacilityModuleKind.STORAGE,
+                ModuleShape.SINGLE,
+                null,
+                true,
+                StationTileCoord.of(1, 0)));
     }
 
     @Test
@@ -257,6 +285,76 @@ final class StarmapServerActionsTest {
         assertTrue(
             facility.modules()
                 .isEmpty());
+    }
+
+    @Test
+    void buildMinerCanStartWithTargetFocusTierAndSettingsGroup() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
+        ModuleInstance source = FacilityModuleKind.MINER
+            .create(StationTileCoord.of(5, 5), FacilityModuleKind.MINER.defaultShape(), ModuleTier.EV);
+        facility.addModule(source);
+        SettingsGroup group = facility.createSettingsGroupForModule(source, "Shared miners");
+
+        AssetBuildModulePacket packet = AssetBuildModulePacket.createManyWithSpec(
+            facility.assetId,
+            FacilityModuleKind.MINER,
+            FacilityModuleKind.MINER.defaultShape(),
+            ModuleTier.LuV,
+            null,
+            MinerFocusTier.II,
+            group.id(),
+            true,
+            List.of(StationTileCoord.of(1, 0)));
+
+        AssetSyncPacket result = packet.apply(TEAM, true);
+
+        assertNotNull(result, "target-spec build must sync the completed server mutation");
+        ModuleInstance built = facility.modules()
+            .get(1);
+        assertEquals(ModuleTier.LuV, built.tier());
+        assertEquals(group.id(), built.groupId());
+        ModuleMiner miner = (ModuleMiner) built.component();
+        assertEquals(MinerFocusTier.II, miner.focusTier());
+        assertNull(miner.focusOreKeyOrNull());
+        assertEquals(0, miner.focusAlignmentProgress());
+    }
+
+    @Test
+    void copyBuildCopiesSourcePhysicalSpecAndRuntimeSettingsWithoutProgress() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
+        ModuleInstance source = FacilityModuleKind.MINER
+            .create(StationTileCoord.of(5, 5), FacilityModuleKind.MINER.defaultShape(), ModuleTier.LuV);
+        ModuleMiner sourceMiner = (ModuleMiner) source.component();
+        sourceMiner.setFocus(MinerFocusTier.II, "ore:iron", 123);
+        facility.addModule(source);
+        facility.setMinerOreBlacklisted(source, "ore:iron", true);
+
+        AssetBuildModulePacket packet = AssetBuildModulePacket
+            .copyFromModule(facility.assetId, 0, source.id, true, List.of(StationTileCoord.of(1, 0)));
+
+        AssetSyncPacket result = packet.apply(TEAM, true);
+
+        assertNotNull(result, "copy build must sync the new module");
+        ModuleInstance copied = facility.modules()
+            .get(1);
+        assertEquals(source.kind(), copied.kind());
+        assertEquals(source.shape(), copied.shape());
+        assertEquals(source.tier(), copied.tier());
+        assertTrue(facility.isMinerOreBlacklisted(copied, "ore:iron"));
+        ModuleMiner copiedMiner = (ModuleMiner) copied.component();
+        assertEquals(MinerFocusTier.II, copiedMiner.focusTier());
+        assertEquals("ore:iron", copiedMiner.focusOreKeyOrNull());
+        assertEquals(0, copiedMiner.focusAlignmentProgress());
     }
 
     @Test

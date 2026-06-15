@@ -41,7 +41,7 @@ final class RecipeOrderCursorPersistenceTest {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = new AutomatedFacility(
             ASSET_ID,
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
 
@@ -53,7 +53,7 @@ final class RecipeOrderCursorPersistenceTest {
         // Load
         AutomatedFacility decoded = new AutomatedFacility(
             ASSET_ID,
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         manager.decodeFacilityState(decoded, encoded);

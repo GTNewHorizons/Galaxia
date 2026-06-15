@@ -9,7 +9,7 @@ import net.minecraft.nbt.NBTTagCompound;
 import com.gtnewhorizon.gtnhlib.teams.INetworkTeamData;
 import com.gtnewhorizon.gtnhlib.teams.ITeamData;
 import com.gtnewhorizon.gtnhlib.teams.Team;
-import com.gtnewhorizon.gtnhlib.teams.TeamDataCopyReason;
+import com.gtnewhorizon.gtnhlib.teams.TeamDataTransferReason;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.handlers.TeamEventHandler;
 
@@ -78,15 +78,16 @@ public class GalaxiaTeamData implements INetworkTeamData {
     }
 
     @Override
-    public void copyData(Team oldTeam, Team newTeam, UUID playerId, ITeamData oldTeamData, TeamDataCopyReason reason) {
-        if (oldTeamData instanceof GalaxiaTeamData other) {
+    public void transferData(Team prevTeam, Team newTeam, UUID playerId, ITeamData prevTeamData,
+        TeamDataTransferReason reason) {
+        if (prevTeamData instanceof GalaxiaTeamData other) {
             this.teamColor = other.teamColor;
             this.permissions.clear();
             this.permissions.putAll(other.permissions);
 
-            TeamEventHandler.playersToClear.addAll(oldTeam.getMembers());
-            TeamEventHandler.playersToClear.addAll(oldTeam.getOfficers());
-            TeamEventHandler.playersToClear.addAll(oldTeam.getOwners());
+            TeamEventHandler.playersToClear.addAll(prevTeam.getMembers());
+            TeamEventHandler.playersToClear.addAll(prevTeam.getOfficers());
+            TeamEventHandler.playersToClear.addAll(prevTeam.getOwners());
         }
     }
 

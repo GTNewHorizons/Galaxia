@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.celestial.station;
 
+import java.math.BigInteger;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -7,21 +8,25 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
-import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
-import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.FluidAttachmentInventory;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.ItemAttachmentInventory;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IEnergyHandler;
 import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
-import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
+import lombok.Getter;
 
 public final class StationGraph {
 
+    @Getter
     private final TileStation controller;
     private final Object2ObjectOpenHashMap<BlockPos, TileStationBase<?>> pieces = new Object2ObjectOpenHashMap<>();
-    private final Object2ObjectOpenHashMap<BlockPos, IStationAttachment<?>> attachments = new Object2ObjectOpenHashMap<>();
+    private final Object2ObjectOpenHashMap<BlockPos, StationAttachmentRegistry.ResolvedAttachment<?>> attachments = new Object2ObjectOpenHashMap<>();
+    private final Object2ObjectOpenHashMap<StationAttachmentRegistry.ResolvedAttachment<?>, IDistributedInventory> resolvedInventories = new Object2ObjectOpenHashMap<>();
     private final Object2ObjectOpenHashMap<BlockPos, ObjectArrayList<BlockPos>> adjacency = new Object2ObjectOpenHashMap<>();
     private final ObjectOpenHashSet<BlockPos> visited = new ObjectOpenHashSet<>();
     private final ObjectArrayList<BlockPos> queue = new ObjectArrayList<>();
@@ -31,7 +36,6 @@ public final class StationGraph {
         this.controller = controller;
     }
 
-    @SuppressWarnings("unchecked")
     public <T extends TileStationBase<?>> Iterable<T> iterateOver(Class<T> clazz) {
         return () -> pieces.values()
             .stream()
@@ -40,48 +44,152 @@ public final class StationGraph {
             .iterator();
     }
 
-    public Stream<? extends IStationAttachment<?>> getAttachments() {
+    public Stream<Object> getAttachments() {
         return attachments.values()
             .stream()
-            .filter(IStationAttachment::isReady);
+            .filter(StationGraph::isReady)
+            .map(StationAttachmentRegistry.ResolvedAttachment::attachment);
     }
 
-    public <T extends GalaxiaBootableMultiblock<T> & IStationAttachment<T>> Stream<T> getAttachments(Class<T> type) {
+    public <T> Stream<T> getAttachments(Class<T> type) {
         return attachments.values()
             .stream()
-            .filter(IStationAttachment::isReady)
-            .filter(type::isInstance)
-            .map(type::cast);
+            .filter(StationGraph::isReady)
+            .filter(ra -> type.isInstance(ra.attachment()))
+            .map(ra -> (T) ra.attachment());
+    }
+
+    public Stream<StationAttachmentRegistry.ResolvedAttachment<?>> getEnergyAttachments() {
+        return attachments.values()
+            .stream()
+            .filter(ra -> StationAttachmentRegistry.isEnergyHandler(ra.handler()))
+            .filter(StationGraph::isReady);
+    }
+
+    public Stream<StationAttachmentRegistry.ResolvedAttachment<?>> getFluidStorageAttachments() {
+        return attachments.values()
+            .stream()
+            .filter(ra -> StationAttachmentRegistry.isFluidStorageHandler(ra.handler()))
+            .filter(StationGraph::isReady);
+    }
+
+    public Stream<StationAttachmentRegistry.ResolvedAttachment<?>> getItemStorageAttachments() {
+        return attachments.values()
+            .stream()
+            .filter(ra -> StationAttachmentRegistry.isItemStorageHandler(ra.handler()))
+            .filter(StationGraph::isReady);
+    }
+
+    public void tickAttachments() {
+        attachments.values()
+            .forEach(StationGraph::tick);
+    }
+
+    public long drawEnergy(long maxPowerDraw) {
+        long remaining = maxPowerDraw;
+        for (StationAttachmentRegistry.ResolvedAttachment<?> ra : (Iterable<StationAttachmentRegistry.ResolvedAttachment<?>>) getEnergyAttachments()::iterator) {
+            remaining -= drawFromAttachment(ra, remaining);
+            if (remaining <= 0) return maxPowerDraw;
+        }
+        return maxPowerDraw - remaining;
+    }
+
+    private <T> long drawFromAttachment(StationAttachmentRegistry.ResolvedAttachment<T> ra, long amount) {
+        IEnergyHandler<T> h = StationAttachmentRegistry.asEnergyHandler(ra.handler());
+        return h.drawEnergy(ra.attachment(), amount);
+    }
+
+    public BigInteger getEnergyStored() {
+        BigInteger total = BigInteger.ZERO;
+        for (StationAttachmentRegistry.ResolvedAttachment<?> ra : (Iterable<StationAttachmentRegistry.ResolvedAttachment<?>>) getEnergyAttachments()::iterator) {
+            total = total.add(energyStoredFromAttachment(ra));
+        }
+        return total;
+    }
+
+    private <T> BigInteger energyStoredFromAttachment(StationAttachmentRegistry.ResolvedAttachment<T> ra) {
+        return StationAttachmentRegistry.asEnergyHandler(ra.handler())
+            .getEnergyStored(ra.attachment());
     }
 
     public @Nonnull Stream<IDistributedInventory> connectedInventories() {
-        return attachments.keySet()
-            .stream()
-            .map(pos -> pos.getTE(controller.getWorldObj()))
-            .filter(te -> te instanceof IDistributedInventory)
-            .filter(te -> !(te instanceof GalaxiaMultiblockBase<?>base) || base.isStructureValid())
-            .map(te -> (IDistributedInventory) te);
+        return resolvedInventories.values()
+            .stream();
     }
 
-    public void registerAttachment(BlockPos parent, BlockPos pos, IStationAttachment<?> attachment) {
+    public void registerAttachment(BlockPos parent, BlockPos pos,
+        @Nonnull StationAttachmentRegistry.ResolvedAttachment<?> ra) {
         if (!pieces.containsKey(parent)) return;
         if (attachments.containsKey(pos)) return;
 
         addAdjacency(parent, pos);
-        attachments.put(pos, attachment);
-        attachment.onAttached(this);
-        fireListeners(l -> l.onAttachmentConnected(pos, attachment));
+        attachments.put(pos, ra);
+        if (ra.handler()
+            .hasDistributedInventory()) {
+            resolvedInventories.put(ra, resolveDistributedInventory(ra));
+        }
+        onAttached(ra, this);
+        fireListeners(l -> l.onAttachmentConnected(pos, ra.attachment()));
+    }
+
+    private <T> IDistributedInventory resolveDistributedInventory(StationAttachmentRegistry.ResolvedAttachment<T> ra) {
+        if (StationAttachmentRegistry.isFluidStorageHandler(ra.handler())) {
+            return new FluidAttachmentInventory<>(
+                StationAttachmentRegistry.asFluidStorageHandler(ra.handler()),
+                ra.attachment());
+        } else if (StationAttachmentRegistry.isItemStorageHandler(ra.handler())) {
+            return new ItemAttachmentInventory<>(
+                StationAttachmentRegistry.asItemStorageHandler(ra.handler()),
+                ra.attachment());
+        }
+        throw new IllegalStateException("[StationGraph] Trying to register unknown inventory handler");
+    }
+
+    public boolean hasAttachment(BlockPos pos) {
+        return attachments.containsKey(pos);
     }
 
     public void removeAttachment(BlockPos pos) {
-        IStationAttachment<?> attachment = attachments.remove(pos);
+        removeAttachmentInternal(pos);
+        fireListeners(l -> l.onAttachmentDisconnected(pos));
+    }
+
+    public void removeAttachmentSilently(BlockPos pos) {
+        removeAttachmentInternal(pos);
+    }
+
+    private void removeAttachmentInternal(BlockPos pos) {
+        StationAttachmentRegistry.ResolvedAttachment<?> ra = attachments.remove(pos);
         adjacency.values()
             .forEach(list -> list.remove(pos));
 
-        if (attachment != null) {
-            attachment.onDetached(this);
-            fireListeners(l -> l.onAttachmentDisconnected(pos));
+        if (ra != null) {
+            if (ra.handler()
+                .hasDistributedInventory()) {
+                resolvedInventories.remove(ra);
+            }
+            onDetached(ra, this);
         }
+    }
+
+    private static <T> boolean isReady(StationAttachmentRegistry.ResolvedAttachment<T> ra) {
+        return ra.handler()
+            .isReady(ra.attachment());
+    }
+
+    private static <T> void tick(StationAttachmentRegistry.ResolvedAttachment<T> ra) {
+        ra.handler()
+            .tick(ra.attachment());
+    }
+
+    private static <T> void onAttached(StationAttachmentRegistry.ResolvedAttachment<T> ra, StationGraph graph) {
+        ra.handler()
+            .onAttached(ra.attachment(), graph);
+    }
+
+    private static <T> void onDetached(StationAttachmentRegistry.ResolvedAttachment<T> ra, StationGraph graph) {
+        ra.handler()
+            .onDetached(ra.attachment(), graph);
     }
 
     public void connectPiece(BlockPos pos) {
@@ -137,8 +245,8 @@ public final class StationGraph {
         var oldPieces = new Object2ObjectOpenHashMap<>(pieces);
 
         // Detach all current attachments before clearing
-        attachments.forEach((pos, attachment) -> {
-            attachment.onDetached(this);
+        attachments.forEach((pos, ra) -> {
+            onDetached(ra, this);
             fireListeners(l -> l.onAttachmentDisconnected(pos));
         });
 
@@ -190,8 +298,8 @@ public final class StationGraph {
             .filter(p -> p != null && p != controller)
             .forEach(p -> fireListeners(l -> l.onPieceDisconnected(p, null)));
 
-        attachments.forEach((pos, attachment) -> {
-            attachment.onDetached(this);
+        attachments.forEach((pos, ra) -> {
+            onDetached(ra, this);
             fireListeners(l -> l.onAttachmentDisconnected(pos));
         });
 
@@ -210,6 +318,7 @@ public final class StationGraph {
         adjacency.clear();
         visited.clear();
         queue.clear();
+        resolvedInventories.clear();
     }
 
     private void fireListeners(Consumer<IGraphListener> action) {
@@ -218,10 +327,6 @@ public final class StationGraph {
 
     public boolean isEmpty() {
         return pieces.size() <= 1;
-    }
-
-    public TileStation getController() {
-        return controller;
     }
 
     public void addListener(IGraphListener listener) {

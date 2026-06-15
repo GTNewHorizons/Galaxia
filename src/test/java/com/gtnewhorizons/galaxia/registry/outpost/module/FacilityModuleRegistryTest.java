@@ -8,19 +8,26 @@ import java.util.List;
 import java.util.Map;
 
 import net.minecraft.init.Items;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.Fluid;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationModuleCategory;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class FacilityModuleRegistryTest {
+
+    private static final FluidKey COOLANT = new FluidKey(new Fluid("galaxia.test.coolant"), null);
 
     @BeforeAll
     static void initRegistries() {
@@ -85,6 +92,35 @@ final class FacilityModuleRegistryTest {
                 .get(material));
         assertEquals(200, data.buildTicks());
         assertEquals(80, data.completionRefundPercent());
+        assertTrue(
+            data.upkeepDemand()
+                .isEmpty());
+    }
+
+    @Test
+    void tierDataBuilderCarriesUpkeepDemand() {
+        ItemStack material = new ItemStack(new Item());
+        ItemStack upkeep = new ItemStack(new Item());
+
+        ModuleTierData data = ModuleTierData.builder()
+            .addedEnergyCapacity(1000L)
+            .powerDraw(32L)
+            .cooldown(10)
+            .cost(Map.of(material, 2L))
+            .upkeepItem(upkeep, 3L)
+            .upkeepFluid(COOLANT, UpkeepAmount.ofWhole(1000L))
+            .build();
+
+        assertEquals(
+            UpkeepAmount.ofWhole(3L),
+            data.upkeepDemand()
+                .itemsPerMinute()
+                .get(ItemStackWrapper.of(upkeep)));
+        assertEquals(
+            UpkeepAmount.ofWhole(1000L),
+            data.upkeepDemand()
+                .fluidsPerMinute()
+                .get(COOLANT));
     }
 
     @Test

@@ -6,6 +6,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
 
+import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
@@ -47,7 +48,7 @@ public class ItemRocketSchematic extends Item {
         if (silo == null || silo.getBuiltBlueprint()
             .isEmpty()) return null;
 
-        ItemStack stack = new ItemStack(new ItemRocketSchematic());
+        ItemStack stack = new ItemStack(GalaxiaItemList.ITEM_ROCKET_SCHEMATIC.getItem());
         RocketBlueprint bp = silo.getBuiltBlueprint()
             .copy();
 

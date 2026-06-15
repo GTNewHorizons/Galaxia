@@ -28,7 +28,7 @@ import com.cleanroommc.modularui.value.sync.IntSyncValue;
 import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
-import com.cleanroommc.modularui.widgets.layout.Flow;
+import com.cleanroommc.modularui.widgets.layout.Grid;
 import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
@@ -260,7 +260,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         if (!worldObj.isRemote) markStructureDirty();
 
         ModularPanel panel = new ModularPanel("galaxia:module_assembler");
-        panel.size(400, 300);
+        panel.size(404, 300);
 
         BooleanSyncValue validSync = new BooleanSyncValue(() -> structureValid, v -> {});
         syncManager.syncValue("assemblerStructureValid", validSync);
@@ -272,14 +272,13 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
                 .asWidget()
                 .pos(10, 35));
 
-        Flow row = Flow.row()
-            .coverChildren()
-            .padding(4);
-        for (IRocketPartDef def : RocketPartRegistry.instance()
-            .getAll()) {
-            row.child(createStockButton(def, syncManager));
-        }
-        panel.childIf(validSync.getBoolValue(), () -> row);
+        List<IRocketPartDef> defList = RocketPartRegistry.instance()
+            .getAll();
+
+        Grid grid = new Grid().coverChildren()
+            .padding(4)
+            .gridOfWidthElements(4, defList, (_, _, _, def) -> createStockButton(def, syncManager));
+        panel.childIf(validSync.getBoolValue(), () -> grid);
 
         return panel;
     }

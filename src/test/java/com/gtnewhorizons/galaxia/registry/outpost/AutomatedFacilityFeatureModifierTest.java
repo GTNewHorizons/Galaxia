@@ -25,7 +25,7 @@ final class AutomatedFacilityFeatureModifierTest {
     }
 
     @Test
-    void icePocketReducesProductionModulePowerDraw() {
+    void icePocketReducesSurfaceOutpostProductionModulePowerDraw() {
         AutomatedFacility facility = facilityWithModuleOnFeature(
             FacilityModuleKind.MACERATOR,
             ModuleTier.HV,
@@ -46,13 +46,31 @@ final class AutomatedFacilityFeatureModifierTest {
         assertEquals(1000L - effectivePowerDraw, facility.getEnergyStored());
     }
 
+    @Test
+    void orbitalStationDoesNotGeneratePlanetaryFeatures() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.FROZEN_BELT,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        facility.setStationFeatureSalt(1L);
+
+        for (int dx = StationTileCoord.MIN; dx <= StationTileCoord.MAX; dx++) {
+            for (int dy = StationTileCoord.MIN; dy <= StationTileCoord.MAX; dy++) {
+                assertTrue(
+                    facility.planetaryFeaturesAt(dx, dy)
+                        .isEmpty());
+            }
+        }
+    }
+
     private static AutomatedFacility facilityWithModuleOnFeature(FacilityModuleKind kind, ModuleTier tier,
         PlanetaryFeatureKey required) {
         for (long salt = 0; salt < 10_000L; salt++) {
             AutomatedFacility facility = new AutomatedFacility(
                 CelestialAsset.ID.create(),
                 CelestialObjectId.FROZEN_BELT,
-                CelestialAsset.Kind.AUTOMATED_STATION,
+                CelestialAsset.Kind.AUTOMATED_OUTPOST,
                 Buildable.Status.OPERATIONAL);
             facility.setStationFeatureSalt(salt);
             for (int dx = StationTileCoord.MIN; dx <= StationTileCoord.MAX; dx++) {

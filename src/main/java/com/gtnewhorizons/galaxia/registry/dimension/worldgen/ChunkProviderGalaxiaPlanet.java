@@ -204,8 +204,6 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 }
 
                 for (int y = 0; y < Math.max(palette.getOceanHeight(), terrainHeight); y++) {
-                    long blockStorageStart = 0;
-                    if (showDebug) blockStorageStart = System.nanoTime();
 
                     int sy = y >> 4;
 

@@ -8,6 +8,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import net.minecraft.init.Items;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -36,7 +37,7 @@ public class FacilityModuleRegistry {
 
     public record Definition(FacilityModuleKind kind, Map<ModuleTier, ModuleTierData> tierData,
         BiConsumer<ModuleInstance, CelestialAsset> applyBehavior, Supplier<IModuleComponent> defaultFactory,
-        List<ModulePanelAction> panelActions, boolean settingsGroups) {
+        List<ModulePanelAction> panelActions, boolean settingsGroups, List<ModuleAreaEffect> areaEffects) {
 
         public Definition {
             if (tierData == null || tierData.isEmpty()) {
@@ -46,6 +47,7 @@ public class FacilityModuleRegistry {
             copiedTiers.putAll(tierData);
             tierData = Collections.unmodifiableMap(copiedTiers);
             panelActions = List.copyOf(panelActions == null ? List.of() : panelActions);
+            areaEffects = List.copyOf(areaEffects == null ? List.of() : areaEffects);
         }
 
         public ModuleTierData getTierData(ModuleTier tier) {
@@ -58,12 +60,12 @@ public class FacilityModuleRegistry {
     }
 
     private static final Map<FacilityModuleKind, Definition> DEFINITIONS = new EnumMap<>(FacilityModuleKind.class);
+    private static final long PLACEHOLDER_UPKEEP_PER_MINUTE = 1L;
 
     public static void init() {
         register(
             FacilityModuleKind.POWER,
-            ModuleTierData.builder()
-                .addedEnergyCapacity(1500L)
+            tierDataBuilder().addedEnergyCapacity(1500L)
                 .powerDraw(-ModulePower.EU_TICK)
                 .cooldown(1)
                 .cost(Map.of(new ItemStack(Items.redstone), 8L, new ItemStack(Items.gold_ingot), 64L))
@@ -74,8 +76,7 @@ public class FacilityModuleRegistry {
             FacilityModuleKind.GEOTHERMAL_GENERATOR,
             Map.of(
                 ModuleTier.HV,
-                ModuleTierData.builder()
-                    .addedEnergyCapacity(2000L)
+                tierDataBuilder().addedEnergyCapacity(2000L)
                     .powerDraw(-ModuleGeothermalGenerator.EU_TICK)
                     .cooldown(1)
                     .cost(Map.of(new ItemStack(Items.redstone), 64L, new ItemStack(Items.gold_ingot), 64L))
@@ -249,14 +250,14 @@ public class FacilityModuleRegistry {
             ModuleBattery::new);
         register(
             FacilityModuleKind.MAINTENANCE_BAY,
-            ModuleTierData.builder()
-                .addedEnergyCapacity(500L)
+            tierDataBuilder().addedEnergyCapacity(500L)
                 .powerDraw(0L)
                 .cooldown(100)
                 .cost(Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 16L))
                 .build(),
             (instance, outpost) -> {},
-            ModuleMaintenanceBay::new);
+            ModuleMaintenanceBay::new,
+            List.of(ModuleAreaEffect.adjacentUpkeepMultiplier(80)));
 
         if (FacilityModuleKind.MACERATOR.isAvailable()) {
             builder(FacilityModuleKind.MACERATOR)
@@ -330,14 +331,28 @@ public class FacilityModuleRegistry {
 
     public static void register(FacilityModuleKind kind, ModuleTierData data,
         BiConsumer<ModuleInstance, CelestialAsset> tickFunction, Supplier<IModuleComponent> defaultFactory) {
+        register(kind, data, tickFunction, defaultFactory, List.of());
+    }
+
+    public static void register(FacilityModuleKind kind, ModuleTierData data,
+        BiConsumer<ModuleInstance, CelestialAsset> tickFunction, Supplier<IModuleComponent> defaultFactory,
+        List<ModuleAreaEffect> areaEffects) {
         DEFINITIONS.put(
             kind,
-            new Definition(kind, Map.of(ModuleTier.NONE, data), tickFunction, defaultFactory, List.of(), false));
+            new Definition(
+                kind,
+                Map.of(ModuleTier.NONE, data),
+                tickFunction,
+                defaultFactory,
+                List.of(),
+                false,
+                areaEffects));
     }
 
     public static void register(FacilityModuleKind kind, Map<ModuleTier, ModuleTierData> tierData,
         BiConsumer<ModuleInstance, CelestialAsset> tickFunction, Supplier<IModuleComponent> defaultFactory) {
-        DEFINITIONS.put(kind, new Definition(kind, tierData, tickFunction, defaultFactory, List.of(), false));
+        DEFINITIONS
+            .put(kind, new Definition(kind, tierData, tickFunction, defaultFactory, List.of(), false, List.of()));
     }
 
     public static ModuleDefinitionBuilder builder(FacilityModuleKind kind) {
@@ -393,6 +408,16 @@ public class FacilityModuleRegistry {
         return DEFINITIONS.containsKey(kind);
     }
 
+    private static ModuleTierData.Builder tierDataBuilder() {
+        return ModuleTierData.builder()
+            .upkeepItem(placeholderUpkeepStack(), PLACEHOLDER_UPKEEP_PER_MINUTE);
+    }
+
+    private static ItemStack placeholderUpkeepStack() {
+        Item item = Items.iron_ingot == null ? new Item() : Items.iron_ingot;
+        return new ItemStack(item);
+    }
+
     public static class TierMapBuilder {
 
         private final EnumMap<ModuleTier, ModuleTierData> map = new EnumMap<>(ModuleTier.class);
@@ -400,8 +425,7 @@ public class FacilityModuleRegistry {
         public TierMapBuilder add(ModuleTier tier, long energy, long power, int cooldown, Map<ItemStack, Long> cost) {
             if (map.put(
                 tier,
-                ModuleTierData.builder()
-                    .addedEnergyCapacity(energy)
+                tierDataBuilder().addedEnergyCapacity(energy)
                     .powerDraw(power)
                     .cooldown(cooldown)
                     .cost(cost)
@@ -416,8 +440,7 @@ public class FacilityModuleRegistry {
             Map<ItemStack, Long> cost) {
             if (map.put(
                 tier,
-                ModuleTierData.builder()
-                    .addedEnergyCapacity(energy)
+                tierDataBuilder().addedEnergyCapacity(energy)
                     .powerDraw(power)
                     .cooldown(cooldown)
                     .capacity(capacity)
@@ -433,8 +456,7 @@ public class FacilityModuleRegistry {
             Map<String, Integer> variantCooldowns, Map<ItemStack, Long> cost) {
             if (map.put(
                 tier,
-                ModuleTierData.builder()
-                    .addedEnergyCapacity(energy)
+                tierDataBuilder().addedEnergyCapacity(energy)
                     .powerDraw(power)
                     .cooldown(cooldown)
                     .variantCooldowns(variantCooldowns)
@@ -450,8 +472,7 @@ public class FacilityModuleRegistry {
             Map<String, Integer> variantChargeTicks, Map<ItemStack, Long> cost) {
             if (map.put(
                 tier,
-                ModuleTierData.builder()
-                    .addedEnergyCapacity(energy)
+                tierDataBuilder().addedEnergyCapacity(energy)
                     .powerDraw(power)
                     .cooldown(cooldown)
                     .chargeTicks(chargeTicks)
@@ -479,6 +500,7 @@ public class FacilityModuleRegistry {
         private BiConsumer<ModuleInstance, CelestialAsset> behavior;
         private Supplier<IModuleComponent> factory;
         private final java.util.ArrayList<ModulePanelAction> panelActions = new java.util.ArrayList<>();
+        private final java.util.ArrayList<ModuleAreaEffect> areaEffects = new java.util.ArrayList<>();
         private boolean settingsGroups;
 
         private ModuleDefinitionBuilder(FacilityModuleKind kind) {
@@ -531,6 +553,14 @@ public class FacilityModuleRegistry {
             return this;
         }
 
+        public ModuleDefinitionBuilder areaEffect(ModuleAreaEffect effect) {
+            if (effect == null) {
+                throw new IllegalArgumentException("effect must not be null");
+            }
+            areaEffects.add(effect);
+            return this;
+        }
+
         public void register() {
             if (tierData == null) {
                 throw new IllegalStateException("ModuleDefinitionBuilder: tierData must be set for " + kind);
@@ -541,7 +571,9 @@ public class FacilityModuleRegistry {
             if (factory == null) {
                 throw new IllegalStateException("ModuleDefinitionBuilder: factory must be set for " + kind);
             }
-            DEFINITIONS.put(kind, new Definition(kind, tierData, behavior, factory, panelActions, settingsGroups));
+            DEFINITIONS.put(
+                kind,
+                new Definition(kind, tierData, behavior, factory, panelActions, settingsGroups, areaEffects));
         }
     }
 }

@@ -17,9 +17,9 @@ final class StationTilePickerControlsWidget extends ParentWidget<StationTilePick
     private static final int CANCEL_X = 10;
     private static final int CONFIRM_X = WIDTH - BUTTON_WIDTH - 10;
 
-    private final StationTilePickerController controller;
+    private final StationEditModeController controller;
 
-    StationTilePickerControlsWidget(StationTilePickerController controller) {
+    StationTilePickerControlsWidget(StationEditModeController controller) {
         this.controller = controller;
         child(
             ModuleConfigModalSupport.button(controller::isActive, "Cancel", controller::cancel)
@@ -33,17 +33,17 @@ final class StationTilePickerControlsWidget extends ParentWidget<StationTilePick
 
     @Override
     public boolean canHoverThrough() {
-        return !controller.isActive();
+        return !controller.isTilePickerActive();
     }
 
     @Override
     public boolean canHover() {
-        return controller.isActive();
+        return controller.isTilePickerActive();
     }
 
     @Override
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
-        if (!controller.isActive()) return;
+        if (!controller.isTilePickerActive()) return;
         BorderedRect.draw(
             0,
             0,

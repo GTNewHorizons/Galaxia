@@ -3,12 +3,8 @@ package com.gtnewhorizons.galaxia.compat.recipe;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import java.lang.reflect.Field;
-
-import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -16,9 +12,10 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
+import com.gtnewhorizons.galaxia.testing.TestFluidStacks;
+import com.gtnewhorizons.galaxia.testing.TestGTRecipes;
 
 import gregtech.api.util.GTRecipe;
-import sun.misc.Unsafe;
 
 final class RecipeIntentMatcherTest {
 
@@ -123,7 +120,7 @@ final class RecipeIntentMatcherTest {
 
     @Test
     void singleItemOutputMatchCopiesOutputChancesIntoSnapshot() throws Exception {
-        Item outputItem = Items.diamond;
+        Item outputItem = new Item();
         ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
         GTRecipe recipe = recipe(null, outputs, null, null, new int[] { 5000 }, 320, 480);
 
@@ -177,18 +174,7 @@ final class RecipeIntentMatcherTest {
 
     private static GTRecipe recipe(ItemStack[] itemInputs, ItemStack[] itemOutputs, FluidStack[] fluidInputs,
         FluidStack[] fluidOutputs, int[] outputChances, int duration, int eut) throws Exception {
-        Unsafe unsafe = unsafe();
-        GTRecipe recipe = (GTRecipe) unsafe.allocateInstance(GTRecipe.class);
-        set(recipe, "mInputs", itemInputs);
-        set(recipe, "mOutputs", itemOutputs);
-        set(recipe, "mOutputChances", outputChances);
-        set(recipe, "mFluidInputs", fluidInputs);
-        set(recipe, "mFluidOutputs", fluidOutputs);
-        set(recipe, "mDuration", duration);
-        set(recipe, "mEUt", eut);
-        set(recipe, "mHidden", false);
-        set(recipe, "mFakeRecipe", false);
-        return recipe;
+        return TestGTRecipes.recipe(itemInputs, itemOutputs, fluidInputs, fluidOutputs, outputChances, duration, eut);
     }
 
     private static FluidStack[] fluids(String fluidName, int amount) throws Exception {
@@ -196,37 +182,10 @@ final class RecipeIntentMatcherTest {
     }
 
     private static FluidStack fluidStack(String fluidName, int amount) throws Exception {
-        Fluid fluid = new Fluid(fluidName);
-        FluidStack stack = (FluidStack) unsafe().allocateInstance(FluidStack.class);
-        Field fluidField = FluidStack.class.getDeclaredField("fluid");
-        fluidField.setAccessible(true);
-        fluidField.set(stack, fluid);
-        stack.amount = amount;
-        return stack;
+        return TestFluidStacks.stack(fluidName, amount);
     }
 
     private static String fluidName(FluidStack stack) throws Exception {
-        try {
-            return stack.getFluid()
-                .getName();
-        } catch (RuntimeException e) {
-            Field fluidField = FluidStack.class.getDeclaredField("fluid");
-            fluidField.setAccessible(true);
-            Fluid fluid = (Fluid) fluidField.get(stack);
-            return fluid != null ? fluid.getName() : null;
-        }
-    }
-
-    private static void set(Object target, String fieldName, Object value) throws Exception {
-        Field field = target.getClass()
-            .getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(target, value);
-    }
-
-    private static Unsafe unsafe() throws Exception {
-        Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
-        unsafeField.setAccessible(true);
-        return (Unsafe) unsafeField.get(null);
+        return TestFluidStacks.name(stack);
     }
 }

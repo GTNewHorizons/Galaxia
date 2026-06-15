@@ -71,6 +71,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
     private static final int MAX_RECIPE_PAYLOAD_BYTES = 4096;
     private static final int MAX_RECIPE_STACKS = 64;
     private static final int HAMMER_UPGRADE_PAYLOAD_BYTES = 4;
+    private static final int MINER_FOCUS_TIER_PAYLOAD_BYTES = 2;
     private static final int MAX_TILE_PICKER_TARGETS = 256;
     private static final int MAX_TILE_COORD_PAYLOAD_BYTES = Integer.BYTES + MAX_TILE_PICKER_TARGETS * Integer.BYTES * 2;
     private static final int MODULE_UPGRADE_TARGET_HEADER_BYTES = 4;
@@ -198,11 +199,19 @@ public final class AssetModuleUpdatePacket implements IMessage {
 
     public static AssetModuleUpdatePacket minerFocusTierPlan(CelestialAsset.ID assetId, int moduleIndex,
         ModuleInstance.ID moduleId, MinerFocusTier focusTier) {
+        return minerFocusTierPlan(assetId, moduleIndex, moduleId, ModuleTier.NONE, focusTier);
+    }
+
+    public static AssetModuleUpdatePacket minerFocusTierPlan(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, ModuleTier targetTier, MinerFocusTier focusTier) {
+        if (targetTier == null) {
+            throw new IllegalArgumentException("targetTier must not be null");
+        }
         if (focusTier == null) {
             throw new IllegalArgumentException("focusTier must not be null");
         }
         AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.PLAN_MINER_FOCUS_TIER);
-        pkt.bytePayload = (byte) focusTier.ordinal();
+        pkt.rawPayload = new byte[] { (byte) targetTier.ordinal(), (byte) focusTier.ordinal() };
         return pkt;
     }
 
@@ -443,7 +452,12 @@ public final class AssetModuleUpdatePacket implements IMessage {
                     PacketUtil.writeString(buf, stringPayload);
                     buf.writeByte(bytePayload);
                 }
-                case PLAN_MINER_FOCUS_TIER -> buf.writeByte(bytePayload);
+                case PLAN_MINER_FOCUS_TIER -> {
+                    if (rawPayload == null || rawPayload.length != MINER_FOCUS_TIER_PAYLOAD_BYTES) {
+                        throw new IllegalArgumentException("invalid miner focus tier payload");
+                    }
+                    buf.writeBytes(rawPayload);
+                }
                 case SET_MINER_FOCUS_ORE -> PacketUtil.writeString(buf, stringPayload);
                 case SET_ALLOW_SHOOTING_MODE, SET_HAMMER_VARIANT, SET_ROUTE_PRIORITY, SET_RECIPE_SCHEDULER_MODE -> buf
                     .writeByte(bytePayload);
@@ -513,7 +527,13 @@ public final class AssetModuleUpdatePacket implements IMessage {
                     throw new IllegalStateException("invalid miner blacklist flag: " + bytePayload);
                 }
             }
-            case PLAN_MINER_FOCUS_TIER -> bytePayload = buf.readByte();
+            case PLAN_MINER_FOCUS_TIER -> {
+                if (buf.readableBytes() < MINER_FOCUS_TIER_PAYLOAD_BYTES) {
+                    throw new IllegalArgumentException("missing miner focus tier payload");
+                }
+                rawPayload = new byte[MINER_FOCUS_TIER_PAYLOAD_BYTES];
+                buf.readBytes(rawPayload);
+            }
             case SET_MINER_FOCUS_ORE -> stringPayload = PacketUtil.readString(buf);
             case SET_ALLOW_SHOOTING_MODE, SET_HAMMER_VARIANT, SET_ROUTE_PRIORITY, SET_RECIPE_SCHEDULER_MODE -> bytePayload = buf
                 .readByte();
@@ -845,20 +865,36 @@ public final class AssetModuleUpdatePacket implements IMessage {
         if (!(module.component() instanceof ModuleMiner miner)) {
             throw new IllegalStateException("PLAN_MINER_FOCUS_TIER sent to non-miner module " + module.id);
         }
-        MinerFocusTier targetTier = PacketUtil
-            .enumFromByte(Byte.toUnsignedInt(packet.bytePayload), MinerFocusTier.class);
-        if (targetTier == null) {
-            throw new IllegalStateException("PLAN_MINER_FOCUS_TIER invalid tier for module " + module.id);
+        if (packet.rawPayload == null || packet.rawPayload.length != MINER_FOCUS_TIER_PAYLOAD_BYTES) {
+            throw new IllegalStateException("PLAN_MINER_FOCUS_TIER malformed payload for module " + module.id);
         }
-        String targetOreKey = targetTier == MinerFocusTier.NONE ? null : miner.focusOreKeyOrNull();
+        ModuleTier targetModuleTier = PacketUtil
+            .enumFromByte(Byte.toUnsignedInt(packet.rawPayload[0]), ModuleTier.class);
+        MinerFocusTier targetFocusTier = PacketUtil
+            .enumFromByte(Byte.toUnsignedInt(packet.rawPayload[1]), MinerFocusTier.class);
+        if (targetModuleTier == null || targetFocusTier == null) {
+            throw new IllegalStateException("PLAN_MINER_FOCUS_TIER invalid target for module " + module.id);
+        }
+        if (targetModuleTier == ModuleTier.NONE) targetModuleTier = module.tier();
+        if (!module.kind()
+            .allowedTiers()
+            .contains(targetModuleTier)) {
+            throw new IllegalStateException(
+                "PLAN_MINER_FOCUS_TIER rejected tier " + targetModuleTier + " for " + module.kind());
+        }
+        String targetOreKey = targetFocusTier == MinerFocusTier.NONE ? null : miner.focusOreKeyOrNull();
         ModuleTierData sourceData = FacilityModuleRegistry.get(module.kind())
             .getTierData(module.tier());
-        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(sourceData.constructionCost());
+        ModuleTierData targetData = FacilityModuleRegistry.get(module.kind())
+            .getTierData(targetModuleTier);
+        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(targetData.constructionCost());
+        Map<ItemStackWrapper, Long> completionRefundCost = FacilityModuleRegistry
+            .operationCost(sourceData.constructionCost());
         ModuleOperationPlan plan = new ModuleOperationPlan(
-            new MinerFocusOperation(module.tier(), targetTier.name(), targetOreKey),
+            new MinerFocusOperation(targetModuleTier, targetFocusTier.name(), targetOreKey),
             sourceData.buildTicks(),
             cost,
-            cost,
+            completionRefundCost,
             sourceData.completionRefundPercent(),
             false,
             false);
@@ -1256,7 +1292,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
             if (!GTTeamsCompat.hasPermission(player, TeamAction.MODIFY_MODULE)) return null;
             UUID teamId = GTTeamsCompat.getTeam(player);
-            return message.apply(teamId);
+            return message.apply(teamId, player.capabilities.isCreativeMode);
         }
     }
 }

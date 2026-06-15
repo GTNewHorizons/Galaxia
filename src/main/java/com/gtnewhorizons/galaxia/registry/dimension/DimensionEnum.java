@@ -1,8 +1,11 @@
 package com.gtnewhorizons.galaxia.registry.dimension;
 
+import lombok.Getter;
+
 /**
  * ENUM for storing all dimensions
  */
+@Getter
 public enum DimensionEnum {
 
     // Format: ENUMNAME(int ID, String name)
@@ -12,8 +15,7 @@ public enum DimensionEnum {
     MOON(20, "Moon", "galaxia.dimension.moon"),
     MARS(21, "Mars", "galaxia.dimension.mars"),
     FROZEN_BELT(22, "Frozen_Belt", "galaxia.dimension.frozen_belt"),
-    PANSPIRA(23, "Panspira", "galaxia.dimension.panspira"),
-    TENEBRAE(24, "Tenebrae", "galaxia.dimension.tenebrae");
+    TENEBRAE(23, "Tenebrae", "galaxia.dimension.tenebrae");
 
     final int id;
     final String name;
@@ -23,18 +25,6 @@ public enum DimensionEnum {
         this.id = id;
         this.name = name;
         this.translationKey = translationKey;
-    }
-
-    public String getName() {
-        return this.name;
-    }
-
-    public int getId() {
-        return this.id;
-    }
-
-    public String getTranslationKey() {
-        return this.translationKey;
     }
 
     public static DimensionEnum fromId(int id) {

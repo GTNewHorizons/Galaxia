@@ -13,6 +13,8 @@ import java.util.UUID;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidRegistry;
+import net.minecraftforge.fluids.FluidStack;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -24,6 +26,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -46,6 +50,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 import io.netty.buffer.Unpooled;
@@ -148,6 +154,23 @@ final class StationPacketRoundTripTest {
     }
 
     @Test
+    void fullSyncRoundTripPreservesUpkeepCredits() {
+        AutomatedFacility server = createFacility();
+        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
+        server.loadUpkeepCredits(new UpkeepSettlement.Credits(Map.of(resource, UpkeepAmount.parse("0.5")), Map.of()));
+
+        AssetSyncPacket.Handler.handleFull(roundTrip(AssetSyncPacket.fullSync(server)));
+
+        AutomatedFacility client = (AutomatedFacility) CelestialAssetStore.CLIENT.findAssetInternal(server.assetId);
+        assertNotNull(client);
+        assertEquals(
+            "0.5",
+            client.upkeepCredits()
+                .itemCredit(resource)
+                .toDisplayString());
+    }
+
+    @Test
     void fullSyncRoundTripPreservesModuleOperation() {
         AutomatedFacility server = createFacility();
         ModuleInstance hammerModule = buildModule(server, FacilityModuleKind.HAMMER, StationTileCoord.of(1, 0));
@@ -219,6 +242,36 @@ final class StationPacketRoundTripTest {
     }
 
     @Test
+    void fullSyncOrdersSettingsGroupsBeforeGroupedModules() {
+        AutomatedFacility server = createFacility();
+        ModuleInstance miner = buildModule(server, FacilityModuleKind.MINER, StationTileCoord.of(1, 0));
+        server.setMinerOreBlacklisted(miner, "ore:iron", true);
+        short groupId = server.createSettingsGroupForModule(miner, "Shared miners")
+            .id();
+
+        AssetSyncPacket full = AssetSyncPacket.fullSync(server);
+
+        int firstGroup = firstFullSyncDeltaIndex(full, AssetSyncPacket.SETTINGS_GROUP_UPDATED);
+        int firstModule = firstFullSyncDeltaIndex(full, AssetSyncPacket.MODULE_ADDED);
+        assertTrue(firstGroup >= 0, "full sync must include settings groups for grouped modules");
+        assertTrue(firstModule >= 0, "full sync must include grouped modules");
+        assertTrue(firstGroup < firstModule, "settings groups must replay before modules that reference them");
+
+        AutomatedFacility client = createFacility();
+        applyFullSyncFromPacket(client, roundTrip(full));
+        assertEquals(
+            groupId,
+            client.modules()
+                .get(0)
+                .groupId());
+        assertTrue(
+            client.isMinerOreBlacklisted(
+                client.modules()
+                    .get(0),
+                "ore:iron"));
+    }
+
+    @Test
     void fullSyncRoundTripPreservesRecipeSnapshotPayload() {
         AutomatedFacility server = createFacility();
         ModuleInstance centrifuge = buildModule(server, FacilityModuleKind.CENTRIFUGE, StationTileCoord.of(1, 0));
@@ -251,6 +304,84 @@ final class StationPacketRoundTripTest {
         assertEquals(480, clientSnapshot.eut());
         assertEquals(1, clientSnapshot.inputs().length);
         assertEquals(1, clientSnapshot.outputs().length);
+    }
+
+    @Test
+    void fullSyncInternsRepeatedRecipeSnapshotsWithinRecipeConfigPayload() {
+        RecipeSnapshot snapshot = recipeSnapshot(832);
+        AutomatedFacility repeated = facilityWithRecipeConfig(snapshot, snapshot);
+        AutomatedFacility distinct = facilityWithRecipeConfig(snapshot, recipeSnapshot(833));
+
+        int repeatedBytes = encodedSize(AssetSyncPacket.fullSync(repeated));
+        int distinctBytes = encodedSize(AssetSyncPacket.fullSync(distinct));
+
+        assertTrue(
+            repeatedBytes < distinctBytes,
+            "repeated RecipeSnapshot payloads should be interned inside one RecipeConfig payload");
+
+        AutomatedFacility client = createFacility();
+        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(repeated)));
+
+        SavedRecipeList clientRecipes = ((IRecipeModule) client.modules()
+            .get(0)
+            .component()).getRecipeConfig()
+                .savedRecipes();
+        assertEquals(2, clientRecipes.size());
+        assertEquals(
+            snapshot.contentHash(),
+            clientRecipes.get(0)
+                .recipe()
+                .contentHash());
+        assertEquals(
+            snapshot.contentHash(),
+            clientRecipes.get(1)
+                .recipe()
+                .contentHash());
+    }
+
+    @Test
+    void fullSyncCompactsInventoryBoundsIntoBulkSnapshot() {
+        AutomatedFacility server = createFacility();
+        ItemStackWrapper iron = ItemStackWrapper.of(new ItemStack(Items.iron_ingot, 1, 0));
+        ItemStackWrapper gold = ItemStackWrapper.of(new ItemStack(Items.gold_ingot, 1, 0));
+        FluidKey water = FluidKey.of(new FluidStack(FluidRegistry.WATER, 1));
+        FluidKey lava = FluidKey.of(new FluidStack(FluidRegistry.LAVA, 1));
+        server.setBound(iron, 12L, true);
+        server.setBound(iron, 64L, false);
+        server.setBound(gold, 8L, true);
+        server.setBound(gold, 40L, false);
+        server.setBound(water, 1_000L, true);
+        server.setBound(water, 16_000L, false);
+        server.setBound(lava, 500L, true);
+        server.setBound(lava, 4_000L, false);
+
+        AssetSyncPacket full = AssetSyncPacket.fullSync(server);
+
+        long perBoundDeltas = full.fullSyncDeltas()
+            .stream()
+            .filter(delta -> delta.syncType() == AssetSyncPacket.INVENTORY_BOUND_UPDATE)
+            .count();
+        assertEquals(0, perBoundDeltas, "full sync should carry inventory bounds as one compact snapshot");
+
+        AutomatedFacility client = createFacility();
+        applyFullSyncFromPacket(client, roundTrip(full));
+
+        assertEquals(
+            new InventoryBounds(12L, 64L),
+            client.getBounds(true)
+                .get(iron));
+        assertEquals(
+            new InventoryBounds(8L, 40L),
+            client.getBounds(true)
+                .get(gold));
+        assertEquals(
+            new InventoryBounds(1_000L, 16_000L),
+            client.getBounds(false)
+                .get(water));
+        assertEquals(
+            new InventoryBounds(500L, 4_000L),
+            client.getBounds(false)
+                .get(lava));
     }
 
     @Test
@@ -358,14 +489,56 @@ final class StationPacketRoundTripTest {
         return decoded;
     }
 
+    private static int encodedSize(AssetSyncPacket pkt) {
+        var buf = Unpooled.buffer();
+        pkt.toBytes(buf);
+        return buf.writerIndex();
+    }
+
+    private static int firstFullSyncDeltaIndex(AssetSyncPacket pkt, byte syncType) {
+        List<AssetSyncPacket> deltas = pkt.fullSyncDeltas();
+        for (int i = 0; i < deltas.size(); i++) {
+            if (deltas.get(i)
+                .syncType() == syncType) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     private static AutomatedFacility createFacility() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
         return facility;
+    }
+
+    private static AutomatedFacility facilityWithRecipeConfig(RecipeSnapshot... snapshots) {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance module = buildModule(facility, FacilityModuleKind.CENTRIFUGE, StationTileCoord.of(1, 0));
+        SavedRecipeList slots = new SavedRecipeList();
+        for (RecipeSnapshot snapshot : snapshots) {
+            slots.add(new SavedRecipe(snapshot, true, 0L, (byte) 1, (byte) 1));
+        }
+        ((IRecipeModule) module.component()).setRecipeConfig(
+            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
+        return facility;
+    }
+
+    private static RecipeSnapshot recipeSnapshot(int recipeIndex) {
+        Item item = Items.diamond;
+        return RecipeSnapshot.resolved(
+            (byte) 1,
+            recipeIndex,
+            new ItemStack[] { new ItemStack(item, 2, 0) },
+            new ItemStack[] { new ItemStack(item, 3, 0) },
+            null,
+            null,
+            200,
+            480);
     }
 
     private static AutomatedFacility buildFacilityWithModules(int count) {

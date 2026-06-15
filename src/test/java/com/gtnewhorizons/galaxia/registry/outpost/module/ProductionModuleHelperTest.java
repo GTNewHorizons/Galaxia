@@ -28,6 +28,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
+import com.gtnewhorizons.galaxia.testing.TestFluidStacks;
 
 final class ProductionModuleHelperTest {
 
@@ -135,7 +136,7 @@ final class ProductionModuleHelperTest {
     void executeConsumesAndProducesFluidSnapshotAmounts() throws Exception {
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         FluidKey inputKey = new FluidKey(TEST_FLUID_1, null);
@@ -168,7 +169,7 @@ final class ProductionModuleHelperTest {
     void executeDoesNotProduceWhenDuplicateItemInputsWouldOverdrawStock() {
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         Item inputItem = Items.diamond;
@@ -195,7 +196,7 @@ final class ProductionModuleHelperTest {
     void executeKeepsInputLowerBoundAfterConsumingRecipeCost() {
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         Item inputItem = Items.diamond;
@@ -216,6 +217,35 @@ final class ProductionModuleHelperTest {
         ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
 
         assertEquals(64, station.getItemAmount(inputResource));
+        assertEquals(0, station.getItemAmount(outputResource));
+    }
+
+    @Test
+    void executeKeepsInputAboveManualLowerBoundPlusUpkeepReserve() {
+        AutomatedFacility station = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.OVERWORLD,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        Item inputItem = Items.diamond;
+        Item outputItem = Items.iron_ingot;
+        ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
+        ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
+        station.updateItems(inputResource, 11);
+        station.setBound(inputResource, 1, true);
+        station.setUpkeepReserve(inputResource, 10L);
+
+        ItemStack[] inputs = { new ItemStack(inputItem, 1, 0) };
+        ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
+        RecipeSnapshot snapshot = RecipeSnapshot.resolved((byte) 1, 0, inputs, outputs, null, null, 20, 30);
+        SavedRecipeList slots = new SavedRecipeList();
+        slots.add(new SavedRecipe(snapshot, true, 0L, (byte) 1, (byte) 1));
+        StubRecipeModule module = new StubRecipeModule(
+            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
+
+        ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
+
+        assertEquals(11, station.getItemAmount(inputResource));
         assertEquals(0, station.getItemAmount(outputResource));
     }
 
@@ -362,7 +392,7 @@ final class ProductionModuleHelperTest {
     private static AutomatedFacility station() {
         return new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
     }
@@ -448,5 +478,13 @@ final class ProductionModuleHelperTest {
         public int nextInt(int bound) {
             return value;
         }
+    }
+
+    private static FluidStack fluidStack(String fluidName, int amount) throws Exception {
+        return TestFluidStacks.stack(fluidName, amount);
+    }
+
+    private static String fluidName(FluidStack stack) {
+        return TestFluidStacks.name(stack);
     }
 }

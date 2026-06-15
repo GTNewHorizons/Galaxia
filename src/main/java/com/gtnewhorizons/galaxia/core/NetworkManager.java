@@ -4,6 +4,7 @@ import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
 
 import com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetCreateRequestPacket;
+import com.gtnewhorizons.galaxia.core.network.AssetFilterUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
@@ -53,6 +54,8 @@ public final class NetworkManager {
         GALAXIA_NETWORK.registerMessage(AssetInventoryUpdatePacket.Handler.class, AssetInventoryUpdatePacket.class, id++,
             Side.SERVER);
         GALAXIA_NETWORK.registerMessage(LogisticsConfigUpdatePacket.Handler.class, LogisticsConfigUpdatePacket.class, id++,
+            Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(AssetFilterUpdatePacket.Handler.class, AssetFilterUpdatePacket.class, id++,
             Side.SERVER);
         GALAXIA_NETWORK.registerMessage(RocketDestinationSyncPacket.Handler.class, RocketDestinationSyncPacket.class, id++,
             Side.SERVER);

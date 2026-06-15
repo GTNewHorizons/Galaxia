@@ -34,8 +34,15 @@ public final class PlanetaryFeatureOverlayRenderer {
 
     public static void draw(int tileX, int tileY, Iterable<PlanetaryFeatureKey> features) {
         if (features == null) return;
+        for (PlanetaryFeatureDefinition definition : sortedDefinitions(features)) {
+            drawFeatureOverlay(tileX, tileY, definition.texture());
+        }
+    }
+
+    private static List<PlanetaryFeatureDefinition> sortedDefinitions(Iterable<PlanetaryFeatureKey> features) {
         List<PlanetaryFeatureDefinition> definitions = new ArrayList<>();
         for (PlanetaryFeatureKey key : features) {
+            if (key == null) continue;
             PlanetaryFeatureDefinition definition = PlanetaryFeatureRegistry.get(key);
             if (definition != null) definitions.add(definition);
         }
@@ -43,9 +50,7 @@ public final class PlanetaryFeatureOverlayRenderer {
             Comparator.comparingInt(
                 definition -> definition.layer()
                     .drawOrder()));
-        for (PlanetaryFeatureDefinition definition : definitions) {
-            drawFeatureOverlay(tileX, tileY, definition.texture());
-        }
+        return definitions;
     }
 
     public static void drawIcon(ResourceLocation texture, int x, int y, int size) {

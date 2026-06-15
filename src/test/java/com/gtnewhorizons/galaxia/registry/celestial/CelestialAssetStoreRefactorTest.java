@@ -12,10 +12,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 /**
@@ -178,6 +186,28 @@ final class CelestialAssetStoreRefactorTest {
 
         // Double destroy returns false
         assertFalse(store.destroyAssetInternal(asset.assetId));
+    }
+
+    @Test
+    void destroyAssetRemovesLogisticsSignals() {
+        LogisticStore.clearSignals();
+        CelestialAssetStore store = newStore();
+        AutomatedFacility asset = (AutomatedFacility) createAsset(BODY_1);
+        ItemStackWrapper resource = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
+        store.registerAssetInternal(TEAM_A, asset);
+        asset.updateItems(resource, 10);
+        asset.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 1, false, true));
+        LogisticStore.updateSignalsForFacility(asset);
+        assertFalse(
+            LogisticStore.allSignalsForScope(LogisticSignal.Scope.SYSTEM)
+                .isEmpty());
+
+        assertTrue(store.destroyAssetInternal(asset.assetId));
+
+        assertTrue(
+            LogisticStore.allSignalsForScope(LogisticSignal.Scope.SYSTEM)
+                .isEmpty());
+        LogisticStore.clearSignals();
     }
 
     @Test

@@ -24,8 +24,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
-import com.gtnewhorizons.galaxia.registry.celestial.station.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
@@ -220,8 +220,7 @@ public class CelestialEventHandler {
             if (result.code() != HammerDispatchStatus.Code.READY || plan == null) continue;
 
             if (supplier instanceof AutomatedFacility af) {
-                if (af.updateContents(plan.resource(), -(int) Math.min(plan.sendAmount(), Integer.MAX_VALUE), true)
-                    <= 0L) continue;
+                if (af.updateContents(plan.resource(), -plan.sendAmount(), true) <= 0L) continue;
                 if (!hammer.trySpendShotEnergy(module, af, plan.requiredEnergy())) {
                     throw new IllegalStateException("HAMMER shot energy became inconsistent");
                 }

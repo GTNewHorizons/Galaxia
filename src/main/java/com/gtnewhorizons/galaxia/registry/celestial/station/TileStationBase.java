@@ -1,7 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.celestial.station;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Deque;
 import java.util.List;
 import java.util.Set;
 
@@ -16,6 +17,7 @@ import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
+import com.gtnewhorizons.galaxia.compat.gt.MTEStationPlug;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
@@ -23,25 +25,22 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
 
+import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import lombok.Getter;
 
 public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> extends GalaxiaBootableMultiblock<T>
     implements IGuiHolder<PosGuiData>, IGraphListener {
 
-    public static final List<Block> BASE_VALID_BLOCKS = List.of(
-        GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
-        GalaxiaBlocksEnum.SPACE_STATION_PANEL.get(),
-        GalaxiaBlocksEnum.SPACE_STATION_GLASS.get());
-
     protected @Nullable StationGraph graph;
     protected List<BlockPos> airlocks = new ArrayList<>();
+    @Getter
+    protected List<BlockPos> stationPlugs = new ArrayList<>();
     protected BlockPos here;
 
     @Getter
-    private boolean oxygenated = false;
-    protected int oxygenLevel = DEFAULT_OXYGEN_LEVEL;
-
-    public static final int DEFAULT_OXYGEN_LEVEL = 100;
+    private boolean sealed = false;
+    private boolean sealedDirty = true;
 
     public TileStationBase() {
         super();
@@ -58,6 +57,18 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
     }
 
     @Override
+    protected boolean attemptBoot() {
+        for (BlockPos plug : stationPlugs) {
+            if (!(plug.getTE(worldObj) instanceof IGregTechTileEntity gtTe
+                && gtTe.getMetaTileEntity() instanceof MTEStationPlug mtePlug)) continue;
+
+            mtePlug.setGraph(graph);
+        }
+
+        return graph != null;
+    }
+
+    @Override
     public void onStructureFormed() {
         super.onStructureFormed();
         this.here = new BlockPos(xCoord, yCoord, zCoord);
@@ -67,11 +78,13 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
 
             if (!teLock.trackStationController(this.here)) {
                 Galaxia.LOG.warn(
-                    "Airlock at %s cannot track more than %d controllers",
+                    "Airlock at {} cannot track more than {} controllers",
                     airlock,
                     TileEntityAirlock.MAX_CONNECTIONS);
             }
         }
+
+        markSealedDirty();
     }
 
     @Override
@@ -83,7 +96,13 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
             teLock.untrackStationController(this.here);
         }
         airlocks.clear();
-        oxygenated = false;
+        stationPlugs.clear();
+        sealed = false;
+        markSealedDirty();
+    }
+
+    public void markSealedDirty() {
+        sealedDirty = true;
     }
 
     public void registerAirlock(int x, int y, int z) {
@@ -91,6 +110,20 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
         if (!this.airlocks.contains(airlock)) {
             this.airlocks.add(airlock);
         }
+    }
+
+    public boolean addStationPlug(IGregTechTileEntity gte, short tier) {
+        BlockPos plug = new BlockPos(gte.getXCoord(), gte.getYCoord(), gte.getZCoord());
+        if (stationPlugs.size() >= 2) return this.stationPlugs.contains(plug);
+        if (!this.stationPlugs.contains(plug)) {
+            this.stationPlugs.add(plug);
+        }
+        if (plug.getTE(worldObj) instanceof IGregTechTileEntity te
+            && te.getMetaTileEntity() instanceof MTEStationPlug mtePlug) {
+            mtePlug.setGraph(graph);
+        }
+        markDirty();
+        return true;
     }
 
     public boolean isValidDimension(World world) {
@@ -102,7 +135,8 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
     public void writeToNBT(NBTTagCompound nbt) {
         super.writeToNBT(nbt);
         nbt.setTag("airlocks", BlockPos.listToNBT(airlocks));
-        nbt.setBoolean("oxygenated", oxygenated);
+        nbt.setTag("plugs", BlockPos.listToNBT(stationPlugs));
+        nbt.setBoolean("sealed", sealed);
     }
 
     @Override
@@ -112,8 +146,11 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
         if (nbt.hasKey("airlocks")) {
             this.airlocks = BlockPos.listFromNBT(nbt.getTagList("airlocks", Constants.NBT.TAG_COMPOUND));
         }
-        if (nbt.hasKey("oxygenated")) {
-            this.oxygenated = nbt.getBoolean("oxygenated");
+        if (nbt.hasKey("plugs")) {
+            this.stationPlugs = BlockPos.listFromNBT(nbt.getTagList("plugs", Constants.NBT.TAG_COMPOUND));
+        }
+        if (nbt.hasKey("sealed")) {
+            this.sealed = nbt.getBoolean("sealed");
         }
     }
 
@@ -150,49 +187,50 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
     }
 
     public void tick() {
-        oxygenated = checkOxygenLevels(new HashSet<>());
+        if (!structureValid) return;
+        if (sealedDirty) {
+            recomputeNetworkSeal();
+        }
     }
 
-    private boolean checkOxygenLevels(Set<BlockPos> visited) {
-        if (!structureValid) return false;
+    private void recomputeNetworkSeal() {
+        Set<TileStationBase<?>> component = new ObjectOpenHashSet<>();
+        Deque<TileStationBase<?>> queue = new ArrayDeque<>();
+        component.add(this);
+        queue.add(this);
 
-        // Prevent cycles
-        if (!visited.add(here)) {
-            return oxygenLevel > 0;
-        }
+        boolean breached = false;
 
-        boolean hasOpenAirlock = false;
-        boolean foundOxygenPath = false;
+        while (!queue.isEmpty()) {
+            TileStationBase<?> room = queue.poll();
 
-        for (BlockPos airlockPos : airlocks) {
-            TileEntityAirlock airlock = airlockPos.getTE(worldObj);
-            if (airlock == null) continue;
-            if (!airlock.isOpen()) continue;
+            for (BlockPos airlockPos : room.airlocks) {
+                TileEntityAirlock airlock = airlockPos.getTE(worldObj);
+                if (airlock == null || !airlock.isOpen()) continue;
 
-            // Open to outside = immediate failure
-            if (airlock.isExternalConnection()) return false;
+                if (airlock.isExternalConnection()) {
+                    breached = true;
+                    // Don't short-circuit — keep traversing so we find and
+                    // update every room in the component.
+                    continue;
+                }
 
-            hasOpenAirlock = true;
-
-            for (BlockPos otherPos : airlock.getStationControllers()) {
-                if (otherPos.equals(here)) continue;
-
-                TileStationBase<?> other = otherPos.getTE(worldObj);
-                if (other == null) continue;
-
-                if (other.checkOxygenLevels(visited)) {
-                    foundOxygenPath = true;
+                for (BlockPos neighborPos : airlock.getStationControllers()) {
+                    if (neighborPos.equals(room.here)) continue;
+                    TileStationBase<?> neighbor = neighborPos.getTE(worldObj);
+                    if (neighbor == null || !neighbor.structureValid) continue;
+                    if (component.add(neighbor)) {
+                        queue.add(neighbor);
+                    }
                 }
             }
         }
 
-        // Case 1: no open doors → sealed
-        if (!hasOpenAirlock) {
-            return oxygenLevel > 0;
+        boolean newSealed = !breached;
+        for (TileStationBase<?> room : component) {
+            room.sealed = newSealed;
+            room.sealedDirty = false;
         }
-
-        // Case 2: doors open → rely on network
-        return foundOxygenPath;
     }
 
 }

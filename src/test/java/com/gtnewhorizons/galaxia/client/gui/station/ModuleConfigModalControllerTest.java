@@ -16,6 +16,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -125,6 +126,17 @@ final class ModuleConfigModalControllerTest {
         assertFalse(controller.isOpen());
     }
 
+    @Test
+    void coreLogisticsOpensInImportOnlyMode() {
+        TestFacility test = facilityWith(FacilityModuleKind.HAMMER, ModuleTier.EV);
+        ModuleConfigModalController controller = controllerFor(test.facility());
+
+        controller.openCoreLogistics();
+
+        assertTrue(controller.isLogisticsOpen());
+        assertEquals(LogisticsConfigAccessMode.IMPORT_ONLY, controller.logisticsAccessMode());
+    }
+
     private static ModuleConfigModalController controllerFor(AutomatedFacility facility) {
         CelestialAssetStore.CLIENT.registerAssetInternal(TEAM_ID, facility);
         return new ModuleConfigModalController(
@@ -137,7 +149,7 @@ final class ModuleConfigModalControllerTest {
     private static TestFacility facilityWith(FacilityModuleKind kind, ModuleTier tier) {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         ModuleInstance module = kind.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, tier);

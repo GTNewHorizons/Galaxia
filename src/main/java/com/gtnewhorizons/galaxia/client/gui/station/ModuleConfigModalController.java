@@ -5,6 +5,7 @@ import java.util.Objects;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -27,7 +28,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
     private final CelestialAsset.ID assetId;
     private final int x;
     private final int y;
-    private final StationTilePickerController tilePickerController;
+    private final StationEditModeController editModeController;
     private final StationOverlayCoordinator overlayCoordinator;
 
     private ParentWidget<?> modal;
@@ -40,6 +41,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
     private boolean hammerUpgradeVoidRefund;
     private boolean retargetQueued;
     private ModuleInstance.ID queuedRetargetModuleId;
+    private LogisticsConfigAccessMode logisticsAccessMode = LogisticsConfigAccessMode.FULL;
     private ModuleUpgradeSelection moduleUpgradeSelection = ModuleUpgradeSelection
         .hammer(HammerVariant.BASE, ModuleTier.EV);
 
@@ -48,17 +50,12 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
     }
 
     ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y,
-        StationTilePickerController tilePickerController) {
-        this(host, assetId, x, y, tilePickerController, new StationOverlayCoordinator());
-    }
-
-    ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y,
-        StationTilePickerController tilePickerController, StationOverlayCoordinator overlayCoordinator) {
+        StationEditModeController editModeController, StationOverlayCoordinator overlayCoordinator) {
         this.host = host;
         this.assetId = assetId;
         this.x = x;
         this.y = y;
-        this.tilePickerController = tilePickerController;
+        this.editModeController = editModeController;
         this.overlayCoordinator = overlayCoordinator;
         overlayCoordinator.register(this);
     }
@@ -97,7 +94,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         this.hammerUpgradeVoidRefund = false;
         this.moduleOperationCancelArmed = false;
 
-        ModuleUpgradeModalWidget widget = new ModuleUpgradeModalWidget(assetId, this, tilePickerController);
+        ModuleUpgradeModalWidget widget = new ModuleUpgradeModalWidget(assetId, this, editModeController);
         widget.left(x)
             .top(y)
             .width(ModuleUpgradeModalWidget.WIDTH)
@@ -114,6 +111,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         close();
         this.kind = Kind.LOGISTICS;
         this.moduleId = targetModuleId;
+        this.logisticsAccessMode = LogisticsConfigAccessMode.FULL;
 
         LogisticsConfigModalWidget widget = new LogisticsConfigModalWidget(assetId, this);
         widget.left(x)
@@ -125,11 +123,20 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
     }
 
     void openStationLogistics() {
+        openStationLogistics(LogisticsConfigAccessMode.FULL);
+    }
+
+    void openCoreLogistics() {
+        openStationLogistics(LogisticsConfigAccessMode.IMPORT_ONLY);
+    }
+
+    private void openStationLogistics(LogisticsConfigAccessMode accessMode) {
         if (closeIfSame(Kind.LOGISTICS, null)) return;
         overlayCoordinator.closeOthers(this);
         close();
         this.kind = Kind.LOGISTICS;
         this.moduleId = null;
+        this.logisticsAccessMode = accessMode == null ? LogisticsConfigAccessMode.FULL : accessMode;
 
         LogisticsConfigModalWidget widget = new LogisticsConfigModalWidget(assetId, this);
         widget.left(x)
@@ -152,10 +159,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         this.settingsGroupMenuOpen = false;
         this.moduleOperationCancelArmed = false;
 
-        MinerBlacklistConfigModalWidget widget = new MinerBlacklistConfigModalWidget(
-            assetId,
-            this,
-            tilePickerController);
+        MinerBlacklistConfigModalWidget widget = new MinerBlacklistConfigModalWidget(assetId, this, editModeController);
         widget.left(x)
             .top(y)
             .width(MinerBlacklistConfigModalWidget.WIDTH)
@@ -173,7 +177,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         this.kind = Kind.RECIPE_CONFIG;
         this.moduleId = module.id;
 
-        RecipeConfigModalWidget widget = new RecipeConfigModalWidget(assetId, this, tilePickerController);
+        RecipeConfigModalWidget widget = new RecipeConfigModalWidget(assetId, this, editModeController);
         widget.left(x)
             .top(y)
             .width(RecipeConfigModalWidget.WIDTH)
@@ -204,6 +208,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         this.hammerUpgradeVoidRefund = false;
         this.moduleUpgradeSelection = ModuleUpgradeSelection.hammer(HammerVariant.BASE, ModuleTier.EV);
         this.moduleOperationCancelArmed = false;
+        this.logisticsAccessMode = LogisticsConfigAccessMode.FULL;
     }
 
     @Override
@@ -287,6 +292,10 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         return moduleId;
     }
 
+    LogisticsConfigAccessMode logisticsAccessMode() {
+        return logisticsAccessMode;
+    }
+
     int minerBlacklistPage() {
         return minerBlacklistPage;
     }
@@ -360,6 +369,10 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
     }
 
     private void retargetLogistics(ModuleInstance module) {
+        if (logisticsAccessMode == LogisticsConfigAccessMode.IMPORT_ONLY) {
+            close();
+            return;
+        }
         moduleId = module.id;
         moduleOperationCancelArmed = false;
     }

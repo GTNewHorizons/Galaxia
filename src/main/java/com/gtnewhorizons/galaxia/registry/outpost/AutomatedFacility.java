@@ -27,6 +27,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureGenera
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
+import com.gtnewhorizons.galaxia.registry.outpost.module.BlockingReason;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
@@ -47,19 +48,26 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSetting
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroupRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepLedger;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 
 public final class AutomatedFacility extends CelestialAsset {
 
     private static final Logger LOG = LogManager.getLogger(AutomatedFacility.class);
 
-    private final Map<ItemStackWrapper, Long> amounts = new LinkedHashMap<>();
-    private final Map<FluidKey, Long> fluidAmounts = new LinkedHashMap<>();
-    private long totalItemAmount;
+    private final FacilityInventoryState inventoryState = new FacilityInventoryState();
+    private final FacilityFilterState filterState = new FacilityFilterState();
 
     private final List<ModuleInstance> modules;
     private final StationLayout layout;
     private final LayoutCacheBundle layoutCache;
-    private final SettingsGroupRegistry settingsGroups;
+    private final FacilitySettingsGroupState settingsGroupState;
+
+    private final UpkeepLedger upkeepLedger;
+    private final FacilityUpkeepState upkeepState = new FacilityUpkeepState();
+
     private long stationFeatureSalt;
     private final Map<ModuleInstance.ID, ModuleFeatureModifiers> featureModifiersByModule = new LinkedHashMap<>();
     private long featureModifiersLayoutVersion = Long.MIN_VALUE;
@@ -68,16 +76,13 @@ public final class AutomatedFacility extends CelestialAsset {
     private long energyStored;
     private final Set<ModuleInstance.ID> dirtyModuleIds = new HashSet<>();
     private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
-    private final Map<InventoryKey, Long> dirtyInventoryDeltas = new LinkedHashMap<>();
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
     private final Set<String> dirtyMinerVoidChanceOreKeys = new HashSet<>();
     private long ticks;
 
-    private final ResourceFilter<ItemStackWrapper> itemFilter = ResourceFilter.forItems();
-    private final ResourceFilter<FluidKey> fluidFilter = ResourceFilter.forFluids();
-
     public static final long MAX_ENERGY = 8_000_000L;
     public static final long BASE_ITEM_CAPACITY = 1000L;
+    public static final int UPKEEP_INTERVAL_TICKS = 20 * 60;
 
     public AutomatedFacility(CelestialAsset.ID assetId, CelestialObjectId celestialBodyId, Kind kind, Status status) {
         super(assetId, celestialBodyId, kind, status, null);
@@ -88,7 +93,8 @@ public final class AutomatedFacility extends CelestialAsset {
         this.modules = new ArrayList<>();
         this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
         this.layoutCache = new LayoutCacheBundle(layout);
-        this.settingsGroups = new SettingsGroupRegistry();
+        this.settingsGroupState = new FacilitySettingsGroupState();
+        this.upkeepLedger = new UpkeepLedger();
         this.stationFeatureSalt = createStationFeatureSalt(assetId, celestialBodyId);
         this.energyStored = 0;
         this.ticks = 0;
@@ -121,7 +127,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public SettingsGroupRegistry settingsGroups() {
-        return settingsGroups;
+        return settingsGroupState.registry();
     }
 
     public long stationFeatureSalt() {
@@ -148,6 +154,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public List<PlanetaryFeatureKey> planetaryFeaturesAt(int dx, int dy) {
+        if (kind != Kind.AUTOMATED_OUTPOST) return Collections.emptyList();
         return GalaxiaCelestialAPI.get(planetaryAnchorBodyId)
             .map(body -> PlanetaryFeatureGenerator.featuresAt(stationFeatureSalt, dx, dy, body))
             .orElse(Collections.emptyList());
@@ -162,28 +169,97 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void applySettingsGroupsToModules() {
-        for (SettingsGroup group : settingsGroups.groups()
-            .values()) {
-            applyRecipeSettingsToGroup(group);
-        }
+        settingsGroupState.applyGroupsToModules(modules);
     }
 
     public void syncRecipeSettingsGroupsFromModules() {
-        for (SettingsGroup group : settingsGroups.groups()
-            .values()) {
-            if (!(group.settings() instanceof RecipeModuleSettings recipeSettings)) continue;
-            for (StationTileCoord coord : group.members()) {
-                ModuleInstance module = moduleAtAnchor(coord);
-                if (module != null && module.component() instanceof IRecipeModule recipeModule) {
-                    recipeSettings.setConfig(recipeModule.getRecipeConfig());
-                    break;
-                }
-            }
-        }
+        settingsGroupState.syncRecipeGroupsFromModules(modules);
     }
 
     public LayoutCacheBundle layoutCache() {
         return layoutCache;
+    }
+
+    public UpkeepLedger.UpkeepSummary upkeepSummary() {
+        return upkeepLedger.summary(this);
+    }
+
+    public void setUpkeepReserve(ItemStackWrapper item, long amount) {
+        if (item == null) {
+            throw new IllegalArgumentException("item must not be null");
+        }
+        if (amount < 0L) {
+            throw new IllegalArgumentException("upkeep reserve must be >= 0");
+        }
+        LogisticsResourceConfig current = logisticsConfig.get(item);
+        logisticsConfig.set(item, current.withMinReserve((int) Math.min(Integer.MAX_VALUE, amount)));
+    }
+
+    public long upkeepReserve(ItemStackWrapper item) {
+        if (item == null) return 0L;
+        if (logisticsConfig.hasExplicit(item)) {
+            return logisticsConfig.get(item)
+                .minReserve();
+        }
+        UpkeepAmount perMinute = upkeepSummary().itemsPerMinute()
+            .get(item);
+        if (perMinute == null || perMinute.isZero()) return 0L;
+        return UpkeepAmount.ofMicroUnits(Math.multiplyExact(perMinute.microUnitsPerMinute(), 10L))
+            .wholeUnitsToCoverDeficit();
+    }
+
+    public void setUpkeepAutoOrder(ItemStackWrapper item, boolean enabled) {
+        if (item == null) {
+            throw new IllegalArgumentException("item must not be null");
+        }
+        LogisticsResourceConfig current = logisticsConfig.get(item);
+        if (enabled) {
+            long reserve = upkeepReserve(item);
+            int minReserve = (int) Math.min(Integer.MAX_VALUE, reserve);
+            int orderSize = current == LogisticsResourceConfig.DEFAULT ? 64 : current.orderSize();
+            logisticsConfig.set(item, new LogisticsResourceConfig(minReserve, orderSize, true, false));
+        } else {
+            logisticsConfig.set(
+                item,
+                current.withImportEnabled(false)
+                    .withSupplyEnabled(false));
+        }
+    }
+
+    public boolean isUpkeepAutoOrderEnabled(ItemStackWrapper item) {
+        return item != null && logisticsConfig.get(item)
+            .isImportEnabled();
+    }
+
+    public long effectiveLowerBound(InventoryKey key) {
+        long manualLowerBound = getBound(key).lowOrDefault();
+        if (key instanceof ItemStackWrapper item) {
+            return Math.addExact(manualLowerBound, upkeepReserve(item));
+        }
+        return manualLowerBound;
+    }
+
+    @Override
+    public boolean isAboveLow(InventoryKey key, long amount) {
+        return (resourceAmount(key) - amount) >= effectiveLowerBound(key);
+    }
+
+    private long resourceAmount(InventoryKey key) {
+        if (key instanceof ItemStackWrapper item) return getItemAmount(item);
+        if (key instanceof FluidKey fluid) return getFluidAmount(fluid);
+        return 0L;
+    }
+
+    public UpkeepSettlement.Credits upkeepCredits() {
+        return upkeepState.credits();
+    }
+
+    public void loadUpkeepCredits(UpkeepSettlement.Credits upkeepCredits) {
+        upkeepState.loadCredits(upkeepCredits);
+    }
+
+    public UpkeepSettlement.Result settleUpkeep() {
+        return upkeepState.settle(upkeepSummary(), modules, this, this::markModuleDirty);
     }
 
     public List<ModuleInstance> modules() {
@@ -200,10 +276,7 @@ public final class AutomatedFacility extends CelestialAsset {
             return;
         }
         modules.add(module);
-        if (FacilityModuleRegistry.get(module.kind())
-            .settingsGroups() && module.groupId() == 0) {
-            attachToSettingsGroup(module, settingsGroups.create(module.kind(), privateSettingsFor(module)));
-        }
+        settingsGroupState.attachPrivateGroupIfSupported(module, this::markModuleDirty);
         dirtyModuleIds.add(module.id);
         bumpSyncRevision();
         LOG.debug(
@@ -224,7 +297,7 @@ public final class AutomatedFacility extends CelestialAsset {
     public void removeModule(int index) {
         ModuleInstance removed = modules.remove(index);
         if (removed != null) {
-            detachFromSettingsGroup(removed);
+            settingsGroupState.detach(removed);
             dirtyRemovedIds.add(removed.id);
             dirtyModuleIds.remove(removed.id);
             bumpSyncRevision();
@@ -277,7 +350,8 @@ public final class AutomatedFacility extends CelestialAsset {
         if (module.groupId() == 0) {
             throw new IllegalStateException("Miner module " + module.id + " has no settings group");
         }
-        SettingsGroup group = settingsGroups.require(module.groupId(), FacilityModuleKind.MINER);
+        SettingsGroup group = settingsGroupState.registry()
+            .require(module.groupId(), FacilityModuleKind.MINER);
         if (!(group.settings() instanceof MinerSettings settings)) {
             throw new IllegalStateException(
                 "Miner settings group " + module.groupId() + " has non-miner settings for module " + module.id);
@@ -291,7 +365,11 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public void setMinerOreBlacklisted(ModuleInstance module, String oreKey, boolean blacklisted) {
         if (minerSettings(module).setOreBlacklisted(oreKey, blacklisted)) {
-            markSettingsGroupMembersDirty(settingsGroups.require(module.groupId(), FacilityModuleKind.MINER));
+            settingsGroupState.markMembersDirty(
+                settingsGroupState.registry()
+                    .require(module.groupId(), FacilityModuleKind.MINER),
+                modules,
+                this::markModuleDirty);
         }
     }
 
@@ -307,7 +385,8 @@ public final class AutomatedFacility extends CelestialAsset {
         if (module.groupId() == 0) {
             throw new IllegalStateException("Recipe module " + module.id + " has no settings group");
         }
-        SettingsGroup group = settingsGroups.require(module.groupId(), module.kind());
+        SettingsGroup group = settingsGroupState.registry()
+            .require(module.groupId(), module.kind());
         if (!(group.settings() instanceof RecipeModuleSettings settings)) {
             throw new IllegalStateException(
                 "Recipe settings group " + module.groupId() + " has non-recipe settings for module " + module.id);
@@ -328,31 +407,34 @@ public final class AutomatedFacility extends CelestialAsset {
             return;
         }
         if (module.groupId() == 0) {
-            attachToSettingsGroup(module, settingsGroups.create(module.kind(), new RecipeModuleSettings(normalized)));
+            settingsGroupState.attach(
+                module,
+                settingsGroupState.registry()
+                    .create(module.kind(), new RecipeModuleSettings(normalized)),
+                this::markModuleDirty);
         }
-        SettingsGroup group = settingsGroups.require(module.groupId(), module.kind());
+        SettingsGroup group = settingsGroupState.registry()
+            .require(module.groupId(), module.kind());
         if (!(group.settings() instanceof RecipeModuleSettings settings)) {
             throw new IllegalStateException(
                 "Recipe settings group " + module.groupId() + " has non-recipe settings for module " + module.id);
         }
         settings.setConfig(normalized);
-        applyRecipeSettingsToGroup(group);
-        markSettingsGroupMembersDirty(group);
+        settingsGroupState.applySettingsToGroup(group, modules);
+        settingsGroupState.markMembersDirty(group, modules, this::markModuleDirty);
+    }
+
+    public boolean canCopyModuleRuntimeSettings(ModuleInstance source, ModuleInstance target) {
+        try {
+            validateModuleRuntimeSettingsCopy(source, target);
+            return true;
+        } catch (RuntimeException ignored) {
+            return false;
+        }
     }
 
     public void copyModuleRuntimeSettings(ModuleInstance source, ModuleInstance target) {
-        requireSettingsGroupsSupported(source);
-        requireSettingsGroupsSupported(target);
-        if (source.kind() != target.kind()) {
-            throw new IllegalStateException(
-                "Module settings copy target kind mismatch: " + source.kind() + " -> " + target.kind());
-        }
-        if (source.id.equals(target.id)) {
-            throw new IllegalStateException("Module settings copy target must be different from source: " + source.id);
-        }
-        SettingsGroup sourceGroup = settingsGroups.require(source.groupId(), source.kind());
-        source.component()
-            .validateSettingsCopyTarget(source, target);
+        SettingsGroup sourceGroup = validateModuleRuntimeSettingsCopy(source, target);
         if (sourceGroup.isJoinable()) {
             assignSettingsGroup(target, sourceGroup.id());
         } else {
@@ -366,6 +448,23 @@ public final class AutomatedFacility extends CelestialAsset {
         markModuleDirty(target.id);
     }
 
+    private SettingsGroup validateModuleRuntimeSettingsCopy(ModuleInstance source, ModuleInstance target) {
+        FacilitySettingsGroupState.requireSupported(source);
+        FacilitySettingsGroupState.requireSupported(target);
+        if (source.kind() != target.kind()) {
+            throw new IllegalStateException(
+                "Module settings copy target kind mismatch: " + source.kind() + " -> " + target.kind());
+        }
+        if (source.id.equals(target.id)) {
+            throw new IllegalStateException("Module settings copy target must be different from source: " + source.id);
+        }
+        SettingsGroup sourceGroup = settingsGroupState.registry()
+            .require(source.groupId(), source.kind());
+        source.component()
+            .validateSettingsCopyTarget(source, target);
+        return sourceGroup;
+    }
+
     public boolean tryReserveOperationMaterials(ModuleInstance module, Map<ItemStackWrapper, Long> materialCost) {
         ModuleOperationState operation = requireWaitingOperation(module);
         Map<ItemStackWrapper, Long> requested = requireMaterialCost(materialCost);
@@ -374,8 +473,8 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         Map<String, Long> deposited = new java.util.LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
-            if (updateContents(material.getKey(), -(int) Math.min(material.getValue(), Integer.MAX_VALUE), true)
-                <= 0L) {
+            long reserved = updateContents(material.getKey(), -material.getValue(), true);
+            if (reserved != material.getValue()) {
                 throw new IllegalStateException(
                     "Operation material reservation became inconsistent for module " + module.id
                         + ", item="
@@ -385,12 +484,26 @@ public final class AutomatedFacility extends CelestialAsset {
             deposited.merge(
                 material.getKey()
                     .toKey(),
-                material.getValue(),
+                reserved,
                 Long::sum);
         }
         module.setOperation(operation.withDepositedResources(mergeAmounts(operation.depositedResources(), deposited)));
         markModuleDirty(module.id);
         return true;
+    }
+
+    public boolean tryConsumeInventory(ItemStackWrapper item, long amount) {
+        if (item == null) return false;
+        if (amount <= 0L) return true;
+        if (getItemAmount(item) < amount) return false;
+        return updateContents(item, -amount, true) == amount;
+    }
+
+    public boolean tryConsumeFluid(FluidKey key, long amount) {
+        if (key == null) return false;
+        if (amount <= 0L) return true;
+        if (getFluidAmount(key) < amount) return false;
+        return updateContents(key, -amount, true) == amount;
     }
 
     public boolean tryReserveAvailableOperationMaterials(ModuleInstance module,
@@ -409,11 +522,12 @@ public final class AutomatedFacility extends CelestialAsset {
             long available = getItemAmount(material.getKey());
             long reserved = Math.min(available, remaining);
             if (reserved <= 0L) continue;
-            if (updateContents(material.getKey(), -(int) Math.min(reserved, Integer.MAX_VALUE), true) <= 0L) {
+            long applied = updateContents(material.getKey(), -reserved, true);
+            if (applied <= 0L) {
                 throw new IllegalStateException(
                     "Operation partial reservation became inconsistent for module " + module.id + ", item=" + itemKey);
             }
-            deposited.merge(itemKey, reserved, Long::sum);
+            deposited.merge(itemKey, applied, Long::sum);
             changed = true;
         }
         if (changed) {
@@ -461,7 +575,7 @@ public final class AutomatedFacility extends CelestialAsset {
         for (Map.Entry<String, Long> entry : operation.refundBuffer()
             .entrySet()) {
             ItemStackWrapper item = requireItemKey(entry.getKey(), module);
-            long accepted = updateItems(item, (int) (long) entry.getValue());
+            long accepted = updateContents(item, entry.getValue(), true);
             if (accepted > 0L) changed = true;
             long leftover = entry.getValue() - accepted;
             if (leftover > 0L) remaining.put(entry.getKey(), leftover);
@@ -479,9 +593,10 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public SettingsGroup createSettingsGroupForModule(ModuleInstance module, String displayName) {
-        requireSettingsGroupsSupported(module);
+        FacilitySettingsGroupState.requireSupported(module);
         if (module.groupId() != 0) {
-            SettingsGroup current = settingsGroups.require(module.groupId(), module.kind());
+            SettingsGroup current = settingsGroupState.registry()
+                .require(module.groupId(), module.kind());
             if (current.members()
                 .size() == 1) {
                 if (displayName != null) {
@@ -494,10 +609,11 @@ public final class AutomatedFacility extends CelestialAsset {
                 return current;
             }
         }
-        ModuleSettings settings = copySettings(module);
-        detachFromSettingsGroup(module);
-        SettingsGroup group = settingsGroups.create(module.kind(), displayName, true, settings);
-        attachToSettingsGroup(module, group);
+        ModuleSettings settings = settingsGroupState.copySettings(module);
+        settingsGroupState.detach(module);
+        SettingsGroup group = settingsGroupState.registry()
+            .create(module.kind(), displayName, true, settings);
+        settingsGroupState.attach(module, group, this::markModuleDirty);
         return group;
     }
 
@@ -505,13 +621,14 @@ public final class AutomatedFacility extends CelestialAsset {
         if (module == null) {
             throw new IllegalArgumentException("renameSettingsGroupForModule: module must not be null");
         }
-        requireSettingsGroupsSupported(module);
-        SettingsGroup group = settingsGroups.require(groupId, module.kind());
+        FacilitySettingsGroupState.requireSupported(module);
+        SettingsGroup group = settingsGroupState.registry()
+            .require(groupId, module.kind());
         if (!group.isJoinable()) {
             throw new IllegalStateException("Settings group " + groupId + " is private and cannot be renamed");
         }
         group.setDisplayName(displayName);
-        markSettingsGroupMembersDirty(group);
+        settingsGroupState.markMembersDirty(group, modules, this::markModuleDirty);
         if (group.members()
             .isEmpty()) {
             bumpSyncRevision();
@@ -520,24 +637,33 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void assignSettingsGroup(ModuleInstance module, short groupId) {
-        requireSettingsGroupsSupported(module);
+        FacilitySettingsGroupState.requireSupported(module);
         if (module.groupId() == groupId) return;
         if (groupId == 0) {
             leaveSettingsGroup(module);
             return;
         }
-        SettingsGroup group = settingsGroups.require(groupId, module.kind());
+        SettingsGroup group = settingsGroupState.registry()
+            .require(groupId, module.kind());
         if (!group.isJoinable()) {
             throw new IllegalStateException("Settings group " + groupId + " is private and cannot be joined");
         }
-        detachFromSettingsGroup(module);
-        attachToSettingsGroup(module, group);
+        settingsGroupState.detach(module);
+        settingsGroupState.attach(module, group, this::markModuleDirty);
+    }
+
+    public boolean canJoinSettingsGroup(FacilityModuleKind kind, short groupId) {
+        if (kind == null || groupId <= 0) return false;
+        SettingsGroup group = settingsGroupState.registry()
+            .get(groupId);
+        return group != null && group.kind() == kind && group.isJoinable();
     }
 
     public void leaveSettingsGroup(ModuleInstance module) {
-        requireSettingsGroupsSupported(module);
+        FacilitySettingsGroupState.requireSupported(module);
         if (module.groupId() != 0) {
-            SettingsGroup current = settingsGroups.require(module.groupId(), module.kind());
+            SettingsGroup current = settingsGroupState.registry()
+                .require(module.groupId(), module.kind());
             if (current.members()
                 .size() == 1) {
                 current.setJoinable(false);
@@ -545,9 +671,13 @@ public final class AutomatedFacility extends CelestialAsset {
                 return;
             }
         }
-        ModuleSettings settings = copySettings(module);
-        detachFromSettingsGroup(module);
-        attachToSettingsGroup(module, settingsGroups.create(module.kind(), settings));
+        ModuleSettings settings = settingsGroupState.copySettings(module);
+        settingsGroupState.detach(module);
+        settingsGroupState.attach(
+            module,
+            settingsGroupState.registry()
+                .create(module.kind(), settings),
+            this::markModuleDirty);
         markModuleDirty(module.id);
     }
 
@@ -557,84 +687,22 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private void setPrivateModuleSettings(ModuleInstance module, ModuleSettings settings) {
         if (module.groupId() != 0) {
-            SettingsGroup current = settingsGroups.require(module.groupId(), module.kind());
+            SettingsGroup current = settingsGroupState.registry()
+                .require(module.groupId(), module.kind());
             if (!current.isJoinable() && current.members()
                 .size() == 1) {
                 current.setSettings(settings);
-                applySettingsToModule(settings, module);
+                FacilitySettingsGroupState.applySettingsToModule(settings, module);
                 markModuleDirty(module.id);
                 return;
             }
         }
-        detachFromSettingsGroup(module);
-        attachToSettingsGroup(module, settingsGroups.create(module.kind(), settings));
-    }
-
-    private ModuleSettings copySettings(ModuleInstance module) {
-        requireSettingsGroupsSupported(module);
-        if (module.groupId() != 0) {
-            SettingsGroup group = settingsGroups.require(module.groupId(), module.kind());
-            return module.component()
-                .copySettings(module, group.settings());
-        }
-        return module.component()
-            .createPrivateSettings(module);
-    }
-
-    private ModuleSettings privateSettingsFor(ModuleInstance module) {
-        requireSettingsGroupsSupported(module);
-        return module.component()
-            .createPrivateSettings(module);
-    }
-
-    private static void requireSettingsGroupsSupported(ModuleInstance module) {
-        if (module == null) {
-            throw new IllegalArgumentException("Settings group module must not be null");
-        }
-        if (!FacilityModuleRegistry.get(module.kind())
-            .settingsGroups()) {
-            throw new IllegalStateException("Settings groups are not supported for module kind " + module.kind());
-        }
-    }
-
-    private void attachToSettingsGroup(ModuleInstance module, SettingsGroup group) {
-        settingsGroups.require(group.id(), module.kind());
-        settingsGroups.addMember(group.id(), module.anchor());
-        module.setGroupId(group.id());
-        applySettingsToModule(group.settings(), module);
-        markModuleDirty(module.id);
-    }
-
-    private void detachFromSettingsGroup(ModuleInstance module) {
-        if (module.groupId() == 0) return;
-        short oldGroupId = module.groupId();
-        settingsGroups.removeMember(oldGroupId, module.anchor());
-        module.setGroupId((short) 0);
-    }
-
-    private void markSettingsGroupMembersDirty(SettingsGroup group) {
-        for (StationTileCoord coord : group.members()) {
-            for (ModuleInstance module : modules) {
-                if (coord.equals(module.anchorOrNull())) {
-                    markModuleDirty(module.id);
-                }
-            }
-        }
-    }
-
-    private void applyRecipeSettingsToGroup(SettingsGroup group) {
-        for (StationTileCoord coord : group.members()) {
-            for (ModuleInstance module : modules) {
-                if (coord.equals(module.anchorOrNull())) {
-                    applySettingsToModule(group.settings(), module);
-                }
-            }
-        }
-    }
-
-    private static void applySettingsToModule(ModuleSettings settings, ModuleInstance module) {
-        module.component()
-            .applySettings(module, settings);
+        settingsGroupState.detach(module);
+        settingsGroupState.attach(
+            module,
+            settingsGroupState.registry()
+                .create(module.kind(), settings),
+            this::markModuleDirty);
     }
 
     private ModuleOperationState requireWaitingOperation(ModuleInstance module) {
@@ -701,7 +769,7 @@ public final class AutomatedFacility extends CelestialAsset {
     public boolean isDirty() {
         return super.isDirty() || !dirtyModuleIds.isEmpty()
             || !dirtyRemovedIds.isEmpty()
-            || !dirtyInventoryDeltas.isEmpty();
+            || inventoryState.hasDirtyDeltas();
     }
 
     @Override
@@ -725,9 +793,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public Map<InventoryKey, Long> drainDirtyInventoryDeltas() {
-        Map<InventoryKey, Long> result = new LinkedHashMap<>(dirtyInventoryDeltas);
-        dirtyInventoryDeltas.clear();
-        return result;
+        return inventoryState.drainDirtyDeltas();
     }
 
     public List<ModuleInstance.ID> drainRemovedIds() {
@@ -737,12 +803,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     private void markInventoryDelta(InventoryKey item, long delta) {
-        if (item == null || delta == 0L) return;
-        dirtyInventoryDeltas.merge(item, delta, Long::sum);
-        if (dirtyInventoryDeltas.getOrDefault(item, 0L) == 0L) {
-            dirtyInventoryDeltas.remove(item);
-        }
-        bumpSyncRevision();
+        inventoryState.markDelta(item, delta, this::bumpSyncRevision);
     }
 
     public long getEnergyStored() {
@@ -792,9 +853,12 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public void tick() {
         ticks++;
+        if (ticks % UPKEEP_INTERVAL_TICKS == 0L) {
+            settleUpkeep();
+        }
         for (ModuleInstance module : modules) {
             boolean moduleTickBlocked = tickModuleOperation(module);
-            if (!moduleTickBlocked) {
+            if (!moduleTickBlocked && module.blocking() != BlockingReason.UPKEEP_SHORTAGE) {
                 module.tick(this);
             }
         }
@@ -881,7 +945,16 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public int upkeepReductionPercent(ModuleInstance module) {
-        return 100 - featureModifiers(module).upkeepMultiplierPercent();
+        return 100 - upkeepMultiplierPercent(module);
+    }
+
+    public int upkeepMultiplierPercent(ModuleInstance module) {
+        return featureModifiers(module).upkeepMultiplierPercent();
+    }
+
+    public UpkeepDemand effectiveUpkeepDemand(ModuleInstance module, UpkeepDemand baseDemand) {
+        if (baseDemand == null || baseDemand.isEmpty()) return UpkeepDemand.EMPTY;
+        return baseDemand.multiplyPercent(upkeepMultiplierPercent(module));
     }
 
     public long effectivePowerDrawEuPerTick(ModuleInstance module) {
@@ -926,6 +999,10 @@ public final class AutomatedFacility extends CelestialAsset {
             feature.applyModuleModifiers(
                 new FeatureModuleContext(module, entry.getKey(), entry.getValue(), tiles.length),
                 builder);
+        }
+        for (ModuleInstance source : modules) {
+            source.areaEffects()
+                .forEach(effect -> effect.apply(source, module, builder));
         }
         return builder.build(counts);
     }
@@ -995,38 +1072,13 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     @Override
-    public Map<ItemStackWrapper, Long> aggregatedItems() {
-        return Collections.unmodifiableMap(new LinkedHashMap<>(amounts));
+    public Map<ItemStackWrapper, Long> getItemAmounts() {
+        return inventoryState.itemAmounts();
     }
 
     @Override
-    public Map<FluidKey, Long> aggregatedFluids() {
-        return Collections.unmodifiableMap(new LinkedHashMap<>(fluidAmounts));
-    }
-
-    @Override
-    public long totalItemsStored() {
-        return totalItemAmount;
-    }
-
-    @Override
-    public long totalFluidStored() {
-        long total = 0L;
-        for (long v : fluidAmounts.values()) total += v;
-        return total;
-    }
-
-    @Override
-    public long getItemAmount(ItemStackWrapper item) {
-        Long v = amounts.get(item);
-        return v == null ? 0L : v;
-    }
-
-    @Override
-    public long getFluidAmount(FluidKey fluid) {
-        if (fluid == null) return 0L;
-        Long v = fluidAmounts.get(fluid);
-        return v == null ? 0L : v;
+    public Map<FluidKey, Long> getFluidAmounts() {
+        return inventoryState.fluidAmounts();
     }
 
     @Override
@@ -1041,56 +1093,19 @@ public final class AutomatedFacility extends CelestialAsset {
 
     @Override
     public ResourceFilter<ItemStackWrapper> getItemFilter() {
-        return itemFilter;
+        return filterState.itemFilter();
     }
 
     @Override
     public ResourceFilter<FluidKey> getFluidFilter() {
-        return fluidFilter;
+        return filterState.fluidFilter();
     }
 
-    public long updateContents(InventoryKey item, int delta, boolean sync) {
+    public long updateContents(InventoryKey item, long delta, boolean sync) {
         final long actual = item instanceof ItemStackWrapper ? updateItems((ItemStackWrapper) item, delta)
             : updateFluids((FluidKey) item, delta);
-        if (actual != 0L && sync) markInventoryDelta(item, delta);
+        if (actual != 0L && sync) markInventoryDelta(item, delta > 0 ? actual : -actual);
         return actual;
-    }
-
-    @Override
-    public long updateItems(ItemStackWrapper item, int delta) {
-        if (item == null || delta == 0) return 0L;
-        if (!getItemFilter().test(item)) return 0L;
-
-        long current = amounts.getOrDefault(item, 0L);
-        long actualDelta = Math.clamp(delta, -current, remainingItemInventoryCapacity());
-        long newValue = current + actualDelta;
-
-        if (newValue == 0L) {
-            amounts.remove(item);
-        } else {
-            amounts.put(item, newValue);
-        }
-
-        totalItemAmount += actualDelta;
-        return Math.abs(actualDelta);
-    }
-
-    @Override
-    public long updateFluids(FluidKey fluid, int delta) {
-        if (fluid == null || delta == 0) return 0L;
-        if (!getFluidFilter().test(fluid)) return 0L;
-
-        long current = fluidAmounts.getOrDefault(fluid, 0L);
-        long actualDelta = Math.clamp(delta, -current, remainingFluidInventoryCapacity());
-        long newValue = current + actualDelta;
-
-        if (newValue == 0L) {
-            fluidAmounts.remove(fluid);
-        } else {
-            fluidAmounts.put(fluid, newValue);
-        }
-
-        return Math.abs(actualDelta);
     }
 
     public long usedItemInventoryCapacity() {
@@ -1137,83 +1152,44 @@ public final class AutomatedFacility extends CelestialAsset {
     /// ----------------------------------------------------------------------------------
 
     public Map<ItemStackWrapper, Long> itemSnapshot() {
-        return Collections.unmodifiableMap(new LinkedHashMap<>(amounts));
+        return inventoryState.itemSnapshot();
     }
 
     public Map<String, Long> fluidSnapshot() {
-        Map<String, Long> result = new LinkedHashMap<>();
-        for (Map.Entry<FluidKey, Long> e : fluidAmounts.entrySet()) {
-            result.put(
-                e.getKey()
-                    .fluid()
-                    .getName(),
-                e.getValue());
-        }
-        return Collections.unmodifiableMap(result);
+        return inventoryState.fluidSnapshot();
     }
 
     public void loadFromSnapshot(Map<ItemStackWrapper, Long> snapshot) {
-        amounts.clear();
-        totalItemAmount = 0L;
-        for (Map.Entry<ItemStackWrapper, Long> e : snapshot.entrySet()) {
-            if (e.getValue() > 0) {
-                amounts.put(e.getKey(), e.getValue());
-                totalItemAmount += e.getValue();
-            }
-        }
+        inventoryState.loadFromSnapshot(snapshot);
     }
 
     public void loadFluidSnapshot(Map<String, Long> snapshot) {
-        fluidAmounts.clear();
-        for (Map.Entry<String, Long> e : snapshot.entrySet()) {
-            if (e.getKey() == null || e.getKey()
-                .isEmpty() || e.getValue() <= 0) continue;
-            FluidKey key = FluidKey.fromName(e.getKey());
-            if (key != null) fluidAmounts.put(key, e.getValue());
-        }
+        inventoryState.loadFluidSnapshot(snapshot);
     }
 
     @Override
     public void clear() {
         super.clear();
-        amounts.clear();
-        fluidAmounts.clear();
-        totalItemAmount = 0L;
+        inventoryState.clearAmounts();
     }
 
     public void addFilter(String key, boolean item) {
-        if (key == null) return;
-        if (item) itemFilter.add(key);
-        else fluidFilter.add(key);
-        markDirty();
+        filterState.add(key, item, this::markDirty);
     }
 
     public void removeFilter(String key, boolean item) {
-        if (key == null) return;
-        if (item) itemFilter.remove(key);
-        else fluidFilter.remove(key);
-        markDirty();
+        filterState.remove(key, item, this::markDirty);
     }
 
     public Map<Boolean, List<String>> filtersSnapshot() {
-        Map<Boolean, List<String>> result = new LinkedHashMap<>();
-        List<String> itemSerialized = itemFilter.serialize();
-        if (!itemSerialized.isEmpty()) result.put(true, itemSerialized);
-        List<String> fluidSerialized = fluidFilter.serialize();
-        if (!fluidSerialized.isEmpty()) result.put(false, fluidSerialized);
-        return result;
+        return filterState.snapshot();
     }
 
     public void setFilters(List<String> filters, boolean item) {
-        if (filters == null) return;
-        if (item) itemFilter.load(filters);
-        else fluidFilter.load(filters);
-        markDirty();
+        filterState.set(filters, item, this::markDirty);
     }
 
     public void clearFilters(boolean item) {
-        if (item) itemFilter.clear();
-        else fluidFilter.clear();
-        markDirty();
+        filterState.clear(item, this::markDirty);
     }
 }
