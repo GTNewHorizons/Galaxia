@@ -169,16 +169,30 @@ tile.module_assembler_controller.name=Module Assembler
 tile.tenebrae_fumarole.name=Fumarole
 tile.gantry_block.name=Gantry Shaft
 tile.hammer_cannon.name=Hammer Cannon
+tile.hammer_target.name=Hammer Target
 tile.gantry_terminal.name=Gantry Terminal
 tile.rocket_trophy.name=Rocket Trophy
 tile.oxygen_collector.name=Oxygen Collector
 tile.oxygen_filler.name=Oxygen Filler
+tile.oxygen_pylon.name=Oxygen Pylon
+tile.heating_coil.name=Heating Coil
+tile.cooling_coil.name=Cooling Coil
+tile.air_purifier.name=Air Purifier
+tile.oxygenator.name=Oxygenator
+tile.wither_blocker.name=Withering Blocker
+
+# Fluids
+fluid.lahar=Lahar
+fluid.liquid_mercury=Liquid Mercury
+fluid.molten_resin=Molten Resin
+fluid.tenebrae_lava=Tenebraen Lava
 
 #### Items
 item.galaxia.galaxia_logo.name=Galaxia
 # Items - "Tools"
 item.galaxia.galactic_map.name=Galactic Map
 item.galaxia.teleporter.name=Teleporter
+item.galaxia.kinetic_tether.name=Kinetic Tether
 
 # Items - Tools - "Rocket Schematic"
 item.galaxia.schematic.name=Rocket Schematic
