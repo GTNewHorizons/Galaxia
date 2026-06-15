@@ -49,7 +49,7 @@ final class SatelliteNetworkGraphTest {
             node(CelestialObjectId.OVERWORLD_ORBIT, CelestialObjectId.OVERWORLD, 0.3D, 0.0D, -8.0D),
             node(CelestialObjectId.AMBERGRIS_FRAGMENT, CelestialObjectId.OVERWORLD, 0.4D, 8.0D, 0.0D),
             node(CelestialObjectId.MARS, null, 2.0D, 60.0D, 0.0D),
-            node(CelestialObjectId.PANSPIRA, null, 3.0D, 80.0D, 0.0D));
+            node(CelestialObjectId.EGORA, null, 3.0D, 80.0D, 0.0D));
 
         List<SatelliteNetworkGraph.Edge> edges = SatelliteNetworkGraph.build(nodes, 3);
 
@@ -61,16 +61,16 @@ final class SatelliteNetworkGraphTest {
         List<SatelliteNetworkGraph.Node> nodes = List.of(
             node(CelestialObjectId.MARS, null, 1.0D, 0.0D, 0.0D),
             node(CelestialObjectId.OVERWORLD, null, 2.0D, 0.0D, 50.0D),
-            node(CelestialObjectId.PANSPIRA, null, 3.0D, 100.0D, 0.0D),
+            node(CelestialObjectId.EGORA, null, 3.0D, 100.0D, 0.0D),
             node(CelestialObjectId.FROZEN_BELT, null, 4.0D, 140.0D, 0.0D));
 
         List<SatelliteNetworkGraph.Edge> edges = SatelliteNetworkGraph.build(nodes, 3);
 
-        assertTrue(edges.contains(new SatelliteNetworkGraph.Edge(CelestialObjectId.MARS, CelestialObjectId.PANSPIRA)));
+        assertTrue(edges.contains(new SatelliteNetworkGraph.Edge(CelestialObjectId.MARS, CelestialObjectId.EGORA)));
         assertTrue(
-            edges.contains(new SatelliteNetworkGraph.Edge(CelestialObjectId.PANSPIRA, CelestialObjectId.FROZEN_BELT)));
+            edges.contains(new SatelliteNetworkGraph.Edge(CelestialObjectId.EGORA, CelestialObjectId.FROZEN_BELT)));
         assertFalse(
-            edges.contains(new SatelliteNetworkGraph.Edge(CelestialObjectId.OVERWORLD, CelestialObjectId.PANSPIRA)));
+            edges.contains(new SatelliteNetworkGraph.Edge(CelestialObjectId.OVERWORLD, CelestialObjectId.EGORA)));
     }
 
     @Test
@@ -79,12 +79,12 @@ final class SatelliteNetworkGraphTest {
             node(CelestialObjectId.OVERWORLD, null, 3.0D, 100.0D, 0.0D),
             node(CelestialObjectId.MOON, CelestialObjectId.OVERWORLD, 0.2D, 104.0D, 8.0D),
             node(CelestialObjectId.MARS, null, 1.0D, 0.0D, 0.0D),
-            node(CelestialObjectId.PANSPIRA, null, 4.0D, 150.0D, 0.0D));
+            node(CelestialObjectId.EGORA, null, 4.0D, 150.0D, 0.0D));
 
         List<SatelliteNetworkGraph.Edge> edges = SatelliteNetworkGraph.build(nodes, 3);
 
         assertTrue(edges.contains(new SatelliteNetworkGraph.Edge(CelestialObjectId.OVERWORLD, CelestialObjectId.MOON)));
-        assertFalse(edges.contains(new SatelliteNetworkGraph.Edge(CelestialObjectId.MOON, CelestialObjectId.PANSPIRA)));
+        assertFalse(edges.contains(new SatelliteNetworkGraph.Edge(CelestialObjectId.MOON, CelestialObjectId.EGORA)));
     }
 
     private static SatelliteNetworkGraph.Node node(CelestialObjectId bodyId, CelestialObjectId parentId,
