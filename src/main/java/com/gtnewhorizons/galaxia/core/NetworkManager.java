@@ -19,7 +19,6 @@ import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.RocketDestinationSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.RocketLaunchPacket;
-import com.gtnewhorizons.galaxia.core.network.SatelliteDebugMutationPacket;
 import com.gtnewhorizons.galaxia.core.network.SatelliteSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.TeamConfigPacket;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
@@ -65,8 +64,6 @@ public final class NetworkManager {
             Side.SERVER);
         GALAXIA_NETWORK.registerMessage(CommitBlueprintAndOrderPacket.Handler.class, CommitBlueprintAndOrderPacket.class, id++,
                 Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(SatelliteDebugMutationPacket.Handler.class, SatelliteDebugMutationPacket.class, id++,
-            Side.SERVER);
 
         GALAXIA_NETWORK.registerMessage(OxygenSyncPacket.Handler.class, OxygenSyncPacket.class, id++,
             Side.CLIENT);

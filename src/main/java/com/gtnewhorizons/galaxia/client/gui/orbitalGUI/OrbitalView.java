@@ -35,8 +35,8 @@ import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
-import com.gtnewhorizons.galaxia.core.network.SatelliteDebugMutationPacket;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
+import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler.SatelliteDebugOperation;
 import com.gtnewhorizons.galaxia.core.profiling.HammerTrajectoryLoadSample;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
@@ -2887,21 +2887,24 @@ public class OrbitalView {
         }
 
         private void addSatellite(CelestialObject body, SatelliteKind kind) {
-            mutateSatellites(body, SatelliteDebugMutationPacket.add(currentTeamId(), body.id(), kind, 1));
+            mutateSatellites(body, kind, SatelliteDebugOperation.ADD, 1);
         }
 
         private void setSatellites(CelestialObject body, SatelliteKind kind) {
-            mutateSatellites(body, SatelliteDebugMutationPacket.set(currentTeamId(), body.id(), kind, 10));
+            mutateSatellites(body, kind, SatelliteDebugOperation.SET, 10);
         }
 
         private void deleteSatellites(CelestialObject body, SatelliteKind kind) {
-            mutateSatellites(body, SatelliteDebugMutationPacket.deleteAll(currentTeamId(), body.id(), kind));
+            mutateSatellites(body, kind, SatelliteDebugOperation.DELETE_ALL, 0);
         }
 
-        private void mutateSatellites(CelestialObject body, SatelliteDebugMutationPacket packet) {
-            if (!canDebugSatellites(body) || packet == null) return;
-            StarmapActionSyncHandler.sendSatelliteDebugMutation(packet);
-            showActionStatus("Satellite debug request sent");
+        private void mutateSatellites(CelestialObject body, SatelliteKind kind, SatelliteDebugOperation operation,
+            int amount) {
+            if (!canDebugSatellites(body)) return;
+            if (StarmapActionSyncHandler
+                .sendSatelliteDebugMutation(currentTeamId(), body.id(), kind, operation, amount)) {
+                showActionStatus("Satellite debug request sent");
+            }
         }
 
         private UUID currentTeamId() {
