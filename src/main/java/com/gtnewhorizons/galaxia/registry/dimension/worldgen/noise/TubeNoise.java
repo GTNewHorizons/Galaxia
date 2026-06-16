@@ -13,7 +13,7 @@ public class TubeNoise {
     private static final short COORDINATE_BOUND = 2 << TOTAL_BITSHIFT;
     private static final short SHIFT_MARGIN = 2 << (TOTAL_BITSHIFT - 1);
     private static final float VERTICAL_INCLINATION_MULTIPLIER = 0.5F;
-    private static final byte TUBE_COUNT = 32;
+    private static final short TUBE_COUNT = 128;
     private static final byte BASE_TUBE_HEIGHT = 16;
     private static final int TUBE_HEIGHT_VARIATION = ChunkProviderGalaxiaPlanet.HEIGHT_LIMIT >> 4;
 
