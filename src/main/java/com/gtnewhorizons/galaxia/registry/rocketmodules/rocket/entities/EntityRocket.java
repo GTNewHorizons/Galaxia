@@ -3,9 +3,11 @@ package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.RocketPlumeHelper;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
 
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
@@ -21,7 +23,10 @@ public class EntityRocket extends Entity {
     public static final double SPAWN_ALTITUDE = 300.0;
     public static final double TERMINAL_FALL_SPEED = -0.5;
 
+    public RocketPlumeHelper plumeHelper;
+
     private TileEntitySilo targetSilo;
+    private Vec3 launchLocation;
     private RocketBlueprint blueprint = new RocketBlueprint();
     private boolean launched = false;
     private int destination = -1;
@@ -33,6 +38,9 @@ public class EntityRocket extends Entity {
         super(world);
         setSize(3f, 10f);
         noClip = true;
+        if (worldObj.isRemote) {
+            plumeHelper = new RocketPlumeHelper();
+        }
     }
 
     public void setBlueprint(RocketBlueprint bp) {
@@ -65,6 +73,10 @@ public class EntityRocket extends Entity {
 
     public void launch() {
         launched = true;
+        launchLocation = Vec3.createVectorHelper(this.posX, this.posY, this.posZ);
+        if (worldObj.isRemote) {
+            plumeHelper.setStartPos(launchLocation);
+        }
     }
 
     public void turnToLanderAndCache() {
@@ -109,9 +121,16 @@ public class EntityRocket extends Entity {
     @Override
     public void onUpdate() {
         super.onUpdate();
+        if (!launched) {
+            launch();
+            return;
+        }
+        if (worldObj.isRemote) {
+            plumeHelper.update(posX, posY, posZ);
+        }
         if (worldObj.isRemote || !launched) return;
 
-        motionY += 0.08;
+        motionY = 0.2;
         moveEntity(motionX, motionY, motionZ);
 
         if (posY < 0) {

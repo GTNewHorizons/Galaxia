@@ -35,7 +35,7 @@ const float gravity = -0.81;
 
 const float dens = 1.22;
 const float dragCoeff = 0.47;
-const float crossSection = 0.2;
+const float crossSection = 0.1;
 const float form = 0.5 * dens * crossSection * dragCoeff;
 
 void main() {

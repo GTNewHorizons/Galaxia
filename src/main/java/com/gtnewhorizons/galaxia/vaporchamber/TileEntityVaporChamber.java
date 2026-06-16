@@ -34,7 +34,7 @@ public class TileEntityVaporChamber extends TileEntity {
      */
     @Override
     public void updateEntity() {
-        if (worldObj.getBlock(xCoord, yCoord - 1, zCoord) == PlanetBlocks.THEIA_MAGMA) {
+        if (worldObj.getBlock(xCoord, yCoord - 1, zCoord) == PlanetBlocks.MOON_MAGMA) {
             if (worldObj.getBlockMetadata(xCoord, yCoord - 1, zCoord) == 1) {
 
             }

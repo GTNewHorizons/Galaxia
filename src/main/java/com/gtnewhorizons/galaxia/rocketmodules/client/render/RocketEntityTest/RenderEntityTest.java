@@ -14,11 +14,11 @@ import net.minecraft.util.ResourceLocation;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.*;
 
-import com.gtnewhorizons.galaxia.core.ShaderHelper;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.ShaderHelper;
 
 public class RenderEntityTest extends Render {
 
-    private static int program = 0;
+    private static int renderProgram = 0;
 
     public static int rocketmask1 = 0;
 
@@ -29,11 +29,11 @@ public class RenderEntityTest extends Render {
     int projectionID = 0;
 
     public RenderEntityTest() {
-        if (program == 0) {
-            program = ShaderHelper.createProgram(
-                "/assets/galaxia/shaders/test.vert",
-                "/assets/galaxia/shaders/test.geom",
-                "/assets/galaxia/shaders/test.frag");
+        if (renderProgram == 0) {
+            renderProgram = ShaderHelper.createProgram(
+                "/assets/galaxia/shaders/rocketplume/plume.vert",
+                "/assets/galaxia/shaders/rocketplume/plume.geom",
+                "/assets/galaxia/shaders/rocketplume/plume.frag");
         }
 
 //        GL11.glEnable(GL43.GL_DEBUG_OUTPUT);
@@ -43,10 +43,10 @@ public class RenderEntityTest extends Render {
 //            if (severity != GL43.GL_DEBUG_SEVERITY_NOTIFICATION && severity != GL43.GL_DEBUG_SEVERITY_LOW && severity != GL43.GL_DEBUG_SEVERITY_MEDIUM) System.err.println("GL Debug: " + message + "\nfrom " + source);
 //        }));
 
-        GL20.glUseProgram(program);
+        GL20.glUseProgram(renderProgram);
 
-        viewID = GL20.glGetUniformLocation(program, "view");
-        projectionID = GL20.glGetUniformLocation(program, "projection");
+        viewID = GL20.glGetUniformLocation(renderProgram, "view");
+        projectionID = GL20.glGetUniformLocation(renderProgram, "projection");
 
         GL20.glUseProgram(0);
 
@@ -82,7 +82,7 @@ public class RenderEntityTest extends Render {
         GL11.glEnable(GL11.GL_DEPTH_TEST);
         GL11.glDepthMask(true);
 
-        GL20.glUseProgram(program);
+        GL20.glUseProgram(renderProgram);
 
         FloatBuffer view = BufferUtils.createFloatBuffer(16);
         FloatBuffer projection = BufferUtils.createFloatBuffer(16);

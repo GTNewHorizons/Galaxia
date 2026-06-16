@@ -1,6 +1,5 @@
-package com.gtnewhorizons.galaxia.core;
+package com.gtnewhorizons.galaxia.registry.rocketmodules.utility;
 
-import java.awt.*;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;

@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.rocketmodules.client.render.RocketEntityTest;
 
 import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.nbt.NBTTagCompound;
@@ -10,11 +9,11 @@ import net.minecraft.world.World;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.*;
 
-import com.gtnewhorizons.galaxia.core.ShaderHelper;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.ShaderHelper;
 
 public class EntityTest extends Entity {
 
-    public static int program = 0;
+    public static int addToRenderProgram = 0;
     public static int cellProgram = 0;
     public static int uProgram = 0;
     public static int vProgram = 0;
@@ -183,7 +182,7 @@ public class EntityTest extends Entity {
 
         GL15.glBeginQuery(GL33.GL_TIME_ELAPSED, 1021);
 
-        GL20.glUseProgram(program);
+        GL20.glUseProgram(addToRenderProgram);
 
         GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, ssboOUTCount);
         GL43.glClearBufferData(GL43.GL_SHADER_STORAGE_BUFFER, GL30.GL_R32F, GL11.GL_RED, GL11.GL_FLOAT, zero);
@@ -191,8 +190,8 @@ public class EntityTest extends Entity {
         GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, 0, ssboOUT);
         GL43.glClearBufferData(GL43.GL_SHADER_STORAGE_BUFFER, GL30.GL_R32F, GL11.GL_RED, GL11.GL_FLOAT, zero);
 
-        GL20.glUniform1i(GL20.glGetUniformLocation(program, "maxWidth"), maxWidth);
-        GL20.glUniform1i(GL20.glGetUniformLocation(program, "maxHeight"), maxHeight);
+        GL20.glUniform1i(GL20.glGetUniformLocation(addToRenderProgram, "maxWidth"), maxWidth);
+        GL20.glUniform1i(GL20.glGetUniformLocation(addToRenderProgram, "maxHeight"), maxHeight);
 
         GL43.glDispatchCompute(maxWidth / 32, maxHeight / 4, maxWidth / 4);
 
@@ -587,7 +586,6 @@ public class EntityTest extends Entity {
 
         GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
     }
-
     public void genSSBOs() {
         ssboOUT = GL15.glGenBuffers();
         ssboU = GL15.glGenBuffers();
@@ -705,87 +703,88 @@ public class EntityTest extends Entity {
         // spotless:on
     }
 
+
     private static void createPrograms() {
-        if (program == 0) {
-            program = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/test.comp");
+        if (addToRenderProgram == 0) {
+            addToRenderProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/add_cells_to_render.comp");
         }
         if (cellProgram == 0) {
-            cellProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/cellinit.comp");
+            cellProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/cell_init.comp");
         }
         if (projectionProgram == 0) {
-            projectionProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/projection.comp");
+            projectionProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/projection.comp");
         }
         if (uProgram == 0) {
-            uProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/uinit.comp");
+            uProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/u_init.comp");
         }
         if (vProgram == 0) {
-            vProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/vinit.comp");
+            vProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/v_init.comp");
         }
         if (wProgram == 0) {
-            wProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/winit.comp");
+            wProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/w_init.comp");
         }
         if (flagProgram == 0) {
-            flagProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/cell_flags.comp");
+            flagProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/cell_flags.comp");
         }
         if (moveProgram == 0) {
-            moveProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/particle_move.comp");
+            moveProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/particle_move.comp");
         }
         if (exhaustProgram == 0) {
-            exhaustProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/particle_exhaust.comp");
+            exhaustProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/particle_exhaust.comp");
         }
         if (toCellUProgram == 0) {
-            toCellUProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/particle_to_cell_u.comp");
+            toCellUProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/particle_to_cell_u.comp");
         }
         if (toCellVProgram == 0) {
-            toCellVProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/particle_to_cell_v.comp");
+            toCellVProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/particle_to_cell_v.comp");
         }
         if (toCellWProgram == 0) {
-            toCellWProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/particle_to_cell_w.comp");
+            toCellWProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/particle_to_cell_w.comp");
         }
         if (cellNormUProgram == 0) {
-            cellNormUProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/cell_normalization_u.comp");
+            cellNormUProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/cell_normalization_u.comp");
         }
         if (cellNormVProgram == 0) {
-            cellNormVProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/cell_normalization_v.comp");
+            cellNormVProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/cell_normalization_v.comp");
         }
         if (cellNormWProgram == 0) {
-            cellNormWProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/cell_normalization_w.comp");
+            cellNormWProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/cell_normalization_w.comp");
         }
         if (cellFillProgram == 0) {
-            cellFillProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/cell_fill.comp");
+            cellFillProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/cell_fill.comp");
         }
         if (cellFluidFillProgram == 0) {
-            cellFluidFillProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/cell_fluid_fill.comp");
+            cellFluidFillProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/cell_fluid_fill.comp");
         }
         if (toParticleUProgram == 0) {
-            toParticleUProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/cell_to_particle_u.comp");
+            toParticleUProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/cell_to_particle_u.comp");
         }
         if (toParticleVProgram == 0) {
-            toParticleVProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/cell_to_particle_v.comp");
+            toParticleVProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/cell_to_particle_v.comp");
         }
         if (toParticleWProgram == 0) {
-            toParticleWProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/cell_to_particle_w.comp");
+            toParticleWProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/cell_to_particle_w.comp");
         }
         if (restoreSolidUProgram == 0) {
-            restoreSolidUProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/restore_solid_cell_u.comp");
+            restoreSolidUProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/restore_solid_cell_u.comp");
         }
         if (restoreSolidVProgram == 0) {
-            restoreSolidVProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/restore_solid_cell_v.comp");
+            restoreSolidVProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/restore_solid_cell_v.comp");
         }
         if (restoreSolidWProgram == 0) {
-            restoreSolidWProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/restore_solid_cell_w.comp");
+            restoreSolidWProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/restore_solid_cell_w.comp");
         }
         if (blellochUpProgram == 0) {
-            blellochUpProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/blelloch_upsweep.comp");
+            blellochUpProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/blelloch_upsweep.comp");
         }
         if (blellochDownProgram == 0) {
-            blellochDownProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/blelloch_downsweep.comp");
+            blellochDownProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/blelloch_downsweep.comp");
         }
         if (countFillProgram == 0) {
-            countFillProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/count_fill.comp");
+            countFillProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/count_fill.comp");
         }
         if (particleSeparationProgram == 0) {
-            particleSeparationProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/particle_separation.comp");
+            particleSeparationProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/rocketplume/particle_separation.comp");
         }
     }
 
