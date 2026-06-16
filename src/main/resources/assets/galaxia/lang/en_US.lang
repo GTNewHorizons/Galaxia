@@ -39,10 +39,16 @@ galaxia.celestial.overworld=Overworld
 
 #### Blocks
 # Blocks - "Moon"
-tile.moon_andesite.name=Moon Andesite
+tile.moon_andesite.name=Lunar Andesite
+tile.moon_andesite_shatterstone.name=Shattered Lunar Andesite
 tile.moon_anorthosite.name=Moon Anorthosite
 tile.moon_basalt.name=Moon Basalt
+tile.moon_basalt_shatterstone.name=Shattered Lunar Basalt
 tile.moon_breccia.name=Moon Breccia
+tile.moon_granite.name=Lunar Granite
+tile.moon_gravel.name=Lunar Gravel
+tile.moon_regolith_shatterstone.name=Lunar Regolith Impactite
+tile.moon_regolith_shattered.name=Shattered Lunar Regolith
 tile.moon_gabbro.name=Moon Gabbro
 tile.moon_magma.name=Moon Magma
 tile.moon_obsidian.name=Moon Obsidian
@@ -51,35 +57,35 @@ tile.moon_tektite.name=Moon Tektite
 
 # Blocks - "Moon Decoration"
 tile.moon_andesite_bricks.name=Moon Andesite Bricks
-tile.moon_andesite_smooth.name=Smooth Moon Andesite
+tile.moon_andesite_smooth.name=Smooth Lunar Andesite
 tile.moon_andesite_tiles.name=Moon Andesite Tiles
-tile.moon_andesite_small_bricks.name=Small Moon Andesite Bricks
-tile.moon_andesite_fancy_bricks.name=Fancy Moon Andesite Bricks
+tile.moon_andesite_small_bricks.name=Small Lunar Andesite Bricks
+tile.moon_andesite_fancy_bricks.name=Fancy Lunar Andesite Bricks
 tile.moon_basalt_bricks.name=Moon Basalt Bricks
-tile.moon_basalt_smooth.name=Smooth Moon Basalt
+tile.moon_basalt_smooth.name=Smooth Lunar Basalt
 tile.moon_basalt_tiles.name=Moon Basalt Tiles
-tile.moon_basalt_small_bricks.name=Small Moon Basalt Bricks
-tile.moon_basalt_fancy_bricks.name=Fancy Moon Basalt Bricks
+tile.moon_basalt_small_bricks.name=Small Lunar Basalt Bricks
+tile.moon_basalt_fancy_bricks.name=Fancy Lunar Basalt Bricks
 tile.moon_tektite_bricks.name=Moon Tektite Bricks
-tile.moon_tektite_smooth.name=Smooth Moon Tektite
+tile.moon_tektite_smooth.name=Smooth Lunar Tektite
 tile.moon_tektite_tiles.name=Moon Tektite Tiles
-tile.moon_tektite_small_bricks.name=Small Moon Tektite Bricks
-tile.moon_tektite_fancy_bricks.name=Fancy Moon Tektite Bricks
+tile.moon_tektite_small_bricks.name=Small Lunar Tektite Bricks
+tile.moon_tektite_fancy_bricks.name=Fancy Lunar Tektite Bricks
 tile.moon_breccia_bricks.name=Moon Breccia Bricks
-tile.moon_breccia_smooth.name=Smooth Moon Breccia
+tile.moon_breccia_smooth.name=Smooth Lunar Breccia
 tile.moon_breccia_tiles.name=Moon Breccia Tiles
-tile.moon_breccia_small_bricks.name=Small Moon Breccia Bricks
-tile.moon_breccia_fancy_bricks.name=Fancy Moon Breccia Bricks
+tile.moon_breccia_small_bricks.name=Small Lunar Breccia Bricks
+tile.moon_breccia_fancy_bricks.name=Fancy Lunar Breccia Bricks
 tile.moon_gabbro_bricks.name=Moon Gabbro Bricks
-tile.moon_gabbro_smooth.name=Smooth Moon Gabbro
+tile.moon_gabbro_smooth.name=Smooth Lunar Gabbro
 tile.moon_gabbro_tiles.name=Moon Gabbro Tiles
-tile.moon_gabbro_small_bricks.name=Small Moon Gabbro Bricks
-tile.moon_gabbro_fancy_bricks.name=Fancy Moon Gabbro Bricks
+tile.moon_gabbro_small_bricks.name=Small Lunar Gabbro Bricks
+tile.moon_gabbro_fancy_bricks.name=Fancy Lunar Gabbro Bricks
 tile.moon_anorthosite_bricks.name=Moon Anorthosite Bricks
-tile.moon_anorthosite_smooth.name=Smooth Moon Anorthosite 
+tile.moon_anorthosite_smooth.name=Smooth Lunar Anorthosite 
 tile.moon_anorthosite_tiles.name=Moon Anorthosite Tiles
-tile.moon_anorthosite_small_bricks.name=Small Moon Anorthosite Bricks
-tile.moon_anorthosite_fancy_bricks.name=Fancy Moon Anorthosite Bricks
+tile.moon_anorthosite_small_bricks.name=Small Lunar Anorthosite Bricks
+tile.moon_anorthosite_fancy_bricks.name=Fancy Lunar Anorthosite Bricks
 
 
 # Blocks - "Mars"
