@@ -24,7 +24,7 @@ import com.gtnewhorizons.galaxia.handlers.KeyHandler;
 import com.gtnewhorizons.galaxia.handlers.SkyUpdateHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
-import com.gtnewhorizons.galaxia.registry.celestial.station.TileHammerTarget;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerTarget;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemKineticTether;
 import com.gtnewhorizons.galaxia.registry.items.tether.TetherRenderer;

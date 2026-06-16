@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.api.ZeroGMovementAPI;
 import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
-import com.gtnewhorizons.galaxia.registry.capabilities.ZeroGRecoilProvider;
+import com.gtnewhorizons.galaxia.registry.interfaces.IZeroGRecoilProvider;
 
 @Mixin(World.class)
 public class MixinThrowRecoil {
@@ -22,7 +22,7 @@ public class MixinThrowRecoil {
     private void onEntitySpawn(Entity entity, CallbackInfoReturnable<Boolean> cir) {
         if (entity == null) return;
 
-        if (entity instanceof ZeroGRecoilProvider provider) {
+        if (entity instanceof IZeroGRecoilProvider provider) {
             EntityLivingBase shooter = provider.galaxia$getShootingEntity();
             if (shooter == null) return;
 

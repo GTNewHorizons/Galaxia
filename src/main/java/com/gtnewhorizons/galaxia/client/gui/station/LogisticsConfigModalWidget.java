@@ -101,7 +101,7 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         addHeaderTooltip(NAME_X, NAME_WIDTH, "Tracked item");
         addHeaderTooltip(STOCK_X, RESERVE_X - STOCK_X, "Items stored in this station");
         addHeaderTooltip(RESERVE_X, CONTROL_GROUP_WIDTH, "Minimum stock kept in station inventory");
-        addHeaderTooltip(PACKAGE_X, CONTROL_GROUP_WIDTH, "Items requested per logistics order");
+        addHeaderTooltip(PACKAGE_X, CONTROL_GROUP_WIDTH, "Export package size for supplied items");
         addHeaderTooltip(IMPORT_X, TOGGLE_WIDTH, "Request this item from other stations");
         if (logisticsAccessMode().canEditSupply()) {
             addHeaderTooltip(EXPORT_X, TOGGLE_WIDTH, "Send this item to other stations");
@@ -196,14 +196,14 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
                 .pos(RESERVE_X + SMALL_BUTTON_WIDTH + VALUE_WIDTH, 6)
                 .size(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT));
         row.child(
-            ModuleConfigModalSupport.button(() -> rowEntry(rowIndex) != null, "-", () -> shiftPackage(rowIndex, -1))
+            ModuleConfigModalSupport.button(() -> canEditPackage(rowIndex), "-", () -> shiftPackage(rowIndex, -1))
                 .pos(PACKAGE_X, 6)
                 .size(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT));
         row.child(
             amountField(rowIndex, false).pos(PACKAGE_X + SMALL_BUTTON_WIDTH, 6)
                 .size(VALUE_WIDTH, BUTTON_HEIGHT));
         row.child(
-            ModuleConfigModalSupport.button(() -> rowEntry(rowIndex) != null, "+", () -> shiftPackage(rowIndex, 1))
+            ModuleConfigModalSupport.button(() -> canEditPackage(rowIndex), "+", () -> shiftPackage(rowIndex, 1))
                 .pos(PACKAGE_X + SMALL_BUTTON_WIDTH + VALUE_WIDTH, 6)
                 .size(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT));
         row.child(
@@ -317,7 +317,8 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
                 new StringValue.Dynamic(
                     () -> amountText(rowIndex, reserve),
                     text -> setAmount(rowIndex, reserve, text)))
-            .setFocusOnGuiOpen(false);
+            .setFocusOnGuiOpen(false)
+            .setEnabledIf(w -> reserve ? rowEntry(rowIndex) != null : canEditPackage(rowIndex));
     }
 
     private String amountText(int rowIndex, boolean reserve) {
@@ -334,6 +335,7 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         Map.Entry<ItemStackWrapper, LogisticsResourceConfig> row = rowEntry(rowIndex);
         CelestialAsset asset = asset();
         if (row == null || asset == null) return;
+        if (!reserve && !canEditPackage(rowIndex)) return;
         int min = reserve ? 0 : 1;
         int parsed = min;
         if (text != null && !text.isEmpty()) {
@@ -383,9 +385,13 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
     private void shiftPackage(int rowIndex, int delta) {
         Map.Entry<ItemStackWrapper, LogisticsResourceConfig> row = rowEntry(rowIndex);
         CelestialAsset asset = asset();
-        if (row == null || asset == null) return;
+        if (row == null || asset == null || !canEditPackage(rowIndex)) return;
         LogisticsResourceConfig cfg = row.getValue();
         update(asset, row.getKey(), cfg.withOrderSize(Math.max(1, cfg.orderSize() + delta)));
+    }
+
+    private boolean canEditPackage(int rowIndex) {
+        return logisticsAccessMode().canEditSupply() && rowEntry(rowIndex) != null;
     }
 
     private void toggleImport(int rowIndex) {

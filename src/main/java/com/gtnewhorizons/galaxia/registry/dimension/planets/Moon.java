@@ -10,8 +10,6 @@ import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeIdOffsetter;
-import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
-import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeCracks;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeTubes;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
@@ -27,55 +25,20 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.StalactiteF
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaWall;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
 
 /**
  * The class holding all data related to the dimension Moon
  */
-public class Moon extends BasePlanet {
+public final class Moon {
 
-    public static final DimensionEnum ENUM = DimensionEnum.MOON;
-
-    /**
-     * Getter for dimension Enum
-     *
-     * @return Dimension Enum
-     */
-    @Override
-    public DimensionEnum getPlanetEnum() {
-        return ENUM;
-    }
-
-    /**
-     * The configuration of the DimensionBuilder to configure the dimension
-     *
-     * @param builder The dimension builder to chain on
-     * @return The dimension Builder with all properties assigned
-     */
-    @Override
-    protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
-        return builder.gravity(0.25)
-            .airResistance(0.01)
-            .mass(0.012)
-            .radius(0.27)
-            .orbitalRadius(1 * earthRadiusToAU)
-            .sky(buildSky())
-            .effects(
-                EffectBuilder.builder()
-                    .baseTemp(225)
-                    .oxygenPercent(0)
-                    .pressure(0)
-                    .build())
-            .tier(EnumTiers.TIER_1);
-    }
+    private Moon() {}
 
     /**
      * Configures the world provider to add the correct biomes and settings
      *
      * @param builder The world provider builder being configured
      */
-    @Override
-    protected void configureProvider(WorldProviderBuilder builder) {
+    public static void configureWorldProvider(WorldProviderBuilder builder) {
         BiomeGenBase border = createOceanBiome(
             "Moon Ocean Edge",
             TerrainConfiguration.builder()
@@ -182,7 +145,7 @@ public class Moon extends BasePlanet {
             .biome(mountains, 6, 1)
             .biome(mountains, 6, 2)
             // Finish
-            .name(ENUM)
+            .name(DimensionEnum.MOON)
             .build();
     }
 
@@ -191,7 +154,7 @@ public class Moon extends BasePlanet {
      *
      * @return The SkyBuilder configured with correct bodies
      */
-    protected SkyBuilder buildSky() {
+    public static SkyBuilder buildSky() {
         return SkyBuilder.builder()
             .addBody(
                 s -> s.texture("minecraft:textures/environment/sun.png")

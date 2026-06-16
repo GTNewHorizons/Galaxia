@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -16,6 +15,7 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
+import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket.ConfigAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -36,12 +36,14 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
 
     private static final int BODY_TOP = ModuleConfigModalSupport.HEADER_HEIGHT + 10;
     private static final int OPTION_TOP = 118;
-    private static final int OPTION_BUTTONS = 8;
-    private static final int OPTION_COLUMNS = 2;
-    private static final int OPTION_BUTTON_WIDTH = 84;
+    private static final int OPTION_BUTTONS = 10;
+    private static final int OPTION_COLUMNS = 5;
+    private static final int OPTION_BUTTON_WIDTH = 42;
     private static final int OPTION_BUTTON_HEIGHT = 18;
     private static final int OPTION_COLUMN_GAP = 4;
     private static final int OPTION_ROW_GAP = 4;
+    private static final int OPTION_LABEL_WIDTH = 74;
+    private static final int OPTION_BUTTON_LEFT = ModuleConfigModalSupport.PANEL_PADDING + OPTION_LABEL_WIDTH;
     private static final int CONTROL_GAP = 8;
     static final int CONTROL_GAP_FOR_TEST = CONTROL_GAP;
     private static final int FLAG_TOP = 214;
@@ -57,13 +59,13 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
-    private final @Nullable StationTilePickerController tilePickerController;
+    private final @Nullable StationEditModeController editModeController;
 
     ModuleUpgradeModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller,
-        @Nullable StationTilePickerController tilePickerController) {
+        @Nullable StationEditModeController editModeController) {
         this.assetId = assetId;
         this.controller = controller;
-        this.tilePickerController = tilePickerController;
+        this.editModeController = editModeController;
         for (int slot = 0; slot < OPTION_BUTTONS; slot++) {
             int col = slot % OPTION_COLUMNS;
             int row = slot / OPTION_COLUMNS;
@@ -71,7 +73,7 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
             child(
                 createOptionButton(optionSlot)
                     .pos(
-                        ModuleConfigModalSupport.PANEL_PADDING + col * (OPTION_BUTTON_WIDTH + OPTION_COLUMN_GAP),
+                        OPTION_BUTTON_LEFT + col * (OPTION_BUTTON_WIDTH + OPTION_COLUMN_GAP),
                         OPTION_TOP + row * (OPTION_BUTTON_HEIGHT + OPTION_ROW_GAP))
                     .size(OPTION_BUTTON_WIDTH, OPTION_BUTTON_HEIGHT));
         }
@@ -167,15 +169,15 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
 
     private void drawGroupLabels(ModuleInstance module) {
         List<ModuleUpgradeGroup> groups = ModuleUpgradeUiModel.groups(module, controller.moduleUpgradeSelection());
-        int x = ModuleConfigModalSupport.PANEL_PADDING + OPTION_COLUMNS * (OPTION_BUTTON_WIDTH + OPTION_COLUMN_GAP) + 8;
-        int lineY = OPTION_TOP;
+        int row = 0;
         for (ModuleUpgradeGroup group : groups) {
-            lineY = ModuleConfigModalSupport.drawTrimmedLine(
+            ModuleConfigModalSupport.drawTrimmedLine(
                 group.title(),
-                x,
-                lineY,
-                WIDTH - x - ModuleConfigModalSupport.PANEL_PADDING,
+                ModuleConfigModalSupport.PANEL_PADDING,
+                OPTION_TOP + row * (OPTION_BUTTON_HEIGHT + OPTION_ROW_GAP) + 4,
+                OPTION_LABEL_WIDTH - 6,
                 EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
+            row++;
         }
     }
 
@@ -241,18 +243,16 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
     private @Nullable OptionRef optionRef(int slot) {
         ModuleInstance module = selectedModule();
         if (module == null) return null;
-        List<OptionRef> options = optionRefs(module);
-        return slot >= 0 && slot < options.size() ? options.get(slot) : null;
-    }
-
-    private List<OptionRef> optionRefs(ModuleInstance module) {
-        List<OptionRef> refs = new ArrayList<>();
+        int row = 0;
         for (ModuleUpgradeGroup group : ModuleUpgradeUiModel.groups(module, controller.moduleUpgradeSelection())) {
+            int column = 0;
             for (ModuleUpgradeOption option : group.options()) {
-                refs.add(new OptionRef(group, option));
+                if (slot == row * OPTION_COLUMNS + column) return new OptionRef(group, option);
+                column++;
             }
+            row++;
         }
-        return refs;
+        return null;
     }
 
     private boolean canConfirm() {
@@ -262,7 +262,7 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
 
     private boolean canConfirmMultiple() {
         ModuleInstance module = selectedModule();
-        return tilePickerController != null && module != null
+        return editModeController != null && module != null
             && module.component() instanceof ModuleHammer
             && canConfirm();
     }
@@ -285,10 +285,14 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
                 controller.hammerUpgradeReserveItems(),
                 controller.hammerUpgradeVoidRefund());
         } else if (module.component() instanceof ModuleMiner) {
-            CelestialClient.planMinerFocusTier(
-                assetId,
-                controller.moduleIndex(),
-                ModuleUpgradeUiModel.minerFocusTier(controller.moduleUpgradeSelection()));
+            ModuleTier targetTier = ModuleUpgradeUiModel.minerTier(controller.moduleUpgradeSelection());
+            MinerFocusTier targetFocusTier = ModuleUpgradeUiModel.minerFocusTier(controller.moduleUpgradeSelection());
+            if (MinerFocusUiModel.canPlanTier(module, targetFocusTier)) {
+                CelestialClient.planMinerFocusTier(assetId, controller.moduleIndex(), targetTier, targetFocusTier);
+            } else if (module.tier() != targetTier) {
+                CelestialClient
+                    .updateModuleConfig(assetId, controller.moduleIndex(), ConfigAction.SET_TIER, targetTier);
+            }
         }
         controller.close();
     }
@@ -298,7 +302,7 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
         ModuleInstance source = selectedModule();
         int sourceModuleIndex = controller.moduleIndex();
         if (facility == null || source == null
-            || tilePickerController == null
+            || editModeController == null
             || !(source.component() instanceof ModuleHammer)
             || sourceModuleIndex < 0) return;
         ModuleTier targetTier = ModuleUpgradeUiModel.hammerTier(controller.moduleUpgradeSelection());
@@ -306,7 +310,8 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
         boolean reserveItems = controller.hammerUpgradeReserveItems();
         boolean voidCompletionRefund = controller.hammerUpgradeVoidRefund();
         controller.close();
-        tilePickerController.start(
+        editModeController.startTileMode(
+            StationEditModeController.Mode.MODULE_UPGRADE,
             "Upgrade modules",
             "Upgrade",
             coord -> ModuleUpgradePickerModel.isCompatibleTarget(facility, source, targetTier, targetVariant, coord),
@@ -332,8 +337,9 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
                 || module.tier() != ModuleUpgradeUiModel.hammerTier(controller.moduleUpgradeSelection());
         }
         if (module.component() instanceof ModuleMiner) {
-            return MinerFocusUiModel
-                .canPlanTier(module, ModuleUpgradeUiModel.minerFocusTier(controller.moduleUpgradeSelection()));
+            return module.tier() != ModuleUpgradeUiModel.minerTier(controller.moduleUpgradeSelection())
+                || MinerFocusUiModel
+                    .canPlanTier(module, ModuleUpgradeUiModel.minerFocusTier(controller.moduleUpgradeSelection()));
         }
         return false;
     }
@@ -347,7 +353,8 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
                     .name();
         }
         if (module.component() instanceof ModuleMiner miner) {
-            return "Current focus tier: " + focusTierLabel(miner.focusTier());
+            return "Current: " + module.tier()
+                .name() + ", focus " + focusTierLabel(miner.focusTier());
         }
         return "Current: -";
     }
@@ -361,7 +368,9 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
                     .name();
         }
         if (module.component() instanceof ModuleMiner) {
-            return "Target focus tier: "
+            return "Target: " + ModuleUpgradeUiModel.minerTier(controller.moduleUpgradeSelection())
+                .name()
+                + ", focus "
                 + focusTierLabel(ModuleUpgradeUiModel.minerFocusTier(controller.moduleUpgradeSelection()));
         }
         return "Target: -";
@@ -380,8 +389,21 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
         }
         if (module.component() instanceof ModuleMiner miner) {
             MinerFocusTier target = ModuleUpgradeUiModel.minerFocusTier(controller.moduleUpgradeSelection());
-            return "Effect: focus bonus " + miner.focusTier()
-                .bonusPercent() + "% -> " + target.bonusPercent() + "%";
+            String tierEffect = module.tier() == ModuleUpgradeUiModel.minerTier(controller.moduleUpgradeSelection())
+                ? ""
+                : "tier " + module.tier()
+                    .name()
+                    + " -> "
+                    + ModuleUpgradeUiModel.minerTier(controller.moduleUpgradeSelection())
+                        .name()
+                    + ", ";
+            return "Effect: " + tierEffect
+                + "focus bonus "
+                + miner.focusTier()
+                    .bonusPercent()
+                + "% -> "
+                + target.bonusPercent()
+                + "%";
         }
         return "Effect: -";
     }
@@ -517,7 +539,16 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
         int row = slot / OPTION_COLUMNS;
         return new ControlRect(
             "option" + slot,
-            ModuleConfigModalSupport.PANEL_PADDING + col * (OPTION_BUTTON_WIDTH + OPTION_COLUMN_GAP),
+            OPTION_BUTTON_LEFT + col * (OPTION_BUTTON_WIDTH + OPTION_COLUMN_GAP),
+            OPTION_TOP + row * (OPTION_BUTTON_HEIGHT + OPTION_ROW_GAP),
+            OPTION_BUTTON_WIDTH,
+            OPTION_BUTTON_HEIGHT);
+    }
+
+    static ControlRect optionRectForTest(int row, int column) {
+        return new ControlRect(
+            "option" + row + "_" + column,
+            OPTION_BUTTON_LEFT + column * (OPTION_BUTTON_WIDTH + OPTION_COLUMN_GAP),
             OPTION_TOP + row * (OPTION_BUTTON_HEIGHT + OPTION_ROW_GAP),
             OPTION_BUTTON_WIDTH,
             OPTION_BUTTON_HEIGHT);

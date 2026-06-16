@@ -23,8 +23,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializer;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
-import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.CelestialBody;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
 
@@ -72,7 +72,8 @@ public abstract class RenderGlobalSkyMixin {
         World world = mc.theWorld;
         if (world == null) return false;
         int dimId = world.provider.dimensionId;
-        return dimId == 0 || SolarSystemRegistry.getById(dimId) != null;
+        return dimId == 0 || CelestialDimensionMaterializer.findDefinitionById(dimId)
+            .isPresent();
     }
 
     /**
@@ -124,7 +125,8 @@ public abstract class RenderGlobalSkyMixin {
     private void galaxia$renderCustomBodies(float partialTicks, CallbackInfo ci) {
         World world = mc.theWorld;
         int dimId = world.provider.dimensionId;
-        DimensionDef def = SolarSystemRegistry.getById(dimId);
+        DimensionDef def = CelestialDimensionMaterializer.findDefinitionById(dimId)
+            .orElse(null);
 
         if (dimId != 0 && def == null) {
             return; // non-galaxia dim that isn't overworld

@@ -91,7 +91,8 @@ public final class HammerDispatchPlanner {
             if (!supplierCfg.isSupplyEnabled()) continue;
 
             if (!(supplierEntry.getKey() instanceof ItemStackWrapper resource)) continue;
-            long availableSurplus = supplier.getItemAmount(resource) - supplierCfg.minReserve();
+            long availableSurplus = supplier.getItemAmount(resource)
+                - supplyReserveFor(supplier, resource, supplierCfg);
             if (availableSurplus <= 0L) {
                 sawSurplusBlocked = true;
                 continue;
@@ -107,8 +108,32 @@ public final class HammerDispatchPlanner {
 
                 long requesterStock = CelestialAsset.getItemAmount(requester, resource);
                 long inboundInTransit = LogisticStore.inboundInTransitAmount(requester.assetId, resource);
-                long requestedAmount = Math.max(0L, requesterCfg.minReserve() - requesterStock - inboundInTransit);
-                if (requestedAmount <= 0L) continue;
+                long arrivedInbound = LogisticStore.arrivedInboundAmount(requester.assetId, resource);
+                long requestedAmount = Math
+                    .max(0L, importTargetFor(requester, resource, requesterCfg) - requesterStock - inboundInTransit);
+                if (requestedAmount <= 0L) {
+                    if (arrivedInbound > 0L) {
+                        bestBlockedStatus = prefer(
+                            destinationBlocked(hammer, arrivedInbound, requesterCfg.orderSize()),
+                            bestBlockedStatus);
+                    }
+                    continue;
+                }
+                if (arrivedInbound > 0L) {
+                    bestBlockedStatus = prefer(
+                        destinationBlocked(hammer, arrivedInbound, requesterCfg.orderSize()),
+                        bestBlockedStatus);
+                    continue;
+                }
+                long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount, requesterCfg.orderSize());
+                if (sendAmount <= 0L) continue;
+                long freeCapacity = destinationFreeItemCapacity(requester);
+                if (freeCapacity < sendAmount) {
+                    bestBlockedStatus = prefer(
+                        destinationLacksPackageSpace(hammer, freeCapacity, requesterCfg.orderSize()),
+                        bestBlockedStatus);
+                    continue;
+                }
 
                 Result result = evaluateCandidateFor(
                     supplier,
@@ -148,8 +173,9 @@ public final class HammerDispatchPlanner {
             return Result.simple(HammerDispatchStatus.Code.NO_EXPORT_CONFIG, hammer);
         }
 
-        long availableSurplus = (supplier instanceof Station station ? station.getCannonChestItems()
-            .getOrDefault(resource, 0L) : supplier.getItemAmount(resource)) - supplierCfg.minReserve();
+        long supplierStock = supplier instanceof Station station ? station.getCannonChestItems()
+            .getOrDefault(resource, 0L) : supplier.getItemAmount(resource);
+        long availableSurplus = supplierStock - supplyReserveFor(supplier, resource, supplierCfg);
         if (availableSurplus <= 0L) return Result.simple(HammerDispatchStatus.Code.NO_SURPLUS_AFTER_RESERVE, hammer);
 
         LogisticsResourceConfig requesterCfg = requester.logisticsConfig.get(resource);
@@ -159,8 +185,20 @@ public final class HammerDispatchPlanner {
 
         long requesterStock = requester.getItemAmount(resource);
         long inboundInTransit = LogisticStore.inboundInTransitAmount(requester.assetId, resource);
-        long requestedAmount = Math.max(0L, requesterCfg.minReserve() - requesterStock - inboundInTransit);
-        if (requestedAmount <= 0L) return Result.simple(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, hammer);
+        long arrivedInbound = LogisticStore.arrivedInboundAmount(requester.assetId, resource);
+        long requestedAmount = Math
+            .max(0L, importTargetFor(requester, resource, requesterCfg) - requesterStock - inboundInTransit);
+        if (requestedAmount <= 0L) {
+            if (arrivedInbound > 0L) return destinationBlocked(hammer, arrivedInbound, requesterCfg.orderSize());
+            return Result.simple(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, hammer);
+        }
+        if (arrivedInbound > 0L) return destinationBlocked(hammer, arrivedInbound, requesterCfg.orderSize());
+        long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount, requesterCfg.orderSize());
+        if (sendAmount <= 0L) return Result.simple(HammerDispatchStatus.Code.NO_SURPLUS_AFTER_RESERVE, hammer);
+        long freeCapacity = destinationFreeItemCapacity(requester);
+        if (freeCapacity < sendAmount) {
+            return destinationLacksPackageSpace(hammer, freeCapacity, requesterCfg.orderSize());
+        }
 
         return evaluateCandidateFor(
             supplier,
@@ -207,15 +245,7 @@ public final class HammerDispatchPlanner {
         double tofOsu, OrbitalTransferPlanner.TransferRoute route, CelestialAsset supplier,
         ModuleInstance hammerModule) {
         long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount, orderSize);
-        if (sendAmount < orderSize || sendAmount <= 0L) {
-            return new Result(
-                HammerDispatchStatus.Code.ORDER_BELOW_PACKAGE_SIZE,
-                0L,
-                hammer.energyStored(),
-                sendAmount,
-                orderSize,
-                null);
-        }
+        if (sendAmount <= 0L) return Result.simple(HammerDispatchStatus.Code.NO_SURPLUS_AFTER_RESERVE, hammer);
         if (!shareAnchor && hammer.variant() != HammerVariant.BIG) {
             return new Result(
                 HammerDispatchStatus.Code.NEED_BIG_HAMMER,
@@ -282,7 +312,50 @@ public final class HammerDispatchPlanner {
     }
 
     public static long dispatchAmount(ModuleHammer hammer, long availableSurplus, long requestedAmount, int orderSize) {
-        return Math.min(Math.min(Math.min(requestedAmount, availableSurplus), orderSize), hammer.maxBatchSize());
+        return Math.min(Math.min(requestedAmount, availableSurplus), hammer.maxBatchSize());
+    }
+
+    private static long supplyReserveFor(CelestialAsset supplier, ItemStackWrapper resource,
+        LogisticsResourceConfig supplierCfg) {
+        long reserve = supplierCfg.minReserve();
+        if (supplier instanceof AutomatedFacility facility) {
+            reserve = Math.max(reserve, facility.effectiveLowerBound(resource));
+        }
+        return reserve;
+    }
+
+    private static long importTargetFor(CelestialAsset requester, ItemStackWrapper resource,
+        LogisticsResourceConfig requesterCfg) {
+        long target = requesterCfg.minReserve();
+        if (requester instanceof AutomatedFacility facility) {
+            target = Math.max(target, facility.effectiveLowerBound(resource));
+        }
+        return target;
+    }
+
+    private static Result destinationLacksPackageSpace(ModuleHammer hammer, long freeCapacity, int orderSize) {
+        return new Result(
+            HammerDispatchStatus.Code.DESTINATION_LACKS_PACKAGE_SPACE,
+            0L,
+            hammer.energyStored(),
+            freeCapacity,
+            orderSize,
+            null);
+    }
+
+    private static Result destinationBlocked(ModuleHammer hammer, long arrivedAmount, int orderSize) {
+        return new Result(
+            HammerDispatchStatus.Code.DESTINATION_CAPACITY_BLOCKED,
+            0L,
+            hammer.energyStored(),
+            arrivedAmount,
+            orderSize,
+            null);
+    }
+
+    private static long destinationFreeItemCapacity(CelestialAsset requester) {
+        if (requester instanceof AutomatedFacility facility) return facility.remainingItemInventoryCapacity();
+        return Long.MAX_VALUE;
     }
 
     private static Result evaluateCandidateFor(CelestialAsset supplier, CelestialAsset requester,

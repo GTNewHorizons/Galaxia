@@ -10,7 +10,6 @@ import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.oredict.OreDictionary;
 
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
@@ -24,7 +23,6 @@ import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizons.galaxia.client.EnumColors;
-import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 
 public final class OrbitalPinnedInfoContentBuilder {
@@ -34,23 +32,16 @@ public final class OrbitalPinnedInfoContentBuilder {
         // TODO: Localize
         rows.add(new PinnedInfoRow("Name", body.displayName()));
         rows.add(new PinnedInfoRow("Type", formatObjectClass(body.objectClass())));
-        GTTeamsCompat.getTeamName()
-            .ifPresent(teamName -> rows.add(new PinnedInfoRow("Team", teamName)));
         rows.add(new PinnedInfoRow("Landable", isLandable(body) ? "Yes" : "No"));
         rows.add(new PinnedInfoRow("Dangers", buildDangerSummary(body)));
         if (body.objectClass() != CelestialObject.Class.STAR && body.objectClass() != CelestialObject.Class.GALAXY) {
             rows.add(new PinnedInfoRow("Surface", formatSurfaceType(body)));
-            if (body.properties()
-                .ores()
-                .isEmpty()) {
+            List<ItemStack> gtOres = body.properties()
+                .getResolvedGtVeinOreStacks();
+            if (gtOres.isEmpty()) {
                 rows.add(new PinnedInfoRow("Ores", "Undefined"));
             } else {
-                rows.add(
-                    new PinnedInfoRow(
-                        "Ores",
-                        "",
-                        body.properties()
-                            .ores()));
+                rows.add(new PinnedInfoRow("Ores", "", gtOres));
             }
         }
         return rows;
@@ -88,32 +79,14 @@ public final class OrbitalPinnedInfoContentBuilder {
             .get("surface");
         signature.append('|')
             .append(surfaceType == null ? "" : surfaceType);
-        List<String> gtOreVeinOres = body.properties()
-            .gtOreVeinOres();
+        List<String> gtOreVeinIds = body.properties()
+            .gtOreVeinIds();
         signature.append('|')
-            .append(gtOreVeinOres.size());
-        for (String oreName : gtOreVeinOres) {
+            .append(gtOreVeinIds.size());
+        for (String veinId : gtOreVeinIds) {
             signature.append('|')
-                .append(oreName)
+                .append(veinId)
                 .append(',');
-        }
-        List<ItemStack> ores = body.properties()
-            .ores();
-        signature.append('|')
-            .append(ores.size());
-        for (ItemStack stack : ores) {
-            if (stack == null || stack.getItem() == null) {
-                signature.append("|null");
-                continue;
-            }
-            signature.append('|')
-                .append(
-                    stack.getItem()
-                        .getUnlocalizedName())
-                .append(':')
-                .append(stack.getItemDamage())
-                .append(':')
-                .append(stack.stackSize);
         }
     }
 
@@ -166,28 +139,6 @@ public final class OrbitalPinnedInfoContentBuilder {
         return out.toString();
     }
 
-    private List<ItemStack> resolveGtVeinDisplayItems(String oreName) {
-        List<ItemStack> items = new ArrayList<>();
-        if (oreName == null || oreName.isEmpty()) return items;
-        ItemStack stack = resolveGtOreDisplayStack(oreName);
-        if (stack != null) items.add(stack);
-        return items;
-    }
-
-    private ItemStack resolveGtOreDisplayStack(String oreName) {
-        if (oreName == null || oreName.isEmpty()) return null;
-        String materialKey = oreName.replaceAll("[^A-Za-z0-9]", "");
-        String[] oreDictKeys = new String[] { "ore" + materialKey, "gem" + materialKey, "dust" + materialKey,
-            "dustImpure" + materialKey, "crushed" + materialKey };
-        for (String oreDictKey : oreDictKeys) {
-            List<ItemStack> matches = OreDictionary.getOres(oreDictKey, false);
-            if (matches == null || matches.isEmpty()) continue;
-            ItemStack match = matches.getFirst();
-            if (match != null) return match.copy();
-        }
-        return null;
-    }
-
     public static final class OrbitalPinnedInfoWidget extends ParentWidget<OrbitalPinnedInfoWidget> {
 
         interface Callbacks {
@@ -209,6 +160,7 @@ public final class OrbitalPinnedInfoContentBuilder {
         private static final int ROW_GAP = 6;
         private static final int ICON_SIZE = 16;
         private static final int ICON_GAP = 2;
+        private static final int GT_ORE_STACKS_PER_VEIN = 4;
         private static final int INLINE_ICON_SIZE = 12;
         private static final int INLINE_ICON_GAP = 1;
         private final Callbacks callbacks;
@@ -306,7 +258,7 @@ public final class OrbitalPinnedInfoContentBuilder {
                     .pos(PANEL_PADDING, y));
             if (!row.items()
                 .isEmpty()) {
-                buildItemGrid(root, row.items(), PANEL_PADDING, y + 12, contentWidth);
+                buildItemGrid(root, row, PANEL_PADDING, y + 12, contentWidth);
                 return;
             }
             List<String> wrappedLines = wrapValue(mc, row.value(), contentWidth);
@@ -320,16 +272,17 @@ public final class OrbitalPinnedInfoContentBuilder {
             }
         }
 
-        private void buildItemGrid(ParentWidget<?> root, List<ItemStack> items, int x, int y, int contentWidth) {
+        private void buildItemGrid(ParentWidget<?> root, PinnedInfoRow row, int x, int y, int contentWidth) {
+            List<ItemStack> items = row.items();
             if (items == null || items.isEmpty()) return;
-            int itemsPerRow = Math.max(1, contentWidth / (ICON_SIZE + ICON_GAP));
+            int itemsPerRow = itemGridColumns(row, contentWidth);
             for (int i = 0; i < items.size(); i++) {
                 ItemStack stack = items.get(i);
                 if (stack == null) continue;
                 int col = i % itemsPerRow;
-                int row = i / itemsPerRow;
+                int rowIndex = i / itemsPerRow;
                 int itemX = x + col * (ICON_SIZE + ICON_GAP);
-                int itemY = y + row * (ICON_SIZE + ICON_GAP);
+                int itemY = y + rowIndex * (ICON_SIZE + ICON_GAP);
                 root.child(
                     createItemWidget(stack, ICON_SIZE).pos(itemX, itemY)
                         .size(ICON_SIZE, ICON_SIZE));
@@ -393,7 +346,7 @@ public final class OrbitalPinnedInfoContentBuilder {
             if (row.inlineItems()) return Math.max(height, INLINE_ICON_SIZE);
             if (!row.items()
                 .isEmpty()) {
-                int itemsPerRow = Math.max(1, contentWidth / (ICON_SIZE + ICON_GAP));
+                int itemsPerRow = itemGridColumns(row, contentWidth);
                 int itemRows = (row.items()
                     .size() + itemsPerRow
                     - 1) / itemsPerRow;
@@ -402,6 +355,12 @@ public final class OrbitalPinnedInfoContentBuilder {
             List<String> wrappedLines = wrapValue(mc, row.value(), contentWidth);
             if (wrappedLines.isEmpty()) return height;
             return height + 4 + wrappedLines.size() * TEXT_LINE_HEIGHT;
+        }
+
+        private int itemGridColumns(PinnedInfoRow row, int contentWidth) {
+            int columns = Math.max(1, contentWidth / (ICON_SIZE + ICON_GAP));
+            if ("Ores".equals(row.label())) return Math.min(GT_ORE_STACKS_PER_VEIN, columns);
+            return columns;
         }
 
         private List<String> wrapValue(Minecraft mc, String value, int width) {

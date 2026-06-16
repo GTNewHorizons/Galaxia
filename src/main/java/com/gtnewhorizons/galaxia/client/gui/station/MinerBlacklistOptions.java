@@ -22,10 +22,6 @@ final class MinerBlacklistOptions {
                 addOptions(
                     options,
                     body.properties()
-                        .ores());
-                addOptions(
-                    options,
-                    body.properties()
                         .getResolvedGtVeinOreStacks());
                 return new ArrayList<>(options.values());
             })

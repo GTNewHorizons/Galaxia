@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -464,19 +465,14 @@ public final class FacilityPersistenceManager {
     }
 
     FacilityStateJson encodeFacilityState(AutomatedFacility state) {
+        state.syncRecipeSettingsGroupsFromModules();
         FacilityStateJson out = new FacilityStateJson();
         out.energyStored = state.getEnergyStored();
         out.stationFeatureSalt = state.stationFeatureSalt();
-        state.syncRecipeSettingsGroupsFromModules();
         out.settingsGroupsNextId = state.settingsGroups()
             .nextGroupId();
         out.settingsGroups = new ArrayList<>();
-        state.settingsGroups()
-            .groups()
-            .values()
-            .stream()
-            .sorted(java.util.Comparator.comparingInt(SettingsGroup::id))
-            .forEach(group -> out.settingsGroups.add(encodeSettingsGroup(group)));
+        sortedSettingsGroups(state).forEach(group -> out.settingsGroups.add(encodeSettingsGroup(group)));
         out.modules = new ArrayList<>();
         int moduleCount = 0;
         for (ModuleInstance m : state.modules()) {
@@ -543,7 +539,7 @@ public final class FacilityPersistenceManager {
                     .toKey(),
                 e.getValue());
         }
-        out.fluidBuffer = toFluidBuffer(state);
+        out.fluidBuffer = new LinkedHashMap<>(state.fluidSnapshot());
         out.upkeepItemCredits = encodeItemUpkeepAmountMap(
             state.upkeepCredits()
                 .itemCredits());
@@ -580,6 +576,15 @@ public final class FacilityPersistenceManager {
             LOG.info("[PERSIST] SAVE ENCODE: facility {} has no layout", state.assetId);
         }
         return out;
+    }
+
+    private static List<SettingsGroup> sortedSettingsGroups(AutomatedFacility state) {
+        return state.settingsGroups()
+            .groups()
+            .values()
+            .stream()
+            .sorted(Comparator.comparingInt(SettingsGroup::id))
+            .toList();
     }
 
     AutomatedFacility decodeFacilityState(CelestialAsset asset, FacilityStateJson json) {
@@ -925,10 +930,6 @@ public final class FacilityPersistenceManager {
             decoded.put(key, new InventoryBounds(value.low(), value.upper()));
         }
         return decoded;
-    }
-
-    private static Map<String, Long> toFluidBuffer(AutomatedFacility state) {
-        return new LinkedHashMap<>(state.fluidSnapshot());
     }
 
     private static Map<String, Long> toFluidBounds(Map<FluidKey, Long> bounds) {

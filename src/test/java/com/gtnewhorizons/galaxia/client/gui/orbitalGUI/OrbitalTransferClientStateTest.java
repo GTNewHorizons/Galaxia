@@ -84,7 +84,7 @@ final class OrbitalTransferClientStateTest {
         InterplanetaryTransferSystem.OrbitalTransferSupport support = new InterplanetaryTransferSystem.OrbitalTransferSupport();
         CelestialObject source = GalaxiaCelestialAPI.get(CelestialObjectId.EGORA)
             .orElseThrow();
-        CelestialObject destination = GalaxiaCelestialAPI.get(CelestialObjectId.PANSPIRA)
+        CelestialObject destination = GalaxiaCelestialAPI.get(CelestialObjectId.OVERWORLD)
             .orElseThrow();
         CelestialObject star = GalaxiaCelestialAPI.findStar(root, source);
         double departureTime = 8850.0;

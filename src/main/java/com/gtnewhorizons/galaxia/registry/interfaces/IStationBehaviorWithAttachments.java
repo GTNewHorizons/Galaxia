@@ -1,15 +1,15 @@
 package com.gtnewhorizons.galaxia.registry.interfaces;
 
-import java.util.Iterator;
+import java.util.List;
 
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraftforge.common.util.Constants;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
-import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
 import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry.ResolvedAttachment;
 
 public interface IStationBehaviorWithAttachments extends IStationBehavior {
 
@@ -17,17 +17,23 @@ public interface IStationBehaviorWithAttachments extends IStationBehavior {
         if (!added) return;
         StationGraph graph = station.getGraph();
         if (graph == null) return;
-        if (pos.getTE(station.getWorldObj()) instanceof IStationAttachment<?>attachment) {
-            graph.registerAttachment(station.getHere(), pos, attachment);
+        ResolvedAttachment<?> ra = resolveAttachment(station, pos);
+        if (ra != null) {
+            graph.registerAttachment(station.getHere(), pos, ra);
         }
     }
 
     default void registerAttachments(TileStation station, StationGraph graph) {
         for (BlockPos pos : station.getAttachments()) {
-            if (pos.getTE(station.getWorldObj()) instanceof IStationAttachment<?>attachment) {
-                graph.registerAttachment(station.getHere(), pos, attachment);
+            ResolvedAttachment<?> ra = resolveAttachment(station, pos);
+            if (ra != null) {
+                graph.registerAttachment(station.getHere(), pos, ra);
             }
         }
+    }
+
+    static ResolvedAttachment<?> resolveAttachment(TileStation station, BlockPos pos) {
+        return StationAttachmentRegistry.resolve(station, pos);
     }
 
     @Override
@@ -36,18 +42,14 @@ public interface IStationBehaviorWithAttachments extends IStationBehavior {
         if (graph == null) return;
 
         boolean changed = false;
-        Iterator<BlockPos> it = station.getAttachments()
-            .iterator();
-        while (it.hasNext()) {
-            BlockPos pos = it.next();
-            TileEntity te = pos.getTE(station.getWorldObj());
-            if (!(te instanceof IStationAttachment)
-                || (te instanceof GalaxiaBootableMultiblock<?>base && !base.isStructureValid())) {
+        // Remove attachments that are no longer structurally valid
+        for (BlockPos pos : List.copyOf(station.getAttachments())) {
+            if (resolveAttachment(station, pos) == null) {
                 graph.removeAttachment(pos);
-                it.remove();
                 changed = true;
             }
         }
+        // Ensure all remaining station attachments are registered in the graph
         registerAttachments(station, graph);
         if (changed) station.markDirty();
     }

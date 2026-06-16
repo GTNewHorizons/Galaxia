@@ -5,7 +5,7 @@ package com.gtnewhorizons.galaxia.registry.outpost;
  *
  * <ul>
  * <li>{@code minReserve} – "Keep at least X": the outpost will not supply below this threshold.</li>
- * <li>{@code orderSize} – "Order packets of X": the size of each incoming shipment requested.</li>
+ * <li>{@code orderSize} – "Package size X": the export package size shown for supplied items.</li>
  * <li>{@code isImportEnabled} – whether this outpost will request items when stock falls below reserve.</li>
  * <li>{@code isSupplyEnabled} – whether this outpost may export surplus items above the reserve.</li>
  * </ul>

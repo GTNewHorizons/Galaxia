@@ -13,13 +13,21 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.Structura
 
 public enum EnumTiers {
 
-    TIER_1(1, ModuleLimit.of(DecouplerPartDef.class, 1), ModuleLimit.of(FuelTankPartDef.class, 1),
-        ModuleLimit.of(FunctionalPartDef.class, 1), ModuleLimit.of(EnginePartDef.class, 1),
+    // spotless:off
+    TIER_1(1,
+        ModuleLimit.of(DecouplerPartDef.class, 1),
+        ModuleLimit.of(FuelTankPartDef.class, 1),
+        ModuleLimit.of(FunctionalPartDef.class, 1),
+        ModuleLimit.of(EnginePartDef.class, 1),
         ModuleLimit.of(StructuralPartDef.class, 0)),
 
-    TIER_2(2, ModuleLimit.of(DecouplerPartDef.class, 1), ModuleLimit.of(FuelTankPartDef.class, 3),
-        ModuleLimit.of(FunctionalPartDef.class, 2), ModuleLimit.of(EnginePartDef.class, 3),
+    TIER_2(2,
+        ModuleLimit.of(DecouplerPartDef.class, 1),
+        ModuleLimit.of(FuelTankPartDef.class, 3),
+        ModuleLimit.of(FunctionalPartDef.class, 2),
+        ModuleLimit.of(EnginePartDef.class, 3),
         ModuleLimit.of(StructuralPartDef.class, 1));
+    // spotless:on
 
     private final int tier;
 
@@ -51,9 +59,5 @@ public enum EnumTiers {
 
     public boolean isGreaterThanOrEqual(EnumTiers other) {
         return this.tier >= other.tier;
-    }
-
-    public int toInt() {
-        return tier;
     }
 }

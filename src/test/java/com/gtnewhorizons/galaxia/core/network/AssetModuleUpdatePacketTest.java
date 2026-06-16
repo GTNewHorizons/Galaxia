@@ -575,6 +575,27 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
+    void applyMinerFocusTierPlanCanCarryModuleTierTarget() {
+        AutomatedFacility facility = addMinerFacilityToServer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket
+                .minerFocusTierPlan(facility.assetId, 0, module.id, ModuleTier.IV, MinerFocusTier.I));
+
+        packet.apply(TEAM);
+
+        assertEquals(ModuleTier.EV, module.tier());
+        assertNotNull(module.operationOrNull());
+        MinerFocusOperation spec = (MinerFocusOperation) module.operationOrNull()
+            .plan()
+            .spec();
+        assertEquals(ModuleTier.IV, spec.targetTier());
+        assertEquals("I", spec.targetFocusTierKey());
+    }
+
+    @Test
     void applyMinerFocusOreUpdatesRuntimeConfigAndResetsAlignment() {
         AutomatedFacility facility = addMinerFacilityToServer();
         ModuleInstance module = facility.modules()
@@ -1106,7 +1127,7 @@ final class AssetModuleUpdatePacketTest {
     private static AutomatedFacility addRecipeFacilityToServer() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         ModuleInstance module = FacilityModuleKind.MACERATOR
@@ -1123,7 +1144,7 @@ final class AssetModuleUpdatePacketTest {
     private static AutomatedFacility addModuleFacilityToServer(FacilityModuleKind kind, ModuleTier tier) {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         ModuleInstance module = kind.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, tier);
@@ -1151,7 +1172,7 @@ final class AssetModuleUpdatePacketTest {
     private static AutomatedFacility addMinerFacilityToServer() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         ModuleInstance module = FacilityModuleKind.MINER
@@ -1168,7 +1189,7 @@ final class AssetModuleUpdatePacketTest {
     private static AutomatedFacility addTwoModuleFacilityToServer(FacilityModuleKind kind, ModuleTier tier) {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         ModuleInstance source = kind.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, tier);

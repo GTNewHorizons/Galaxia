@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.celestial.station;
 
+import java.math.BigInteger;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,8 +12,10 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.WorldServer;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -69,14 +72,26 @@ public class Station extends CelestialAsset {
 
     @Override
     public boolean tryConsumeEnergy(long powerDraw) {
-        // TODO
-        return true;
+        return drawEnergy(powerDraw) > 0;
+    }
+
+    public long drawEnergy(long maxPowerDraw) {
+        TileStation ctrl = getTileController();
+        if (ctrl == null) return 0;
+        StationGraph graph = ctrl.getGraph();
+        if (graph == null) return 0;
+        return graph.drawEnergy(maxPowerDraw);
     }
 
     @Override
     public long getEnergyStored() {
-        // TODO
-        return Integer.MAX_VALUE;
+        TileStation ctrl = getTileController();
+        if (ctrl == null) return 0;
+        StationGraph graph = ctrl.getGraph();
+        if (graph == null) return 0;
+        return graph.getEnergyStored()
+            .min(BigInteger.valueOf(Long.MAX_VALUE))
+            .longValue();
     }
 
     @Override
@@ -126,6 +141,9 @@ public class Station extends CelestialAsset {
         WorldServer world = server.worldServerForDimension(dimId);
         if (world == null) return null;
 
-        return controller.getTE(world);
+        if (controller.getTE(world) instanceof TileStation s) return s;
+        Galaxia.LOG.error("[Station] Something that should not be a controller is registered as such");
+
+        return null;
     }
 }

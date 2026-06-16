@@ -8,13 +8,13 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.MathHelper;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.factory.GuiFactories;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.registry.block.PlacementHelper;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 import com.gtnewhorizons.galaxia.registry.celestial.station.GalaxiaBehaviors;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
@@ -46,11 +46,10 @@ public class BlockStationController extends BlockUpdatable implements ITileEntit
 
             sm.setOwner(teamId);
 
-            int f = MathHelper.floor_double((placer.rotationYaw * 4.0F / 360.0F) + 0.5D) & 3;
-            ForgeDirection[] dirs = { ForgeDirection.NORTH, ForgeDirection.EAST, ForgeDirection.SOUTH,
-                ForgeDirection.WEST };
-            sm.setPlacedFacing(dirs[f]);
-            sm.setFacing(dirs[f]);
+            ForgeDirection facing = PlacementHelper.placeInEveryDirection(placer);
+
+            sm.setPlacedFacing(facing);
+            sm.setFacing(facing);
         }
     }
 

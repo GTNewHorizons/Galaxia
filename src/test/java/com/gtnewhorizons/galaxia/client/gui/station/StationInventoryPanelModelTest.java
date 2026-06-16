@@ -75,17 +75,21 @@ final class StationInventoryPanelModelTest {
         ItemStackWrapper tracked = new ItemStackWrapper(Items.diamond, 0, null);
         setAmount(distributed, tracked, 5);
 
-        List<Map.Entry<ItemStackWrapper, Long>> rows = StationInventoryPanelModel.inventoryRows(distributed);
+        List<StationInventoryPanelModel.InventoryItemRow> rows = StationInventoryPanelModel.inventoryRows(distributed);
 
         assertEquals(1, rows.size());
         assertEquals(
             tracked,
             rows.get(0)
-                .getKey());
+                .item());
         assertEquals(
             5L,
             rows.get(0)
-                .getValue());
+                .amount());
+        assertEquals(
+            0L,
+            rows.get(0)
+                .upkeepReserve());
     }
 
     @Test
@@ -106,17 +110,40 @@ final class StationInventoryPanelModelTest {
         ItemStackWrapper tracked = ItemStackWrapper.of(upkeepStack);
         distributed.addModule(moduleWithUpkeep(upkeepStack, 1L));
 
-        List<Map.Entry<ItemStackWrapper, Long>> rows = StationInventoryPanelModel.inventoryRows(distributed);
+        List<StationInventoryPanelModel.InventoryItemRow> rows = StationInventoryPanelModel.inventoryRows(distributed);
 
         assertEquals(1, rows.size());
         assertEquals(
             tracked,
             rows.get(0)
-                .getKey());
+                .item());
         assertEquals(
             0L,
             rows.get(0)
-                .getValue());
+                .amount());
+        assertEquals(
+            10L,
+            rows.get(0)
+                .upkeepReserve());
+    }
+
+    @Test
+    void inventoryRowsExposeUpkeepReserveSeparatelyFromManualReserve() {
+        AutomatedFacility distributed = (AutomatedFacility) distributed();
+        ItemStack upkeepStack = new ItemStack(new Item(), 1, 0);
+        ItemStackWrapper tracked = ItemStackWrapper.of(upkeepStack);
+        distributed.addModule(moduleWithUpkeep(upkeepStack, 1L));
+        distributed.updateItems(tracked, 7);
+        distributed.setBound(tracked, 54L, true);
+        distributed.setUpkeepReserve(tracked, 13L);
+
+        List<StationInventoryPanelModel.InventoryItemRow> rows = StationInventoryPanelModel.inventoryRows(distributed);
+
+        assertEquals(1, rows.size());
+        StationInventoryPanelModel.InventoryItemRow row = rows.get(0);
+        assertEquals(tracked, row.item());
+        assertEquals(7L, row.amount());
+        assertEquals(13L, row.upkeepReserve());
     }
 
     @Test

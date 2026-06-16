@@ -17,6 +17,8 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockOpenable;
 
+import lombok.Getter;
+
 public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> {
 
     public TileEntityAirlock() {
@@ -28,6 +30,7 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
         OPEN,
     }
 
+    @Getter
     private AirlockState state = AirlockState.CLOSED;
 
     public static final int MAX_CONNECTIONS = 2;
@@ -94,10 +97,6 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
         return GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get();
     }
 
-    public AirlockState getState() {
-        return state;
-    }
-
     public boolean isOpen() {
         return state == AirlockState.OPEN;
     }
@@ -140,6 +139,7 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
         if (stationControllers.contains(pos)) return true;
         stationControllers.add(pos);
         markDirty();
+        notifyDirtySeal();
         return true;
     }
 
@@ -258,7 +258,15 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
             }
         }
 
+        notifyDirtySeal();
         this.markDirty();
+    }
+
+    private void notifyDirtySeal() {
+        for (BlockPos controllerPos : getStationControllers()) {
+            TileStationBase<?> controller = controllerPos.getTE(worldObj);
+            if (controller != null) controller.markSealedDirty();
+        }
     }
 
     @Override

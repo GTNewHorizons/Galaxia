@@ -19,36 +19,111 @@ import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
+import com.gtnewhorizon.gtnhlib.util.CoordinatePacker;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
+import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.network.StationGraphSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializer;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
-import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehavior;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehaviorWithAttachments;
 
+import it.unimi.dsi.fastutil.longs.LongArraySet;
 import lombok.Getter;
 import lombok.Setter;
 
 public class TileStation extends TileStationBase<TileStation> {
 
+    public static final int COIL_COOLING_FACTOR = 1;
+    public static final int COIL_HEATING_FACTOR = 1;
+    public static final int OXYGEN_FACTOR = 1;
+    public static final int OXYGEN_DECAY_RATE = 1;
+
+    public static final long COIL_COOLING_EUT = 1024;
+    public static final long COIL_HEATING_EUT = 1024;
+    public static final long OXYGENATOR_EUT = 1024;
+    public static final long AIR_PURIFIER_EUT = 1024;
+    public static final long WITHER_BLOCKER_EUT = 1024;
+
+    public static final long BASE_EUT_PER_BLOCK = 8;
+
     private IStationBehavior behavior = GalaxiaBehaviors.ROOM.get();
+
+    private StationGraphSyncHandler activeGraphSyncHandler;
+
+    public void clearActiveGraphSyncHandler(StationGraphSyncHandler handler) {
+        if (activeGraphSyncHandler == handler) {
+            activeGraphSyncHandler = null;
+        }
+    }
 
     @Getter
     @Setter
     private UUID owner;
+    private boolean proximityBlocked;
     private Role controllerFlag = Role.UNDEFINED;
 
-    @Getter
     private CelestialAsset.ID backingStation;
 
     @Setter
     @Getter
     private List<BlockPos> attachments = new ArrayList<>();
+
+    private IStructureDefinition<TileStation> DEFINITION = null;
+
+    private final LongArraySet coolingCoils = new LongArraySet();
+    private final LongArraySet heatingCoils = new LongArraySet();
+    private final LongArraySet oxygenators = new LongArraySet();
+    private final LongArraySet airPurifiers = new LongArraySet();
+    private final LongArraySet witherBlockers = new LongArraySet();
+
+    private double oxygenLevel = 0;
+
+    public int getCoolingModifier() {
+        return isSealed() ? (coolingCoils.size() * COIL_COOLING_FACTOR) : 0;
+    }
+
+    public void addCoolingCoil(int x, int y, int z) {
+        coolingCoils.add(CoordinatePacker.pack(x, y, z));
+    }
+
+    public int getHeatingModifier() {
+        return isSealed() ? (heatingCoils.size() * COIL_HEATING_FACTOR) : 0;
+    }
+
+    public void addHeatingCoil(int x, int y, int z) {
+        heatingCoils.add(CoordinatePacker.pack(x, y, z));
+    }
+
+    public boolean isOxygenated() {
+        return isSealed() && oxygenLevel >= 100;
+    }
+
+    public void addOxygenator(int x, int y, int z) {
+        oxygenators.add(CoordinatePacker.pack(x, y, z));
+    }
+
+    public boolean hasAirPurifier() {
+        return isSealed() && !airPurifiers.isEmpty();
+    }
+
+    public void addAirPurifier(int x, int y, int z) {
+        airPurifiers.add(CoordinatePacker.pack(x, y, z));
+    }
+
+    public boolean hasWitherBlocker() {
+        return isSealed() && !witherBlockers.isEmpty();
+    }
+
+    public void addWitherBlocker(int x, int y, int z) {
+        witherBlockers.add(CoordinatePacker.pack(x, y, z));
+    }
 
     public void setBehavior(IStationBehavior newBehavior) {
         if (newBehavior == behavior) return;
@@ -62,9 +137,14 @@ public class TileStation extends TileStationBase<TileStation> {
         this.behavior = newBehavior;
         markStructureDirty();
         markDirty();
+        if (activeGraphSyncHandler != null) {
+            activeGraphSyncHandler.forceDirty();
+            activeGraphSyncHandler.triggerFullSync();
+        }
         if (worldObj != null) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
         }
+        reset();
     }
 
     public void addAttachment(BlockPos pos) {
@@ -75,7 +155,12 @@ public class TileStation extends TileStationBase<TileStation> {
 
     @Override
     public IStructureDefinition<TileStation> getStructureDefinition() {
-        return behavior.getStructureDefinition();
+        if (DEFINITION != null) return DEFINITION;
+
+        DEFINITION = behavior.buildStructureDefinition(
+            CelestialDimensionMaterializer.findDefinitionById(worldObj.provider.dimensionId)
+                .orElse(null));
+        return DEFINITION;
     }
 
     @Override
@@ -86,6 +171,11 @@ public class TileStation extends TileStationBase<TileStation> {
     @Override
     public void onStructureFormed() {
         super.onStructureFormed();
+        if (overlapsForeignStation()) {
+            proximityBlocked = true;
+            return;
+        }
+        proximityBlocked = false;
         behavior.onStructureFormed(this);
     }
 
@@ -103,13 +193,23 @@ public class TileStation extends TileStationBase<TileStation> {
             }
         }
         behavior.onStructureDisformed(this);
+        clearAllFunctionalBlocks();
         super.onStructureDisformed();
+    }
+
+    public void clearAllFunctionalBlocks() {
+        coolingCoils.clear();
+        heatingCoils.clear();
+        oxygenators.clear();
+        airPurifiers.clear();
+        witherBlockers.clear();
     }
 
     @Override
     protected boolean attemptBoot() {
         if (controllerFlag == Role.MAIN) {
             initController();
+            super.attemptBoot();
             return true;
         }
 
@@ -123,17 +223,20 @@ public class TileStation extends TileStationBase<TileStation> {
                     this.graph = base.graph;
                     graph.connectPiece(here);
                     controllerFlag = Role.SECONDARY;
+                    super.attemptBoot();
                     return true;
                 }
             }
         }
 
         if (controllerFlag == Role.SECONDARY) {
+            super.attemptBoot();
             return false;
         }
 
         controllerFlag = Role.MAIN;
         initController();
+        super.attemptBoot();
         return true;
     }
 
@@ -148,6 +251,7 @@ public class TileStation extends TileStationBase<TileStation> {
                 if (station.getController() == null) {
                     station.setController(this.here);
                 }
+                this.owner = CelestialAssetStore.getTeamId(backingStation);
                 return;
             }
         }
@@ -159,22 +263,74 @@ public class TileStation extends TileStationBase<TileStation> {
         CelestialAssetStore.registerAsset(owner, station);
     }
 
+    private boolean overlapsForeignStation() {
+        if (owner == null) return false;
+
+        CelestialObjectId bodyId = GalaxiaCelestialAPI.getObjectFromDimension(worldObj.provider.dimensionId);
+        if (bodyId == CelestialObjectId.INVALID) return false;
+
+        for (CelestialAsset.ID otherId : CelestialAssetStore.getAssetsOnBody(bodyId)) {
+            CelestialAsset other = CelestialAssetStore.findAsset(otherId);
+            if (!(other instanceof Station otherStation)) continue;
+            if (otherStation.getController() != null && otherStation.getController()
+                .equals(here)) continue;
+            UUID otherTeam = CelestialAssetStore.getTeamId(otherId);
+            if (otherTeam != null && otherTeam.equals(owner)) continue;
+
+            TileStation otherTile = otherStation.getTileController();
+            if (otherTile == null || !otherTile.structureValid) continue;
+
+            if (piecesOverlap(this, otherTile)) return true;
+
+            StationGraph otherGraph = otherTile.getGraph();
+            if (otherGraph != null) {
+                for (TileStationBase<?> piece : otherGraph.iterateOver(TileStationBase.class)) {
+                    if (piecesOverlap(this, piece)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean piecesOverlap(TileStationBase<?> a, TileStationBase<?> b) {
+        int dist = (a.getSearchRadius() + b.getSearchRadius()) * 2;
+        int dx = Math.abs(a.here.x() - b.here.x());
+        int dy = Math.abs(a.here.y() - b.here.y());
+        int dz = Math.abs(a.here.z() - b.here.z());
+        return dx < dist && dy < dist && dz < dist;
+    }
+
     @Override
     protected void tickPostBoot() {
+        if (proximityBlocked) return;
         behavior.tickPostBoot(this);
     }
 
     @Override
     public void tick() {
+        if (!structureValid || proximityBlocked) return;
+
         super.tick();
+        if (getBackingStation().tryConsumeEnergy(
+            oxygenators.size() * OXYGENATOR_EUT + coolingCoils.size() * COIL_COOLING_EUT
+                + heatingCoils.size() * COIL_HEATING_EUT
+                + airPurifiers.size() * AIR_PURIFIER_EUT
+                + witherBlockers.size() * WITHER_BLOCKER_EUT
+                + getStructureBlocksAmount() * BASE_EUT_PER_BLOCK)
+            && isSealed()) {
+
+            oxygenLevel = Math
+                .clamp(oxygenLevel + (double) (oxygenators.size() * OXYGEN_FACTOR) / getVolume(), 0.0, 100.0);
+        } else {
+            oxygenLevel = Math.max(oxygenLevel - OXYGEN_DECAY_RATE, 0);
+        }
 
         if (!isMainController()) return;
 
         for (TileStationBase<?> secondary : graph.iterateOver(TileStationBase.class)) {
             secondary.tick();
         }
-        graph.getAttachments()
-            .forEach(IStationAttachment::tick);
+        graph.tickAttachments();
     }
 
     public boolean isMainController() {
@@ -190,8 +346,30 @@ public class TileStation extends TileStationBase<TileStation> {
     }
 
     public int getVolume() {
+        var def = getStructureDefinition();
+        if (def instanceof ArbitraryShapeDefinition<?>asd) {
+            return asd.getVolume();
+        }
+
+        Galaxia.LOG.warn("[Station] `getVolume` called on a sealed structure defined without volume");
+
+        return 1;
+    }
+
+    public int getStructureBlocksAmount() {
+        var def = getStructureDefinition();
+        if (def instanceof ArbitraryShapeDefinition<?>asd) {
+            return asd.getStructureBlocksAmount();
+        }
+
+        Galaxia.LOG.warn("[Station] `getVolume` called on structure defined without amount of blocks");
+
+        return 1;
+    }
+
+    public int getTotalVolume() {
         int own = 0;
-        var def = behavior.getStructureDefinition();
+        var def = getStructureDefinition();
         if (def instanceof ArbitraryShapeDefinition<?>asd) {
             own = asd.getVolume();
         }
@@ -199,7 +377,7 @@ public class TileStation extends TileStationBase<TileStation> {
         int sum = own;
         for (TileStationBase<?> s : graph.iterateOver(TileStationBase.class)) {
             if (s instanceof TileStation ts) {
-                var tsDef = ts.behavior.getStructureDefinition();
+                var tsDef = ts.getStructureDefinition();
                 if (tsDef instanceof ArbitraryShapeDefinition<?>asd) {
                     sum += asd.getVolume();
                 }
@@ -214,16 +392,8 @@ public class TileStation extends TileStationBase<TileStation> {
             .toList();
     }
 
-    public boolean hasOxygen(int x, int y, int z) {
-        if (isInside(x, y, z)) return isOxygenated();
-
-        if (graph != null) {
-            for (TileStationBase<?> secondary : graph.iterateOver(TileStationBase.class)) {
-                if (secondary.isInside(x, y, z)) return secondary.isOxygenated();
-            }
-        }
-
-        return false;
+    public Station getBackingStation() {
+        return (Station) CelestialAssetStore.findAsset(backingStation);
     }
 
     @Override
@@ -290,6 +460,12 @@ public class TileStation extends TileStationBase<TileStation> {
             return structure + ": " + color + status + EnumChatFormatting.RESET;
         })).pos(10, structY));
 
+        // Register station graph sync handler for all behaviors to consume
+        StationGraphSyncHandler graphSyncHandler = new StationGraphSyncHandler();
+        graphSyncHandler.setStation(this);
+        syncManager.syncValue(StationGraphSyncHandler.KEY, graphSyncHandler);
+        activeGraphSyncHandler = graphSyncHandler;
+
         // Behavior-specific widgets
         int behaviorY = isCtrl ? 60 : 78;
         List<Widget<?>> behaviourWidgets = behavior.buildBehaviourWidgets(this, syncManager, behaviorY);
@@ -344,13 +520,17 @@ public class TileStation extends TileStationBase<TileStation> {
                 backingStation.id()
                     .getLeastSignificantBits());
         }
-
+        nbt.setDouble("oxygenLevel", oxygenLevel);
+        nbt.setBoolean("proximityBlocked", proximityBlocked);
         behavior.writeToNBT(this, nbt);
     }
 
     @Override
     public void readFromNBT(NBTTagCompound nbt) {
         super.readFromNBT(nbt);
+        if (nbt.hasKey("proximityBlocked")) {
+            this.proximityBlocked = nbt.getBoolean("proximityBlocked");
+        }
 
         if (nbt.hasKey("controllerFlag")) {
             controllerFlag = Role.fromId(nbt.getByte("controllerFlag"));
@@ -369,6 +549,9 @@ public class TileStation extends TileStationBase<TileStation> {
                 .from(new UUID(nbt.getLong("backingStationMost"), nbt.getLong("backingStationLeast")));
         }
 
+        if (nbt.hasKey("oxygenLevel")) {
+            oxygenLevel = nbt.getDouble("oxygenLevel");
+        }
         behavior.readFromNBT(this, nbt);
     }
 
@@ -437,7 +620,6 @@ public class TileStation extends TileStationBase<TileStation> {
             bootState = BootState.UNINITIALIZED;
         }
         graph = null;
-        controllerFlag = Role.UNDEFINED;
     }
 
     @Override
@@ -446,6 +628,7 @@ public class TileStation extends TileStationBase<TileStation> {
         if (controller.getGraph() != null) {
             graph = controller.getGraph();
         }
+        if (proximityBlocked || overlapsForeignStation()) return;
         behavior.onGraphRebuilt(this);
         if (behavior instanceof IStationBehaviorWithAttachments attacher && graph != null) {
             attacher.registerAttachments(this, graph);
@@ -453,7 +636,7 @@ public class TileStation extends TileStationBase<TileStation> {
     }
 
     @Override
-    public void onAttachmentConnected(BlockPos pos, IStationAttachment<?> attachment) {
+    public void onAttachmentConnected(BlockPos pos, Object attachment) {
         if (!(behavior instanceof IStationBehaviorWithAttachments attacher)) return;
         if (!attachments.contains(pos)) {
             attachments.add(pos);
@@ -484,6 +667,13 @@ public class TileStation extends TileStationBase<TileStation> {
     @Override
     protected int getControllerOffsetZ() {
         return 0;
+    }
+
+    protected void reset() {
+        DEFINITION = null;
+        controllerFlag = Role.UNDEFINED;
+        graph = null;
+        super.reset();
     }
 
     public enum Role {

@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
-import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -235,6 +234,23 @@ final class ModuleMinerTest {
     }
 
     @Test
+    void runtimeSettingsCopyRejectsMinerTargetWithoutRequiredFocusTier() {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance source = createMiner(StationTileCoord.of(1, 0));
+        ModuleInstance target = createMiner(StationTileCoord.of(2, 0));
+        facility.addModule(source);
+        facility.addModule(target);
+        ModuleMiner sourceMiner = (ModuleMiner) source.component();
+        ModuleMiner targetMiner = (ModuleMiner) target.component();
+        sourceMiner.setFocus(MinerFocusTier.II, "ore:iron", 1200);
+        targetMiner.setFocus(MinerFocusTier.NONE, null, 0);
+
+        assertFalse(facility.canCopyModuleRuntimeSettings(source, target));
+        assertThrows(IllegalStateException.class, () -> facility.copyModuleRuntimeSettings(source, target));
+        assertNull(targetMiner.focusOreKeyOrNull());
+    }
+
+    @Test
     void privateSettingsGroupCannotBeJoinedDirectly() {
         AutomatedFacility facility = createFacility();
         ModuleInstance source = createMiner(StationTileCoord.of(1, 0));
@@ -317,26 +333,21 @@ final class ModuleMinerTest {
     }
 
     @Test
-    void rareCrystalAddsGemMiningCandidates() {
+    void rareCrystalDoesNotAddVanillaGemCandidatesWhenGtStacksAreMissing() {
         AutomatedFacility facility = createFeatureFacility();
         ModuleInstance miner = createMiner(
             findMinerAnchorWithFeature(facility, PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION.key()));
-        List<ItemStack> candidates = new java.util.ArrayList<>();
-        candidates.add(new ItemStack(Items.iron_ingot));
 
-        candidates.addAll(
-            ModuleMiner.featureMiningEffects(miner, facility)
-                .candidates());
+        List<ItemStack> candidates = ModuleMiner.featureMiningEffects(miner, facility)
+            .candidates();
 
-        assertTrue(
-            candidates.stream()
-                .anyMatch(stack -> stack.getItem() == Items.diamond || stack.getItem() == Items.emerald));
+        assertTrue(candidates.isEmpty());
     }
 
     private static AutomatedFacility createFacility() {
         return new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
+            CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
     }

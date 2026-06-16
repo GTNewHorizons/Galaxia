@@ -56,6 +56,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     private final @Nullable CelestialAsset.ID assetId;
     private final StationMapWidget map;
     private final @Nullable StationTilePickerController tilePickerController;
+    private final @Nullable StationEditModeController editModeController;
     private final @Nullable ModuleConfigModalController configController;
     private @Nullable StationTileCoord armedDestroySelection;
     private boolean destroyMultipleMode;
@@ -72,15 +73,17 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
 
     public StationSidePanelWidget(@Nullable CelestialAsset.ID assetId, StationMapWidget map,
         @Nullable StationTilePickerController tilePickerController) {
-        this(assetId, map, tilePickerController, null);
+        this(assetId, map, tilePickerController, null, null);
     }
 
     public StationSidePanelWidget(@Nullable CelestialAsset.ID assetId, StationMapWidget map,
         @Nullable StationTilePickerController tilePickerController,
+        @Nullable StationEditModeController editModeController,
         @Nullable ModuleConfigModalController configController) {
         this.assetId = assetId;
         this.map = map;
         this.tilePickerController = tilePickerController;
+        this.editModeController = editModeController;
         this.configController = configController;
         child(
             createDestroyMultipleToggle().pos(DESTROY_BUTTON_X, DESTROY_MULTIPLE_TOGGLE_Y)
@@ -97,6 +100,12 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
                 createModuleActionButton(actionSlot).pos(actionX, actionY)
                     .size(ACTION_BUTTON_WIDTH, ACTION_BUTTON_HEIGHT));
         }
+    }
+
+    public StationSidePanelWidget(@Nullable CelestialAsset.ID assetId, StationMapWidget map,
+        @Nullable StationTilePickerController tilePickerController,
+        @Nullable ModuleConfigModalController configController) {
+        this(assetId, map, tilePickerController, null, configController);
     }
 
     @Override
@@ -347,10 +356,9 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
         ModuleInstance module = selectedModule();
         if (module == null) return null;
         FacilityModuleRegistry.Definition definition = FacilityModuleRegistry.get(module.kind());
-        if (definition == null || slot >= definition.panelActions()
-            .size()) {
-            return null;
-        }
+        if (definition == null) return null;
+        if (slot >= definition.panelActions()
+            .size()) return null;
         return definition.panelActions()
             .get(slot);
     }
@@ -470,16 +478,17 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     }
 
     private boolean startDestroyPicker() {
-        if (assetId == null || tilePickerController == null) return false;
+        if (assetId == null || editModeController == null) return false;
         AutomatedFacility facility = resolveFacility(assetId);
         if (facility == null || facility.stationLayout() == null) return false;
-        tilePickerController.start(
+        editModeController.startTileMode(
+            StationEditModeController.Mode.MASS_DECONSTRUCT,
             "Destroy modules",
             "Destroy",
             (coord, selected) -> canDestroyTarget(facility, coord),
             coord -> canonicalDestroyTarget(facility, coord),
             this::destroyTargets);
-        tilePickerController.setVisualStyle(StationTilePickerController.VisualStyle.DECONSTRUCT);
+        editModeController.setVisualStyle(StationTilePickerController.VisualStyle.DECONSTRUCT);
         return true;
     }
 
@@ -562,6 +571,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     }
 
     private boolean isPickerActive() {
-        return tilePickerController != null && tilePickerController.isActive();
+        return editModeController != null ? editModeController.isTilePickerActive()
+            : tilePickerController != null && tilePickerController.isActive();
     }
 }

@@ -13,6 +13,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepLedger;
 
 final class StationInventoryPanelModel {
 
@@ -51,12 +52,15 @@ final class StationInventoryPanelModel {
         }
     }
 
-    static List<Map.Entry<ItemStackWrapper, Long>> inventoryRows(IDistributedInventory inventory) {
+    static List<InventoryItemRow> inventoryRows(IDistributedInventory inventory) {
         Map<ItemStackWrapper, Long> rows = new LinkedHashMap<>(inventory.aggregatedItems());
         Set<ItemStackWrapper> upkeepItems = Set.of();
-        if (inventory instanceof AutomatedFacility facility) {
-            upkeepItems = facility.upkeepSummary()
-                .itemsPerMinute()
+        AutomatedFacility facility = null;
+        UpkeepLedger.UpkeepSummary upkeepSummary = UpkeepLedger.UpkeepSummary.EMPTY;
+        if (inventory instanceof AutomatedFacility af) {
+            facility = af;
+            upkeepSummary = af.upkeepSummary();
+            upkeepItems = upkeepSummary.itemsPerMinute()
                 .keySet();
             for (ItemStackWrapper item : upkeepItems) {
                 rows.putIfAbsent(item, 0L);
@@ -65,10 +69,18 @@ final class StationInventoryPanelModel {
         Set<ItemStackWrapper> visibleUpkeepItems = upkeepItems;
         rows.entrySet()
             .removeIf(row -> row.getValue() <= 0L && !visibleUpkeepItems.contains(row.getKey()));
-        List<Map.Entry<ItemStackWrapper, Long>> sorted = new ArrayList<>(rows.entrySet());
+        AutomatedFacility facilityForRows = facility;
+        List<InventoryItemRow> sorted = rows.entrySet()
+            .stream()
+            .map(
+                row -> new InventoryItemRow(
+                    row.getKey(),
+                    row.getValue(),
+                    facilityForRows == null ? 0L : facilityForRows.upkeepReserve(row.getKey())))
+            .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         sorted.sort(
             Comparator.comparing(
-                row -> row.getKey()
+                row -> row.item()
                     .toStack(1)
                     .getDisplayName(),
                 String.CASE_INSENSITIVE_ORDER));
@@ -95,8 +107,8 @@ final class StationInventoryPanelModel {
 
     static List<UpkeepItemRow> upkeepItemRows(AutomatedFacility facility) {
         List<UpkeepItemRow> result = new ArrayList<>();
-        for (Map.Entry<ItemStackWrapper, UpkeepAmount> entry : facility.upkeepSummary()
-            .itemsPerMinute()
+        UpkeepLedger.UpkeepSummary summary = facility.upkeepSummary();
+        for (Map.Entry<ItemStackWrapper, UpkeepAmount> entry : summary.itemsPerMinute()
             .entrySet()) {
             ItemStackWrapper item = entry.getKey();
             result.add(
@@ -106,7 +118,7 @@ final class StationInventoryPanelModel {
                     facility.getItemAmount(item),
                     facility.upkeepReserve(item),
                     facility.isUpkeepAutoOrderEnabled(item),
-                    upkeepReserveStatus(facility, item)));
+                    upkeepReserveStatus(facility, summary, item)));
         }
         result.sort(
             Comparator.comparing(
@@ -118,8 +130,12 @@ final class StationInventoryPanelModel {
     }
 
     static UpkeepReserveStatus upkeepReserveStatus(AutomatedFacility facility, ItemStackWrapper item) {
-        UpkeepAmount demand = facility.upkeepSummary()
-            .itemsPerMinute()
+        return upkeepReserveStatus(facility, facility.upkeepSummary(), item);
+    }
+
+    private static UpkeepReserveStatus upkeepReserveStatus(AutomatedFacility facility,
+        UpkeepLedger.UpkeepSummary summary, ItemStackWrapper item) {
+        UpkeepAmount demand = summary.itemsPerMinute()
             .get(item);
         long reserve = facility.upkeepReserve(item);
         if (demand == null || demand.isZero()) {
@@ -142,6 +158,8 @@ final class StationInventoryPanelModel {
     record UpkeepReserveStatus(long reserve, double minutes, UpkeepReserveLevel level, String tooltip) {}
 
     private record BoundInput(boolean present, long amount, boolean valid) {}
+
+    record InventoryItemRow(ItemStackWrapper item, long amount, long upkeepReserve) {}
 
     record UpkeepItemRow(ItemStackWrapper item, UpkeepAmount perMinute, long stock, long reserve, boolean autoOrder,
         UpkeepReserveStatus status) {}
