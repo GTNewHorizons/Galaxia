@@ -2,22 +2,16 @@ package com.gtnewhorizons.galaxia.registry.satellite;
 
 public enum SatelliteKind {
 
-    COMMUNICATION(1L, 0.0D),
-    PROSPECTING(0L, 0.10D);
+    COMMUNICATION(1.0D),
+    PROSPECTING(0.10D);
 
-    private final long bandwidthPerSatellite;
-    private final double miningSpeedBonusPerSatellite;
+    private final double effectPerSatellite;
 
-    SatelliteKind(long bandwidthPerSatellite, double miningSpeedBonusPerSatellite) {
-        this.bandwidthPerSatellite = bandwidthPerSatellite;
-        this.miningSpeedBonusPerSatellite = miningSpeedBonusPerSatellite;
+    SatelliteKind(double effectPerSatellite) {
+        this.effectPerSatellite = effectPerSatellite;
     }
 
-    public long bandwidthPerSatellite() {
-        return bandwidthPerSatellite;
-    }
-
-    public double miningSpeedBonusPerSatellite() {
-        return miningSpeedBonusPerSatellite;
+    public double effectPerSatellite() {
+        return effectPerSatellite;
     }
 }

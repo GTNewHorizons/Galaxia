@@ -39,6 +39,7 @@ public final class CelestialAssetStore {
     private final Map<UUID, Map<CelestialObjectId, Set<CelestialAsset.ID>>> bodyIndex;
     private final Map<CelestialObjectId, Set<CelestialAsset.ID>> byBody;
     private final Map<UUID, Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>>> satelliteCounts;
+    private long satelliteRevision;
 
     CelestialAssetStore() {
         this.byId = new LinkedHashMap<>();
@@ -46,6 +47,7 @@ public final class CelestialAssetStore {
         this.bodyIndex = new LinkedHashMap<>();
         this.byBody = new LinkedHashMap<>();
         this.satelliteCounts = new LinkedHashMap<>();
+        this.satelliteRevision = 0L;
     }
 
     // ── Static convenience wrappers (delegate to SERVER) ──
@@ -257,6 +259,7 @@ public final class CelestialAssetStore {
         teamById.clear();
         bodyIndex.clear();
         byBody.clear();
+        if (!satelliteCounts.isEmpty()) satelliteRevision++;
         satelliteCounts.clear();
     }
 
@@ -316,13 +319,17 @@ public final class CelestialAssetStore {
     }
 
     public long satelliteBandwidth(UUID teamId, CelestialObjectId bodyId) {
-        return (long) satelliteCount(teamId, bodyId, SatelliteKind.COMMUNICATION)
-            * SatelliteKind.COMMUNICATION.bandwidthPerSatellite();
+        return (long) (satelliteCount(teamId, bodyId, SatelliteKind.COMMUNICATION)
+            * SatelliteKind.COMMUNICATION.effectPerSatellite());
     }
 
     public double satelliteMiningSpeedBonus(UUID teamId, CelestialObjectId bodyId) {
         return satelliteCount(teamId, bodyId, SatelliteKind.PROSPECTING)
-            * SatelliteKind.PROSPECTING.miningSpeedBonusPerSatellite();
+            * SatelliteKind.PROSPECTING.effectPerSatellite();
+    }
+
+    public long satelliteRevision() {
+        return satelliteRevision;
     }
 
     public void addSatellites(UUID teamId, CelestialObjectId bodyId, SatelliteKind kind, int amount) {
@@ -343,9 +350,10 @@ public final class CelestialAssetStore {
             deleteSatellites(teamId, bodyId, kind);
             return;
         }
-        satelliteCounts.computeIfAbsent(teamId, ignored -> new LinkedHashMap<>())
+        Integer previous = satelliteCounts.computeIfAbsent(teamId, ignored -> new LinkedHashMap<>())
             .computeIfAbsent(bodyId, ignored -> new EnumMap<>(SatelliteKind.class))
             .put(kind, count);
+        if (previous == null || previous != count) satelliteRevision++;
     }
 
     public void deleteSatellites(UUID teamId, CelestialObjectId bodyId, SatelliteKind kind) {
@@ -354,9 +362,10 @@ public final class CelestialAssetStore {
         if (teamCounts == null) return;
         EnumMap<SatelliteKind, Integer> bodyCounts = teamCounts.get(bodyId);
         if (bodyCounts == null) return;
-        bodyCounts.remove(kind);
+        if (bodyCounts.remove(kind) == null) return;
         if (bodyCounts.isEmpty()) teamCounts.remove(bodyId);
         if (teamCounts.isEmpty()) satelliteCounts.remove(teamId);
+        satelliteRevision++;
     }
 
     public Map<UUID, Map<CelestialObjectId, Map<SatelliteKind, Integer>>> snapshotSatelliteCounts() {
@@ -394,6 +403,7 @@ public final class CelestialAssetStore {
     }
 
     public void replaceSatelliteCounts(Map<UUID, Map<CelestialObjectId, Map<SatelliteKind, Integer>>> replacement) {
+        if (!satelliteCounts.isEmpty()) satelliteRevision++;
         satelliteCounts.clear();
         if (replacement == null || replacement.isEmpty()) return;
         for (Map.Entry<UUID, Map<CelestialObjectId, Map<SatelliteKind, Integer>>> teamEntry : replacement.entrySet()) {
