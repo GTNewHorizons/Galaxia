@@ -8,6 +8,7 @@ import java.util.Random;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.BiomeGenBase;
+import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
 import com.gtnewhorizon.gtnhlib.hash.Fnv1a64;
 import com.gtnewhorizon.gtnhlib.util.StdLCG;
@@ -45,6 +46,7 @@ public final class HeightOracle {
     private final double[][] pooledBiomeContrib;
 
     private final StdLCG rand = new StdLCG();
+    private final NoiseGeneratorOctaves terrainNoise;
 
     public HeightOracle(World world, DimensionEnum dimension, boolean clampHeight) {
         this.world = world;
@@ -53,6 +55,7 @@ public final class HeightOracle {
         this.clampHeight = clampHeight;
 
         this.pooledBiomeContrib = new double[wcm.getBiomeCount()][CHUNK_AREA];
+        this.terrainNoise = new NoiseGeneratorOctaves(new StdLCG(world.getSeed()), 4);
     }
 
     public static final class ChunkData {
@@ -224,14 +227,14 @@ public final class HeightOracle {
 
             for (TerrainFeature f : terrain.getMacroFeatures()) {
                 TerrainFeatureApplier
-                    .applyToHeightmap(f, outHeightMap, outSurfaceBlocks, cx, cz, withSeed(cx, cz, i++, 5), terrainRelevance, dimension);
+                    .applyToHeightmap(f, outHeightMap, outSurfaceBlocks, cx, cz, withSeed(cx, cz, i++, 5), terrainRelevance, dimension, terrainNoise);
             }
 
             i = 0;
 
             for (TerrainFeature f : terrain.getMesoFeatures()) {
                 TerrainFeatureApplier
-                    .applyToHeightmap(f, outHeightMap, outSurfaceBlocks, cx, cz, withSeed(cx, cz, i++, 10), terrainRelevance, dimension);
+                    .applyToHeightmap(f, outHeightMap, outSurfaceBlocks, cx, cz, withSeed(cx, cz, i++, 10), terrainRelevance, dimension, terrainNoise);
             }
         }
 
