@@ -179,7 +179,7 @@ tile.heating_coil.name=Heating Coil
 tile.cooling_coil.name=Cooling Coil
 tile.air_purifier.name=Air Purifier
 tile.oxygenator.name=Oxygenator
-tile.wither_blocker.name=Withering Effect Area Blocker
+tile.wither_blocker.name=Atmospheric Withering Blocker
 
 # Fluids
 fluid.lahar=Lahar
