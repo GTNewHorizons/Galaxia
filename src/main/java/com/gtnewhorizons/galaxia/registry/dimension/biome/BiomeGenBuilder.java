@@ -13,11 +13,9 @@ import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
 import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationFunction;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationLayers;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaWall;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.SurfaceFeature;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.UndergroundFeature;
 
 /**
  * The builder for biome generation
@@ -40,9 +38,8 @@ public class BiomeGenBuilder {
     ImmutableBlockMeta oceanSurface = stone;
     ImmutableBlockMeta seabed = stone;
     ImmutableBlockMeta snowBlock = stone;
-    List<LocationRuleGalaxiaSurface> surfaceFeatures = new ArrayList<>();
-    List<LocationRuleGalaxiaCave> caveFeatures = new ArrayList<>();
-    List<LocationRuleGalaxiaWall> wallFeatures = new ArrayList<>();
+    List<SurfaceFeature> surfaceFeatures = new ArrayList<>();
+    List<UndergroundFeature> undergroundFeatures = new ArrayList<>();
     ImmutableBlockMeta topBlock = stone;
     int surfaceThickness = 1;
     boolean enableRain = false;
@@ -179,18 +176,13 @@ public class BiomeGenBuilder {
         return this;
     }
 
-    public BiomeGenBuilder surfaceFeature(LocationRuleGalaxiaSurface feature) {
+    public BiomeGenBuilder surfaceFeature(SurfaceFeature feature) {
         surfaceFeatures.add(feature);
         return this;
     }
 
-    public BiomeGenBuilder caveFeature(LocationRuleGalaxiaCave feature) {
-        caveFeatures.add(feature);
-        return this;
-    }
-
-    public BiomeGenBuilder wallFeature(LocationRuleGalaxiaWall feature) {
-        wallFeatures.add(feature);
+    public BiomeGenBuilder undergroundFeature(UndergroundFeature feature) {
+        undergroundFeatures.add(feature);
         return this;
     }
 

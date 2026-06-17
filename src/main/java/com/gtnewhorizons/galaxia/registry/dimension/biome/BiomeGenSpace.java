@@ -7,11 +7,9 @@ import net.minecraft.world.biome.BiomeGenBase;
 import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationFunction;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationLayers;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaWall;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.SurfaceFeature;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.UndergroundFeature;
 import lombok.Getter;
 
 /**
@@ -29,9 +27,8 @@ public class BiomeGenSpace extends BiomeGenBase implements BiomeBlockPalette {
     private final ImmutableBlockMeta oceanFiller;
     private final ImmutableBlockMeta oceanSurface;
     private final ImmutableBlockMeta seabed;
-    private final List<LocationRuleGalaxiaSurface> surfaceFeatures;
-    private final List<LocationRuleGalaxiaCave> caveFeatures;
-    private final List<LocationRuleGalaxiaWall> wallFeatures;
+    private final List<SurfaceFeature> surfaceFeatures;
+    private final List<UndergroundFeature> undergroundFeatures;
     private final int surfaceThickness;
     private final ImmutableBlockMeta oceanCrackBlock;
     private final float oceanCrackThickness;
@@ -71,8 +68,7 @@ public class BiomeGenSpace extends BiomeGenBase implements BiomeBlockPalette {
         this.spawnableWaterCreatureList = b.mobsWater;
         this.flowers = b.flowers;
         this.surfaceFeatures = b.surfaceFeatures;
-        this.caveFeatures = b.caveFeatures;
-        this.wallFeatures = b.wallFeatures;
+        this.undergroundFeatures = b.undergroundFeatures;
         this.surfaceThickness = b.surfaceThickness;
         this.oceanCrackThickness = b.oceanCrackThickness;
         this.oceanCrackBlock = b.oceanCrackBlock;

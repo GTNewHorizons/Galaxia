@@ -23,9 +23,8 @@ import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeBlockPalette;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenSpace;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.DefaultBlockPalette;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaWall;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.SurfaceFeature;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.UndergroundFeature;
 
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NoiseSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NormalizedSampler;
@@ -81,6 +80,20 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider, GalaxiaPlanet
         this.crackNoise2 = new NormalizedSampler(new ScaledNoise(new OctavesSampler(rand, 2), 0.05));
 
         if (showDebug) writeDebug();
+    }
+
+    @Override
+    public void setBlockSafe(int x, int y, int z, Block block, int meta) {
+        if (y < 0 || y > 255) return;
+
+        int cx = x >> 4;
+        int cz = z >> 4;
+
+        if (!worldObj.getChunkProvider().chunkExists(cx, cz)) {
+            this.queueDeferredWrite(x, y, z, block, meta);
+        } else {
+            worldObj.setBlock(x, y, z, block, meta, 2);
+        }
     }
 
     @Override
@@ -348,55 +361,18 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider, GalaxiaPlanet
         BiomeGenBase localBiome = worldObj.getWorldChunkManager()
             .getBiomeGenAt(x, z);
         if (localBiome instanceof BiomeGenSpace spaceBiome) {
-            if (spaceBiome.getSurfaceFeatures()
-                .isEmpty()) {
-                return;
-            }
+            int surfaceY = (heightOracle.getColumnHeight(x, z) + 15) >> 4;
+
             // Generate surface features in locally random points within the chunk
-            for (LocationRuleGalaxiaSurface feature : spaceBiome.getSurfaceFeatures()) {
-                int localX = x - 8;
-                int localZ = z - 8;
-                if (!feature.isCentered()) {
-                    localX += this.rand.nextInt(CHUNK_WIDTH);
-                    localZ += this.rand.nextInt(CHUNK_WIDTH);
-                }
-                int localY = heightOracle.getColumnHeight(localX, localZ);
-                feature.generate(worldObj, rand, localX, localY, localZ);
+            for (SurfaceFeature feature : spaceBiome.getSurfaceFeatures()) {
+                feature.generateSurfaceFeature(worldObj, this, cx, cz);
             }
-            // Generate cave features
-            for (LocationRuleGalaxiaCave feature : spaceBiome.getCaveFeatures()) {
-                int maximumHeight = feature.getMaximumHeight();
-                int minimumHeight = feature.getMinimumHeight();
-                for (int frequency = 0; frequency < feature.getFrequency(); frequency++) {
-                    int localX = x - 8;
-                    int localZ = z - 8;
-                    if (!feature.isCentered()) {
-                        localX += this.rand.nextInt(CHUNK_WIDTH);
-                        localZ += this.rand.nextInt(CHUNK_WIDTH);
-                    }
-                    int localY = rand.nextInt(
-                        Math.min(heightOracle.getColumnHeight(localX, localZ), maximumHeight - minimumHeight) + 1)
-                        + minimumHeight;
-                    feature.generate(worldObj, rand, localX, localY, localZ);
+
+            // Generate underground features
+            for (UndergroundFeature feature : spaceBiome.getUndergroundFeatures()) {
+                for (int y = 0; y <= surfaceY; y++) {
+                    feature.generateUndergroundFeature(worldObj, this, cx, y, cz);
                 }
-            }
-            // Generate wall features
-            for (LocationRuleGalaxiaWall feature : spaceBiome.getWallFeatures()) {
-                int localX = x - 8;
-                int localZ = z - 8;
-                if (!feature.isCentered()) {
-                    localX += this.rand.nextInt(CHUNK_WIDTH);
-                    localZ += this.rand.nextInt(CHUNK_WIDTH);
-                }
-                int minimumHeight = feature.getMinimumHeight();
-                int localY = minimumHeight;
-                int localHeight = heightOracle.getColumnHeight(localX, localZ);
-                if (localY > localHeight) {
-                    continue;
-                }
-                localY += rand.nextInt(
-                    Math.max(1, Math.min(feature.getMaximumHeight() - minimumHeight, localHeight - minimumHeight)));
-                feature.generate(worldObj, rand, localX, localY, localZ);
             }
         }
     }

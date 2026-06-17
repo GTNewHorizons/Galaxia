@@ -9,6 +9,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import net.minecraft.block.Block;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.init.Blocks;
+import net.minecraft.util.MathHelper;
 import net.minecraft.world.ChunkPosition;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -19,9 +20,14 @@ import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import org.jetbrains.annotations.Nullable;
 
 import com.cardinalstar.cubicchunks.api.ICube;
+import com.cardinalstar.cubicchunks.api.util.Box;
 import com.cardinalstar.cubicchunks.api.worldgen.GenerationResult;
 import com.cardinalstar.cubicchunks.api.worldgen.IWorldGenerator;
+import com.cardinalstar.cubicchunks.mixin.api.ICubicWorldInternal;
+import com.cardinalstar.cubicchunks.server.CubeProviderServer;
+import com.cardinalstar.cubicchunks.server.chunkio.ICubeLoader;
 import com.cardinalstar.cubicchunks.util.HashMap3D;
+import com.cardinalstar.cubicchunks.world.api.ICubeProviderServer.Requirement;
 import com.cardinalstar.cubicchunks.world.cube.Cube;
 import com.falsepattern.endlessids.mixin.helpers.ChunkBiomeHook;
 import com.gtnewhorizon.gtnhlib.util.StdLCG;
@@ -32,6 +38,8 @@ import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeBlockPalette;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenSpace;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.DefaultBlockPalette;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.SurfaceFeature;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.UndergroundFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NoiseSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NormalizedSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.OctavesSampler;
@@ -68,6 +76,11 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
         this.rand = new StdLCG(world.getSeed());
         this.crackNoise1 = new NormalizedSampler(new ScaledNoise(new OctavesSampler(rand, 2), 0.05));
         this.crackNoise2 = new NormalizedSampler(new ScaledNoise(new OctavesSampler(rand, 2), 0.05));
+    }
+
+    @Override
+    public void setBlockSafe(int x, int y, int z, Block block, int meta) {
+        worldObj.setBlock(x, y, z, block, meta, 2);
     }
 
     @Override
@@ -237,10 +250,65 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
         return new GenerationResult<>(chunk);
     }
 
+    private ICubeLoader getCubeLoader() {
+        return getCubeProviderServer().getCubeLoader();
+    }
+
+    private CubeProviderServer getCubeProviderServer() {
+        return ((ICubicWorldInternal.Server) worldObj).getCubeCache();
+    }
+
     @Override
     public void populate(Cube cube) {
+        var data = heightOracle.getOrCompute(cube.getX(), cube.getZ());
+
+        int surfaceMinY = (int) (data.heightMin / 16d);
+        int surfaceMaxY = MathHelper.ceiling_double_int(data.heightMax / 16d);
+
+        BiomeGenSpace biome = data.biomes[0] instanceof BiomeGenSpace space ? space : null;
+
+        int cx = cube.getX();
+        int cy = cube.getY();
+        int cz = cube.getZ();
+
         cube.getColumn().isTerrainPopulated = true;
-        cube.markPopulated(Cube.POP_ALL);
+
+        boolean isSurface = cy >= surfaceMinY && cy <= surfaceMaxY;
+
+        ICubeLoader loader = getCubeLoader();
+
+        if (isSurface) {
+            loader.cacheCubes(new Box(cx - 1, surfaceMinY, cz - 1, cx + 1, surfaceMaxY, cz + 1), Requirement.GENERATE);
+
+            if (biome != null) {
+                for (SurfaceFeature feature : biome.getSurfaceFeatures()) {
+                    feature.generateSurfaceFeature(worldObj, this, cx, cz);
+                }
+            }
+
+            populateCubes(loader, biome, new Box(cx, surfaceMinY, cz, cx, surfaceMaxY, cz), surfaceMaxY);
+
+            loader.uncacheCubes();
+        } else {
+            loader.cacheCubes(new Box(cx - 1, cy - 1, cz - 1, cx + 1, cy + 1, cz + 1), Requirement.GENERATE);
+
+            populateCubes(loader, biome, new Box(cx, cy, cz, cx, cy, cz), surfaceMaxY);
+
+            loader.uncacheCubes();
+        }
+    }
+
+    private void populateCubes(ICubeLoader loader, @Nullable BiomeGenSpace biome, Box cubesToPopulate, int surfaceMaxY) {
+        for (var pos : cubesToPopulate) {
+            if (pos.y() <= surfaceMaxY && biome != null) {
+                // Generate underground features
+                for (UndergroundFeature feature : biome.getUndergroundFeatures()) {
+                    feature.generateUndergroundFeature(worldObj, this, pos.x(), pos.y(), pos.z());
+                }
+            }
+
+            loader.getCube(pos.x(), pos.y(), pos.z(), Requirement.GENERATE).markPopulated(Cube.POP_ALL);
+        }
     }
 
     @Override

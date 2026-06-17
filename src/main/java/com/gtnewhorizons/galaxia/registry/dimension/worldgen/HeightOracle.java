@@ -57,6 +57,7 @@ public final class HeightOracle {
 
     public static final class ChunkData {
         public final double[] heightmap = new double[CHUNK_AREA];
+        public double heightMin, heightMax;
         public final ImmutableBlockMeta[] surfaceBlocks = new ImmutableBlockMeta[CHUNK_AREA];
         public final BiomeGenBase[] biomes = new BiomeGenBase[CHUNK_AREA];
     }
@@ -65,8 +66,19 @@ public final class HeightOracle {
         long key = ((long) cx << 32) | (cz & 0xFFFFFFFFL);
         ChunkData data = cache.getAndMoveToLast(key);
         if (data != null) return data;
+
         data = new ChunkData();
+
         this.computeChunkData(cx, cz, data.heightmap, data.surfaceBlocks, data.biomes);
+
+        data.heightMin = Double.MAX_VALUE;
+        data.heightMax = Double.MIN_VALUE;
+
+        for (double height : data.heightmap) {
+            data.heightMin = Math.min(data.heightMin, height);
+            data.heightMax = Math.max(data.heightMax, height);
+        }
+
         cache.putAndMoveToLast(key, data);
         while (cache.size() > MAX_CACHED_CHUNKS) {
             cache.removeFirst();

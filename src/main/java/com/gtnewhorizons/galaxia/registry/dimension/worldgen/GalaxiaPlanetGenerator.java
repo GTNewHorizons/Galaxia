@@ -24,4 +24,9 @@ public interface GalaxiaPlanetGenerator {
     void queueDeferredWrite(int x, int y, int z, Block block, int meta);
 
     HeightOracle getHeightOracle();
+
+    /// Sets the block at the location without causing cascading worldgen.
+    /// In vanilla, this will defer the update if the chunk hasn't been generated, or do it immediately if it has.
+    /// In cubic chunks, cascading worldgen isn't a thing, so this just sets the block immediately.
+    void setBlockSafe(int x, int y, int z, Block block, int meta);
 }
