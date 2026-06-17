@@ -24,12 +24,14 @@ import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.ChunkProviderGalaxiaPlanet;
 
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.CubicChunkProviderGalaxiaPlanet;
+import cpw.mods.fml.common.Optional;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
 /**
  * An abstract version of the WorldProvider to be used on Galaxia Planets
  */
+@Optional.Interface(modid = "cubicchunks", iface = "com.cardinalstar.cubicchunks.world.ICubicWorldProvider", striprefs = true)
 public class WorldProviderSpace extends WorldProvider implements ICubicWorldProvider {
 
     private static final Map<Integer, Consumer<WorldProviderBuilder>> CONFIGS = new ConcurrentHashMap<>();
@@ -118,6 +120,7 @@ public class WorldProviderSpace extends WorldProvider implements ICubicWorldProv
         return chunkGenSupplier.get();
     }
 
+    @Optional.Method(modid = "cubicchunks")
     @Override
     public @Nullable IWorldGenerator createCubeGenerator() {
         return new CubicChunkProviderGalaxiaPlanet(worldObj, dimension);
