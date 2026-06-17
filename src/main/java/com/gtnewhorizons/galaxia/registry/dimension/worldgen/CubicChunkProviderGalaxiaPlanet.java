@@ -42,7 +42,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.Underground
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NoiseSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NormalizedSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.OctavesSampler;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.ScaledNoise;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.ScaledSampler;
 
 import lombok.Getter;
 
@@ -74,8 +74,8 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
         this.heightOracle = new HeightOracle(world, dimension, false);
 
         this.rand = new StdLCG(world.getSeed());
-        this.crackNoise1 = new NormalizedSampler(new ScaledNoise(new OctavesSampler(rand, 2), 0.05));
-        this.crackNoise2 = new NormalizedSampler(new ScaledNoise(new OctavesSampler(rand, 2), 0.05));
+        this.crackNoise1 = new NormalizedSampler(new ScaledSampler(new OctavesSampler(rand, 2), 0.05));
+        this.crackNoise2 = new NormalizedSampler(new ScaledSampler(new OctavesSampler(rand, 2), 0.05));
     }
 
     @Override

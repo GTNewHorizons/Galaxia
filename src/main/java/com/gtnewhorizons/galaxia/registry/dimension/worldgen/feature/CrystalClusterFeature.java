@@ -87,10 +87,14 @@ public class CrystalClusterFeature implements UndergroundFeature {
         int oY = dir.offsetY;
         int oZ = dir.offsetZ;
 
+        // Calculate the target position by generating a random number (-3 to 3, inclusive), then adding the height
+        // vector to it
+        // The height vector equals the direction, scaled by the heightBias (dir * heightBias)
         int targetX = rand.nextInt(7) - 3 + oX * heightBias;
         int targetY = rand.nextInt(7) - 3 + oY * heightBias;
         int targetZ = rand.nextInt(7) - 3 + oZ * heightBias;
 
+        // Iterate over a line, starting from the origin (offset by the direction * 1), up to the target position.
         getLineVoxels(oX, oY, oZ, targetX, targetY, targetZ, (x1, y1, z1) -> {
             int wX = x + x1;
             int wY = y + y1;
@@ -108,9 +112,18 @@ public class CrystalClusterFeature implements UndergroundFeature {
 
     interface VoxelConsumer {
 
+        /// @return True to continue, false to break
         boolean accept(int x, int y, int z);
     }
 
+    /// Iterates over each voxel in a line that connects between two points.
+    /// @param x1 Start X
+    /// @param y1 Start Y
+    /// @param z1 Start Z
+    /// @param x2 End X (inclusive)
+    /// @param y2 End Y (inclusive)
+    /// @param z2 End Z (inclusive)
+    /// @param fn The consumer that is called for each voxel.
     private static void getLineVoxels(int x1, int y1, int z1, int x2, int y2, int z2, VoxelConsumer fn) {
         int dx = Math.abs(x1 - x2), dy = Math.abs(y1 - y2), dz = Math.abs(z1 - z2);
         int sx = x1 < x2 ? 1 : -1, sy = y1 < y2 ? 1 : -1, sz = z1 < z2 ? 1 : -1;

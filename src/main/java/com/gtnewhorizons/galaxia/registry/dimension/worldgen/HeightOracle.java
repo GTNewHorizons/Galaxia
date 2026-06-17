@@ -21,6 +21,9 @@ import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldChunkManagerSp
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
 
+/// Handles biome detection, biome blending, height map calculations, and surface block detection.
+/// This is the core of the terrain generator; it provides the rough shape.
+/// Note that the height for a given column is the first air block, not the top-most block.
 public final class HeightOracle {
 
     private static final int CHUNK_AREA = 256;

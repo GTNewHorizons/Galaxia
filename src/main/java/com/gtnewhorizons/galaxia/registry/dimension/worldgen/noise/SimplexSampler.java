@@ -4,7 +4,8 @@ import java.util.Random;
 
 import net.minecraft.util.MathHelper;
 
-public class SimplexNoiseSampler implements NoiseSampler {
+/// A standard simplex noise sampler.
+public class SimplexSampler implements NoiseSampler {
 
     protected static final int[][] GRADIENTS = new int[][] { { 1, 1, 0 }, { -1, 1, 0 }, { 1, -1, 0 }, { -1, -1, 0 },
         { 1, 0, 1 }, { -1, 0, 1 }, { 1, 0, -1 }, { -1, 0, -1 }, { 0, 1, 1 }, { 0, -1, 1 }, { 0, 1, -1 }, { 0, -1, -1 },
@@ -17,7 +18,7 @@ public class SimplexNoiseSampler implements NoiseSampler {
     public final double originY;
     public final double originZ;
 
-    public SimplexNoiseSampler(Random random) {
+    public SimplexSampler(Random random) {
         this.originX = random.nextDouble() * 256.0D;
         this.originY = random.nextDouble() * 256.0D;
         this.originZ = random.nextDouble() * 256.0D;

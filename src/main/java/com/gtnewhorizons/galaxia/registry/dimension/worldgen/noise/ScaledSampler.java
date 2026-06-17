@@ -1,20 +1,22 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise;
 
-public class ScaledNoise implements NoiseSampler {
+/// Scales another sampler by a certain amount in each axis.
+/// Effects are the opposite of what you'd expect - scaling by 2 in an axis shrinks the noise by half along that axis.
+public class ScaledSampler implements NoiseSampler {
 
     private final NoiseSampler base;
     private final double scaleX;
     private final double scaleY;
     private final double scaleZ;
 
-    public ScaledNoise(NoiseSampler base, double scaleX, double scaleY, double scaleZ) {
+    public ScaledSampler(NoiseSampler base, double scaleX, double scaleY, double scaleZ) {
         this.base = base;
         this.scaleX = scaleX;
         this.scaleY = scaleY;
         this.scaleZ = scaleZ;
     }
 
-    public ScaledNoise(NoiseSampler base, double scale) {
+    public ScaledSampler(NoiseSampler base, double scale) {
         this(base, scale, scale, scale);
     }
 

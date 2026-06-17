@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise;
 
-/// A noise sampler that remaps the gaussian distribution of one sampler to a nearly linear distribution.
+/// A sampler that remaps the 'boxy' normal distribution of a [SimplexSampler] to an approximately linear distribution.
 public class NormalizedSampler implements NoiseSampler {
 
     private static final double REMAP_EXPONENT = 0.65;

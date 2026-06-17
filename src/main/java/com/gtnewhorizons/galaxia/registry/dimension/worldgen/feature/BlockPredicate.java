@@ -5,6 +5,8 @@ import net.minecraft.world.World;
 
 import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
 
+/// A functional interface that matches against a block + meta combination, instead of a single value.
+/// This is typically used for controlling whether a worldgen feature can generate on a specific block.
 @FunctionalInterface
 public interface BlockPredicate {
 

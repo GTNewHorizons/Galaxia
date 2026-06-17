@@ -27,7 +27,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.Underground
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NoiseSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NormalizedSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.OctavesSampler;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.ScaledNoise;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.ScaledSampler;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import lombok.Getter;
@@ -71,8 +71,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider, GalaxiaPlanet
         this.heightOracle = new HeightOracle(world, dimension, true);
 
         this.rand = new StdLCG(world.getSeed());
-        this.crackNoise1 = new NormalizedSampler(new ScaledNoise(new OctavesSampler(rand, 2), 0.05));
-        this.crackNoise2 = new NormalizedSampler(new ScaledNoise(new OctavesSampler(rand, 2), 0.05));
+        this.crackNoise1 = new NormalizedSampler(new ScaledSampler(new OctavesSampler(rand, 2), 0.05));
+        this.crackNoise2 = new NormalizedSampler(new ScaledSampler(new OctavesSampler(rand, 2), 0.05));
 
         if (showDebug) writeDebug();
     }

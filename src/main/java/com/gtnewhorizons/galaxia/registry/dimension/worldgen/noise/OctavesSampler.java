@@ -3,6 +3,9 @@ package com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise;
 import java.util.Random;
 import java.util.function.Supplier;
 
+/// Layers several samplers on top of each other.
+/// More octaves increase the CPU cost linearly, but increase the complexity and detail of the returned noise.
+/// Each octave has an increasing scale (smaller features) and a decreasing amplitude (smaller effect).
 public class OctavesSampler implements NoiseSampler {
 
     private final NoiseSampler[] octaves;
