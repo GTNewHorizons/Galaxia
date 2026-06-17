@@ -224,8 +224,7 @@ public final class Moon {
             .surfaceFeature(
                 CraterFeature.builder()
                     .tektite(MOON_TEKTITE)
-                    .condition(
-                        (block, meta) -> block == MOON_REGOLITH || block == MOON_BASALT)
+                    .condition((block, meta) -> block == MOON_REGOLITH || block == MOON_BASALT)
                     .build())
             .undergroundFeature(
                 StalactiteFeature.builder()
@@ -286,8 +285,7 @@ public final class Moon {
                 CraterFeature.builder()
                     .rarity(64)
                     .tektite(MOON_TEKTITE)
-                    .condition(
-                        (block, meta) -> block == MOON_REGOLITH || block == MOON_BASALT)
+                    .condition((block, meta) -> block == MOON_REGOLITH || block == MOON_BASALT)
                     .build())
             .terrain(terrainConfiguration)
             .ocean(MOON_OBSIDIAN, MOON_BASALT, 56, MOON_OBSIDIAN, 1)
