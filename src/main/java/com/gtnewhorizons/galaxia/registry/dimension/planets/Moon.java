@@ -2,6 +2,12 @@ package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
 import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_ANDESITE;
 import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_ANORTHOSITE;
+import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_BASALT;
+import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_GABBRO;
+import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_MAGMA;
+import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_OBSIDIAN;
+import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_REGOLITH;
+import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_TEKTITE;
 
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -17,7 +23,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeCracks;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeTubes;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationLayers;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CraterFeature;
@@ -57,7 +62,7 @@ public final class Moon {
                 .height(32)
                 .endFeature()
                 .feature(TerrainPreset.SHIELD_VOLCANOES)
-                .replacementBlock(PlanetBlocks.MOON_MAGMA)
+                .replacementBlock(MOON_MAGMA)
                 .width(2)
                 .height(32)
                 .endFeature()
@@ -69,7 +74,7 @@ public final class Moon {
                 .height(32)
                 .endFeature()
                 .feature(TerrainPreset.SHIELD_VOLCANOES)
-                .replacementBlock(PlanetBlocks.MOON_MAGMA)
+                .replacementBlock(MOON_MAGMA)
                 .width(4)
                 .height(64)
                 .endFeature()
@@ -209,7 +214,7 @@ public final class Moon {
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)
-            .topBlock(PlanetBlocks.MOON_REGOLITH)
+            .topBlock(MOON_REGOLITH)
             .fillerBlocks(height -> {
                 if (height == 0) return bedrock;
                 if (height <= 32) return anorthosite;
@@ -218,9 +223,9 @@ public final class Moon {
             .caveShape(new CaveShapeCracks())
             .surfaceFeature(
                 CraterFeature.builder()
-                    .tektite(PlanetBlocks.MOON_TEKTITE)
+                    .tektite(MOON_TEKTITE)
                     .condition(
-                        (block, meta) -> block == PlanetBlocks.MOON_REGOLITH || block == PlanetBlocks.MOON_BASALT)
+                        (block, meta) -> block == MOON_REGOLITH || block == MOON_BASALT)
                     .build())
             .undergroundFeature(
                 StalactiteFeature.builder()
@@ -256,31 +261,37 @@ public final class Moon {
                     .crystal(Blocks.stained_glass)
                     .build())
             .terrain(terrainConfiguration)
-            .ocean(PlanetBlocks.MOON_OBSIDIAN, PlanetBlocks.MOON_BASALT, 1, PlanetBlocks.MOON_OBSIDIAN, 1)
+            .ocean(MOON_OBSIDIAN, MOON_BASALT, 1, MOON_OBSIDIAN, 1)
             .surfaceThickness(4)
             .build();
     }
 
     protected static BiomeGenBase createOceanBiome(String name, TerrainConfiguration terrainConfiguration) {
+        BlockMeta basalt = new BlockMeta(MOON_BASALT);
+        BlockMeta gabbro = new BlockMeta(MOON_GABBRO);
+        BlockMeta bedrock = new BlockMeta(Blocks.bedrock);
+
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)
-            .topBlock(PlanetBlocks.MOON_BASALT)
-            .fillerBlocks(
-                new StratificationLayers(PlanetBlocks.MOON_BASALT).addStrataLayer(Blocks.bedrock, 0, 0)
-                    .addStrataLayer(PlanetBlocks.MOON_GABBRO, 1, 32))
+            .topBlock(MOON_BASALT)
+            .fillerBlocks(height -> {
+                if (height == 0) return bedrock;
+                if (height <= 32) return gabbro;
+                return basalt;
+            })
             .caveShape(new CaveShapeTubes((byte) 16, (byte) 4, (short) 100))
             .surfaceFeature(
                 CraterFeature.builder()
                     .rarity(64)
-                    .tektite(PlanetBlocks.MOON_TEKTITE)
+                    .tektite(MOON_TEKTITE)
                     .condition(
-                        (block, meta) -> block == PlanetBlocks.MOON_REGOLITH || block == PlanetBlocks.MOON_BASALT)
+                        (block, meta) -> block == MOON_REGOLITH || block == MOON_BASALT)
                     .build())
             .terrain(terrainConfiguration)
-            .ocean(PlanetBlocks.MOON_OBSIDIAN, PlanetBlocks.MOON_BASALT, 56, PlanetBlocks.MOON_OBSIDIAN, 1)
-            .oceanCracks(0.3F, PlanetBlocks.MOON_MAGMA, 4)
+            .ocean(MOON_OBSIDIAN, MOON_BASALT, 56, MOON_OBSIDIAN, 1)
+            .oceanCracks(0.3F, MOON_MAGMA, 4)
             .surfaceThickness(4)
             .build();
     }

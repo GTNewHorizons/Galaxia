@@ -4,12 +4,12 @@ import net.minecraft.init.Blocks;
 
 import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
 import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationLayers;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationFunction;
 
 public class DefaultBlockPalette implements BiomeBlockPalette {
 
     private final ImmutableBlockMeta topBlock = new BlockMeta(Blocks.grass);
-    private final StratificationLayers fillerBlocks = new StratificationLayers(Blocks.stone).freeze();
+    private final StratificationFunction fillerBlocks = StratificationFunction.of(Blocks.stone);
     private final ImmutableBlockMeta snowBlock = new BlockMeta(Blocks.snow);
     private final ImmutableBlockMeta oceanFiller = new BlockMeta(Blocks.water);
     private final ImmutableBlockMeta oceanSurface = new BlockMeta(Blocks.sand);
@@ -22,7 +22,7 @@ public class DefaultBlockPalette implements BiomeBlockPalette {
     }
 
     @Override
-    public StratificationLayers getFillerBlocks() {
+    public StratificationFunction getFillerBlocks() {
         return fillerBlocks;
     }
 
