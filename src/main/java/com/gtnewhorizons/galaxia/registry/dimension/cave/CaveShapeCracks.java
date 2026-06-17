@@ -80,21 +80,24 @@ public class CaveShapeCracks implements CaveShape {
 
     @Override
     public boolean generateCave(int localX, int localY, int localZ, int height) {
-        if (localY >= HEIGHT_LIMIT) {
+        if (localY < 0 || localY >= HEIGHT_LIMIT) {
             return false;
         }
         double localNoise = caveCache[localX + localZ * CHUNK_WIDTH][localY];
-        double boundTightening;
+
         int ceilingDistance = height - localY;
+
+        double boundTightening = 0;
+
         if (ceilingDistance > 0 && ceilingDistance < CHUNK_WIDTH) {
-            boundTightening = 0.75 / ceilingDistance;
-        } else if (localY > 4) {
-            boundTightening = 0;
-        } else {
-            boundTightening = (double) 1 / (Math.max(localY - 1, 1));
+            boundTightening = 1d / ceilingDistance;
+        } else if (localY <= 4) {
+            boundTightening = 1d / Math.max(localY - 1, 1);
         }
+
         double lowerBound = 0.45;
         double upperBound = 0.5 - 0.05 * boundTightening;
+
         return localNoise < upperBound && localNoise > lowerBound;
     }
 }
