@@ -10,6 +10,7 @@ public class OctavesSampler implements NoiseSampler {
 
     private final NoiseSampler[] octaves;
     private final double[] amplitudes, scales;
+    private final double norm;
 
     public OctavesSampler(Supplier<NoiseSampler> samplers, int octaves) {
         this.octaves = new NoiseSampler[octaves];
@@ -21,10 +22,18 @@ public class OctavesSampler implements NoiseSampler {
             this.amplitudes[i] = 1d / Math.pow(2d, i);
             this.scales[i] = Math.pow(2d, i);
         }
+
+        double sum = 0;
+
+        for (double amp : amplitudes) {
+            sum += amp;
+        }
+
+        this.norm = 1d / sum;
     }
 
     public OctavesSampler(Random rng, int octaves) {
-        this(() -> new SimplexNoiseSampler(rng), octaves);
+        this(() -> new SimplexSampler(rng), octaves);
     }
 
     @Override
@@ -38,7 +47,7 @@ public class OctavesSampler implements NoiseSampler {
             value += sampler.sample(x * scale, y * scale) * amplitudes[i];
         }
 
-        return value;
+        return value * norm;
     }
 
     @Override
@@ -52,6 +61,6 @@ public class OctavesSampler implements NoiseSampler {
             value += sampler.sample(x * scale, y * scale, z * scale) * amplitudes[i];
         }
 
-        return value;
+        return value * norm;
     }
 }
