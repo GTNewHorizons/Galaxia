@@ -246,11 +246,7 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
         var data = heightOracle.getOrCompute(columnX, columnZ);
 
-        short[] biomeOut = ((ChunkBiomeHook) chunk).getBiomeShortArray();
-
-        for (int i = 0; i < 256; i++) {
-            biomeOut[i] = (short) data.biomes[i].biomeID;
-        }
+        WorldgenUtils.setBiomes(chunk, data.biomes);
 
         return new GenerationResult<>(chunk);
     }

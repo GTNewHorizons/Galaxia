@@ -53,10 +53,6 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider, GalaxiaPlanet
     private final NoiseSampler crackNoise1, crackNoise2;
     private final boolean showDebug = false;
 
-    private final ImmutableBlockMeta[] surfaceReplacementMap = new ImmutableBlockMeta[CHUNK_AREA];
-    private final BiomeGenBase[] chunkBiomes = new BiomeGenBase[CHUNK_AREA];
-    private final double[] heightMapBuf = new double[CHUNK_AREA];
-
     @Getter
     private final HeightOracle heightOracle;
 
@@ -140,14 +136,9 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider, GalaxiaPlanet
         ExtendedBlockStorage[] storage = chunk.getBlockStorageArray();
 
         // Get local biomes + compute heightmap (shared with HeightOracle)
-        double[] heightMap = heightMapBuf;
-        heightOracle.computeChunkData(chunkX, chunkZ, heightMap, surfaceReplacementMap, chunkBiomes);
+        var data = heightOracle.getOrCompute(chunkX, chunkZ);
 
-        short[] biomeOut = ((ChunkBiomeHook) chunk).getBiomeShortArray();
-
-        for (int i = 0; i < 256; i++) {
-            biomeOut[i] = (short) chunkBiomes[i].biomeID;
-        }
+        WorldgenUtils.setBiomes(chunk, data.biomes);
 
         long terrainFeatureTime = 0;
         if (showDebug) {
@@ -178,7 +169,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider, GalaxiaPlanet
                 long assignmentTimeStart = 0;
                 if (showDebug) assignmentTimeStart = System.nanoTime();
 
-                BiomeGenBase localBiome = chunkBiomes[localX + localZ * CHUNK_WIDTH];
+                BiomeGenBase localBiome = data.biomes[localX + localZ * CHUNK_WIDTH];
 
                 BiomeBlockPalette palette = DEFAULT_PALETTE;
 
@@ -192,7 +183,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider, GalaxiaPlanet
 
                 if (showDebug) assignmentTime += System.nanoTime() - assignmentTimeStart;
 
-                int terrainHeight = Math.max(1, (int) heightMap[localX + (localZ << 4)]);
+                int terrainHeight = Math.max(1, (int) data.heightmap[localX + (localZ << 4)]);
 
                 if (caveShape != null) {
                     if (!caveShape.preparedCaveShape()) {
@@ -217,7 +208,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider, GalaxiaPlanet
                     ImmutableBlockMeta block;
 
                     if (y >= terrainHeight - palette.getSurfaceThickness()) {
-                        ImmutableBlockMeta replacementBlock = surfaceReplacementMap[localX + (localZ << 4)];
+                        ImmutableBlockMeta replacementBlock = data.surfaceBlocks[localX + (localZ << 4)];
 
                         if (replacementBlock != null) {
                             block = replacementBlock;
