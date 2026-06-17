@@ -3,8 +3,8 @@ package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.Chunk;
 
-import com.cardinalstar.cubicchunks.util.Mods;
 import com.falsepattern.endlessids.mixin.helpers.ChunkBiomeHook;
+
 import cpw.mods.fml.common.Loader;
 
 public class WorldgenUtils {
