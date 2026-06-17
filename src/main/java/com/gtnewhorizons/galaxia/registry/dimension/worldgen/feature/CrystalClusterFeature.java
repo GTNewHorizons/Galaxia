@@ -2,22 +2,13 @@ package com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature;
 
 import static net.minecraftforge.common.util.ForgeDirection.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-
 import net.minecraft.block.Block;
 import net.minecraft.world.World;
-
 import net.minecraftforge.common.util.ForgeDirection;
 
-import org.joml.Vector3i;
-
-import com.gtnewhorizon.structurelib.alignment.IntegerAxisSwap;
-import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
-import com.gtnewhorizon.structurelib.util.Vec3Impl;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.GalaxiaPlanetGenerator;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.math.WorldgenRandom;
+
 import lombok.Builder;
 
 @Builder
@@ -90,7 +81,8 @@ public class CrystalClusterFeature implements UndergroundFeature {
         }
     }
 
-    private void generateCrystal(World world, GalaxiaPlanetGenerator generator, int x, int y, int z, int heightBias, ForgeDirection dir) {
+    private void generateCrystal(World world, GalaxiaPlanetGenerator generator, int x, int y, int z, int heightBias,
+        ForgeDirection dir) {
         int oX = dir.offsetX;
         int oY = dir.offsetY;
         int oZ = dir.offsetZ;
@@ -115,6 +107,7 @@ public class CrystalClusterFeature implements UndergroundFeature {
     }
 
     interface VoxelConsumer {
+
         boolean accept(int x, int y, int z);
     }
 

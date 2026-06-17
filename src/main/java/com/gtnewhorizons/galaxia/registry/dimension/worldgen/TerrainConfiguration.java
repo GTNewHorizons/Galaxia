@@ -10,6 +10,7 @@ import net.minecraft.init.Blocks;
 
 import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
 import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
+
 import lombok.Getter;
 
 /**

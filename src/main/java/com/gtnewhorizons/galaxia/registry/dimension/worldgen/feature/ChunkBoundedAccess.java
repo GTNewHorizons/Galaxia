@@ -4,7 +4,6 @@ import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
 
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.ChunkProviderGalaxiaPlanet;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.GalaxiaPlanetGenerator;
 
 public final class ChunkBoundedAccess {
@@ -20,7 +19,9 @@ public final class ChunkBoundedAccess {
         if (isLoaded(world, x, z)) return world.getBlock(x, y, z);
         GalaxiaPlanetGenerator provider = GalaxiaPlanetGenerator.of(world);
         if (provider != null) {
-            return provider.getHeightOracle().getPredictedBlock(x, y, z).getBlock();
+            return provider.getHeightOracle()
+                .getPredictedBlock(x, y, z)
+                .getBlock();
         }
         return Blocks.stone;
     }
@@ -29,7 +30,8 @@ public final class ChunkBoundedAccess {
         if (isLoaded(world, x, z)) return world.isAirBlock(x, y, z);
         GalaxiaPlanetGenerator provider = GalaxiaPlanetGenerator.of(world);
         if (provider != null) {
-            return provider.getHeightOracle().isAir(x, y, z);
+            return provider.getHeightOracle()
+                .isAir(x, y, z);
         }
         return false;
     }

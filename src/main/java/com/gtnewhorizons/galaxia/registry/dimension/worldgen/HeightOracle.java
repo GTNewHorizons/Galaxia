@@ -16,8 +16,8 @@ import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
 import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenSpace;
-
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldChunkManagerSpace;
+
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
 
@@ -59,6 +59,7 @@ public final class HeightOracle {
     }
 
     public static final class ChunkData {
+
         public final double[] heightmap = new double[CHUNK_AREA];
         public double heightMin, heightMax;
         public final ImmutableBlockMeta[] surfaceBlocks = new ImmutableBlockMeta[CHUNK_AREA];
@@ -150,7 +151,8 @@ public final class HeightOracle {
         return rand;
     }
 
-    public void computeChunkData(int cx, int cz, double[] outHeightMap, ImmutableBlockMeta[] outSurfaceBlocks, BiomeGenBase[] outBiomes) {
+    public void computeChunkData(int cx, int cz, double[] outHeightMap, ImmutableBlockMeta[] outSurfaceBlocks,
+        BiomeGenBase[] outBiomes) {
         Arrays.fill(outHeightMap, 64.0);
         Arrays.fill(outSurfaceBlocks, null);
         Arrays.fill(outBiomes, null);
@@ -226,15 +228,31 @@ public final class HeightOracle {
             int i = 0;
 
             for (TerrainFeature f : terrain.getMacroFeatures()) {
-                TerrainFeatureApplier
-                    .applyToHeightmap(f, outHeightMap, outSurfaceBlocks, cx, cz, withSeed(cx, cz, i++, 5), terrainRelevance, dimension, terrainNoise);
+                TerrainFeatureApplier.applyToHeightmap(
+                    f,
+                    outHeightMap,
+                    outSurfaceBlocks,
+                    cx,
+                    cz,
+                    withSeed(cx, cz, i++, 5),
+                    terrainRelevance,
+                    dimension,
+                    terrainNoise);
             }
 
             i = 0;
 
             for (TerrainFeature f : terrain.getMesoFeatures()) {
-                TerrainFeatureApplier
-                    .applyToHeightmap(f, outHeightMap, outSurfaceBlocks, cx, cz, withSeed(cx, cz, i++, 10), terrainRelevance, dimension, terrainNoise);
+                TerrainFeatureApplier.applyToHeightmap(
+                    f,
+                    outHeightMap,
+                    outSurfaceBlocks,
+                    cx,
+                    cz,
+                    withSeed(cx, cz, i++, 10),
+                    terrainRelevance,
+                    dimension,
+                    terrainNoise);
             }
         }
 

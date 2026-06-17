@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import net.minecraft.block.Block;
@@ -14,7 +13,7 @@ public class StratificationLayers implements StratificationFunction {
 
     private static final ImmutableBlockMeta AIR = new BlockMeta(Blocks.air);
 
-    public record Strata(ImmutableBlockMeta blockMeta, int min, int max) { }
+    public record Strata(ImmutableBlockMeta blockMeta, int min, int max) {}
 
     private final List<Strata> strataLayers = new ArrayList<>();
     private boolean frozen = false;

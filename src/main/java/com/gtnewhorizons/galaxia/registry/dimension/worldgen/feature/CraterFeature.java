@@ -1,15 +1,13 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature;
 
-import java.util.Random;
-
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
 
-import com.gtnewhorizon.gtnhlib.util.StdLCG;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.GalaxiaPlanetGenerator;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.HeightOracle;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.math.WorldgenRandom;
+
 import lombok.Builder;
 
 @Builder
@@ -25,7 +23,7 @@ public class CraterFeature implements SurfaceFeature {
     /// Non-deterministic random. Used for minor details like the rim debris.
     private final WorldgenRandom nondetRand = new WorldgenRandom();
 
-    private record CraterSeed(int x, int y, int z, int diameter) { }
+    private record CraterSeed(int x, int y, int z, int diameter) {}
 
     private CraterSeed getSeed(World world, GalaxiaPlanetGenerator generator, int cx, int cz) {
         seedRand.prime(world, cx, cz, 123, 5678);

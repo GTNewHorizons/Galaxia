@@ -10,6 +10,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationFunct
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.SurfaceFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.UndergroundFeature;
+
 import lombok.Getter;
 
 /**

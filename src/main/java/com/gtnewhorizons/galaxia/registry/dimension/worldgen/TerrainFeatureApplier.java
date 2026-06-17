@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
 import java.util.Random;
 
-import net.minecraft.block.Block;
 import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
 import com.gtnewhorizon.gtnhlib.util.StdLCG;
@@ -27,8 +26,9 @@ public final class TerrainFeatureApplier {
      * @param terrainRelevance Matrix holding the terrain precedence
      * @param noise            World-level noise generator seeded from the world seed
      */
-    public static void applyToHeightmap(TerrainFeature feature, double[] heightMap, ImmutableBlockMeta[] surfaceReplacementMap,
-        int chunkX, int chunkZ, Random rand, double[] terrainRelevance, DimensionEnum dimension, NoiseGeneratorOctaves noise) {
+    public static void applyToHeightmap(TerrainFeature feature, double[] heightMap,
+        ImmutableBlockMeta[] surfaceReplacementMap, int chunkX, int chunkZ, Random rand, double[] terrainRelevance,
+        DimensionEnum dimension, NoiseGeneratorOctaves noise) {
         TerrainPreset preset = feature.preset();
         double height = feature.height();
         double width = feature.width();

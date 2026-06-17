@@ -1,12 +1,11 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature;
 
-import java.util.Random;
-
 import net.minecraft.block.Block;
 import net.minecraft.world.World;
 
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.GalaxiaPlanetGenerator;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.math.WorldgenRandom;
+
 import lombok.Builder;
 
 @Builder

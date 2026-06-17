@@ -25,11 +25,11 @@ import com.gtnewhorizons.galaxia.registry.dimension.biome.DefaultBlockPalette;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.SurfaceFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.UndergroundFeature;
-
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NoiseSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NormalizedSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.OctavesSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.ScaledNoise;
+
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import lombok.Getter;
 
@@ -62,7 +62,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider, GalaxiaPlanet
 
     private final Long2ObjectOpenHashMap<List<DeferredWrite>> deferredWrites = new Long2ObjectOpenHashMap<>();
 
-    public record DeferredWrite(int localX, int y, int localZ, Block block, int meta) { }
+    public record DeferredWrite(int localX, int y, int localZ, Block block, int meta) {}
 
     /**
      * Constructor to initialize the world and noise/random generators
@@ -89,7 +89,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider, GalaxiaPlanet
         int cx = x >> 4;
         int cz = z >> 4;
 
-        if (!worldObj.getChunkProvider().chunkExists(cx, cz)) {
+        if (!worldObj.getChunkProvider()
+            .chunkExists(cx, cz)) {
             this.queueDeferredWrite(x, y, z, block, meta);
         } else {
             worldObj.setBlock(x, y, z, block, meta, 2);
@@ -224,7 +225,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider, GalaxiaPlanet
                             block = y >= palette.getSnowHeight() ? palette.getSnowBlock() : palette.getTopBlock();
                         }
                     } else {
-                        block = palette.getFillerBlocks().getStrataBlock(y);
+                        block = palette.getFillerBlocks()
+                            .getStrataBlock(y);
                     }
 
                     long oceanTimeStart = 0;
@@ -247,10 +249,12 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider, GalaxiaPlanet
 
                             boolean topTwoLayers = y == oceanHeight - 1 || y == oceanHeight - 2;
 
-                            boolean isCrack = oceanDepth >= 2 && palette.hasCracks() && topTwoLayers && isCrackBlock(
-                                palette.getOceanCrackThickness(),
-                                chunkX * CHUNK_WIDTH + localX,
-                                chunkZ * CHUNK_WIDTH + localZ);
+                            boolean isCrack = oceanDepth >= 2 && palette.hasCracks()
+                                && topTwoLayers
+                                && isCrackBlock(
+                                    palette.getOceanCrackThickness(),
+                                    chunkX * CHUNK_WIDTH + localX,
+                                    chunkZ * CHUNK_WIDTH + localZ);
 
                             if (isCrack) {
                                 // The top layer should always be air and the lower blocks should be the crack blocks

@@ -44,6 +44,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NoiseSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NormalizedSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.OctavesSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.ScaledNoise;
+
 import lombok.Getter;
 
 @ParametersAreNonnullByDefault
@@ -66,7 +67,7 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
     private final HashMap3D<ArrayList<DeferredWrite>> deferredWrites = new HashMap3D<>();
 
-    public record DeferredWrite(int x, int y, int z, Block block, int meta) { }
+    public record DeferredWrite(int x, int y, int z, Block block, int meta) {}
 
     public CubicChunkProviderGalaxiaPlanet(World world, DimensionEnum dimension) {
         this.dimension = dimension;
@@ -85,7 +86,8 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
     @Override
     public void queueDeferredWrite(int x, int y, int z, Block block, int meta) {
-        deferredWrites.computeIfAbsent(x >> 4, y >> 4, z >> 4, ($x, $y, $z) -> new ArrayList<>()).add(new DeferredWrite(x & 0xF, y & 0xF, z & 0xF, block, meta));
+        deferredWrites.computeIfAbsent(x >> 4, y >> 4, z >> 4, ($x, $y, $z) -> new ArrayList<>())
+            .add(new DeferredWrite(x & 0xF, y & 0xF, z & 0xF, block, meta));
     }
 
     private void drainDeferredWrites(int cx, int cy, int cz, Cube cube) {
@@ -163,7 +165,8 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                             block = y >= palette.getSnowHeight() ? palette.getSnowBlock() : palette.getTopBlock();
                         }
                     } else {
-                        block = palette.getFillerBlocks().getStrataBlock(y);
+                        block = palette.getFillerBlocks()
+                            .getStrataBlock(y);
                     }
 
                     int oceanHeight = palette.getOceanHeight();
@@ -183,10 +186,12 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
                             boolean topTwoLayers = y == oceanHeight - 1 || y == oceanHeight - 2;
 
-                            boolean isCrack = oceanDepth >= 2 && palette.hasCracks() && topTwoLayers && isCrackBlock(
-                                palette.getOceanCrackThickness(),
-                                cubeX * CHUNK_WIDTH + localX,
-                                cubeZ * CHUNK_WIDTH + localZ);
+                            boolean isCrack = oceanDepth >= 2 && palette.hasCracks()
+                                && topTwoLayers
+                                && isCrackBlock(
+                                    palette.getOceanCrackThickness(),
+                                    cubeX * CHUNK_WIDTH + localX,
+                                    cubeZ * CHUNK_WIDTH + localZ);
 
                             if (isCrack) {
                                 // The top layer should always be air and the lower blocks should be the crack blocks
@@ -298,7 +303,8 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
         }
     }
 
-    private void populateCubes(ICubeLoader loader, @Nullable BiomeGenSpace biome, Box cubesToPopulate, int surfaceMaxY) {
+    private void populateCubes(ICubeLoader loader, @Nullable BiomeGenSpace biome, Box cubesToPopulate,
+        int surfaceMaxY) {
         for (var pos : cubesToPopulate) {
             if (pos.y() <= surfaceMaxY && biome != null) {
                 // Generate underground features
@@ -307,7 +313,8 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                 }
             }
 
-            loader.getCube(pos.x(), pos.y(), pos.z(), Requirement.GENERATE).markPopulated(Cube.POP_ALL);
+            loader.getCube(pos.x(), pos.y(), pos.z(), Requirement.GENERATE)
+                .markPopulated(Cube.POP_ALL);
         }
     }
 

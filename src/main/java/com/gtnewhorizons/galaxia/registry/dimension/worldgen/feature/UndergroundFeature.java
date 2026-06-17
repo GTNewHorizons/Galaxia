@@ -1,12 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature;
 
-import java.util.Random;
-
-import net.minecraft.block.Block;
 import net.minecraft.world.World;
-import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 
-import com.cardinalstar.cubicchunks.world.cube.Cube;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.GalaxiaPlanetGenerator;
 
 /// A feature that is generated underground, on planets
