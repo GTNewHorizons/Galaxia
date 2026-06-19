@@ -160,7 +160,7 @@ public class OrbitalView {
     private record SatelliteSignalKey(SatelliteNetworkGraph.Edge edge, int direction, int lane) {}
 
     private record SatelliteSignalState(double distanceWorldUnits, double cooldownSeconds, double arrivalFadeSeconds,
-        int cycle, boolean openingBurst) {}
+        int cycle) {}
 
     private record SatelliteSignalProgress(double headProgress, double tailAlpha, boolean drawHead) {}
 
@@ -438,10 +438,13 @@ public class OrbitalView {
         private static final double SATELLITE_SIGNAL_WORLD_UNITS_PER_SECOND = 4_700.0D;
         private static final double SATELLITE_SIGNAL_MIN_SEGMENT_PIXELS = 16.0D;
         private static final double SATELLITE_SIGNAL_SEGMENT_PIXELS_RANGE = 8.0D;
-        private static final double SATELLITE_SIGNAL_MIN_COOLDOWN_SECONDS = 0.35D;
-        private static final double SATELLITE_SIGNAL_COOLDOWN_SECONDS_RANGE = 1.6D;
+        private static final double SATELLITE_SIGNAL_MIN_COOLDOWN_SECONDS = 0.85D;
+        private static final double SATELLITE_SIGNAL_COOLDOWN_SECONDS_RANGE = 2.4D;
+        private static final double SATELLITE_SIGNAL_INITIAL_DELAY_MIN_SECONDS = 0.45D;
+        private static final double SATELLITE_SIGNAL_INITIAL_DELAY_RANGE_SECONDS = 2.4D;
         private static final double SATELLITE_SIGNAL_ARRIVAL_FADE_SECONDS = 0.35D;
-        private static final int SATELLITE_SIGNAL_LANES_PER_DIRECTION = 3;
+        private static final int SATELLITE_SIGNAL_MAX_LANES_PER_DIRECTION = 3;
+        private static final long SATELLITE_SIGNAL_MBPS_PER_LANE = 30L;
         private static final long SATELLITE_NETWORK_EDGE_SWITCH_COOLDOWN_MS = 1400L;
         private static final int SATELLITE_SIGNAL_PURPLE = 0xCCAA77FF;
         private static final int SATELLITE_SIGNAL_HEAD_PURPLE = 0xFFFF55FF;
@@ -2395,7 +2398,7 @@ public class OrbitalView {
             GlStateManager.enableBlend();
             GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
             drawSatelliteNetworkThreads(alpha);
-            drawSatelliteNetworkSignals(alpha);
+            drawSatelliteNetworkSignals(teamId, alpha);
             GL11.glLineWidth(1f);
             GlStateManager.color(1f, 1f, 1f, 1f);
             GlStateManager.enableTexture2D();
@@ -2495,7 +2498,7 @@ public class OrbitalView {
             GL11.glVertex2f(endpoints[2], endpoints[3]);
         }
 
-        private void drawSatelliteNetworkSignals(float alpha) {
+        private void drawSatelliteNetworkSignals(UUID teamId, float alpha) {
             double elapsedSeconds = satelliteSignalFrameSeconds();
             Set<SatelliteSignalKey> activeSignals = new HashSet<>();
             for (SatelliteNetworkGraph.Edge edge : visibleSatelliteNetworkEdges) {
@@ -2505,13 +2508,23 @@ public class OrbitalView {
                 OrbitalScene.ResolvedBodyDrawState toState = satelliteNetworkWorldStates.get(edge.to());
                 if (from == null || to == null || fromState == null || toState == null) continue;
                 double worldLength = satelliteSignalWorldLength(fromState, toState);
-                for (int lane = 0; lane < SATELLITE_SIGNAL_LANES_PER_DIRECTION; lane++) {
+                int lanes = satelliteSignalLaneCount(teamId, edge);
+                for (int lane = 0; lane < lanes; lane++) {
                     drawSignalLane(edge, 0, lane, from, to, worldLength, alpha, elapsedSeconds, activeSignals);
                     drawSignalLane(edge, 1, lane, to, from, worldLength, alpha, elapsedSeconds, activeSignals);
                 }
             }
             satelliteSignalStates.keySet()
                 .removeIf(key -> !activeSignals.contains(key));
+        }
+
+        private int satelliteSignalLaneCount(UUID teamId, SatelliteNetworkGraph.Edge edge) {
+            long fromBandwidth = CelestialAssetStore.CLIENT.satelliteBandwidth(teamId, edge.from());
+            long toBandwidth = CelestialAssetStore.CLIENT.satelliteBandwidth(teamId, edge.to());
+            long linkBandwidth = Math.min(fromBandwidth, toBandwidth);
+            if (linkBandwidth <= 0L) return 0;
+            long lanes = (linkBandwidth + SATELLITE_SIGNAL_MBPS_PER_LANE - 1L) / SATELLITE_SIGNAL_MBPS_PER_LANE;
+            return (int) Math.min(SATELLITE_SIGNAL_MAX_LANES_PER_DIRECTION, Math.max(1L, lanes));
         }
 
         private void drawSignalLane(SatelliteNetworkGraph.Edge edge, int direction, int lane,
@@ -2636,9 +2649,8 @@ public class OrbitalView {
             activeSignals.add(key);
             SatelliteSignalState state = satelliteSignalStates.get(key);
             if (state == null) {
-                boolean openingBurst = key.lane() == 0;
-                double cooldownSeconds = openingBurst ? 0.0D : signalCooldownSeconds(seed, 0) * phaseOffset;
-                state = new SatelliteSignalState(0.0D, cooldownSeconds, 0.0D, 0, openingBurst);
+                double cooldownSeconds = key.lane() == 0 ? 0.0D : signalInitialDelaySeconds(seed, phaseOffset);
+                state = new SatelliteSignalState(0.0D, cooldownSeconds, 0.0D, 0);
             }
             if (state.arrivalFadeSeconds() > 0.0D) {
                 double fadeAlpha = Math.min(1.0D, state.arrivalFadeSeconds() / SATELLITE_SIGNAL_ARRIVAL_FADE_SECONDS);
@@ -2649,35 +2661,28 @@ public class OrbitalView {
                         state.distanceWorldUnits(),
                         state.cooldownSeconds(),
                         arrivalFadeSeconds,
-                        state.cycle(),
-                        state.openingBurst()));
+                        state.cycle()));
                 return new SatelliteSignalProgress(state.distanceWorldUnits() / linkLengthWorldUnits, fadeAlpha, false);
             }
             if (state.cooldownSeconds() > 0.0D) {
                 double cooldownSeconds = Math.max(0.0D, state.cooldownSeconds() - elapsedSeconds);
-                satelliteSignalStates.put(
-                    key,
-                    new SatelliteSignalState(0.0D, cooldownSeconds, 0.0D, state.cycle(), state.openingBurst()));
+                satelliteSignalStates.put(key, new SatelliteSignalState(0.0D, cooldownSeconds, 0.0D, state.cycle()));
                 return null;
             }
-            double targetWorldUnits = state.openingBurst() ? linkLengthWorldUnits * 0.5D : linkLengthWorldUnits;
             double traveledWorldUnits = state.distanceWorldUnits()
                 + elapsedSeconds * SATELLITE_SIGNAL_WORLD_UNITS_PER_SECOND;
-            if (traveledWorldUnits >= targetWorldUnits) {
+            if (traveledWorldUnits >= linkLengthWorldUnits) {
                 int cycle = state.cycle() + 1;
                 satelliteSignalStates.put(
                     key,
                     new SatelliteSignalState(
-                        targetWorldUnits,
+                        linkLengthWorldUnits,
                         signalCooldownSeconds(seed, cycle),
                         SATELLITE_SIGNAL_ARRIVAL_FADE_SECONDS,
-                        cycle,
-                        false));
-                return new SatelliteSignalProgress(targetWorldUnits / linkLengthWorldUnits, 1.0D, false);
+                        cycle));
+                return new SatelliteSignalProgress(1.0D, 1.0D, false);
             }
-            satelliteSignalStates.put(
-                key,
-                new SatelliteSignalState(traveledWorldUnits, 0.0D, 0.0D, state.cycle(), state.openingBurst()));
+            satelliteSignalStates.put(key, new SatelliteSignalState(traveledWorldUnits, 0.0D, 0.0D, state.cycle()));
             return new SatelliteSignalProgress(traveledWorldUnits / linkLengthWorldUnits, 1.0D, true);
         }
 
@@ -2702,6 +2707,12 @@ public class OrbitalView {
             int cycleSeed = mixSatelliteSignalSeed(seed ^ cycle * 0x85ebca6b);
             return SATELLITE_SIGNAL_MIN_COOLDOWN_SECONDS
                 + signalUnit(cycleSeed, 8) * SATELLITE_SIGNAL_COOLDOWN_SECONDS_RANGE;
+        }
+
+        private static double signalInitialDelaySeconds(int seed, double phaseOffset) {
+            int delaySeed = mixSatelliteSignalSeed(seed ^ 0x4cf5ad43);
+            return SATELLITE_SIGNAL_INITIAL_DELAY_MIN_SECONDS
+                + ((signalUnit(delaySeed, 8) + phaseOffset) * 0.5D) * SATELLITE_SIGNAL_INITIAL_DELAY_RANGE_SECONDS;
         }
 
         private static int mixSatelliteSignalSeed(int seed) {
