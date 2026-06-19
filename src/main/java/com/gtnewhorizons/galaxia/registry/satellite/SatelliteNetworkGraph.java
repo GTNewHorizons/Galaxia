@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
+package com.gtnewhorizons.galaxia.registry.satellite;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -6,14 +6,14 @@ import java.util.List;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 
-final class SatelliteNetworkGraph {
+public final class SatelliteNetworkGraph {
 
     private SatelliteNetworkGraph() {}
 
-    record Node(CelestialObjectId bodyId, CelestialObjectId parentId, double orbitalOrder, double x, double y,
+    public record Node(CelestialObjectId bodyId, CelestialObjectId parentId, double orbitalOrder, double x, double y,
         double radius) {
 
-        Node {
+        public Node {
             if (bodyId == null || bodyId == CelestialObjectId.INVALID) {
                 throw new IllegalArgumentException("bodyId must be a valid celestial object id");
             }
@@ -21,14 +21,14 @@ final class SatelliteNetworkGraph {
             radius = Math.max(0.0D, radius);
         }
 
-        Node(CelestialObjectId bodyId, double x, double y, double radius) {
+        public Node(CelestialObjectId bodyId, double x, double y, double radius) {
             this(bodyId, null, x, x, y, radius);
         }
     }
 
-    record Edge(CelestialObjectId from, CelestialObjectId to) {
+    public record Edge(CelestialObjectId from, CelestialObjectId to) {
 
-        Edge {
+        public Edge {
             if (from == null || from == CelestialObjectId.INVALID || to == null || to == CelestialObjectId.INVALID) {
                 throw new IllegalArgumentException("edge endpoints must be valid celestial object ids");
             }
@@ -42,14 +42,14 @@ final class SatelliteNetworkGraph {
             }
         }
 
-        boolean touches(CelestialObjectId bodyId) {
+        public boolean touches(CelestialObjectId bodyId) {
             return from == bodyId || to == bodyId;
         }
     }
 
     private record Candidate(int fromIndex, int toIndex, double distance) {}
 
-    static List<Edge> build(List<Node> nodes, int maxEdgesPerNode) {
+    public static List<Edge> build(List<Node> nodes, int maxEdgesPerNode) {
         if (nodes == null || nodes.size() < 2 || maxEdgesPerNode <= 0) return List.of();
         List<Node> validNodes = nodes.stream()
             .filter(node -> node != null)

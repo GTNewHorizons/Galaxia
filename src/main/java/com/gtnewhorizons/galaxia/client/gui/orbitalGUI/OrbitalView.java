@@ -47,6 +47,7 @@ import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkGraph;
 
 public class OrbitalView {
 

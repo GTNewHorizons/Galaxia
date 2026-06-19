@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
+package com.gtnewhorizons.galaxia.registry.satellite;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
