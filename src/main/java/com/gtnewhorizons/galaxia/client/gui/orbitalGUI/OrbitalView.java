@@ -164,6 +164,8 @@ public class OrbitalView {
 
     private record SatelliteSignalProgress(double headProgress, double tailAlpha, boolean drawHead) {}
 
+    private record SatelliteNetworkEndpoint(float centerX, float centerY, float renderedRadius) {}
+
     public static final class OrbitalContextMenuState {
 
         private CelestialObject body;
@@ -415,7 +417,7 @@ public class OrbitalView {
         private final List<SatelliteNetworkGraph.Edge> pendingSatelliteNetworkEdges = new ArrayList<>();
         private final Set<CelestialObjectId> satelliteNetworkNodeIds = new HashSet<>();
         private final Set<CelestialObjectId> visibleSatelliteNetworkNodeIds = new HashSet<>();
-        private final Map<CelestialObjectId, OrbitalScene.ScreenBodyBounds> satelliteNetworkBounds = new EnumMap<>(
+        private final Map<CelestialObjectId, SatelliteNetworkEndpoint> satelliteNetworkEndpoints = new EnumMap<>(
             CelestialObjectId.class);
         private final Map<CelestialObjectId, OrbitalScene.ResolvedBodyDrawState> satelliteNetworkWorldStates = new EnumMap<>(
             CelestialObjectId.class);
@@ -2361,21 +2363,18 @@ public class OrbitalView {
             if (teamId == null || alpha <= 0.01f) return;
             satelliteNetworkNodes.clear();
             satelliteNetworkNodeIds.clear();
-            satelliteNetworkBounds.clear();
+            satelliteNetworkEndpoints.clear();
             satelliteNetworkWorldStates.clear();
-            for (OrbitalScene.ScreenBodyBounds bounds : frame.screenBodies) {
-                CelestialObject body = bounds.body();
-                if (body == null) continue;
-                satelliteNetworkBounds.put(body.id(), bounds);
-            }
             for (OrbitalScene.ResolvedBodyDrawState state : frame.resolvedBodies) {
                 CelestialObject body = state.body();
                 if (body == null || body.objectClass() == CelestialObject.Class.GALAXY
                     || body.objectClass() == CelestialObject.Class.STAR
+                    || !isSatelliteNetworkRenderable(state)
                     || CelestialAssetStore.CLIENT.satelliteCount(teamId, body.id(), SatelliteKind.COMMUNICATION) <= 0) {
                     continue;
                 }
                 satelliteNetworkWorldStates.put(body.id(), state);
+                satelliteNetworkEndpoints.put(body.id(), satelliteNetworkEndpoint(state));
                 satelliteNetworkNodeIds.add(body.id());
                 satelliteNetworkNodes.add(
                     new SatelliteNetworkGraph.Node(
@@ -2399,6 +2398,14 @@ public class OrbitalView {
             GL11.glLineWidth(1f);
             GlStateManager.color(1f, 1f, 1f, 1f);
             GlStateManager.enableTexture2D();
+        }
+
+        private boolean isSatelliteNetworkRenderable(OrbitalScene.ResolvedBodyDrawState state) {
+            return state.renderBody() && state.bodyAlpha() > 0.01f;
+        }
+
+        private SatelliteNetworkEndpoint satelliteNetworkEndpoint(OrbitalScene.ResolvedBodyDrawState state) {
+            return new SatelliteNetworkEndpoint(state.screenX(), state.screenY(), state.renderedRadius());
         }
 
         private void updateVisibleSatelliteNetworkEdges(List<SatelliteNetworkGraph.Edge> candidateEdges,
@@ -2479,8 +2486,8 @@ public class OrbitalView {
         }
 
         private void drawSatelliteThread(SatelliteNetworkGraph.Edge edge) {
-            OrbitalScene.ScreenBodyBounds from = satelliteNetworkBounds.get(edge.from());
-            OrbitalScene.ScreenBodyBounds to = satelliteNetworkBounds.get(edge.to());
+            SatelliteNetworkEndpoint from = satelliteNetworkEndpoints.get(edge.from());
+            SatelliteNetworkEndpoint to = satelliteNetworkEndpoints.get(edge.to());
             if (from == null || to == null) return;
             float[] endpoints = satelliteThreadEndpoints(from, to);
             GL11.glVertex2f(endpoints[0], endpoints[1]);
@@ -2491,8 +2498,8 @@ public class OrbitalView {
             double elapsedSeconds = satelliteSignalFrameSeconds();
             Set<SatelliteSignalKey> activeSignals = new HashSet<>();
             for (SatelliteNetworkGraph.Edge edge : visibleSatelliteNetworkEdges) {
-                OrbitalScene.ScreenBodyBounds from = satelliteNetworkBounds.get(edge.from());
-                OrbitalScene.ScreenBodyBounds to = satelliteNetworkBounds.get(edge.to());
+                SatelliteNetworkEndpoint from = satelliteNetworkEndpoints.get(edge.from());
+                SatelliteNetworkEndpoint to = satelliteNetworkEndpoints.get(edge.to());
                 OrbitalScene.ResolvedBodyDrawState fromState = satelliteNetworkWorldStates.get(edge.from());
                 OrbitalScene.ResolvedBodyDrawState toState = satelliteNetworkWorldStates.get(edge.to());
                 if (from == null || to == null || fromState == null || toState == null) continue;
@@ -2526,8 +2533,8 @@ public class OrbitalView {
                 .removeIf(key -> !activeSignals.contains(key));
         }
 
-        private void drawSignalSegment(SatelliteSignalKey signalKey, OrbitalScene.ScreenBodyBounds from,
-            OrbitalScene.ScreenBodyBounds to, double linkLengthWorldUnits, int seed, double phaseOffset,
+        private void drawSignalSegment(SatelliteSignalKey signalKey, SatelliteNetworkEndpoint from,
+            SatelliteNetworkEndpoint to, double linkLengthWorldUnits, int seed, double phaseOffset,
             double segmentLengthPixels, float alpha, double elapsedSeconds, Set<SatelliteSignalKey> activeSignals) {
             float[] endpoints = satelliteThreadEndpoints(from, to);
             double dx = endpoints[2] - endpoints[0];
@@ -2703,7 +2710,7 @@ public class OrbitalView {
                 + signalUnit(seed, shift) * SATELLITE_SIGNAL_SEGMENT_PIXELS_RANGE;
         }
 
-        private float[] satelliteThreadEndpoints(OrbitalScene.ScreenBodyBounds from, OrbitalScene.ScreenBodyBounds to) {
+        private float[] satelliteThreadEndpoints(SatelliteNetworkEndpoint from, SatelliteNetworkEndpoint to) {
             float dx = to.centerX() - from.centerX();
             float dy = to.centerY() - from.centerY();
             float len = (float) Math.sqrt(dx * dx + dy * dy);
