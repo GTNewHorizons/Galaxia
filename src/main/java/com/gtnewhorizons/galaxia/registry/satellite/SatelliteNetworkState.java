@@ -48,5 +48,9 @@ public record SatelliteNetworkState(UUID teamId, int revision, Map<CelestialObje
             capacityKbps = Math.max(0L, capacityKbps);
             usedKbps = Math.max(0L, usedKbps);
         }
+
+        public SatelliteNetworkGraph.Edge asEdge() {
+            return new SatelliteNetworkGraph.Edge(from, to);
+        }
     }
 }

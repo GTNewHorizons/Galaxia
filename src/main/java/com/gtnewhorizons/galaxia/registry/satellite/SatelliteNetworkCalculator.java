@@ -19,10 +19,25 @@ public final class SatelliteNetworkCalculator {
         Map<SatelliteNetworkGraph.Edge, Long> usedByEdge) {
         Map<CelestialObjectId, Long> capacities = capacityByBody == null ? Map.of() : capacityByBody;
         Map<SatelliteNetworkGraph.Edge, Long> usedLinks = usedByEdge == null ? Map.of() : usedByEdge;
+        Map<CelestialObjectId, Long> usedByBody = new HashMap<>();
+        for (Map.Entry<SatelliteNetworkGraph.Edge, Long> entry : usedLinks.entrySet()) {
+            long used = Math.max(0L, entry.getValue());
+            usedByBody.merge(
+                entry.getKey()
+                    .from(),
+                used,
+                Long::sum);
+            usedByBody.merge(
+                entry.getKey()
+                    .to(),
+                used,
+                Long::sum);
+        }
         Map<CelestialObjectId, SatelliteNetworkState.Body> bodies = new HashMap<>();
         for (SatelliteNetworkGraph.Node node : nodes == null ? List.<SatelliteNetworkGraph.Node>of() : nodes) {
             long capacity = capacities.getOrDefault(node.bodyId(), 0L);
-            bodies.put(node.bodyId(), new SatelliteNetworkState.Body(node.bodyId(), capacity, 0L));
+            long used = usedByBody.getOrDefault(node.bodyId(), 0L);
+            bodies.put(node.bodyId(), new SatelliteNetworkState.Body(node.bodyId(), capacity, used));
         }
 
         List<SatelliteNetworkState.Link> links = new ArrayList<>();
@@ -33,6 +48,17 @@ public final class SatelliteNetworkCalculator {
         }
 
         return new SatelliteNetworkState(teamId, revision, bodies, links);
+    }
+
+    public static SatelliteNetworkState forTeam(UUID teamId, int revision, List<SatelliteNetworkGraph.Node> nodes,
+        Map<CelestialObjectId, Long> capacityByBody, Map<SatelliteNetworkGraph.Edge, Long> usedByEdge) {
+        Map<CelestialObjectId, Long> capacities = capacityByBody == null ? Map.of() : capacityByBody;
+        List<SatelliteNetworkGraph.Node> activeNodes = (nodes == null ? List.<SatelliteNetworkGraph.Node>of() : nodes)
+            .stream()
+            .filter(node -> capacities.getOrDefault(node.bodyId(), 0L) > 0L)
+            .toList();
+        List<SatelliteNetworkGraph.Edge> edges = SatelliteNetworkGraph.build(activeNodes, 3);
+        return fromGraph(teamId, revision, activeNodes, edges, capacities, usedByEdge);
     }
 
     public static long widestPathCapacity(CelestialObjectId from, CelestialObjectId to,
@@ -60,9 +86,7 @@ public final class SatelliteNetworkCalculator {
             visited.add(current);
 
             for (SatelliteNetworkGraph.Edge edge : links) {
-                CelestialObjectId next = edge.from() == current ? edge.to()
-                    : edge.to() == current ? edge.from()
-                        : null;
+                CelestialObjectId next = edge.from() == current ? edge.to() : edge.to() == current ? edge.from() : null;
                 if (next == null || visited.contains(next)) continue;
                 long nextCapacity = Math.max(0L, capacities.getOrDefault(next, 0L));
                 long candidate = Math.min(currentBest, nextCapacity);
