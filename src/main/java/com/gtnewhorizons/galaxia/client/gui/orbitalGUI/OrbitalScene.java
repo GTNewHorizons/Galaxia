@@ -399,14 +399,12 @@ public class OrbitalScene {
         }
 
         private void registerMarkers(OrbitalSceneFrame frame, ResolvedBodyDrawState state) {
-            CelestialMarkerBase.CelestialMarkerContext context = markerContext.set(
-                state.body(),
-                CelestialClient.getState(
-                    state.body()
-                        .id()));
+            List<CelestialAsset> assetState = CelestialClient.getState(
+                state.body()
+                    .id());
+            CelestialMarkerBase.CelestialMarkerContext context = markerContext.set(state.body(), assetState);
             List<CelestialMarkerBase.CelestialMarker> markers = CelestialMarkerBase.CelestialMarkerRegistry
                 .getMarkers(context);
-            if (markers.isEmpty()) return;
             int iconSize = Math.max(10, Math.min(15, Math.round(state.renderedRadius() * 0.95f)));
             int gap = 3;
             int startX = Math.round(state.screenX() + state.renderedRadius() + 6f);
@@ -415,6 +413,24 @@ public class OrbitalScene {
                 CelestialMarkerBase.CelestialMarker marker = markers.get(i);
                 int markerX = startX + i * (iconSize + gap);
                 frame.addMarker(marker.texture(), markerX, topY, iconSize, state.bodyAlpha() * marker.alpha());
+            }
+            addSatelliteMarkers(frame, state, assetState, iconSize, gap);
+        }
+
+        private void addSatelliteMarkers(OrbitalSceneFrame frame, ResolvedBodyDrawState state,
+            List<CelestialAsset> assetState, int iconSize, int gap) {
+            if (assetState == null || assetState.isEmpty()) return;
+            ResourceLocation texture = CelestialMarkerBase.CelestialAssetIcons.get(CelestialAsset.Kind.SATELLITE);
+            int leftX = Math.round(state.screenX() - state.renderedRadius() - 6f - iconSize);
+            int topY = Math.round(state.screenY() - state.renderedRadius());
+            int index = 0;
+            for (CelestialAsset asset : assetState) {
+                if (asset.kind != CelestialAsset.Kind.SATELLITE) continue;
+                float alpha = CelestialMarkerBase.assetMarkerAlpha(asset);
+                if (alpha <= 0.0f) continue;
+                int markerY = topY + index * (iconSize + gap);
+                frame.addMarker(texture, leftX, markerY, iconSize, state.bodyAlpha() * alpha);
+                index++;
             }
         }
     }

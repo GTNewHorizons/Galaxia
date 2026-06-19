@@ -54,17 +54,10 @@ public class CelestialMarkerBase {
             }
             List<CelestialMarker> markers = new ArrayList<>();
             for (CelestialAsset asset : context.assetState()) {
+                if (asset.kind == CelestialAsset.Kind.SATELLITE) continue;
                 ResourceLocation texture = CelestialAssetIcons.get(asset.kind);
                 if (texture == null) continue;
-                // TODO: Put these values in the colors maybe
-                float alpha = switch (asset.status()) {
-                    case OPERATIONAL -> 1.0f;
-                    case CONSTRUCTION_SITE -> 0.85f;
-                    case DECONSTRUCTION -> 0.65f;
-                    case DISABLED -> 0.45f;
-                    case IN_CONSTRUCTION -> 0.0F;
-                    case DESTROYED -> 0.0f;
-                };
+                float alpha = assetMarkerAlpha(asset);
                 if (alpha <= 0.0f) continue;
                 markers.add(
                     new CelestialMarker(
@@ -77,6 +70,19 @@ public class CelestialMarkerBase {
         }
     }
 
+    static float assetMarkerAlpha(CelestialAsset asset) {
+        if (asset == null) return 0.0f;
+        // TODO: Put these values in the colors maybe
+        return switch (asset.status()) {
+            case OPERATIONAL -> 1.0f;
+            case CONSTRUCTION_SITE -> 0.85f;
+            case DECONSTRUCTION -> 0.65f;
+            case DISABLED -> 0.45f;
+            case IN_CONSTRUCTION -> 0.0F;
+            case DESTROYED -> 0.0f;
+        };
+    }
+
     public static final class CelestialAssetIcons {
 
         private CelestialAssetIcons() {}
@@ -86,7 +92,7 @@ public class CelestialMarkerBase {
                 case STATION -> EnumTextures.ICON_STATION.get();
                 case AUTOMATED_STATION -> EnumTextures.ICON_STATION_AUTOMATED.get();
                 case AUTOMATED_OUTPOST -> EnumTextures.ICON_OUTPOST_AUTOMATED.get();
-                case SATELLITE -> EnumTextures.ICON_STATION.get();
+                case SATELLITE -> EnumTextures.ICON_SATELLITE.get();
             };
         }
     }

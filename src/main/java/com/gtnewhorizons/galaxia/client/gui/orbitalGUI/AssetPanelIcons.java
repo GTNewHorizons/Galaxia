@@ -29,7 +29,7 @@ final class AssetPanelIcons {
             case STATION -> EnumTextures.ICON_STATION.get();
             case AUTOMATED_STATION -> EnumTextures.ICON_STATION_AUTOMATED.get();
             case AUTOMATED_OUTPOST -> EnumTextures.ICON_OUTPOST_AUTOMATED.get();
-            case SATELLITE -> EnumTextures.ICON_STATION.get();
+            case SATELLITE -> EnumTextures.ICON_SATELLITE.get();
         };
     }
 
