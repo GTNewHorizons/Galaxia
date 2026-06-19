@@ -411,14 +411,9 @@ public final class FacilityPersistenceManager {
         CelestialAsset.Kind kind = safeValueOf(CelestialAsset.Kind.class, json.kind);
         Buildable.Status status = safeValueOf(Buildable.Status.class, json.status);
         if (kind == null || status == null) return null;
-        CelestialAsset asset;
-        if (kind == CelestialAsset.Kind.SATELLITE) {
-            SatelliteKind satelliteKind = safeValueOf(SatelliteKind.class, json.satelliteKind);
-            if (satelliteKind == null) return null;
-            asset = new Satellite(json.assetId, objectId, status, satelliteKind);
-        } else {
-            asset = CelestialAsset.create(json.assetId, objectId, kind, status);
-        }
+        SatelliteKind satelliteKind = safeValueOf(SatelliteKind.class, json.satelliteKind);
+        if (kind == CelestialAsset.Kind.SATELLITE && satelliteKind == null) return null;
+        CelestialAsset asset = CelestialAsset.create(json.assetId, objectId, kind, status, satelliteKind);
         asset.setConstructionInventory(decodeRequirements(json.constructionInventory));
         asset.setDisplayName(json.displayName);
         if (asset instanceof Station station && json.controllerX != null

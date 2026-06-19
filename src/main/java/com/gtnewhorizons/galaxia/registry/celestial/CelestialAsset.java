@@ -66,7 +66,21 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         return create(celestialObjectId, kind, operational ? Status.OPERATIONAL : Status.CONSTRUCTION_SITE);
     }
 
+    public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, boolean operational,
+        SatelliteKind satelliteKind) {
+        return create(
+            celestialObjectId,
+            kind,
+            operational ? Status.OPERATIONAL : Status.CONSTRUCTION_SITE,
+            satelliteKind);
+    }
+
     public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, Status status) {
+        return create(celestialObjectId, kind, status, SatelliteKind.COMMUNICATION);
+    }
+
+    public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, Status status,
+        SatelliteKind satelliteKind) {
         return switch (kind) {
             case STATION -> new Station(ID.create(), celestialObjectId, status);
             case AUTOMATED_STATION, AUTOMATED_OUTPOST -> new AutomatedFacility(
@@ -74,15 +88,26 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
                 celestialObjectId,
                 kind,
                 status);
-            case SATELLITE -> new Satellite(ID.create(), celestialObjectId, status, SatelliteKind.COMMUNICATION);
+            case SATELLITE -> {
+                if (satelliteKind == null) throw new IllegalArgumentException("satelliteKind is required");
+                yield new Satellite(ID.create(), celestialObjectId, status, satelliteKind);
+            }
         };
     }
 
     public static CelestialAsset create(ID id, CelestialObjectId celestialObjectId, Kind kind, Status status) {
+        return create(id, celestialObjectId, kind, status, SatelliteKind.COMMUNICATION);
+    }
+
+    public static CelestialAsset create(ID id, CelestialObjectId celestialObjectId, Kind kind, Status status,
+        SatelliteKind satelliteKind) {
         return switch (kind) {
             case STATION -> new Station(id, celestialObjectId, status);
             case AUTOMATED_STATION, AUTOMATED_OUTPOST -> new AutomatedFacility(id, celestialObjectId, kind, status);
-            case SATELLITE -> new Satellite(id, celestialObjectId, status, SatelliteKind.COMMUNICATION);
+            case SATELLITE -> {
+                if (satelliteKind == null) throw new IllegalArgumentException("satelliteKind is required");
+                yield new Satellite(id, celestialObjectId, status, satelliteKind);
+            }
         };
     }
 

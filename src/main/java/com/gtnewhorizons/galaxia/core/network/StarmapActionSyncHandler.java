@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,6 +27,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 import cpw.mods.fml.relauncher.Side;
@@ -81,8 +83,8 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
                 .createStation(bodyId, asset.displayName(), ((Station) asset).getController());
             case AUTOMATED_OUTPOST, AUTOMATED_STATION -> AssetCreateRequestPacket
                 .createFacility(bodyId, asset.displayName(), asset.kind, asset.isOperational());
-            case SATELLITE -> throw new IllegalArgumentException(
-                "Satellites are not registered through asset creation");
+            case SATELLITE -> AssetCreateRequestPacket
+                .createSatellite(bodyId, ((Satellite) asset).satelliteKind(), asset.isOperational());
         };
         Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
@@ -269,22 +271,20 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
                 syncPacket(packet.apply(teamId));
             }
             case REQUEST_SATELLITE_DEBUG_MUTATION -> {
+                // TODO: Remove this once satellite production is handled by normal gameplay.
                 if (!isSatelliteDebugAuthorized(playerMp)) return;
                 UUID debugTeamId = PacketUtil.readId(buf);
                 CelestialObjectId bodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
                 SatelliteKind kind = PacketUtil.readEnum(buf, SatelliteKind.class);
                 SatelliteDebugOperation operation = PacketUtil.readEnum(buf, SatelliteDebugOperation.class);
                 int amount = buf.readInt();
-                for (CelestialAsset.ID assetId : applySatelliteDebugMutation(
+                for (AssetSyncPacket packet : applySatelliteDebugMutation(
                     debugTeamId,
                     bodyId,
                     kind,
                     operation,
                     amount)) {
-                    CelestialAsset asset = CelestialAssetStore.SERVER.findAssetInternal(assetId);
-                    Galaxia.GALAXIA_NETWORK.sendTo(
-                        asset == null ? AssetSyncPacket.assetRemoved(assetId) : AssetSyncPacket.fullSync(asset),
-                        playerMp);
+                    Galaxia.GALAXIA_NETWORK.sendTo(packet, playerMp);
                 }
             }
         }
@@ -305,15 +305,32 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
                 .func_152596_g(player.getGameProfile());
     }
 
-    private static List<CelestialAsset.ID> applySatelliteDebugMutation(UUID teamId, CelestialObjectId bodyId,
+    private static List<AssetSyncPacket> applySatelliteDebugMutation(UUID teamId, CelestialObjectId bodyId,
         SatelliteKind kind, SatelliteDebugOperation operation, int amount) {
         return switch (operation) {
             case ADD -> {
                 if (amount <= 0) throw new IllegalArgumentException("Satellite ADD amount must be positive: " + amount);
-                yield CelestialAssetStore.SERVER.addSatellites(teamId, bodyId, kind, amount);
+                List<AssetSyncPacket> packets = new ArrayList<>(amount);
+                for (int i = 0; i < amount; i++) {
+                    AssetSyncPacket packet = AssetCreateRequestPacket.createSatellite(bodyId, kind, true)
+                        .apply(teamId);
+                    if (packet != null) packets.add(packet);
+                }
+                yield packets;
             }
-            case SET -> CelestialAssetStore.SERVER.setSatelliteCount(teamId, bodyId, kind, amount);
-            case DELETE_ALL -> CelestialAssetStore.SERVER.deleteSatellites(teamId, bodyId, kind);
+            case SET -> syncSatelliteMutations(
+                CelestialAssetStore.SERVER.setSatelliteCount(teamId, bodyId, kind, amount));
+            case DELETE_ALL -> syncSatelliteMutations(
+                CelestialAssetStore.SERVER.deleteSatellites(teamId, bodyId, kind));
         };
+    }
+
+    private static List<AssetSyncPacket> syncSatelliteMutations(List<CelestialAsset.ID> assetIds) {
+        List<AssetSyncPacket> packets = new ArrayList<>(assetIds.size());
+        for (CelestialAsset.ID assetId : assetIds) {
+            CelestialAsset asset = CelestialAssetStore.SERVER.findAssetInternal(assetId);
+            packets.add(asset == null ? AssetSyncPacket.assetRemoved(assetId) : AssetSyncPacket.fullSync(asset));
+        }
+        return packets;
     }
 }
