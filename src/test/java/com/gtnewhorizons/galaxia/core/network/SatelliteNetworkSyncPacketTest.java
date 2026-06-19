@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkClientState;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkState;
 
 import io.netty.buffer.ByteBuf;
@@ -36,5 +37,20 @@ final class SatelliteNetworkSyncPacketTest {
         read.fromBytes(buf);
 
         assertEquals(state, read.state());
+    }
+
+    @Test
+    void handlerStoresSnapshotOnClient() {
+        SatelliteNetworkClientState.clear();
+        SatelliteNetworkState state = new SatelliteNetworkState(
+            new UUID(7L, 8L),
+            14,
+            Map.of(CelestialObjectId.MARS, new SatelliteNetworkState.Body(CelestialObjectId.MARS, 10L, 0L)),
+            List.of());
+
+        new SatelliteNetworkSyncPacket.Handler().onMessage(new SatelliteNetworkSyncPacket(state), null);
+
+        assertEquals(state, SatelliteNetworkClientState.current());
+        SatelliteNetworkClientState.clear();
     }
 }

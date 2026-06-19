@@ -7,9 +7,12 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkClientState;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkState;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
+import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
+import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
 
 public final class SatelliteNetworkSyncPacket implements IMessage {
@@ -72,5 +75,14 @@ public final class SatelliteNetworkSyncPacket implements IMessage {
             links.add(new SatelliteNetworkState.Link(from, to, capacityKbps, usedKbps));
         }
         state = new SatelliteNetworkState(teamId, revision, bodies, links);
+    }
+
+    public static final class Handler implements IMessageHandler<SatelliteNetworkSyncPacket, IMessage> {
+
+        @Override
+        public IMessage onMessage(SatelliteNetworkSyncPacket message, MessageContext ctx) {
+            SatelliteNetworkClientState.update(message.state);
+            return null;
+        }
     }
 }
