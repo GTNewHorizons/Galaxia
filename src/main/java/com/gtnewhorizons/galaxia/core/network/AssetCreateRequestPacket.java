@@ -79,6 +79,7 @@ public final class AssetCreateRequestPacket implements IMessage {
     }
 
     public AssetSyncPacket apply(UUID teamId) {
+        if (kind == CelestialAsset.Kind.SATELLITE) return null;
         CelestialAsset asset = CelestialAsset.create(celestialObjectId, kind, operational);
         asset.setDisplayName(displayName);
         if (kind == CelestialAsset.Kind.STATION) {

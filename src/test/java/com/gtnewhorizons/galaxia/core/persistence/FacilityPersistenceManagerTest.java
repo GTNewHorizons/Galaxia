@@ -638,7 +638,6 @@ final class FacilityPersistenceManagerTest {
     private static byte[] assetRegistryBytes(List<FacilityPersistenceManager.AssetJson> assets) {
         FacilityPersistenceManager.AssetRegistryJson registry = new FacilityPersistenceManager.AssetRegistryJson();
         registry.assets = assets;
-        registry.satellites = new LinkedHashMap<>();
         return PERSISTENCE_GSON.toJson(registry)
             .getBytes(StandardCharsets.UTF_8);
     }

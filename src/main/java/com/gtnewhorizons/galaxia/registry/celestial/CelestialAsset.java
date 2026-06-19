@@ -29,6 +29,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsConfiguration;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 public abstract class CelestialAsset implements Buildable, IDistributedInventory {
 
@@ -72,6 +74,7 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
                 celestialObjectId,
                 kind,
                 status);
+            case SATELLITE -> new Satellite(ID.create(), celestialObjectId, status, SatelliteKind.COMMUNICATION);
         };
     }
 
@@ -79,6 +82,7 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         return switch (kind) {
             case STATION -> new Station(id, celestialObjectId, status);
             case AUTOMATED_STATION, AUTOMATED_OUTPOST -> new AutomatedFacility(id, celestialObjectId, kind, status);
+            case SATELLITE -> new Satellite(id, celestialObjectId, status, SatelliteKind.COMMUNICATION);
         };
     }
 
@@ -198,6 +202,7 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
                 required.put(new ItemStack(Blocks.stone), 64L);
                 required.put(new ItemStack(Blocks.dirt), 64L);
             }
+            case SATELLITE -> {}
         }
         return required;
     }
@@ -361,6 +366,7 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         STATION,
         AUTOMATED_STATION, // Not implemented yet
         AUTOMATED_OUTPOST,
+        SATELLITE,
 
         ;
 
@@ -386,7 +392,7 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
 
         public static Location ofKind(Kind kind) {
             return switch (kind) {
-                case STATION, AUTOMATED_STATION -> ORBIT;
+                case STATION, AUTOMATED_STATION, SATELLITE -> ORBIT;
                 case AUTOMATED_OUTPOST -> SURFACE;
             };
         }

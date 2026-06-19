@@ -87,6 +87,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleS
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
+import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -214,11 +215,6 @@ public final class FacilityPersistenceManager {
             loadedCount++;
         }
         LOG.info("[PERSIST] LOAD END: {} asset(s) loaded", loadedCount);
-        if (registry.satellites == null) {
-            throw new IllegalStateException(
-                "[PERSIST] LOAD FAILED: asset registry " + file + " contained no satellite count map");
-        }
-        CelestialAssetStore.SERVER.replaceSatelliteCounts(registry.satellites);
     }
 
     private static <T extends Enum<T>> T safeValueOf(Class<T> cls, String name) {
@@ -234,7 +230,6 @@ public final class FacilityPersistenceManager {
     private void saveAssets(File file) {
         AssetRegistryJson registry = new AssetRegistryJson();
         registry.assets = new ArrayList<>();
-        registry.satellites = CelestialAssetStore.SERVER.snapshotSatelliteCounts();
         int totalAssets = 0;
         int totalModules = 0;
         int totalAnchors = 0;
@@ -360,6 +355,10 @@ public final class FacilityPersistenceManager {
         json.location = asset.location.name();
         json.status = asset.status()
             .name();
+        if (asset instanceof Satellite satellite) {
+            json.satelliteKind = satellite.satelliteKind()
+                .name();
+        }
         json.requiredResources = encodeRequirements(asset.requiredResources());
         json.constructionInventory = encodeRequirements(asset.constructionInventory());
         if (asset instanceof Station station && station.getController() != null) {
@@ -412,7 +411,14 @@ public final class FacilityPersistenceManager {
         CelestialAsset.Kind kind = safeValueOf(CelestialAsset.Kind.class, json.kind);
         Buildable.Status status = safeValueOf(Buildable.Status.class, json.status);
         if (kind == null || status == null) return null;
-        CelestialAsset asset = CelestialAsset.create(json.assetId, objectId, kind, status);
+        CelestialAsset asset;
+        if (kind == CelestialAsset.Kind.SATELLITE) {
+            SatelliteKind satelliteKind = safeValueOf(SatelliteKind.class, json.satelliteKind);
+            if (satelliteKind == null) return null;
+            asset = new Satellite(json.assetId, objectId, status, satelliteKind);
+        } else {
+            asset = CelestialAsset.create(json.assetId, objectId, kind, status);
+        }
         asset.setConstructionInventory(decodeRequirements(json.constructionInventory));
         asset.setDisplayName(json.displayName);
         if (asset instanceof Station station && json.controllerX != null
@@ -1014,7 +1020,6 @@ public final class FacilityPersistenceManager {
     static final class AssetRegistryJson {
 
         List<AssetJson> assets;
-        Map<UUID, Map<CelestialObjectId, Map<SatelliteKind, Integer>>> satellites;
     }
 
     static final class AssetJson {
@@ -1026,6 +1031,7 @@ public final class FacilityPersistenceManager {
         String planetaryAnchorBodyId;
         String displayName;
         String kind;
+        String satelliteKind;
         String location;
         String status;
         Map<String, Long> requiredResources;

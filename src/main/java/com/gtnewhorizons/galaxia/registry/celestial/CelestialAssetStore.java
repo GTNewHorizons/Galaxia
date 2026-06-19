@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
 import java.util.ArrayList;
-import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -14,6 +13,7 @@ import net.minecraft.item.ItemStack;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
+import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 /**
@@ -38,16 +38,12 @@ public final class CelestialAssetStore {
     private final Map<CelestialAsset.ID, UUID> teamById;
     private final Map<UUID, Map<CelestialObjectId, Set<CelestialAsset.ID>>> bodyIndex;
     private final Map<CelestialObjectId, Set<CelestialAsset.ID>> byBody;
-    private final Map<UUID, Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>>> satelliteCounts;
-    private long satelliteRevision;
 
     CelestialAssetStore() {
         this.byId = new LinkedHashMap<>();
         this.teamById = new LinkedHashMap<>();
         this.bodyIndex = new LinkedHashMap<>();
         this.byBody = new LinkedHashMap<>();
-        this.satelliteCounts = new LinkedHashMap<>();
-        this.satelliteRevision = 0L;
     }
 
     // ── Static convenience wrappers (delegate to SERVER) ──
@@ -259,8 +255,6 @@ public final class CelestialAssetStore {
         teamById.clear();
         bodyIndex.clear();
         byBody.clear();
-        if (!satelliteCounts.isEmpty()) satelliteRevision++;
-        satelliteCounts.clear();
     }
 
     public boolean isOwnedByInternal(UUID teamId, CelestialAsset.ID id) {
@@ -271,7 +265,6 @@ public final class CelestialAssetStore {
 
     public void removeTeamInternal(UUID teamId) {
         Map<CelestialObjectId, Set<CelestialAsset.ID>> teamAssets = bodyIndex.remove(teamId);
-        satelliteCounts.remove(teamId);
         if (teamAssets == null) return;
         for (Map.Entry<CelestialObjectId, Set<CelestialAsset.ID>> ids : teamAssets.entrySet()) {
             for (CelestialAsset.ID id : ids.getValue()) {
@@ -289,7 +282,6 @@ public final class CelestialAssetStore {
 
     public void transferTeamAssetsInternal(UUID fromTeamId, UUID toTeamId) {
         Map<CelestialObjectId, Set<CelestialAsset.ID>> fromAssets = bodyIndex.remove(fromTeamId);
-        transferSatelliteCounts(fromTeamId, toTeamId);
         if (fromAssets == null || fromAssets.isEmpty()) return;
 
         for (Set<CelestialAsset.ID> ids : fromAssets.values()) {
@@ -311,11 +303,11 @@ public final class CelestialAssetStore {
 
     public int satelliteCount(UUID teamId, CelestialObjectId bodyId, SatelliteKind kind) {
         validateSatelliteKey(teamId, bodyId, kind);
-        Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> teamCounts = satelliteCounts.get(teamId);
-        if (teamCounts == null) return 0;
-        EnumMap<SatelliteKind, Integer> bodyCounts = teamCounts.get(bodyId);
-        if (bodyCounts == null) return 0;
-        return bodyCounts.getOrDefault(kind, 0);
+        int count = 0;
+        for (CelestialAsset asset : getStateInternal(teamId, bodyId)) {
+            if (asset instanceof Satellite satellite && satellite.satelliteKind() == kind) count++;
+        }
+        return count;
     }
 
     public long satelliteBandwidth(UUID teamId, CelestialObjectId bodyId) {
@@ -328,11 +320,8 @@ public final class CelestialAssetStore {
             * SatelliteKind.PROSPECTING.effectPerSatellite();
     }
 
-    public long satelliteRevision() {
-        return satelliteRevision;
-    }
-
-    public void addSatellites(UUID teamId, CelestialObjectId bodyId, SatelliteKind kind, int amount) {
+    public List<CelestialAsset.ID> addSatellites(UUID teamId, CelestialObjectId bodyId, SatelliteKind kind,
+        int amount) {
         validateSatelliteKey(teamId, bodyId, kind);
         if (amount < 0) throw new IllegalArgumentException("Satellite amount must be non-negative: " + amount);
         int current = satelliteCount(teamId, bodyId, kind);
@@ -340,95 +329,46 @@ public final class CelestialAssetStore {
             throw new IllegalArgumentException(
                 "Satellite count overflow for team " + teamId + ", body " + bodyId + ", kind " + kind);
         }
-        setSatelliteCount(teamId, bodyId, kind, current + amount);
+        return setSatelliteCount(teamId, bodyId, kind, current + amount);
     }
 
-    public void setSatelliteCount(UUID teamId, CelestialObjectId bodyId, SatelliteKind kind, int count) {
+    public List<CelestialAsset.ID> setSatelliteCount(UUID teamId, CelestialObjectId bodyId, SatelliteKind kind,
+        int count) {
         validateSatelliteKey(teamId, bodyId, kind);
         if (count < 0) throw new IllegalArgumentException("Satellite count must be non-negative: " + count);
         if (count == 0) {
-            deleteSatellites(teamId, bodyId, kind);
-            return;
+            return deleteSatellites(teamId, bodyId, kind);
         }
-        Integer previous = satelliteCounts.computeIfAbsent(teamId, ignored -> new LinkedHashMap<>())
-            .computeIfAbsent(bodyId, ignored -> new EnumMap<>(SatelliteKind.class))
-            .put(kind, count);
-        if (previous == null || previous != count) satelliteRevision++;
+        int current = satelliteCount(teamId, bodyId, kind);
+        List<CelestialAsset.ID> changed = new ArrayList<>();
+        for (int i = current; i < count; i++) {
+            Satellite satellite = new Satellite(CelestialAsset.ID.create(), bodyId, Buildable.Status.OPERATIONAL, kind);
+            registerAssetInternal(teamId, satellite);
+            changed.add(satellite.assetId);
+        }
+        for (int i = current; i > count; i--) {
+            CelestialAsset.ID assetId = firstSatelliteId(teamId, bodyId, kind);
+            if (destroyAssetInternal(assetId)) changed.add(assetId);
+        }
+        return changed;
     }
 
-    public void deleteSatellites(UUID teamId, CelestialObjectId bodyId, SatelliteKind kind) {
+    public List<CelestialAsset.ID> deleteSatellites(UUID teamId, CelestialObjectId bodyId, SatelliteKind kind) {
         validateSatelliteKey(teamId, bodyId, kind);
-        Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> teamCounts = satelliteCounts.get(teamId);
-        if (teamCounts == null) return;
-        EnumMap<SatelliteKind, Integer> bodyCounts = teamCounts.get(bodyId);
-        if (bodyCounts == null) return;
-        if (bodyCounts.remove(kind) == null) return;
-        if (bodyCounts.isEmpty()) teamCounts.remove(bodyId);
-        if (teamCounts.isEmpty()) satelliteCounts.remove(teamId);
-        satelliteRevision++;
-    }
-
-    public Map<UUID, Map<CelestialObjectId, Map<SatelliteKind, Integer>>> snapshotSatelliteCounts() {
-        Map<UUID, Map<CelestialObjectId, Map<SatelliteKind, Integer>>> snapshot = new LinkedHashMap<>();
-        for (Map.Entry<UUID, Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>>> teamEntry : satelliteCounts
-            .entrySet()) {
-            snapshot.put(teamEntry.getKey(), copySatelliteBodyCounts(teamEntry.getValue()));
+        List<CelestialAsset.ID> removed = new ArrayList<>();
+        while (satelliteCount(teamId, bodyId, kind) > 0) {
+            CelestialAsset.ID assetId = firstSatelliteId(teamId, bodyId, kind);
+            if (destroyAssetInternal(assetId)) removed.add(assetId);
         }
-        return snapshot;
+        return removed;
     }
 
-    public Map<CelestialObjectId, Map<SatelliteKind, Integer>> snapshotSatelliteCounts(UUID teamId) {
-        if (teamId == null) throw new IllegalArgumentException("Satellite team id is required");
-        Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> teamCounts = satelliteCounts.get(teamId);
-        if (teamCounts == null) return new LinkedHashMap<>();
-        return copySatelliteBodyCounts(teamCounts);
-    }
-
-    public void replaceTeamSatelliteCounts(UUID teamId,
-        Map<CelestialObjectId, Map<SatelliteKind, Integer>> replacement) {
-        if (teamId == null) throw new IllegalArgumentException("Satellite team id is required");
-        Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> current = satelliteCounts.remove(teamId);
-        if (current != null) current.clear();
-        if (replacement == null || replacement.isEmpty()) return;
-        for (Map.Entry<CelestialObjectId, Map<SatelliteKind, Integer>> bodyEntry : replacement.entrySet()) {
-            if (bodyEntry.getValue() == null) continue;
-            for (Map.Entry<SatelliteKind, Integer> kindEntry : bodyEntry.getValue()
-                .entrySet()) {
-                Integer count = kindEntry.getValue();
-                if (count != null && count > 0) {
-                    setSatelliteCount(teamId, bodyEntry.getKey(), kindEntry.getKey(), count);
-                }
-            }
+    private CelestialAsset.ID firstSatelliteId(UUID teamId, CelestialObjectId bodyId, SatelliteKind kind) {
+        for (CelestialAsset asset : getStateInternal(teamId, bodyId)) {
+            if (asset instanceof Satellite satellite && satellite.satelliteKind() == kind) return asset.assetId;
         }
-    }
-
-    public void replaceSatelliteCounts(Map<UUID, Map<CelestialObjectId, Map<SatelliteKind, Integer>>> replacement) {
-        if (!satelliteCounts.isEmpty()) satelliteRevision++;
-        satelliteCounts.clear();
-        if (replacement == null || replacement.isEmpty()) return;
-        for (Map.Entry<UUID, Map<CelestialObjectId, Map<SatelliteKind, Integer>>> teamEntry : replacement.entrySet()) {
-            replaceTeamSatelliteCounts(teamEntry.getKey(), teamEntry.getValue());
-        }
-    }
-
-    private void transferSatelliteCounts(UUID fromTeamId, UUID toTeamId) {
-        Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> fromCounts = satelliteCounts.remove(fromTeamId);
-        if (fromCounts == null || fromCounts.isEmpty()) return;
-        for (Map.Entry<CelestialObjectId, EnumMap<SatelliteKind, Integer>> bodyEntry : fromCounts.entrySet()) {
-            for (Map.Entry<SatelliteKind, Integer> kindEntry : bodyEntry.getValue()
-                .entrySet()) {
-                addSatellites(toTeamId, bodyEntry.getKey(), kindEntry.getKey(), kindEntry.getValue());
-            }
-        }
-    }
-
-    private static Map<CelestialObjectId, Map<SatelliteKind, Integer>> copySatelliteBodyCounts(
-        Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> source) {
-        Map<CelestialObjectId, Map<SatelliteKind, Integer>> copy = new LinkedHashMap<>();
-        for (Map.Entry<CelestialObjectId, EnumMap<SatelliteKind, Integer>> bodyEntry : source.entrySet()) {
-            copy.put(bodyEntry.getKey(), new EnumMap<>(bodyEntry.getValue()));
-        }
-        return copy;
+        throw new IllegalStateException(
+            "No satellite asset for team " + teamId + ", body " + bodyId + ", kind " + kind);
     }
 
     private static void validateSatelliteKey(UUID teamId, CelestialObjectId bodyId, SatelliteKind kind) {

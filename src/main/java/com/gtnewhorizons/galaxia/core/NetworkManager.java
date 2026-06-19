@@ -19,7 +19,6 @@ import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.RocketDestinationSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.RocketLaunchPacket;
-import com.gtnewhorizons.galaxia.core.network.SatelliteSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.TeamConfigPacket;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.core.network.TetherAnchorSyncPacket;
@@ -78,8 +77,6 @@ public final class NetworkManager {
         GALAXIA_NETWORK.registerMessage(BeamEffectPacket.Handler.class, BeamEffectPacket.class, id++,
             Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(TetherAnchorSyncPacket.Handler.class, TetherAnchorSyncPacket.class, id++,
-            Side.CLIENT);
-        GALAXIA_NETWORK.registerMessage(SatelliteSyncPacket.Handler.class, SatelliteSyncPacket.class, id++,
             Side.CLIENT);
     }
     // spotless:on

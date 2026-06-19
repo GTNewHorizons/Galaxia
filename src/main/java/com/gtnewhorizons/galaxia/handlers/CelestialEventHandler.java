@@ -19,7 +19,6 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
-import com.gtnewhorizons.galaxia.core.network.SatelliteSyncPacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -46,8 +45,6 @@ public class CelestialEventHandler {
 
     // TODO: Is there a centralized way to get ticks?
     private int syncCooldownTicks;
-    private final Map<UUID, UUID> satelliteSyncTeamByPlayer = new HashMap<>();
-    private final Map<UUID, Long> satelliteSyncRevisionByPlayer = new HashMap<>();
 
     public CelestialEventHandler() {}
 
@@ -96,16 +93,8 @@ public class CelestialEventHandler {
             final boolean toClear = TeamEventHandler.playersToClear.remove(playerId);
             if (toClear) {
                 Galaxia.GALAXIA_NETWORK.sendTo(AssetSyncPacket.clear(), player);
-                satelliteSyncTeamByPlayer.remove(playerId);
-                satelliteSyncRevisionByPlayer.remove(playerId);
                 // Wait until next sync just to be sure this gets first, otherwise it could easily become a race
                 continue;
-            }
-            if (shouldSyncSatellites(playerId, playerTeam)) {
-                Galaxia.GALAXIA_NETWORK.sendTo(
-                    SatelliteSyncPacket
-                        .fullForTeam(playerTeam, CelestialAssetStore.SERVER.snapshotSatelliteCounts(playerTeam)),
-                    player);
             }
             Map<CelestialObjectId, Set<CelestialAsset>> teamAssets = CelestialAssetStore.getTeamAssets(playerTeam);
             if (teamAssets == null) continue;
@@ -133,17 +122,6 @@ public class CelestialEventHandler {
 
             Galaxia.GALAXIA_NETWORK.sendTo(LogisticsSyncPacket.from(relevantDeliveries), player);
         }
-    }
-
-    private boolean shouldSyncSatellites(UUID playerId, UUID teamId) {
-        long revision = CelestialAssetStore.SERVER.satelliteRevision();
-        UUID syncedTeam = satelliteSyncTeamByPlayer.get(playerId);
-        Long syncedRevision = satelliteSyncRevisionByPlayer.get(playerId);
-        boolean sameTeam = teamId == null ? syncedTeam == null : teamId.equals(syncedTeam);
-        if (sameTeam && syncedRevision != null && syncedRevision == revision) return false;
-        satelliteSyncTeamByPlayer.put(playerId, teamId);
-        satelliteSyncRevisionByPlayer.put(playerId, revision);
-        return true;
     }
 
     private boolean hasCreativeProfilerViewer() {
