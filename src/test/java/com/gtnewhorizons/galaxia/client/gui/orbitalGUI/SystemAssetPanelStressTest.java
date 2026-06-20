@@ -20,6 +20,7 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class SystemAssetPanelStressTest {
@@ -46,9 +47,38 @@ final class SystemAssetPanelStressTest {
     }
 
     @Test
+    void satelliteRowsAreGroupedOutsideManageableAssetRows() {
+        List<CelestialAsset> assets = List.of(
+            asset(
+                "Mars Outpost",
+                CelestialAsset.Kind.AUTOMATED_OUTPOST,
+                CelestialObjectId.MARS,
+                Buildable.Status.OPERATIONAL,
+                WarningPriority.NONE,
+                true,
+                false),
+            satellite(CelestialObjectId.MARS, SatelliteKind.COMMUNICATION),
+            satellite(CelestialObjectId.MARS, SatelliteKind.COMMUNICATION),
+            satellite(CelestialObjectId.MARS, SatelliteKind.PROSPECTING),
+            satellite(CelestialObjectId.MOON, SatelliteKind.COMMUNICATION));
+
+        assertEquals(
+            1,
+            SolarSystemAssetPanelWidget.assetRows(assets, SystemAssetFilter.ALL, SystemAssetSort.BY_BODY)
+                .size());
+        assertEquals(
+            List.of("MARS:COMMUNICATION:2", "MARS:PROSPECTING:1", "MOON:COMMUNICATION:1"),
+            SolarSystemAssetPanelWidget.satelliteRows(assets)
+                .stream()
+                .map(row -> row.bodyId() + ":" + row.kind() + ":" + row.count())
+                .collect(Collectors.toList()));
+    }
+
+    @Test
     void warningsFirstSortKeepsHighestWarningsAheadOfConstructionAndNameFallbacks() {
         List<CelestialAsset> assets = stressAssets().stream()
             .sorted(SystemAssetSort.BY_WARNINGS_FIRST.comparator())
+            .filter(SystemAssetFilter.ALL::accepts)
             .collect(Collectors.toList());
 
         assertEquals(
@@ -126,6 +156,14 @@ final class SystemAssetPanelStressTest {
                 Buildable.Status.DISABLED,
                 WarningPriority.NONE,
                 true,
+                false),
+            asset(
+                "Communication Satellite",
+                CelestialAsset.Kind.SATELLITE,
+                CelestialObjectId.OVERWORLD,
+                Buildable.Status.OPERATIONAL,
+                WarningPriority.NO_POWER,
+                true,
                 false));
     }
 
@@ -155,6 +193,10 @@ final class SystemAssetPanelStressTest {
         FakeAsset asset = new FakeAsset(kind, body, status, warning, mining, production);
         asset.setDisplayName(name);
         return asset;
+    }
+
+    private static CelestialAsset satellite(CelestialObjectId body, SatelliteKind kind) {
+        return CelestialAsset.create(body, CelestialAsset.Kind.SATELLITE, Buildable.Status.OPERATIONAL, kind);
     }
 
     private static final class FakeAsset extends CelestialAsset {
