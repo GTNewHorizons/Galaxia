@@ -23,16 +23,10 @@ final class SatelliteNetworkServiceTest {
 
     @Test
     void rebuildStoresDerivedSnapshotAndKeepsRevisionWhenContentIsUnchanged() {
-        SatelliteNetworkState state = SatelliteNetworkService.rebuild(
-            TEAM,
-            nodes(),
-            Map.of(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L),
-            Map.of());
-        SatelliteNetworkState unchanged = SatelliteNetworkService.rebuild(
-            TEAM,
-            nodes(),
-            Map.of(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L),
-            Map.of());
+        SatelliteNetworkState state = SatelliteNetworkService
+            .rebuild(TEAM, nodes(), Map.of(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L), Map.of());
+        SatelliteNetworkState unchanged = SatelliteNetworkService
+            .rebuild(TEAM, nodes(), Map.of(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L), Map.of());
 
         assertSame(state, SatelliteNetworkService.current(TEAM));
         assertSame(state, unchanged);
@@ -51,17 +45,11 @@ final class SatelliteNetworkServiceTest {
 
     @Test
     void rebuildIncrementsRevisionWhenCapacityChanges() {
-        SatelliteNetworkState first = SatelliteNetworkService.rebuild(
-            TEAM,
-            nodes(),
-            Map.of(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L),
-            Map.of());
+        SatelliteNetworkState first = SatelliteNetworkService
+            .rebuild(TEAM, nodes(), Map.of(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L), Map.of());
 
-        SatelliteNetworkState changed = SatelliteNetworkService.rebuild(
-            TEAM,
-            nodes(),
-            Map.of(CelestialObjectId.MARS, 20L, CelestialObjectId.OVERWORLD, 10L),
-            Map.of());
+        SatelliteNetworkState changed = SatelliteNetworkService
+            .rebuild(TEAM, nodes(), Map.of(CelestialObjectId.MARS, 20L, CelestialObjectId.OVERWORLD, 10L), Map.of());
 
         assertEquals(first.revision() + 1, changed.revision());
         assertEquals(20L, changed.capacityKbps(CelestialObjectId.MARS));
