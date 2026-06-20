@@ -21,6 +21,11 @@ public final class Satellite extends CelestialAsset {
     }
 
     @Override
+    public boolean isManageable() {
+        return false;
+    }
+
+    @Override
     public boolean tryConsumeEnergy(long powerDraw) {
         return false;
     }
