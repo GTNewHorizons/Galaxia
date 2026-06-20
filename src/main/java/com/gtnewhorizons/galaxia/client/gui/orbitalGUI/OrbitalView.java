@@ -641,6 +641,23 @@ public class OrbitalView {
                     }
 
                     @Override
+                    public boolean canDebugSatellites(CelestialObject body) {
+                        return OrbitalMapWidget.this.canDebugSatellites(body);
+                    }
+
+                    @Override
+                    public void deleteSatelliteAmount(CelestialObject body, SatelliteKind kind, int amount) {
+                        OrbitalMapWidget.this.deleteSatelliteAmount(body, kind, amount);
+                        assetActionsWidget.markContentDirty();
+                    }
+
+                    @Override
+                    public void deleteSatellites(CelestialObject body, SatelliteKind kind) {
+                        OrbitalMapWidget.this.deleteSatellites(body, kind);
+                        assetActionsWidget.markContentDirty();
+                    }
+
+                    @Override
                     public void confirmPendingAssetCreation() {
                         assetActionController.confirmPendingAssetCreation(assetUiState);
                         assetActionsWidget.markStructureDirty();
@@ -2947,6 +2964,12 @@ public class OrbitalView {
 
         private void deleteSatellites(CelestialObject body, SatelliteKind kind) {
             mutateSatellites(body, kind, SatelliteDebugOperation.DELETE_ALL, 0);
+        }
+
+        private void deleteSatelliteAmount(CelestialObject body, SatelliteKind kind, int amount) {
+            if (amount <= 0) return;
+            int newCount = Math.max(0, satelliteCount(body, kind) - amount);
+            mutateSatellites(body, kind, SatelliteDebugOperation.SET, newCount);
         }
 
         private void mutateSatellites(CelestialObject body, SatelliteKind kind, SatelliteDebugOperation operation,
