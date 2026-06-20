@@ -38,6 +38,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
@@ -52,6 +53,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 import io.netty.buffer.Unpooled;
@@ -481,6 +485,83 @@ final class StationPacketRoundTripTest {
             "layout tile state must match updated module status");
     }
 
+    @Test
+    void dirtyExistingModuleSyncsAsModuleUpdatedDelta() {
+        UUID playerId = UUID.randomUUID();
+        AutomatedFacility server = buildFacilityWithModules(1);
+        AssetSyncPacket.figureOutWhatToSend(server, playerId);
+
+        ModuleInstance module = server.modules()
+            .get(0);
+        module.updateStatus(Buildable.Status.DISABLED);
+        server.markModuleDirty(module.id);
+
+        List<AssetSyncPacket> deltas = AssetSyncPacket.figureOutWhatToSend(server, playerId);
+
+        assertEquals(1, deltas.size());
+        assertEquals(
+            AssetSyncPacket.MODULE_UPDATED,
+            deltas.get(0)
+                .syncType());
+    }
+
+    @Test
+    void debugDataGeneratorStateDeltaUpdatesClientModule() {
+        UUID playerId = UUID.randomUUID();
+        AutomatedFacility source = createFacility(CelestialObjectId.MARS);
+        AutomatedFacility destination = createFacility(CelestialObjectId.EGORA);
+        ModuleDebugDataGenerator producer = debugDataGenerator(source, StationTileCoord.of(1, 0));
+        ModuleDebugDataGenerator consumer = debugDataGenerator(destination, StationTileCoord.of(1, 0));
+        producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.COMMUNICATION, 10L, 1));
+        consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.COMMUNICATION, 10L, 1, null));
+        SatelliteNetworkService.refreshFacilityEndpoints(source);
+        SatelliteNetworkService.refreshFacilityEndpoints(destination);
+        CelestialAssetStore.SERVER.setSatelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, 1);
+        CelestialAssetStore.SERVER.setSatelliteCount(TEAM, CelestialObjectId.EGORA, SatelliteKind.COMMUNICATION, 1);
+        SatelliteNetworkService.rebuild(TEAM, 0.0D);
+
+        List<AssetSyncPacket> initialPackets = AssetSyncPacket.figureOutWhatToSend(source, playerId);
+        AutomatedFacility clientSource = createUnregisteredFacility(CelestialObjectId.MARS);
+        applyFullSyncFromPacket(clientSource, roundTrip(initialPackets.get(0)));
+        List<AssetSyncPacket> initialDestinationPackets = AssetSyncPacket.figureOutWhatToSend(destination, playerId);
+        AutomatedFacility clientDestination = createUnregisteredFacility(CelestialObjectId.EGORA);
+        applyFullSyncFromPacket(clientDestination, roundTrip(initialDestinationPackets.get(0)));
+
+        SatelliteNetworkService.tickDataJobs();
+        List<AssetSyncPacket> deltas = AssetSyncPacket.figureOutWhatToSend(source, playerId);
+        for (AssetSyncPacket delta : deltas) {
+            AssetSyncPacket.Handler.handleDelta(clientSource, roundTrip(delta));
+        }
+        List<AssetSyncPacket> destinationDeltas = AssetSyncPacket.figureOutWhatToSend(destination, playerId);
+        for (AssetSyncPacket delta : destinationDeltas) {
+            AssetSyncPacket.Handler.handleDelta(clientDestination, roundTrip(delta));
+        }
+
+        ModuleDebugDataGenerator clientProducer = (ModuleDebugDataGenerator) clientSource.modules()
+            .get(0)
+            .component();
+        ModuleDebugDataGenerator clientConsumer = (ModuleDebugDataGenerator) clientDestination.modules()
+            .get(0)
+            .component();
+        assertEquals(CelestialObjectId.EGORA, clientProducer.detectedCounterpartBodyId());
+        assertEquals(
+            SatelliteDataType.COMMUNICATION,
+            clientConsumer.config()
+                .dataType());
+        assertEquals(5L, clientConsumer.consumedDeciKb());
+
+        SatelliteNetworkService.tickDataJobs();
+        destinationDeltas = AssetSyncPacket.figureOutWhatToSend(destination, playerId);
+        for (AssetSyncPacket delta : destinationDeltas) {
+            AssetSyncPacket.Handler.handleDelta(clientDestination, roundTrip(delta));
+        }
+
+        clientConsumer = (ModuleDebugDataGenerator) clientDestination.modules()
+            .get(0)
+            .component();
+        assertEquals(10L, clientConsumer.consumedDeciKb());
+    }
+
     private static AssetSyncPacket roundTrip(AssetSyncPacket pkt) {
         var buf = Unpooled.buffer();
         pkt.toBytes(buf);
@@ -507,13 +588,25 @@ final class StationPacketRoundTripTest {
     }
 
     private static AutomatedFacility createFacility() {
+        return createFacility(CelestialObjectId.MARS);
+    }
+
+    private static AutomatedFacility createFacility(CelestialObjectId bodyId) {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.MARS,
+            bodyId,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
         return facility;
+    }
+
+    private static AutomatedFacility createUnregisteredFacility(CelestialObjectId bodyId) {
+        return new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            bodyId,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
     }
 
     private static AutomatedFacility facilityWithRecipeConfig(RecipeSnapshot... snapshots) {
@@ -561,6 +654,11 @@ final class StationPacketRoundTripTest {
             layout.place(coord, new PlacedTile(module, state));
         }
         return module;
+    }
+
+    private static ModuleDebugDataGenerator debugDataGenerator(AutomatedFacility facility, StationTileCoord anchor) {
+        return (ModuleDebugDataGenerator) buildModule(facility, FacilityModuleKind.DEBUG_DATA_GENERATOR, anchor)
+            .component();
     }
 
     private static void applyFullSyncFromPacket(AutomatedFacility client, AssetSyncPacket packet) {
