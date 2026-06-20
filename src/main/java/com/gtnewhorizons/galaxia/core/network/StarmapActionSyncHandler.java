@@ -8,7 +8,6 @@ import java.util.UUID;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.PacketBuffer;
-import net.minecraft.server.MinecraftServer;
 
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.value.sync.SyncHandler;
@@ -219,7 +218,6 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
         EntityPlayer player = getSyncManager().getPlayer();
         if (!(player instanceof EntityPlayerMP playerMp)) return;
         UUID teamId = GTTeamsCompat.getTeam(playerMp);
-        boolean creative = playerMp.capabilities.isCreativeMode;
 
         switch (id) {
             case REQUEST_CREATE_ASSET -> {
@@ -245,7 +243,7 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
                 if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.BUILD_MODULE)) return;
                 AssetBuildModulePacket packet = new AssetBuildModulePacket();
                 packet.fromBytes(buf);
-                AssetSyncPacket sync = packet.apply(teamId, creative);
+                AssetSyncPacket sync = packet.apply(teamId, playerMp);
                 if (sync == null) {
                     syncFailure("Module build failed");
                 } else {
@@ -256,7 +254,7 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
                 if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.MODIFY_MODULE)) return;
                 AssetModuleUpdatePacket packet = new AssetModuleUpdatePacket();
                 packet.fromBytes(buf);
-                syncPacket(packet.apply(teamId, creative));
+                syncPacket(packet.apply(teamId, playerMp));
             }
             case REQUEST_LOGISTICS_CONFIG -> {
                 if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.CONFIGURE_LOGISTICS)) return;
@@ -272,7 +270,7 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
             }
             case REQUEST_SATELLITE_DEBUG_MUTATION -> {
                 // TODO: Remove this once satellite production is handled by normal gameplay.
-                if (!isSatelliteDebugAuthorized(playerMp)) return;
+                if (!DebugActionAuthorization.isAuthorized(playerMp)) return;
                 UUID debugTeamId = PacketUtil.readId(buf);
                 CelestialObjectId bodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
                 SatelliteKind kind = PacketUtil.readEnum(buf, SatelliteKind.class);
@@ -296,13 +294,6 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
 
     private void syncFailure(String message) {
         syncToClient(RESPONSE_ACTION_FAILED, buf -> PacketUtil.writeString(buf, message));
-    }
-
-    private static boolean isSatelliteDebugAuthorized(EntityPlayerMP player) {
-        MinecraftServer server = MinecraftServer.getServer();
-        return player.capabilities.isCreativeMode && server != null
-            && server.getConfigurationManager()
-                .func_152596_g(player.getGameProfile());
     }
 
     private static List<AssetSyncPacket> applySatelliteDebugMutation(UUID teamId, CelestialObjectId bodyId,

@@ -526,6 +526,11 @@ galaxia.system_asset.tooltip.status=Status: %s
 galaxia.system_asset.tooltip.warning=Warning: %s
 galaxia.system_asset.tooltip.construction=Construction: %d%%
 
+#### Satellites
+galaxia.satellite.kind.communication=Communication Satellites
+galaxia.satellite.kind.prospecting=Prospecting Satellites
+galaxia.satellite.tooltip.count=%s: %d
+
 #### Machine GUI
 # Oxygen Collector GUI
 galaxia.gui.oxygen_collector.title=Oxygen Collector

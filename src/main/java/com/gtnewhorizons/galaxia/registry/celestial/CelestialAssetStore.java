@@ -15,6 +15,7 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
 
 /**
  * Server-authoritative asset store with a separate {@link #CLIENT} mirror instance.
@@ -141,6 +142,7 @@ public final class CelestialAssetStore {
             .add(asset.assetId);
         byBody.computeIfAbsent(asset.celestialObjectId, k -> new HashSet<>()) // ← new
             .add(asset.assetId);
+        if (this == SERVER) SatelliteNetworkService.refreshAssetEndpoints(teamId, asset);
     }
 
     public UUID getTeamIdInternal(CelestialAsset.ID assetId) {
@@ -171,6 +173,7 @@ public final class CelestialAssetStore {
     public boolean destroyAssetInternal(CelestialAsset.ID assetId) {
         CelestialAsset asset = byId.remove(assetId);
         if (asset == null) return false;
+        if (this == SERVER) SatelliteNetworkService.unregisterAssetEndpoints(assetId);
 
         UUID teamId = teamById.remove(assetId);
         if (teamId == null) return false;
@@ -255,6 +258,7 @@ public final class CelestialAssetStore {
         teamById.clear();
         bodyIndex.clear();
         byBody.clear();
+        if (this == SERVER) SatelliteNetworkService.clear();
     }
 
     public boolean isOwnedByInternal(UUID teamId, CelestialAsset.ID id) {
@@ -266,6 +270,7 @@ public final class CelestialAssetStore {
     public void removeTeamInternal(UUID teamId) {
         Map<CelestialObjectId, Set<CelestialAsset.ID>> teamAssets = bodyIndex.remove(teamId);
         if (teamAssets == null) return;
+        if (this == SERVER) SatelliteNetworkService.unregisterTeamEndpoints(teamId);
         for (Map.Entry<CelestialObjectId, Set<CelestialAsset.ID>> ids : teamAssets.entrySet()) {
             for (CelestialAsset.ID id : ids.getValue()) {
                 byId.remove(id);
@@ -299,6 +304,7 @@ public final class CelestialAssetStore {
             }
             return existing;
         });
+        if (this == SERVER) SatelliteNetworkService.rebuildDataEndpointsFromAssets();
     }
 
     public int satelliteCount(UUID teamId, CelestialObjectId bodyId, SatelliteKind kind) {
