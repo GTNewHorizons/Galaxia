@@ -75,6 +75,30 @@ final class SystemAssetPanelStressTest {
     }
 
     @Test
+    void manageAssetsModalSeparatesDeployedAssetsFromAggregatedSatellites() {
+        List<CelestialAsset> assets = List.of(
+            asset(
+                "Mars Outpost",
+                CelestialAsset.Kind.AUTOMATED_OUTPOST,
+                CelestialObjectId.MARS,
+                Buildable.Status.OPERATIONAL,
+                WarningPriority.NONE,
+                true,
+                false),
+            satellite(CelestialObjectId.MARS, SatelliteKind.COMMUNICATION),
+            satellite(CelestialObjectId.MARS, SatelliteKind.COMMUNICATION),
+            satellite(CelestialObjectId.MARS, SatelliteKind.PROSPECTING));
+
+        assertEquals(List.of("Mars Outpost"), namesOf(StarmapAssetActions.deployedAssetRows(assets)));
+        assertEquals(
+            List.of("COMMUNICATION:2", "PROSPECTING:1"),
+            StarmapAssetActions.satelliteAssetRows(assets)
+                .stream()
+                .map(row -> row.kind() + ":" + row.count())
+                .collect(Collectors.toList()));
+    }
+
+    @Test
     void warningsFirstSortKeepsHighestWarningsAheadOfConstructionAndNameFallbacks() {
         List<CelestialAsset> assets = stressAssets().stream()
             .sorted(SystemAssetSort.BY_WARNINGS_FIRST.comparator())
