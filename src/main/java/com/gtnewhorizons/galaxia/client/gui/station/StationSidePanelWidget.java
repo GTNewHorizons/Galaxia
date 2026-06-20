@@ -24,6 +24,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePanelAction;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
@@ -385,6 +386,8 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
             configController.openHammer(moduleIndex);
         } else if (module.component() instanceof IRecipeModule) {
             configController.openRecipeConfig(moduleIndex);
+        } else if (module.component() instanceof ModuleDebugDataGenerator) {
+            configController.openDebugDataGenerator(moduleIndex);
         }
     }
 
