@@ -246,6 +246,9 @@ galaxia.gui.planet_teleporter.selected=Selected: %s
 # Elements - GUI - "Orbital GUI"
 galaxia.gui.orbital.search=Search
 galaxia.gui.orbital.search.placeholder=Enter name...
+galaxia.gui.orbital.click_mode.hierarchy=Hierarchy
+galaxia.gui.orbital.click_mode.follow=Follow
+galaxia.gui.orbital.click_mode.tooltip=Changes planet click mode between opening hierarchy and following the selected planet
 
 # Elements - GUI - "Rocket Silo"
 galaxia.gui.rocket_silo.title=Rocket Silo
