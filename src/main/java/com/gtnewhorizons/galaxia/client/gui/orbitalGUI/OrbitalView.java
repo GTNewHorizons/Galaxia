@@ -47,7 +47,9 @@ import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkClientState;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkGraph;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkState;
 
 public class OrbitalView {
 
@@ -412,11 +414,8 @@ public class OrbitalView {
         private boolean transfersHidden = false;
         private boolean satelliteNetworkHidden = false;
         private final OrbitalScene.OrbitalSceneFrameBuilder sceneFrameBuilder;
-        private final List<SatelliteNetworkGraph.Node> satelliteNetworkNodes = new ArrayList<>();
-        private final List<SatelliteNetworkGraph.Edge> satelliteNetworkEdges = new ArrayList<>();
         private final List<SatelliteNetworkGraph.Edge> visibleSatelliteNetworkEdges = new ArrayList<>();
         private final List<SatelliteNetworkGraph.Edge> pendingSatelliteNetworkEdges = new ArrayList<>();
-        private final Set<CelestialObjectId> satelliteNetworkNodeIds = new HashSet<>();
         private final Set<CelestialObjectId> visibleSatelliteNetworkNodeIds = new HashSet<>();
         private final Map<CelestialObjectId, SatelliteNetworkEndpoint> satelliteNetworkEndpoints = new EnumMap<>(
             CelestialObjectId.class);
@@ -445,7 +444,7 @@ public class OrbitalView {
         private static final double SATELLITE_SIGNAL_INITIAL_DELAY_RANGE_SECONDS = 2.4D;
         private static final double SATELLITE_SIGNAL_ARRIVAL_FADE_SECONDS = 0.35D;
         private static final int SATELLITE_SIGNAL_MAX_LANES_PER_DIRECTION = 3;
-        private static final long SATELLITE_SIGNAL_MBPS_PER_LANE = 30L;
+        private static final long SATELLITE_SIGNAL_KBPS_PER_LANE = 30L;
         private static final long SATELLITE_NETWORK_EDGE_SWITCH_COOLDOWN_MS = 1400L;
         private static final int SATELLITE_SIGNAL_PURPLE = 0xCCAA77FF;
         private static final int SATELLITE_SIGNAL_HEAD_PURPLE = 0xFFFF55FF;
@@ -2366,8 +2365,21 @@ public class OrbitalView {
         private void drawSatelliteCommunicationNetwork(OrbitalScene.OrbitalSceneFrame frame, float alpha) {
             UUID teamId = currentTeamId();
             if (teamId == null || alpha <= 0.01f) return;
-            satelliteNetworkNodes.clear();
-            satelliteNetworkNodeIds.clear();
+            SatelliteNetworkState networkState = SatelliteNetworkClientState.current();
+            if (!teamId.equals(networkState.teamId())) {
+                updateVisibleSatelliteNetworkEdges(List.of(), Set.of());
+                return;
+            }
+
+            List<SatelliteNetworkGraph.Edge> snapshotEdges = networkState.links()
+                .stream()
+                .map(SatelliteNetworkState.Link::asEdge)
+                .toList();
+            Set<CelestialObjectId> snapshotBodyIds = networkState.bodies()
+                .keySet();
+            updateVisibleSatelliteNetworkEdges(snapshotEdges, snapshotBodyIds);
+            if (visibleSatelliteNetworkEdges.isEmpty()) return;
+
             satelliteNetworkEndpoints.clear();
             satelliteNetworkWorldStates.clear();
             for (OrbitalScene.ResolvedBodyDrawState state : frame.resolvedBodies) {
@@ -2375,31 +2387,18 @@ public class OrbitalView {
                 if (body == null || body.objectClass() == CelestialObject.Class.GALAXY
                     || body.objectClass() == CelestialObject.Class.STAR
                     || !isSatelliteNetworkRenderable(state)
-                    || CelestialAssetStore.CLIENT.satelliteCount(teamId, body.id(), SatelliteKind.COMMUNICATION) <= 0) {
+                    || !snapshotBodyIds.contains(body.id())) {
                     continue;
                 }
                 satelliteNetworkWorldStates.put(body.id(), state);
                 satelliteNetworkEndpoints.put(body.id(), satelliteNetworkEndpoint(state));
-                satelliteNetworkNodeIds.add(body.id());
-                satelliteNetworkNodes.add(
-                    new SatelliteNetworkGraph.Node(
-                        body.id(),
-                        satelliteNetworkParentId(state),
-                        satelliteNetworkOrbitalOrder(body),
-                        state.screenX(),
-                        state.screenY(),
-                        state.renderedRadius()));
             }
-            satelliteNetworkEdges.clear();
-            satelliteNetworkEdges.addAll(SatelliteNetworkGraph.build(satelliteNetworkNodes, 3));
-            updateVisibleSatelliteNetworkEdges(satelliteNetworkEdges, satelliteNetworkNodeIds);
-            if (visibleSatelliteNetworkEdges.isEmpty()) return;
 
             GlStateManager.disableTexture2D();
             GlStateManager.enableBlend();
             GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
             drawSatelliteNetworkThreads(alpha);
-            drawSatelliteNetworkSignals(teamId, alpha);
+            drawSatelliteNetworkSignals(networkState, alpha);
             GL11.glLineWidth(1f);
             GlStateManager.color(1f, 1f, 1f, 1f);
             GlStateManager.enableTexture2D();
@@ -2462,19 +2461,6 @@ public class OrbitalView {
             visibleSatelliteNetworkNodeIds.addAll(nodeIds);
         }
 
-        private CelestialObjectId satelliteNetworkParentId(OrbitalScene.ResolvedBodyDrawState state) {
-            if (state == null || state.parent() == null) return null;
-            return state.parent()
-                .id();
-        }
-
-        private double satelliteNetworkOrbitalOrder(CelestialObject body) {
-            OrbitalParams params = body.orbitalParams();
-            if (params == null) return body.id()
-                .ordinal();
-            return params.semiMajorAxis();
-        }
-
         private void drawSatelliteNetworkThreads(float alpha) {
             drawSatelliteThreadPass(alpha, 5.0f, 0.18f, EnumColors.MAP_COLOR_SATELLITE_NETWORK.getColor());
             drawSatelliteThreadPass(alpha, 2.0f, 0.45f, EnumColors.MAP_COLOR_SATELLITE_NETWORK.getColor());
@@ -2499,7 +2485,7 @@ public class OrbitalView {
             GL11.glVertex2f(endpoints[2], endpoints[3]);
         }
 
-        private void drawSatelliteNetworkSignals(UUID teamId, float alpha) {
+        private void drawSatelliteNetworkSignals(SatelliteNetworkState networkState, float alpha) {
             double elapsedSeconds = satelliteSignalFrameSeconds();
             Set<SatelliteSignalKey> activeSignals = new HashSet<>();
             for (SatelliteNetworkGraph.Edge edge : visibleSatelliteNetworkEdges) {
@@ -2509,7 +2495,7 @@ public class OrbitalView {
                 OrbitalScene.ResolvedBodyDrawState toState = satelliteNetworkWorldStates.get(edge.to());
                 if (from == null || to == null || fromState == null || toState == null) continue;
                 double worldLength = satelliteSignalWorldLength(fromState, toState);
-                int lanes = satelliteSignalLaneCount(teamId, edge);
+                int lanes = satelliteSignalLaneCount(networkState, edge);
                 for (int lane = 0; lane < lanes; lane++) {
                     drawSignalLane(edge, 0, lane, from, to, worldLength, alpha, elapsedSeconds, activeSignals);
                     drawSignalLane(edge, 1, lane, to, from, worldLength, alpha, elapsedSeconds, activeSignals);
@@ -2519,13 +2505,19 @@ public class OrbitalView {
                 .removeIf(key -> !activeSignals.contains(key));
         }
 
-        private int satelliteSignalLaneCount(UUID teamId, SatelliteNetworkGraph.Edge edge) {
-            long fromBandwidth = CelestialAssetStore.CLIENT.satelliteBandwidth(teamId, edge.from());
-            long toBandwidth = CelestialAssetStore.CLIENT.satelliteBandwidth(teamId, edge.to());
-            long linkBandwidth = Math.min(fromBandwidth, toBandwidth);
+        private int satelliteSignalLaneCount(SatelliteNetworkState networkState, SatelliteNetworkGraph.Edge edge) {
+            long linkBandwidth = satelliteNetworkLinkCapacity(networkState, edge);
             if (linkBandwidth <= 0L) return 0;
-            long lanes = (linkBandwidth + SATELLITE_SIGNAL_MBPS_PER_LANE - 1L) / SATELLITE_SIGNAL_MBPS_PER_LANE;
+            long lanes = (linkBandwidth + SATELLITE_SIGNAL_KBPS_PER_LANE - 1L) / SATELLITE_SIGNAL_KBPS_PER_LANE;
             return (int) Math.min(SATELLITE_SIGNAL_MAX_LANES_PER_DIRECTION, Math.max(1L, lanes));
+        }
+
+        private long satelliteNetworkLinkCapacity(SatelliteNetworkState networkState, SatelliteNetworkGraph.Edge edge) {
+            for (SatelliteNetworkState.Link link : networkState.links()) {
+                if (link.asEdge()
+                    .equals(edge)) return link.capacityKbps();
+            }
+            return 0L;
         }
 
         private void drawSignalLane(SatelliteNetworkGraph.Edge edge, int direction, int lane,
