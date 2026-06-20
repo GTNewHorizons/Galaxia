@@ -84,12 +84,6 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
                 .width(1)
                 .height(1));
         child(
-            (IWidget) mapWidget.createContextMenuWidget()
-                .left(0)
-                .top(0)
-                .width(1)
-                .height(1));
-        child(
             (IWidget) mapWidget.createAssetActionsWidget()
                 .left(0)
                 .top(0)
@@ -111,6 +105,12 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
                 .top(0)
                 .width(1)
                 .height(1));
+        child(
+            (IWidget) mapWidget.createContextMenuWidget()
+                .left(0)
+                .top(0)
+                .widthRel(1f)
+                .heightRel(1f));
     }
 
     public OrbitalView.OrbitalMapWidget mapWidget() {
