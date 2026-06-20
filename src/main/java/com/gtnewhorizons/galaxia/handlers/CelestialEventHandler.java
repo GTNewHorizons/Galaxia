@@ -19,6 +19,7 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.SatelliteNetworkSyncPacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -37,6 +38,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkState;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
@@ -58,6 +61,7 @@ public class CelestialEventHandler {
         for (CelestialAsset asset : CelestialAssetStore.allAssets()) {
             asset.tick();
         }
+        SatelliteNetworkService.tickDataJobs();
 
         LogisticStore.tickDeliveries();
         double orbitalTime = GalaxiaCelestialAPI.currentOrbitalTime();
@@ -75,6 +79,8 @@ public class CelestialEventHandler {
         }
 
         HammerTrajectoryLoadTracker.endTick();
+
+        syncSatelliteNetworks(orbitalTime);
 
         syncCooldownTicks--;
         if (syncCooldownTicks > 0) return;
@@ -121,6 +127,17 @@ public class CelestialEventHandler {
                 .collect(Collectors.toList());
 
             Galaxia.GALAXIA_NETWORK.sendTo(LogisticsSyncPacket.from(relevantDeliveries), player);
+        }
+    }
+
+    private static void syncSatelliteNetworks(double orbitalTime) {
+        for (EntityPlayerMP player : MinecraftServer.getServer()
+            .getConfigurationManager().playerEntityList) {
+            if (player == null) continue;
+            if (TeamEventHandler.playersToClear.contains(player.getUniqueID())) continue;
+            UUID playerTeam = GTTeamsCompat.getTeam(player);
+            SatelliteNetworkState satelliteNetwork = SatelliteNetworkService.rebuild(playerTeam, orbitalTime);
+            Galaxia.GALAXIA_NETWORK.sendTo(new SatelliteNetworkSyncPacket(satelliteNetwork), player);
         }
     }
 
