@@ -369,6 +369,18 @@ public final class CelestialAssetStore {
         return removed;
     }
 
+    public List<CelestialAsset.ID> deleteSatelliteAmount(UUID teamId, CelestialObjectId bodyId, SatelliteKind kind,
+        int amount) {
+        validateSatelliteKey(teamId, bodyId, kind);
+        if (amount < 0) throw new IllegalArgumentException("Satellite amount must be non-negative: " + amount);
+        List<CelestialAsset.ID> removed = new ArrayList<>();
+        for (int i = 0; i < amount && satelliteCount(teamId, bodyId, kind) > 0; i++) {
+            CelestialAsset.ID assetId = firstSatelliteId(teamId, bodyId, kind);
+            if (destroyAssetInternal(assetId)) removed.add(assetId);
+        }
+        return removed;
+    }
+
     private CelestialAsset.ID firstSatelliteId(UUID teamId, CelestialObjectId bodyId, SatelliteKind kind) {
         for (CelestialAsset asset : getStateInternal(teamId, bodyId)) {
             if (asset instanceof Satellite satellite && satellite.satelliteKind() == kind) return asset.assetId;

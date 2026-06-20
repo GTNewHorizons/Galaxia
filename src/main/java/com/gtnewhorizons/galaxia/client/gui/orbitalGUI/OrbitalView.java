@@ -39,7 +39,7 @@ import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
-import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler.SatelliteDebugOperation;
+import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler.SatelliteMutationOperation;
 import com.gtnewhorizons.galaxia.core.profiling.HammerTrajectoryLoadSample;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
@@ -638,11 +638,6 @@ public class OrbitalView {
                     public void openPendingAssetDestruction(CelestialAsset asset) {
                         assetActionController.openPendingAssetDestruction(assetUiState, asset);
                         assetActionsWidget.markStructureDirty();
-                    }
-
-                    @Override
-                    public boolean canDebugSatellites(CelestialObject body) {
-                        return OrbitalMapWidget.this.canDebugSatellites(body);
                     }
 
                     @Override
@@ -2955,29 +2950,29 @@ public class OrbitalView {
         }
 
         private void addSatellite(CelestialObject body, SatelliteKind kind) {
-            mutateSatellites(body, kind, SatelliteDebugOperation.ADD, 1);
+            mutateSatellites(body, kind, SatelliteMutationOperation.ADD, 1);
         }
 
         private void setSatellites(CelestialObject body, SatelliteKind kind) {
-            mutateSatellites(body, kind, SatelliteDebugOperation.SET, 10);
+            mutateSatellites(body, kind, SatelliteMutationOperation.SET, 10);
         }
 
         private void deleteSatellites(CelestialObject body, SatelliteKind kind) {
-            mutateSatellites(body, kind, SatelliteDebugOperation.DELETE_ALL, 0);
+            mutateSatellites(body, kind, SatelliteMutationOperation.DELETE_ALL, 0);
         }
 
         private void deleteSatelliteAmount(CelestialObject body, SatelliteKind kind, int amount) {
             if (amount <= 0) return;
-            int newCount = Math.max(0, satelliteCount(body, kind) - amount);
-            mutateSatellites(body, kind, SatelliteDebugOperation.SET, newCount);
+            mutateSatellites(body, kind, SatelliteMutationOperation.DELETE_AMOUNT, amount);
         }
 
-        private void mutateSatellites(CelestialObject body, SatelliteKind kind, SatelliteDebugOperation operation,
+        private void mutateSatellites(CelestialObject body, SatelliteKind kind, SatelliteMutationOperation operation,
             int amount) {
-            if (!canDebugSatellites(body)) return;
-            if (StarmapActionSyncHandler
-                .sendSatelliteDebugMutation(currentTeamId(), body.id(), kind, operation, amount)) {
-                showActionStatus("Satellite debug request sent");
+            if (body == null || body.objectClass() == CelestialObject.Class.GALAXY || currentTeamId() == null) return;
+            if ((operation == SatelliteMutationOperation.ADD || operation == SatelliteMutationOperation.SET)
+                && !canDebugSatellites(body)) return;
+            if (StarmapActionSyncHandler.sendSatelliteMutation(currentTeamId(), body.id(), kind, operation, amount)) {
+                showActionStatus("Satellite request sent");
             }
         }
 

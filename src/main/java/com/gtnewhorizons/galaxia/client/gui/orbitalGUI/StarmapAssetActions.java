@@ -68,6 +68,8 @@ record TransferTargetRow(StationTransferTarget target, int left, int top, int ri
 
 record SatelliteAssetRow(SatelliteKind kind, int count) {}
 
+record PendingSatelliteDeletion(SatelliteKind kind, int amount) {}
+
 record PinnedInfoRow(String label, String value, List<ItemStack> items, boolean inlineItems) {
 
     static PinnedInfoRow section(String label) {
@@ -459,6 +461,7 @@ public final class StarmapAssetActions {
         PendingConstructionCancellation pendingConstructionCancellation;
         PendingResourceTransfer pendingResourceTransfer;
         PendingAssetRename pendingAssetRename;
+        PendingSatelliteDeletion pendingSatelliteDeletion;
 
         boolean isAssetActionsOpen() {
             return assetActionsBody != null;
@@ -487,6 +490,7 @@ public final class StarmapAssetActions {
             pendingConstructionCancellation = null;
             pendingResourceTransfer = null;
             pendingAssetRename = null;
+            pendingSatelliteDeletion = null;
         }
     }
 
@@ -537,8 +541,6 @@ public final class StarmapAssetActions {
             void openStationManagement(CelestialAsset asset);
 
             void openPendingAssetDestruction(CelestialAsset asset);
-
-            boolean canDebugSatellites(CelestialObject body);
 
             void deleteSatelliteAmount(CelestialObject body, SatelliteKind kind, int amount);
 
@@ -668,6 +670,7 @@ public final class StarmapAssetActions {
 
         public void markContentDirty() {
             contentVersion++;
+            state.pendingSatelliteDeletion = null;
         }
 
         boolean isPointInScrollViewport(int localX, int localY) {
@@ -1342,32 +1345,51 @@ public final class StarmapAssetActions {
                         .width(textWidth));
 
             int buttonX = rowWidth - ROW_ACTION_BUTTON_RIGHT_INSET - actionButtonsWidth + ICON_BUTTON_SIZE;
-            boolean enabled = callbacks.canDebugSatellites(state.assetActionsBody);
             row.child(
-                createFooterButton(
-                    StatCollector.translateToLocal("galaxia.asset_manager.satellites.delete_one"),
-                    enabled,
-                    () -> callbacks.deleteSatelliteAmount(state.assetActionsBody, satellite.kind(), 1))
+                createSatelliteDeleteButton(
+                    satellite.kind(),
+                    1,
+                    StatCollector.translateToLocal("galaxia.asset_manager.satellites.delete_one"))
                         .pos(buttonX, ROW_ICON_Y)
                         .size(SATELLITE_ACTION_BUTTON_WIDTH, ICON_BUTTON_SIZE));
             row.child(
-                createFooterButton(
+                createSatelliteDeleteButton(
+                    satellite.kind(),
+                    SATELLITE_DELETE_AMOUNT,
                     StatCollector.translateToLocalFormatted(
                         "galaxia.asset_manager.satellites.delete_amount",
-                        SATELLITE_DELETE_AMOUNT),
-                    enabled,
-                    () -> callbacks
-                        .deleteSatelliteAmount(state.assetActionsBody, satellite.kind(), SATELLITE_DELETE_AMOUNT))
+                        SATELLITE_DELETE_AMOUNT))
                             .pos(buttonX + SATELLITE_ACTION_BUTTON_WIDTH + ROW_ACTION_BUTTON_GAP, ROW_ICON_Y)
                             .size(SATELLITE_ACTION_BUTTON_WIDTH, ICON_BUTTON_SIZE));
             row.child(
-                createTextButton(
-                    StatCollector.translateToLocal("galaxia.asset_manager.satellites.delete_all"),
-                    enabled,
-                    () -> callbacks.deleteSatellites(state.assetActionsBody, satellite.kind()),
-                    true).pos(buttonX + (SATELLITE_ACTION_BUTTON_WIDTH + ROW_ACTION_BUTTON_GAP) * 2, ROW_ICON_Y)
+                createSatelliteDeleteButton(
+                    satellite.kind(),
+                    0,
+                    StatCollector.translateToLocal("galaxia.asset_manager.satellites.delete_all"))
+                        .pos(buttonX + (SATELLITE_ACTION_BUTTON_WIDTH + ROW_ACTION_BUTTON_GAP) * 2, ROW_ICON_Y)
                         .size(SATELLITE_ACTION_BUTTON_WIDTH, ICON_BUTTON_SIZE));
             return row;
+        }
+
+        private ButtonWidget<?> createSatelliteDeleteButton(SatelliteKind kind, int amount, String label) {
+            boolean armed = state.pendingSatelliteDeletion != null && state.pendingSatelliteDeletion.kind() == kind
+                && state.pendingSatelliteDeletion.amount() == amount;
+            String visibleLabel = armed
+                ? StatCollector.translateToLocal("galaxia.asset_manager.satellites.confirm_delete")
+                : label;
+            return createTextButton(visibleLabel, state.assetActionsBody != null, () -> {
+                if (!armed) {
+                    state.pendingSatelliteDeletion = new PendingSatelliteDeletion(kind, amount);
+                    markStructureDirty();
+                    return;
+                }
+                state.pendingSatelliteDeletion = null;
+                if (amount == 0) {
+                    callbacks.deleteSatellites(state.assetActionsBody, kind);
+                } else {
+                    callbacks.deleteSatelliteAmount(state.assetActionsBody, kind, amount);
+                }
+            }, true);
         }
 
         private ButtonWidget<?> createNameButton(CelestialAsset asset, int width) {
