@@ -2454,15 +2454,17 @@ public class OrbitalView {
                 OrbitalScene.ResolvedBodyDrawState toState = satelliteNetworkWorldStates.get(edge.to());
                 if (from == null || to == null || fromState == null || toState == null) continue;
                 double worldLength = satelliteSignalWorldLength(fromState, toState);
-                int forwardLanes = satelliteSignalLaneCount(networkState, edge, edge.from(), edge.to());
-                if (forwardLanes == 0) forwardLanes = 1;
+                long forwardUsage = satelliteNetworkLinkUsage(networkState, edge, edge.from(), edge.to());
+                long reverseUsage = satelliteNetworkLinkUsage(networkState, edge, edge.to(), edge.from());
+                boolean keepAliveLink = forwardUsage <= 0L && reverseUsage <= 0L;
+                int forwardLanes = satelliteSignalLaneCount(forwardUsage);
+                if (keepAliveLink) forwardLanes = 1;
                 for (int lane = 0; lane < forwardLanes; lane++) {
                     drawSignalLane(
                         edge,
                         0,
                         lane,
-                        forwardLanes == 1
-                            && satelliteNetworkLinkUsage(networkState, edge, edge.from(), edge.to()) <= 0L,
+                        keepAliveLink,
                         from,
                         to,
                         worldLength,
@@ -2470,15 +2472,14 @@ public class OrbitalView {
                         elapsedSeconds,
                         activeSignals);
                 }
-                int reverseLanes = satelliteSignalLaneCount(networkState, edge, edge.to(), edge.from());
-                if (reverseLanes == 0) reverseLanes = 1;
+                int reverseLanes = satelliteSignalLaneCount(reverseUsage);
+                if (keepAliveLink) reverseLanes = 1;
                 for (int lane = 0; lane < reverseLanes; lane++) {
                     drawSignalLane(
                         edge,
                         1,
                         lane,
-                        reverseLanes == 1
-                            && satelliteNetworkLinkUsage(networkState, edge, edge.to(), edge.from()) <= 0L,
+                        keepAliveLink,
                         to,
                         from,
                         worldLength,
@@ -2491,9 +2492,7 @@ public class OrbitalView {
                 .removeIf(key -> !activeSignals.contains(key));
         }
 
-        private int satelliteSignalLaneCount(SatelliteNetworkState networkState, SatelliteNetworkGraph.Edge edge,
-            CelestialObjectId source, CelestialObjectId destination) {
-            long directionalUsage = satelliteNetworkLinkUsage(networkState, edge, source, destination);
+        private int satelliteSignalLaneCount(long directionalUsage) {
             if (directionalUsage <= 0L) return 0;
             long lanes = (directionalUsage + SATELLITE_SIGNAL_KBPS_PER_LANE - 1L) / SATELLITE_SIGNAL_KBPS_PER_LANE;
             return (int) Math.min(SATELLITE_SIGNAL_MAX_LANES_PER_DIRECTION, Math.max(1L, lanes));
