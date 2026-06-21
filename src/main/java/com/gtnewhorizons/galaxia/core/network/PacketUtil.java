@@ -45,6 +45,11 @@ public final class PacketUtil {
         buf.writeLong(uuid.getLeastSignificantBits());
     }
 
+    static void writeId(ByteBuf buf, UUID uuid) {
+        buf.writeLong(uuid.getMostSignificantBits());
+        buf.writeLong(uuid.getLeastSignificantBits());
+    }
+
     static UUID readId(ByteBuf buf) {
         long mostSig = buf.readLong();
         long leastSig = buf.readLong();

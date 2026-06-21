@@ -87,6 +87,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleS
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
+import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import sun.misc.Unsafe;
@@ -126,6 +128,11 @@ public final class FacilityPersistenceManager {
         LogisticStore.clearDeliveries();
         HammerTrajectoryLoadTracker.reset();
         loadAll();
+    }
+
+    void saveToSaveDirectory(File worldSaveDir) {
+        this.worldSaveDir = worldSaveDir;
+        saveAll();
     }
 
     @SubscribeEvent
@@ -171,18 +178,18 @@ public final class FacilityPersistenceManager {
             LOG.info("[PERSIST] LOAD: no file at {}, skipping", file);
             return;
         }
-        List<AssetJson> list;
+        AssetRegistryJson registry;
         try (FileReader reader = new FileReader(file)) {
-            Type listType = new TypeToken<List<AssetJson>>() {}.getType();
-            list = gson.fromJson(reader, listType);
+            registry = gson.fromJson(reader, AssetRegistryJson.class);
         } catch (IOException | JsonParseException e) {
             throw new IllegalStateException("[PERSIST] LOAD FAILED: read error " + file + ": " + e.getMessage(), e);
         }
-        if (list == null) {
+        if (registry == null || registry.assets == null) {
             throw new IllegalStateException(
                 "[PERSIST] LOAD FAILED: asset registry " + file + " contained no asset list");
         }
 
+        List<AssetJson> list = registry.assets;
         LOG.info("[PERSIST] LOAD: found {} asset(s) in JSON", list.size());
         int loadedCount = 0;
         for (AssetJson json : list) {
@@ -221,7 +228,8 @@ public final class FacilityPersistenceManager {
     }
 
     private void saveAssets(File file) {
-        List<AssetJson> list = new ArrayList<>();
+        AssetRegistryJson registry = new AssetRegistryJson();
+        registry.assets = new ArrayList<>();
         int totalAssets = 0;
         int totalModules = 0;
         int totalAnchors = 0;
@@ -249,14 +257,14 @@ public final class FacilityPersistenceManager {
                     asset.kind,
                     asset.status());
             }
-            list.add(json);
+            registry.assets.add(json);
         }
         LOG.info(
             "[PERSIST] SAVE: {} asset(s) total, {} modules, {} anchor tiles across all assets",
             totalAssets,
             totalModules,
             totalAnchors);
-        writeJson(file, list);
+        writeJson(file, registry);
     }
 
     private void loadTasks(File file) {
@@ -347,6 +355,10 @@ public final class FacilityPersistenceManager {
         json.location = asset.location.name();
         json.status = asset.status()
             .name();
+        if (asset instanceof Satellite satellite) {
+            json.satelliteKind = satellite.satelliteKind()
+                .name();
+        }
         json.requiredResources = encodeRequirements(asset.requiredResources());
         json.constructionInventory = encodeRequirements(asset.constructionInventory());
         if (asset instanceof Station station && station.getController() != null) {
@@ -399,7 +411,9 @@ public final class FacilityPersistenceManager {
         CelestialAsset.Kind kind = safeValueOf(CelestialAsset.Kind.class, json.kind);
         Buildable.Status status = safeValueOf(Buildable.Status.class, json.status);
         if (kind == null || status == null) return null;
-        CelestialAsset asset = CelestialAsset.create(json.assetId, objectId, kind, status);
+        SatelliteKind satelliteKind = safeValueOf(SatelliteKind.class, json.satelliteKind);
+        if (kind == CelestialAsset.Kind.SATELLITE && satelliteKind == null) return null;
+        CelestialAsset asset = CelestialAsset.create(json.assetId, objectId, kind, status, satelliteKind);
         asset.setConstructionInventory(decodeRequirements(json.constructionInventory));
         asset.setDisplayName(json.displayName);
         if (asset instanceof Station station && json.controllerX != null
@@ -998,6 +1012,11 @@ public final class FacilityPersistenceManager {
         return decoded;
     }
 
+    static final class AssetRegistryJson {
+
+        List<AssetJson> assets;
+    }
+
     static final class AssetJson {
 
         CelestialAsset.ID assetId;
@@ -1007,6 +1026,7 @@ public final class FacilityPersistenceManager {
         String planetaryAnchorBodyId;
         String displayName;
         String kind;
+        String satelliteKind;
         String location;
         String status;
         Map<String, Long> requiredResources;

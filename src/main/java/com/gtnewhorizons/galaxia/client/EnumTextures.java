@@ -65,6 +65,7 @@ public enum EnumTextures {
     ICON_STATION("textures/gui/bodyicons/station.png"),
     ICON_STATION_AUTOMATED("textures/gui/bodyicons/station_automated.png"),
     ICON_OUTPOST_AUTOMATED("textures/gui/bodyicons/outpost_automated.png"),
+    ICON_SATELLITE("textures/items/parts/satellite_dish.png"),
 
     // Asset panel / transfer package icons
     ICON_CAP_MINING("textures/gui/outpost_mining.png"),

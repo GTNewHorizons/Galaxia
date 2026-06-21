@@ -1,12 +1,14 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.PacketBuffer;
+import net.minecraft.server.MinecraftServer;
 
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.value.sync.SyncHandler;
@@ -15,6 +17,7 @@ import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -24,6 +27,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -38,11 +43,22 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
     private static final int REQUEST_MODULE_UPDATE = 4;
     private static final int REQUEST_LOGISTICS_CONFIG = 6;
     private static final int REQUEST_FILTER_UPDATE = 7;
+    private static final int REQUEST_SATELLITE_DEBUG_MUTATION = 8;
 
     private static final int RESPONSE_SYNC = 100;
     private static final int RESPONSE_ACTION_FAILED = 101;
 
     private static StarmapActionSyncHandler activeClientHandler;
+
+    public enum SatelliteDebugOperation {
+        ADD,
+        SET,
+        DELETE_ALL
+    }
+
+    public StarmapActionSyncHandler() {
+        allowC2S();
+    }
 
     @Override
     public void init(String key, PanelSyncManager syncManager) {
@@ -67,6 +83,8 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
                 .createStation(bodyId, asset.displayName(), ((Station) asset).getController());
             case AUTOMATED_OUTPOST, AUTOMATED_STATION -> AssetCreateRequestPacket
                 .createFacility(bodyId, asset.displayName(), asset.kind, asset.isOperational());
+            case SATELLITE -> AssetCreateRequestPacket
+                .createSatellite(bodyId, ((Satellite) asset).satelliteKind(), asset.isOperational());
         };
         Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
@@ -166,6 +184,21 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
         return true;
     }
 
+    @SideOnly(Side.CLIENT)
+    public static boolean sendSatelliteDebugMutation(UUID teamId, CelestialObjectId bodyId, SatelliteKind kind,
+        SatelliteDebugOperation operation, int amount) {
+        StarmapActionSyncHandler handler = activeClientHandler;
+        if (handler == null || teamId == null || bodyId == null || kind == null || operation == null) return false;
+        handler.syncToServer(REQUEST_SATELLITE_DEBUG_MUTATION, buf -> {
+            PacketUtil.writeId(buf, teamId);
+            PacketUtil.writeEnum(buf, bodyId);
+            PacketUtil.writeEnum(buf, kind);
+            PacketUtil.writeEnum(buf, operation);
+            buf.writeInt(amount);
+        });
+        return true;
+    }
+
     @Override
     @SideOnly(Side.CLIENT)
     public void readOnClient(int id, PacketBuffer buf) throws IOException {
@@ -237,6 +270,23 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
                 packet.fromBytes(buf);
                 syncPacket(packet.apply(teamId));
             }
+            case REQUEST_SATELLITE_DEBUG_MUTATION -> {
+                // TODO: Remove this once satellite production is handled by normal gameplay.
+                if (!isSatelliteDebugAuthorized(playerMp)) return;
+                UUID debugTeamId = PacketUtil.readId(buf);
+                CelestialObjectId bodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
+                SatelliteKind kind = PacketUtil.readEnum(buf, SatelliteKind.class);
+                SatelliteDebugOperation operation = PacketUtil.readEnum(buf, SatelliteDebugOperation.class);
+                int amount = buf.readInt();
+                for (AssetSyncPacket packet : applySatelliteDebugMutation(
+                    debugTeamId,
+                    bodyId,
+                    kind,
+                    operation,
+                    amount)) {
+                    Galaxia.GALAXIA_NETWORK.sendTo(packet, playerMp);
+                }
+            }
         }
     }
 
@@ -246,5 +296,41 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
 
     private void syncFailure(String message) {
         syncToClient(RESPONSE_ACTION_FAILED, buf -> PacketUtil.writeString(buf, message));
+    }
+
+    private static boolean isSatelliteDebugAuthorized(EntityPlayerMP player) {
+        MinecraftServer server = MinecraftServer.getServer();
+        return player.capabilities.isCreativeMode && server != null
+            && server.getConfigurationManager()
+                .func_152596_g(player.getGameProfile());
+    }
+
+    private static List<AssetSyncPacket> applySatelliteDebugMutation(UUID teamId, CelestialObjectId bodyId,
+        SatelliteKind kind, SatelliteDebugOperation operation, int amount) {
+        return switch (operation) {
+            case ADD -> {
+                if (amount <= 0) throw new IllegalArgumentException("Satellite ADD amount must be positive: " + amount);
+                List<AssetSyncPacket> packets = new ArrayList<>(amount);
+                for (int i = 0; i < amount; i++) {
+                    AssetSyncPacket packet = AssetCreateRequestPacket.createSatellite(bodyId, kind, true)
+                        .apply(teamId);
+                    if (packet != null) packets.add(packet);
+                }
+                yield packets;
+            }
+            case SET -> syncSatelliteMutations(
+                CelestialAssetStore.SERVER.setSatelliteCount(teamId, bodyId, kind, amount));
+            case DELETE_ALL -> syncSatelliteMutations(
+                CelestialAssetStore.SERVER.deleteSatellites(teamId, bodyId, kind));
+        };
+    }
+
+    private static List<AssetSyncPacket> syncSatelliteMutations(List<CelestialAsset.ID> assetIds) {
+        List<AssetSyncPacket> packets = new ArrayList<>(assetIds.size());
+        for (CelestialAsset.ID assetId : assetIds) {
+            CelestialAsset asset = CelestialAssetStore.SERVER.findAssetInternal(assetId);
+            packets.add(asset == null ? AssetSyncPacket.assetRemoved(assetId) : AssetSyncPacket.fullSync(asset));
+        }
+        return packets;
     }
 }
