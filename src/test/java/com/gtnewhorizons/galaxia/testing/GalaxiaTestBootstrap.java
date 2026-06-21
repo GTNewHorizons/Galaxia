@@ -19,6 +19,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import cpw.mods.fml.common.LoadController;
 import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.relauncher.Side;
+import gregtech.api.enums.FluidState;
+import gregtech.api.enums.Materials;
+import gregtech.api.fluid.GTFluidFactory;
 import sun.misc.Unsafe;
 
 public final class GalaxiaTestBootstrap {
@@ -93,9 +96,16 @@ public final class GalaxiaTestBootstrap {
             repairStaticRegistryFields(net.minecraft.init.Items.class, Item.itemRegistry);
             StatList.func_151178_a();
             invokeVanillaDispenserBootstrap();
+            ensureGtAirFluid();
             setBootstrapInitialized();
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Failed to initialize Minecraft registries for tests", e);
+        }
+    }
+
+    private static void ensureGtAirFluid() {
+        if (Materials.Air.getGas(1L) == null) {
+            GTFluidFactory.of("Air", "Air", Materials.Air, FluidState.GAS, 295);
         }
     }
 

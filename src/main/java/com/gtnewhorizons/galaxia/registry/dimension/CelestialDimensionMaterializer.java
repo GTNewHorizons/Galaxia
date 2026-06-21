@@ -6,6 +6,7 @@ import javax.annotation.Nonnull;
 
 import net.minecraftforge.common.DimensionManager;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialBodyProperties;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
@@ -62,19 +63,20 @@ public final class CelestialDimensionMaterializer {
         }
 
         DimensionEnum dimension = profile.dimension();
+        CelestialBodyProperties properties = body.properties();
         return new DimensionDef(
             dimension.getName(),
             dimension.getId(),
             profile.provider(),
             profile.keepLoaded(),
-            profile.gravity(),
+            properties.localGravityG(),
             profile.airResistance(),
             profile.removeSpeedCancelation(),
             profile.celestialBodies(),
             profile.effects(),
-            profile.mass(),
-            profile.orbitalRadius(),
-            profile.radius(),
+            properties.massEarthRelative(),
+            properties.orbitalRadiusEarthRelative(),
+            properties.radiusEarthRelative(),
             profile.tier(),
             profile.skyboxTexture(),
             profile.validSpaceStationBlocks());
