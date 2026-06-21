@@ -781,7 +781,6 @@ public final class StarmapAssetActions {
                     .hashCode();
                 result = 31 * result + asset.displayName()
                     .hashCode();
-                result = 31 * result + asset.getSyncRevision();
             }
             return result;
         }
