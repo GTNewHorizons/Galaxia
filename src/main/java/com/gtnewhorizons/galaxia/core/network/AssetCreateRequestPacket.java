@@ -12,6 +12,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -24,6 +25,7 @@ public final class AssetCreateRequestPacket implements IMessage {
     private String displayName;
     private CelestialAsset.Kind kind;
     private boolean operational;
+    private SatelliteKind satelliteKind;
 
     private BlockPos controller;
 
@@ -37,6 +39,19 @@ public final class AssetCreateRequestPacket implements IMessage {
         pkt.displayName = displayName;
         pkt.kind = kind;
         pkt.operational = operational;
+
+        return pkt;
+    }
+
+    public static AssetCreateRequestPacket createSatellite(CelestialObjectId celestialObjectId, SatelliteKind kind,
+        boolean operational) {
+        AssetCreateRequestPacket pkt = new AssetCreateRequestPacket();
+
+        pkt.celestialObjectId = celestialObjectId;
+        pkt.displayName = "";
+        pkt.kind = CelestialAsset.Kind.SATELLITE;
+        pkt.operational = operational;
+        pkt.satelliteKind = kind;
 
         return pkt;
     }
@@ -64,6 +79,8 @@ public final class AssetCreateRequestPacket implements IMessage {
             buf.writeInt(controller.x());
             buf.writeInt(controller.y());
             buf.writeInt(controller.z());
+        } else if (kind == CelestialAsset.Kind.SATELLITE) {
+            PacketUtil.writeEnum(buf, requiredSatelliteKind());
         }
     }
 
@@ -75,11 +92,13 @@ public final class AssetCreateRequestPacket implements IMessage {
         operational = buf.readBoolean();
         if (kind == CelestialAsset.Kind.STATION) {
             controller = new BlockPos(buf.readInt(), buf.readInt(), buf.readInt());
+        } else if (kind == CelestialAsset.Kind.SATELLITE) {
+            satelliteKind = PacketUtil.readEnum(buf, SatelliteKind.class);
         }
     }
 
     public AssetSyncPacket apply(UUID teamId) {
-        CelestialAsset asset = CelestialAsset.create(celestialObjectId, kind, operational);
+        CelestialAsset asset = CelestialAsset.create(celestialObjectId, kind, operational, requiredSatelliteKind());
         asset.setDisplayName(displayName);
         if (kind == CelestialAsset.Kind.STATION) {
             Station station = (Station) asset;
@@ -91,6 +110,13 @@ public final class AssetCreateRequestPacket implements IMessage {
         Galaxia.LOG.info("[Outpost] Created asset {} ({}) at {}", asset.assetId, kind, celestialObjectId);
 
         return AssetSyncPacket.fullSync(asset);
+    }
+
+    private SatelliteKind requiredSatelliteKind() {
+        if (kind == CelestialAsset.Kind.SATELLITE && satelliteKind == null) {
+            throw new IllegalStateException("satelliteKind is required");
+        }
+        return satelliteKind;
     }
 
     public static final class Handler implements IMessageHandler<AssetCreateRequestPacket, IMessage> {

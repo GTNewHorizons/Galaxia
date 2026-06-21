@@ -326,7 +326,13 @@ public final class CelestialRegistry {
                                 EffectBuilder.builder()
                                     .build())
                             .tier(EnumTiers.TIER_1)
-                            .worldGeneration(CelestialRegistry::configureOverworldProvider)).build()));
+                            .worldGeneration(CelestialRegistry::configureOverworldProvider)).build())
+                .featureTileChance(0.20)
+                .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 2.0)
+                .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 1.5)
+                .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 2.0)
+                .feature(PlanetaryFeatureRegistry.MAGMA_POOL, 0.4)
+                .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.2));
 
         register(
             DimensionEnum.OVERWORLD_ORBIT,

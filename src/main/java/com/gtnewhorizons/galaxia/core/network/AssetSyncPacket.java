@@ -68,6 +68,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleS
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
+import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -119,6 +121,7 @@ public final class AssetSyncPacket implements IMessage {
     private long energyStored;
     private long stationFeatureSalt;
     private UpkeepSettlement.Credits upkeepCredits = UpkeepSettlement.Credits.empty();
+    private SatelliteKind satelliteKind;
 
     private List<AssetSyncPacket> fullSyncDeltas;
 
@@ -158,6 +161,8 @@ public final class AssetSyncPacket implements IMessage {
             return fullSync((AutomatedFacility) state);
         } else if (state instanceof Station) {
             return fullSync((Station) state);
+        } else if (state instanceof Satellite) {
+            return fullSync((Satellite) state);
         }
         throw new IllegalStateException("Unexpected value: " + state);
     }
@@ -206,6 +211,20 @@ public final class AssetSyncPacket implements IMessage {
         pkt.stationFeatureSalt = state.stationFeatureSalt();
         pkt.upkeepCredits = state.upkeepCredits();
         pkt.fullSyncDeltas = automatedFacilityDeltas(state);
+
+        return pkt;
+    }
+
+    public static AssetSyncPacket fullSync(Satellite state) {
+        AssetSyncPacket pkt = new AssetSyncPacket();
+        pkt.assetId = state.assetId;
+        pkt.assetKind = state.kind;
+        pkt.syncType = FULL_SYNC;
+        pkt.syncRevision = state.getSyncRevision();
+        pkt.assetStatus = state.status();
+        pkt.teamId = CelestialAssetStore.getTeamId(state.assetId);
+        pkt.celestialBodyId = state.celestialObjectId;
+        pkt.satelliteKind = state.satelliteKind();
 
         return pkt;
     }
@@ -467,6 +486,11 @@ public final class AssetSyncPacket implements IMessage {
                 packets.add(fullSync(station));
                 station.markSyncedFor(playerId);
             }
+        } else if (asset instanceof Satellite satellite) {
+            if (satellite.needsFullSyncFor(playerId)) {
+                packets.add(fullSync(satellite));
+                satellite.markSyncedFor(playerId);
+            }
         }
         return packets;
     }
@@ -514,6 +538,12 @@ public final class AssetSyncPacket implements IMessage {
                             buf.writeByte(d.syncType);
                             d.writeDelta(buf);
                         }
+                    }
+                    case SATELLITE -> {
+                        buf.writeLong(teamId.getMostSignificantBits());
+                        buf.writeLong(teamId.getLeastSignificantBits());
+                        PacketUtil.writeEnum(buf, celestialBodyId);
+                        PacketUtil.writeEnum(buf, satelliteKind);
                     }
                 }
             }
@@ -570,6 +600,11 @@ public final class AssetSyncPacket implements IMessage {
                             d.readDelta(buf);
                             fullSyncDeltas.add(d);
                         }
+                    }
+                    case SATELLITE -> {
+                        teamId = new UUID(buf.readLong(), buf.readLong());
+                        celestialBodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
+                        satelliteKind = PacketUtil.readEnum(buf, SatelliteKind.class);
                     }
                 }
             }
@@ -1406,6 +1441,19 @@ public final class AssetSyncPacket implements IMessage {
                         handleDelta(state, d);
                     }
 
+                }
+                case SATELLITE -> {
+                    Satellite satellite = asset instanceof Satellite s ? s : null;
+                    if (satellite == null || satellite.satelliteKind() != packet.satelliteKind) {
+                        if (satellite != null) CelestialAssetStore.CLIENT.destroyAssetInternal(packet.assetId);
+                        satellite = new Satellite(
+                            packet.assetId,
+                            packet.celestialBodyId,
+                            packet.assetStatus,
+                            packet.satelliteKind);
+                        CelestialAssetStore.CLIENT.registerAssetInternal(packet.teamId, satellite);
+                        asset = satellite;
+                    }
                 }
             }
 

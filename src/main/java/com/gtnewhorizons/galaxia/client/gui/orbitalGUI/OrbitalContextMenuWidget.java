@@ -16,8 +16,15 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
-record ContextMenuAction(String label, boolean enabled, OrbitalContextMenuWidget.ContextMenuActionType actionType) {}
+record ContextMenuAction(String label, boolean enabled, OrbitalContextMenuWidget.ContextMenuActionType actionType,
+    SatelliteKind satelliteKind) {
+
+    ContextMenuAction(String label, boolean enabled, OrbitalContextMenuWidget.ContextMenuActionType actionType) {
+        this(label, enabled, actionType, null);
+    }
+}
 
 record ContextMenuLayout(int left, int top, int right, int bottom, int headerHeight, int rowHeight,
     List<ContextMenuAction> actions) {}
@@ -52,6 +59,16 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
         void createBaseStation(CelestialObject body);
 
         void triggerAssetCreation(CelestialObject body, CelestialAsset.Kind kind, boolean openActionsFirst);
+
+        boolean canDebugSatellites(CelestialObject body);
+
+        int satelliteCount(CelestialObject body, SatelliteKind kind);
+
+        void addSatellite(CelestialObject body, SatelliteKind kind);
+
+        void setSatellites(CelestialObject body, SatelliteKind kind);
+
+        void deleteSatellites(CelestialObject body, SatelliteKind kind);
 
         void closeContextMenu();
     }
@@ -129,7 +146,11 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
             + '|'
             + callbacks.canCreateAutomatedStation(body)
             + '|'
-            + callbacks.canCreateAutomatedFacility(body);
+            + callbacks.canCreateAutomatedFacility(body)
+            + '|'
+            + callbacks.canDebugSatellites(body)
+            + '|'
+            + satelliteCountsSignature(body);
     }
 
     private void rebuildChildren() {
@@ -184,7 +205,7 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
                                 .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor())))
                     .onMousePressed(mouseButton -> {
                         if (mouseButton != 0) return true;
-                        handleAction(body, action.actionType());
+                        handleAction(body, action);
                         return true;
                     }));
             row.child(
@@ -201,14 +222,17 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
         return row;
     }
 
-    private void handleAction(CelestialObject body, ContextMenuActionType actionType) {
-        switch (actionType) {
+    private void handleAction(CelestialObject body, ContextMenuAction action) {
+        switch (action.actionType()) {
             case MANAGE_ASSETS -> callbacks.openAssetActions(body);
             case CREATE_STATION -> callbacks.createBaseStation(body);
             case OPEN_AUTOMATED_STATION_CONFIRM -> callbacks
                 .triggerAssetCreation(body, CelestialAsset.Kind.AUTOMATED_STATION, true);
             case OPEN_AUTOMATED_OUTPOST_CONFIRM -> callbacks
                 .triggerAssetCreation(body, CelestialAsset.Kind.AUTOMATED_OUTPOST, true);
+            case DEBUG_ADD_SATELLITE -> callbacks.addSatellite(body, action.satelliteKind());
+            case DEBUG_SET_SATELLITES -> callbacks.setSatellites(body, action.satelliteKind());
+            case DEBUG_DELETE_SATELLITES -> callbacks.deleteSatellites(body, action.satelliteKind());
             case MESSAGE -> {}
         }
         callbacks.closeContextMenu();
@@ -238,6 +262,7 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
     private List<ContextMenuAction> buildActions(CelestialObject body) {
         List<ContextMenuAction> actions = new ArrayList<>();
         actions.add(new ContextMenuAction("Manage Assets", true, ContextMenuActionType.MANAGE_ASSETS));
+        addSatelliteCountActions(actions, body);
         if (callbacks.canCreateBaseStation(body)) {
             actions.add(new ContextMenuAction("Create Station", true, ContextMenuActionType.CREATE_STATION));
         }
@@ -255,10 +280,59 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
                     true,
                     ContextMenuActionType.OPEN_AUTOMATED_OUTPOST_CONFIRM));
         }
+        if (callbacks.canDebugSatellites(body)) {
+            addSatelliteDebugActions(actions, SatelliteKind.COMMUNICATION, "Communication");
+            addSatelliteDebugActions(actions, SatelliteKind.PROSPECTING, "Prospecting");
+        }
         if (actions.size() == 1) {
             actions.add(new ContextMenuAction("No actions available", false, ContextMenuActionType.MESSAGE));
         }
         return actions;
+    }
+
+    private void addSatelliteCountActions(List<ContextMenuAction> actions, CelestialObject body) {
+        actions.add(
+            new ContextMenuAction(
+                "Communication Satellites: " + callbacks.satelliteCount(body, SatelliteKind.COMMUNICATION),
+                false,
+                ContextMenuActionType.MESSAGE));
+        actions.add(
+            new ContextMenuAction(
+                "Prospecting Satellites: " + callbacks.satelliteCount(body, SatelliteKind.PROSPECTING),
+                false,
+                ContextMenuActionType.MESSAGE));
+    }
+
+    private void addSatelliteDebugActions(List<ContextMenuAction> actions, SatelliteKind kind, String label) {
+        actions.add(
+            new ContextMenuAction(
+                "Debug: Add " + label + " Satellite",
+                true,
+                ContextMenuActionType.DEBUG_ADD_SATELLITE,
+                kind));
+        actions.add(
+            new ContextMenuAction(
+                "Debug: Set " + label + " Satellites to 10",
+                true,
+                ContextMenuActionType.DEBUG_SET_SATELLITES,
+                kind));
+        actions.add(
+            new ContextMenuAction(
+                "Debug: Delete " + label + " Satellites",
+                true,
+                ContextMenuActionType.DEBUG_DELETE_SATELLITES,
+                kind));
+    }
+
+    private String satelliteCountsSignature(CelestialObject body) {
+        StringBuilder signature = new StringBuilder();
+        for (SatelliteKind kind : SatelliteKind.values()) {
+            if (signature.length() > 0) signature.append(',');
+            signature.append(kind.name())
+                .append('=')
+                .append(callbacks.satelliteCount(body, kind));
+        }
+        return signature.toString();
     }
 
     private static final class PassiveBackgroundLayer extends ParentWidget<PassiveBackgroundLayer> {
@@ -290,6 +364,9 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
         MANAGE_ASSETS,
         CREATE_STATION,
         OPEN_AUTOMATED_STATION_CONFIRM,
-        OPEN_AUTOMATED_OUTPOST_CONFIRM
+        OPEN_AUTOMATED_OUTPOST_CONFIRM,
+        DEBUG_ADD_SATELLITE,
+        DEBUG_SET_SATELLITES,
+        DEBUG_DELETE_SATELLITES
     }
 }

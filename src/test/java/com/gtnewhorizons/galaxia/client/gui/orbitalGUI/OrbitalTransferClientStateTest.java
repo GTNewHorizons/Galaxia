@@ -82,30 +82,37 @@ final class OrbitalTransferClientStateTest {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
         CelestialObject root = GalaxiaCelestialAPI.getPrimaryRoot();
         InterplanetaryTransferSystem.OrbitalTransferSupport support = new InterplanetaryTransferSystem.OrbitalTransferSupport();
-        CelestialObject source = GalaxiaCelestialAPI.get(CelestialObjectId.EGORA)
-            .orElseThrow();
-        CelestialObject destination = GalaxiaCelestialAPI.get(CelestialObjectId.OVERWORLD)
-            .orElseThrow();
-        CelestialObject star = GalaxiaCelestialAPI.findStar(root, source);
         double departureTime = 8850.0;
-        double hohmannTof = star.getHohmannTof(source, destination, root, departureTime);
 
-        for (int i = 0; i < 64; i++) {
-            double tof = hohmannTof * (0.1 + (3.0 - 0.1) * i / 63.0);
-            double expectedDepartureAngularMomentum = cheapestDepartureAngularMomentum(
-                root,
-                star,
-                source,
-                destination,
-                departureTime,
-                tof);
-            if (!Double.isFinite(expectedDepartureAngularMomentum) || expectedDepartureAngularMomentum >= 0.0) continue;
+        for (CelestialObject source : GalaxiaCelestialAPI.getAllBodies()
+            .values()) {
+            CelestialObject star = GalaxiaCelestialAPI.findStar(root, source);
+            if (star == null) continue;
+            for (CelestialObject destination : GalaxiaCelestialAPI.getAllBodies()
+                .values()) {
+                if (source.id() == destination.id()) continue;
+                if (GalaxiaCelestialAPI.findStar(root, destination) != star) continue;
+                double hohmannTof = star.getHohmannTof(source, destination, root, departureTime);
 
-            InterplanetaryTransferJob rendered = support
-                .createTransferJob(root, source, destination, "Package", "Cargo", departureTime, tof);
-            assertNotNull(rendered);
-            assertTrue(initialPathAngularMomentum(rendered) < 0.0);
-            return;
+                for (int i = 0; i < 64; i++) {
+                    double tof = hohmannTof * (0.1 + (3.0 - 0.1) * i / 63.0);
+                    double expectedDepartureAngularMomentum = cheapestDepartureAngularMomentum(
+                        root,
+                        star,
+                        source,
+                        destination,
+                        departureTime,
+                        tof);
+                    if (!Double.isFinite(expectedDepartureAngularMomentum) || expectedDepartureAngularMomentum >= 0.0)
+                        continue;
+
+                    InterplanetaryTransferJob rendered = support
+                        .createTransferJob(root, source, destination, "Package", "Cargo", departureTime, tof);
+                    assertNotNull(rendered);
+                    assertTrue(initialPathAngularMomentum(rendered) < 0.0);
+                    return;
+                }
+            }
         }
 
         fail("Expected at least one fixed-time default transfer where the cheapest Lambert branch is retrograde");
