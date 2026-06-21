@@ -168,8 +168,10 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
             this.temperature = source.temperature;
             this.surfacePressurePa = source.surfacePressurePa;
             this.starmapAtmosphericDrag = source.starmapAtmosphericDrag;
-            this.atmosphereIngredients.addAll(source.atmosphereIngredients);
             this.atmosphereCompositionSource = source.atmosphereCompositionSource;
+            if (source.atmosphereCompositionSource == null) {
+                this.atmosphereIngredients.addAll(source.atmosphereIngredients);
+            }
             this.metadata.putAll(source.metadata);
         }
 

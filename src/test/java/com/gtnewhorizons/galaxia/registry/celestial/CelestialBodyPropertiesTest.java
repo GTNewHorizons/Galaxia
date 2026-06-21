@@ -64,6 +64,26 @@ final class CelestialBodyPropertiesTest {
     }
 
     @Test
+    void atmosphereCompositionSourceSurvivesBuilderRoundTrip() {
+        Fluid carbonDioxide = new Fluid("carbon_dioxide");
+
+        CelestialBodyProperties source = CelestialBodyProperties.builder()
+            .surfacePressurePa(610.0)
+            .addAtmosphereIngredient(carbonDioxide, 1.0)
+            .build();
+        CelestialBodyProperties derived = CelestialBodyProperties.builder()
+            .surfacePressurePa(120.0)
+            .copyAtmosphereCompositionFrom(source)
+            .build();
+
+        CelestialBodyProperties rebuilt = derived.toBuilder()
+            .build();
+
+        assertEquals(120.0, rebuilt.surfacePressurePa());
+        assertEquals(source.atmosphereIngredients(), rebuilt.atmosphereIngredients());
+    }
+
+    @Test
     void starmapAtmosphericDragDefaultsToNeutralMultiplier() {
         assertEquals(
             1.0,
