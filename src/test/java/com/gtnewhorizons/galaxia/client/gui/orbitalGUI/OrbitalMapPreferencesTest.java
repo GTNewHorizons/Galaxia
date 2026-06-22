@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -16,20 +16,23 @@ final class OrbitalMapPreferencesTest {
     private Path tempDir;
 
     @Test
-    void disableHierarchicalViewPersistsPerPlayer() throws IOException {
+    void clickModePersistsPerWorldAndPlayer() throws IOException {
         Path preferenceFile = tempDir.resolve("orbital-map.json");
         OrbitalMapPreferences preferences = new OrbitalMapPreferences(preferenceFile.toFile());
 
-        preferences.setDisableHierarchicalView("alice", true);
+        preferences.setClickMode("world-a", "alice", OrbitalMapClickMode.FOLLOW);
 
         OrbitalMapPreferences reloaded = new OrbitalMapPreferences(preferenceFile.toFile());
-        assertTrue(reloaded.disableHierarchicalView("alice"));
-        assertFalse(reloaded.disableHierarchicalView("bob"));
+        assertEquals(OrbitalMapClickMode.FOLLOW, reloaded.clickMode("world-a", "alice"));
+        assertEquals(OrbitalMapClickMode.HIERARCHY, reloaded.clickMode("world-a", "bob"));
+        assertEquals(OrbitalMapClickMode.HIERARCHY, reloaded.clickMode("world-b", "alice"));
 
         String saved = Files.readString(preferenceFile);
+        assertTrue(saved.contains("\"worlds\""));
+        assertTrue(saved.contains("\"world-a\""));
         assertTrue(saved.contains("\"players\""));
         assertTrue(saved.contains("\"alice\""));
         assertTrue(saved.contains("\"clickMode\""));
-        assertTrue(saved.contains("\"follow\""));
+        assertTrue(saved.contains("\"FOLLOW\""));
     }
 }

@@ -16,7 +16,7 @@ final class OrbitalPlanetTrackingControllerTest {
     void disabledHierarchyClickTracksPlanetWithoutOpeningHierarchy() {
         CelestialObject planet = body(CelestialObjectId.OVERWORLD, "Overworld", CelestialObject.Class.PLANET);
         OrbitalPlanetTrackingController controller = new OrbitalPlanetTrackingController();
-        controller.setDisableHierarchicalView(true);
+        controller.setClickMode(OrbitalMapClickMode.FOLLOW);
 
         OrbitalPlanetTrackingController.ClickAction action = controller.clickBody(planet, true);
 
@@ -39,7 +39,7 @@ final class OrbitalPlanetTrackingControllerTest {
     void scrollDoesNotUnlockTrackingButManualMovementDoes() {
         CelestialObject planet = body(CelestialObjectId.MARS, "Mars", CelestialObject.Class.PLANET);
         OrbitalPlanetTrackingController controller = new OrbitalPlanetTrackingController();
-        controller.setDisableHierarchicalView(true);
+        controller.setClickMode(OrbitalMapClickMode.FOLLOW);
         controller.clickBody(planet, false);
 
         controller.onScrolled();

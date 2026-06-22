@@ -10,16 +10,16 @@ final class OrbitalPlanetTrackingController {
         SELECT_ONLY
     }
 
-    private boolean disableHierarchicalView;
+    private OrbitalMapClickMode clickMode = OrbitalMapClickMode.HIERARCHY;
     private boolean following;
     private CelestialObject focusedBody;
 
-    boolean disableHierarchicalView() {
-        return disableHierarchicalView;
+    OrbitalMapClickMode clickMode() {
+        return clickMode;
     }
 
-    void setDisableHierarchicalView(boolean disableHierarchicalView) {
-        this.disableHierarchicalView = disableHierarchicalView;
+    void setClickMode(OrbitalMapClickMode clickMode) {
+        this.clickMode = clickMode == null ? OrbitalMapClickMode.HIERARCHY : clickMode;
     }
 
     boolean isFollowing() {
@@ -32,7 +32,7 @@ final class OrbitalPlanetTrackingController {
 
     ClickAction clickBody(CelestialObject body, boolean canOpenHierarchy) {
         if (body == null) return ClickAction.SELECT_ONLY;
-        if (disableHierarchicalView) {
+        if (clickMode == OrbitalMapClickMode.FOLLOW) {
             track(body);
             return ClickAction.TRACK_ONLY;
         }

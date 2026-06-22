@@ -26,7 +26,7 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
     private static final int SATELLITE_LINKS_W = 98;
     private static final int ASSETS_X = 284;
     private static final int ASSETS_W = 66;
-    private static final int HIERARCHY_TOGGLE_X = 252;
+    private static final int HIERARCHY_TOGGLE_X = 356;
     private static final int HIERARCHY_TOGGLE_W = 74;
 
     private final OrbitalView.OrbitalMapWidget mapWidget;
@@ -42,10 +42,11 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
 
     public GalacticMapWidget(CelestialObject galaxyRoot, CelestialObject initialLayer, TextFieldWidget renameField) {
         OrbitalMapPreferences preferences = OrbitalMapPreferences.current();
+        String worldPreferenceKey = OrbitalMapPreferences.currentWorldKey();
         String playerPreferenceKey = OrbitalMapPreferences.currentPlayerKey();
         this.mapWidget = new OrbitalView.OrbitalMapWidget(galaxyRoot).withInitialLayer(initialLayer)
             .attachRenameField(renameField);
-        this.mapWidget.setDisableHierarchicalView(preferences.disableHierarchicalView(playerPreferenceKey));
+        this.mapWidget.setClickMode(preferences.clickMode(worldPreferenceKey, playerPreferenceKey));
         this.signalsButton = createTopBarButton(() -> signalsLabel, () -> {
             mapWidget.toggleSignals();
             updateTopBarLabels();
@@ -67,8 +68,8 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
         }).pos(ASSETS_X, TOP_BUTTON_Y)
             .size(ASSETS_W, TOP_BUTTON_H);
         this.hierarchyToggleButton = createClickModeToggleButton(() -> {
-            mapWidget.toggleDisableHierarchicalView();
-            preferences.setDisableHierarchicalView(playerPreferenceKey, mapWidget.getDisableHierarchicalView());
+            mapWidget.toggleClickMode();
+            preferences.setClickMode(worldPreferenceKey, playerPreferenceKey, mapWidget.getClickMode());
         }).pos(HIERARCHY_TOGGLE_X, TOP_BUTTON_Y)
             .size(HIERARCHY_TOGGLE_W, TOP_BUTTON_H);
 
@@ -144,7 +145,7 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
     }
 
     private String clickModeLabel() {
-        String key = mapWidget.getDisableHierarchicalView() ? "galaxia.gui.orbital.click_mode.follow"
+        String key = mapWidget.getClickMode() == OrbitalMapClickMode.FOLLOW ? "galaxia.gui.orbital.click_mode.follow"
             : "galaxia.gui.orbital.click_mode.hierarchy";
         return StatCollector.translateToLocal(key);
     }

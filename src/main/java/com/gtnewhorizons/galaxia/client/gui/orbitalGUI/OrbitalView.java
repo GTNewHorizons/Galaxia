@@ -1105,8 +1105,10 @@ public class OrbitalView {
             transfersHidden = !transfersHidden;
         }
 
-        public void toggleDisableHierarchicalView() {
-            setDisableHierarchicalView(!getDisableHierarchicalView());
+        public void toggleClickMode() {
+            setClickMode(
+                getClickMode() == OrbitalMapClickMode.HIERARCHY ? OrbitalMapClickMode.FOLLOW
+                    : OrbitalMapClickMode.HIERARCHY);
         }
 
         public boolean isSatelliteNetworkHidden() {
@@ -1620,12 +1622,12 @@ public class OrbitalView {
             return true;
         }
 
-        public boolean getDisableHierarchicalView() {
-            return planetTrackingController.disableHierarchicalView();
+        public OrbitalMapClickMode getClickMode() {
+            return planetTrackingController.clickMode();
         }
 
-        public void setDisableHierarchicalView(boolean disableHierarchicalView) {
-            planetTrackingController.setDisableHierarchicalView(disableHierarchicalView);
+        public void setClickMode(OrbitalMapClickMode clickMode) {
+            planetTrackingController.setClickMode(clickMode);
         }
 
         private void centerOnBody(CelestialObject body) {
