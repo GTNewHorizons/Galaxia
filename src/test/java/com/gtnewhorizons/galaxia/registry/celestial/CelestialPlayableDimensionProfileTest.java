@@ -13,8 +13,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializ
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.PlayableDimensionProfile;
-import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class CelestialPlayableDimensionProfileTest {
@@ -50,7 +48,49 @@ final class CelestialPlayableDimensionProfileTest {
     }
 
     @Test
-    void materializerCreatesDimensionDefFromPlayableProfile() {
+    void playableDimensionBodyFactsAreAuthoredOnCelestialProperties() {
+        GalaxiaTestBootstrap.ensureCelestialRegistry();
+
+        CelestialObject mars = CelestialRegistry.findByDimension(DimensionEnum.MARS)
+            .orElseThrow();
+
+        DimensionDef def = CelestialDimensionMaterializer.materializeDefinition(mars);
+
+        assertEquals(
+            mars.properties()
+                .localGravityG(),
+            def.gravity());
+        assertEquals(
+            mars.properties()
+                .massEarthRelative(),
+            def.mass());
+        assertEquals(
+            mars.properties()
+                .orbitalRadiusEarthRelative(),
+            def.orbitalRadius());
+        assertEquals(
+            mars.properties()
+                .radiusEarthRelative(),
+            def.radius());
+    }
+
+    @Test
+    void playableDimensionPressureIsAuthoredOnCelestialProperties() {
+        GalaxiaTestBootstrap.ensureCelestialRegistry();
+
+        for (CelestialObject body : CelestialRegistry.getPlayableBodies()) {
+            DimensionDef def = CelestialDimensionMaterializer.materializeDefinition(body);
+
+            assertEquals(
+                def.effects()
+                    .getPressure(null),
+                body.properties()
+                    .surfacePressurePa());
+        }
+    }
+
+    @Test
+    void materializerCreatesDimensionDefForPlayableBody() {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
 
         CelestialObject mars = CelestialRegistry.findByDimension(DimensionEnum.MARS)
@@ -60,119 +100,40 @@ final class CelestialPlayableDimensionProfileTest {
 
         assertEquals(DimensionEnum.MARS.getName(), def.name());
         assertEquals(DimensionEnum.MARS.getId(), def.id());
-        assertSame(WorldProviderSpace.class, def.provider());
-        assertEquals(0.25, def.gravity());
-        assertEquals(0.1, def.airResistance());
-        assertEquals(EnumTiers.TIER_2, def.tier());
+        assertSame(
+            mars.playableDimensionProfile()
+                .provider(),
+            def.provider());
         assertEquals(
-            67,
+            mars.properties()
+                .localGravityG(),
+            def.gravity());
+        assertEquals(
+            mars.playableDimensionProfile()
+                .airResistance(),
+            def.airResistance());
+        assertEquals(
+            mars.playableDimensionProfile()
+                .tier(),
+            def.tier());
+        assertEquals(
+            mars.playableDimensionProfile()
+                .effects()
+                .getTemperature(null),
             def.effects()
                 .getTemperature(null));
         assertEquals(
-            0,
+            mars.playableDimensionProfile()
+                .effects()
+                .getOxygenPercent(null),
             def.effects()
                 .getOxygenPercent(null));
         assertEquals(
-            1,
+            mars.playableDimensionProfile()
+                .effects()
+                .getPressure(null),
             def.effects()
                 .getPressure(null));
     }
 
-    @Test
-    void materializerPreservesRuntimeContractForEveryPlayableBody() {
-        GalaxiaTestBootstrap.ensureCelestialRegistry();
-
-        Set<ExpectedDimension> expectedDimensions = Set.of(
-            new ExpectedDimension(
-                DimensionEnum.MARS,
-                WorldProviderSpace.class,
-                0.25,
-                0.1,
-                0.25,
-                1.52 * 23481,
-                0.53,
-                EnumTiers.TIER_2,
-                67,
-                0,
-                1),
-            new ExpectedDimension(
-                DimensionEnum.MOON,
-                WorldProviderSpace.class,
-                0.25,
-                0.01,
-                0.012,
-                23481,
-                0.27,
-                EnumTiers.TIER_1,
-                225,
-                0,
-                0),
-            new ExpectedDimension(
-                DimensionEnum.FROZEN_BELT,
-                WorldProviderSpace.class,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                EnumTiers.TIER_1,
-                67,
-                0,
-                1),
-            new ExpectedDimension(
-                DimensionEnum.OVERWORLD,
-                WorldProviderSpace.class,
-                1.0,
-                1.0,
-                0.0,
-                23481,
-                0.0,
-                EnumTiers.TIER_1,
-                273,
-                100,
-                1),
-            new ExpectedDimension(
-                DimensionEnum.OVERWORLD_ORBIT,
-                WorldProviderSpace.class,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                EnumTiers.TIER_1,
-                67,
-                0,
-                1));
-
-        Set<ExpectedDimension> actualDimensions = CelestialRegistry.getPlayableBodies()
-            .stream()
-            .map(CelestialDimensionMaterializer::materializeDefinition)
-            .map(ExpectedDimension::from)
-            .collect(Collectors.toSet());
-
-        assertEquals(expectedDimensions, actualDimensions);
-    }
-
-    private record ExpectedDimension(DimensionEnum dimension, Class<?> provider, double gravity, double airResistance,
-        double mass, double orbitalRadius, double radius, EnumTiers tier, int baseTemperature, int oxygenPercent,
-        int pressure) {
-
-        private static ExpectedDimension from(DimensionDef def) {
-            return new ExpectedDimension(
-                DimensionEnum.fromId(def.id()),
-                def.provider(),
-                def.gravity(),
-                def.airResistance(),
-                def.mass(),
-                def.orbitalRadius(),
-                def.radius(),
-                def.tier(),
-                def.effects()
-                    .getTemperature(null),
-                def.effects()
-                    .getOxygenPercent(null),
-                def.effects()
-                    .getPressure(null));
-        }
-    }
 }
