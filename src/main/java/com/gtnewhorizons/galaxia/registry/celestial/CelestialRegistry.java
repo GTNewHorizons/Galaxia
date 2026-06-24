@@ -11,6 +11,9 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
 
+import net.minecraftforge.fluids.Fluid;
+import net.minecraftforge.fluids.FluidStack;
+
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
@@ -24,6 +27,8 @@ import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilde
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
+
+import gregtech.api.enums.Materials;
 
 public final class CelestialRegistry {
 
@@ -52,6 +57,13 @@ public final class CelestialRegistry {
             .build();
     }
 
+    private static Fluid requiredGas(Materials material) {
+        FluidStack stack = material.getGas(1L);
+        Fluid fluid = stack != null ? stack.getFluid() : null;
+        if (fluid == null) throw new IllegalStateException("Required atmosphere gas is not available: " + material);
+        return fluid;
+    }
+
     private static PlayableDimensionProfile.Builder stationBuildable(PlayableDimensionProfile.Builder builder) {
         return builder.addValidSpaceStationBlocks(
             GalaxiaBlocksEnum.RUSTY_SCAFFOLDING.get(),
@@ -69,7 +81,7 @@ public final class CelestialRegistry {
             CelestialObjectId.NOVA_CAELUM,
             builder -> builder.objectClass(CelestialObject.Class.GALAXY)
                 .properties(
-                    b -> b.withGravity(5.4e8, 0.0)
+                    b -> b.orbitalGravity(5.4e8, 0.0)
                         .visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
@@ -83,7 +95,7 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(1.0)
                 .properties(
-                    b -> b.withGravity(7.2e7, 0.0)
+                    b -> b.orbitalGravity(7.2e7, 0.0)
                         .visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
@@ -97,7 +109,7 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.92)
                 .properties(
-                    b -> b.withGravity(4.2e7, 0.0)
+                    b -> b.orbitalGravity(4.2e7, 0.0)
                         .visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
@@ -124,7 +136,7 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.24)
                 .properties(
-                    b -> b.withGravity(5.2e6, 1200.0)
+                    b -> b.orbitalGravity(5.2e6, 1200.0)
                         .visitable(false)
                         .canCreateStation(true)
                         .canCreateOutpost(true)
@@ -147,7 +159,7 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.19)
                 .properties(
-                    b -> b.withGravity(4.6e6, 1500.0)
+                    b -> b.orbitalGravity(4.6e6, 1500.0)
                         .visitable(false)
                         .canCreateStation(true)
                         .canCreateOutpost(true)
@@ -168,7 +180,7 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.18)
                 .properties(
-                    b -> b.withGravity(9.8e6, 2400.0)
+                    b -> b.orbitalGravity(9.8e6, 2400.0)
                         .visitable(false)
                         .canCreateStation(true)
                         .canCreateOutpost(true)
@@ -192,10 +204,14 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_MARS.get())
                 .spriteSize(0.825)
                 .properties(
-                    b -> b.withGravity(5.5e8, 9500.0)
+                    b -> b.orbitalGravity(5.5e8, 9500.0)
                         .visitable(true)
                         .canCreateStation(true)
                         .canCreateOutpost(true)
+                        .localGravityG(0.25)
+                        .massEarthRelative(0.25)
+                        .orbitalRadiusEarthRelative(1.52 * EARTH_RADIUS_TO_AU)
+                        .radiusEarthRelative(0.53)
                         .temperature(67)
                         .radiation(0.10)
                         .oreProfile("undefined")
@@ -203,12 +219,8 @@ public final class CelestialRegistry {
                 .playableDimensionProfile(
                     stationBuildable(
                         PlayableDimensionProfile.builder(DimensionEnum.MARS)
-                            .mass(0.25)
-                            .orbitalRadius(1.52 * EARTH_RADIUS_TO_AU)
-                            .radius(0.53)
-                            .gravity(0.25)
                             .airResistance(0.1)
-                            .effects(dimensionEffects(67, 0, 1))
+                            .effects(dimensionEffects(67, 0, 0))
                             .tier(EnumTiers.TIER_2)
                             .worldGeneration(Mars::configureWorldProvider)).build())
                 .featureTileChance(0.16)
@@ -224,10 +236,14 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_MOON.get())
                 .spriteSize(0.06)
                 .properties(
-                    b -> b.withGravity(1.8e6, 480.0)
+                    b -> b.orbitalGravity(1.8e6, 480.0)
                         .visitable(true)
                         .canCreateStation(true)
                         .canCreateOutpost(true)
+                        .localGravityG(0.25)
+                        .massEarthRelative(0.012)
+                        .orbitalRadiusEarthRelative(EARTH_RADIUS_TO_AU)
+                        .radiusEarthRelative(0.27)
                         .temperature(225)
                         .radiation(0.18)
                         .oreProfile("undefined")
@@ -235,10 +251,6 @@ public final class CelestialRegistry {
                 .playableDimensionProfile(
                     stationBuildable(
                         PlayableDimensionProfile.builder(DimensionEnum.MOON)
-                            .mass(0.012)
-                            .orbitalRadius(EARTH_RADIUS_TO_AU)
-                            .radius(0.27)
-                            .gravity(0.25)
                             .airResistance(0.01)
                             .celestialBodies(
                                 Moon.buildSky()
@@ -259,10 +271,11 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.60)
                 .properties(
-                    b -> b.withGravity(3.5e5, 3000.0)
+                    b -> b.orbitalGravity(3.5e5, 3000.0)
                         .visitable(true)
                         .canCreateStation(true)
                         .canCreateOutpost(false)
+                        .localGravityG(0.0)
                         .temperature(67)
                         .radiation(0.28)
                         .oreProfile("undefined")
@@ -272,9 +285,8 @@ public final class CelestialRegistry {
                     stationBuildable(
                         PlayableDimensionProfile.builder(DimensionEnum.FROZEN_BELT)
                             .provider(WorldProviderSpace.class)
-                            .gravity(0.0)
                             .airResistance(0.0)
-                            .effects(dimensionEffects(67, 0, 1))
+                            .effects(dimensionEffects(67, 0, 0))
                             .worldGeneration(FrozenBelt::configureWorldProvider)).build())
                 .featureTileChance(0.34)
                 .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 4.0)
@@ -290,7 +302,7 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_AMBERGRIS.get())
                 .spriteSize(0.05)
                 .properties(
-                    b -> b.withGravity(6.0e4, 140.0)
+                    b -> b.orbitalGravity(6.0e4, 140.0)
                         .visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(true)
@@ -308,10 +320,14 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.18)
                 .properties(
-                    b -> b.withGravity(1, 2400.0)
+                    b -> b.orbitalGravity(1, 2400.0)
                         .visitable(false)
                         .canCreateStation(true)
                         .canCreateOutpost(true)
+                        .localGravityG(1.0)
+                        .orbitalRadiusEarthRelative(EARTH_RADIUS_TO_AU)
+                        .surfacePressurePa(1.0)
+                        .addAtmosphereIngredient(requiredGas(Materials.Air), 1.0)
                         .temperature(288)
                         .radiation(0.00)
                         .oreProfile("undefined")
@@ -321,12 +337,17 @@ public final class CelestialRegistry {
                 .playableDimensionProfile(
                     stationBuildable(
                         PlayableDimensionProfile.builder(DimensionEnum.OVERWORLD)
-                            .orbitalRadius(EARTH_RADIUS_TO_AU)
                             .effects(
                                 EffectBuilder.builder()
                                     .build())
                             .tier(EnumTiers.TIER_1)
-                            .worldGeneration(CelestialRegistry::configureOverworldProvider)).build()));
+                            .worldGeneration(CelestialRegistry::configureOverworldProvider)).build())
+                .featureTileChance(0.20)
+                .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 2.0)
+                .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 1.5)
+                .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 2.0)
+                .feature(PlanetaryFeatureRegistry.MAGMA_POOL, 0.4)
+                .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.2));
 
         register(
             DimensionEnum.OVERWORLD_ORBIT,
@@ -336,19 +357,19 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.08)
                 .properties(
-                    b -> b.withGravity(0.0, 90.0)
+                    b -> b.orbitalGravity(0.0, 90.0)
                         .visitable(true)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
+                        .localGravityG(0.0)
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
                         .metadata("stationRole", "orbital_logistics"))
                 .playableDimensionProfile(
                     PlayableDimensionProfile.builder(DimensionEnum.OVERWORLD_ORBIT)
                         .provider(WorldProviderSpace.class)
-                        .gravity(0.0)
                         .airResistance(0.0)
-                        .effects(dimensionEffects(67, 0, 1))
+                        .effects(dimensionEffects(67, 0, 0))
                         .tier(EnumTiers.TIER_1)
                         .worldGeneration(SpaceStation::configureWorldProvider)
                         .build()));

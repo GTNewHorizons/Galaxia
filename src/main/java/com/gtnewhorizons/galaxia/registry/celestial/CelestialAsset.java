@@ -29,6 +29,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsConfiguration;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 public abstract class CelestialAsset implements Buildable, IDistributedInventory {
 
@@ -64,7 +66,21 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         return create(celestialObjectId, kind, operational ? Status.OPERATIONAL : Status.CONSTRUCTION_SITE);
     }
 
+    public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, boolean operational,
+        SatelliteKind satelliteKind) {
+        return create(
+            celestialObjectId,
+            kind,
+            operational ? Status.OPERATIONAL : Status.CONSTRUCTION_SITE,
+            satelliteKind);
+    }
+
     public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, Status status) {
+        return create(celestialObjectId, kind, status, SatelliteKind.COMMUNICATION);
+    }
+
+    public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, Status status,
+        SatelliteKind satelliteKind) {
         return switch (kind) {
             case STATION -> new Station(ID.create(), celestialObjectId, status);
             case AUTOMATED_STATION, AUTOMATED_OUTPOST -> new AutomatedFacility(
@@ -72,13 +88,26 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
                 celestialObjectId,
                 kind,
                 status);
+            case SATELLITE -> {
+                if (satelliteKind == null) throw new IllegalArgumentException("satelliteKind is required");
+                yield new Satellite(ID.create(), celestialObjectId, status, satelliteKind);
+            }
         };
     }
 
     public static CelestialAsset create(ID id, CelestialObjectId celestialObjectId, Kind kind, Status status) {
+        return create(id, celestialObjectId, kind, status, SatelliteKind.COMMUNICATION);
+    }
+
+    public static CelestialAsset create(ID id, CelestialObjectId celestialObjectId, Kind kind, Status status,
+        SatelliteKind satelliteKind) {
         return switch (kind) {
             case STATION -> new Station(id, celestialObjectId, status);
             case AUTOMATED_STATION, AUTOMATED_OUTPOST -> new AutomatedFacility(id, celestialObjectId, kind, status);
+            case SATELLITE -> {
+                if (satelliteKind == null) throw new IllegalArgumentException("satelliteKind is required");
+                yield new Satellite(id, celestialObjectId, status, satelliteKind);
+            }
         };
     }
 
@@ -198,6 +227,7 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
                 required.put(new ItemStack(Blocks.stone), 64L);
                 required.put(new ItemStack(Blocks.dirt), 64L);
             }
+            case SATELLITE -> {}
         }
         return required;
     }
@@ -361,6 +391,7 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         STATION,
         AUTOMATED_STATION, // Not implemented yet
         AUTOMATED_OUTPOST,
+        SATELLITE,
 
         ;
 
@@ -386,7 +417,7 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
 
         public static Location ofKind(Kind kind) {
             return switch (kind) {
-                case STATION, AUTOMATED_STATION -> ORBIT;
+                case STATION, AUTOMATED_STATION, SATELLITE -> ORBIT;
                 case AUTOMATED_OUTPOST -> SURFACE;
             };
         }
