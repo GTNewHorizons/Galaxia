@@ -19,6 +19,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 
@@ -175,7 +176,7 @@ final class StationItemInteractionModalWidget extends ParentWidget<StationItemIn
         return switch (kind) {
             case HAMMER -> new ItemStack(Items.iron_pickaxe);
             case MINER -> new ItemStack(Items.diamond_pickaxe);
-            case POWER, BATTERY, GEOTHERMAL_GENERATOR -> new ItemStack(Items.redstone);
+            case POWER, BATTERY, GEOTHERMAL_GENERATOR, DEBUG_DATA_GENERATOR -> new ItemStack(Items.redstone);
             case STORAGE -> new ItemStack(Blocks.chest);
             case TANK -> new ItemStack(Items.bucket);
             case MAINTENANCE_BAY -> new ItemStack(Blocks.anvil);
@@ -206,6 +207,8 @@ final class StationItemInteractionModalWidget extends ParentWidget<StationItemIn
             configController.openRecipeConfig(moduleIndex);
         } else if (module.component() instanceof ModuleMiner) {
             configController.openMinerBlacklist(moduleIndex);
+        } else if (module.component() instanceof ModuleDebugDataGenerator) {
+            configController.openDebugDataGenerator(moduleIndex);
         } else {
             configController.openUpgrade(moduleIndex);
         }

@@ -50,6 +50,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperati
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
@@ -69,7 +70,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkClientState;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -464,7 +467,7 @@ public final class AssetSyncPacket implements IMessage {
             }
             for (ModuleInstance m : facility.drainDirtyModules()) {
                 int idx = facility.moduleIndex(m.id);
-                packets.add(moduleAdded(facility.assetId, idx, m).withSyncRevision(facility.getSyncRevision()));
+                packets.add(moduleUpdated(facility.assetId, idx, m).withSyncRevision(facility.getSyncRevision()));
             }
             for (Map.Entry<InventoryKey, Long> delta : facility.drainDirtyInventoryDeltas()
                 .entrySet()) {
@@ -750,6 +753,7 @@ public final class AssetSyncPacket implements IMessage {
             }
             case POWER, GEOTHERMAL_GENERATOR -> {}
             case STORAGE, TANK, BATTERY -> {}
+            case DEBUG_DATA_GENERATOR -> writeDebugDataGenerator(buf, module);
             case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> writeRecipeConfig(
                 buf,
                 module);
@@ -790,6 +794,7 @@ public final class AssetSyncPacket implements IMessage {
             }
             case POWER, GEOTHERMAL_GENERATOR -> {}
             case STORAGE, TANK, BATTERY -> {}
+            case DEBUG_DATA_GENERATOR -> readDebugDataGenerator(buf, module);
             case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> readRecipeConfig(
                 buf,
                 module);
@@ -1210,6 +1215,44 @@ public final class AssetSyncPacket implements IMessage {
         writeRecipeConfigPayload(buf, recipeModule.getRecipeConfig());
     }
 
+    private static void writeDebugDataGenerator(ByteBuf buf, ModuleInstance module) {
+        ModuleDebugDataGenerator debugGenerator = (ModuleDebugDataGenerator) module.component();
+        ModuleDebugDataGenerator.Config config = debugGenerator.config();
+        PacketUtil.writeEnum(buf, config.mode());
+        buf.writeBoolean(config.enabled());
+        PacketUtil.writeEnum(buf, config.dataType());
+        buf.writeLong(config.amountKb());
+        buf.writeInt(config.durationTicks());
+        CelestialObjectId originBodyId = config.originBodyId();
+        buf.writeBoolean(originBodyId != null);
+        if (originBodyId != null) PacketUtil.writeEnum(buf, originBodyId);
+        buf.writeInt(debugGenerator.jobProgressTicks());
+        buf.writeLong(debugGenerator.consumedDeciKb());
+        CelestialObjectId detectedCounterpartBodyId = debugGenerator.detectedCounterpartBodyId();
+        buf.writeBoolean(detectedCounterpartBodyId != null);
+        if (detectedCounterpartBodyId != null) PacketUtil.writeEnum(buf, detectedCounterpartBodyId);
+    }
+
+    private static void readDebugDataGenerator(ByteBuf buf, ModuleInstance module) {
+        if (!(module.component() instanceof ModuleDebugDataGenerator debugGenerator)) return;
+        ModuleDebugDataGenerator.Mode mode = PacketUtil.readEnum(buf, ModuleDebugDataGenerator.Mode.class);
+        boolean enabled = buf.readBoolean();
+        SatelliteDataType dataType = PacketUtil.readEnum(buf, SatelliteDataType.class);
+        long amountKb = buf.readLong();
+        int durationTicks = buf.readInt();
+        CelestialObjectId originBodyId = buf.readBoolean() ? PacketUtil.readEnum(buf, CelestialObjectId.class) : null;
+        int jobProgressTicks = buf.readInt();
+        long consumedDeciKb = buf.readLong();
+        CelestialObjectId detectedCounterpartBodyId = buf.readBoolean()
+            ? PacketUtil.readEnum(buf, CelestialObjectId.class)
+            : null;
+        debugGenerator.restore(
+            new ModuleDebugDataGenerator.Config(mode, enabled, dataType, amountKb, durationTicks, originBodyId),
+            jobProgressTicks,
+            consumedDeciKb,
+            detectedCounterpartBodyId);
+    }
+
     private static void writeRecipeConfigPayload(ByteBuf buf, RecipeConfig config) {
         if (config == null) {
             buf.writeBoolean(false);
@@ -1375,7 +1418,10 @@ public final class AssetSyncPacket implements IMessage {
 
         public static void handleClientSync(AssetSyncPacket packet) {
             switch (packet.syncType) {
-                case CLEAR -> CelestialAssetStore.CLIENT.clearInternal();
+                case CLEAR -> {
+                    CelestialAssetStore.CLIENT.clearInternal();
+                    SatelliteNetworkClientState.clear();
+                }
                 case ASSET_REMOVED -> CelestialAssetStore.CLIENT.destroyAssetInternal(packet.assetId);
                 case FULL_SYNC -> handleFull(packet);
                 default -> {

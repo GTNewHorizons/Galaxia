@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 
@@ -19,10 +20,28 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
+import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 public class OrbitalScene {
 
     private static final double[] ZERO_VIEW_ORIGIN = { 0.0, 0.0 };
+
+    static int visibleSatelliteMarkerCount(List<CelestialAsset> assetState) {
+        return visibleSatelliteMarkerAlphas(assetState).size();
+    }
+
+    private static EnumMap<SatelliteKind, Float> visibleSatelliteMarkerAlphas(List<CelestialAsset> assetState) {
+        EnumMap<SatelliteKind, Float> alphas = new EnumMap<>(SatelliteKind.class);
+        if (assetState == null) return alphas;
+        for (CelestialAsset asset : assetState) {
+            if (!(asset instanceof Satellite satellite)) continue;
+            float alpha = CelestialMarkerBase.assetMarkerAlpha(asset);
+            if (alpha <= 0.0f) continue;
+            alphas.merge(satellite.satelliteKind(), alpha, (left, right) -> Math.max(left, right));
+        }
+        return alphas;
+    }
 
     static final class ResolvedBodyDrawState {
 
@@ -221,6 +240,29 @@ public class OrbitalScene {
         }
     }
 
+    static final class SatelliteMarkerBounds {
+
+        private CelestialObject body;
+        private int x;
+        private int y;
+        private int size;
+
+        void set(CelestialObject body, int x, int y, int size) {
+            this.body = body;
+            this.x = x;
+            this.y = y;
+            this.size = size;
+        }
+
+        CelestialObject body() {
+            return body;
+        }
+
+        boolean contains(int localMouseX, int localMouseY) {
+            return localMouseX >= x && localMouseX <= x + size && localMouseY >= y && localMouseY <= y + size;
+        }
+    }
+
     public static final class OrbitalSceneFrame {
 
         final List<ResolvedBodyDrawState> resolvedBodies = new ArrayList<>();
@@ -228,14 +270,17 @@ public class OrbitalScene {
         final List<ScreenBodyBounds> screenBodies = new ArrayList<>();
         final List<LabelDrawCall> labelDrawCalls = new ArrayList<>();
         final List<MarkerDrawCall> markerDrawCalls = new ArrayList<>();
+        final List<SatelliteMarkerBounds> satelliteMarkerBounds = new ArrayList<>();
         private final List<ResolvedBodyDrawState> resolvedBodyPool = new ArrayList<>();
         private final List<ScreenBodyBounds> screenBodyPool = new ArrayList<>();
         private final List<LabelDrawCall> labelPool = new ArrayList<>();
         private final List<MarkerDrawCall> markerPool = new ArrayList<>();
+        private final List<SatelliteMarkerBounds> satelliteMarkerPool = new ArrayList<>();
         private int resolvedBodyPoolIndex = 0;
         private int screenBodyPoolIndex = 0;
         private int labelPoolIndex = 0;
         private int markerPoolIndex = 0;
+        private int satelliteMarkerPoolIndex = 0;
 
         void resetForReuse() {
             resolvedBodies.clear();
@@ -243,10 +288,12 @@ public class OrbitalScene {
             screenBodies.clear();
             labelDrawCalls.clear();
             markerDrawCalls.clear();
+            satelliteMarkerBounds.clear();
             resolvedBodyPoolIndex = 0;
             screenBodyPoolIndex = 0;
             labelPoolIndex = 0;
             markerPoolIndex = 0;
+            satelliteMarkerPoolIndex = 0;
         }
 
         ResolvedBodyDrawState addResolvedBody(CelestialObject body, CelestialObject parent, double worldX,
@@ -302,6 +349,16 @@ public class OrbitalScene {
             return call;
         }
 
+        void addSatelliteMarker(CelestialObject body, ResourceLocation texture, int x, int y, int size, float alpha) {
+            addMarker(texture, x, y, size, alpha);
+            SatelliteMarkerBounds bounds = satelliteMarkerPoolIndex < satelliteMarkerPool.size()
+                ? satelliteMarkerPool.get(satelliteMarkerPoolIndex)
+                : createSatelliteMarkerBounds();
+            satelliteMarkerPoolIndex++;
+            bounds.set(body, x, y, size);
+            satelliteMarkerBounds.add(bounds);
+        }
+
         private ResolvedBodyDrawState createResolvedBody() {
             ResolvedBodyDrawState state = new ResolvedBodyDrawState();
             resolvedBodyPool.add(state);
@@ -324,6 +381,12 @@ public class OrbitalScene {
             MarkerDrawCall call = new MarkerDrawCall();
             markerPool.add(call);
             return call;
+        }
+
+        private SatelliteMarkerBounds createSatelliteMarkerBounds() {
+            SatelliteMarkerBounds bounds = new SatelliteMarkerBounds();
+            satelliteMarkerPool.add(bounds);
+            return bounds;
         }
     }
 
@@ -419,17 +482,15 @@ public class OrbitalScene {
 
         private void addSatelliteMarkers(OrbitalSceneFrame frame, ResolvedBodyDrawState state,
             List<CelestialAsset> assetState, int iconSize, int gap) {
-            if (assetState == null || assetState.isEmpty()) return;
+            EnumMap<SatelliteKind, Float> markerAlphas = visibleSatelliteMarkerAlphas(assetState);
+            if (markerAlphas.isEmpty()) return;
             ResourceLocation texture = CelestialMarkerBase.CelestialAssetIcons.get(CelestialAsset.Kind.SATELLITE);
             int leftX = Math.round(state.screenX() - state.renderedRadius() - 6f - iconSize);
             int topY = Math.round(state.screenY() - state.renderedRadius());
             int index = 0;
-            for (CelestialAsset asset : assetState) {
-                if (asset.kind != CelestialAsset.Kind.SATELLITE) continue;
-                float alpha = CelestialMarkerBase.assetMarkerAlpha(asset);
-                if (alpha <= 0.0f) continue;
+            for (float alpha : markerAlphas.values()) {
                 int markerY = topY + index * (iconSize + gap);
-                frame.addMarker(texture, leftX, markerY, iconSize, state.bodyAlpha() * alpha);
+                frame.addSatelliteMarker(state.body(), texture, leftX, markerY, iconSize, state.bodyAlpha() * alpha);
                 index++;
             }
         }

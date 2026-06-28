@@ -519,6 +519,7 @@ galaxia.config.category.hazard_pulse.tooltip=Enable pulse animation
 galaxia.gui.orbital.status=Zoom: x%.2f   Speed: %s
 galaxia.gui.orbital.paused=PAUSED
 galaxia.gui.orbital.speed_multiplier=x%.1f
+galaxia.gui.orbital.debug=Debug
 
 galaxia.system_asset.title=Assets - %s system
 galaxia.system_asset.empty=No assets in this system.
@@ -541,6 +542,20 @@ galaxia.system_asset.tooltip.body=Body: %s
 galaxia.system_asset.tooltip.status=Status: %s
 galaxia.system_asset.tooltip.warning=Warning: %s
 galaxia.system_asset.tooltip.construction=Construction: %d%%
+
+galaxia.asset_manager.tab.assets=Assets
+galaxia.asset_manager.tab.satellites=Satellites
+galaxia.asset_manager.satellites.empty=No satellites
+galaxia.asset_manager.satellites.count=Count: %d
+galaxia.asset_manager.satellites.delete_one=Delete 1
+galaxia.asset_manager.satellites.delete_amount=Delete %d
+galaxia.asset_manager.satellites.delete_all=Delete all
+galaxia.asset_manager.satellites.confirm_delete=Confirm
+
+#### Satellites
+galaxia.satellite.kind.communication=Communication Satellites
+galaxia.satellite.kind.prospecting=Prospecting Satellites
+galaxia.satellite.tooltip.count=%s: %d
 
 #### Machine GUI
 # Oxygen Collector GUI

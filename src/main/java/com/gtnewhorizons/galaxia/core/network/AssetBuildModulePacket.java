@@ -171,12 +171,16 @@ public final class AssetBuildModulePacket implements IMessage {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
             if (!GTTeamsCompat.hasPermission(player, TeamAction.BUILD_MODULE)) return null;
             UUID teamId = GTTeamsCompat.getTeam(player);
-            boolean creative = player.capabilities.isCreativeMode;
-            return message.apply(teamId, creative);
+            return message.apply(teamId, player);
         }
     }
 
-    public AssetSyncPacket apply(UUID teamId, boolean creativePlayer) {
+    public AssetSyncPacket apply(UUID teamId, EntityPlayerMP player) {
+        if (player == null) return null;
+        return apply(teamId, DebugActionAuthorization.isAuthorized(player));
+    }
+
+    public AssetSyncPacket apply(UUID teamId, boolean debugActionAuthorized) {
         if (teamId == null || assetId == null) {
             return null;
         }
@@ -207,6 +211,9 @@ public final class AssetBuildModulePacket implements IMessage {
         if (buildKind == null || buildShape == null || buildTier == null) {
             return null;
         }
+        if (buildKind.isDebugOnly() && !debugActionAuthorized) {
+            return null;
+        }
         if (!buildKind.isAllowedOn(asset.kind)) {
             return null;
         }
@@ -234,7 +241,7 @@ public final class AssetBuildModulePacket implements IMessage {
             return null;
         }
 
-        boolean shouldInstantBuild = instantBuild && creativePlayer;
+        boolean shouldInstantBuild = instantBuild && debugActionAuthorized;
         for (StationTileCoord anchor : anchors) {
             ModuleInstance module = buildKind.create(anchor, buildShape, buildTier);
             if (!applyPhysicalSpec(module, buildTier, buildHammerVariant, buildMinerFocusTier)) return null;

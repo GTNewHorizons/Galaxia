@@ -177,6 +177,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
             .heightRel(LIST_HEIGHT_REL);
         for (FacilityModuleKind kind : FacilityModuleKind.values()) {
             if (!kind.isAllowedOn(facility.kind)) continue;
+            if (kind.isDebugOnly() && !pendingInstantBuild) continue;
             buildListLayer.child(
                 createKindButton(kind).pos(listCardX(column), listCardY(row))
                     .widthRel(LIST_CARD_WIDTH_REL)
@@ -568,6 +569,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
             case CHEMICAL_REACTOR -> "Runs chemical recipes";
             case ASSEMBLER -> "Runs assembler recipes";
             case DISTILLERY -> "Runs distillery recipes";
+            case DEBUG_DATA_GENERATOR -> "Generates debug satellite data";
         };
     }
 

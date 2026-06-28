@@ -51,6 +51,8 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
     }
 
     public static void open(CelestialAsset.ID assetId, boolean creativeBuildMode) {
+        CelestialAsset asset = CelestialClient.getByAssetId(assetId);
+        if (asset != null && asset.kind == CelestialAsset.Kind.SATELLITE) return;
         pendingAssetId = assetId;
         pendingCreativeBuildMode = creativeBuildMode;
         FACTORY.openClient();

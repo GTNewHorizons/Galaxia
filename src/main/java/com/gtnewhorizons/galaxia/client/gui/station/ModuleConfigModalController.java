@@ -10,6 +10,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 
@@ -21,7 +22,8 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         MODULE_UPGRADE,
         LOGISTICS,
         MINER_BLACKLIST,
-        RECIPE_CONFIG
+        RECIPE_CONFIG,
+        DEBUG_DATA_GENERATOR
     }
 
     private final ModularPanel host;
@@ -186,6 +188,24 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         host.child(widget);
     }
 
+    void openDebugDataGenerator(int moduleIndex) {
+        ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
+        if (module == null || !(module.component() instanceof ModuleDebugDataGenerator)) return;
+        if (closeIfSame(Kind.DEBUG_DATA_GENERATOR, module.id)) return;
+        overlayCoordinator.closeOthers(this);
+        close();
+        this.kind = Kind.DEBUG_DATA_GENERATOR;
+        this.moduleId = module.id;
+
+        DebugDataGeneratorConfigModalWidget widget = new DebugDataGeneratorConfigModalWidget(assetId, this);
+        widget.left(x)
+            .top(y)
+            .width(DebugDataGeneratorConfigModalWidget.WIDTH)
+            .height(DebugDataGeneratorConfigModalWidget.HEIGHT);
+        this.modal = widget;
+        host.child(widget);
+    }
+
     private boolean closeIfSame(Kind targetKind, ModuleInstance.ID targetModuleId) {
         if (kind == targetKind && Objects.equals(moduleId, targetModuleId)) {
             close();
@@ -259,6 +279,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
             case LOGISTICS -> retargetLogistics(module);
             case MINER_BLACKLIST -> retargetMinerBlacklist(module);
             case RECIPE_CONFIG -> retargetRecipeConfig(module);
+            case DEBUG_DATA_GENERATOR -> retargetDebugDataGenerator(module);
             case NONE -> {}
         }
     }
@@ -281,6 +302,10 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
 
     boolean isRecipeConfigOpen() {
         return kind == Kind.RECIPE_CONFIG;
+    }
+
+    boolean isDebugDataGeneratorOpen() {
+        return kind == Kind.DEBUG_DATA_GENERATOR;
     }
 
     int moduleIndex() {
@@ -407,6 +432,14 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
 
     private void retargetRecipeConfig(ModuleInstance module) {
         if (!(module.component() instanceof IRecipeModule)) {
+            close();
+            return;
+        }
+        moduleId = module.id;
+    }
+
+    private void retargetDebugDataGenerator(ModuleInstance module) {
+        if (!(module.component() instanceof ModuleDebugDataGenerator)) {
             close();
             return;
         }

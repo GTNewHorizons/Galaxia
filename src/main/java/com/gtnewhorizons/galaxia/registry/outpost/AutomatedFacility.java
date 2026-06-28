@@ -52,6 +52,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepLedger;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
 
 public final class AutomatedFacility extends CelestialAsset {
 
@@ -292,6 +293,7 @@ public final class AutomatedFacility extends CelestialAsset {
             modules.size());
 
         markDirty();
+        SatelliteNetworkService.refreshFacilityEndpoints(this);
     }
 
     public void removeModule(int index) {
@@ -304,6 +306,7 @@ public final class AutomatedFacility extends CelestialAsset {
             if (layout != null) layout.removeTileForModule(removed.id);
             layoutCache.applyMutation(MutationKind.DECONSTRUCT, removed.kind(), removed);
             markDirty();
+            SatelliteNetworkService.refreshFacilityEndpoints(this);
         }
     }
 

@@ -20,6 +20,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleAssembler;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleBattery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleCentrifuge;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleChemicalReactor;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDistillery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleElectrolyzer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleGeothermalGenerator;
@@ -258,6 +259,19 @@ public class FacilityModuleRegistry {
             (instance, outpost) -> {},
             ModuleMaintenanceBay::new,
             List.of(ModuleAreaEffect.adjacentUpkeepMultiplier(80)));
+        builder(FacilityModuleKind.DEBUG_DATA_GENERATOR).tiers(
+            Map.of(
+                ModuleTier.HV,
+                ModuleTierData.builder()
+                    .addedEnergyCapacity(500L)
+                    .powerDraw(0L)
+                    .cooldown(1)
+                    .cost(Map.of(new ItemStack(Items.redstone), 1L))
+                    .build()))
+            .configButton()
+            .behavior((instance, outpost) -> {})
+            .factory(ModuleDebugDataGenerator::new)
+            .register();
 
         if (FacilityModuleKind.MACERATOR.isAvailable()) {
             builder(FacilityModuleKind.MACERATOR)

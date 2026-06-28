@@ -292,7 +292,10 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     }
 
     private int getCreativeButtonWidth() {
-        return Math.max(112, Minecraft.getMinecraft().fontRenderer.getStringWidth("Creative Mode") + 18);
+        return Math.max(
+            78,
+            Minecraft.getMinecraft().fontRenderer
+                .getStringWidth(StatCollector.translateToLocal("galaxia.gui.orbital.debug")) + 18);
     }
 
     private boolean handleLayerButtonClick(int localX, int localY) {
@@ -699,7 +702,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             18,
             CREATIVE_BUTTON_TOP,
             getCreativeButtonWidth(),
-            "Creative Mode",
+            StatCollector.translateToLocal("galaxia.gui.orbital.debug"),
             map.isCreativeBuildModeEnabled());
         if (shouldShowTransferSimulatorButton()) drawLayerButton(
             18,
