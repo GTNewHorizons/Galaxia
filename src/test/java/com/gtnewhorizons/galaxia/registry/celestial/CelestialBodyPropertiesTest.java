@@ -11,6 +11,9 @@ import net.minecraftforge.fluids.Fluid;
 
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
+
 final class CelestialBodyPropertiesTest {
 
     @Test
@@ -99,6 +102,26 @@ final class CelestialBodyPropertiesTest {
     }
 
     @Test
+    void asteroidFieldProfileSurvivesBuilderRoundTrip() {
+        AsteroidFieldProfile profile = AsteroidFieldProfile.builder()
+            .sizeCounts(1, 1, 1)
+            .radialBand(10.0, 20.0)
+            .oreProfile(new AsteroidOreProfile("metallic", 1.0, List.of("galaxia:iron")))
+            .build();
+
+        CelestialBodyProperties properties = CelestialBodyProperties.builder()
+            .asteroidFieldProfile(profile)
+            .build();
+
+        assertEquals(profile, properties.asteroidFieldProfile());
+        assertEquals(
+            profile,
+            properties.toBuilder()
+                .build()
+                .asteroidFieldProfile());
+    }
+
+    @Test
     void atmosphereAuthoringRejectsInvalidInputs() {
         Fluid nitrogen = new Fluid("nitrogen");
 
@@ -173,6 +196,7 @@ final class CelestialBodyPropertiesTest {
                 1.0,
                 Collections.singletonList(null),
                 null,
+                null,
                 Map.of()));
         assertThrows(
             IllegalStateException.class,
@@ -194,6 +218,7 @@ final class CelestialBodyPropertiesTest {
                 0.0,
                 1.0,
                 List.of(new CelestialBodyProperties.AtmosphereIngredient(new Fluid("nitrogen"), 1.0)),
+                null,
                 null,
                 Map.of()));
     }
