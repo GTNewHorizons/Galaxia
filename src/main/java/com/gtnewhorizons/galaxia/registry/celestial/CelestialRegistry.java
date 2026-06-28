@@ -16,6 +16,8 @@ import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.PlayableDimensionProfile;
 import com.gtnewhorizons.galaxia.registry.dimension.SpaceStation;
@@ -62,6 +64,18 @@ public final class CelestialRegistry {
         Fluid fluid = stack != null ? stack.getFluid() : null;
         if (fluid == null) throw new IllegalStateException("Required atmosphere gas is not available: " + material);
         return fluid;
+    }
+
+    private static AsteroidFieldProfile frozenBeltAsteroidField() {
+        return AsteroidFieldProfile.builder()
+            .seedSalt(0xF20A3E11L)
+            .generationVersion(1)
+            .sizeCounts(1, 2, 3)
+            .radialBand(2.15 * EARTH_RADIUS_TO_AU, 2.45 * EARTH_RADIUS_TO_AU)
+            .oreProfile(new AsteroidOreProfile("metallic", 3.0, List.of("ore.mix.iron")))
+            .oreProfile(new AsteroidOreProfile("volatile_ice", 2.0, List.of("ore.mix.lapis")))
+            .oreProfile(new AsteroidOreProfile("rare_crystal", 1.0, List.of("ore.mix.redstone")))
+            .build();
     }
 
     private static PlayableDimensionProfile.Builder stationBuildable(PlayableDimensionProfile.Builder builder) {
@@ -279,6 +293,7 @@ public final class CelestialRegistry {
                         .temperature(67)
                         .radiation(0.28)
                         .oreProfile("undefined")
+                        .asteroidFieldProfile(frozenBeltAsteroidField())
                         .metadata("surface", "undefined")
                         .metadata("minorBodies", "enabled"))
                 .playableDimensionProfile(
