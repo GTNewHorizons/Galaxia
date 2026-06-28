@@ -37,6 +37,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -346,6 +347,14 @@ public final class CelestialClient {
             assetId,
             moduleIndex,
             module -> AssetModuleUpdatePacket.copyModuleSettings(assetId, moduleIndex, module.id, targetCoords));
+    }
+
+    public static void updateDebugDataGeneratorConfig(ID assetId, int moduleIndex,
+        ModuleDebugDataGenerator.Config config) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.debugDataGeneratorConfig(assetId, moduleIndex, module.id, config));
     }
 
     private static void sendModuleUpdate(ID assetId, int moduleIndex,

@@ -35,6 +35,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperati
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
@@ -43,6 +44,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 import com.gtnewhorizons.galaxia.testing.TestFluidStacks;
 
@@ -291,6 +293,50 @@ final class AssetModuleUpdatePacketTest {
         assertArrayEquals(
             new byte[] { (byte) HammerVariant.BIG.ordinal(), (byte) ModuleTier.ZPM.ordinal(), 1, 1 },
             decoded.getRawPayload());
+    }
+
+    @Test
+    void debugDataGeneratorConfigPayload_roundTrips() {
+        ModuleDebugDataGenerator.Config config = ModuleDebugDataGenerator.Config
+            .consume(SatelliteDataType.PROSPECTING, 25L, 40, CelestialObjectId.EGORA);
+
+        AssetModuleUpdatePacket decoded = roundTrip(
+            AssetModuleUpdatePacket.debugDataGeneratorConfig(ASSET_ID, 0, MODULE_ID, config));
+
+        assertEquals(AssetModuleUpdatePacket.ConfigAction.SET_DEBUG_DATA_GENERATOR_CONFIG, decoded.getConfigAction());
+        assertNotNull(decoded.getRawPayload());
+    }
+
+    @Test
+    void debugDataGeneratorConfigRequiresDebugAuthorization() {
+        AutomatedFacility facility = addDebugDataGeneratorFacilityToServer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        ModuleDebugDataGenerator generator = (ModuleDebugDataGenerator) module.component();
+        generator.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.COMMUNICATION, 10L, 1));
+        ModuleDebugDataGenerator.Config config = new ModuleDebugDataGenerator.Config(
+            ModuleDebugDataGenerator.Mode.PRODUCE,
+            true,
+            SatelliteDataType.RESEARCH,
+            400L,
+            1,
+            null);
+        AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
+            .debugDataGeneratorConfig(facility.assetId, 0, module.id, config);
+
+        assertNull(packet.apply(TEAM, false));
+        assertEquals(
+            SatelliteDataType.COMMUNICATION,
+            generator.config()
+                .dataType());
+
+        AssetSyncPacket sync = packet.apply(TEAM, true);
+
+        assertNotNull(sync);
+        assertEquals(
+            SatelliteDataType.RESEARCH,
+            generator.config()
+                .dataType());
     }
 
     @Test
@@ -1056,6 +1102,22 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
+    void fromBytesCrashesOnMalformedDebugDataGeneratorPayload() {
+        ByteBuf buf = Unpooled.buffer();
+        PacketUtil.writeId(buf, ASSET_ID);
+        buf.writeInt(0);
+        PacketUtil.writeId(buf, MODULE_ID);
+        buf.writeByte(1);
+        PacketUtil.writeEnum(buf, AssetModuleUpdatePacket.ConfigAction.SET_DEBUG_DATA_GENERATOR_CONFIG);
+        buf.writeInt(1);
+        buf.writeByte(0);
+
+        AssetModuleUpdatePacket decoded = new AssetModuleUpdatePacket();
+
+        assertThrows(IllegalArgumentException.class, () -> decoded.fromBytes(buf));
+    }
+
+    @Test
     void applyCrashesOnMalformedRecipePayloadWithOversizedNestedItemArray() {
         AutomatedFacility facility = addRecipeFacilityToServer();
         ModuleInstance module = facility.modules()
@@ -1151,6 +1213,10 @@ final class AssetModuleUpdatePacketTest {
         facility.addModule(module);
         CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
         return facility;
+    }
+
+    private static AutomatedFacility addDebugDataGeneratorFacilityToServer() {
+        return addModuleFacilityToServer(FacilityModuleKind.DEBUG_DATA_GENERATOR, ModuleTier.HV);
     }
 
     private static ModuleOperationPlan hammerOperationPlan(ModuleInstance module, ModuleTier targetTier,

@@ -21,6 +21,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
@@ -135,6 +136,21 @@ final class ModuleConfigModalControllerTest {
 
         assertTrue(controller.isLogisticsOpen());
         assertEquals(LogisticsConfigAccessMode.IMPORT_ONLY, controller.logisticsAccessMode());
+    }
+
+    @Test
+    void debugDataGeneratorConfigModalCapturesHover() {
+        TestFacility test = facilityWith(FacilityModuleKind.DEBUG_DATA_GENERATOR, ModuleTier.EV);
+        ModuleConfigModalController controller = controllerFor(test.facility());
+
+        DebugDataGeneratorConfigModalWidget widget = new DebugDataGeneratorConfigModalWidget(
+            test.facility().assetId,
+            controller);
+
+        assertFalse(widget.canHoverThrough());
+        assertTrue(
+            test.module()
+                .component() instanceof ModuleDebugDataGenerator);
     }
 
     private static ModuleConfigModalController controllerFor(AutomatedFacility facility) {

@@ -26,7 +26,8 @@ public enum FacilityModuleKind {
     CHEMICAL_REACTOR,
     ASSEMBLER,
     DISTILLERY,
-    GEOTHERMAL_GENERATOR;
+    GEOTHERMAL_GENERATOR,
+    DEBUG_DATA_GENERATOR;
 
     private static final EnumSet<FacilityModuleKind> CAPACITY_KINDS = EnumSet.noneOf(FacilityModuleKind.class);
 
@@ -47,6 +48,7 @@ public enum FacilityModuleKind {
             case HAMMER -> StationModuleCategory.LOGISTICS;
             case MINER -> StationModuleCategory.MINING_SUPPORT;
             case POWER, GEOTHERMAL_GENERATOR -> StationModuleCategory.POWER;
+            case DEBUG_DATA_GENERATOR -> StationModuleCategory.SUPPORT;
             case STORAGE, TANK, BATTERY -> StationModuleCategory.INFRASTRUCTURE;
             case MAINTENANCE_BAY -> StationModuleCategory.SUPPORT;
             case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> StationModuleCategory.PROCESSING;
@@ -101,6 +103,7 @@ public enum FacilityModuleKind {
             case MAINTENANCE_BAY -> EnumSet.of(ModuleTier.NONE);
             case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> EnumSet
                 .of(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV);
+            case DEBUG_DATA_GENERATOR -> EnumSet.of(ModuleTier.HV);
         };
     }
 
@@ -111,7 +114,7 @@ public enum FacilityModuleKind {
             case GEOTHERMAL_GENERATOR -> ModuleTier.HV;
             case STORAGE, TANK, BATTERY -> ModuleTier.HV;
             case MAINTENANCE_BAY -> ModuleTier.NONE;
-            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> ModuleTier.HV;
+            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY, DEBUG_DATA_GENERATOR -> ModuleTier.HV;
         };
     }
 
@@ -128,7 +131,7 @@ public enum FacilityModuleKind {
             case HAMMER, MINER -> ModulePriority.NORMAL;
             case POWER, GEOTHERMAL_GENERATOR -> ModulePriority.HIGH;
             case STORAGE, TANK, BATTERY -> ModulePriority.NORMAL;
-            case MAINTENANCE_BAY, MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> ModulePriority.NORMAL;
+            case MAINTENANCE_BAY, MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY, DEBUG_DATA_GENERATOR -> ModulePriority.NORMAL;
         };
     }
 
@@ -147,7 +150,11 @@ public enum FacilityModuleKind {
         };
     }
 
+    public boolean isDebugOnly() {
+        return this == DEBUG_DATA_GENERATOR;
+    }
+
     public boolean isDirectlyConfigurable() {
-        return this == HAMMER || this == MINER || this == POWER || isProductionModule();
+        return this == HAMMER || this == MINER || this == POWER || isProductionModule() || isDebugOnly();
     }
 }

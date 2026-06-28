@@ -1096,6 +1096,13 @@ final class FacilityPersistenceManagerTest {
             ModuleShape.SINGLE,
             ModuleTier.HV,
             StationTileCoord.of(1, 4));
+        createAndPlaceModule(
+            station,
+            FacilityModuleKind.DEBUG_DATA_GENERATOR,
+            Buildable.Status.OPERATIONAL,
+            ModuleShape.SINGLE,
+            ModuleTier.HV,
+            StationTileCoord.of(2, 4));
 
         StationLayout layout = station.stationLayout();
         assertNotNull(layout);
@@ -1112,8 +1119,8 @@ final class FacilityPersistenceManagerTest {
         System.out.println("Layout tile count: " + encoded.layoutTiles.size());
 
         // Verify module entries
-        assertEquals(14, encoded.modules.size());
-        assertEquals(14, encoded.layoutTiles.size());
+        assertEquals(15, encoded.modules.size());
+        assertEquals(15, encoded.layoutTiles.size());
 
         // Verify each kind appears in encoded modules
         assertTrue(
@@ -1158,6 +1165,9 @@ final class FacilityPersistenceManagerTest {
         assertTrue(
             encoded.modules.stream()
                 .anyMatch(mj -> "DISTILLERY".equals(mj.kind)));
+        assertTrue(
+            encoded.modules.stream()
+                .anyMatch(mj -> "DEBUG_DATA_GENERATOR".equals(mj.kind)));
 
         // Verify shape bytes — SINGLE has ordinal 0
         for (FacilityPersistenceManager.ModuleJson mj : encoded.modules) {
@@ -1179,10 +1189,10 @@ final class FacilityPersistenceManagerTest {
         org.junit.jupiter.api.Assertions.assertAll(
             "fullRoundTripAllKinds",
             () -> assertEquals(
-                14,
+                15,
                 decoded.modules()
                     .size(),
-                "Expected 14 modules, got " + decoded.modules()
+                "Expected 15 modules, got " + decoded.modules()
                     .size() + dumpKinds(decoded)),
             () -> {
                 // Verify each kind is present
@@ -1212,6 +1222,7 @@ final class FacilityPersistenceManagerTest {
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(2, 3), "CHEMICAL_REACTOR anchor"),
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(3, 3), "ASSEMBLER anchor"),
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(1, 4), "DISTILLERY anchor"),
+            () -> assertLayoutTilesExist(decoded, StationTileCoord.of(2, 4), "DEBUG_DATA_GENERATOR anchor"),
             () -> assertLayoutEquals(layout, decoded.stationLayout()),
             // JSON identity — byte-perfect round-trip
             () -> assertEquals(

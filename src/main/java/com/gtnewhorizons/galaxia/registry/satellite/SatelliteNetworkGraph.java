@@ -6,6 +6,13 @@ import java.util.List;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 
+/**
+ * Low-level geometry helper for visible satellite links.
+ *
+ * <p>
+ * The builder is visual-first: prefer local parent/nearby links, cap how many links one body gets, then add only the
+ * required extra links to keep satellite bodies in one connected network.
+ */
 public final class SatelliteNetworkGraph {
 
     private SatelliteNetworkGraph() {}
@@ -47,8 +54,29 @@ public final class SatelliteNetworkGraph {
         }
     }
 
+    public record DirectedEdge(CelestialObjectId from, CelestialObjectId to) {
+
+        public DirectedEdge {
+            if (from == null || from == CelestialObjectId.INVALID || to == null || to == CelestialObjectId.INVALID) {
+                throw new IllegalArgumentException("directed edge endpoints must be valid celestial object ids");
+            }
+            if (from == to) {
+                throw new IllegalArgumentException("directed edge endpoints must be different");
+            }
+        }
+
+        public Edge asEdge() {
+            return new Edge(from, to);
+        }
+    }
+
     private record Candidate(int fromIndex, int toIndex, double distance) {}
 
+    /*
+     * Produces the visual graph used by the network calculator. The result is deterministic for the same node
+     * positions:
+     * hierarchy first, nearest neighbours second, required island bridges last.
+     */
     public static List<Edge> build(List<Node> nodes, int maxEdgesPerNode) {
         if (nodes == null || nodes.size() < 2 || maxEdgesPerNode <= 0) return List.of();
         List<Node> validNodes = nodes.stream()
@@ -64,6 +92,7 @@ public final class SatelliteNetworkGraph {
         int[] edgeCounts = new int[CelestialObjectId.values().length];
         List<Edge> edges = new ArrayList<>();
 
+        // Prefer explicit orbital hierarchy first, so child bodies tend to stay attached to their parent.
         for (int i = 0; i < validNodes.size(); i++) {
             Node node = validNodes.get(i);
             int parentIndex = nodeIndex(validNodes, node.parentId());
@@ -75,6 +104,7 @@ public final class SatelliteNetworkGraph {
 
         List<Candidate> candidates = sortedCandidates(validNodes, false);
 
+        // Then connect nearby bodies while respecting the per-node link cap.
         for (Candidate candidate : candidates) {
             if (find(components, candidate.fromIndex()) == find(components, candidate.toIndex())) continue;
             Node from = validNodes.get(candidate.fromIndex());
@@ -84,6 +114,7 @@ public final class SatelliteNetworkGraph {
             }
         }
 
+        // If the cap left islands, add only the missing edges needed to restore one connected network.
         for (Candidate candidate : sortedCandidates(validNodes, true)) {
             if (find(components, candidate.fromIndex()) == find(components, candidate.toIndex())) continue;
             Node from = validNodes.get(candidate.fromIndex());
@@ -96,6 +127,10 @@ public final class SatelliteNetworkGraph {
         return edges;
     }
 
+    /*
+     * Candidate order is the main tie-breaker for stable topology. Child peers are skipped during the capped pass so a
+     * moon cluster does not consume all nearby slots before parent links have a chance to connect.
+     */
     private static List<Candidate> sortedCandidates(List<Node> validNodes, boolean includeChildPeers) {
         List<Candidate> candidates = new ArrayList<>();
         for (int from = 0; from < validNodes.size(); from++) {
