@@ -450,6 +450,7 @@ public class OrbitalView {
         private int lastRenderedLogisticsClockRevision = Integer.MIN_VALUE;
         private TextFieldWidget renameField = null;
         private boolean creativeBuildMode = creativeBuildModePersisted;
+        private final OrbitalPlanetTrackingController planetTrackingController = new OrbitalPlanetTrackingController();
         private boolean guiActionsRegistered = false;
         private OrbitalLayerTransitionState transitionState = new OrbitalLayerTransitionState();
         private long lastSatelliteSignalFrameMs = System.currentTimeMillis();
@@ -1108,6 +1109,12 @@ public class OrbitalView {
             transfersHidden = !transfersHidden;
         }
 
+        public void toggleClickMode() {
+            setClickMode(
+                getClickMode() == OrbitalMapClickMode.HIERARCHY ? OrbitalMapClickMode.FOLLOW
+                    : OrbitalMapClickMode.HIERARCHY);
+        }
+
         public boolean isSatelliteNetworkHidden() {
             return satelliteNetworkHidden;
         }
@@ -1324,13 +1331,7 @@ public class OrbitalView {
                         pressedBodyCandidate = null;
                         return true;
                     }
-                    if (clickedBody != null) {
-                        boolean opensSystemFromGalaxy = viewRoot == root
-                            && clickedBody.objectClass() == CelestialObject.Class.STAR
-                            && bodySelectionListener != null;
-                        if (!opensSystemFromGalaxy) focusOn(clickedBody);
-                        if (bodySelectionListener != null) bodySelectionListener.onBodySelected(clickedBody);
-                    }
+                    if (clickedBody != null) handleBodyClick(clickedBody);
                 }
                 clickCandidate = false;
                 dragging = false;
@@ -1386,7 +1387,7 @@ public class OrbitalView {
             viewState.targetCameraX = viewState.cameraX;
             viewState.targetCameraY = viewState.cameraY;
             viewState.targetZoomLevel = viewState.zoomLevel;
-            if (focusedTransfer == null) isFollowing = false;
+            planetTrackingController.onScrolled();
             return true;
         }
 
@@ -1424,6 +1425,7 @@ public class OrbitalView {
             viewState.targetCameraY = viewState.cameraY;
             isFollowing = false;
             focusedTransfer = null;
+            planetTrackingController.onManualCameraMoved();
             lastMouseX = lx;
             lastMouseY = ly;
         }
@@ -1602,6 +1604,33 @@ public class OrbitalView {
                 pendingFocusBody = body;
                 viewState.targetIsometricProgress = 0.0;
             }
+        }
+
+        private boolean handleBodyClick(CelestialObject clickedBody) {
+            if (clickedBody == null) return false;
+            boolean opensSystemFromGalaxy = viewRoot == root && clickedBody.objectClass() == CelestialObject.Class.STAR
+                && bodySelectionListener != null;
+            OrbitalPlanetTrackingController.ClickAction action = planetTrackingController
+                .clickBody(clickedBody, opensSystemFromGalaxy);
+            switch (action) {
+                case TRACK_ONLY -> centerOnBody(clickedBody);
+                case FOCUS_AND_SELECT -> {
+                    focusOn(clickedBody);
+                    if (bodySelectionListener != null) bodySelectionListener.onBodySelected(clickedBody);
+                }
+                case SELECT_ONLY -> {
+                    if (bodySelectionListener != null) bodySelectionListener.onBodySelected(clickedBody);
+                }
+            }
+            return true;
+        }
+
+        public OrbitalMapClickMode getClickMode() {
+            return planetTrackingController.clickMode();
+        }
+
+        public void setClickMode(OrbitalMapClickMode clickMode) {
+            planetTrackingController.setClickMode(clickMode);
         }
 
         private void centerOnBody(CelestialObject body) {

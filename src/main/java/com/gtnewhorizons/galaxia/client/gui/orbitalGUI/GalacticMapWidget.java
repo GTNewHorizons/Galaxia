@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 import java.util.function.Supplier;
 
 import net.minecraft.client.gui.Gui;
+import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -25,20 +26,27 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
     private static final int SATELLITE_LINKS_W = 98;
     private static final int ASSETS_X = 284;
     private static final int ASSETS_W = 66;
+    private static final int HIERARCHY_TOGGLE_X = 356;
+    private static final int HIERARCHY_TOGGLE_W = 74;
 
     private final OrbitalView.OrbitalMapWidget mapWidget;
     private final ButtonWidget<?> signalsButton;
     private final ButtonWidget<?> transferVisibilityButton;
     private final ButtonWidget<?> satelliteLinksButton;
     private final ButtonWidget<?> assetsPanelButton;
+    private final ButtonWidget<?> hierarchyToggleButton;
     private String signalsLabel = "Signals";
     private String transfersLabel = "Hide Transfers";
     private String satelliteLinksLabel = "Hide Sat Links";
     private String assetsLabel = "Assets";
 
     public GalacticMapWidget(CelestialObject galaxyRoot, CelestialObject initialLayer, TextFieldWidget renameField) {
+        OrbitalMapPreferences preferences = OrbitalMapPreferences.current();
+        String worldPreferenceKey = OrbitalMapPreferences.currentWorldKey();
+        String playerPreferenceKey = OrbitalMapPreferences.currentPlayerKey();
         this.mapWidget = new OrbitalView.OrbitalMapWidget(galaxyRoot).withInitialLayer(initialLayer)
             .attachRenameField(renameField);
+        this.mapWidget.setClickMode(preferences.clickMode(worldPreferenceKey, playerPreferenceKey));
         this.signalsButton = createTopBarButton(() -> signalsLabel, () -> {
             mapWidget.toggleSignals();
             updateTopBarLabels();
@@ -59,6 +67,11 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
             updateTopBarLabels();
         }).pos(ASSETS_X, TOP_BUTTON_Y)
             .size(ASSETS_W, TOP_BUTTON_H);
+        this.hierarchyToggleButton = createClickModeToggleButton(() -> {
+            mapWidget.toggleClickMode();
+            preferences.setClickMode(worldPreferenceKey, playerPreferenceKey, mapWidget.getClickMode());
+        }).pos(HIERARCHY_TOGGLE_X, TOP_BUTTON_Y)
+            .size(HIERARCHY_TOGGLE_W, TOP_BUTTON_H);
 
         child(
             (IWidget) mapWidget.left(0)
@@ -99,6 +112,7 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
         child(transferVisibilityButton);
         child(satelliteLinksButton);
         child(assetsPanelButton);
+        child(hierarchyToggleButton);
         child(
             (IWidget) mapWidget.createAssetsPanelWidget()
                 .left(0)
@@ -130,6 +144,12 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
         assetsLabel = mapWidget.isAssetsPanelOpen() ? "Assets \u25b2" : "Assets";
     }
 
+    private String clickModeLabel() {
+        String key = mapWidget.getClickMode() == OrbitalMapClickMode.FOLLOW ? "galaxia.gui.orbital.click_mode.follow"
+            : "galaxia.gui.orbital.click_mode.hierarchy";
+        return StatCollector.translateToLocal(key);
+    }
+
     private ButtonWidget<?> createTopBarButton(Supplier<String> labelSupplier, Runnable onClick) {
         return new ButtonWidget<>().background(drawable((ctx, x, y, w, h) -> {
             Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor());
@@ -150,6 +170,12 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
                 onClick.run();
                 return true;
             });
+    }
+
+    private ButtonWidget<?> createClickModeToggleButton(Runnable onClick) {
+        return createTopBarButton(this::clickModeLabel, onClick)
+            .tooltipDynamic(t -> t.addLine(StatCollector.translateToLocal("galaxia.gui.orbital.click_mode.tooltip")))
+            .onUpdateListener(ButtonWidget::markTooltipDirty, true);
     }
 
     private IDrawable drawable(DrawableCommand cmd) {
