@@ -23,6 +23,24 @@ public final class AsteroidFieldResolver {
         return List.copyOf(nodes);
     }
 
+    public static AsteroidDetectionState initialDetectionState(AsteroidFieldNode node) {
+        Objects.requireNonNull(node, "node cannot be null");
+        return node.sizeClass() == AsteroidSizeClass.LARGE ? AsteroidDetectionState.DETECTED
+            : AsteroidDetectionState.HIDDEN;
+    }
+
+    public static AsteroidOreKnowledgeState initialOreKnowledge(AsteroidFieldNode node) {
+        Objects.requireNonNull(node, "node cannot be null");
+        if (node.sizeClass() != AsteroidSizeClass.LARGE) return AsteroidOreKnowledgeState.UNKNOWN;
+        return rolledOreKnowledge(node, 5L);
+    }
+
+    public static AsteroidOreKnowledgeState oreKnowledgeAfterDetection(AsteroidFieldNode node) {
+        Objects.requireNonNull(node, "node cannot be null");
+        if (node.sizeClass() == AsteroidSizeClass.SMALL) return AsteroidOreKnowledgeState.UNKNOWN;
+        return rolledOreKnowledge(node, 6L);
+    }
+
     private static AsteroidFieldNode resolveNode(CelestialObjectId beltId, AsteroidFieldProfile profile, int index) {
         long baseSeed = mix(
             beltId.name()
@@ -64,6 +82,17 @@ public final class AsteroidFieldResolver {
             .get(
                 profile.oreProfiles()
                     .size() - 1);
+    }
+
+    private static AsteroidOreKnowledgeState rolledOreKnowledge(AsteroidFieldNode node, long salt) {
+        double roll = unitDouble(
+            mix(
+                node.appearance()
+                    .variantSeed(),
+                salt));
+        if (roll < 0.20) return AsteroidOreKnowledgeState.PROFILE;
+        if (roll < 0.55) return AsteroidOreKnowledgeState.SIGNATURE;
+        return AsteroidOreKnowledgeState.UNKNOWN;
     }
 
     private static String displayName(CelestialObjectId beltId, int index) {

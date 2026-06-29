@@ -65,6 +65,42 @@ final class AsteroidFieldResolverTest {
         }
     }
 
+    @Test
+    void initialDiscoveryStatesFollowSizeClassRules() {
+        List<AsteroidFieldNode> nodes = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile(1));
+        AsteroidFieldNode large = nodes.stream()
+            .filter(node -> node.sizeClass() == AsteroidSizeClass.LARGE)
+            .findFirst()
+            .orElseThrow();
+        AsteroidFieldNode medium = nodes.stream()
+            .filter(node -> node.sizeClass() == AsteroidSizeClass.MEDIUM)
+            .findFirst()
+            .orElseThrow();
+        AsteroidFieldNode small = nodes.stream()
+            .filter(node -> node.sizeClass() == AsteroidSizeClass.SMALL)
+            .findFirst()
+            .orElseThrow();
+
+        assertEquals(AsteroidDetectionState.DETECTED, AsteroidFieldResolver.initialDetectionState(large));
+        assertEquals(AsteroidDetectionState.HIDDEN, AsteroidFieldResolver.initialDetectionState(medium));
+        assertEquals(AsteroidDetectionState.HIDDEN, AsteroidFieldResolver.initialDetectionState(small));
+        assertTrue(
+            List.of(
+                AsteroidOreKnowledgeState.UNKNOWN,
+                AsteroidOreKnowledgeState.SIGNATURE,
+                AsteroidOreKnowledgeState.PROFILE)
+                .contains(AsteroidFieldResolver.initialOreKnowledge(large)));
+        assertEquals(AsteroidOreKnowledgeState.UNKNOWN, AsteroidFieldResolver.initialOreKnowledge(medium));
+        assertEquals(AsteroidOreKnowledgeState.UNKNOWN, AsteroidFieldResolver.initialOreKnowledge(small));
+        assertTrue(
+            List.of(
+                AsteroidOreKnowledgeState.UNKNOWN,
+                AsteroidOreKnowledgeState.SIGNATURE,
+                AsteroidOreKnowledgeState.PROFILE)
+                .contains(AsteroidFieldResolver.oreKnowledgeAfterDetection(medium)));
+        assertEquals(AsteroidOreKnowledgeState.UNKNOWN, AsteroidFieldResolver.oreKnowledgeAfterDetection(small));
+    }
+
     private static AsteroidFieldProfile profile(int generationVersion) {
         return AsteroidFieldProfile.builder()
             .seedSalt(99L)
