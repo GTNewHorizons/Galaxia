@@ -127,6 +127,20 @@ public final class SatelliteNetworkService {
         return ASTEROID_KNOWLEDGE.snapshots(teamId);
     }
 
+    public static Map<UUID, List<AsteroidFieldKnowledgeSnapshot>> asteroidKnowledgeSnapshotsByTeam() {
+        return ASTEROID_KNOWLEDGE.snapshotsByTeam();
+    }
+
+    public static void restoreAsteroidKnowledge(UUID teamId, List<AsteroidFieldKnowledgeSnapshot> snapshots) {
+        ASTEROID_KNOWLEDGE.restore(
+            teamId,
+            snapshots,
+            bodyId -> GalaxiaCelestialAPI.get(bodyId)
+                .map(
+                    body -> body.properties()
+                        .asteroidFieldProfile()));
+    }
+
     public static boolean canStartProcess(UUID teamId, CelestialObjectId bodyId, SatelliteDataKey outputKey) {
         return DATA_BUFFERS.canStart(teamId, bodyId, outputKey, current(teamId).capacityKbps(bodyId));
     }

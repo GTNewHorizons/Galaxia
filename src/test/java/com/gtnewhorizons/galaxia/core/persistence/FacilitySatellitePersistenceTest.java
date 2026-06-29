@@ -1,8 +1,10 @@
 package com.gtnewhorizons.galaxia.core.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
@@ -13,7 +15,18 @@ import org.junit.jupiter.api.io.TempDir;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class FacilitySatellitePersistenceTest {
@@ -23,11 +36,13 @@ final class FacilitySatellitePersistenceTest {
     @BeforeAll
     static void bootstrapRegistry() {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
+        GalaxiaTestBootstrap.ensureFacilityModules();
     }
 
     @AfterEach
     void clearStores() {
         CelestialAssetStore.SERVER.clearInternal();
+        SatelliteNetworkService.clear();
     }
 
     @Test
@@ -90,6 +105,35 @@ final class FacilitySatellitePersistenceTest {
     }
 
     @Test
+    void asteroidKnowledgeRoundTripsThroughStarmapPersistence(@TempDir Path tempDir) {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        manager.loadFromSaveDirectory(tempDir.toFile());
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.FROZEN_BELT,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
+        CelestialAssetStore.registerAsset(TEAM, facility);
+        ModuleDebugDataGenerator producer = addDebugModule(facility);
+        ModuleDebugDataGenerator consumer = addDebugModule(facility);
+        producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
+        consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
+        SatelliteNetworkService.refreshFacilityEndpoints(facility);
+        SatelliteNetworkService.tickDataJobs();
+        List<AsteroidFieldKnowledgeSnapshot> saved = SatelliteNetworkService.asteroidKnowledgeSnapshots(TEAM);
+        assertFalse(saved.isEmpty());
+
+        manager.saveToSaveDirectory(tempDir.toFile());
+        CelestialAssetStore.SERVER.clearInternal();
+        SatelliteNetworkService.clear();
+
+        FacilityPersistenceManager reloaded = new FacilityPersistenceManager();
+        reloaded.loadFromSaveDirectory(tempDir.toFile());
+
+        assertEquals(saved, SatelliteNetworkService.asteroidKnowledgeSnapshots(TEAM));
+    }
+
+    @Test
     void deletingSatelliteAmountOnlyRemovesExistingSatellites() {
         CelestialAssetStore.SERVER.setSatelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, 3);
 
@@ -101,4 +145,16 @@ final class FacilitySatellitePersistenceTest {
             CelestialAssetStore.SERVER.satelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION));
     }
 
+    private static ModuleDebugDataGenerator addDebugModule(AutomatedFacility facility) {
+        ModuleInstance module = FacilityModuleKind.DEBUG_DATA_GENERATOR.create(
+            StationTileCoord.of(
+                facility.modules()
+                    .size(),
+                0),
+            ModuleShape.SINGLE,
+            ModuleTier.HV);
+        module.updateStatus(Buildable.Status.OPERATIONAL);
+        facility.addModule(module);
+        return (ModuleDebugDataGenerator) module.component();
+    }
 }

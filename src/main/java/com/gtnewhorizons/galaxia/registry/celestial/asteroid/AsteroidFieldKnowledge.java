@@ -34,6 +34,45 @@ public final class AsteroidFieldKnowledge {
         return new AsteroidFieldKnowledge(nodes, entries);
     }
 
+    public static AsteroidFieldKnowledge fromSnapshot(CelestialObjectId beltId, AsteroidFieldProfile profile,
+        AsteroidFieldKnowledgeSnapshot snapshot) {
+        Objects.requireNonNull(beltId, "beltId cannot be null");
+        Objects.requireNonNull(profile, "profile cannot be null");
+        Objects.requireNonNull(snapshot, "snapshot cannot be null");
+        if (snapshot.beltId() != beltId) {
+            throw new IllegalStateException(
+                "Asteroid snapshot belt does not match requested belt: " + snapshot.beltId());
+        }
+
+        List<AsteroidFieldNode> nodes = AsteroidFieldResolver.resolveAll(beltId, profile);
+        if (snapshot.entries()
+            .size() != nodes.size()) {
+            throw new IllegalStateException("Asteroid snapshot entry count does not match profile for " + beltId);
+        }
+
+        Map<MinorCelestialBodyId, Entry> entries = new LinkedHashMap<>();
+        boolean[] seen = new boolean[nodes.size()];
+        for (AsteroidFieldKnowledgeSnapshot.Entry snapshotEntry : snapshot.entries()) {
+            int index = snapshotEntry.index();
+            if (index < 0 || index >= nodes.size()) {
+                throw new IllegalStateException(
+                    "Asteroid snapshot index is outside profile for " + beltId + ": " + index);
+            }
+            if (seen[index]) {
+                throw new IllegalStateException(
+                    "Asteroid snapshot contains duplicate index for " + beltId + ": " + index);
+            }
+            seen[index] = true;
+            if (snapshotEntry.detectionState() == AsteroidDetectionState.HIDDEN
+                && snapshotEntry.oreKnowledgeState() != AsteroidOreKnowledgeState.UNKNOWN) {
+                throw new IllegalStateException("Hidden asteroid snapshot entry cannot expose ore knowledge: " + index);
+            }
+            AsteroidFieldNode node = nodes.get(index);
+            entries.put(node.id(), new Entry(snapshotEntry.detectionState(), snapshotEntry.oreKnowledgeState()));
+        }
+        return new AsteroidFieldKnowledge(nodes, entries);
+    }
+
     public List<AsteroidFieldNode> nodes() {
         return nodes;
     }

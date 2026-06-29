@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 
@@ -54,6 +55,37 @@ public final class AsteroidFieldKnowledgeStore {
                 entry -> entry.getValue()
                     .snapshot(entry.getKey()))
             .toList();
+    }
+
+    public Map<UUID, List<AsteroidFieldKnowledgeSnapshot>> snapshotsByTeam() {
+        Map<UUID, List<AsteroidFieldKnowledgeSnapshot>> snapshots = new LinkedHashMap<>();
+        for (UUID teamId : knowledgeByTeam.keySet()) {
+            snapshots.put(teamId, snapshots(teamId));
+        }
+        return Map.copyOf(snapshots);
+    }
+
+    public void restore(UUID teamId, List<AsteroidFieldKnowledgeSnapshot> snapshots,
+        Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver) {
+        Objects.requireNonNull(teamId, "teamId cannot be null");
+        Objects.requireNonNull(snapshots, "snapshots cannot be null");
+        Objects.requireNonNull(profileResolver, "profileResolver cannot be null");
+        Map<CelestialObjectId, AsteroidFieldKnowledge> restored = new LinkedHashMap<>();
+        for (AsteroidFieldKnowledgeSnapshot snapshot : snapshots) {
+            Objects.requireNonNull(snapshot, "snapshot cannot be null");
+            AsteroidFieldProfile profile = Objects
+                .requireNonNull(profileResolver.apply(snapshot.beltId()), "profileResolver cannot return null")
+                .orElseThrow(() -> new IllegalStateException("No asteroid field profile for " + snapshot.beltId()));
+            if (restored.containsKey(snapshot.beltId())) {
+                throw new IllegalStateException("Duplicate asteroid snapshot for belt " + snapshot.beltId());
+            }
+            restored.put(snapshot.beltId(), AsteroidFieldKnowledge.fromSnapshot(snapshot.beltId(), profile, snapshot));
+        }
+        if (restored.isEmpty()) {
+            knowledgeByTeam.remove(teamId);
+        } else {
+            knowledgeByTeam.put(teamId, restored);
+        }
     }
 
     public void clear() {
