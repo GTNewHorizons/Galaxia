@@ -8,8 +8,8 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;

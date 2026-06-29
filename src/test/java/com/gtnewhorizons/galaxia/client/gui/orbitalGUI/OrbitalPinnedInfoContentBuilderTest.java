@@ -6,10 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
+import net.minecraft.util.StatCollector;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
-import net.minecraft.util.StatCollector;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
@@ -172,8 +172,9 @@ final class OrbitalPinnedInfoContentBuilderTest {
     private static PinnedInfoRow scanRow(List<PinnedInfoRow> rows) {
         String scanLabel = StatCollector.translateToLocal("galaxia.gui.orbital.pinned_info.label.scan");
         return rows.stream()
-            .filter(row -> row.label()
-                .equals(scanLabel))
+            .filter(
+                row -> row.label()
+                    .equals(scanLabel))
             .findFirst()
             .orElseThrow();
     }

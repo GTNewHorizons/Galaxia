@@ -44,8 +44,8 @@ public final class SatelliteNetworkSyncPacket implements IMessage {
         this(state, asteroidKnowledge, List.of(), List.of());
     }
 
-    public SatelliteNetworkSyncPacket(SatelliteNetworkState state, List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge,
-        List<AsteroidSatelliteScanSnapshot> asteroidScans,
+    public SatelliteNetworkSyncPacket(SatelliteNetworkState state,
+        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge, List<AsteroidSatelliteScanSnapshot> asteroidScans,
         List<AsteroidSatelliteScanCompletionSnapshot> asteroidScanCompletions) {
         this.state = state;
         this.asteroidKnowledge = List.copyOf(asteroidKnowledge == null ? List.of() : asteroidKnowledge);
@@ -225,8 +225,8 @@ public final class SatelliteNetworkSyncPacket implements IMessage {
             MinorCelestialBodyId anchorAsteroidId = PacketUtil.readCelestialObjectKey(buf)
                 .minorBodyId();
             int generationVersion = buf.readInt();
-            completionSnapshots.add(
-                new AsteroidSatelliteScanCompletionSnapshot(beltId, anchorAsteroidId, generationVersion));
+            completionSnapshots
+                .add(new AsteroidSatelliteScanCompletionSnapshot(beltId, anchorAsteroidId, generationVersion));
         }
         asteroidScanCompletions = List.copyOf(completionSnapshots);
     }

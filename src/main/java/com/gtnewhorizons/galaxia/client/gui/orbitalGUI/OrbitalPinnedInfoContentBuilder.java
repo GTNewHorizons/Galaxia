@@ -137,13 +137,16 @@ public final class OrbitalPinnedInfoContentBuilder {
 
     private String formatScanProgress(AsteroidSatelliteScanSnapshot scan) {
         int percent = scan.pass()
-            .durationTicks() == 0 ? 100
+            .durationTicks() == 0
+                ? 100
                 : Math.min(
                     100,
                     Math.max(
                         0,
-                        (int) Math.round(scan.elapsedTicks() * 100.0 / scan.pass()
-                            .durationTicks())));
+                        (int) Math.round(
+                            scan.elapsedTicks() * 100.0
+                                / scan.pass()
+                                    .durationTicks())));
         return StatCollector.translateToLocalFormatted(
             key("scan.progress"),
             tr(
