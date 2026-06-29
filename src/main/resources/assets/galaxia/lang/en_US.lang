@@ -273,6 +273,7 @@ galaxia.gui.orbital.pinned_info.label.landable=Landable
 galaxia.gui.orbital.pinned_info.label.dangers=Dangers
 galaxia.gui.orbital.pinned_info.label.surface=Surface
 galaxia.gui.orbital.pinned_info.label.ores=Ores
+galaxia.gui.orbital.pinned_info.label.scan=Scan
 galaxia.gui.orbital.pinned_info.value.yes=Yes
 galaxia.gui.orbital.pinned_info.value.no=No
 galaxia.gui.orbital.pinned_info.danger.none=None
@@ -290,6 +291,10 @@ galaxia.gui.orbital.pinned_info.surface.undefined=Undefined
 galaxia.gui.orbital.pinned_info.ore.unknown=Unknown
 galaxia.gui.orbital.pinned_info.ore.signature=Signature: %s
 galaxia.gui.orbital.pinned_info.ore.undefined=Undefined
+galaxia.gui.orbital.pinned_info.scan.progress=%s %d%%
+galaxia.gui.orbital.pinned_info.scan.pass.detection=Detection
+galaxia.gui.orbital.pinned_info.scan.pass.signature=Signature
+galaxia.gui.orbital.pinned_info.scan.pass.profile=Profile
 
 # Elements - GUI - "Rocket Silo"
 galaxia.gui.rocket_silo.title=Rocket Silo

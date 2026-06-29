@@ -27,6 +27,7 @@ import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
+import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
 
 public final class OrbitalPinnedInfoContentBuilder {
 
@@ -39,6 +40,7 @@ public final class OrbitalPinnedInfoContentBuilder {
         if (body.objectClass() != CelestialObject.Class.STAR && body.objectClass() != CelestialObject.Class.GALAXY) {
             rows.add(row("surface", formatSurfaceType(body)));
             rows.add(buildOreRow(body));
+            buildScanRow(body).ifPresent(rows::add);
         }
         return rows;
     }
@@ -89,6 +91,12 @@ public final class OrbitalPinnedInfoContentBuilder {
                     .append(',');
             }
         }
+        AsteroidFieldClientState.scanSnapshot(body.id())
+            .ifPresent(
+                scan -> signature.append("|asteroidScan:")
+                    .append(scan.pass())
+                    .append(':')
+                    .append(scan.elapsedTicks()));
     }
 
     private boolean canShowOreDetails(CelestialObject body) {
@@ -118,6 +126,31 @@ public final class OrbitalPinnedInfoContentBuilder {
             .getResolvedGtVeinOreStacks();
         if (gtOres.isEmpty()) return row("ores", tr("ore.undefined"));
         return new PinnedInfoRow(label("ores"), "", gtOres);
+    }
+
+    private java.util.Optional<PinnedInfoRow> buildScanRow(CelestialObject body) {
+        if (!body.id()
+            .isMinorBody()) return java.util.Optional.empty();
+        return AsteroidFieldClientState.scanSnapshot(body.id())
+            .map(scan -> row("scan", formatScanProgress(scan)));
+    }
+
+    private String formatScanProgress(AsteroidSatelliteScanSnapshot scan) {
+        int percent = scan.pass()
+            .durationTicks() == 0 ? 100
+                : Math.min(
+                    100,
+                    Math.max(
+                        0,
+                        (int) Math.round(scan.elapsedTicks() * 100.0 / scan.pass()
+                            .durationTicks())));
+        return StatCollector.translateToLocalFormatted(
+            key("scan.progress"),
+            tr(
+                "scan.pass." + scan.pass()
+                    .name()
+                    .toLowerCase()),
+            percent);
     }
 
     private AsteroidOreKnowledgeState asteroidOreKnowledge(CelestialObject body) {

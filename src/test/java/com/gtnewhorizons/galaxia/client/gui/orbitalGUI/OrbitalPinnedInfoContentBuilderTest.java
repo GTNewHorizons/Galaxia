@@ -9,6 +9,9 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import net.minecraft.util.StatCollector;
+
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
@@ -21,6 +24,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfil
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanPass;
+import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class OrbitalPinnedInfoContentBuilderTest {
@@ -66,6 +71,40 @@ final class OrbitalPinnedInfoContentBuilderTest {
                 signature.toString()
                     .contains(veinId));
         }
+        AsteroidFieldClientState.clear();
+    }
+
+    @Test
+    void asteroidRowsIncludeActiveSatelliteScanProgress() {
+        CelestialObject frozenBelt = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
+            .orElseThrow();
+        AsteroidFieldProfile profile = frozenBelt.properties()
+            .asteroidFieldProfile();
+        AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(CelestialObjectId.FROZEN_BELT, profile, 0);
+        CelestialObject asteroid = CelestialRegistry
+            .get(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, node.index())))
+            .orElseThrow();
+        AsteroidFieldClientState.updateScans(
+            List.of(
+                new AsteroidSatelliteScanSnapshot(
+                    new CelestialAsset.ID(new java.util.UUID(9L, 10L)),
+                    CelestialObjectId.FROZEN_BELT,
+                    node.id(),
+                    AsteroidSatelliteScanPass.DETECTION,
+                    AsteroidSatelliteScanPass.DETECTION.durationTicks() / 2)),
+            List.of());
+
+        OrbitalPinnedInfoContentBuilder builder = new OrbitalPinnedInfoContentBuilder();
+        PinnedInfoRow scanRow = scanRow(builder.buildRows(asteroid));
+        StringBuilder signature = new StringBuilder();
+        builder.buildSignatureInto(signature, asteroid, 100, 100);
+
+        assertTrue(
+            scanRow.value()
+                .length() > 0);
+        assertTrue(
+            signature.toString()
+                .contains("asteroidScan:DETECTION:600"));
         AsteroidFieldClientState.clear();
     }
 
@@ -128,5 +167,14 @@ final class OrbitalPinnedInfoContentBuilderTest {
 
     private static PinnedInfoRow oreRow(List<PinnedInfoRow> rows) {
         return rows.get(rows.size() - 1);
+    }
+
+    private static PinnedInfoRow scanRow(List<PinnedInfoRow> rows) {
+        String scanLabel = StatCollector.translateToLocal("galaxia.gui.orbital.pinned_info.label.scan");
+        return rows.stream()
+            .filter(row -> row.label()
+                .equals(scanLabel))
+            .findFirst()
+            .orElseThrow();
     }
 }

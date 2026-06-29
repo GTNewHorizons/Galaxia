@@ -9,10 +9,15 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanCompletionSnapshot;
+import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanPass;
+import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteBandwidthFormatter;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataKey;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
@@ -79,6 +84,35 @@ final class SatelliteNetworkSyncPacketTest {
     }
 
     @Test
+    void roundTripPreservesAsteroidScanSnapshots() {
+        UUID teamId = new UUID(5L, 10L);
+        SatelliteNetworkState state = SatelliteNetworkState.empty(teamId, 22);
+        AsteroidSatelliteScanSnapshot progress = new AsteroidSatelliteScanSnapshot(
+            new CelestialAsset.ID(new UUID(1L, 2L)),
+            CelestialObjectId.FROZEN_BELT,
+            new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 3),
+            AsteroidSatelliteScanPass.SIGNATURE,
+            120);
+        AsteroidSatelliteScanCompletionSnapshot completion = new AsteroidSatelliteScanCompletionSnapshot(
+            CelestialObjectId.FROZEN_BELT,
+            new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 1),
+            4);
+
+        SatelliteNetworkSyncPacket packet = new SatelliteNetworkSyncPacket(
+            state,
+            List.of(),
+            List.of(progress),
+            List.of(completion));
+        ByteBuf buf = Unpooled.buffer();
+        packet.toBytes(buf);
+        SatelliteNetworkSyncPacket read = new SatelliteNetworkSyncPacket();
+        read.fromBytes(buf);
+
+        assertEquals(List.of(progress), read.asteroidScans());
+        assertEquals(List.of(completion), read.asteroidScanCompletions());
+    }
+
+    @Test
     void handlerStoresSnapshotOnClient() {
         SatelliteNetworkClientState.clear();
         SatelliteNetworkState state = new SatelliteNetworkState(
@@ -109,6 +143,29 @@ final class SatelliteNetworkSyncPacketTest {
             .onMessage(new SatelliteNetworkSyncPacket(state, List.of(snapshot)), null);
 
         assertEquals(List.of(snapshot), AsteroidFieldClientState.snapshots());
+        AsteroidFieldClientState.clear();
+    }
+
+    @Test
+    void handlerStoresAsteroidScanSnapshotsOnClient() {
+        AsteroidFieldClientState.clear();
+        SatelliteNetworkState state = SatelliteNetworkState.empty(new UUID(7L, 10L), 16);
+        AsteroidSatelliteScanSnapshot progress = new AsteroidSatelliteScanSnapshot(
+            new CelestialAsset.ID(new UUID(3L, 4L)),
+            CelestialObjectId.FROZEN_BELT,
+            new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 2),
+            AsteroidSatelliteScanPass.DETECTION,
+            700);
+        AsteroidSatelliteScanCompletionSnapshot completion = new AsteroidSatelliteScanCompletionSnapshot(
+            CelestialObjectId.FROZEN_BELT,
+            new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0),
+            1);
+
+        new SatelliteNetworkSyncPacket.Handler()
+            .onMessage(new SatelliteNetworkSyncPacket(state, List.of(), List.of(progress), List.of(completion)), null);
+
+        assertEquals(List.of(progress), AsteroidFieldClientState.scanSnapshots());
+        assertEquals(List.of(completion), AsteroidFieldClientState.scanCompletions());
         AsteroidFieldClientState.clear();
     }
 

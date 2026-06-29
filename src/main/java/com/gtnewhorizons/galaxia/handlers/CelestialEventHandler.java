@@ -140,7 +140,9 @@ public class CelestialEventHandler {
             Galaxia.GALAXIA_NETWORK.sendTo(
                 new SatelliteNetworkSyncPacket(
                     satelliteNetwork,
-                    SatelliteNetworkService.asteroidKnowledgeSnapshots(playerTeam)),
+                    SatelliteNetworkService.asteroidKnowledgeSnapshots(playerTeam),
+                    SatelliteNetworkService.asteroidScanSnapshots(playerTeam),
+                    SatelliteNetworkService.asteroidScanCompletionSnapshots(playerTeam)),
                 player);
         }
     }
