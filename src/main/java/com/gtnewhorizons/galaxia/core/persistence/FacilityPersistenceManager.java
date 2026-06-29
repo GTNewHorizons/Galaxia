@@ -356,7 +356,7 @@ public final class FacilityPersistenceManager {
         AssetJson json = new AssetJson();
         json.teamId = String.valueOf(CelestialAssetStore.getTeamId(asset.assetId));
         json.assetId = asset.assetId;
-        json.celestialObjectId = encodeCelestialObjectKey(asset.celestialObjectId);
+        json.celestialObjectKey = encodeCelestialObjectKey(asset.celestialObjectId);
         json.displayName = asset.displayName();
         json.kind = asset.kind.name();
         json.location = asset.location.name();
@@ -407,13 +407,12 @@ public final class FacilityPersistenceManager {
     CelestialAsset decodeAsset(AssetJson json) {
         if (json == null || json.teamId == null
             || json.assetId == null
-            || json.celestialObjectId == null
             || json.kind == null
             || json.location == null
             || json.status == null) {
             return null;
         }
-        CelestialObjectKey objectId = decodeCelestialObjectKey(json.celestialObjectId);
+        CelestialObjectKey objectId = decodeCelestialObjectKey(json);
         if (objectId == null) return null;
         CelestialAsset.Kind kind = safeValueOf(CelestialAsset.Kind.class, json.kind);
         Buildable.Status status = safeValueOf(Buildable.Status.class, json.status);
@@ -485,30 +484,67 @@ public final class FacilityPersistenceManager {
         return asset;
     }
 
-    private static String encodeCelestialObjectKey(CelestialObjectKey key) {
+    private static CelestialObjectKeyJson encodeCelestialObjectKey(CelestialObjectKey key) {
         if (key == null) return null;
-        if (key.isRegistered()) return key.registeredBodyId()
-            .name();
+        CelestialObjectKeyJson json = new CelestialObjectKeyJson();
+        // New saves persist structured keys so generated minor bodies do not have
+        // to be packed into a string that future code must parse heuristically.
+        if (key.isRegistered()) {
+            json.kind = "registered";
+            json.registeredBodyId = key.registeredBodyId()
+                .name();
+            return json;
+        }
         MinorCelestialBodyId minorId = key.minorBodyId();
-        return "minor:" + minorId.parentBeltId()
-            .name() + ":" + minorId.index();
+        json.kind = "minor";
+        json.parentBeltId = minorId.parentBeltId()
+            .name();
+        json.index = minorId.index();
+        return json;
     }
 
-    private static CelestialObjectKey decodeCelestialObjectKey(String value) {
-        if (value == null || value.isBlank()) return null;
-        if (value.startsWith("minor:")) {
-            String[] parts = value.split(":", -1);
-            if (parts.length != 3) return null;
-            CelestialObjectId parentBeltId = CelestialObjectId.fromString(parts[1]);
-            if (parentBeltId == null) return null;
+    private static CelestialObjectKey decodeCelestialObjectKey(AssetJson json) {
+        if (json.celestialObjectKey != null) return decodeStructuredCelestialObjectKey(json.celestialObjectKey);
+        throw invalidCelestialKey("celestialObjectKey", null, "structured celestial object key is required");
+    }
+
+    private static CelestialObjectKey decodeStructuredCelestialObjectKey(CelestialObjectKeyJson json) {
+        if (json.kind == null || json.kind.isBlank()) {
+            throw invalidCelestialKey("celestialObjectKey.kind", String.valueOf(json.kind), "kind is required");
+        }
+        if ("registered".equals(json.kind)) {
+            CelestialObjectId registeredId = CelestialObjectId.fromString(json.registeredBodyId);
+            if (registeredId == null) {
+                throw invalidCelestialKey(
+                    "celestialObjectKey.registeredBodyId",
+                    String.valueOf(json.registeredBodyId),
+                    "invalid registeredBodyId");
+            }
+            return CelestialObjectKey.registered(registeredId);
+        }
+        if ("minor".equals(json.kind)) {
+            CelestialObjectId parentBeltId = CelestialObjectId.fromString(json.parentBeltId);
+            if (parentBeltId == null) {
+                throw invalidCelestialKey(
+                    "celestialObjectKey.parentBeltId",
+                    String.valueOf(json.parentBeltId),
+                    "invalid parentBeltId");
+            }
+            if (json.index == null) {
+                throw invalidCelestialKey("celestialObjectKey.index", "null", "index is required");
+            }
             try {
-                return CelestialObjectKey.minorBody(new MinorCelestialBodyId(parentBeltId, Integer.parseInt(parts[2])));
-            } catch (IllegalArgumentException ignored) {
-                return null;
+                return CelestialObjectKey.minorBody(new MinorCelestialBodyId(parentBeltId, json.index));
+            } catch (IllegalArgumentException ex) {
+                throw invalidCelestialKey("celestialObjectKey.index", String.valueOf(json.index), ex.getMessage());
             }
         }
-        CelestialObjectId registeredId = CelestialObjectId.fromString(value);
-        return registeredId == null ? null : CelestialObjectKey.registered(registeredId);
+        throw invalidCelestialKey("celestialObjectKey.kind", json.kind, "unknown key kind");
+    }
+
+    private static IllegalArgumentException invalidCelestialKey(String fieldName, String value, String reason) {
+        return new IllegalArgumentException(
+            "[PERSIST] Invalid persisted celestial key field " + fieldName + "='" + value + "': " + reason);
     }
 
     FacilityStateJson encodeFacilityState(AutomatedFacility state) {
@@ -1105,7 +1141,7 @@ public final class FacilityPersistenceManager {
 
         CelestialAsset.ID assetId;
         String teamId;
-        String celestialObjectId;
+        CelestialObjectKeyJson celestialObjectKey;
         String systemId;
         String planetaryAnchorBodyId;
         String displayName;
@@ -1123,6 +1159,14 @@ public final class FacilityPersistenceManager {
         Map<String, BoundsJson> fluidsBounds;
         Map<String, LogisticsConfigJson> logisticsConfig;
         Map<Boolean, List<String>> filters;
+    }
+
+    static final class CelestialObjectKeyJson {
+
+        String kind;
+        String registeredBodyId;
+        String parentBeltId;
+        Integer index;
     }
 
     static final class BoundsJson {
