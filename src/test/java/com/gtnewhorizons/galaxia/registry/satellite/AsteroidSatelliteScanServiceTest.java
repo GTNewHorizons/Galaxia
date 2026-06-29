@@ -160,6 +160,38 @@ final class AsteroidSatelliteScanServiceTest {
     }
 
     @Test
+    void scanScopeDoesNotAdvanceAsteroidsOutsideAnchorRadius() {
+        AsteroidFieldProfile profile = profile(3, 0.0);
+        AsteroidFieldKnowledgeStore knowledgeStore = new AsteroidFieldKnowledgeStore();
+        AsteroidSatelliteScanService service = new AsteroidSatelliteScanService(
+            knowledgeStore,
+            bodyId -> bodyId == BELT ? Optional.of(profile) : Optional.empty());
+        AsteroidFieldNode anchor = AsteroidFieldResolver.resolveNode(BELT, profile, 0);
+        CelestialAsset satellite = prospectingSatellite(anchor.id());
+
+        service.tick(
+            TEAM,
+            List.of(satellite),
+            AsteroidSatelliteScanPass.DETECTION.durationTicks() + AsteroidSatelliteScanPass.SIGNATURE.durationTicks()
+                + AsteroidSatelliteScanPass.PROFILE.durationTicks());
+
+        AsteroidFieldKnowledge knowledge = knowledgeStore.get(TEAM, BELT)
+            .orElseThrow();
+        assertEquals(
+            AsteroidOreKnowledgeState.PROFILE,
+            knowledge.entryFor(anchor.id())
+                .oreKnowledgeState());
+        for (AsteroidFieldNode node : knowledge.nodes()) {
+            if (node.id()
+                .equals(anchor.id())) continue;
+            assertEquals(
+                AsteroidDetectionState.HIDDEN,
+                knowledge.entryFor(node.id())
+                    .detectionState());
+        }
+    }
+
+    @Test
     void restoredProgressContinuesPartiallyCompletedScan() {
         AsteroidFieldProfile profile = profile();
         AsteroidFieldKnowledgeStore firstKnowledgeStore = new AsteroidFieldKnowledgeStore();
@@ -230,11 +262,16 @@ final class AsteroidSatelliteScanServiceTest {
     }
 
     private static AsteroidFieldProfile profile(int smallCount) {
+        return profile(smallCount, 1000.0);
+    }
+
+    private static AsteroidFieldProfile profile(int smallCount, double satelliteScanRadius) {
         return AsteroidFieldProfile.builder()
             .seedSalt(0xA57E201DL)
             .generationVersion(1)
             .sizeCounts(0, 0, smallCount)
             .radialBand(8.0, 10.0)
+            .satelliteScanRadius(satelliteScanRadius)
             .oreProfile(new AsteroidOreProfile("metallic", 1.0, List.of("ore.mix.iron")))
             .build();
     }

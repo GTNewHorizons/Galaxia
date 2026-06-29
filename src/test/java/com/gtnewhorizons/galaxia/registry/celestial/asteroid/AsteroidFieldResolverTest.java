@@ -107,6 +107,7 @@ final class AsteroidFieldResolverTest {
             .generationVersion(generationVersion)
             .sizeCounts(1, 2, 3)
             .radialBand(10.0, 20.0)
+            .satelliteScanRadius(1000.0)
             .oreProfile(new AsteroidOreProfile("metallic", 2.0, List.of("galaxia:iron")))
             .oreProfile(new AsteroidOreProfile("icy", 1.0, List.of("galaxia:ice")))
             .build();

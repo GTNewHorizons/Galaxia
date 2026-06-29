@@ -17,13 +17,21 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitModel;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanOrder;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanScope;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 
 public final class AsteroidSatelliteScanService {
 
-    private static final Predicate<AsteroidFieldNode> WHOLE_FIELD = node -> true;
+    private static final OrbitalMechanics.OrbitalState LOCAL_BELT_REFERENCE = new OrbitalMechanics.OrbitalState(
+        1.0,
+        0.0,
+        0.0,
+        0.0);
 
     private final AsteroidFieldKnowledgeStore knowledgeStore;
     private final Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver;
@@ -170,6 +178,7 @@ public final class AsteroidSatelliteScanService {
         }
 
         AsteroidFieldKnowledge knowledge = knowledgeStore.getOrCreate(teamId, beltId, profile.get());
+        Predicate<AsteroidFieldNode> scope = scanScope(beltId, profile.get(), anchorId);
         CompletionKey completionKey = new CompletionKey(
             teamId,
             beltId,
@@ -184,7 +193,7 @@ public final class AsteroidSatelliteScanService {
         List<ScanResult> results = new ArrayList<>();
         int remainingTicks = elapsedTicks;
         while (remainingTicks > 0) {
-            Optional<ScanWork> work = nextWork(knowledge);
+            Optional<ScanWork> work = nextWork(knowledge, scope);
             if (work.isEmpty()) {
                 progressBySatellite.remove(key);
                 completions.add(completionKey);
@@ -200,7 +209,7 @@ public final class AsteroidSatelliteScanService {
             }
 
             remainingTicks -= requiredTicks;
-            completeWork(knowledge, work.get());
+            completeWork(knowledge, work.get(), scope);
             progressBySatellite.remove(key);
             results.add(
                 new ScanResult(
@@ -209,7 +218,7 @@ public final class AsteroidSatelliteScanService {
                         .asteroidId(),
                     work.get()
                         .pass()));
-            if (nextWork(knowledge).isEmpty()) {
+            if (nextWork(knowledge, scope).isEmpty()) {
                 completions.add(completionKey);
                 break;
             }
@@ -223,27 +232,37 @@ public final class AsteroidSatelliteScanService {
         return current;
     }
 
-    private static Optional<ScanWork> nextWork(AsteroidFieldKnowledge knowledge) {
+    private static Predicate<AsteroidFieldNode> scanScope(CelestialObjectId beltId, AsteroidFieldProfile profile,
+        MinorCelestialBodyId anchorId) {
+        AsteroidFieldNode anchor = AsteroidFieldResolver.resolveNode(beltId, profile, anchorId.index());
+        OrbitalMechanics.OrbitalState center = AsteroidFieldOrbitModel
+            .resolveWorldState(profile, anchor, LOCAL_BELT_REFERENCE);
+        return AsteroidFieldScanScope
+            .withinRadius(profile, LOCAL_BELT_REFERENCE, center, profile.satelliteScanRadius());
+    }
+
+    private static Optional<ScanWork> nextWork(AsteroidFieldKnowledge knowledge, Predicate<AsteroidFieldNode> scope) {
         Optional<AsteroidFieldNode> detection = knowledge
-            .nextDetectionCandidate(WHOLE_FIELD, AsteroidFieldScanOrder.innerToOuter());
+            .nextDetectionCandidate(scope, AsteroidFieldScanOrder.innerToOuter());
         if (detection.isPresent())
             return detection.map(node -> ScanWork.from(AsteroidSatelliteScanPass.DETECTION, node));
 
         Optional<AsteroidFieldNode> signature = knowledge
-            .nextSignatureCandidate(WHOLE_FIELD, AsteroidFieldScanOrder.innerToOuter());
+            .nextSignatureCandidate(scope, AsteroidFieldScanOrder.innerToOuter());
         if (signature.isPresent())
             return signature.map(node -> ScanWork.from(AsteroidSatelliteScanPass.SIGNATURE, node));
 
-        return knowledge.nextProfileCandidate(WHOLE_FIELD, AsteroidFieldScanOrder.innerToOuter())
+        return knowledge.nextProfileCandidate(scope, AsteroidFieldScanOrder.innerToOuter())
             .map(node -> ScanWork.from(AsteroidSatelliteScanPass.PROFILE, node));
     }
 
-    private static void completeWork(AsteroidFieldKnowledge knowledge, ScanWork work) {
+    private static void completeWork(AsteroidFieldKnowledge knowledge, ScanWork work,
+        Predicate<AsteroidFieldNode> scope) {
         if (work.pass() == AsteroidSatelliteScanPass.DETECTION) {
             knowledge.detect(work.asteroidId());
             return;
         }
-        knowledge.prospect(work.asteroidId(), WHOLE_FIELD);
+        knowledge.prospect(work.asteroidId(), scope);
     }
 
     public record ScanResult(CelestialObjectId beltId, MinorCelestialBodyId asteroidId,

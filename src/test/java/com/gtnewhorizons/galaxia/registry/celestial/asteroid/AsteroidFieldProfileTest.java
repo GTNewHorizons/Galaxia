@@ -18,6 +18,7 @@ final class AsteroidFieldProfileTest {
             .generationVersion(4)
             .sizeCounts(1, 2, 3)
             .radialBand(10.0, 20.0)
+            .satelliteScanRadius(1000.0)
             .oreProfile(metallic)
             .build();
 
@@ -29,6 +30,7 @@ final class AsteroidFieldProfileTest {
         assertEquals(3, profile.smallCount());
         assertEquals(10.0, profile.innerOrbitalRadius());
         assertEquals(20.0, profile.outerOrbitalRadius());
+        assertEquals(1000.0, profile.satelliteScanRadius());
         assertEquals(List.of(metallic), profile.oreProfiles());
     }
 
@@ -53,6 +55,10 @@ final class AsteroidFieldProfileTest {
             () -> AsteroidFieldProfile.builder()
                 .radialBand(2.0, 1.0));
         assertThrows(
+            IllegalArgumentException.class,
+            () -> AsteroidFieldProfile.builder()
+                .satelliteScanRadius(-1.0));
+        assertThrows(
             NullPointerException.class,
             () -> AsteroidFieldProfile.builder()
                 .oreProfile(null));
@@ -61,6 +67,7 @@ final class AsteroidFieldProfileTest {
             () -> AsteroidFieldProfile.builder()
                 .sizeCounts(0, 0, 0)
                 .radialBand(1.0, 2.0)
+                .satelliteScanRadius(1000.0)
                 .oreProfile(metallic)
                 .build());
         assertThrows(
@@ -68,6 +75,7 @@ final class AsteroidFieldProfileTest {
             () -> AsteroidFieldProfile.builder()
                 .sizeCounts(1, 0, 0)
                 .radialBand(1.0, 2.0)
+                .satelliteScanRadius(1000.0)
                 .build());
     }
 }

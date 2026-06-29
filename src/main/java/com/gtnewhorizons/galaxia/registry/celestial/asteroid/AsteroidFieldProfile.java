@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Objects;
 
 public record AsteroidFieldProfile(long seedSalt, int generationVersion, int totalNodes, int largeCount,
-    int mediumCount, int smallCount, double innerOrbitalRadius, double outerOrbitalRadius,
+    int mediumCount, int smallCount, double innerOrbitalRadius, double outerOrbitalRadius, double satelliteScanRadius,
     List<AsteroidOreProfile> oreProfiles) {
 
     public AsteroidFieldProfile {
@@ -26,6 +26,7 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
         if (outerOrbitalRadius <= innerOrbitalRadius) {
             throw new IllegalArgumentException("outerOrbitalRadius must be greater than innerOrbitalRadius");
         }
+        satelliteScanRadius = requireNonNegativeFinite("satelliteScanRadius", satelliteScanRadius);
         if (oreProfiles == null || oreProfiles.isEmpty()) {
             throw new IllegalStateException("Asteroid field profile requires at least one ore profile");
         }
@@ -61,6 +62,13 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
         return value;
     }
 
+    private static double requireNonNegativeFinite(String name, double value) {
+        if (!Double.isFinite(value) || value < 0.0) {
+            throw new IllegalArgumentException(name + " must be finite and non-negative");
+        }
+        return value;
+    }
+
     public static final class Builder {
 
         private long seedSalt;
@@ -70,6 +78,7 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
         private int smallCount;
         private double innerOrbitalRadius;
         private double outerOrbitalRadius;
+        private double satelliteScanRadius = Double.NaN;
         private final List<AsteroidOreProfile> oreProfiles = new ArrayList<>();
 
         public Builder seedSalt(long value) {
@@ -98,6 +107,11 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
             return this;
         }
 
+        public Builder satelliteScanRadius(double value) {
+            this.satelliteScanRadius = requireNonNegativeFinite("satelliteScanRadius", value);
+            return this;
+        }
+
         public Builder oreProfile(AsteroidOreProfile value) {
             this.oreProfiles.add(Objects.requireNonNull(value, "ore profile cannot be null"));
             return this;
@@ -114,6 +128,7 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
                 smallCount,
                 innerOrbitalRadius,
                 outerOrbitalRadius,
+                satelliteScanRadius,
                 oreProfiles);
         }
     }

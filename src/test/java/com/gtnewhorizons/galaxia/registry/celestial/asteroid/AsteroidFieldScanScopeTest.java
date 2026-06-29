@@ -42,6 +42,7 @@ final class AsteroidFieldScanScopeTest {
         return AsteroidFieldProfile.builder()
             .sizeCounts(1, 0, 0)
             .radialBand(10.0, 20.0)
+            .satelliteScanRadius(1000.0)
             .oreProfile(new AsteroidOreProfile("test", 1.0, List.of("test_vein")))
             .build();
     }

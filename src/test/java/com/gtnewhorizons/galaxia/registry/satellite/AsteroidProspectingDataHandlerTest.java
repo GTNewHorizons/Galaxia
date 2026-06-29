@@ -98,6 +98,7 @@ final class AsteroidProspectingDataHandlerTest {
             .generationVersion(1)
             .sizeCounts(0, 0, 1)
             .radialBand(10.0, 12.0)
+            .satelliteScanRadius(1000.0)
             .oreProfile(new AsteroidOreProfile("metallic", 1.0, List.of("ore.mix.iron")))
             .build();
     }

@@ -51,6 +51,7 @@ final class AsteroidFieldOrbitModelTest {
         return AsteroidFieldProfile.builder()
             .sizeCounts(1, 0, 0)
             .radialBand(innerRadius, outerRadius)
+            .satelliteScanRadius(1000.0)
             .oreProfile(new AsteroidOreProfile("test", 1.0, List.of("test_vein")))
             .build();
     }
