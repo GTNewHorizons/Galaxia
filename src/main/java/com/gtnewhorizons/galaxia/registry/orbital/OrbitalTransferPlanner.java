@@ -96,8 +96,7 @@ public final class OrbitalTransferPlanner {
         }
 
         public boolean hasTrajectoryGeometry() {
-            return attractorBodyId != null
-                && Double.isFinite(anchorX)
+            return attractorBodyId != null && Double.isFinite(anchorX)
                 && Double.isFinite(anchorY)
                 && Double.isFinite(r1x)
                 && Double.isFinite(r1y)

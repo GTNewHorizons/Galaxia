@@ -256,7 +256,10 @@ public final class GalaxiaCelestialAPI {
     public static boolean sharesPlanetaryAnchor(CelestialObject root, CelestialObjectId bodyIdA,
         CelestialObjectId bodyIdB) {
         return bodyIdA != null && bodyIdB != null
-            && sharesPlanetaryAnchor(root, CelestialObjectKey.registered(bodyIdA), CelestialObjectKey.registered(bodyIdB));
+            && sharesPlanetaryAnchor(
+                root,
+                CelestialObjectKey.registered(bodyIdA),
+                CelestialObjectKey.registered(bodyIdB));
     }
 
     public static boolean sharesPlanetaryAnchor(CelestialObject root, CelestialObjectKey bodyIdA,

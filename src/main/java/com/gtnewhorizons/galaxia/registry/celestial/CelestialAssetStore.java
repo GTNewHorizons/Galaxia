@@ -370,7 +370,8 @@ public final class CelestialAssetStore {
         return setSatelliteCount(teamId, bodyId, kind, current + amount);
     }
 
-    public List<CelestialAsset.ID> addSatellites(UUID teamId, CelestialObjectId bodyId, SatelliteKind kind, int amount) {
+    public List<CelestialAsset.ID> addSatellites(UUID teamId, CelestialObjectId bodyId, SatelliteKind kind,
+        int amount) {
         return addSatellites(teamId, CelestialObjectKey.registered(bodyId), kind, amount);
     }
 

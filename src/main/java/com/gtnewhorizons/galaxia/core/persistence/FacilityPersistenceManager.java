@@ -38,6 +38,8 @@ import com.gtnewhorizons.galaxia.core.network.PacketUtil;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
@@ -354,7 +356,7 @@ public final class FacilityPersistenceManager {
         AssetJson json = new AssetJson();
         json.teamId = String.valueOf(CelestialAssetStore.getTeamId(asset.assetId));
         json.assetId = asset.assetId;
-        json.celestialObjectId = String.valueOf(asset.celestialObjectId);
+        json.celestialObjectId = encodeCelestialObjectKey(asset.celestialObjectId);
         json.displayName = asset.displayName();
         json.kind = asset.kind.name();
         json.location = asset.location.name();
@@ -411,7 +413,7 @@ public final class FacilityPersistenceManager {
             || json.status == null) {
             return null;
         }
-        CelestialObjectId objectId = CelestialObjectId.fromString(json.celestialObjectId);
+        CelestialObjectKey objectId = decodeCelestialObjectKey(json.celestialObjectId);
         if (objectId == null) return null;
         CelestialAsset.Kind kind = safeValueOf(CelestialAsset.Kind.class, json.kind);
         Buildable.Status status = safeValueOf(Buildable.Status.class, json.status);
@@ -481,6 +483,32 @@ public final class FacilityPersistenceManager {
         }
 
         return asset;
+    }
+
+    private static String encodeCelestialObjectKey(CelestialObjectKey key) {
+        if (key == null) return null;
+        if (key.isRegistered()) return key.registeredBodyId()
+            .name();
+        MinorCelestialBodyId minorId = key.minorBodyId();
+        return "minor:" + minorId.parentBeltId()
+            .name() + ":" + minorId.index();
+    }
+
+    private static CelestialObjectKey decodeCelestialObjectKey(String value) {
+        if (value == null || value.isBlank()) return null;
+        if (value.startsWith("minor:")) {
+            String[] parts = value.split(":", -1);
+            if (parts.length != 3) return null;
+            CelestialObjectId parentBeltId = CelestialObjectId.fromString(parts[1]);
+            if (parentBeltId == null) return null;
+            try {
+                return CelestialObjectKey.minorBody(new MinorCelestialBodyId(parentBeltId, Integer.parseInt(parts[2])));
+            } catch (IllegalArgumentException ignored) {
+                return null;
+            }
+        }
+        CelestialObjectId registeredId = CelestialObjectId.fromString(value);
+        return registeredId == null ? null : CelestialObjectKey.registered(registeredId);
     }
 
     FacilityStateJson encodeFacilityState(AutomatedFacility state) {

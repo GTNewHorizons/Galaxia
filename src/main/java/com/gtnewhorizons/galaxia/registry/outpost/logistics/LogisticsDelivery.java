@@ -211,8 +211,8 @@ public class LogisticsDelivery {
 
     public static LogisticsDelivery createWithTrajectory(CelestialAsset.ID fromAssetId, CelestialAsset.ID toAssetId,
         ItemStackWrapper resourceId, long amount, int deliveryTicks, LogisticSignal.Scope scope,
-        CelestialObjectKey fromBodyId, CelestialObjectKey toBodyId, double departureOrbitalTime, double tofOrbitalSeconds,
-        OrbitalTransferPlanner.TransferRoute transferRoute) {
+        CelestialObjectKey fromBodyId, CelestialObjectKey toBodyId, double departureOrbitalTime,
+        double tofOrbitalSeconds, OrbitalTransferPlanner.TransferRoute transferRoute) {
         return createWithTrajectory(
             ID.create(),
             fromAssetId,

@@ -169,7 +169,8 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
             .displayName();
         return key.minorBodyId()
             .parentBeltId()
-            .displayName() + " " + (key.minorBodyId()
+            .displayName() + " "
+            + (key.minorBodyId()
                 .index() + 1);
     }
 

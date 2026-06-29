@@ -237,8 +237,9 @@ public final class SatelliteNetworkService {
         OrbitalMechanics.OrbitalState state = OrbitalMechanics.resolveWorldState(root, body, orbitalTime);
         return new SatelliteNetworkGraph.Node(
             body.requireRegisteredId(),
-            body.parentId() == null ? null : body.parentId()
-                .requireRegisteredBodyId(),
+            body.parentId() == null ? null
+                : body.parentId()
+                    .requireRegisteredBodyId(),
             orbitalOrder(body),
             state.x(),
             state.y(),

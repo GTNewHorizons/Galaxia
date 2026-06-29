@@ -36,6 +36,8 @@ import com.gtnewhorizons.galaxia.core.network.PacketUtil;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
@@ -142,6 +144,22 @@ final class FacilityPersistenceManagerTest {
                 .size());
         assertLayoutEquals(station.stationLayout(), loaded.stationLayout());
         assertEquals(GSON.toJson(json.facility), GSON.toJson(manager.encodeFacilityState(loaded)));
+    }
+
+    @Test
+    void assetJsonRoundTripsMinorCelestialObjectKey() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        CelestialObjectKey key = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 3));
+        CelestialAsset asset = CelestialAsset
+            .create(key, CelestialAsset.Kind.AUTOMATED_OUTPOST, Buildable.Status.OPERATIONAL);
+
+        FacilityPersistenceManager.AssetJson encoded = manager.encodeAsset(asset);
+        CelestialAsset decoded = manager.decodeAsset(encoded);
+
+        assertEquals("minor:FROZEN_BELT:3", encoded.celestialObjectId);
+        assertNotNull(decoded);
+        assertEquals(key, decoded.celestialObjectId);
     }
 
     @Test
