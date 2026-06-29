@@ -266,6 +266,7 @@ galaxia.gui.orbital.click_mode.hierarchy=Hierarchy
 galaxia.gui.orbital.click_mode.follow=Follow
 galaxia.gui.orbital.click_mode.tooltip=Changes planet click mode between opening hierarchy and following the selected planet
 galaxia.gui.orbital.asset.create.unsupported_body=%s cannot be created here
+galaxia.gui.orbital.context_menu.manage_assets=Manage Assets
 galaxia.gui.orbital.pinned_info.label.name=Name
 galaxia.gui.orbital.pinned_info.label.type=Type
 galaxia.gui.orbital.pinned_info.label.landable=Landable
@@ -582,6 +583,10 @@ galaxia.asset_manager.satellites.confirm_delete=Confirm
 #### Satellites
 galaxia.satellite.kind.communication=Communication Satellites
 galaxia.satellite.kind.prospecting=Prospecting Satellites
+galaxia.satellite.action.add_communication=Add Communication Satellite
+galaxia.satellite.action.delete_communication=Delete Communication Satellites
+galaxia.satellite.action.add_prospecting=Add Prospecting Satellite
+galaxia.satellite.action.delete_prospecting=Delete Prospecting Satellites
 galaxia.satellite.tooltip.count=%s: %d
 
 #### Machine GUI
