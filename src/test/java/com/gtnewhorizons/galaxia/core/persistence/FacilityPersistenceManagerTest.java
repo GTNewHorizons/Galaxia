@@ -70,6 +70,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
+import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanCompletionSnapshot;
+import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanPass;
+import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 import com.gtnewhorizons.galaxia.testing.TestFluidStacks;
 
@@ -144,6 +148,34 @@ final class FacilityPersistenceManagerTest {
                 .size());
         assertLayoutEquals(station.stationLayout(), loaded.stationLayout());
         assertEquals(GSON.toJson(json.facility), GSON.toJson(manager.encodeFacilityState(loaded)));
+    }
+
+    @Test
+    void asteroidScanProgressAndCompletionsRoundTripThroughSaveFile(@TempDir Path tempDir) {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        UUID teamId = UUID.fromString("00000000-0000-0000-0000-000000000271");
+        MinorCelestialBodyId progressAsteroid = new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 1);
+        MinorCelestialBodyId completedAsteroid = new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 2);
+        AsteroidSatelliteScanSnapshot progress = new AsteroidSatelliteScanSnapshot(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.FROZEN_BELT,
+            progressAsteroid,
+            AsteroidSatelliteScanPass.SIGNATURE,
+            600);
+        AsteroidSatelliteScanCompletionSnapshot completion = new AsteroidSatelliteScanCompletionSnapshot(
+            CelestialObjectId.FROZEN_BELT,
+            completedAsteroid,
+            1);
+        SatelliteNetworkService.restoreAsteroidScans(teamId, List.of(progress));
+        SatelliteNetworkService.restoreAsteroidScanCompletions(teamId, List.of(completion));
+
+        manager.saveToSaveDirectory(tempDir.toFile());
+        SatelliteNetworkService.clear();
+
+        manager.loadFromSaveDirectory(tempDir.toFile());
+
+        assertEquals(List.of(progress), SatelliteNetworkService.asteroidScanSnapshots(teamId));
+        assertEquals(List.of(completion), SatelliteNetworkService.asteroidScanCompletionSnapshots(teamId));
     }
 
     @Test
