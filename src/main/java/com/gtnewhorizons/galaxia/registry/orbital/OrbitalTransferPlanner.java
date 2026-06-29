@@ -2,7 +2,7 @@ package com.gtnewhorizons.galaxia.registry.orbital;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 /**
  * Shared (non-client) utilities for interplanetary trajectory planning.
@@ -66,7 +66,7 @@ public final class OrbitalTransferPlanner {
      */
 
     public record TransferRoute(double tofOsu, double totalDv, double departureDv, double captureDv,
-        CelestialObjectId attractorBodyId, double anchorX, double anchorY, double r1x, double r1y,
+        CelestialObjectKey attractorBodyId, double anchorX, double anchorY, double r1x, double r1y,
         double departureVelocityX, double departureVelocityY, boolean prograde) {
 
         public TransferRoute(double tofOsu, double totalDv, double departureDv) {
@@ -75,7 +75,7 @@ public final class OrbitalTransferPlanner {
                 totalDv,
                 departureDv,
                 Math.max(0.0, totalDv - departureDv),
-                CelestialObjectId.INVALID,
+                null,
                 Double.NaN,
                 Double.NaN,
                 Double.NaN,
@@ -96,7 +96,7 @@ public final class OrbitalTransferPlanner {
         }
 
         public boolean hasTrajectoryGeometry() {
-            return attractorBodyId != null && attractorBodyId != CelestialObjectId.INVALID
+            return attractorBodyId != null
                 && Double.isFinite(anchorX)
                 && Double.isFinite(anchorY)
                 && Double.isFinite(r1x)
@@ -295,7 +295,7 @@ public final class OrbitalTransferPlanner {
             tof);
     }
 
-    static TransferRoute solveFixedRoute(CelestialObjectId attractorBodyId, double mu, double minPeriapsis,
+    static TransferRoute solveFixedRoute(CelestialObjectKey attractorBodyId, double mu, double minPeriapsis,
         double anchorX, double anchorY, double r1x, double r1y, double vsrcX, double vsrcY, double r2x, double r2y,
         double vdstX, double vdstY, double tof) {
         if (mu <= 0.0 || tof <= 0.0 || isDegenerateTransferGeometry(r1x, r1y, r2x, r2y)) return null;
@@ -322,7 +322,7 @@ public final class OrbitalTransferPlanner {
             best.totalDv(),
             best.depDv(),
             Math.max(0.0, best.totalDv() - best.depDv()),
-            attractorBodyId == null ? CelestialObjectId.INVALID : attractorBodyId,
+            attractorBodyId,
             anchorX,
             anchorY,
             r1x,

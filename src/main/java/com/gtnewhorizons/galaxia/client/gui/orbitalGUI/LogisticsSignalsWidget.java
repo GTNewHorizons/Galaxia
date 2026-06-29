@@ -28,6 +28,7 @@ import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
@@ -319,10 +320,7 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
                     .equals(outpost.systemId);
             case PLANETARY: {
                 CelestialObject viewAnchor = GalaxiaCelestialAPI.findPlanetaryAnchor(galaxyRoot, viewRoot);
-                String viewAnchorId = viewAnchor != null ? viewAnchor.id()
-                    .getId()
-                    : viewRoot.id()
-                        .getId();
+                CelestialObjectKey viewAnchorId = viewAnchor != null ? viewAnchor.id() : viewRoot.id();
                 return outpost.planetaryAnchorBodyId != null && outpost.planetaryAnchorBodyId.equals(viewAnchorId);
             }
             default:
@@ -330,7 +328,7 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         }
     }
 
-    private boolean isBodyIdInScope(CelestialObjectId bodyId, ViewScope scope, CelestialObject viewRoot) {
+    private boolean isBodyIdInScope(CelestialObjectKey bodyId, ViewScope scope, CelestialObject viewRoot) {
         if (bodyId == null) return false;
         switch (scope) {
             case GALACTIC:
@@ -361,7 +359,7 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
                 break;
             case PLANETARY: {
                 CelestialObject anchor = GalaxiaCelestialAPI.findPlanetaryAnchor(galaxyRoot, viewRoot);
-                CelestialObjectId anchorId = anchor != null ? anchor.id() : viewRoot.id();
+                CelestialObjectKey anchorId = anchor != null ? anchor.id() : viewRoot.id();
                 signalData = CelestialClient.clientSignalsForPlanet(anchorId);
                 break;
             }

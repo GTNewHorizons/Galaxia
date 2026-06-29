@@ -12,7 +12,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
@@ -132,9 +132,9 @@ public final class LogisticStore {
         for (ItemStackWrapper r : currentSignals.keySet()) {
             if (!allResources.contains(r)) allResources.add(r);
         }
-        CelestialObjectId bodyId = asset.celestialObjectId;
-        CelestialObjectId systemId = asset.systemId;
-        CelestialObjectId planetaryAnchorBodyId = asset.planetaryAnchorBodyId;
+        CelestialObjectKey bodyId = asset.celestialObjectId;
+        CelestialObjectKey systemId = asset.systemId;
+        CelestialObjectKey planetaryAnchorBodyId = asset.planetaryAnchorBodyId;
 
         for (ItemStackWrapper resource : allResources) {
             long stock = snapshot.getOrDefault(resource, 0L);
@@ -186,27 +186,27 @@ public final class LogisticStore {
         }
     }
 
-    public static Map<CelestialObjectId, List<LogisticSignal>> allSignalsForScope(LogisticSignal.Scope scope) {
-        Map<CelestialObjectId, List<LogisticSignal>> result = new LinkedHashMap<>();
+    public static Map<CelestialObjectKey, List<LogisticSignal>> allSignalsForScope(LogisticSignal.Scope scope) {
+        Map<CelestialObjectKey, List<LogisticSignal>> result = new LinkedHashMap<>();
 
         for (Map<ItemStackWrapper, LogisticSignal> outpostMap : outpostSignals.values()) {
             for (LogisticSignal signal : outpostMap.values()) {
                 if (signal.scope() == scope) {
-                    CelestialObjectId scopeKey = scopeKeyFor(signal);
+                    CelestialObjectKey scopeKey = scopeKeyFor(signal);
                     result.computeIfAbsent(scopeKey, k -> new ArrayList<>())
                         .add(signal);
                 }
             }
         }
 
-        Map<CelestialObjectId, List<LogisticSignal>> safe = new LinkedHashMap<>(result.size());
-        for (Map.Entry<CelestialObjectId, List<LogisticSignal>> e : result.entrySet()) {
+        Map<CelestialObjectKey, List<LogisticSignal>> safe = new LinkedHashMap<>(result.size());
+        for (Map.Entry<CelestialObjectKey, List<LogisticSignal>> e : result.entrySet()) {
             safe.put(e.getKey(), Collections.unmodifiableList(e.getValue()));
         }
         return Collections.unmodifiableMap(safe);
     }
 
-    private static CelestialObjectId scopeKeyFor(LogisticSignal signal) {
+    private static CelestialObjectKey scopeKeyFor(LogisticSignal signal) {
         return switch (signal.scope()) {
             case PLANETARY -> signal.planetaryAnchorBodyId();
             case SYSTEM -> signal.systemId();

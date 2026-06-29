@@ -15,7 +15,7 @@ public enum SystemAssetSort {
 
     public Comparator<CelestialAsset> comparator() {
         return switch (this) {
-            case BY_BODY -> Comparator.comparing((CelestialAsset a) -> a.celestialObjectId.name())
+            case BY_BODY -> Comparator.comparing((CelestialAsset a) -> a.celestialObjectId.toString())
                 .thenComparing(CelestialAsset::displayName);
             case BY_KIND -> Comparator.comparing((CelestialAsset a) -> a.kind.ordinal())
                 .thenComparing(CelestialAsset::displayName);

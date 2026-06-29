@@ -34,8 +34,8 @@ public final class CelestialRegistry {
 
     private static final double EARTH_RADIUS_TO_AU = 23481;
 
-    private static final Map<CelestialObjectId, CelestialObject> REGISTRATIONS = new LinkedHashMap<>();
-    private static final Map<DimensionEnum, CelestialObjectId> IDS_BY_DIMENSION = new EnumMap<>(DimensionEnum.class);
+    private static final Map<CelestialObjectKey, CelestialObject> REGISTRATIONS = new LinkedHashMap<>();
+    private static final Map<DimensionEnum, CelestialObjectKey> IDS_BY_DIMENSION = new EnumMap<>(DimensionEnum.class);
 
     private static boolean bootstrapped;
     private static boolean frozen;
@@ -421,11 +421,22 @@ public final class CelestialRegistry {
     }
 
     public static Optional<CelestialObject> get(CelestialObjectId id) {
-        return Optional.ofNullable(REGISTRATIONS.get(id));
+        return id == null ? Optional.empty() : get(CelestialObjectKey.registered(id));
+    }
+
+    public static Optional<CelestialObject> get(CelestialObjectKey key) {
+        registerDefaults();
+        return Optional.ofNullable(REGISTRATIONS.get(key));
     }
 
     public static List<CelestialObject> getAll() {
+        registerDefaults();
         return Collections.unmodifiableList(new ArrayList<>(REGISTRATIONS.values()));
+    }
+
+    public static Map<CelestialObjectKey, CelestialObject> getAllBodies() {
+        registerDefaults();
+        return Collections.unmodifiableMap(REGISTRATIONS);
     }
 
     public static List<CelestialObject> getPlayableBodies() {
@@ -448,7 +459,7 @@ public final class CelestialRegistry {
 
     public static Optional<CelestialObject> findByDimension(DimensionEnum dimension) {
         registerDefaults();
-        CelestialObjectId objectId = IDS_BY_DIMENSION.get(dimension);
+        CelestialObjectKey objectId = IDS_BY_DIMENSION.get(dimension);
         if (objectId == null) return Optional.empty();
         return Optional.ofNullable(
             hierarchy.bodiesById()
@@ -456,13 +467,17 @@ public final class CelestialRegistry {
     }
 
     public static Optional<CelestialObject> findById(CelestialObjectId id) {
+        return id == null ? Optional.empty() : findById(CelestialObjectKey.registered(id));
+    }
+
+    public static Optional<CelestialObject> findById(CelestialObjectKey id) {
         registerDefaults();
         return Optional.ofNullable(
             hierarchy.bodiesById()
                 .get(id));
     }
 
-    private static void validateRegistration(CelestialObject registration, CelestialObjectId existingId) {
+    private static void validateRegistration(CelestialObject registration, CelestialObjectKey existingId) {
         if (REGISTRATIONS.containsKey(registration.id()) && !registration.id()
             .equals(existingId)) {
             throw new IllegalArgumentException("Duplicate celestial object id: " + registration.id());
@@ -475,7 +490,9 @@ public final class CelestialRegistry {
             throw new IllegalArgumentException("Unknown parent celestial object id: " + registration.parentId());
         }
         if (registration.dimensionEnum() != null) {
-            CelestialObjectId existingDimensionOwner = IDS_BY_DIMENSION.get(registration.dimensionEnum());
+            // A dimension can only have one owning celestial key. This keeps
+            // dynamic/minor bodies from accidentally stealing a planet dimension.
+            CelestialObjectKey existingDimensionOwner = IDS_BY_DIMENSION.get(registration.dimensionEnum());
             if (existingDimensionOwner != null && !existingDimensionOwner.equals(existingId)) {
                 throw new IllegalArgumentException("Duplicate dimension mapping for " + registration.dimensionEnum());
             }
