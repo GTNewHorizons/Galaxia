@@ -34,11 +34,15 @@ public final class AsteroidSatelliteScanService {
         this.profileResolver = Objects.requireNonNull(profileResolver, "profileResolver cannot be null");
     }
 
+    public void clear() {
+        progressBySatellite.clear();
+    }
+
     public List<ScanResult> tick(UUID teamId, List<CelestialAsset> assets, int elapsedTicks) {
         Objects.requireNonNull(teamId, "teamId cannot be null");
         Objects.requireNonNull(assets, "assets cannot be null");
         if (elapsedTicks < 0) throw new IllegalArgumentException("elapsedTicks must be non-negative");
-        if (elapsedTicks == 0 || assets.isEmpty()) return List.of();
+        if (elapsedTicks == 0) return List.of();
 
         List<ScanResult> results = new ArrayList<>();
         Set<ScanKey> activeKeys = new java.util.HashSet<>();

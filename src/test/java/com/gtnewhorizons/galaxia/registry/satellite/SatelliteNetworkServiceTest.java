@@ -21,8 +21,10 @@ import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
@@ -317,6 +319,35 @@ final class SatelliteNetworkServiceTest {
 
         assertEquals(CelestialObjectId.EGORA, producer.detectedCounterpartBodyId());
         assertEquals(CelestialObjectId.MARS, consumer.detectedCounterpartBodyId());
+    }
+
+    @Test
+    void tickDataJobsAdvancesProspectingSatellitesAnchoredOnAsteroids() {
+        AsteroidFieldProfile profile = GalaxiaCelestialAPI.get(CelestialObjectId.FROZEN_BELT)
+            .orElseThrow()
+            .properties()
+            .asteroidFieldProfile();
+        AsteroidFieldNode hidden = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile)
+            .stream()
+            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.HIDDEN)
+            .findFirst()
+            .orElseThrow();
+        CelestialAsset satellite = CelestialAsset.create(
+            CelestialObjectKey.minorBody(hidden.id()),
+            CelestialAsset.Kind.SATELLITE,
+            Buildable.Status.OPERATIONAL,
+            SatelliteKind.PROSPECTING);
+        CelestialAssetStore.registerAsset(TEAM, satellite);
+
+        SatelliteNetworkService.tickDataJobs(AsteroidSatelliteScanPass.DETECTION.durationTicks());
+
+        AsteroidFieldKnowledge knowledge = SatelliteNetworkService.asteroidKnowledge()
+            .get(TEAM, CelestialObjectId.FROZEN_BELT)
+            .orElseThrow();
+        assertEquals(
+            AsteroidDetectionState.DETECTED,
+            knowledge.entryFor(hidden.id())
+                .detectionState());
     }
 
     @Test
