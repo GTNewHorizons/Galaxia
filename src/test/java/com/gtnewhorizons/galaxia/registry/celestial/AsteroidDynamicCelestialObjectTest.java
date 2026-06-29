@@ -18,6 +18,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
@@ -122,5 +123,37 @@ final class AsteroidDynamicCelestialObjectTest {
             children.stream()
                 .map(CelestialObject::id)
                 .anyMatch(CelestialObjectKey.minorBody(hiddenNode.id())::equals));
+    }
+
+    @Test
+    void detectedSmallAsteroidsAreVisitableOutpostTargets() {
+        CelestialObject frozenBelt = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
+            .orElseThrow();
+        AsteroidFieldProfile profile = frozenBelt.properties()
+            .asteroidFieldProfile();
+        AsteroidFieldNode smallNode = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile)
+            .stream()
+            .filter(node -> node.sizeClass() == AsteroidSizeClass.SMALL)
+            .findFirst()
+            .orElseThrow();
+        AsteroidFieldKnowledgeSnapshot snapshot = new AsteroidFieldKnowledgeSnapshot(
+            CelestialObjectId.FROZEN_BELT,
+            List.of(
+                new AsteroidFieldKnowledgeSnapshot.Entry(
+                    smallNode.index(),
+                    AsteroidDetectionState.DETECTED,
+                    AsteroidOreKnowledgeState.UNKNOWN)));
+
+        CelestialObject asteroid = GalaxiaCelestialAPI.getChildren(CelestialObjectId.FROZEN_BELT, List.of(snapshot))
+            .stream()
+            .filter(child -> child.id()
+                .equals(CelestialObjectKey.minorBody(smallNode.id())))
+            .findFirst()
+            .orElseThrow();
+
+        assertTrue(asteroid.properties()
+            .visitable());
+        assertTrue(asteroid.properties()
+            .canCreateOutpost());
     }
 }

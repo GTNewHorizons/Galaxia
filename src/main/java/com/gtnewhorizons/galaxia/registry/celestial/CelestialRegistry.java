@@ -495,7 +495,7 @@ public final class CelestialRegistry {
             .spriteSize(spriteSize)
             .properties(
                 b -> b.orbitalGravity(6.0e4, soiRadius)
-                    .visitable(node.sizeClass() != AsteroidSizeClass.SMALL)
+                    .visitable(true)
                     .canCreateStation(false)
                     .canCreateOutpost(true)
                     .temperature(41)
