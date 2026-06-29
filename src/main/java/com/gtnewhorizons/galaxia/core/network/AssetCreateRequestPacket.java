@@ -145,15 +145,18 @@ public final class AssetCreateRequestPacket implements IMessage {
             .canCreateOutpost()) {
             throw new IllegalArgumentException("Cannot create automated outpost on " + celestialObjectId);
         }
-        if (kind == CelestialAsset.Kind.AUTOMATED_OUTPOST && body.id()
+        if (requiresDetectedAsteroidTarget() && body.id()
             .isMinorBody()
             && !AsteroidFieldKnowledgeService.isDetected(
                 teamId,
                 body.id()
                     .minorBodyId())) {
-            throw new IllegalArgumentException(
-                "Cannot create automated outpost on hidden asteroid " + celestialObjectId);
+            throw new IllegalArgumentException("Cannot create asset on hidden asteroid " + celestialObjectId);
         }
+    }
+
+    private boolean requiresDetectedAsteroidTarget() {
+        return kind == CelestialAsset.Kind.AUTOMATED_OUTPOST || kind == CelestialAsset.Kind.SATELLITE;
     }
 
     private SatelliteKind requiredSatelliteKind() {
