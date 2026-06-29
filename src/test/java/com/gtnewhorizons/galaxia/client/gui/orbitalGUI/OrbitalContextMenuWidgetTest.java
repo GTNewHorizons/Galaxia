@@ -11,6 +11,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
@@ -44,7 +45,9 @@ final class OrbitalContextMenuWidgetTest {
     @Test
     void asteroidContextMenuOffersOnlyProspectingSatelliteActions() {
         CelestialObject asteroid = CelestialRegistry
-            .get(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0)))
+            .get(
+                CelestialObjectKey.minorBody(
+                    new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN)))
             .orElseThrow();
 
         List<String> labelKeys = OrbitalContextMenuWidget.buildActions(asteroid, true)

@@ -1,11 +1,13 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -48,29 +50,33 @@ public final class AsteroidFieldKnowledge {
         }
 
         List<AsteroidFieldNode> nodes = AsteroidFieldResolver.resolveAll(beltId, profile);
-        if (snapshot.entries()
-            .size() != nodes.size()) {
-            throw new IllegalStateException("Asteroid snapshot entry count does not match profile for " + beltId);
+        Map<Integer, AsteroidFieldNode> nodesByIndex = new LinkedHashMap<>();
+        Map<MinorCelestialBodyId, Entry> entries = new LinkedHashMap<>();
+        for (AsteroidFieldNode node : nodes) {
+            nodesByIndex.put(node.index(), node);
+            entries.put(
+                node.id(),
+                new Entry(
+                    AsteroidFieldResolver.initialDetectionState(node),
+                    AsteroidFieldResolver.initialOreKnowledge(node)));
         }
 
-        Map<MinorCelestialBodyId, Entry> entries = new LinkedHashMap<>();
-        boolean[] seen = new boolean[nodes.size()];
+        Set<Integer> seen = new HashSet<>();
         for (AsteroidFieldKnowledgeSnapshot.Entry snapshotEntry : snapshot.entries()) {
             int index = snapshotEntry.index();
-            if (index < 0 || index >= nodes.size()) {
+            AsteroidFieldNode node = nodesByIndex.get(index);
+            if (node == null) {
                 throw new IllegalStateException(
                     "Asteroid snapshot index is outside profile for " + beltId + ": " + index);
             }
-            if (seen[index]) {
+            if (!seen.add(index)) {
                 throw new IllegalStateException(
                     "Asteroid snapshot contains duplicate index for " + beltId + ": " + index);
             }
-            seen[index] = true;
             if (snapshotEntry.detectionState() == AsteroidDetectionState.HIDDEN
                 && snapshotEntry.oreKnowledgeState() != AsteroidOreKnowledgeState.UNKNOWN) {
                 throw new IllegalStateException("Hidden asteroid snapshot entry cannot expose ore knowledge: " + index);
             }
-            AsteroidFieldNode node = nodes.get(index);
             entries.put(node.id(), new Entry(snapshotEntry.detectionState(), snapshotEntry.oreKnowledgeState()));
         }
         return new AsteroidFieldKnowledge(nodes, entries);

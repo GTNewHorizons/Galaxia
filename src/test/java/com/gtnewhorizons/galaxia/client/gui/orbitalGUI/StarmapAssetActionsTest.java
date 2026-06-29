@@ -12,6 +12,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
@@ -29,7 +30,9 @@ final class StarmapAssetActionsTest {
             new StarmapAssetActions.OrbitalAssetSupport(),
             new TestCallbacks());
         CelestialObject asteroid = CelestialRegistry
-            .get(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0)))
+            .get(
+                CelestialObjectKey.minorBody(
+                    new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN)))
             .orElseThrow();
 
         controller.triggerAssetCreation(state, asteroid, CelestialAsset.Kind.AUTOMATED_STATION, false);

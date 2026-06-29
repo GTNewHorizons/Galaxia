@@ -23,6 +23,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanPass;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
@@ -80,7 +81,8 @@ final class OrbitalPinnedInfoContentBuilderTest {
             .orElseThrow();
         AsteroidFieldProfile profile = frozenBelt.properties()
             .asteroidFieldProfile();
-        AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(CelestialObjectId.FROZEN_BELT, profile, 0);
+        AsteroidFieldNode node = AsteroidFieldResolver
+            .resolveNode(CelestialObjectId.FROZEN_BELT, profile, AsteroidSlotRanges.GENERATED_SLOT_MIN);
         CelestialObject asteroid = CelestialRegistry
             .get(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, node.index())))
             .orElseThrow();

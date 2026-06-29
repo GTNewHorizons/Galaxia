@@ -22,6 +22,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolv
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanOrder;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
@@ -43,7 +44,8 @@ final class AsteroidSatelliteScanServiceTest {
         AsteroidSatelliteScanService service = new AsteroidSatelliteScanService(
             knowledgeStore,
             bodyId -> bodyId == BELT ? Optional.of(profile) : Optional.empty());
-        AsteroidFieldNode anchor = AsteroidFieldResolver.resolveNode(BELT, profile, 0);
+        AsteroidFieldNode anchor = AsteroidFieldResolver
+            .resolveNode(BELT, profile, AsteroidSlotRanges.GENERATED_SLOT_MIN);
         CelestialAsset satellite = prospectingSatellite(anchor.id());
 
         assertTrue(
@@ -166,7 +168,8 @@ final class AsteroidSatelliteScanServiceTest {
         AsteroidSatelliteScanService service = new AsteroidSatelliteScanService(
             knowledgeStore,
             bodyId -> bodyId == BELT ? Optional.of(profile) : Optional.empty());
-        AsteroidFieldNode anchor = AsteroidFieldResolver.resolveNode(BELT, profile, 0);
+        AsteroidFieldNode anchor = AsteroidFieldResolver
+            .resolveNode(BELT, profile, AsteroidSlotRanges.GENERATED_SLOT_MIN);
         CelestialAsset satellite = prospectingSatellite(anchor.id());
 
         service.tick(
@@ -198,7 +201,8 @@ final class AsteroidSatelliteScanServiceTest {
         AsteroidSatelliteScanService firstService = new AsteroidSatelliteScanService(
             firstKnowledgeStore,
             bodyId -> bodyId == BELT ? Optional.of(profile) : Optional.empty());
-        AsteroidFieldNode anchor = AsteroidFieldResolver.resolveNode(BELT, profile, 0);
+        AsteroidFieldNode anchor = AsteroidFieldResolver
+            .resolveNode(BELT, profile, AsteroidSlotRanges.GENERATED_SLOT_MIN);
         CelestialAsset satellite = prospectingSatellite(anchor.id());
 
         assertTrue(
@@ -224,7 +228,8 @@ final class AsteroidSatelliteScanServiceTest {
         AsteroidSatelliteScanService firstService = new AsteroidSatelliteScanService(
             firstKnowledgeStore,
             bodyId -> bodyId == BELT ? Optional.of(profile) : Optional.empty());
-        AsteroidFieldNode anchor = AsteroidFieldResolver.resolveNode(BELT, profile, 0);
+        AsteroidFieldNode anchor = AsteroidFieldResolver
+            .resolveNode(BELT, profile, AsteroidSlotRanges.GENERATED_SLOT_MIN);
         CelestialAsset satellite = prospectingSatellite(anchor.id());
 
         firstService.tick(

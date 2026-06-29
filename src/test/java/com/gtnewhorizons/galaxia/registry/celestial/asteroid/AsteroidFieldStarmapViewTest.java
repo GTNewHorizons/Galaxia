@@ -38,15 +38,15 @@ final class AsteroidFieldStarmapViewTest {
                 CelestialObjectId.FROZEN_BELT,
                 List.of(
                     new AsteroidFieldKnowledgeSnapshot.Entry(
-                        0,
+                        AsteroidSlotRanges.GENERATED_SLOT_MIN,
                         AsteroidDetectionState.DETECTED,
                         AsteroidOreKnowledgeState.UNKNOWN),
                     new AsteroidFieldKnowledgeSnapshot.Entry(
-                        1,
+                        AsteroidSlotRanges.GENERATED_SLOT_MIN + 1,
                         AsteroidDetectionState.DETECTED,
                         AsteroidOreKnowledgeState.SIGNATURE),
                     new AsteroidFieldKnowledgeSnapshot.Entry(
-                        2,
+                        AsteroidSlotRanges.GENERATED_SLOT_MIN + 2,
                         AsteroidDetectionState.DETECTED,
                         AsteroidOreKnowledgeState.PROFILE))));
 

@@ -17,6 +17,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitM
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 
 final class OrbitalMechanicsTest {
@@ -31,8 +32,11 @@ final class OrbitalMechanicsTest {
             .satelliteScanRadius(1000.0)
             .oreProfile(new AsteroidOreProfile("test", 1.0, List.of("test_vein")))
             .build();
-        MinorCelestialBodyId minorId = new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0);
-        AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(CelestialObjectId.FROZEN_BELT, profile, 0);
+        MinorCelestialBodyId minorId = new MinorCelestialBodyId(
+            CelestialObjectId.FROZEN_BELT,
+            AsteroidSlotRanges.GENERATED_SLOT_MIN);
+        AsteroidFieldNode node = AsteroidFieldResolver
+            .resolveNode(CelestialObjectId.FROZEN_BELT, profile, AsteroidSlotRanges.GENERATED_SLOT_MIN);
         CelestialObject belt = CelestialObject.builder()
             .id(CelestialObjectId.FROZEN_BELT)
             .name("Frozen Belt")

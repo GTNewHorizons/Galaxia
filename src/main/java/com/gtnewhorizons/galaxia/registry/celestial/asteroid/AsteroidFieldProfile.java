@@ -45,8 +45,9 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
         Set<Integer> seenPresetIndexes = new HashSet<>();
         for (AsteroidNodePreset preset : nodePresets) {
             preset = Objects.requireNonNull(preset, "node preset cannot be null");
-            if (preset.index() >= totalNodes) {
-                throw new IllegalArgumentException("node preset index must be inside totalNodes");
+            if (AsteroidSlotRanges.isGeneratedSlot(preset.index())) {
+                throw new IllegalArgumentException(
+                    "node preset index must be in a reserved authored asteroid slot range");
             }
             if (!seenPresetIndexes.add(preset.index())) {
                 throw new IllegalArgumentException("duplicate asteroid node preset index: " + preset.index());
@@ -64,6 +65,13 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
         return nodePresets.stream()
             .filter(preset -> preset.index() == index)
             .findFirst();
+    }
+
+    public boolean hasNodeIndex(int index) {
+        if (AsteroidSlotRanges.isGeneratedSlot(index)) {
+            return AsteroidSlotRanges.generatedOrdinal(index) < totalNodes;
+        }
+        return nodePreset(index).isPresent();
     }
 
     private static int requireNonNegative(String name, int value) {
@@ -146,6 +154,11 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
         public Builder nodePreset(int index, AsteroidNodeKind kind, String displayName,
             AsteroidDetectionState initialDetectionState) {
             this.nodePresets.add(new AsteroidNodePreset(index, kind, displayName, initialDetectionState));
+            return this;
+        }
+
+        public Builder nodePreset(AsteroidNodePreset value) {
+            this.nodePresets.add(Objects.requireNonNull(value, "node preset cannot be null"));
             return this;
         }
 

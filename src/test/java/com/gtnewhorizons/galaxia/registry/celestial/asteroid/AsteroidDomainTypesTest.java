@@ -16,7 +16,7 @@ final class AsteroidDomainTypesTest {
     @Test
     void domainVocabularyMatchesAsteroidFieldRules() {
         assertArrayEquals(
-            new AsteroidNodeKind[] { AsteroidNodeKind.UNIQUE, AsteroidNodeKind.NAMED, AsteroidNodeKind.GENERATED },
+            new AsteroidNodeKind[] { AsteroidNodeKind.LORE, AsteroidNodeKind.UNIQUE, AsteroidNodeKind.GENERATED },
             AsteroidNodeKind.values());
         assertArrayEquals(
             new AsteroidSizeClass[] { AsteroidSizeClass.LARGE, AsteroidSizeClass.MEDIUM, AsteroidSizeClass.SMALL },

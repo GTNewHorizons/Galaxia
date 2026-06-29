@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -16,17 +17,23 @@ public final class AsteroidFieldResolver {
         Objects.requireNonNull(beltId, "beltId cannot be null");
         Objects.requireNonNull(profile, "profile cannot be null");
 
-        List<AsteroidFieldNode> nodes = new ArrayList<>(profile.totalNodes());
-        for (int index = 0; index < profile.totalNodes(); index++) {
-            nodes.add(resolveNode(beltId, profile, index));
+        List<AsteroidFieldNode> nodes = new ArrayList<>(
+            profile.totalNodes() + profile.nodePresets()
+                .size());
+        for (AsteroidNodePreset preset : profile.nodePresets()) {
+            nodes.add(resolveNode(beltId, profile, preset.index()));
         }
+        for (int ordinal = 0; ordinal < profile.totalNodes(); ordinal++) {
+            nodes.add(resolveNode(beltId, profile, AsteroidSlotRanges.generatedSlot(ordinal)));
+        }
+        nodes.sort(Comparator.comparingInt(AsteroidFieldNode::index));
         return List.copyOf(nodes);
     }
 
     public static AsteroidFieldNode resolveNode(CelestialObjectId beltId, AsteroidFieldProfile profile, int index) {
         Objects.requireNonNull(beltId, "beltId cannot be null");
         Objects.requireNonNull(profile, "profile cannot be null");
-        if (index < 0 || index >= profile.totalNodes()) {
+        if (!profile.hasNodeIndex(index)) {
             throw new IllegalArgumentException("node index must be within the asteroid field profile");
         }
         return resolveNodeUnchecked(beltId, profile, index);
@@ -39,6 +46,7 @@ public final class AsteroidFieldResolver {
 
     public static AsteroidOreKnowledgeState initialOreKnowledge(AsteroidFieldNode node) {
         Objects.requireNonNull(node, "node cannot be null");
+        if (node.initialOreKnowledgeState() != null) return node.initialOreKnowledgeState();
         if (node.sizeClass() != AsteroidSizeClass.LARGE) return AsteroidOreKnowledgeState.UNKNOWN;
         return rolledOreKnowledge(node, 5L);
     }
@@ -58,9 +66,9 @@ public final class AsteroidFieldResolver {
             profile.generationVersion(),
             index);
         MinorCelestialBodyId id = new MinorCelestialBodyId(beltId, index);
-        AsteroidSizeClass sizeClass = sizeClass(profile, index);
         AsteroidNodePreset preset = profile.nodePreset(index)
             .orElse(null);
+        AsteroidSizeClass sizeClass = preset == null ? generatedSizeClass(profile, index) : preset.sizeClass();
         return new AsteroidFieldNode(
             id,
             beltId,
@@ -69,19 +77,24 @@ public final class AsteroidFieldResolver {
             preset == null ? AsteroidNodeKind.GENERATED : preset.kind(),
             sizeClass,
             preset == null ? defaultInitialDetectionState(sizeClass) : preset.initialDetectionState(),
-            unitDouble(mix(baseSeed, 1L)) * 360.0,
-            unitDouble(mix(baseSeed, 2L)),
-            selectOreProfile(profile, unitDouble(mix(baseSeed, 3L))),
-            new AsteroidAppearanceProfile("generated_asteroid_tiles", mix(baseSeed, 4L)));
+            preset == null ? null : preset.initialOreKnowledgeState(),
+            preset != null && preset.angleOffsetDeg() != null ? preset.angleOffsetDeg()
+                : unitDouble(mix(baseSeed, 1L)) * 360.0,
+            preset != null && preset.orbitalDepth01() != null ? preset.orbitalDepth01() : unitDouble(mix(baseSeed, 2L)),
+            preset != null && preset.oreProfileId() != null ? selectOreProfile(profile, preset.oreProfileId())
+                : selectOreProfile(profile, unitDouble(mix(baseSeed, 3L))),
+            preset != null && preset.appearance() != null ? preset.appearance()
+                : new AsteroidAppearanceProfile("generated_asteroid_tiles", mix(baseSeed, 4L)));
     }
 
     private static AsteroidDetectionState defaultInitialDetectionState(AsteroidSizeClass sizeClass) {
         return sizeClass == AsteroidSizeClass.LARGE ? AsteroidDetectionState.DETECTED : AsteroidDetectionState.HIDDEN;
     }
 
-    private static AsteroidSizeClass sizeClass(AsteroidFieldProfile profile, int index) {
-        if (index < profile.largeCount()) return AsteroidSizeClass.LARGE;
-        if (index < profile.largeCount() + profile.mediumCount()) return AsteroidSizeClass.MEDIUM;
+    private static AsteroidSizeClass generatedSizeClass(AsteroidFieldProfile profile, int index) {
+        int ordinal = AsteroidSlotRanges.generatedOrdinal(index);
+        if (ordinal < profile.largeCount()) return AsteroidSizeClass.LARGE;
+        if (ordinal < profile.largeCount() + profile.mediumCount()) return AsteroidSizeClass.MEDIUM;
         return AsteroidSizeClass.SMALL;
     }
 
@@ -101,6 +114,16 @@ public final class AsteroidFieldResolver {
                     .size() - 1);
     }
 
+    private static AsteroidOreProfile selectOreProfile(AsteroidFieldProfile profile, String oreProfileId) {
+        return profile.oreProfiles()
+            .stream()
+            .filter(
+                oreProfile -> oreProfile.id()
+                    .equals(oreProfileId))
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("Unknown asteroid ore profile: " + oreProfileId));
+    }
+
     private static AsteroidOreKnowledgeState rolledOreKnowledge(AsteroidFieldNode node, long salt) {
         double roll = unitDouble(
             mix(
@@ -113,7 +136,9 @@ public final class AsteroidFieldResolver {
     }
 
     private static String displayName(CelestialObjectId beltId, int index) {
-        return beltId.name() + " " + (index + 1);
+        int displayNumber = AsteroidSlotRanges.isGeneratedSlot(index) ? AsteroidSlotRanges.generatedOrdinal(index) + 1
+            : index + 1;
+        return beltId.name() + " " + displayNumber;
     }
 
     private static double unitDouble(long value) {

@@ -20,6 +20,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
@@ -63,7 +64,7 @@ final class AssetCreateRequestPacketTest {
     @Test
     void asteroidCreateRequestAllowsOutpostsAndRejectsAutomatedStations() {
         CelestialObjectKey asteroidId = CelestialObjectKey
-            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0));
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN));
 
         AssetSyncPacket outpostSync = AssetCreateRequestPacket
             .createFacility(asteroidId, "Asteroid Outpost", CelestialAsset.Kind.AUTOMATED_OUTPOST, true)
@@ -117,7 +118,7 @@ final class AssetCreateRequestPacketTest {
     @Test
     void asteroidCreateRequestRejectsCommunicationSatellites() {
         CelestialObjectKey asteroidId = CelestialObjectKey
-            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0));
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN));
 
         assertThrows(
             IllegalArgumentException.class,

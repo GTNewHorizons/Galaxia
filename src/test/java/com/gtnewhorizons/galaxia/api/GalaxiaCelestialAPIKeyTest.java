@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
@@ -22,7 +23,7 @@ final class GalaxiaCelestialAPIKeyTest {
     void publicApiFindsDynamicMinorBodyByKey() {
         CelestialObject root = GalaxiaCelestialAPI.getPrimaryRoot();
         CelestialObjectKey key = CelestialObjectKey
-            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 2));
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN));
 
         CelestialObject asteroid = GalaxiaCelestialAPI.get(key)
             .orElseThrow();

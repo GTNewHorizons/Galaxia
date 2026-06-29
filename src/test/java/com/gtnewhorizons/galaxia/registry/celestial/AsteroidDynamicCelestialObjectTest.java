@@ -20,6 +20,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfil
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
@@ -33,7 +34,7 @@ final class AsteroidDynamicCelestialObjectTest {
     @Test
     void frozenBeltMinorBodyKeyResolvesGeneratedAsteroidObject() {
         CelestialObjectKey key = CelestialObjectKey
-            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0));
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN));
 
         CelestialObject asteroid = CelestialRegistry.get(key)
             .orElseThrow();
@@ -53,7 +54,7 @@ final class AsteroidDynamicCelestialObjectTest {
     @Test
     void generatedAsteroidObjectsDoNotPolluteStaticRegistryListing() {
         CelestialObjectKey key = CelestialObjectKey
-            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 1));
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN));
 
         assertTrue(
             CelestialRegistry.get(key)
@@ -66,7 +67,7 @@ final class AsteroidDynamicCelestialObjectTest {
     @Test
     void dynamicAsteroidCanBeFoundThroughRegistryFindById() {
         CelestialObjectKey key = CelestialObjectKey
-            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0));
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN));
 
         CelestialObject asteroid = CelestialRegistry.findById(key)
             .orElseThrow();
@@ -84,7 +85,7 @@ final class AsteroidDynamicCelestialObjectTest {
 
         assertEquals("Karnyx", asteroid.name());
         assertEquals(
-            "unique",
+            "lore",
             asteroid.properties()
                 .metadata()
                 .get("minorBodies"));

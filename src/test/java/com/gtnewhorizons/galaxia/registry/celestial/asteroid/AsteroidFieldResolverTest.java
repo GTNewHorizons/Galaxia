@@ -23,9 +23,22 @@ final class AsteroidFieldResolverTest {
         assertEquals(first, second);
         assertEquals(6, first.size());
         assertEquals(
-            new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0),
+            new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN),
             first.get(0)
                 .id());
+    }
+
+    @Test
+    void generatedAsteroidsStartAfterReservedAuthoredSlots() {
+        List<AsteroidFieldNode> nodes = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile(1));
+
+        assertEquals(
+            AsteroidSlotRanges.GENERATED_SLOT_MIN,
+            nodes.get(0)
+                .index());
+        assertTrue(
+            nodes.stream()
+                .allMatch(node -> AsteroidSlotRanges.isGeneratedSlot(node.index())));
     }
 
     @Test

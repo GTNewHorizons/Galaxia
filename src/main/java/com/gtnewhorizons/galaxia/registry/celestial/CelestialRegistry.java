@@ -21,9 +21,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowle
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.AsteroidContentRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.PlayableDimensionProfile;
 import com.gtnewhorizons.galaxia.registry.dimension.SpaceStation;
@@ -70,20 +69,6 @@ public final class CelestialRegistry {
         Fluid fluid = stack != null ? stack.getFluid() : null;
         if (fluid == null) throw new IllegalStateException("Required atmosphere gas is not available: " + material);
         return fluid;
-    }
-
-    private static AsteroidFieldProfile frozenBeltAsteroidField() {
-        return AsteroidFieldProfile.builder()
-            .seedSalt(0xF20A3E11L)
-            .generationVersion(1)
-            .sizeCounts(6, 8, 12)
-            .radialBand(2.15 * EARTH_RADIUS_TO_AU, 2.45 * EARTH_RADIUS_TO_AU)
-            .satelliteScanRadius(0.12 * EARTH_RADIUS_TO_AU)
-            .oreProfile(new AsteroidOreProfile("metallic", 3.0, List.of("ore.mix.iron")))
-            .oreProfile(new AsteroidOreProfile("volatile_ice", 2.0, List.of("ore.mix.lapis")))
-            .oreProfile(new AsteroidOreProfile("rare_crystal", 1.0, List.of("ore.mix.redstone")))
-            .nodePreset(1, AsteroidNodeKind.UNIQUE, "Karnyx", AsteroidDetectionState.DETECTED)
-            .build();
     }
 
     private static PlayableDimensionProfile.Builder stationBuildable(PlayableDimensionProfile.Builder builder) {
@@ -301,7 +286,7 @@ public final class CelestialRegistry {
                         .temperature(67)
                         .radiation(0.28)
                         .oreProfile("undefined")
-                        .asteroidFieldProfile(frozenBeltAsteroidField())
+                        .asteroidFieldProfile(AsteroidContentRegistry.profile(CelestialObjectId.FROZEN_BELT))
                         .metadata("surface", "undefined")
                         .metadata("minorBodies", "enabled"))
                 .playableDimensionProfile(
@@ -448,7 +433,7 @@ public final class CelestialRegistry {
 
         AsteroidFieldProfile profile = belt.properties()
             .asteroidFieldProfile();
-        if (minorId.index() >= profile.totalNodes()) return Optional.empty();
+        if (!profile.hasNodeIndex(minorId.index())) return Optional.empty();
 
         AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(minorId.parentBeltId(), profile, minorId.index());
         return Optional.of(toDynamicAsteroidObject(node, profile));

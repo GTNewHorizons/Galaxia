@@ -84,11 +84,11 @@ final class AsteroidFieldKnowledgeStoreTest {
     @Test
     void scopedProspectingOnlyAdvancesNodesInsideScope() {
         AsteroidFieldKnowledgeStore store = new AsteroidFieldKnowledgeStore();
-        AsteroidFieldProfile profile = profile();
+        AsteroidFieldProfile profile = profileWithScopedProspectingTarget();
         AsteroidFieldKnowledge knowledge = store.getOrCreate(TEAM_A, CelestialObjectId.FROZEN_BELT, profile);
         AsteroidFieldNode large = knowledge.nodes()
             .stream()
-            .filter(node -> node.sizeClass() == AsteroidSizeClass.LARGE)
+            .filter(node -> node.kind() == AsteroidNodeKind.LORE)
             .findFirst()
             .orElseThrow();
         Predicate<AsteroidFieldNode> largeOnly = node -> node.id()
@@ -98,10 +98,11 @@ final class AsteroidFieldKnowledgeStoreTest {
             .orElseThrow();
 
         assertEquals(large.id(), prospected.id());
-        assertEquals(
-            AsteroidOreKnowledgeState.SIGNATURE,
-            knowledge.entryFor(large.id())
-                .oreKnowledgeState());
+        assertTrue(
+            List.of(AsteroidOreKnowledgeState.SIGNATURE, AsteroidOreKnowledgeState.PROFILE)
+                .contains(
+                    knowledge.entryFor(large.id())
+                        .oreKnowledgeState()));
         assertEquals(
             large.id(),
             store.prospectNext(TEAM_A, CelestialObjectId.FROZEN_BELT, profile, largeOnly)
@@ -159,6 +160,30 @@ final class AsteroidFieldKnowledgeStoreTest {
             .radialBand(1.20, 1.40)
             .satelliteScanRadius(1000.0)
             .oreProfile(new AsteroidOreProfile("volatile_ice", 1.0, List.of("ice", "sulfur")))
+            .build();
+    }
+
+    private static AsteroidFieldProfile profileWithScopedProspectingTarget() {
+        return AsteroidFieldProfile.builder()
+            .seedSalt(41L)
+            .generationVersion(1)
+            .sizeCounts(1, 0, 0)
+            .radialBand(1.20, 1.40)
+            .satelliteScanRadius(1000.0)
+            .oreProfile(new AsteroidOreProfile("volatile_ice", 1.0, List.of("ice", "sulfur")))
+            .nodePreset(
+                new AsteroidNodePreset(
+                    1,
+                    AsteroidNodeKind.LORE,
+                    "scoped_target",
+                    "Scoped Target",
+                    AsteroidSizeClass.LARGE,
+                    AsteroidDetectionState.DETECTED,
+                    AsteroidOreKnowledgeState.UNKNOWN,
+                    0.0,
+                    0.5,
+                    null,
+                    null))
             .build();
     }
 

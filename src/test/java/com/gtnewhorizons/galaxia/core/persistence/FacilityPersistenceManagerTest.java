@@ -37,6 +37,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -154,8 +155,12 @@ final class FacilityPersistenceManagerTest {
     void asteroidScanProgressAndCompletionsRoundTripThroughSaveFile(@TempDir Path tempDir) {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         UUID teamId = UUID.fromString("00000000-0000-0000-0000-000000000271");
-        MinorCelestialBodyId progressAsteroid = new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 1);
-        MinorCelestialBodyId completedAsteroid = new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 2);
+        MinorCelestialBodyId progressAsteroid = new MinorCelestialBodyId(
+            CelestialObjectId.FROZEN_BELT,
+            AsteroidSlotRanges.GENERATED_SLOT_MIN);
+        MinorCelestialBodyId completedAsteroid = new MinorCelestialBodyId(
+            CelestialObjectId.FROZEN_BELT,
+            AsteroidSlotRanges.GENERATED_SLOT_MIN + 1);
         AsteroidSatelliteScanSnapshot progress = new AsteroidSatelliteScanSnapshot(
             CelestialAsset.ID.create(),
             CelestialObjectId.FROZEN_BELT,
@@ -183,7 +188,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         UUID teamId = UUID.randomUUID();
         CelestialObjectKey key = CelestialObjectKey
-            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 3));
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN));
         CelestialAsset asset = CelestialAsset
             .create(key, CelestialAsset.Kind.AUTOMATED_OUTPOST, Buildable.Status.OPERATIONAL);
 
@@ -213,7 +218,7 @@ final class FacilityPersistenceManagerTest {
             keyJson.get("parentBeltId")
                 .getAsString());
         assertEquals(
-            3,
+            AsteroidSlotRanges.GENERATED_SLOT_MIN,
             keyJson.get("index")
                 .getAsInt());
 
