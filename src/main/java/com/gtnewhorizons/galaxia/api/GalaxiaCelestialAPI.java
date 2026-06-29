@@ -69,8 +69,7 @@ public final class GalaxiaCelestialAPI {
     }
 
     public static List<CelestialObject> getChildren(CelestialObject parent) {
-        return CelestialRegistry.hierarchy.childrenByParentId()
-            .getOrDefault(parent.id(), List.of());
+        return parent == null ? List.of() : getChildren(parent.id());
     }
 
     public static List<CelestialObject> getChildren(CelestialObjectId parentId) {
@@ -78,8 +77,7 @@ public final class GalaxiaCelestialAPI {
     }
 
     public static List<CelestialObject> getChildren(CelestialObjectKey parentId) {
-        return CelestialRegistry.hierarchy.childrenByParentId()
-            .getOrDefault(parentId, List.of());
+        return CelestialRegistry.getChildren(parentId);
     }
 
     public static Map<CelestialObjectKey, CelestialObject> getAllBodies() {

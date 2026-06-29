@@ -16,6 +16,7 @@ import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
@@ -532,6 +533,35 @@ public final class CelestialRegistry {
             .toList();
     }
 
+    public static List<CelestialObject> getChildren(CelestialObjectKey parentId) {
+        registerDefaults();
+        if (parentId == null) return List.of();
+
+        List<CelestialObject> children = new ArrayList<>(
+            hierarchy.childrenByParentId()
+                .getOrDefault(parentId, List.of()));
+        if (parentId.isRegistered()) {
+            children.addAll(resolveInitiallyDetectedMinorBodies(parentId.registeredBodyId()));
+        }
+        return Collections.unmodifiableList(children);
+    }
+
+    private static List<CelestialObject> resolveInitiallyDetectedMinorBodies(CelestialObjectId parentId) {
+        CelestialObject parent = REGISTRATIONS.get(CelestialObjectKey.registered(parentId));
+        if (parent == null || parent.properties()
+            .asteroidFieldProfile() == null) {
+            return List.of();
+        }
+
+        AsteroidFieldProfile profile = parent.properties()
+            .asteroidFieldProfile();
+        return AsteroidFieldResolver.resolveAll(parentId, profile)
+            .stream()
+            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.DETECTED)
+            .map(node -> toDynamicAsteroidObject(node, profile))
+            .toList();
+    }
+
     public static List<CelestialObject> getRoots() {
         return hierarchy.roots();
     }
@@ -557,9 +587,10 @@ public final class CelestialRegistry {
 
     public static Optional<CelestialObject> findById(CelestialObjectKey id) {
         registerDefaults();
-        return Optional.ofNullable(
-            hierarchy.bodiesById()
-                .get(id));
+        CelestialObject registered = hierarchy.bodiesById()
+            .get(id);
+        if (registered != null) return Optional.of(registered);
+        return resolveDynamicMinorBody(id);
     }
 
     private static void validateRegistration(CelestialObject registration, CelestialObjectKey existingId) {

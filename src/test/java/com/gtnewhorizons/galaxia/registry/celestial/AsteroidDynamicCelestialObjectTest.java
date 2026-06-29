@@ -4,9 +4,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
@@ -48,5 +57,40 @@ final class AsteroidDynamicCelestialObjectTest {
         assertFalse(
             CelestialRegistry.getAllBodies()
                 .containsKey(key));
+    }
+
+    @Test
+    void dynamicAsteroidCanBeFoundThroughRegistryFindById() {
+        CelestialObjectKey key = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0));
+
+        CelestialObject asteroid = CelestialRegistry.findById(key)
+            .orElseThrow();
+
+        assertEquals(key, asteroid.id());
+    }
+
+    @Test
+    void asteroidBeltChildrenIncludeOnlyInitiallyDetectedMinorBodies() {
+        CelestialObject frozenBelt = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
+            .orElseThrow();
+        AsteroidFieldProfile profile = frozenBelt.properties()
+            .asteroidFieldProfile();
+        Set<CelestialObjectKey> initiallyDetectedKeys = AsteroidFieldResolver
+            .resolveAll(CelestialObjectId.FROZEN_BELT, profile)
+            .stream()
+            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.DETECTED)
+            .map(AsteroidFieldNode::id)
+            .map(CelestialObjectKey::minorBody)
+            .collect(Collectors.toSet());
+
+        List<CelestialObject> children = GalaxiaCelestialAPI.getChildren(CelestialObjectId.FROZEN_BELT);
+        Set<CelestialObjectKey> asteroidChildKeys = children.stream()
+            .map(CelestialObject::id)
+            .filter(CelestialObjectKey::isMinorBody)
+            .collect(Collectors.toSet());
+
+        assertFalse(initiallyDetectedKeys.isEmpty());
+        assertEquals(initiallyDetectedKeys, asteroidChildKeys);
     }
 }
