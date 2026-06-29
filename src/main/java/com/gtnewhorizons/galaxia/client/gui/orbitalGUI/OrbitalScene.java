@@ -26,6 +26,18 @@ public class OrbitalScene {
 
     private static final double[] ZERO_VIEW_ORIGIN = { 0.0, 0.0 };
 
+    static boolean drawsBodySprite(CelestialObject body) {
+        return !isAsteroidBeltContainer(body);
+    }
+
+    static boolean registersBodyInteraction(CelestialObject body) {
+        return !isAsteroidBeltContainer(body);
+    }
+
+    private static boolean isAsteroidBeltContainer(CelestialObject body) {
+        return body != null && body.objectClass() == CelestialObject.Class.ASTEROID_BELT;
+    }
+
     static int visibleSatelliteMarkerCount(List<CelestialAsset> assetState) {
         return visibleSatelliteMarkerAlphas(assetState).size();
     }
@@ -428,7 +440,8 @@ public class OrbitalScene {
             callbacks.fillResolvedBodyDrawState(state, body, parent, worldX, worldY, labelAlpha);
             if (state.body()
                 .objectClass() != CelestialObject.Class.GALAXY && state.bodyAlpha() > 0.01f
-                && state.renderBody()) {
+                && state.renderBody()
+                && registersBodyInteraction(state.body())) {
                 registerHitboxes(frame, state);
                 registerMarkers(frame, state);
             }
@@ -528,7 +541,8 @@ public class OrbitalScene {
             for (ResolvedBodyDrawState state : frame.resolvedBodies) {
                 if (state.body()
                     .objectClass() == CelestialObject.Class.GALAXY || state.bodyAlpha() <= 0.01f
-                    || !state.renderBody()) continue;
+                    || !state.renderBody()
+                    || !drawsBodySprite(state.body())) continue;
                 ResourceLocation texture = callbacks.getRenderTexture(state.body());
                 if (texture != null && callbacks.getDisplaySpriteSize(state.body()) > 0.0001f) {
                     drawSprite(texture, state.screenX(), state.screenY(), state.renderedRadius(), state.bodyAlpha());
