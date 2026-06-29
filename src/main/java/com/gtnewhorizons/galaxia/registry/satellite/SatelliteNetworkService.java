@@ -12,6 +12,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -33,6 +34,9 @@ public final class SatelliteNetworkService {
     private static final Map<UUID, Map<SatelliteNetworkGraph.DirectedEdge, ActiveDataUsage>> ACTIVE_DIRECTIONAL_DATA_USAGE = new HashMap<>();
     private static final SatelliteDataBufferStore DATA_BUFFERS = new SatelliteDataBufferStore();
     private static final SatelliteDataEndpointRegistry DATA_ENDPOINTS = new SatelliteDataEndpointRegistry();
+    private static final AsteroidFieldKnowledgeStore ASTEROID_KNOWLEDGE = new AsteroidFieldKnowledgeStore();
+    private static final AsteroidProspectingDataHandler ASTEROID_PROSPECTING = AsteroidProspectingDataHandler
+        .live(ASTEROID_KNOWLEDGE);
 
     private SatelliteNetworkService() {}
 
@@ -107,10 +111,15 @@ public final class SatelliteNetworkService {
         ACTIVE_DIRECTIONAL_DATA_USAGE.clear();
         DATA_BUFFERS.clear();
         DATA_ENDPOINTS.clear();
+        ASTEROID_KNOWLEDGE.clear();
     }
 
     static SatelliteDataBufferStore dataBuffers() {
         return DATA_BUFFERS;
+    }
+
+    static AsteroidFieldKnowledgeStore asteroidKnowledge() {
+        return ASTEROID_KNOWLEDGE;
     }
 
     public static boolean canStartProcess(UUID teamId, CelestialObjectId bodyId, SatelliteDataKey outputKey) {
@@ -124,8 +133,12 @@ public final class SatelliteNetworkService {
     public static void tickDataJobs() {
         tickActiveUsage();
         for (UUID teamId : DATA_ENDPOINTS.teamIds()) {
-            SatelliteDataJobService.Usage usage = SatelliteDataJobService
-                .tickEndpointsUsage(teamId, DATA_ENDPOINTS.endpoints(teamId), DATA_BUFFERS, current(teamId));
+            SatelliteDataJobService.Usage usage = SatelliteDataJobService.tickEndpointsUsage(
+                teamId,
+                DATA_ENDPOINTS.endpoints(teamId),
+                DATA_BUFFERS,
+                current(teamId),
+                ASTEROID_PROSPECTING);
             recordActiveUsage(teamId, usage);
         }
     }
