@@ -5,8 +5,8 @@ import java.util.Objects;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 
 public record AsteroidFieldNode(MinorCelestialBodyId id, CelestialObjectId beltId, int index, String displayName,
-    AsteroidNodeKind kind, AsteroidSizeClass sizeClass, double angleOffsetDeg, double orbitalDepth01,
-    AsteroidOreProfile oreProfile, AsteroidAppearanceProfile appearance) {
+    AsteroidNodeKind kind, AsteroidSizeClass sizeClass, AsteroidDetectionState initialDetectionState,
+    double angleOffsetDeg, double orbitalDepth01, AsteroidOreProfile oreProfile, AsteroidAppearanceProfile appearance) {
 
     public AsteroidFieldNode {
         id = Objects.requireNonNull(id, "id cannot be null");
@@ -26,6 +26,7 @@ public record AsteroidFieldNode(MinorCelestialBodyId id, CelestialObjectId beltI
         }
         kind = Objects.requireNonNull(kind, "kind cannot be null");
         sizeClass = Objects.requireNonNull(sizeClass, "sizeClass cannot be null");
+        initialDetectionState = Objects.requireNonNull(initialDetectionState, "initialDetectionState cannot be null");
         if (!Double.isFinite(angleOffsetDeg) || angleOffsetDeg < 0.0 || angleOffsetDeg >= 360.0) {
             throw new IllegalArgumentException("angleOffsetDeg must be in [0, 360)");
         }

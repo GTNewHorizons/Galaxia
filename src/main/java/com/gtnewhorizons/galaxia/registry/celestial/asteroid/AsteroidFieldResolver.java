@@ -34,8 +34,7 @@ public final class AsteroidFieldResolver {
 
     public static AsteroidDetectionState initialDetectionState(AsteroidFieldNode node) {
         Objects.requireNonNull(node, "node cannot be null");
-        return node.sizeClass() == AsteroidSizeClass.LARGE ? AsteroidDetectionState.DETECTED
-            : AsteroidDetectionState.HIDDEN;
+        return node.initialDetectionState();
     }
 
     public static AsteroidOreKnowledgeState initialOreKnowledge(AsteroidFieldNode node) {
@@ -59,17 +58,25 @@ public final class AsteroidFieldResolver {
             profile.generationVersion(),
             index);
         MinorCelestialBodyId id = new MinorCelestialBodyId(beltId, index);
+        AsteroidSizeClass sizeClass = sizeClass(profile, index);
+        AsteroidNodePreset preset = profile.nodePreset(index)
+            .orElse(null);
         return new AsteroidFieldNode(
             id,
             beltId,
             index,
-            displayName(beltId, index),
-            AsteroidNodeKind.GENERATED,
-            sizeClass(profile, index),
+            preset == null ? displayName(beltId, index) : preset.displayName(),
+            preset == null ? AsteroidNodeKind.GENERATED : preset.kind(),
+            sizeClass,
+            preset == null ? defaultInitialDetectionState(sizeClass) : preset.initialDetectionState(),
             unitDouble(mix(baseSeed, 1L)) * 360.0,
             unitDouble(mix(baseSeed, 2L)),
             selectOreProfile(profile, unitDouble(mix(baseSeed, 3L))),
             new AsteroidAppearanceProfile("generated_asteroid_tiles", mix(baseSeed, 4L)));
+    }
+
+    private static AsteroidDetectionState defaultInitialDetectionState(AsteroidSizeClass sizeClass) {
+        return sizeClass == AsteroidSizeClass.LARGE ? AsteroidDetectionState.DETECTED : AsteroidDetectionState.HIDDEN;
     }
 
     private static AsteroidSizeClass sizeClass(AsteroidFieldProfile profile, int index) {

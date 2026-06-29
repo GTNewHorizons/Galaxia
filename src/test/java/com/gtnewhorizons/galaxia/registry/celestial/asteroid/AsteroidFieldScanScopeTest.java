@@ -55,6 +55,7 @@ final class AsteroidFieldScanScopeTest {
             "Test Asteroid " + index,
             AsteroidNodeKind.GENERATED,
             AsteroidSizeClass.LARGE,
+            AsteroidDetectionState.DETECTED,
             angleOffsetDeg,
             orbitalDepth01,
             new AsteroidOreProfile("test", 1.0, List.of("test_vein")),

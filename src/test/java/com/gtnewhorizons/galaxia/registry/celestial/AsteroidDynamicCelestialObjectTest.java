@@ -74,6 +74,27 @@ final class AsteroidDynamicCelestialObjectTest {
     }
 
     @Test
+    void frozenBeltPresetAsteroidHasNameKindAndVisibilityOverride() {
+        CelestialObjectKey key = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 1));
+
+        CelestialObject asteroid = CelestialRegistry.get(key)
+            .orElseThrow();
+
+        assertEquals("Karnyx", asteroid.name());
+        assertEquals(
+            "unique",
+            asteroid.properties()
+                .metadata()
+                .get("minorBodies"));
+        assertTrue(
+            GalaxiaCelestialAPI.getChildren(CelestialObjectId.FROZEN_BELT)
+                .stream()
+                .map(CelestialObject::id)
+                .anyMatch(key::equals));
+    }
+
+    @Test
     void asteroidBeltChildrenIncludeOnlyInitiallyDetectedMinorBodies() {
         CelestialObject frozenBelt = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
             .orElseThrow();

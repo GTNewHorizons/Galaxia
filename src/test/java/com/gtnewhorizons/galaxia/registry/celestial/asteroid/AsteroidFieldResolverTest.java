@@ -101,6 +101,25 @@ final class AsteroidFieldResolverTest {
         assertEquals(AsteroidOreKnowledgeState.UNKNOWN, AsteroidFieldResolver.oreKnowledgeAfterDetection(small));
     }
 
+    @Test
+    void nodePresetOverridesGeneratedNameKindAndInitialVisibility() {
+        AsteroidFieldProfile profile = AsteroidFieldProfile.builder()
+            .seedSalt(99L)
+            .generationVersion(1)
+            .sizeCounts(0, 1, 1)
+            .radialBand(10.0, 20.0)
+            .satelliteScanRadius(1000.0)
+            .oreProfile(new AsteroidOreProfile("metallic", 2.0, List.of("galaxia:iron")))
+            .nodePreset(1, AsteroidNodeKind.UNIQUE, "The Anvil", AsteroidDetectionState.DETECTED)
+            .build();
+
+        AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(CelestialObjectId.FROZEN_BELT, profile, 1);
+
+        assertEquals(AsteroidNodeKind.UNIQUE, node.kind());
+        assertEquals("The Anvil", node.displayName());
+        assertEquals(AsteroidDetectionState.DETECTED, AsteroidFieldResolver.initialDetectionState(node));
+    }
+
     private static AsteroidFieldProfile profile(int generationVersion) {
         return AsteroidFieldProfile.builder()
             .seedSalt(99L)
