@@ -11,8 +11,9 @@ public final class AsteroidFieldStarmapView {
         Objects.requireNonNull(knowledge, "knowledge");
         return knowledge.nodes()
             .stream()
-            .filter(node -> knowledge.entryFor(node.id())
-                .detectionState() == AsteroidDetectionState.DETECTED)
+            .filter(
+                node -> knowledge.entryFor(node.id())
+                    .detectionState() == AsteroidDetectionState.DETECTED)
             .map(node -> AsteroidFieldStarmapEntry.from(node, knowledge.entryFor(node.id())))
             .toList();
     }

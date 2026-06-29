@@ -52,12 +52,11 @@ public record AsteroidFieldStarmapEntry(MinorCelestialBodyId id, CelestialObject
 
         AsteroidOreKnowledgeState oreKnowledgeState = knowledge.oreKnowledgeState();
         Optional<String> visibleOreProfileId = oreKnowledgeState == AsteroidOreKnowledgeState.UNKNOWN ? Optional.empty()
-            : Optional.of(node.oreProfile()
-                .id());
-        List<String> visibleGtOreVeinIds = oreKnowledgeState == AsteroidOreKnowledgeState.PROFILE
-            ? node.oreProfile()
-                .gtOreVeinIds()
-            : List.of();
+            : Optional.of(
+                node.oreProfile()
+                    .id());
+        List<String> visibleGtOreVeinIds = oreKnowledgeState == AsteroidOreKnowledgeState.PROFILE ? node.oreProfile()
+            .gtOreVeinIds() : List.of();
 
         return new AsteroidFieldStarmapEntry(
             node.id(),

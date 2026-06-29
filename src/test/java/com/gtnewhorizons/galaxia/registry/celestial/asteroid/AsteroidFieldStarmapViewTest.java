@@ -52,12 +52,30 @@ final class AsteroidFieldStarmapViewTest {
 
         List<AsteroidFieldStarmapEntry> entries = AsteroidFieldStarmapView.visibleEntries(knowledge);
 
-        assertEquals(Optional.empty(), entries.get(0).visibleOreProfileId());
-        assertEquals(List.of(), entries.get(0).visibleGtOreVeinIds());
-        assertEquals(Optional.of("volatile_ice"), entries.get(1).visibleOreProfileId());
-        assertEquals(List.of(), entries.get(1).visibleGtOreVeinIds());
-        assertEquals(Optional.of("volatile_ice"), entries.get(2).visibleOreProfileId());
-        assertEquals(List.of("ice", "sulfur"), entries.get(2).visibleGtOreVeinIds());
+        assertEquals(
+            Optional.empty(),
+            entries.get(0)
+                .visibleOreProfileId());
+        assertEquals(
+            List.of(),
+            entries.get(0)
+                .visibleGtOreVeinIds());
+        assertEquals(
+            Optional.of("volatile_ice"),
+            entries.get(1)
+                .visibleOreProfileId());
+        assertEquals(
+            List.of(),
+            entries.get(1)
+                .visibleGtOreVeinIds());
+        assertEquals(
+            Optional.of("volatile_ice"),
+            entries.get(2)
+                .visibleOreProfileId());
+        assertEquals(
+            List.of("ice", "sulfur"),
+            entries.get(2)
+                .visibleGtOreVeinIds());
     }
 
     private static List<MinorCelestialBodyId> visibleIds(AsteroidFieldKnowledge knowledge) {

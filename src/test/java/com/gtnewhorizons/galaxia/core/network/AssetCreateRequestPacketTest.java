@@ -14,8 +14,8 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeService;
@@ -70,13 +70,19 @@ final class AssetCreateRequestPacketTest {
             .apply(TEAM);
 
         assertNotNull(outpostSync);
-        assertEquals(1, CelestialAssetStore.getAssetsOnBody(asteroidId).size());
+        assertEquals(
+            1,
+            CelestialAssetStore.getAssetsOnBody(asteroidId)
+                .size());
         assertThrows(
             IllegalArgumentException.class,
             () -> AssetCreateRequestPacket
                 .createFacility(asteroidId, "Asteroid Station", CelestialAsset.Kind.AUTOMATED_STATION, true)
                 .apply(TEAM));
-        assertEquals(1, CelestialAssetStore.getAssetsOnBody(asteroidId).size());
+        assertEquals(
+            1,
+            CelestialAssetStore.getAssetsOnBody(asteroidId)
+                .size());
     }
 
     @Test
@@ -88,7 +94,10 @@ final class AssetCreateRequestPacketTest {
             () -> AssetCreateRequestPacket
                 .createFacility(hiddenAsteroidId, "Hidden Outpost", CelestialAsset.Kind.AUTOMATED_OUTPOST, true)
                 .apply(TEAM));
-        assertEquals(0, CelestialAssetStore.getAssetsOnBody(hiddenAsteroidId).size());
+        assertEquals(
+            0,
+            CelestialAssetStore.getAssetsOnBody(hiddenAsteroidId)
+                .size());
     }
 
     @Test
@@ -109,7 +118,10 @@ final class AssetCreateRequestPacketTest {
             .apply(TEAM);
 
         assertNotNull(outpostSync);
-        assertEquals(1, CelestialAssetStore.getAssetsOnBody(hiddenAsteroidId).size());
+        assertEquals(
+            1,
+            CelestialAssetStore.getAssetsOnBody(hiddenAsteroidId)
+                .size());
     }
 
     private static CelestialObjectKey hiddenAsteroidId() {

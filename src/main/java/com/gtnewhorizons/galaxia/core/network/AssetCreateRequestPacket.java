@@ -134,7 +134,9 @@ public final class AssetCreateRequestPacket implements IMessage {
 
     private void validateTargetBody(UUID teamId) {
         CelestialObject body = CelestialRegistry.get(celestialObjectId)
-            .orElseThrow(() -> new IllegalArgumentException("Unknown celestial object for asset creation: " + celestialObjectId));
+            .orElseThrow(
+                () -> new IllegalArgumentException(
+                    "Unknown celestial object for asset creation: " + celestialObjectId));
         if (kind == CelestialAsset.Kind.AUTOMATED_STATION && !body.properties()
             .canCreateStation()) {
             throw new IllegalArgumentException("Cannot create automated station on " + celestialObjectId);
@@ -145,9 +147,12 @@ public final class AssetCreateRequestPacket implements IMessage {
         }
         if (kind == CelestialAsset.Kind.AUTOMATED_OUTPOST && body.id()
             .isMinorBody()
-            && !AsteroidFieldKnowledgeService.isDetected(teamId, body.id()
-                .minorBodyId())) {
-            throw new IllegalArgumentException("Cannot create automated outpost on hidden asteroid " + celestialObjectId);
+            && !AsteroidFieldKnowledgeService.isDetected(
+                teamId,
+                body.id()
+                    .minorBodyId())) {
+            throw new IllegalArgumentException(
+                "Cannot create automated outpost on hidden asteroid " + celestialObjectId);
         }
     }
 

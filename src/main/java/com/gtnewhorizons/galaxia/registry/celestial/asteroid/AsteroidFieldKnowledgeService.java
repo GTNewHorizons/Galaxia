@@ -24,8 +24,7 @@ public final class AsteroidFieldKnowledgeService {
     public static boolean isDetected(UUID teamId, MinorCelestialBodyId minorBodyId) {
         Objects.requireNonNull(teamId, "teamId cannot be null");
         Objects.requireNonNull(minorBodyId, "minorBodyId cannot be null");
-        AsteroidFieldProfile profile = profile(minorBodyId.parentBeltId())
-            .orElse(null);
+        AsteroidFieldProfile profile = profile(minorBodyId.parentBeltId()).orElse(null);
         if (profile == null || minorBodyId.index() >= profile.totalNodes()) return false;
 
         Optional<AsteroidFieldKnowledge> knowledge = STORE.get(teamId, minorBodyId.parentBeltId());

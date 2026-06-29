@@ -146,14 +146,17 @@ final class AsteroidDynamicCelestialObjectTest {
 
         CelestialObject asteroid = GalaxiaCelestialAPI.getChildren(CelestialObjectId.FROZEN_BELT, List.of(snapshot))
             .stream()
-            .filter(child -> child.id()
-                .equals(CelestialObjectKey.minorBody(smallNode.id())))
+            .filter(
+                child -> child.id()
+                    .equals(CelestialObjectKey.minorBody(smallNode.id())))
             .findFirst()
             .orElseThrow();
 
-        assertTrue(asteroid.properties()
-            .visitable());
-        assertTrue(asteroid.properties()
-            .canCreateOutpost());
+        assertTrue(
+            asteroid.properties()
+                .visitable());
+        assertTrue(
+            asteroid.properties()
+                .canCreateOutpost());
     }
 }
