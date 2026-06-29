@@ -81,7 +81,12 @@ public final class SatelliteDataEndpointRegistry {
         for (ModuleInstance module : facility.modules()) {
             if (module.component() instanceof ModuleDebugDataGenerator debugModule) {
                 endpoints.add(
-                    new Endpoint(teamId, facility, module, facility.celestialObjectId.requireRegisteredBodyId(), debugModule));
+                    new Endpoint(
+                        teamId,
+                        facility,
+                        module,
+                        facility.celestialObjectId.requireRegisteredBodyId(),
+                        debugModule));
             }
         }
         return endpoints;

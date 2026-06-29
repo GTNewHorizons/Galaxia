@@ -19,8 +19,8 @@ final class AsteroidDynamicCelestialObjectTest {
 
     @Test
     void frozenBeltMinorBodyKeyResolvesGeneratedAsteroidObject() {
-        CelestialObjectKey key = CelestialObjectKey.minorBody(
-            new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0));
+        CelestialObjectKey key = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0));
 
         CelestialObject asteroid = CelestialRegistry.get(key)
             .orElseThrow();
@@ -29,16 +29,24 @@ final class AsteroidDynamicCelestialObjectTest {
         assertEquals(CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT), asteroid.parentId());
         assertEquals(CelestialObject.Class.ASTEROID, asteroid.objectClass());
         assertEquals("FROZEN_BELT 1", asteroid.name());
-        assertTrue(asteroid.properties().canCreateOutpost());
-        assertFalse(asteroid.properties().canCreateStation());
+        assertTrue(
+            asteroid.properties()
+                .canCreateOutpost());
+        assertFalse(
+            asteroid.properties()
+                .canCreateStation());
     }
 
     @Test
     void generatedAsteroidObjectsDoNotPolluteStaticRegistryListing() {
-        CelestialObjectKey key = CelestialObjectKey.minorBody(
-            new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 1));
+        CelestialObjectKey key = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 1));
 
-        assertTrue(CelestialRegistry.get(key).isPresent());
-        assertFalse(CelestialRegistry.getAllBodies().containsKey(key));
+        assertTrue(
+            CelestialRegistry.get(key)
+                .isPresent());
+        assertFalse(
+            CelestialRegistry.getAllBodies()
+                .containsKey(key));
     }
 }

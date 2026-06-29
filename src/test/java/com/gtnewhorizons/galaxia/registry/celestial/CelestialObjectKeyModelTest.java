@@ -22,8 +22,8 @@ final class CelestialObjectKeyModelTest {
 
     @Test
     void celestialObjectCanRepresentDynamicMinorBody() {
-        CelestialObjectKey asteroidKey = CelestialObjectKey.minorBody(
-            new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 3));
+        CelestialObjectKey asteroidKey = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 3));
 
         CelestialObject asteroid = CelestialObject.builder()
             .id(asteroidKey)

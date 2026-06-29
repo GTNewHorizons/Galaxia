@@ -21,14 +21,17 @@ final class GalaxiaCelestialAPIKeyTest {
     @Test
     void publicApiFindsDynamicMinorBodyByKey() {
         CelestialObject root = GalaxiaCelestialAPI.getPrimaryRoot();
-        CelestialObjectKey key = CelestialObjectKey.minorBody(
-            new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 2));
+        CelestialObjectKey key = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 2));
 
         CelestialObject asteroid = GalaxiaCelestialAPI.get(key)
             .orElseThrow();
 
         assertEquals(asteroid, GalaxiaCelestialAPI.findBodyById(root, key));
-        assertEquals(CelestialObjectId.VAEL, GalaxiaCelestialAPI.findStar(key).requireRegisteredId());
+        assertEquals(
+            CelestialObjectId.VAEL,
+            GalaxiaCelestialAPI.findStar(key)
+                .requireRegisteredId());
         assertEquals(asteroid, GalaxiaCelestialAPI.findPlanetaryAnchor(key));
     }
 }

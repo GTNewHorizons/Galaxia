@@ -24,8 +24,8 @@ final class CelestialObjectKeyCodecTest {
 
     @Test
     void roundTripsMinorBodyKey() {
-        CelestialObjectKey key = CelestialObjectKey.minorBody(
-            new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 4));
+        CelestialObjectKey key = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 4));
 
         NBTTagCompound tag = CelestialObjectKeyCodec.write(key);
 

@@ -21,8 +21,10 @@ public final class CelestialObjectKeyCodec {
         // minor bodies from sharing an ambiguous "id" field.
         if (key.isRegistered()) {
             tag.setString("kind", "registered");
-            tag.setString("id", key.registeredBodyId()
-                .name());
+            tag.setString(
+                "id",
+                key.registeredBodyId()
+                    .name());
             return tag;
         }
         tag.setString("kind", "minor");
@@ -48,7 +50,9 @@ public final class CelestialObjectKeyCodec {
         }
         if ("minor".equals(kind)) {
             return CelestialObjectKey.minorBody(
-                new MinorCelestialBodyId(parseRegisteredId(tag.getString("parentBeltId"), "parentBeltId"), tag.getInteger("index")));
+                new MinorCelestialBodyId(
+                    parseRegisteredId(tag.getString("parentBeltId"), "parentBeltId"),
+                    tag.getInteger("index")));
         }
         throw new IllegalArgumentException("Unknown celestial object key kind: " + kind);
     }

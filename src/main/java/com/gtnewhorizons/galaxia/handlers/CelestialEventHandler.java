@@ -22,7 +22,6 @@ import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.SatelliteNetworkSyncPacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;

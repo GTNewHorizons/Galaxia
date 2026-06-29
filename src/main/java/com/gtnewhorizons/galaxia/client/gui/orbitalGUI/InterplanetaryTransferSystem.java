@@ -557,8 +557,9 @@ public final class InterplanetaryTransferSystem {
         }
 
         private static boolean isSameOrbitAnchor(CelestialObject transferAnchor, CelestialObject visibleSystem) {
-            return transferAnchor == visibleSystem
-                || (transferAnchor != null && visibleSystem != null && transferAnchor.id() == visibleSystem.id());
+            return transferAnchor == visibleSystem || (transferAnchor != null && visibleSystem != null
+                && transferAnchor.id()
+                    .equals(visibleSystem.id()));
         }
 
         int version() {

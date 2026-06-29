@@ -294,12 +294,12 @@ public final class CelestialRegistry {
                         .canCreateStation(true)
                         .canCreateOutpost(false)
                         .localGravityG(0.0)
-                   .temperature(67)
-                   .radiation(0.28)
-                   .oreProfile("undefined")
-                   .asteroidFieldProfile(frozenBeltAsteroidField())
-                   .metadata("surface", "undefined")
-                   .metadata("minorBodies", "enabled"))
+                        .temperature(67)
+                        .radiation(0.28)
+                        .oreProfile("undefined")
+                        .asteroidFieldProfile(frozenBeltAsteroidField())
+                        .metadata("surface", "undefined")
+                        .metadata("minorBodies", "enabled"))
                 .playableDimensionProfile(
                     stationBuildable(
                         PlayableDimensionProfile.builder(DimensionEnum.FROZEN_BELT)
@@ -497,13 +497,19 @@ public final class CelestialRegistry {
                     .canCreateOutpost(true)
                     .temperature(41)
                     .radiation(0.52)
-                    .oreProfile(node.oreProfile().id())
+                    .oreProfile(
+                        node.oreProfile()
+                            .id())
                     .gtOreVeinIds(
                         node.oreProfile()
                             .gtOreVeinIds()
                             .toArray(new String[0]))
                     .metadata("surface", "undefined")
-                    .metadata("sizeClass", node.sizeClass().name().toLowerCase())
+                    .metadata(
+                        "sizeClass",
+                        node.sizeClass()
+                            .name()
+                            .toLowerCase())
                     .metadata("minorBodies", "generated"))
             .build();
     }

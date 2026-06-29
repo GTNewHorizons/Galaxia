@@ -70,7 +70,12 @@ final class SystemAssetPanelStressTest {
             List.of("MARS:COMMUNICATION:2", "MARS:PROSPECTING:1", "MOON:COMMUNICATION:1"),
             SolarSystemAssetPanelWidget.satelliteRows(assets)
                 .stream()
-                .map(row -> row.bodyId() + ":" + row.kind() + ":" + row.count())
+                .map(
+                    row -> row.bodyId()
+                        .requireRegisteredBodyId() + ":"
+                        + row.kind()
+                        + ":"
+                        + row.count())
                 .collect(Collectors.toList()));
     }
 
