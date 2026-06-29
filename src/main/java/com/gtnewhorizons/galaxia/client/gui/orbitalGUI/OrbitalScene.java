@@ -567,7 +567,8 @@ public class OrbitalScene {
             if (ellipseAlpha <= 0.01f) return;
             for (ResolvedBodyDrawState state : frame.resolvedBodies) {
                 if (state.parent() == null || !state.renderBody()
-                    || OrbitalView.OrbitalWorldStateCache.usesAbsolutePosition(state.parent(), state.body())) continue;
+                    || OrbitalView.OrbitalWorldStateCache.usesAbsolutePosition(state.parent(), state.body())
+                    || OrbitalMechanics.usesAsteroidFieldPosition(state.parent(), state.body())) continue;
                 ResolvedBodyDrawState parentState = frame.resolvedBodiesByBody.get(state.parent());
                 if (parentState == null) continue;
                 drawEllipse(
@@ -673,9 +674,16 @@ public class OrbitalScene {
         private ScreenBodyBounds findScreenBodyBounds(OrbitalSceneFrame frame, CelestialObject body) {
             for (int i = frame.screenBodies.size() - 1; i >= 0; i--) {
                 ScreenBodyBounds bounds = frame.screenBodies.get(i);
-                if (bounds.body() == body) return bounds;
+                if (sameBody(bounds.body(), body)) return bounds;
             }
             return null;
+        }
+
+        private static boolean sameBody(CelestialObject left, CelestialObject right) {
+            if (left == right) return true;
+            if (left == null || right == null || left.id() == null || right.id() == null) return false;
+            return left.id()
+                .equals(right.id());
         }
 
         private void drawSprite(ResourceLocation tex, float x, float y, float radius, float alpha) {

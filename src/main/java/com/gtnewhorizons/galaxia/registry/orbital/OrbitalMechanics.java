@@ -58,6 +58,10 @@ public final class OrbitalMechanics {
         return safeParentState.add(localState);
     }
 
+    public static boolean usesAsteroidFieldPosition(CelestialObject parent, CelestialObject child) {
+        return resolveFieldAsteroidChildWorldState(parent, child, new OrbitalState(0.0, 0.0, 0.0, 0.0)) != null;
+    }
+
     private static OrbitalState resolveFieldAsteroidChildWorldState(CelestialObject parent, CelestialObject child,
         OrbitalState parentState) {
         if (child == null || child.id() == null

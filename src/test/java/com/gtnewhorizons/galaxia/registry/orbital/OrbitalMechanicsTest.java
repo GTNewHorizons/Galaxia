@@ -2,6 +2,8 @@ package com.gtnewhorizons.galaxia.registry.orbital;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
@@ -54,6 +56,7 @@ final class OrbitalMechanicsTest {
             () -> assertEquals(expected.y(), actual.y(), EPSILON),
             () -> assertEquals(expected.vx(), actual.vx(), EPSILON),
             () -> assertEquals(expected.vy(), actual.vy(), EPSILON));
+        assertTrue(OrbitalMechanics.usesAsteroidFieldPosition(belt, asteroid));
     }
 
     @Test
@@ -86,5 +89,6 @@ final class OrbitalMechanicsTest {
             () -> assertEquals(expected.y(), actual.y(), EPSILON),
             () -> assertEquals(expected.vx(), actual.vx(), EPSILON),
             () -> assertEquals(expected.vy(), actual.vy(), EPSILON));
+        assertFalse(OrbitalMechanics.usesAsteroidFieldPosition(parent, asteroid));
     }
 }
