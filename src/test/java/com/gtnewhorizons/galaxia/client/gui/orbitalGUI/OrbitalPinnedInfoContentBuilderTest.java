@@ -90,17 +90,21 @@ final class OrbitalPinnedInfoContentBuilderTest {
 
         AsteroidFieldClientState.update(snapshot(node, AsteroidOreKnowledgeState.UNKNOWN));
         PinnedInfoRow unknownRow = oreRow(builder.buildRows(asteroid));
-        assertFalse(unknownRow.value()
-            .contains(node.oreProfile()
-                .id()));
-        assertTrue(unknownRow.items()
-            .isEmpty());
+        assertFalse(
+            unknownRow.value()
+                .contains(
+                    node.oreProfile()
+                        .id()));
+        assertTrue(
+            unknownRow.items()
+                .isEmpty());
 
         AsteroidFieldClientState.update(snapshot(node, AsteroidOreKnowledgeState.SIGNATURE));
         PinnedInfoRow signatureRow = oreRow(builder.buildRows(asteroid));
         assertNotEquals(unknownRow.value(), signatureRow.value());
-        assertTrue(signatureRow.items()
-            .isEmpty());
+        assertTrue(
+            signatureRow.items()
+                .isEmpty());
 
         AsteroidFieldClientState.update(snapshot(node, AsteroidOreKnowledgeState.PROFILE));
         PinnedInfoRow profileRow = oreRow(builder.buildRows(asteroid));
