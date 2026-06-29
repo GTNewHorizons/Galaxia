@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.satellite;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,7 @@ public final class AsteroidSatelliteScanService {
     private final AsteroidFieldKnowledgeStore knowledgeStore;
     private final Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver;
     private final Map<ScanKey, Progress> progressBySatellite = new LinkedHashMap<>();
+    private final Set<CompletionKey> completions = new HashSet<>();
 
     public AsteroidSatelliteScanService(AsteroidFieldKnowledgeStore knowledgeStore,
         Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver) {
@@ -36,6 +38,96 @@ public final class AsteroidSatelliteScanService {
 
     public void clear() {
         progressBySatellite.clear();
+        completions.clear();
+    }
+
+    public List<AsteroidSatelliteScanSnapshot> snapshots(UUID teamId) {
+        Objects.requireNonNull(teamId, "teamId cannot be null");
+        List<AsteroidSatelliteScanSnapshot> snapshots = new ArrayList<>();
+        for (Map.Entry<ScanKey, Progress> entry : progressBySatellite.entrySet()) {
+            if (!entry.getKey()
+                .teamId()
+                .equals(teamId)) continue;
+            Progress progress = entry.getValue();
+            snapshots.add(
+                new AsteroidSatelliteScanSnapshot(
+                    entry.getKey()
+                        .satelliteId(),
+                    progress.asteroidId()
+                        .parentBeltId(),
+                    progress.asteroidId(),
+                    progress.pass(),
+                    progress.elapsedTicks()));
+        }
+        return List.copyOf(snapshots);
+    }
+
+    public Map<UUID, List<AsteroidSatelliteScanSnapshot>> snapshotsByTeam() {
+        Map<UUID, List<AsteroidSatelliteScanSnapshot>> snapshots = new LinkedHashMap<>();
+        for (ScanKey key : progressBySatellite.keySet()) {
+            snapshots.put(key.teamId(), snapshots(key.teamId()));
+        }
+        return Map.copyOf(snapshots);
+    }
+
+    public List<AsteroidSatelliteScanCompletionSnapshot> completionSnapshots(UUID teamId) {
+        Objects.requireNonNull(teamId, "teamId cannot be null");
+        return completions.stream()
+            .filter(
+                key -> key.teamId()
+                    .equals(teamId))
+            .map(
+                key -> new AsteroidSatelliteScanCompletionSnapshot(
+                    key.beltId(),
+                    key.anchorAsteroidId(),
+                    key.generationVersion()))
+            .toList();
+    }
+
+    public Map<UUID, List<AsteroidSatelliteScanCompletionSnapshot>> completionSnapshotsByTeam() {
+        Map<UUID, List<AsteroidSatelliteScanCompletionSnapshot>> snapshots = new LinkedHashMap<>();
+        for (CompletionKey key : completions) {
+            snapshots.put(key.teamId(), completionSnapshots(key.teamId()));
+        }
+        return Map.copyOf(snapshots);
+    }
+
+    public void restore(UUID teamId, List<AsteroidSatelliteScanSnapshot> snapshots) {
+        Objects.requireNonNull(teamId, "teamId cannot be null");
+        Objects.requireNonNull(snapshots, "snapshots cannot be null");
+        progressBySatellite.keySet()
+            .removeIf(
+                key -> key.teamId()
+                    .equals(teamId));
+        for (AsteroidSatelliteScanSnapshot snapshot : snapshots) {
+            Objects.requireNonNull(snapshot, "snapshot cannot be null");
+            ScanKey key = new ScanKey(teamId, snapshot.satelliteId());
+            if (progressBySatellite.containsKey(key)) {
+                throw new IllegalStateException(
+                    "Duplicate asteroid scan snapshot for satellite " + snapshot.satelliteId());
+            }
+            progressBySatellite.put(key, new Progress(snapshot.pass(), snapshot.asteroidId(), snapshot.elapsedTicks()));
+        }
+    }
+
+    public void restoreCompletions(UUID teamId, List<AsteroidSatelliteScanCompletionSnapshot> snapshots) {
+        Objects.requireNonNull(teamId, "teamId cannot be null");
+        Objects.requireNonNull(snapshots, "snapshots cannot be null");
+        completions.removeIf(
+            key -> key.teamId()
+                .equals(teamId));
+        for (AsteroidSatelliteScanCompletionSnapshot snapshot : snapshots) {
+            Objects.requireNonNull(snapshot, "snapshot cannot be null");
+            CompletionKey key = new CompletionKey(
+                teamId,
+                snapshot.beltId(),
+                snapshot.anchorAsteroidId(),
+                snapshot.generationVersion());
+            if (!completions.add(key)) {
+                throw new IllegalStateException(
+                    "Duplicate asteroid scan completion for anchor " + snapshot.anchorAsteroidId());
+            }
+        }
     }
 
     public List<ScanResult> tick(UUID teamId, List<CelestialAsset> assets, int elapsedTicks) {
@@ -78,12 +170,24 @@ public final class AsteroidSatelliteScanService {
         }
 
         AsteroidFieldKnowledge knowledge = knowledgeStore.getOrCreate(teamId, beltId, profile.get());
+        CompletionKey completionKey = new CompletionKey(
+            teamId,
+            beltId,
+            anchorId,
+            profile.get()
+                .generationVersion());
+        if (completions.contains(completionKey)) {
+            progressBySatellite.remove(key);
+            return List.of();
+        }
+
         List<ScanResult> results = new ArrayList<>();
         int remainingTicks = elapsedTicks;
         while (remainingTicks > 0) {
             Optional<ScanWork> work = nextWork(knowledge);
             if (work.isEmpty()) {
                 progressBySatellite.remove(key);
+                completions.add(completionKey);
                 break;
             }
             Progress progress = currentProgress(key, work.get());
@@ -105,6 +209,10 @@ public final class AsteroidSatelliteScanService {
                         .asteroidId(),
                     work.get()
                         .pass()));
+            if (nextWork(knowledge).isEmpty()) {
+                completions.add(completionKey);
+                break;
+            }
         }
         return results;
     }
@@ -153,6 +261,21 @@ public final class AsteroidSatelliteScanService {
         private ScanKey {
             teamId = Objects.requireNonNull(teamId, "teamId cannot be null");
             satelliteId = Objects.requireNonNull(satelliteId, "satelliteId cannot be null");
+        }
+    }
+
+    private record CompletionKey(UUID teamId, CelestialObjectId beltId, MinorCelestialBodyId anchorAsteroidId,
+        int generationVersion) {
+
+        private CompletionKey {
+            teamId = Objects.requireNonNull(teamId, "teamId cannot be null");
+            beltId = Objects.requireNonNull(beltId, "beltId cannot be null");
+            anchorAsteroidId = Objects.requireNonNull(anchorAsteroidId, "anchorAsteroidId cannot be null");
+            if (!anchorAsteroidId.parentBeltId()
+                .equals(beltId)) {
+                throw new IllegalArgumentException("anchor asteroid parent belt must match completion belt");
+            }
+            if (generationVersion <= 0) throw new IllegalArgumentException("generationVersion must be positive");
         }
     }
 

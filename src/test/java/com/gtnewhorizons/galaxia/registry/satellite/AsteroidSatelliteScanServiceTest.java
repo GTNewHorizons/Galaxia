@@ -159,6 +159,64 @@ final class AsteroidSatelliteScanServiceTest {
             service.tick(TEAM, List.of(satellite), AsteroidSatelliteScanPass.PROFILE.durationTicks()));
     }
 
+    @Test
+    void restoredProgressContinuesPartiallyCompletedScan() {
+        AsteroidFieldProfile profile = profile();
+        AsteroidFieldKnowledgeStore firstKnowledgeStore = new AsteroidFieldKnowledgeStore();
+        AsteroidSatelliteScanService firstService = new AsteroidSatelliteScanService(
+            firstKnowledgeStore,
+            bodyId -> bodyId == BELT ? Optional.of(profile) : Optional.empty());
+        AsteroidFieldNode anchor = AsteroidFieldResolver.resolveNode(BELT, profile, 0);
+        CelestialAsset satellite = prospectingSatellite(anchor.id());
+
+        assertTrue(
+            firstService.tick(TEAM, List.of(satellite), 600)
+                .isEmpty());
+
+        AsteroidFieldKnowledgeStore restoredKnowledgeStore = new AsteroidFieldKnowledgeStore();
+        AsteroidSatelliteScanService restoredService = new AsteroidSatelliteScanService(
+            restoredKnowledgeStore,
+            bodyId -> bodyId == BELT ? Optional.of(profile) : Optional.empty());
+        restoredService.restore(TEAM, firstService.snapshots(TEAM));
+
+        assertEquals(
+            List.of(
+                new AsteroidSatelliteScanService.ScanResult(BELT, anchor.id(), AsteroidSatelliteScanPass.DETECTION)),
+            restoredService.tick(TEAM, List.of(satellite), 600));
+    }
+
+    @Test
+    void completedAnchorStopsFutureScanWorkAfterRestore() {
+        AsteroidFieldProfile profile = profile();
+        AsteroidFieldKnowledgeStore firstKnowledgeStore = new AsteroidFieldKnowledgeStore();
+        AsteroidSatelliteScanService firstService = new AsteroidSatelliteScanService(
+            firstKnowledgeStore,
+            bodyId -> bodyId == BELT ? Optional.of(profile) : Optional.empty());
+        AsteroidFieldNode anchor = AsteroidFieldResolver.resolveNode(BELT, profile, 0);
+        CelestialAsset satellite = prospectingSatellite(anchor.id());
+
+        firstService.tick(
+            TEAM,
+            List.of(satellite),
+            AsteroidSatelliteScanPass.DETECTION.durationTicks() + AsteroidSatelliteScanPass.SIGNATURE.durationTicks()
+                + AsteroidSatelliteScanPass.PROFILE.durationTicks());
+        assertEquals(
+            List.of(new AsteroidSatelliteScanCompletionSnapshot(BELT, anchor.id(), profile.generationVersion())),
+            firstService.completionSnapshots(TEAM));
+
+        AsteroidSatelliteScanService restoredService = new AsteroidSatelliteScanService(
+            new AsteroidFieldKnowledgeStore(),
+            bodyId -> bodyId == BELT ? Optional.of(profile) : Optional.empty());
+        restoredService.restoreCompletions(TEAM, firstService.completionSnapshots(TEAM));
+
+        assertTrue(
+            restoredService.tick(TEAM, List.of(satellite), AsteroidSatelliteScanPass.DETECTION.durationTicks())
+                .isEmpty());
+        assertTrue(
+            restoredService.snapshots(TEAM)
+                .isEmpty());
+    }
+
     private static CelestialAsset prospectingSatellite(MinorCelestialBodyId asteroidId) {
         return CelestialAsset.create(
             CelestialObjectKey.minorBody(asteroidId),

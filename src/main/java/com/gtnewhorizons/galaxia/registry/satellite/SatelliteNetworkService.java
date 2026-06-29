@@ -139,6 +139,22 @@ public final class SatelliteNetworkService {
         return ASTEROID_KNOWLEDGE.snapshotsByTeam();
     }
 
+    public static List<AsteroidSatelliteScanSnapshot> asteroidScanSnapshots(UUID teamId) {
+        return ASTEROID_SCANS.snapshots(teamId);
+    }
+
+    public static Map<UUID, List<AsteroidSatelliteScanSnapshot>> asteroidScanSnapshotsByTeam() {
+        return ASTEROID_SCANS.snapshotsByTeam();
+    }
+
+    public static List<AsteroidSatelliteScanCompletionSnapshot> asteroidScanCompletionSnapshots(UUID teamId) {
+        return ASTEROID_SCANS.completionSnapshots(teamId);
+    }
+
+    public static Map<UUID, List<AsteroidSatelliteScanCompletionSnapshot>> asteroidScanCompletionSnapshotsByTeam() {
+        return ASTEROID_SCANS.completionSnapshotsByTeam();
+    }
+
     public static void restoreAsteroidKnowledge(UUID teamId, List<AsteroidFieldKnowledgeSnapshot> snapshots) {
         ASTEROID_KNOWLEDGE.restore(
             teamId,
@@ -147,6 +163,15 @@ public final class SatelliteNetworkService {
                 .map(
                     body -> body.properties()
                         .asteroidFieldProfile()));
+    }
+
+    public static void restoreAsteroidScans(UUID teamId, List<AsteroidSatelliteScanSnapshot> snapshots) {
+        ASTEROID_SCANS.restore(teamId, snapshots);
+    }
+
+    public static void restoreAsteroidScanCompletions(UUID teamId,
+        List<AsteroidSatelliteScanCompletionSnapshot> snapshots) {
+        ASTEROID_SCANS.restoreCompletions(teamId, snapshots);
     }
 
     public static boolean canStartProcess(UUID teamId, CelestialObjectId bodyId, SatelliteDataKey outputKey) {
