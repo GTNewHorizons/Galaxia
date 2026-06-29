@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.UUID;
 
@@ -10,8 +11,11 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
@@ -47,5 +51,24 @@ final class AssetCreateRequestPacketTest {
         assertEquals(
             1,
             CelestialAssetStore.SERVER.satelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION));
+    }
+
+    @Test
+    void asteroidCreateRequestAllowsOutpostsAndRejectsAutomatedStations() {
+        CelestialObjectKey asteroidId = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0));
+
+        AssetSyncPacket outpostSync = AssetCreateRequestPacket
+            .createFacility(asteroidId, "Asteroid Outpost", CelestialAsset.Kind.AUTOMATED_OUTPOST, true)
+            .apply(TEAM);
+
+        assertNotNull(outpostSync);
+        assertEquals(1, CelestialAssetStore.getAssetsOnBody(asteroidId).size());
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> AssetCreateRequestPacket
+                .createFacility(asteroidId, "Asteroid Station", CelestialAsset.Kind.AUTOMATED_STATION, true)
+                .apply(TEAM));
+        assertEquals(1, CelestialAssetStore.getAssetsOnBody(asteroidId).size());
     }
 }
