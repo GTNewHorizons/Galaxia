@@ -29,6 +29,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMacerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMaintenanceBay;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModulePower;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleSpaceshipDock;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleStorage;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleTank;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
@@ -168,6 +169,17 @@ public class FacilityModuleRegistry {
                     HammerVariant.BASE,
                     64))
             .register();
+        register(
+            FacilityModuleKind.SPACESHIP_DOCK,
+            Map.of(
+                ModuleTier.NONE,
+                tierDataBuilder().addedEnergyCapacity(0L)
+                    .powerDraw(0L)
+                    .cooldown(1)
+                    .cost(Map.of())
+                    .build()),
+            (module, asset) -> {},
+            ModuleSpaceshipDock::new);
         register(
             FacilityModuleKind.STORAGE,
             new TierMapBuilder()

@@ -1186,6 +1186,13 @@ final class FacilityPersistenceManagerTest {
             StationTileCoord.of(1, 4));
         createAndPlaceModule(
             station,
+            FacilityModuleKind.SPACESHIP_DOCK,
+            Buildable.Status.OPERATIONAL,
+            ModuleShape.SINGLE,
+            ModuleTier.NONE,
+            StationTileCoord.of(3, 4));
+        createAndPlaceModule(
+            station,
             FacilityModuleKind.DEBUG_DATA_GENERATOR,
             Buildable.Status.OPERATIONAL,
             ModuleShape.SINGLE,
@@ -1207,13 +1214,16 @@ final class FacilityPersistenceManagerTest {
         System.out.println("Layout tile count: " + encoded.layoutTiles.size());
 
         // Verify module entries
-        assertEquals(15, encoded.modules.size());
-        assertEquals(15, encoded.layoutTiles.size());
+        assertEquals(16, encoded.modules.size());
+        assertEquals(16, encoded.layoutTiles.size());
 
         // Verify each kind appears in encoded modules
         assertTrue(
             encoded.modules.stream()
                 .anyMatch(mj -> "HAMMER".equals(mj.kind)));
+        assertTrue(
+            encoded.modules.stream()
+                .anyMatch(mj -> "SPACESHIP_DOCK".equals(mj.kind)));
         assertTrue(
             encoded.modules.stream()
                 .anyMatch(mj -> "MINER".equals(mj.kind)));
@@ -1277,10 +1287,10 @@ final class FacilityPersistenceManagerTest {
         org.junit.jupiter.api.Assertions.assertAll(
             "fullRoundTripAllKinds",
             () -> assertEquals(
-                15,
+                16,
                 decoded.modules()
                     .size(),
-                "Expected 15 modules, got " + decoded.modules()
+                "Expected 16 modules, got " + decoded.modules()
                     .size() + dumpKinds(decoded)),
             () -> {
                 // Verify each kind is present
@@ -1295,6 +1305,7 @@ final class FacilityPersistenceManagerTest {
                 }
             },
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(1, 0), "HAMMER anchor"),
+            () -> assertLayoutTilesExist(decoded, StationTileCoord.of(3, 4), "SPACESHIP_DOCK anchor"),
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(2, 0), "MINER anchor"),
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(3, 0), "POWER anchor"),
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(5, 0), "GEOTHERMAL_GENERATOR anchor"),

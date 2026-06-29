@@ -14,6 +14,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 public enum FacilityModuleKind {
 
     HAMMER,
+    SPACESHIP_DOCK,
     MINER,
     POWER,
     STORAGE,
@@ -45,7 +46,7 @@ public enum FacilityModuleKind {
 
     public StationModuleCategory getCategory() {
         return switch (this) {
-            case HAMMER -> StationModuleCategory.LOGISTICS;
+            case HAMMER, SPACESHIP_DOCK -> StationModuleCategory.LOGISTICS;
             case MINER -> StationModuleCategory.MINING_SUPPORT;
             case POWER, GEOTHERMAL_GENERATOR -> StationModuleCategory.POWER;
             case DEBUG_DATA_GENERATOR -> StationModuleCategory.SUPPORT;
@@ -96,6 +97,7 @@ public enum FacilityModuleKind {
     public EnumSet<ModuleTier> allowedTiers() {
         return switch (this) {
             case HAMMER -> EnumSet.of(ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV, ModuleTier.ZPM, ModuleTier.UV);
+            case SPACESHIP_DOCK -> EnumSet.of(ModuleTier.NONE);
             case MINER -> EnumSet.of(ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV);
             case POWER -> EnumSet.of(ModuleTier.NONE);
             case GEOTHERMAL_GENERATOR -> EnumSet.of(ModuleTier.HV);
@@ -110,7 +112,7 @@ public enum FacilityModuleKind {
     public ModuleTier defaultTier() {
         return switch (this) {
             case HAMMER, MINER -> ModuleTier.EV;
-            case POWER -> ModuleTier.NONE;
+            case POWER, SPACESHIP_DOCK -> ModuleTier.NONE;
             case GEOTHERMAL_GENERATOR -> ModuleTier.HV;
             case STORAGE, TANK, BATTERY -> ModuleTier.HV;
             case MAINTENANCE_BAY -> ModuleTier.NONE;
@@ -128,7 +130,7 @@ public enum FacilityModuleKind {
 
     public ModulePriority defaultPriority() {
         return switch (this) {
-            case HAMMER, MINER -> ModulePriority.NORMAL;
+            case HAMMER, SPACESHIP_DOCK, MINER -> ModulePriority.NORMAL;
             case POWER, GEOTHERMAL_GENERATOR -> ModulePriority.HIGH;
             case STORAGE, TANK, BATTERY -> ModulePriority.NORMAL;
             case MAINTENANCE_BAY, MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY, DEBUG_DATA_GENERATOR -> ModulePriority.NORMAL;

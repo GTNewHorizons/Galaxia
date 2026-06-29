@@ -175,6 +175,7 @@ final class StationItemInteractionModalWidget extends ParentWidget<StationItemIn
         if (kind == null) return new ItemStack(Items.compass);
         return switch (kind) {
             case HAMMER -> new ItemStack(Items.iron_pickaxe);
+            case SPACESHIP_DOCK -> new ItemStack(Items.compass);
             case MINER -> new ItemStack(Items.diamond_pickaxe);
             case POWER, BATTERY, GEOTHERMAL_GENERATOR, DEBUG_DATA_GENERATOR -> new ItemStack(Items.redstone);
             case STORAGE -> new ItemStack(Blocks.chest);

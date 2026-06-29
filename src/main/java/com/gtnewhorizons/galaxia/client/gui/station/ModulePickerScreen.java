@@ -556,6 +556,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private static String moduleDescription(FacilityModuleKind kind) {
         return switch (kind) {
             case HAMMER -> "Launches logistics packages";
+            case SPACESHIP_DOCK -> "Placeholder spaceship support module";
             case MINER -> "Extracts planetary ores";
             case POWER -> "Adds station EU generation";
             case GEOTHERMAL_GENERATOR -> "Generates EU from magma pools";
