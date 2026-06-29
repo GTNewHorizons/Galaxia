@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 
@@ -31,17 +32,27 @@ public final class AsteroidFieldKnowledgeStore {
     }
 
     public Optional<AsteroidFieldNode> detectNext(UUID teamId, CelestialObjectId beltId, AsteroidFieldProfile profile) {
+        return detectNext(teamId, beltId, profile, node -> true);
+    }
+
+    public Optional<AsteroidFieldNode> detectNext(UUID teamId, CelestialObjectId beltId, AsteroidFieldProfile profile,
+        Predicate<AsteroidFieldNode> scope) {
         AsteroidFieldKnowledge knowledge = getOrCreate(teamId, beltId, profile);
-        Optional<AsteroidFieldNode> candidate = knowledge.nextDetectionCandidate();
+        Optional<AsteroidFieldNode> candidate = knowledge.nextDetectionCandidate(scope);
         candidate.ifPresent(node -> knowledge.detect(node.id()));
         return candidate;
     }
 
     public Optional<AsteroidFieldNode> prospectNext(UUID teamId, CelestialObjectId beltId,
         AsteroidFieldProfile profile) {
+        return prospectNext(teamId, beltId, profile, node -> true);
+    }
+
+    public Optional<AsteroidFieldNode> prospectNext(UUID teamId, CelestialObjectId beltId, AsteroidFieldProfile profile,
+        Predicate<AsteroidFieldNode> scope) {
         AsteroidFieldKnowledge knowledge = getOrCreate(teamId, beltId, profile);
-        Optional<AsteroidFieldNode> candidate = knowledge.nextProspectingCandidate();
-        candidate.ifPresent(node -> knowledge.prospect(node.id()));
+        Optional<AsteroidFieldNode> candidate = knowledge.nextProspectingCandidate(scope);
+        candidate.ifPresent(node -> knowledge.prospect(node.id(), scope));
         return candidate;
     }
 

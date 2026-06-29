@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 import org.junit.jupiter.api.Test;
 
@@ -96,6 +97,41 @@ final class AsteroidFieldKnowledgeTest {
             AsteroidOreKnowledgeState.PROFILE,
             knowledge.entryFor(small.id())
                 .oreKnowledgeState());
+    }
+
+    @Test
+    void scopedProspectingOnlyWaitsForDetectionWorkInsideTheSameScope() {
+        AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledge.initialize(CelestialObjectId.FROZEN_BELT, profile());
+        AsteroidFieldNode large = node(knowledge, AsteroidSizeClass.LARGE);
+        AsteroidFieldNode medium = node(knowledge, AsteroidSizeClass.MEDIUM);
+        Predicate<AsteroidFieldNode> largeOnly = node -> node.id()
+            .equals(large.id());
+        Predicate<AsteroidFieldNode> largeAndMedium = node -> node.sizeClass() != AsteroidSizeClass.SMALL;
+
+        assertFalse(knowledge.hasDetectionWork(largeOnly));
+        assertTrue(knowledge.canProspect(largeOnly));
+        assertEquals(
+            large.id(),
+            knowledge.nextProspectingCandidate(largeOnly)
+                .orElseThrow()
+                .id());
+
+        knowledge.prospect(large.id(), largeOnly);
+
+        assertEquals(
+            AsteroidOreKnowledgeState.PROFILE,
+            knowledge.entryFor(large.id())
+                .oreKnowledgeState());
+        assertTrue(knowledge.hasDetectionWork(largeAndMedium));
+        assertFalse(knowledge.canProspect(largeAndMedium));
+        assertEquals(
+            medium.id(),
+            knowledge.nextDetectionCandidate(largeAndMedium)
+                .orElseThrow()
+                .id());
+        assertFalse(
+            knowledge.nextProspectingCandidate(largeAndMedium)
+                .isPresent());
     }
 
     private static AsteroidFieldNode node(AsteroidFieldKnowledge knowledge, AsteroidSizeClass sizeClass) {

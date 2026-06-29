@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 
@@ -86,22 +87,42 @@ public final class AsteroidFieldKnowledge {
     }
 
     public Optional<AsteroidFieldNode> nextDetectionCandidate() {
+        return nextDetectionCandidate(node -> true);
+    }
+
+    public Optional<AsteroidFieldNode> nextDetectionCandidate(Predicate<AsteroidFieldNode> scope) {
+        Objects.requireNonNull(scope, "scope cannot be null");
         return nodes.stream()
+            .filter(scope)
             .filter(node -> entryFor(node.id()).detectionState() == AsteroidDetectionState.HIDDEN)
             .findFirst();
     }
 
     public boolean hasDetectionWork() {
-        return nextDetectionCandidate().isPresent();
+        return hasDetectionWork(node -> true);
+    }
+
+    public boolean hasDetectionWork(Predicate<AsteroidFieldNode> scope) {
+        return nextDetectionCandidate(scope).isPresent();
     }
 
     public boolean canProspect() {
-        return !hasDetectionWork();
+        return canProspect(node -> true);
+    }
+
+    public boolean canProspect(Predicate<AsteroidFieldNode> scope) {
+        return !hasDetectionWork(scope);
     }
 
     public Optional<AsteroidFieldNode> nextProspectingCandidate() {
-        if (!canProspect()) return Optional.empty();
+        return nextProspectingCandidate(node -> true);
+    }
+
+    public Optional<AsteroidFieldNode> nextProspectingCandidate(Predicate<AsteroidFieldNode> scope) {
+        Objects.requireNonNull(scope, "scope cannot be null");
+        if (!canProspect(scope)) return Optional.empty();
         return nodes.stream()
+            .filter(scope)
             .filter(node -> entryFor(node.id()).detectionState() == AsteroidDetectionState.DETECTED)
             .filter(node -> entryFor(node.id()).oreKnowledgeState() != AsteroidOreKnowledgeState.PROFILE)
             .findFirst();
@@ -120,12 +141,20 @@ public final class AsteroidFieldKnowledge {
     }
 
     public Entry prospect(MinorCelestialBodyId id) {
-        requireNode(id);
+        return prospect(id, node -> true);
+    }
+
+    public Entry prospect(MinorCelestialBodyId id, Predicate<AsteroidFieldNode> scope) {
+        AsteroidFieldNode node = requireNode(id);
+        Objects.requireNonNull(scope, "scope cannot be null");
+        if (!scope.test(node)) {
+            throw new IllegalArgumentException("Asteroid node is outside prospecting scope: " + id);
+        }
         Entry current = entryFor(id);
         if (current.detectionState() == AsteroidDetectionState.HIDDEN) {
             throw new IllegalStateException("Cannot prospect hidden asteroid node: " + id);
         }
-        if (hasDetectionWork()) {
+        if (hasDetectionWork(scope)) {
             throw new IllegalStateException("Asteroid detection must finish before prospecting can start");
         }
 

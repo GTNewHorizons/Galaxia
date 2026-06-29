@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 import org.junit.jupiter.api.Test;
 
@@ -59,6 +60,32 @@ final class AsteroidFieldKnowledgeStoreTest {
             AsteroidOreKnowledgeState.PROFILE,
             knowledge.entryFor(prospected.id())
                 .oreKnowledgeState());
+    }
+
+    @Test
+    void scopedProspectingOnlyAdvancesNodesInsideScope() {
+        AsteroidFieldKnowledgeStore store = new AsteroidFieldKnowledgeStore();
+        AsteroidFieldProfile profile = profile();
+        AsteroidFieldKnowledge knowledge = store.getOrCreate(TEAM_A, CelestialObjectId.FROZEN_BELT, profile);
+        AsteroidFieldNode large = knowledge.nodes()
+            .stream()
+            .filter(node -> node.sizeClass() == AsteroidSizeClass.LARGE)
+            .findFirst()
+            .orElseThrow();
+        Predicate<AsteroidFieldNode> largeOnly = node -> node.id()
+            .equals(large.id());
+
+        AsteroidFieldNode prospected = store.prospectNext(TEAM_A, CelestialObjectId.FROZEN_BELT, profile, largeOnly)
+            .orElseThrow();
+
+        assertEquals(large.id(), prospected.id());
+        assertEquals(
+            AsteroidOreKnowledgeState.PROFILE,
+            knowledge.entryFor(large.id())
+                .oreKnowledgeState());
+        assertTrue(
+            store.detectNext(TEAM_A, CelestialObjectId.FROZEN_BELT, profile, largeOnly)
+                .isEmpty());
     }
 
     @Test
