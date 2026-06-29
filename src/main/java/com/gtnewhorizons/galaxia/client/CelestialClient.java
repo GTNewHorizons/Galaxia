@@ -497,6 +497,14 @@ public final class CelestialClient {
         return CelestialAssetStore.CLIENT.listAssetsInSystemInternal(systemId, GTTeamsCompat.getTeam());
     }
 
+    public static List<CelestialObject> getChildren(CelestialObject parent) {
+        return parent == null ? List.of() : getChildren(parent.id());
+    }
+
+    public static List<CelestialObject> getChildren(CelestialObjectKey parentId) {
+        return GalaxiaCelestialAPI.getChildren(parentId, AsteroidFieldClientState.snapshots());
+    }
+
     // ── Helpers ──
 
     private static void collectTransferTargets(CelestialObject current, List<TransferTarget> targets) {
@@ -506,7 +514,7 @@ public final class CelestialClient {
                 targets.add(new TransferTarget(asset.assetId, asset.displayName(), current));
             }
         }
-        for (CelestialObject child : GalaxiaCelestialAPI.getChildren(current)) {
+        for (CelestialObject child : getChildren(current)) {
             collectTransferTargets(child, targets);
         }
     }

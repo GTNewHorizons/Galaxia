@@ -17,6 +17,7 @@ import net.minecraftforge.fluids.FluidStack;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
@@ -534,6 +535,11 @@ public final class CelestialRegistry {
     }
 
     public static List<CelestialObject> getChildren(CelestialObjectKey parentId) {
+        return getChildren(parentId, List.of());
+    }
+
+    public static List<CelestialObject> getChildren(CelestialObjectKey parentId,
+        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge) {
         registerDefaults();
         if (parentId == null) return List.of();
 
@@ -541,12 +547,17 @@ public final class CelestialRegistry {
             hierarchy.childrenByParentId()
                 .getOrDefault(parentId, List.of()));
         if (parentId.isRegistered()) {
-            children.addAll(resolveInitiallyDetectedMinorBodies(parentId.registeredBodyId()));
+            children.addAll(resolveKnownMinorBodies(parentId.registeredBodyId(), asteroidKnowledge));
         }
         return Collections.unmodifiableList(children);
     }
 
     private static List<CelestialObject> resolveInitiallyDetectedMinorBodies(CelestialObjectId parentId) {
+        return resolveKnownMinorBodies(parentId, List.of());
+    }
+
+    private static List<CelestialObject> resolveKnownMinorBodies(CelestialObjectId parentId,
+        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge) {
         CelestialObject parent = REGISTRATIONS.get(CelestialObjectKey.registered(parentId));
         if (parent == null || parent.properties()
             .asteroidFieldProfile() == null) {
@@ -555,11 +566,24 @@ public final class CelestialRegistry {
 
         AsteroidFieldProfile profile = parent.properties()
             .asteroidFieldProfile();
+        Optional<AsteroidFieldKnowledgeSnapshot> snapshot = asteroidKnowledge == null ? Optional.empty()
+            : asteroidKnowledge.stream()
+                .filter(candidate -> candidate.beltId() == parentId)
+                .findFirst();
         return AsteroidFieldResolver.resolveAll(parentId, profile)
             .stream()
-            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.DETECTED)
+            .filter(node -> isVisibleMinorBody(node, snapshot.orElse(null)))
             .map(node -> toDynamicAsteroidObject(node, profile))
             .toList();
+    }
+
+    private static boolean isVisibleMinorBody(AsteroidFieldNode node, AsteroidFieldKnowledgeSnapshot snapshot) {
+        if (snapshot == null)
+            return AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.DETECTED;
+        return snapshot.entries()
+            .stream()
+            .anyMatch(
+                entry -> entry.index() == node.index() && entry.detectionState() == AsteroidDetectionState.DETECTED);
     }
 
     public static List<CelestialObject> getRoots() {

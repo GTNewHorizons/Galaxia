@@ -323,7 +323,7 @@ public class OrbitalView {
                 states.put(body, cachedState);
             }
             cachedState.set(parent, worldState.x(), worldState.y(), worldState.vx(), worldState.vy(), rebuildVersion);
-            for (CelestialObject child : GalaxiaCelestialAPI.getChildren(body)) {
+            for (CelestialObject child : CelestialClient.getChildren(body)) {
                 OrbitalMechanics.OrbitalState childWorldState = OrbitalMechanics
                     .resolveChildWorldState(body, child, worldState, globalTime);
                 populate(child, body, childWorldState, globalTime);
@@ -1685,7 +1685,7 @@ public class OrbitalView {
         private double calculateOverviewExtent(CelestialObject body) {
             if (body.objectClass() == CelestialObject.Class.GALAXY) {
                 double maxDistance = 0.0;
-                for (CelestialObject child : GalaxiaCelestialAPI.getChildren(body)) {
+                for (CelestialObject child : CelestialClient.getChildren(body)) {
                     double[] pos = getAbsoluteWorldPos(child);
                     if (pos == null) continue;
                     maxDistance = Math.max(maxDistance, Math.hypot(pos[0], pos[1]));
@@ -1693,7 +1693,7 @@ public class OrbitalView {
                 return maxDistance;
             }
             double maxSize = 0.0;
-            for (CelestialObject child : GalaxiaCelestialAPI.getChildren(body)) maxSize = Math.max(
+            for (CelestialObject child : CelestialClient.getChildren(body)) maxSize = Math.max(
                 maxSize,
                 child.orbitalParams()
                     .apogee());
@@ -1709,7 +1709,7 @@ public class OrbitalView {
             CelestialObject parent = findParent(root, body);
             if (parent == null) return 0.0;
             double maxApogee = 0.0;
-            for (CelestialObject sibling : GalaxiaCelestialAPI.getChildren(parent)) maxApogee = Math.max(
+            for (CelestialObject sibling : CelestialClient.getChildren(parent)) maxApogee = Math.max(
                 maxApogee,
                 sibling.orbitalParams()
                     .apogee());
@@ -1753,10 +1753,7 @@ public class OrbitalView {
         }
 
         private double getNearestOtherStarDistance(CelestialObject anchorStar) {
-            return nearestOtherStarDistance(
-                anchorStar,
-                GalaxiaCelestialAPI.getChildren(root),
-                this::getAbsoluteWorldPos);
+            return nearestOtherStarDistance(anchorStar, CelestialClient.getChildren(root), this::getAbsoluteWorldPos);
         }
 
         static double nearestOtherStarDistance(CelestialObject anchorStar, Collection<CelestialObject> galaxyBodies,
@@ -1912,7 +1909,7 @@ public class OrbitalView {
                 out[1] = cy;
                 return;
             }
-            List<CelestialObject> children = GalaxiaCelestialAPI.getChildren(focusedBody);
+            List<CelestialObject> children = CelestialClient.getChildren(focusedBody);
             int index = children.indexOf(body);
             if (index >= 0) {
                 out[0] = cx + ISO_OFFSET + index * ISO_SPACING;
@@ -1928,7 +1925,7 @@ public class OrbitalView {
             CelestialObject parent = findParent(root, focusedBody);
             if (parent == null) return false;
             return body == parent || body == focusedBody
-                || GalaxiaCelestialAPI.getChildren(focusedBody)
+                || CelestialClient.getChildren(focusedBody)
                     .contains(body);
         }
 
@@ -1946,7 +1943,7 @@ public class OrbitalView {
 
         private boolean isDescendantOrSelf(CelestialObject ancestor, CelestialObject target) {
             if (ancestor == target) return true;
-            for (CelestialObject child : GalaxiaCelestialAPI.getChildren(ancestor))
+            for (CelestialObject child : CelestialClient.getChildren(ancestor))
                 if (isDescendantOrSelf(child, target)) return true;
             return false;
         }

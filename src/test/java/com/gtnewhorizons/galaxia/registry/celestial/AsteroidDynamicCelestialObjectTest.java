@@ -13,9 +13,11 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
@@ -92,5 +94,33 @@ final class AsteroidDynamicCelestialObjectTest {
 
         assertFalse(initiallyDetectedKeys.isEmpty());
         assertEquals(initiallyDetectedKeys, asteroidChildKeys);
+    }
+
+    @Test
+    void asteroidBeltChildrenCanUseTeamKnowledgeSnapshots() {
+        CelestialObject frozenBelt = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
+            .orElseThrow();
+        AsteroidFieldProfile profile = frozenBelt.properties()
+            .asteroidFieldProfile();
+        AsteroidFieldNode hiddenNode = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile)
+            .stream()
+            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.HIDDEN)
+            .findFirst()
+            .orElseThrow();
+        AsteroidFieldKnowledgeSnapshot snapshot = new AsteroidFieldKnowledgeSnapshot(
+            CelestialObjectId.FROZEN_BELT,
+            List.of(
+                new AsteroidFieldKnowledgeSnapshot.Entry(
+                    hiddenNode.index(),
+                    AsteroidDetectionState.DETECTED,
+                    AsteroidOreKnowledgeState.UNKNOWN)));
+
+        List<CelestialObject> children = GalaxiaCelestialAPI
+            .getChildren(CelestialObjectId.FROZEN_BELT, List.of(snapshot));
+
+        assertTrue(
+            children.stream()
+                .map(CelestialObject::id)
+                .anyMatch(CelestialObjectKey.minorBody(hiddenNode.id())::equals));
     }
 }

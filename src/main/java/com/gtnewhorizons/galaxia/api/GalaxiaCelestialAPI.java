@@ -12,6 +12,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 
@@ -76,8 +77,18 @@ public final class GalaxiaCelestialAPI {
         return parentId == null ? List.of() : getChildren(CelestialObjectKey.registered(parentId));
     }
 
+    public static List<CelestialObject> getChildren(CelestialObjectId parentId,
+        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge) {
+        return parentId == null ? List.of() : getChildren(CelestialObjectKey.registered(parentId), asteroidKnowledge);
+    }
+
     public static List<CelestialObject> getChildren(CelestialObjectKey parentId) {
         return CelestialRegistry.getChildren(parentId);
+    }
+
+    public static List<CelestialObject> getChildren(CelestialObjectKey parentId,
+        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge) {
+        return CelestialRegistry.getChildren(parentId, asteroidKnowledge);
     }
 
     public static Map<CelestialObjectKey, CelestialObject> getAllBodies() {

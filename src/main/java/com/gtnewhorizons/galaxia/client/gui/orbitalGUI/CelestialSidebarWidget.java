@@ -22,7 +22,6 @@ import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
-import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.TeamPermissionScreen;
@@ -196,7 +195,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         if (!visibleEntriesDirty) return;
         cachedVisibleEntries.clear();
         if (activeLayer != root) {
-            for (CelestialObject child : GalaxiaCelestialAPI.getChildren(activeLayer))
+            for (CelestialObject child : CelestialClient.getChildren(activeLayer))
                 collect(child, 0, cachedVisibleEntries);
         }
         visibleEntriesDirty = false;
@@ -208,7 +207,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             .toLowerCase()
             .contains(searchQuery);
 
-        List<CelestialObject> childs = GalaxiaCelestialAPI.getChildren(body);
+        List<CelestialObject> childs = CelestialClient.getChildren(body);
         if (matches || searchQuery.isEmpty()) {
             list.add(new VisibleEntry(body, depth, !childs.isEmpty()));
         }
