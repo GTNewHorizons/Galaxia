@@ -158,9 +158,16 @@ public final class AsteroidFieldKnowledge {
             throw new IllegalStateException("Asteroid detection must finish before prospecting can start");
         }
 
-        Entry updated = new Entry(AsteroidDetectionState.DETECTED, AsteroidOreKnowledgeState.PROFILE);
+        Entry updated = new Entry(AsteroidDetectionState.DETECTED, nextOreKnowledgeState(current.oreKnowledgeState()));
         entriesById.put(id, updated);
         return updated;
+    }
+
+    private static AsteroidOreKnowledgeState nextOreKnowledgeState(AsteroidOreKnowledgeState current) {
+        return switch (current) {
+            case UNKNOWN -> AsteroidOreKnowledgeState.SIGNATURE;
+            case SIGNATURE, PROFILE -> AsteroidOreKnowledgeState.PROFILE;
+        };
     }
 
     public AsteroidFieldKnowledgeSnapshot snapshot(CelestialObjectId beltId) {

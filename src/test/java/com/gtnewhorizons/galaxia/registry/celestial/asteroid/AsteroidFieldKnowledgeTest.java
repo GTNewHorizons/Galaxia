@@ -84,13 +84,20 @@ final class AsteroidFieldKnowledgeTest {
     }
 
     @Test
-    void prospectingRevealsOreProfileForDetectedAsteroids() {
+    void prospectingAdvancesOreKnowledgeFromSignatureToProfile() {
         AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledge.initialize(CelestialObjectId.FROZEN_BELT, profile());
         AsteroidFieldNode medium = node(knowledge, AsteroidSizeClass.MEDIUM);
         AsteroidFieldNode small = node(knowledge, AsteroidSizeClass.SMALL);
 
         knowledge.detect(medium.id());
         knowledge.detect(small.id());
+        knowledge.prospect(small.id());
+
+        assertEquals(
+            AsteroidOreKnowledgeState.SIGNATURE,
+            knowledge.entryFor(small.id())
+                .oreKnowledgeState());
+
         knowledge.prospect(small.id());
 
         assertEquals(
@@ -115,6 +122,13 @@ final class AsteroidFieldKnowledgeTest {
             knowledge.nextProspectingCandidate(largeOnly)
                 .orElseThrow()
                 .id());
+
+        knowledge.prospect(large.id(), largeOnly);
+
+        assertEquals(
+            AsteroidOreKnowledgeState.SIGNATURE,
+            knowledge.entryFor(large.id())
+                .oreKnowledgeState());
 
         knowledge.prospect(large.id(), largeOnly);
 

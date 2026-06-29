@@ -54,6 +54,16 @@ final class AsteroidProspectingDataHandlerTest {
 
         assertEquals(detected, prospected);
         assertEquals(
+            AsteroidOreKnowledgeState.SIGNATURE,
+            knowledge.entryFor(
+                detected.get()
+                    .id())
+                .oreKnowledgeState());
+
+        Optional<AsteroidFieldNode> profiled = handler.handle(event);
+
+        assertEquals(detected, profiled);
+        assertEquals(
             AsteroidOreKnowledgeState.PROFILE,
             knowledge.entryFor(
                 detected.get()

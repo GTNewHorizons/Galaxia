@@ -57,6 +57,15 @@ final class AsteroidFieldKnowledgeStoreTest {
         AsteroidFieldKnowledge knowledge = store.getOrCreate(TEAM_A, CelestialObjectId.FROZEN_BELT, profile);
 
         assertEquals(
+            AsteroidOreKnowledgeState.SIGNATURE,
+            knowledge.entryFor(prospected.id())
+                .oreKnowledgeState());
+        assertEquals(
+            prospected.id(),
+            store.prospectNext(TEAM_A, CelestialObjectId.FROZEN_BELT, profile)
+                .orElseThrow()
+                .id());
+        assertEquals(
             AsteroidOreKnowledgeState.PROFILE,
             knowledge.entryFor(prospected.id())
                 .oreKnowledgeState());
@@ -79,6 +88,15 @@ final class AsteroidFieldKnowledgeStoreTest {
             .orElseThrow();
 
         assertEquals(large.id(), prospected.id());
+        assertEquals(
+            AsteroidOreKnowledgeState.SIGNATURE,
+            knowledge.entryFor(large.id())
+                .oreKnowledgeState());
+        assertEquals(
+            large.id(),
+            store.prospectNext(TEAM_A, CelestialObjectId.FROZEN_BELT, profile, largeOnly)
+                .orElseThrow()
+                .id());
         assertEquals(
             AsteroidOreKnowledgeState.PROFILE,
             knowledge.entryFor(large.id())
