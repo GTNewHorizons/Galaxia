@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
@@ -65,5 +67,62 @@ final class OrbitalPinnedInfoContentBuilderTest {
                     .contains(veinId));
         }
         AsteroidFieldClientState.clear();
+    }
+
+    @Test
+    void asteroidOreRowsFollowKnowledgeLevel() {
+        CelestialObject frozenBelt = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
+            .orElseThrow();
+        AsteroidFieldProfile profile = frozenBelt.properties()
+            .asteroidFieldProfile();
+        AsteroidFieldNode node = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile)
+            .stream()
+            .filter(
+                candidate -> !candidate.oreProfile()
+                    .gtOreVeinIds()
+                    .isEmpty())
+            .findFirst()
+            .orElseThrow();
+        CelestialObject asteroid = CelestialRegistry
+            .get(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, node.index())))
+            .orElseThrow();
+        OrbitalPinnedInfoContentBuilder builder = new OrbitalPinnedInfoContentBuilder();
+
+        AsteroidFieldClientState.update(snapshot(node, AsteroidOreKnowledgeState.UNKNOWN));
+        PinnedInfoRow unknownRow = oreRow(builder.buildRows(asteroid));
+        assertFalse(unknownRow.value()
+            .contains(node.oreProfile()
+                .id()));
+        assertTrue(unknownRow.items()
+            .isEmpty());
+
+        AsteroidFieldClientState.update(snapshot(node, AsteroidOreKnowledgeState.SIGNATURE));
+        PinnedInfoRow signatureRow = oreRow(builder.buildRows(asteroid));
+        assertNotEquals(unknownRow.value(), signatureRow.value());
+        assertTrue(signatureRow.items()
+            .isEmpty());
+
+        AsteroidFieldClientState.update(snapshot(node, AsteroidOreKnowledgeState.PROFILE));
+        PinnedInfoRow profileRow = oreRow(builder.buildRows(asteroid));
+        assertNotEquals(unknownRow.value(), profileRow.value());
+        assertNotEquals(signatureRow.value(), profileRow.value());
+
+        AsteroidFieldClientState.clear();
+    }
+
+    private static List<AsteroidFieldKnowledgeSnapshot> snapshot(AsteroidFieldNode node,
+        AsteroidOreKnowledgeState oreKnowledgeState) {
+        return List.of(
+            new AsteroidFieldKnowledgeSnapshot(
+                CelestialObjectId.FROZEN_BELT,
+                List.of(
+                    new AsteroidFieldKnowledgeSnapshot.Entry(
+                        node.index(),
+                        AsteroidDetectionState.DETECTED,
+                        oreKnowledgeState))));
+    }
+
+    private static PinnedInfoRow oreRow(List<PinnedInfoRow> rows) {
+        return rows.get(rows.size() - 1);
     }
 }
