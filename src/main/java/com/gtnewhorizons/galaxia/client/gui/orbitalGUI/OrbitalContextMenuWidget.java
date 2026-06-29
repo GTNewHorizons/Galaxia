@@ -217,7 +217,11 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
         Minecraft mc = Minecraft.getMinecraft();
         int maxTextWidth = mc.fontRenderer.getStringWidth(body.displayName());
         for (ContextMenuAction action : actions) {
-            maxTextWidth = Math.max(maxTextWidth, mc.fontRenderer.getStringWidth(IKey.lang(action.labelKey()).get()));
+            maxTextWidth = Math.max(
+                maxTextWidth,
+                mc.fontRenderer.getStringWidth(
+                    IKey.lang(action.labelKey())
+                        .get()));
         }
 
         int width = Math.max(160, maxTextWidth + MENU_SIDE_PADDING * 2);
