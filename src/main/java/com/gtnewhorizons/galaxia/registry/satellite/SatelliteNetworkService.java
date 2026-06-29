@@ -13,6 +13,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
@@ -36,15 +37,14 @@ public final class SatelliteNetworkService {
     private static final Map<UUID, Map<SatelliteNetworkGraph.DirectedEdge, ActiveDataUsage>> ACTIVE_DIRECTIONAL_DATA_USAGE = new HashMap<>();
     private static final SatelliteDataBufferStore DATA_BUFFERS = new SatelliteDataBufferStore();
     private static final SatelliteDataEndpointRegistry DATA_ENDPOINTS = new SatelliteDataEndpointRegistry();
-    private static final AsteroidFieldKnowledgeStore ASTEROID_KNOWLEDGE = new AsteroidFieldKnowledgeStore();
     private static final AsteroidSatelliteScanService ASTEROID_SCANS = new AsteroidSatelliteScanService(
-        ASTEROID_KNOWLEDGE,
+        AsteroidFieldKnowledgeService.store(),
         bodyId -> GalaxiaCelestialAPI.get(bodyId)
             .map(
                 body -> body.properties()
                     .asteroidFieldProfile()));
     private static final AsteroidProspectingDataHandler ASTEROID_PROSPECTING = AsteroidProspectingDataHandler
-        .live(ASTEROID_KNOWLEDGE);
+        .live(AsteroidFieldKnowledgeService.store());
 
     private SatelliteNetworkService() {}
 
@@ -119,7 +119,7 @@ public final class SatelliteNetworkService {
         ACTIVE_DIRECTIONAL_DATA_USAGE.clear();
         DATA_BUFFERS.clear();
         DATA_ENDPOINTS.clear();
-        ASTEROID_KNOWLEDGE.clear();
+        AsteroidFieldKnowledgeService.clear();
         ASTEROID_SCANS.clear();
     }
 
@@ -128,15 +128,15 @@ public final class SatelliteNetworkService {
     }
 
     static AsteroidFieldKnowledgeStore asteroidKnowledge() {
-        return ASTEROID_KNOWLEDGE;
+        return AsteroidFieldKnowledgeService.store();
     }
 
     public static List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledgeSnapshots(UUID teamId) {
-        return ASTEROID_KNOWLEDGE.snapshots(teamId);
+        return AsteroidFieldKnowledgeService.snapshots(teamId);
     }
 
     public static Map<UUID, List<AsteroidFieldKnowledgeSnapshot>> asteroidKnowledgeSnapshotsByTeam() {
-        return ASTEROID_KNOWLEDGE.snapshotsByTeam();
+        return AsteroidFieldKnowledgeService.snapshotsByTeam();
     }
 
     public static List<AsteroidSatelliteScanSnapshot> asteroidScanSnapshots(UUID teamId) {
@@ -156,7 +156,7 @@ public final class SatelliteNetworkService {
     }
 
     public static void restoreAsteroidKnowledge(UUID teamId, List<AsteroidFieldKnowledgeSnapshot> snapshots) {
-        ASTEROID_KNOWLEDGE.restore(
+        AsteroidFieldKnowledgeService.restore(
             teamId,
             snapshots,
             bodyId -> GalaxiaCelestialAPI.get(bodyId)

@@ -14,6 +14,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
@@ -116,7 +117,7 @@ public final class AssetCreateRequestPacket implements IMessage {
     }
 
     public AssetSyncPacket apply(UUID teamId) {
-        validateTargetBody();
+        validateTargetBody(teamId);
         CelestialAsset asset = CelestialAsset.create(celestialObjectId, kind, operational, requiredSatelliteKind());
         asset.setDisplayName(displayName);
         if (kind == CelestialAsset.Kind.STATION) {
@@ -131,7 +132,7 @@ public final class AssetCreateRequestPacket implements IMessage {
         return AssetSyncPacket.fullSync(asset);
     }
 
-    private void validateTargetBody() {
+    private void validateTargetBody(UUID teamId) {
         CelestialObject body = CelestialRegistry.get(celestialObjectId)
             .orElseThrow(() -> new IllegalArgumentException("Unknown celestial object for asset creation: " + celestialObjectId));
         if (kind == CelestialAsset.Kind.AUTOMATED_STATION && !body.properties()
@@ -141,6 +142,12 @@ public final class AssetCreateRequestPacket implements IMessage {
         if (kind == CelestialAsset.Kind.AUTOMATED_OUTPOST && !body.properties()
             .canCreateOutpost()) {
             throw new IllegalArgumentException("Cannot create automated outpost on " + celestialObjectId);
+        }
+        if (kind == CelestialAsset.Kind.AUTOMATED_OUTPOST && body.id()
+            .isMinorBody()
+            && !AsteroidFieldKnowledgeService.isDetected(teamId, body.id()
+                .minorBodyId())) {
+            throw new IllegalArgumentException("Cannot create automated outpost on hidden asteroid " + celestialObjectId);
         }
     }
 
