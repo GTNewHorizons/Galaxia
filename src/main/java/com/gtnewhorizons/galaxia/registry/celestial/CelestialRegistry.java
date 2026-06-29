@@ -76,7 +76,7 @@ public final class CelestialRegistry {
         return AsteroidFieldProfile.builder()
             .seedSalt(0xF20A3E11L)
             .generationVersion(1)
-            .sizeCounts(1, 2, 3)
+            .sizeCounts(6, 8, 12)
             .radialBand(2.15 * EARTH_RADIUS_TO_AU, 2.45 * EARTH_RADIUS_TO_AU)
             .satelliteScanRadius(0.12 * EARTH_RADIUS_TO_AU)
             .oreProfile(new AsteroidOreProfile("metallic", 3.0, List.of("ore.mix.iron")))
@@ -318,24 +318,6 @@ public final class CelestialRegistry {
                 .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.3));
 
         register(
-            CelestialObjectId.AMBERGRIS_FRAGMENT,
-            builder -> builder.parent(CelestialObjectId.FROZEN_BELT)
-                .objectClass(CelestialObject.Class.ASTEROID)
-                .circularOrbit(0.18 * EARTH_RADIUS_TO_AU, 0.00091, seededPhase("ambergris_fragment"))
-                .texture(EnumTextures.ICON_AMBERGRIS.get())
-                .spriteSize(0.05)
-                .properties(
-                    b -> b.orbitalGravity(6.0e4, 140.0)
-                        .visitable(false)
-                        .canCreateStation(false)
-                        .canCreateOutpost(true)
-                        .temperature(41)
-                        .radiation(0.52)
-                        .oreProfile("undefined")
-                        .metadata("surface", "undefined")
-                        .metadata("sizeClass", "minor")));
-
-        register(
             CelestialObjectId.OVERWORLD,
             builder -> builder.parent(CelestialObjectId.VAEL)
                 .objectClass(CelestialObject.Class.PLANET)
@@ -492,7 +474,7 @@ public final class CelestialRegistry {
             .parent(CelestialObjectKey.registered(node.beltId()))
             .objectClass(CelestialObject.Class.ASTEROID)
             .circularOrbit(radius, 0.00091, Math.toRadians(node.angleOffsetDeg()))
-            .texture(EnumTextures.ICON_AMBERGRIS.get())
+            .texture(EnumTextures.ICON_MOON.get())
             .spriteSize(spriteSize)
             .properties(
                 b -> b.orbitalGravity(6.0e4, soiRadius)

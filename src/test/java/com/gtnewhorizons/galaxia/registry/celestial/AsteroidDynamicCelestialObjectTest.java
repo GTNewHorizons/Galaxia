@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
+import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
@@ -115,7 +116,19 @@ final class AsteroidDynamicCelestialObjectTest {
             .collect(Collectors.toSet());
 
         assertFalse(initiallyDetectedKeys.isEmpty());
+        assertTrue(initiallyDetectedKeys.size() >= 5);
         assertEquals(initiallyDetectedKeys, asteroidChildKeys);
+        assertFalse(
+            children.stream()
+                .anyMatch(
+                    child -> child.objectClass() == CelestialObject.Class.ASTEROID && child.id()
+                        .isRegistered()));
+        assertTrue(
+            children.stream()
+                .filter(child -> child.objectClass() == CelestialObject.Class.ASTEROID)
+                .noneMatch(
+                    child -> EnumTextures.ICON_AMBERGRIS.get()
+                        .equals(child.texture())));
     }
 
     @Test
