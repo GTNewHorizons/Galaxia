@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -41,6 +42,18 @@ public final class AsteroidFieldKnowledgeStore {
         Optional<AsteroidFieldNode> candidate = knowledge.nextProspectingCandidate();
         candidate.ifPresent(node -> knowledge.prospect(node.id()));
         return candidate;
+    }
+
+    public List<AsteroidFieldKnowledgeSnapshot> snapshots(UUID teamId) {
+        Objects.requireNonNull(teamId, "teamId cannot be null");
+        Map<CelestialObjectId, AsteroidFieldKnowledge> teamKnowledge = knowledgeByTeam.get(teamId);
+        if (teamKnowledge == null || teamKnowledge.isEmpty()) return List.of();
+        return teamKnowledge.entrySet()
+            .stream()
+            .map(
+                entry -> entry.getValue()
+                    .snapshot(entry.getKey()))
+            .toList();
     }
 
     public void clear() {

@@ -95,6 +95,21 @@ public final class AsteroidFieldKnowledge {
         return updated;
     }
 
+    public AsteroidFieldKnowledgeSnapshot snapshot(CelestialObjectId beltId) {
+        Objects.requireNonNull(beltId, "beltId cannot be null");
+        return new AsteroidFieldKnowledgeSnapshot(
+            beltId,
+            nodes.stream()
+                .map(node -> {
+                    Entry entry = entryFor(node.id());
+                    return new AsteroidFieldKnowledgeSnapshot.Entry(
+                        node.index(),
+                        entry.detectionState(),
+                        entry.oreKnowledgeState());
+                })
+                .toList());
+    }
+
     private AsteroidFieldNode requireNode(MinorCelestialBodyId id) {
         Objects.requireNonNull(id, "id cannot be null");
         return nodes.stream()

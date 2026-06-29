@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataKey;
@@ -173,6 +174,7 @@ public final class SatelliteNetworkSyncPacket implements IMessage {
         @Override
         public IMessage onMessage(SatelliteNetworkSyncPacket message, MessageContext ctx) {
             SatelliteNetworkClientState.update(message.state);
+            AsteroidFieldClientState.update(message.asteroidKnowledge);
             return null;
         }
     }

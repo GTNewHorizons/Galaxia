@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteBandwidthFormatter;
@@ -90,5 +91,40 @@ final class SatelliteNetworkSyncPacketTest {
 
         assertEquals(state, SatelliteNetworkClientState.current());
         SatelliteNetworkClientState.clear();
+    }
+
+    @Test
+    void handlerStoresAsteroidKnowledgeSnapshotsOnClient() {
+        AsteroidFieldClientState.clear();
+        SatelliteNetworkState state = SatelliteNetworkState.empty(new UUID(7L, 9L), 15);
+        AsteroidFieldKnowledgeSnapshot snapshot = new AsteroidFieldKnowledgeSnapshot(
+            CelestialObjectId.FROZEN_BELT,
+            List.of(
+                new AsteroidFieldKnowledgeSnapshot.Entry(
+                    1,
+                    AsteroidDetectionState.DETECTED,
+                    AsteroidOreKnowledgeState.UNKNOWN)));
+
+        new SatelliteNetworkSyncPacket.Handler()
+            .onMessage(new SatelliteNetworkSyncPacket(state, List.of(snapshot)), null);
+
+        assertEquals(List.of(snapshot), AsteroidFieldClientState.snapshots());
+        AsteroidFieldClientState.clear();
+    }
+
+    @Test
+    void assetClearPacketClearsAsteroidKnowledgeSnapshotsOnClient() {
+        AsteroidFieldKnowledgeSnapshot snapshot = new AsteroidFieldKnowledgeSnapshot(
+            CelestialObjectId.FROZEN_BELT,
+            List.of(
+                new AsteroidFieldKnowledgeSnapshot.Entry(
+                    1,
+                    AsteroidDetectionState.DETECTED,
+                    AsteroidOreKnowledgeState.UNKNOWN)));
+        AsteroidFieldClientState.update(List.of(snapshot));
+
+        AssetSyncPacket.Handler.handleClientSync(AssetSyncPacket.clear());
+
+        assertEquals(List.of(), AsteroidFieldClientState.snapshots());
     }
 }

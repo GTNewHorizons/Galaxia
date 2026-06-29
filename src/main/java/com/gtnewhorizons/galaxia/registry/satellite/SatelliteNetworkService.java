@@ -12,6 +12,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
@@ -120,6 +121,10 @@ public final class SatelliteNetworkService {
 
     static AsteroidFieldKnowledgeStore asteroidKnowledge() {
         return ASTEROID_KNOWLEDGE;
+    }
+
+    public static List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledgeSnapshots(UUID teamId) {
+        return ASTEROID_KNOWLEDGE.snapshots(teamId);
     }
 
     public static boolean canStartProcess(UUID teamId, CelestialObjectId bodyId, SatelliteDataKey outputKey) {

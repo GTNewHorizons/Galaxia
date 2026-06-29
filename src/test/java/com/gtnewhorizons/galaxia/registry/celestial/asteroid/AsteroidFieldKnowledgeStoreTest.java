@@ -75,6 +75,27 @@ final class AsteroidFieldKnowledgeStoreTest {
         assertNotSame(first, store.getOrCreate(TEAM_A, CelestialObjectId.FROZEN_BELT, profile));
     }
 
+    @Test
+    void snapshotsExposeKnownStateForOneTeam() {
+        AsteroidFieldKnowledgeStore store = new AsteroidFieldKnowledgeStore();
+        AsteroidFieldProfile profile = profile();
+        AsteroidFieldNode detected = store.detectNext(TEAM_A, CelestialObjectId.FROZEN_BELT, profile)
+            .orElseThrow();
+        store.getOrCreate(TEAM_B, CelestialObjectId.FROZEN_BELT, profile);
+
+        List<AsteroidFieldKnowledgeSnapshot> snapshots = store.snapshots(TEAM_A);
+
+        assertEquals(1, snapshots.size());
+        AsteroidFieldKnowledgeSnapshot snapshot = snapshots.get(0);
+        assertEquals(CelestialObjectId.FROZEN_BELT, snapshot.beltId());
+        AsteroidFieldKnowledgeSnapshot.Entry entry = snapshot.entries()
+            .stream()
+            .filter(candidate -> candidate.index() == detected.index())
+            .findFirst()
+            .orElseThrow();
+        assertEquals(AsteroidDetectionState.DETECTED, entry.detectionState());
+    }
+
     private static AsteroidFieldProfile profile() {
         return AsteroidFieldProfile.builder()
             .seedSalt(41L)

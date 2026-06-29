@@ -137,7 +137,11 @@ public class CelestialEventHandler {
             if (TeamEventHandler.playersToClear.contains(player.getUniqueID())) continue;
             UUID playerTeam = GTTeamsCompat.getTeam(player);
             SatelliteNetworkState satelliteNetwork = SatelliteNetworkService.rebuild(playerTeam, orbitalTime);
-            Galaxia.GALAXIA_NETWORK.sendTo(new SatelliteNetworkSyncPacket(satelliteNetwork), player);
+            Galaxia.GALAXIA_NETWORK.sendTo(
+                new SatelliteNetworkSyncPacket(
+                    satelliteNetwork,
+                    SatelliteNetworkService.asteroidKnowledgeSnapshots(playerTeam)),
+                player);
         }
     }
 
