@@ -14,13 +14,15 @@ import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
 
 import com.gtnewhorizons.galaxia.compat.GTCompat;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 
 public record CelestialBodyProperties(boolean visitable, boolean canCreateStation, boolean canCreateOutpost,
     double localGravityG, double massEarthRelative, double orbitalRadiusEarthRelative, double radiusEarthRelative,
     double standardGravitationalParameter, double sphereOfInfluenceRadius, double parkingOrbitRadius, String oreProfile,
     List<String> gtOreVeinIds, double radiation, double temperature, double surfacePressurePa,
     double starmapAtmosphericDrag, List<AtmosphereIngredient> atmosphereIngredients,
-    CelestialBodyProperties atmosphereCompositionSource, Map<String, String> metadata) {
+    CelestialBodyProperties atmosphereCompositionSource, AsteroidFieldProfile asteroidFieldProfile,
+    Map<String, String> metadata) {
 
     public CelestialBodyProperties {
         localGravityG = requireNonNegativeFinite("localGravityG", localGravityG);
@@ -146,6 +148,7 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
         private double starmapAtmosphericDrag = 1.0;
         private final List<AtmosphereIngredient> atmosphereIngredients = new ArrayList<>();
         private CelestialBodyProperties atmosphereCompositionSource;
+        private AsteroidFieldProfile asteroidFieldProfile;
         private final Map<String, String> metadata = new LinkedHashMap<>();
 
         public Builder() {}
@@ -169,6 +172,7 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
             this.surfacePressurePa = source.surfacePressurePa;
             this.starmapAtmosphericDrag = source.starmapAtmosphericDrag;
             this.atmosphereCompositionSource = source.atmosphereCompositionSource;
+            this.asteroidFieldProfile = source.asteroidFieldProfile;
             if (source.atmosphereCompositionSource == null) {
                 this.atmosphereIngredients.addAll(source.atmosphereIngredients);
             }
@@ -297,6 +301,11 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
             return this;
         }
 
+        public Builder asteroidFieldProfile(AsteroidFieldProfile value) {
+            this.asteroidFieldProfile = value;
+            return this;
+        }
+
         public Builder metadata(String key, String value) {
             this.metadata.put(key, value);
             return this;
@@ -332,6 +341,7 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
                 starmapAtmosphericDrag,
                 atmosphereIngredients,
                 atmosphereCompositionSource,
+                asteroidFieldProfile,
                 metadata);
         }
     }

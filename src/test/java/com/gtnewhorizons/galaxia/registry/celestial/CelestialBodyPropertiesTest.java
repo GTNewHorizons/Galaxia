@@ -173,6 +173,7 @@ final class CelestialBodyPropertiesTest {
                 1.0,
                 Collections.singletonList(null),
                 null,
+                null,
                 Map.of()));
         assertThrows(
             IllegalStateException.class,
@@ -194,6 +195,7 @@ final class CelestialBodyPropertiesTest {
                 0.0,
                 1.0,
                 List.of(new CelestialBodyProperties.AtmosphereIngredient(new Fluid("nitrogen"), 1.0)),
+                null,
                 null,
                 Map.of()));
     }

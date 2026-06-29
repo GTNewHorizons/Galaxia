@@ -160,7 +160,12 @@ public final class GalaxiaCelestialAPI {
 
     public static CelestialObject findBodyById(CelestialObject root, CelestialObjectKey needle) {
         if (root == null || needle == null) return null;
-        return findBodyByIdRec(root, needle);
+        CelestialObject found = findBodyByIdRec(root, needle);
+        if (found != null) return found;
+
+        CelestialObject dynamic = get(needle).orElse(null);
+        if (dynamic == null || dynamic.parentId() == null) return null;
+        return findBodyByIdRec(root, dynamic.parentId()) != null ? dynamic : null;
     }
 
     private static CelestialObject findBodyByIdRec(CelestialObject current, CelestialObjectKey needle) {
@@ -191,7 +196,9 @@ public final class GalaxiaCelestialAPI {
     public static CelestialObject findStar(CelestialObject root, CelestialObjectKey targetId) {
         if (root == null || targetId == null) return null;
         CelestialObject target = get(targetId).orElse(null);
-        return findStar(root, target);
+        CelestialObject star = findStar(root, target);
+        if (star != null || target == null || target.parentId() == null) return star;
+        return findStar(root, target.parentId());
     }
 
     public static CelestialObject findStar(CelestialObject root, CelestialObject target) {
@@ -225,7 +232,9 @@ public final class GalaxiaCelestialAPI {
     public static CelestialObject findPlanetaryAnchor(CelestialObject root, CelestialObjectKey targetId) {
         if (root == null || targetId == null) return null;
         CelestialObject target = get(targetId).orElse(null);
-        return findPlanetaryAnchor(root, target);
+        CelestialObject anchor = findPlanetaryAnchor(root, target);
+        if (anchor != null || target == null || target.parentId() == null) return anchor;
+        return target;
     }
 
     public static CelestialObject findPlanetaryAnchor(CelestialObject root, CelestialObject target) {

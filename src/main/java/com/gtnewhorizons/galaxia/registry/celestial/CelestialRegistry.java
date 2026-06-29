@@ -16,6 +16,12 @@ import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.PlayableDimensionProfile;
 import com.gtnewhorizons.galaxia.registry.dimension.SpaceStation;
@@ -62,6 +68,18 @@ public final class CelestialRegistry {
         Fluid fluid = stack != null ? stack.getFluid() : null;
         if (fluid == null) throw new IllegalStateException("Required atmosphere gas is not available: " + material);
         return fluid;
+    }
+
+    private static AsteroidFieldProfile frozenBeltAsteroidField() {
+        return AsteroidFieldProfile.builder()
+            .seedSalt(0xF20A3E11L)
+            .generationVersion(1)
+            .sizeCounts(1, 2, 3)
+            .radialBand(2.15 * EARTH_RADIUS_TO_AU, 2.45 * EARTH_RADIUS_TO_AU)
+            .oreProfile(new AsteroidOreProfile("metallic", 3.0, List.of("ore.mix.iron")))
+            .oreProfile(new AsteroidOreProfile("volatile_ice", 2.0, List.of("ore.mix.lapis")))
+            .oreProfile(new AsteroidOreProfile("rare_crystal", 1.0, List.of("ore.mix.redstone")))
+            .build();
     }
 
     private static PlayableDimensionProfile.Builder stationBuildable(PlayableDimensionProfile.Builder builder) {
@@ -276,11 +294,12 @@ public final class CelestialRegistry {
                         .canCreateStation(true)
                         .canCreateOutpost(false)
                         .localGravityG(0.0)
-                        .temperature(67)
-                        .radiation(0.28)
-                        .oreProfile("undefined")
-                        .metadata("surface", "undefined")
-                        .metadata("minorBodies", "enabled"))
+                   .temperature(67)
+                   .radiation(0.28)
+                   .oreProfile("undefined")
+                   .asteroidFieldProfile(frozenBeltAsteroidField())
+                   .metadata("surface", "undefined")
+                   .metadata("minorBodies", "enabled"))
                 .playableDimensionProfile(
                     stationBuildable(
                         PlayableDimensionProfile.builder(DimensionEnum.FROZEN_BELT)
@@ -426,7 +445,67 @@ public final class CelestialRegistry {
 
     public static Optional<CelestialObject> get(CelestialObjectKey key) {
         registerDefaults();
-        return Optional.ofNullable(REGISTRATIONS.get(key));
+        CelestialObject registered = REGISTRATIONS.get(key);
+        if (registered != null) return Optional.of(registered);
+        return resolveDynamicMinorBody(key);
+    }
+
+    private static Optional<CelestialObject> resolveDynamicMinorBody(CelestialObjectKey key) {
+        if (key == null || !key.isMinorBody()) return Optional.empty();
+
+        MinorCelestialBodyId minorId = key.minorBodyId();
+        CelestialObject belt = REGISTRATIONS.get(CelestialObjectKey.registered(minorId.parentBeltId()));
+        if (belt == null || belt.properties()
+            .asteroidFieldProfile() == null) {
+            return Optional.empty();
+        }
+
+        AsteroidFieldProfile profile = belt.properties()
+            .asteroidFieldProfile();
+        if (minorId.index() >= profile.totalNodes()) return Optional.empty();
+
+        AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(minorId.parentBeltId(), profile, minorId.index());
+        return Optional.of(toDynamicAsteroidObject(node, profile));
+    }
+
+    private static CelestialObject toDynamicAsteroidObject(AsteroidFieldNode node, AsteroidFieldProfile profile) {
+        double radius = profile.innerOrbitalRadius()
+            + (profile.outerOrbitalRadius() - profile.innerOrbitalRadius()) * node.orbitalDepth01();
+        double spriteSize = switch (node.sizeClass()) {
+            case LARGE -> 0.055;
+            case MEDIUM -> 0.040;
+            case SMALL -> 0.028;
+        };
+        double soiRadius = switch (node.sizeClass()) {
+            case LARGE -> 180.0;
+            case MEDIUM -> 120.0;
+            case SMALL -> 80.0;
+        };
+
+        return CelestialObject.builder()
+            .id(CelestialObjectKey.minorBody(node.id()))
+            .name(node.displayName())
+            .parent(CelestialObjectKey.registered(node.beltId()))
+            .objectClass(CelestialObject.Class.ASTEROID)
+            .circularOrbit(radius, 0.00091, Math.toRadians(node.angleOffsetDeg()))
+            .texture(EnumTextures.ICON_AMBERGRIS.get())
+            .spriteSize(spriteSize)
+            .properties(
+                b -> b.orbitalGravity(6.0e4, soiRadius)
+                    .visitable(node.sizeClass() != AsteroidSizeClass.SMALL)
+                    .canCreateStation(false)
+                    .canCreateOutpost(true)
+                    .temperature(41)
+                    .radiation(0.52)
+                    .oreProfile(node.oreProfile().id())
+                    .gtOreVeinIds(
+                        node.oreProfile()
+                            .gtOreVeinIds()
+                            .toArray(new String[0]))
+                    .metadata("surface", "undefined")
+                    .metadata("sizeClass", node.sizeClass().name().toLowerCase())
+                    .metadata("minorBodies", "generated"))
+            .build();
     }
 
     public static List<CelestialObject> getAll() {
