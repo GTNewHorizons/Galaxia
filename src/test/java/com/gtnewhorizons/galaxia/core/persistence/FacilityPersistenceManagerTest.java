@@ -36,8 +36,6 @@ import com.gtnewhorizons.galaxia.core.network.PacketUtil;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
@@ -147,19 +145,23 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
-    void assetJsonRoundTripsMinorCelestialObjectKey() {
-        FacilityPersistenceManager manager = new FacilityPersistenceManager();
-        CelestialObjectKey key = CelestialObjectKey
-            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 3));
-        CelestialAsset asset = CelestialAsset
-            .create(key, CelestialAsset.Kind.AUTOMATED_OUTPOST, Buildable.Status.OPERATIONAL);
+    void missingStructuredPersistedCelestialObjectKeyFailsLoadLoudly(@TempDir Path tempDir) throws Exception {
+        FacilityPersistenceManager.AssetJson missingStructuredKey = assetJson(
+            UUID.randomUUID(),
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            CelestialObjectId.MARS);
+        missingStructuredKey.celestialObjectKey = null;
 
-        FacilityPersistenceManager.AssetJson encoded = manager.encodeAsset(asset);
-        CelestialAsset decoded = manager.decodeAsset(encoded);
+        Path dataDir = tempDir.resolve("galaxiadata");
+        Files.createDirectories(dataDir);
+        Files.write(dataDir.resolve("_assets.json"), assetRegistryBytes(List.of(missingStructuredKey)));
 
-        assertEquals("minor:FROZEN_BELT:3", encoded.celestialObjectId);
-        assertNotNull(decoded);
-        assertEquals(key, decoded.celestialObjectId);
+        IllegalArgumentException thrown = assertThrows(
+            IllegalArgumentException.class,
+            () -> new FacilityPersistenceManager().loadFromSaveDirectory(tempDir.toFile()));
+        assertTrue(
+            thrown.getMessage()
+                .contains("celestialObjectKey"));
     }
 
     @Test
@@ -642,7 +644,9 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.AssetJson json = new FacilityPersistenceManager.AssetJson();
         json.teamId = teamId.toString();
         json.assetId = CelestialAsset.ID.create();
-        json.celestialObjectId = body.toString();
+        json.celestialObjectKey = new FacilityPersistenceManager.CelestialObjectKeyJson();
+        json.celestialObjectKey.kind = "registered";
+        json.celestialObjectKey.registeredBodyId = body.name();
         json.displayName = body + ":" + kind;
         json.kind = kind.name();
         json.location = CelestialAsset.Location.ofKind(kind)
