@@ -1,0 +1,37 @@
+package com.gtnewhorizons.galaxia.api;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
+
+final class GalaxiaCelestialAPIKeyTest {
+
+    @BeforeAll
+    static void init() {
+        GalaxiaTestBootstrap.ensureCelestialRegistry();
+    }
+
+    @Test
+    void publicApiFindsDynamicMinorBodyByKey() {
+        CelestialObject root = GalaxiaCelestialAPI.getPrimaryRoot();
+        CelestialObjectKey key = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 2));
+
+        CelestialObject asteroid = GalaxiaCelestialAPI.get(key)
+            .orElseThrow();
+
+        assertEquals(asteroid, GalaxiaCelestialAPI.findBodyById(root, key));
+        assertEquals(
+            CelestialObjectId.VAEL,
+            GalaxiaCelestialAPI.findStar(key)
+                .requireRegisteredId());
+        assertEquals(asteroid, GalaxiaCelestialAPI.findPlanetaryAnchor(key));
+    }
+}

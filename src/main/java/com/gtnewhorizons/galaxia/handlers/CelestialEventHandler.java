@@ -22,7 +22,7 @@ import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.SatelliteNetworkSyncPacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
@@ -70,7 +70,7 @@ public class CelestialEventHandler {
         // Dispatch routing is decided at match time:
         // same planetary anchor → HAMMER
         // different planetary anchors -> BIG HAMMER
-        for (Map.Entry<CelestialObjectId, List<LogisticSignal>> entry : LogisticStore
+        for (Map.Entry<CelestialObjectKey, List<LogisticSignal>> entry : LogisticStore
             // TODO: Use different scopes also?
             .allSignalsForScope(LogisticSignal.Scope.SYSTEM)
             .entrySet()) {
@@ -102,7 +102,7 @@ public class CelestialEventHandler {
                 // Wait until next sync just to be sure this gets first, otherwise it could easily become a race
                 continue;
             }
-            Map<CelestialObjectId, Set<CelestialAsset>> teamAssets = CelestialAssetStore.getTeamAssets(playerTeam);
+            Map<CelestialObjectKey, Set<CelestialAsset>> teamAssets = CelestialAssetStore.getTeamAssets(playerTeam);
             if (teamAssets == null) continue;
             Set<CelestialAsset> aggregatedAssets = teamAssets.values()
                 .stream()

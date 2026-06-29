@@ -11,7 +11,7 @@ import org.jetbrains.annotations.UnknownNullability;
 
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
@@ -28,8 +28,8 @@ import io.netty.buffer.ByteBuf;
 public final class LogisticsSyncPacket implements IMessage {
 
     private List<LogisticsDelivery> deliveries;
-    private Map<CelestialObjectId, Map<String, Long>> bySystem;
-    private Map<CelestialObjectId, Map<String, Long>> byPlanet;
+    private Map<CelestialObjectKey, Map<String, Long>> bySystem;
+    private Map<CelestialObjectKey, Map<String, Long>> byPlanet;
 
     public LogisticsSyncPacket() {}
 
@@ -45,16 +45,16 @@ public final class LogisticsSyncPacket implements IMessage {
         pkt.bySystem = new LinkedHashMap<>();
         pkt.byPlanet = new LinkedHashMap<>();
 
-        for (Map.Entry<CelestialObjectId, List<LogisticSignal>> entry : LogisticStore
+        for (Map.Entry<CelestialObjectKey, List<LogisticSignal>> entry : LogisticStore
             .allSignalsForScope(LogisticSignal.Scope.SYSTEM)
             .entrySet()) {
-            CelestialObjectId systemId = entry.getKey();
+            CelestialObjectKey systemId = entry.getKey();
             Map<String, Long> systemAgg = new LinkedHashMap<>();
             for (LogisticSignal sig : entry.getValue()) {
                 String key = sig.resourceId()
                     .toKey();
                 systemAgg.merge(key, sig.amount(), Long::sum);
-                CelestialObjectId anchorId = sig.planetaryAnchorBodyId();
+                CelestialObjectKey anchorId = sig.planetaryAnchorBodyId();
                 if (anchorId != null) {
                     pkt.byPlanet.computeIfAbsent(anchorId, k -> new LinkedHashMap<>())
                         .merge(key, sig.amount(), Long::sum);
@@ -81,8 +81,8 @@ public final class LogisticsSyncPacket implements IMessage {
             buf.writeLong(d.amount());
             buf.writeInt(t.getRemainingTicks());
             PacketUtil.writeEnum(buf, d.scope());
-            PacketUtil.writeEnum(buf, d.fromBodyId());
-            PacketUtil.writeEnum(buf, d.toBodyId());
+            PacketUtil.writeCelestialObjectKey(buf, d.fromBodyId());
+            PacketUtil.writeCelestialObjectKey(buf, d.toBodyId());
             buf.writeDouble(d.departureOrbitalTime());
             buf.writeDouble(d.tofOrbitalSeconds());
             writeTransferRoute(buf, d.transferRoute());
@@ -104,8 +104,8 @@ public final class LogisticsSyncPacket implements IMessage {
             long amount = buf.readLong();
             int remainingTicks = buf.readInt();
             LogisticSignal.Scope scope = PacketUtil.readEnum(buf, LogisticSignal.Scope.class);
-            CelestialObjectId fromBodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
-            CelestialObjectId toBodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
+            CelestialObjectKey fromBodyId = PacketUtil.readCelestialObjectKey(buf);
+            CelestialObjectKey toBodyId = PacketUtil.readCelestialObjectKey(buf);
             double departureOrbitalTime = buf.readDouble();
             double tofOrbitalSeconds = buf.readDouble();
             OrbitalTransferPlanner.TransferRoute transferRoute = readTransferRoute(buf);
@@ -153,7 +153,7 @@ public final class LogisticsSyncPacket implements IMessage {
         buf.writeDouble(route.totalDv());
         buf.writeDouble(route.departureDv());
         buf.writeDouble(route.captureDv());
-        PacketUtil.writeEnum(buf, route.attractorBodyId());
+        PacketUtil.writeCelestialObjectKey(buf, route.attractorBodyId());
         buf.writeDouble(route.anchorX());
         buf.writeDouble(route.anchorY());
         buf.writeDouble(route.r1x());
@@ -169,7 +169,7 @@ public final class LogisticsSyncPacket implements IMessage {
         double totalDv = buf.readDouble();
         double departureDv = buf.readDouble();
         double captureDv = buf.readDouble();
-        CelestialObjectId attractorBodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
+        CelestialObjectKey attractorBodyId = PacketUtil.readCelestialObjectKey(buf);
         double anchorX = buf.readDouble();
         double anchorY = buf.readDouble();
         double r1x = buf.readDouble();
@@ -192,10 +192,10 @@ public final class LogisticsSyncPacket implements IMessage {
             prograde);
     }
 
-    private static void writeAggMap(ByteBuf buf, @UnknownNullability Map<CelestialObjectId, Map<String, Long>> map) {
+    private static void writeAggMap(ByteBuf buf, @UnknownNullability Map<CelestialObjectKey, Map<String, Long>> map) {
         buf.writeInt(map.size());
-        for (Map.Entry<CelestialObjectId, Map<String, Long>> outer : map.entrySet()) {
-            PacketUtil.writeEnum(buf, outer.getKey());
+        for (Map.Entry<CelestialObjectKey, Map<String, Long>> outer : map.entrySet()) {
+            PacketUtil.writeCelestialObjectKey(buf, outer.getKey());
             Map<String, Long> inner = outer.getValue();
             buf.writeInt(inner.size());
             for (Map.Entry<String, Long> e : inner.entrySet()) {
@@ -205,11 +205,11 @@ public final class LogisticsSyncPacket implements IMessage {
         }
     }
 
-    private static Map<CelestialObjectId, Map<String, Long>> readAggMap(ByteBuf buf) {
+    private static Map<CelestialObjectKey, Map<String, Long>> readAggMap(ByteBuf buf) {
         int outerCount = buf.readInt();
-        Map<CelestialObjectId, Map<String, Long>> map = new LinkedHashMap<>(outerCount);
+        Map<CelestialObjectKey, Map<String, Long>> map = new LinkedHashMap<>(outerCount);
         for (int i = 0; i < outerCount; i++) {
-            CelestialObjectId outerKey = PacketUtil.readEnum(buf, CelestialObjectId.class);
+            CelestialObjectKey outerKey = PacketUtil.readCelestialObjectKey(buf);
             int innerCount = buf.readInt();
             Map<String, Long> inner = new LinkedHashMap<>(innerCount);
             for (int j = 0; j < innerCount; j++) {

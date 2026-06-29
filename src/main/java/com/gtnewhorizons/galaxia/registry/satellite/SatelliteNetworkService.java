@@ -236,8 +236,10 @@ public final class SatelliteNetworkService {
     private static SatelliteNetworkGraph.Node nodeFor(CelestialObject root, CelestialObject body, double orbitalTime) {
         OrbitalMechanics.OrbitalState state = OrbitalMechanics.resolveWorldState(root, body, orbitalTime);
         return new SatelliteNetworkGraph.Node(
-            body.id(),
-            body.parentId(),
+            body.requireRegisteredId(),
+            body.parentId() == null ? null
+                : body.parentId()
+                    .requireRegisteredBodyId(),
             orbitalOrder(body),
             state.x(),
             state.y(),
@@ -246,7 +248,7 @@ public final class SatelliteNetworkService {
 
     private static double orbitalOrder(CelestialObject body) {
         OrbitalParams params = body.orbitalParams();
-        return params == null ? body.id()
+        return params == null ? body.requireRegisteredId()
             .ordinal() : params.semiMajorAxis();
     }
 

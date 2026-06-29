@@ -2426,8 +2426,8 @@ public class OrbitalView {
                     || !snapshotBodyIds.contains(body.id())) {
                     continue;
                 }
-                satelliteNetworkWorldStates.put(body.id(), state);
-                satelliteNetworkEndpoints.put(body.id(), satelliteNetworkEndpoint(state));
+                satelliteNetworkWorldStates.put(body.requireRegisteredId(), state);
+                satelliteNetworkEndpoints.put(body.requireRegisteredId(), satelliteNetworkEndpoint(state));
             }
 
             GlStateManager.disableTexture2D();
@@ -3077,8 +3077,8 @@ public class OrbitalView {
             long usedKbps = 0L;
             long capacityKbps = 0L;
             if (teamId != null && body != null && teamId.equals(networkState.teamId())) {
-                usedKbps = networkState.usedKbps(body.id());
-                capacityKbps = networkState.capacityKbps(body.id());
+                usedKbps = networkState.usedKbps(body.requireRegisteredId());
+                capacityKbps = networkState.capacityKbps(body.requireRegisteredId());
             }
             return "Bandwidth: " + SatelliteBandwidthFormatter.formatKbps(usedKbps)
                 + " / "
@@ -3089,7 +3089,7 @@ public class OrbitalView {
             UUID teamId = currentTeamId();
             SatelliteNetworkState networkState = SatelliteNetworkClientState.current();
             if (teamId == null || body == null || !teamId.equals(networkState.teamId())) return List.of();
-            return networkState.pendingData(body.id())
+            return networkState.pendingData(body.requireRegisteredId())
                 .stream()
                 .map(
                     entry -> SatelliteBandwidthFormatter.formatDataDeciKb(entry.deciKb()) + " "

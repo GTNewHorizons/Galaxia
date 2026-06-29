@@ -36,6 +36,8 @@ import com.gtnewhorizons.galaxia.core.network.PacketUtil;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
@@ -142,6 +144,92 @@ final class FacilityPersistenceManagerTest {
                 .size());
         assertLayoutEquals(station.stationLayout(), loaded.stationLayout());
         assertEquals(GSON.toJson(json.facility), GSON.toJson(manager.encodeFacilityState(loaded)));
+    }
+
+    @Test
+    void saveFileRoundTripsStructuredMinorCelestialObjectKey(@TempDir Path tempDir) throws Exception {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        UUID teamId = UUID.randomUUID();
+        CelestialObjectKey key = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 3));
+        CelestialAsset asset = CelestialAsset
+            .create(key, CelestialAsset.Kind.AUTOMATED_OUTPOST, Buildable.Status.OPERATIONAL);
+
+        CelestialAssetStore.clear();
+        CelestialAssetStore.registerAsset(teamId, asset);
+        manager.saveToSaveDirectory(tempDir.toFile());
+
+        JsonObject registry = PERSISTENCE_GSON.fromJson(
+            Files.readString(
+                tempDir.resolve("galaxiadata")
+                    .resolve("_assets.json")),
+            JsonObject.class);
+        JsonObject assetJson = registry.getAsJsonArray("assets")
+            .get(0)
+            .getAsJsonObject();
+        JsonObject keyJson = assetJson.getAsJsonObject("celestialObjectKey");
+        assertNotNull(keyJson);
+        assertTrue(
+            !assetJson.has("celestialObjectId") || assetJson.get("celestialObjectId")
+                .isJsonNull());
+        assertEquals(
+            "minor",
+            keyJson.get("kind")
+                .getAsString());
+        assertEquals(
+            "FROZEN_BELT",
+            keyJson.get("parentBeltId")
+                .getAsString());
+        assertEquals(
+            3,
+            keyJson.get("index")
+                .getAsInt());
+
+        CelestialAssetStore.clear();
+        manager.loadFromSaveDirectory(tempDir.toFile());
+
+        CelestialAsset loaded = CelestialAssetStore.findAsset(asset.assetId);
+        assertNotNull(loaded);
+        assertEquals(teamId, CelestialAssetStore.getTeamId(asset.assetId));
+        assertEquals(key, loaded.celestialObjectId);
+    }
+
+    @Test
+    void malformedPersistedCelestialObjectKeysFailLoadLoudly(@TempDir Path tempDir) throws Exception {
+        FacilityPersistenceManager.AssetJson wrongPartCount = assetJson(
+            UUID.randomUUID(),
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            CelestialObjectId.MARS);
+        wrongPartCount.celestialObjectId = "minor:FROZEN_BELT";
+
+        FacilityPersistenceManager.AssetJson invalidParent = assetJson(
+            UUID.randomUUID(),
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            CelestialObjectId.MARS);
+        invalidParent.celestialObjectId = "minor:NOT_A_BELT:3";
+
+        FacilityPersistenceManager.AssetJson invalidIndex = assetJson(
+            UUID.randomUUID(),
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            CelestialObjectId.MARS);
+        invalidIndex.celestialObjectId = "minor:FROZEN_BELT:not-an-int";
+
+        Path dataDir = tempDir.resolve("galaxiadata");
+        Files.createDirectories(dataDir);
+
+        for (FacilityPersistenceManager.AssetJson asset : List.of(wrongPartCount, invalidParent, invalidIndex)) {
+            Files.write(dataDir.resolve("_assets.json"), assetRegistryBytes(List.of(asset)));
+
+            IllegalArgumentException thrown = assertThrows(
+                IllegalArgumentException.class,
+                () -> new FacilityPersistenceManager().loadFromSaveDirectory(tempDir.toFile()));
+            assertTrue(
+                thrown.getMessage()
+                    .contains("celestialObjectId"));
+            assertTrue(
+                thrown.getMessage()
+                    .contains(asset.celestialObjectId));
+        }
     }
 
     @Test

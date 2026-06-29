@@ -172,6 +172,7 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
             this.surfacePressurePa = source.surfacePressurePa;
             this.starmapAtmosphericDrag = source.starmapAtmosphericDrag;
             this.atmosphereCompositionSource = source.atmosphereCompositionSource;
+            this.asteroidFieldProfile = source.asteroidFieldProfile;
             if (source.atmosphereCompositionSource == null) {
                 this.atmosphereIngredients.addAll(source.atmosphereIngredients);
             }

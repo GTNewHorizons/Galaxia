@@ -6,13 +6,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 final class OrbitalTransferPlannerTest {
 
     @Test
     void fixedLambertRouteAcceptsNearOppositeGeometry() {
         OrbitalTransferPlanner.TransferRoute route = OrbitalTransferPlanner.solveFixedRoute(
-            CelestialObjectId.VAEL,
+            CelestialObjectKey.registered(CelestialObjectId.VAEL),
             1.0,
             0.01,
             0.0,

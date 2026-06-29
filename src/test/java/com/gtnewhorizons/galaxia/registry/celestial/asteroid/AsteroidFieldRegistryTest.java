@@ -24,7 +24,7 @@ final class AsteroidFieldRegistryTest {
             .asteroidFieldProfile();
         assertNotNull(profile);
 
-        List<AsteroidFieldNode> nodes = AsteroidFieldResolver.resolveAll(frozenBelt.id(), profile);
+        List<AsteroidFieldNode> nodes = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile);
 
         assertTrue(
             nodes.stream()

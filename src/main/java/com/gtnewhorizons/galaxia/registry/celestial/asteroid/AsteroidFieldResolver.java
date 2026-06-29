@@ -23,6 +23,15 @@ public final class AsteroidFieldResolver {
         return List.copyOf(nodes);
     }
 
+    public static AsteroidFieldNode resolveNode(CelestialObjectId beltId, AsteroidFieldProfile profile, int index) {
+        Objects.requireNonNull(beltId, "beltId cannot be null");
+        Objects.requireNonNull(profile, "profile cannot be null");
+        if (index < 0 || index >= profile.totalNodes()) {
+            throw new IllegalArgumentException("node index must be within the asteroid field profile");
+        }
+        return resolveNodeUnchecked(beltId, profile, index);
+    }
+
     public static AsteroidDetectionState initialDetectionState(AsteroidFieldNode node) {
         Objects.requireNonNull(node, "node cannot be null");
         return node.sizeClass() == AsteroidSizeClass.LARGE ? AsteroidDetectionState.DETECTED
@@ -41,7 +50,8 @@ public final class AsteroidFieldResolver {
         return rolledOreKnowledge(node, 6L);
     }
 
-    private static AsteroidFieldNode resolveNode(CelestialObjectId beltId, AsteroidFieldProfile profile, int index) {
+    private static AsteroidFieldNode resolveNodeUnchecked(CelestialObjectId beltId, AsteroidFieldProfile profile,
+        int index) {
         long baseSeed = mix(
             beltId.name()
                 .hashCode(),

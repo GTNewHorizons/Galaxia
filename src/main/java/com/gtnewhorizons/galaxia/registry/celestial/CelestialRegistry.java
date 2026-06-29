@@ -16,8 +16,12 @@ import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.PlayableDimensionProfile;
 import com.gtnewhorizons.galaxia.registry.dimension.SpaceStation;
@@ -36,8 +40,8 @@ public final class CelestialRegistry {
 
     private static final double EARTH_RADIUS_TO_AU = 23481;
 
-    private static final Map<CelestialObjectId, CelestialObject> REGISTRATIONS = new LinkedHashMap<>();
-    private static final Map<DimensionEnum, CelestialObjectId> IDS_BY_DIMENSION = new EnumMap<>(DimensionEnum.class);
+    private static final Map<CelestialObjectKey, CelestialObject> REGISTRATIONS = new LinkedHashMap<>();
+    private static final Map<DimensionEnum, CelestialObjectKey> IDS_BY_DIMENSION = new EnumMap<>(DimensionEnum.class);
 
     private static boolean bootstrapped;
     private static boolean frozen;
@@ -436,11 +440,88 @@ public final class CelestialRegistry {
     }
 
     public static Optional<CelestialObject> get(CelestialObjectId id) {
-        return Optional.ofNullable(REGISTRATIONS.get(id));
+        return id == null ? Optional.empty() : get(CelestialObjectKey.registered(id));
+    }
+
+    public static Optional<CelestialObject> get(CelestialObjectKey key) {
+        registerDefaults();
+        CelestialObject registered = REGISTRATIONS.get(key);
+        if (registered != null) return Optional.of(registered);
+        return resolveDynamicMinorBody(key);
+    }
+
+    private static Optional<CelestialObject> resolveDynamicMinorBody(CelestialObjectKey key) {
+        if (key == null || !key.isMinorBody()) return Optional.empty();
+
+        MinorCelestialBodyId minorId = key.minorBodyId();
+        CelestialObject belt = REGISTRATIONS.get(CelestialObjectKey.registered(minorId.parentBeltId()));
+        if (belt == null || belt.properties()
+            .asteroidFieldProfile() == null) {
+            return Optional.empty();
+        }
+
+        AsteroidFieldProfile profile = belt.properties()
+            .asteroidFieldProfile();
+        if (minorId.index() >= profile.totalNodes()) return Optional.empty();
+
+        AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(minorId.parentBeltId(), profile, minorId.index());
+        return Optional.of(toDynamicAsteroidObject(node, profile));
+    }
+
+    private static CelestialObject toDynamicAsteroidObject(AsteroidFieldNode node, AsteroidFieldProfile profile) {
+        double radius = profile.innerOrbitalRadius()
+            + (profile.outerOrbitalRadius() - profile.innerOrbitalRadius()) * node.orbitalDepth01();
+        double spriteSize = switch (node.sizeClass()) {
+            case LARGE -> 0.055;
+            case MEDIUM -> 0.040;
+            case SMALL -> 0.028;
+        };
+        double soiRadius = switch (node.sizeClass()) {
+            case LARGE -> 180.0;
+            case MEDIUM -> 120.0;
+            case SMALL -> 80.0;
+        };
+
+        return CelestialObject.builder()
+            .id(CelestialObjectKey.minorBody(node.id()))
+            .name(node.displayName())
+            .parent(CelestialObjectKey.registered(node.beltId()))
+            .objectClass(CelestialObject.Class.ASTEROID)
+            .circularOrbit(radius, 0.00091, Math.toRadians(node.angleOffsetDeg()))
+            .texture(EnumTextures.ICON_AMBERGRIS.get())
+            .spriteSize(spriteSize)
+            .properties(
+                b -> b.orbitalGravity(6.0e4, soiRadius)
+                    .visitable(node.sizeClass() != AsteroidSizeClass.SMALL)
+                    .canCreateStation(false)
+                    .canCreateOutpost(true)
+                    .temperature(41)
+                    .radiation(0.52)
+                    .oreProfile(
+                        node.oreProfile()
+                            .id())
+                    .gtOreVeinIds(
+                        node.oreProfile()
+                            .gtOreVeinIds()
+                            .toArray(new String[0]))
+                    .metadata("surface", "undefined")
+                    .metadata(
+                        "sizeClass",
+                        node.sizeClass()
+                            .name()
+                            .toLowerCase())
+                    .metadata("minorBodies", "generated"))
+            .build();
     }
 
     public static List<CelestialObject> getAll() {
+        registerDefaults();
         return Collections.unmodifiableList(new ArrayList<>(REGISTRATIONS.values()));
+    }
+
+    public static Map<CelestialObjectKey, CelestialObject> getAllBodies() {
+        registerDefaults();
+        return Collections.unmodifiableMap(REGISTRATIONS);
     }
 
     public static List<CelestialObject> getPlayableBodies() {
@@ -463,7 +544,7 @@ public final class CelestialRegistry {
 
     public static Optional<CelestialObject> findByDimension(DimensionEnum dimension) {
         registerDefaults();
-        CelestialObjectId objectId = IDS_BY_DIMENSION.get(dimension);
+        CelestialObjectKey objectId = IDS_BY_DIMENSION.get(dimension);
         if (objectId == null) return Optional.empty();
         return Optional.ofNullable(
             hierarchy.bodiesById()
@@ -471,13 +552,17 @@ public final class CelestialRegistry {
     }
 
     public static Optional<CelestialObject> findById(CelestialObjectId id) {
+        return id == null ? Optional.empty() : findById(CelestialObjectKey.registered(id));
+    }
+
+    public static Optional<CelestialObject> findById(CelestialObjectKey id) {
         registerDefaults();
         return Optional.ofNullable(
             hierarchy.bodiesById()
                 .get(id));
     }
 
-    private static void validateRegistration(CelestialObject registration, CelestialObjectId existingId) {
+    private static void validateRegistration(CelestialObject registration, CelestialObjectKey existingId) {
         if (REGISTRATIONS.containsKey(registration.id()) && !registration.id()
             .equals(existingId)) {
             throw new IllegalArgumentException("Duplicate celestial object id: " + registration.id());
@@ -490,7 +575,7 @@ public final class CelestialRegistry {
             throw new IllegalArgumentException("Unknown parent celestial object id: " + registration.parentId());
         }
         if (registration.dimensionEnum() != null) {
-            CelestialObjectId existingDimensionOwner = IDS_BY_DIMENSION.get(registration.dimensionEnum());
+            CelestialObjectKey existingDimensionOwner = IDS_BY_DIMENSION.get(registration.dimensionEnum());
             if (existingDimensionOwner != null && !existingDimensionOwner.equals(existingId)) {
                 throw new IllegalArgumentException("Duplicate dimension mapping for " + registration.dimensionEnum());
             }

@@ -11,6 +11,7 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
@@ -21,7 +22,7 @@ import io.netty.buffer.ByteBuf;
 
 public final class AssetCreateRequestPacket implements IMessage {
 
-    private CelestialObjectId celestialObjectId;
+    private CelestialObjectKey celestialObjectId;
     private String displayName;
     private CelestialAsset.Kind kind;
     private boolean operational;
@@ -32,6 +33,11 @@ public final class AssetCreateRequestPacket implements IMessage {
     public AssetCreateRequestPacket() {}
 
     public static AssetCreateRequestPacket createFacility(CelestialObjectId celestialObjectId, String displayName,
+        CelestialAsset.Kind kind, boolean operational) {
+        return createFacility(CelestialObjectKey.registered(celestialObjectId), displayName, kind, operational);
+    }
+
+    public static AssetCreateRequestPacket createFacility(CelestialObjectKey celestialObjectId, String displayName,
         CelestialAsset.Kind kind, boolean operational) {
         AssetCreateRequestPacket pkt = new AssetCreateRequestPacket();
 
@@ -44,6 +50,11 @@ public final class AssetCreateRequestPacket implements IMessage {
     }
 
     public static AssetCreateRequestPacket createSatellite(CelestialObjectId celestialObjectId, SatelliteKind kind,
+        boolean operational) {
+        return createSatellite(CelestialObjectKey.registered(celestialObjectId), kind, operational);
+    }
+
+    public static AssetCreateRequestPacket createSatellite(CelestialObjectKey celestialObjectId, SatelliteKind kind,
         boolean operational) {
         AssetCreateRequestPacket pkt = new AssetCreateRequestPacket();
 
@@ -58,6 +69,11 @@ public final class AssetCreateRequestPacket implements IMessage {
 
     public static AssetCreateRequestPacket createStation(CelestialObjectId celestialObjectId, String displayName,
         BlockPos controller) {
+        return createStation(CelestialObjectKey.registered(celestialObjectId), displayName, controller);
+    }
+
+    public static AssetCreateRequestPacket createStation(CelestialObjectKey celestialObjectId, String displayName,
+        BlockPos controller) {
         AssetCreateRequestPacket pkt = new AssetCreateRequestPacket();
 
         pkt.celestialObjectId = celestialObjectId;
@@ -71,7 +87,7 @@ public final class AssetCreateRequestPacket implements IMessage {
 
     @Override
     public void toBytes(ByteBuf buf) {
-        PacketUtil.writeEnum(buf, celestialObjectId);
+        PacketUtil.writeCelestialObjectKey(buf, celestialObjectId);
         PacketUtil.writeString(buf, displayName);
         PacketUtil.writeEnum(buf, kind);
         buf.writeBoolean(operational);
@@ -86,7 +102,7 @@ public final class AssetCreateRequestPacket implements IMessage {
 
     @Override
     public void fromBytes(ByteBuf buf) {
-        celestialObjectId = PacketUtil.readEnum(buf, CelestialObjectId.class);
+        celestialObjectId = PacketUtil.readCelestialObjectKey(buf);
         displayName = PacketUtil.readString(buf);
         kind = PacketUtil.readEnum(buf, CelestialAsset.Kind.class);
         operational = buf.readBoolean();
