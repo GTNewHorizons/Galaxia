@@ -265,6 +265,7 @@ galaxia.gui.orbital.search.placeholder=Enter name...
 galaxia.gui.orbital.click_mode.hierarchy=Hierarchy
 galaxia.gui.orbital.click_mode.follow=Follow
 galaxia.gui.orbital.click_mode.tooltip=Changes planet click mode between opening hierarchy and following the selected planet
+galaxia.gui.orbital.asset.create.unsupported_body=%s cannot be created here
 galaxia.gui.orbital.pinned_info.label.name=Name
 galaxia.gui.orbital.pinned_info.label.type=Type
 galaxia.gui.orbital.pinned_info.label.landable=Landable

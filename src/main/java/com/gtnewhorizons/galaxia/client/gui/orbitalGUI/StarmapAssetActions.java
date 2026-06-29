@@ -235,6 +235,13 @@ public final class StarmapAssetActions {
             boolean openActionsFirst) {
             if (body == null) return;
             if (openActionsFirst) openAssetActions(state, body);
+            if (!canCreateAssetOnBody(body, kind)) {
+                callbacks.showActionStatus(
+                    StatCollector.translateToLocalFormatted(
+                        "galaxia.gui.orbital.asset.create.unsupported_body",
+                        assetSupport.formatAssetKind(kind)));
+                return;
+            }
             CelestialAsset.Location location = getDefaultAssetLocation(kind);
             String displayName = buildDefaultAssetDisplayName(body, kind);
             if (kind == CelestialAsset.Kind.STATION) {
@@ -257,6 +264,16 @@ public final class StarmapAssetActions {
                 kind,
                 location,
                 CelestialAsset.defaultRequirements(kind));
+        }
+
+        private boolean canCreateAssetOnBody(CelestialObject body, CelestialAsset.Kind kind) {
+            return switch (kind) {
+                case AUTOMATED_STATION -> body.properties()
+                    .canCreateStation();
+                case AUTOMATED_OUTPOST -> body.properties()
+                    .canCreateOutpost();
+                default -> true;
+            };
         }
 
         void confirmPendingAssetCreation(OrbitalAssetUiState state) {
