@@ -54,4 +54,36 @@ final class OrbitalMechanicsTest {
             () -> assertEquals(expected.vx(), actual.vx(), EPSILON),
             () -> assertEquals(expected.vy(), actual.vy(), EPSILON));
     }
+
+    @Test
+    void standaloneMinorAsteroidUsesNormalChildOrbitWhenParentHasNoAsteroidField() {
+        MinorCelestialBodyId minorId = new MinorCelestialBodyId(CelestialObjectId.MARS, 0);
+        CelestialObject parent = CelestialObject.builder()
+            .id(CelestialObjectId.MARS)
+            .name("Mars")
+            .objectClass(CelestialObject.Class.PLANET)
+            .build();
+        CelestialObject asteroid = CelestialObject.builder()
+            .id(CelestialObjectKey.minorBody(minorId))
+            .name("Mars Trojan")
+            .parent(CelestialObjectId.MARS)
+            .objectClass(CelestialObject.Class.ASTEROID)
+            .circularOrbit(12.0, 0.001, 0.0)
+            .build();
+        OrbitalMechanics.OrbitalState parentState = new OrbitalMechanics.OrbitalState(100.0, 0.0, 0.0, 2.0);
+
+        OrbitalMechanics.OrbitalState expected = parentState.add(
+            OrbitalMechanics.calculateOrbitalState(
+                asteroid.orbitalParams(),
+                OrbitalMechanics.resolveAttractorMu(parent, asteroid.orbitalParams()),
+                0.0));
+        OrbitalMechanics.OrbitalState actual = OrbitalMechanics
+            .resolveChildWorldState(parent, asteroid, parentState, 0.0);
+
+        assertAll(
+            () -> assertEquals(expected.x(), actual.x(), EPSILON),
+            () -> assertEquals(expected.y(), actual.y(), EPSILON),
+            () -> assertEquals(expected.vx(), actual.vx(), EPSILON),
+            () -> assertEquals(expected.vy(), actual.vy(), EPSILON));
+    }
 }

@@ -49,7 +49,7 @@ public final class OrbitalMechanics {
             AbsolutePosition absolute = child.absolutePosition();
             return new OrbitalState(absolute.x(), absolute.y(), 0.0, 0.0);
         }
-        OrbitalState asteroidFieldState = resolveAsteroidFieldChildWorldState(parent, child, safeParentState);
+        OrbitalState asteroidFieldState = resolveFieldAsteroidChildWorldState(parent, child, safeParentState);
         if (asteroidFieldState != null) return asteroidFieldState;
         OrbitalState localState = calculateOrbitalState(
             child.orbitalParams(),
@@ -58,7 +58,7 @@ public final class OrbitalMechanics {
         return safeParentState.add(localState);
     }
 
-    private static OrbitalState resolveAsteroidFieldChildWorldState(CelestialObject parent, CelestialObject child,
+    private static OrbitalState resolveFieldAsteroidChildWorldState(CelestialObject parent, CelestialObject child,
         OrbitalState parentState) {
         if (child == null || child.id() == null
             || !child.id()
@@ -81,9 +81,7 @@ public final class OrbitalMechanics {
         }
         AsteroidFieldProfile profile = parent.properties()
             .asteroidFieldProfile();
-        if (profile == null) {
-            throw new IllegalStateException("Minor celestial body parent lacks asteroid field profile: " + parentId);
-        }
+        if (profile == null) return null;
 
         AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(parentId, profile, minorId.index());
         return AsteroidFieldOrbitModel.resolveWorldState(profile, node, parentState);
