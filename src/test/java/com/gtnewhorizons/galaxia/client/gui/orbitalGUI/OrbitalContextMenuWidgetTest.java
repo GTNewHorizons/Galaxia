@@ -9,7 +9,9 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class OrbitalContextMenuWidgetTest {
@@ -34,6 +36,25 @@ final class OrbitalContextMenuWidgetTest {
                 "galaxia.gui.orbital.context_menu.manage_assets",
                 "galaxia.satellite.action.add_communication",
                 "galaxia.satellite.action.delete_communication",
+                "galaxia.satellite.action.add_prospecting",
+                "galaxia.satellite.action.delete_prospecting"),
+            labelKeys);
+    }
+
+    @Test
+    void asteroidContextMenuOffersOnlyProspectingSatelliteActions() {
+        CelestialObject asteroid = CelestialRegistry
+            .get(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0)))
+            .orElseThrow();
+
+        List<String> labelKeys = OrbitalContextMenuWidget.buildActions(asteroid, true)
+            .stream()
+            .map(ContextMenuAction::labelKey)
+            .toList();
+
+        assertEquals(
+            List.of(
+                "galaxia.gui.orbital.context_menu.manage_assets",
                 "galaxia.satellite.action.add_prospecting",
                 "galaxia.satellite.action.delete_prospecting"),
             labelKeys);

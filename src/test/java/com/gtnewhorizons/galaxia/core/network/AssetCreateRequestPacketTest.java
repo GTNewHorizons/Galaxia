@@ -115,6 +115,21 @@ final class AssetCreateRequestPacketTest {
     }
 
     @Test
+    void asteroidCreateRequestRejectsCommunicationSatellites() {
+        CelestialObjectKey asteroidId = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0));
+
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> AssetCreateRequestPacket.createSatellite(asteroidId, SatelliteKind.COMMUNICATION, true)
+                .apply(TEAM));
+        assertEquals(
+            0,
+            CelestialAssetStore.getAssetsOnBody(asteroidId)
+                .size());
+    }
+
+    @Test
     void asteroidCreateRequestAllowsTeamDetectedHiddenAsteroidOutposts() {
         CelestialObjectKey hiddenAsteroidId = hiddenAsteroidId();
         CelestialObject belt = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)

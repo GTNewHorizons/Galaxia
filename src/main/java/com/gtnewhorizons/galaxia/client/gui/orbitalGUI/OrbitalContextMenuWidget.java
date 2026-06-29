@@ -239,16 +239,19 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
                 true,
                 ContextMenuActionType.MANAGE_ASSETS));
         if (canDebugSatellites) {
-            actions.add(
-                new ContextMenuAction(
-                    "galaxia.satellite.action.add_communication",
-                    true,
-                    ContextMenuActionType.ADD_COMMUNICATION_SATELLITE));
-            actions.add(
-                new ContextMenuAction(
-                    "galaxia.satellite.action.delete_communication",
-                    true,
-                    ContextMenuActionType.DELETE_COMMUNICATION_SATELLITES));
+            if (body == null || !body.id()
+                .isMinorBody()) {
+                actions.add(
+                    new ContextMenuAction(
+                        "galaxia.satellite.action.add_communication",
+                        true,
+                        ContextMenuActionType.ADD_COMMUNICATION_SATELLITE));
+                actions.add(
+                    new ContextMenuAction(
+                        "galaxia.satellite.action.delete_communication",
+                        true,
+                        ContextMenuActionType.DELETE_COMMUNICATION_SATELLITES));
+            }
             actions.add(
                 new ContextMenuAction(
                     "galaxia.satellite.action.add_prospecting",

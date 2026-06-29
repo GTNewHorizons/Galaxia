@@ -145,6 +145,10 @@ public final class AssetCreateRequestPacket implements IMessage {
             .canCreateOutpost()) {
             throw new IllegalArgumentException("Cannot create automated outpost on " + celestialObjectId);
         }
+        if (kind == CelestialAsset.Kind.SATELLITE && requiredSatelliteKind() == SatelliteKind.COMMUNICATION && body.id()
+            .isMinorBody()) {
+            throw new IllegalArgumentException("Cannot create communication satellite on asteroid " + celestialObjectId);
+        }
         if (requiresDetectedAsteroidTarget() && body.id()
             .isMinorBody()
             && !AsteroidFieldKnowledgeService.isDetected(
