@@ -1,12 +1,17 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 
 public record AsteroidFieldStarmapEntry(MinorCelestialBodyId id, CelestialObjectId beltId, int index,
     String displayName, AsteroidNodeKind nodeKind, AsteroidSizeClass sizeClass, double angleOffsetDeg,
-    double orbitalDepth01, AsteroidOreKnowledgeState oreKnowledgeState, AsteroidAppearanceProfile appearanceProfile) {
+    double orbitalDepth01, AsteroidOreKnowledgeState oreKnowledgeState, Optional<String> visibleOreProfileId,
+    List<String> visibleGtOreVeinIds, AsteroidAppearanceProfile appearanceProfile) {
 
     public AsteroidFieldStarmapEntry {
         Objects.requireNonNull(id, "id");
@@ -26,6 +31,15 @@ public record AsteroidFieldStarmapEntry(MinorCelestialBodyId id, CelestialObject
             throw new IllegalArgumentException("Asteroid starmap orbital depth must be in range [0, 1]");
         }
         Objects.requireNonNull(oreKnowledgeState, "oreKnowledgeState");
+        visibleOreProfileId = Objects.requireNonNull(visibleOreProfileId, "visibleOreProfileId");
+        if (oreKnowledgeState == AsteroidOreKnowledgeState.UNKNOWN && visibleOreProfileId.isPresent()) {
+            throw new IllegalArgumentException("Unknown asteroid ore cannot expose an ore profile id");
+        }
+        if (visibleGtOreVeinIds == null) visibleGtOreVeinIds = List.of();
+        else visibleGtOreVeinIds = Collections.unmodifiableList(new ArrayList<>(visibleGtOreVeinIds));
+        if (oreKnowledgeState != AsteroidOreKnowledgeState.PROFILE && !visibleGtOreVeinIds.isEmpty()) {
+            throw new IllegalArgumentException("Asteroid ore veins require profile-level knowledge");
+        }
         Objects.requireNonNull(appearanceProfile, "appearanceProfile");
     }
 
@@ -36,6 +50,15 @@ public record AsteroidFieldStarmapEntry(MinorCelestialBodyId id, CelestialObject
             throw new IllegalArgumentException("Hidden asteroids cannot be exposed on the starmap");
         }
 
+        AsteroidOreKnowledgeState oreKnowledgeState = knowledge.oreKnowledgeState();
+        Optional<String> visibleOreProfileId = oreKnowledgeState == AsteroidOreKnowledgeState.UNKNOWN ? Optional.empty()
+            : Optional.of(node.oreProfile()
+                .id());
+        List<String> visibleGtOreVeinIds = oreKnowledgeState == AsteroidOreKnowledgeState.PROFILE
+            ? node.oreProfile()
+                .gtOreVeinIds()
+            : List.of();
+
         return new AsteroidFieldStarmapEntry(
             node.id(),
             node.beltId(),
@@ -45,7 +68,9 @@ public record AsteroidFieldStarmapEntry(MinorCelestialBodyId id, CelestialObject
             node.sizeClass(),
             node.angleOffsetDeg(),
             node.orbitalDepth01(),
-            knowledge.oreKnowledgeState(),
+            oreKnowledgeState,
+            visibleOreProfileId,
+            visibleGtOreVeinIds,
             node.appearance());
     }
 }
