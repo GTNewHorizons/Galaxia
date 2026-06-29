@@ -18,6 +18,7 @@ import org.apache.logging.log4j.Logger;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureModuleContext;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.ModuleFeatureModifierBuilder;
@@ -85,7 +86,7 @@ public final class AutomatedFacility extends CelestialAsset {
     public static final long BASE_ITEM_CAPACITY = 1000L;
     public static final int UPKEEP_INTERVAL_TICKS = 20 * 60;
 
-    public AutomatedFacility(CelestialAsset.ID assetId, CelestialObjectId celestialBodyId, Kind kind, Status status) {
+    public AutomatedFacility(CelestialAsset.ID assetId, CelestialObjectKey celestialBodyId, Kind kind, Status status) {
         super(assetId, celestialBodyId, kind, status, null);
         if (kind != Kind.AUTOMATED_OUTPOST && kind != Kind.AUTOMATED_STATION) {
             throw new IllegalArgumentException(
@@ -101,18 +102,31 @@ public final class AutomatedFacility extends CelestialAsset {
         this.ticks = 0;
     }
 
-    private static long createStationFeatureSalt(CelestialAsset.ID assetId, CelestialObjectId bodyId) {
+    public AutomatedFacility(CelestialAsset.ID assetId, CelestialObjectId celestialBodyId, Kind kind, Status status) {
+        this(assetId, CelestialObjectKey.registered(celestialBodyId), kind, status);
+    }
+
+    private static long createStationFeatureSalt(CelestialAsset.ID assetId, CelestialObjectKey bodyId) {
         long value = assetId == null || assetId.id() == null ? 0L
             : assetId.id()
                 .getMostSignificantBits()
                 ^ assetId.id()
                     .getLeastSignificantBits();
-        value ^= bodyId == null ? 0L : ((long) bodyId.ordinal() << 32);
+        value ^= bodyId == null ? 0L : (stationFeatureBodySalt(bodyId) << 32);
         value ^= 0xD1B54A32D192ED03L;
         value ^= value >>> 33;
         value *= 0xff51afd7ed558ccdL;
         value ^= value >>> 33;
         return value;
+    }
+
+    private static long stationFeatureBodySalt(CelestialObjectKey bodyId) {
+        if (bodyId.isRegistered()) return bodyId.registeredBodyId()
+            .ordinal();
+        return (((long) bodyId.minorBodyId()
+            .parentBeltId()
+            .ordinal()) << 32) ^ bodyId.minorBodyId()
+                .index();
     }
 
     public static boolean ownsStationLayout(Kind kind) {

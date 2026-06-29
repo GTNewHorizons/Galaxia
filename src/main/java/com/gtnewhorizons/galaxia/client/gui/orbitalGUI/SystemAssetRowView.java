@@ -1,7 +1,7 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
 
@@ -13,7 +13,7 @@ public final class SystemAssetRowView {
 
     public final CelestialAsset.ID assetId;
     public final CelestialAsset.Kind kind;
-    public final CelestialObjectId hostBodyId;
+    public final CelestialObjectKey hostBodyId;
     public final String displayName;
     public final Buildable.Status status;
     public final boolean underConstruction;

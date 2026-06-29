@@ -113,8 +113,7 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
     private String buildSignature() {
         CelestialObject body = state.body();
         if (body == null) return "";
-        return body.id()
-            .getId() + '|'
+        return body.id() + "|"
             + body.displayName()
             + '|'
             + state.x()

@@ -6,6 +6,7 @@ import java.util.UUID;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -30,14 +31,14 @@ public class LogisticsDelivery {
         private final ItemStackWrapper resourceId;
         private long amount;
         private final LogisticSignal.Scope scope;
-        private final CelestialObjectId fromBodyId;
-        private final CelestialObjectId toBodyId;
+        private final CelestialObjectKey fromBodyId;
+        private final CelestialObjectKey toBodyId;
         private final double departureOrbitalTime;
         private final double tofOrbitalSeconds;
         private final OrbitalTransferPlanner.TransferRoute transferRoute;
 
         public Data(CelestialAsset.ID fromAssetId, CelestialAsset.ID toAssetId, ItemStackWrapper resourceId,
-            long amount, LogisticSignal.Scope scope, CelestialObjectId fromBodyId, CelestialObjectId toBodyId,
+            long amount, LogisticSignal.Scope scope, CelestialObjectKey fromBodyId, CelestialObjectKey toBodyId,
             double departureOrbitalTime, double tofOrbitalSeconds, OrbitalTransferPlanner.TransferRoute transferRoute) {
             this.fromAssetId = fromAssetId;
             this.toAssetId = toAssetId;
@@ -75,11 +76,11 @@ public class LogisticsDelivery {
             return scope;
         }
 
-        public CelestialObjectId fromBodyId() {
+        public CelestialObjectKey fromBodyId() {
             return fromBodyId;
         }
 
-        public CelestialObjectId toBodyId() {
+        public CelestialObjectKey toBodyId() {
             return toBodyId;
         }
 
@@ -156,8 +157,8 @@ public class LogisticsDelivery {
 
         AutomatedFacility from = CelestialClient.getByAssetId(fromAssetId) instanceof AutomatedFacility o ? o : null;
         AutomatedFacility to = CelestialClient.getByAssetId(toAssetId) instanceof AutomatedFacility o ? o : null;
-        CelestialObjectId fromBody = from != null ? from.celestialObjectId : CelestialObjectId.INVALID;
-        CelestialObjectId toBody = to != null ? to.celestialObjectId : CelestialObjectId.INVALID;
+        CelestialObjectKey fromBody = from != null ? from.celestialObjectId : null;
+        CelestialObjectKey toBody = to != null ? to.celestialObjectId : null;
 
         return createWithTrajectory(
             fromAssetId,
@@ -175,7 +176,7 @@ public class LogisticsDelivery {
 
     public static LogisticsDelivery createWithTrajectory(CelestialAsset.ID fromAssetId, CelestialAsset.ID toAssetId,
         ItemStackWrapper resourceId, long amount, int deliveryTicks, LogisticSignal.Scope scope,
-        CelestialObjectId fromBodyId, CelestialObjectId toBodyId, double departureOrbitalTime,
+        CelestialObjectKey fromBodyId, CelestialObjectKey toBodyId, double departureOrbitalTime,
         double tofOrbitalSeconds) {
         return createWithTrajectory(
             fromAssetId,
@@ -193,7 +194,24 @@ public class LogisticsDelivery {
 
     public static LogisticsDelivery createWithTrajectory(CelestialAsset.ID fromAssetId, CelestialAsset.ID toAssetId,
         ItemStackWrapper resourceId, long amount, int deliveryTicks, LogisticSignal.Scope scope,
-        CelestialObjectId fromBodyId, CelestialObjectId toBodyId, double departureOrbitalTime, double tofOrbitalSeconds,
+        CelestialObjectId fromBodyId, CelestialObjectId toBodyId, double departureOrbitalTime,
+        double tofOrbitalSeconds) {
+        return createWithTrajectory(
+            fromAssetId,
+            toAssetId,
+            resourceId,
+            amount,
+            deliveryTicks,
+            scope,
+            fromBodyId == null ? null : CelestialObjectKey.registered(fromBodyId),
+            toBodyId == null ? null : CelestialObjectKey.registered(toBodyId),
+            departureOrbitalTime,
+            tofOrbitalSeconds);
+    }
+
+    public static LogisticsDelivery createWithTrajectory(CelestialAsset.ID fromAssetId, CelestialAsset.ID toAssetId,
+        ItemStackWrapper resourceId, long amount, int deliveryTicks, LogisticSignal.Scope scope,
+        CelestialObjectKey fromBodyId, CelestialObjectKey toBodyId, double departureOrbitalTime, double tofOrbitalSeconds,
         OrbitalTransferPlanner.TransferRoute transferRoute) {
         return createWithTrajectory(
             ID.create(),
@@ -212,7 +230,7 @@ public class LogisticsDelivery {
 
     public static LogisticsDelivery createWithTrajectory(ID id, CelestialAsset.ID fromAssetId,
         CelestialAsset.ID toAssetId, ItemStackWrapper resourceId, long amount, int deliveryTicks,
-        LogisticSignal.Scope scope, CelestialObjectId fromBodyId, CelestialObjectId toBodyId,
+        LogisticSignal.Scope scope, CelestialObjectKey fromBodyId, CelestialObjectKey toBodyId,
         double departureOrbitalTime, double tofOrbitalSeconds) {
         return createWithTrajectory(
             id,
@@ -232,6 +250,24 @@ public class LogisticsDelivery {
     public static LogisticsDelivery createWithTrajectory(ID id, CelestialAsset.ID fromAssetId,
         CelestialAsset.ID toAssetId, ItemStackWrapper resourceId, long amount, int deliveryTicks,
         LogisticSignal.Scope scope, CelestialObjectId fromBodyId, CelestialObjectId toBodyId,
+        double departureOrbitalTime, double tofOrbitalSeconds) {
+        return createWithTrajectory(
+            id,
+            fromAssetId,
+            toAssetId,
+            resourceId,
+            amount,
+            deliveryTicks,
+            scope,
+            fromBodyId == null ? null : CelestialObjectKey.registered(fromBodyId),
+            toBodyId == null ? null : CelestialObjectKey.registered(toBodyId),
+            departureOrbitalTime,
+            tofOrbitalSeconds);
+    }
+
+    public static LogisticsDelivery createWithTrajectory(ID id, CelestialAsset.ID fromAssetId,
+        CelestialAsset.ID toAssetId, ItemStackWrapper resourceId, long amount, int deliveryTicks,
+        LogisticSignal.Scope scope, CelestialObjectKey fromBodyId, CelestialObjectKey toBodyId,
         double departureOrbitalTime, double tofOrbitalSeconds, OrbitalTransferPlanner.TransferRoute transferRoute) {
         return new LogisticsDelivery(
             id,

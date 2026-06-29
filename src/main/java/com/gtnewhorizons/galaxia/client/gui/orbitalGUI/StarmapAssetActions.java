@@ -35,6 +35,7 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
@@ -50,7 +51,7 @@ record ButtonRect(int left, int top, int right, int bottom) {
 
 record ModalBounds(int left, int top, int right, int bottom) {}
 
-record PendingAssetCreation(CelestialObjectId celestialObjectId, String displayName, CelestialAsset.Kind kind,
+record PendingAssetCreation(CelestialObjectKey celestialObjectId, String displayName, CelestialAsset.Kind kind,
     CelestialAsset.Location location, Map<ItemStack, Long> requiredResources) {}
 
 record PendingAssetRename(CelestialAsset asset) {}

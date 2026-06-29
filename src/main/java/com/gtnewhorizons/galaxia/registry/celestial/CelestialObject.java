@@ -16,7 +16,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureDefini
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureProfile;
 
-public record CelestialObject(CelestialObjectId id, String name, String nameKey, CelestialObjectId parentId,
+public record CelestialObject(CelestialObjectKey id, String name, String nameKey, CelestialObjectKey parentId,
     DimensionEnum dimensionEnum, Class objectClass, OrbitalParams orbitalParams,
     OrbitalMechanics.AbsolutePosition absolutePosition, ResourceLocation texture, double spriteSize,
     CelestialBodyProperties properties, PlanetaryFeatureProfile featureProfile,
@@ -100,12 +100,16 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
         };
     }
 
+    public CelestialObjectId requireRegisteredId() {
+        return id.requireRegisteredBodyId();
+    }
+
     public static final class Builder {
 
-        private CelestialObjectId id;
+        private CelestialObjectKey id;
         private String name;
         private String nameKey;
-        private CelestialObjectId parentId;
+        private CelestialObjectKey parentId;
         private DimensionEnum dimensionEnum;
         private Class objectClass = Class.PLANET;
         private OrbitalParams orbitalParams = OrbitalParams.circular(0.0, 0.0);
@@ -136,13 +140,20 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
             this.playableDimensionProfile = source.playableDimensionProfile;
         }
 
-        public Builder id(CelestialObjectId value) {
+        public Builder id(CelestialObjectKey value) {
             this.id = value;
-            this.name = value.displayName();
-            if (value != null && value.dimension() != null) {
-                this.dimensionEnum = value.dimension();
+            if (value != null && value.isRegistered()) {
+                CelestialObjectId registeredId = value.registeredBodyId();
+                this.name = registeredId.displayName();
+                if (registeredId.dimension() != null) {
+                    this.dimensionEnum = registeredId.dimension();
+                }
             }
             return this;
+        }
+
+        public Builder id(CelestialObjectId value) {
+            return id(value == null ? null : CelestialObjectKey.registered(value));
         }
 
         public Builder name(String value) {
@@ -155,20 +166,30 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
             return this;
         }
 
-        public Builder parent(CelestialObjectId value) {
+        public Builder parent(CelestialObjectKey value) {
             this.parentId = value;
             return this;
         }
 
+        public Builder parent(CelestialObjectId value) {
+            return parent(value == null ? null : CelestialObjectKey.registered(value));
+        }
+
+        public Builder parentId(CelestialObjectKey value) {
+            return parent(value);
+        }
+
         public Builder parentId(CelestialObjectId value) {
-            this.parentId = value;
-            return this;
+            return parent(value);
         }
 
         public Builder dimension(DimensionEnum value) {
             this.dimensionEnum = value;
             if (value != null) {
-                if (this.id == null) this.id = CelestialObjectId.fromDimension(value);
+                if (this.id == null) {
+                    CelestialObjectId dimensionId = CelestialObjectId.fromDimension(value);
+                    this.id = dimensionId == null ? null : CelestialObjectKey.registered(dimensionId);
+                }
                 if (this.name == null) this.name = value.getName();
                 if (this.nameKey == null) this.nameKey = value.getTranslationKey();
             }

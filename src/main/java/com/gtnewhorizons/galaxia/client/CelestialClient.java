@@ -25,6 +25,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
@@ -64,9 +65,13 @@ public final class CelestialClient {
     }
 
     public static List<CelestialAsset> getState(CelestialObjectId celestialObjectId) {
+        return getState(CelestialObjectKey.registered(celestialObjectId));
+    }
+
+    public static List<CelestialAsset> getState(CelestialObjectKey celestialObjectId) {
         List<CelestialAsset> result = new ArrayList<>();
         for (CelestialAsset asset : CelestialAssetStore.CLIENT.allAssetsInternal()) {
-            if (asset.celestialObjectId == celestialObjectId) {
+            if (asset.celestialObjectId.equals(celestialObjectId)) {
                 result.add(asset);
             }
         }
@@ -94,12 +99,16 @@ public final class CelestialClient {
     private static int signalRevision = 0;
     private static HammerTrajectoryLoadSample hammerTrajectoryLoadSample = new HammerTrajectoryLoadSample(0.0, 0.0);
 
-    private static final Map<CelestialObjectId, Map<String, Long>> systemSignals = new LinkedHashMap<>();
-    private static final Map<CelestialObjectId, Map<String, Long>> planetSignals = new LinkedHashMap<>();
+    private static final Map<CelestialObjectKey, Map<String, Long>> systemSignals = new LinkedHashMap<>();
+    private static final Map<CelestialObjectKey, Map<String, Long>> planetSignals = new LinkedHashMap<>();
 
     private CelestialClient() {}
 
     public static boolean registerAsset(CelestialObjectId celestialObjectId, CelestialAsset asset) {
+        return registerAsset(CelestialObjectKey.registered(celestialObjectId), asset);
+    }
+
+    public static boolean registerAsset(CelestialObjectKey celestialObjectId, CelestialAsset asset) {
         return StarmapActionSyncHandler.sendRegisterAsset(celestialObjectId, asset);
     }
 
@@ -429,8 +438,8 @@ public final class CelestialClient {
 
     // ── Signal mirror ──
 
-    public static void updateClientSignals(Map<CelestialObjectId, Map<String, Long>> bySystem,
-        Map<CelestialObjectId, Map<String, Long>> byPlanet) {
+    public static void updateClientSignals(Map<CelestialObjectKey, Map<String, Long>> bySystem,
+        Map<CelestialObjectKey, Map<String, Long>> byPlanet) {
         systemSignals.clear();
         systemSignals.putAll(bySystem);
         planetSignals.clear();
@@ -438,12 +447,12 @@ public final class CelestialClient {
         signalRevision++;
     }
 
-    public static Map<String, Long> clientSignalsForSystem(CelestialObjectId systemId) {
+    public static Map<String, Long> clientSignalsForSystem(CelestialObjectKey systemId) {
         Map<String, Long> result = systemSignals.get(systemId);
         return result != null ? Collections.unmodifiableMap(result) : Collections.emptyMap();
     }
 
-    public static Map<String, Long> clientSignalsForPlanet(CelestialObjectId anchorBodyId) {
+    public static Map<String, Long> clientSignalsForPlanet(CelestialObjectKey anchorBodyId) {
         Map<String, Long> result = planetSignals.get(anchorBodyId);
         return result != null ? Collections.unmodifiableMap(result) : Collections.emptyMap();
     }
@@ -479,6 +488,10 @@ public final class CelestialClient {
     }
 
     public static List<CelestialAsset> listAssetsInSystem(CelestialObjectId systemId) {
+        return listAssetsInSystem(CelestialObjectKey.registered(systemId));
+    }
+
+    public static List<CelestialAsset> listAssetsInSystem(CelestialObjectKey systemId) {
         return CelestialAssetStore.CLIENT.listAssetsInSystemInternal(systemId, GTTeamsCompat.getTeam());
     }
 
