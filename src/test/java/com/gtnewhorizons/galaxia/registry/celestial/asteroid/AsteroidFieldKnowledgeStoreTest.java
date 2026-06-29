@@ -60,6 +60,16 @@ final class AsteroidFieldKnowledgeStoreTest {
             AsteroidOreKnowledgeState.SIGNATURE,
             knowledge.entryFor(prospected.id())
                 .oreKnowledgeState());
+
+        while (hasUnknownDetectedAsteroid(knowledge)) {
+            AsteroidFieldNode signature = store.prospectNext(TEAM_A, CelestialObjectId.FROZEN_BELT, profile)
+                .orElseThrow();
+            assertEquals(
+                AsteroidOreKnowledgeState.SIGNATURE,
+                knowledge.entryFor(signature.id())
+                    .oreKnowledgeState());
+        }
+
         assertEquals(
             prospected.id(),
             store.prospectNext(TEAM_A, CelestialObjectId.FROZEN_BELT, profile)
@@ -149,5 +159,15 @@ final class AsteroidFieldKnowledgeStoreTest {
             .radialBand(1.20, 1.40)
             .oreProfile(new AsteroidOreProfile("volatile_ice", 1.0, List.of("ice", "sulfur")))
             .build();
+    }
+
+    private static boolean hasUnknownDetectedAsteroid(AsteroidFieldKnowledge knowledge) {
+        return knowledge.nodes()
+            .stream()
+            .anyMatch(
+                node -> knowledge.entryFor(node.id())
+                    .detectionState() == AsteroidDetectionState.DETECTED
+                    && knowledge.entryFor(node.id())
+                        .oreKnowledgeState() == AsteroidOreKnowledgeState.UNKNOWN);
     }
 }

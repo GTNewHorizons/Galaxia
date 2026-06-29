@@ -1,11 +1,13 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 
@@ -91,9 +93,14 @@ public final class AsteroidFieldKnowledge {
     }
 
     public Optional<AsteroidFieldNode> nextDetectionCandidate(Predicate<AsteroidFieldNode> scope) {
+        return nextDetectionCandidate(scope, AsteroidFieldScanOrder.byIndex());
+    }
+
+    public Optional<AsteroidFieldNode> nextDetectionCandidate(Predicate<AsteroidFieldNode> scope,
+        Comparator<AsteroidFieldNode> order) {
         Objects.requireNonNull(scope, "scope cannot be null");
-        return nodes.stream()
-            .filter(scope)
+        Objects.requireNonNull(order, "order cannot be null");
+        return scopedNodes(scope, order)
             .filter(node -> entryFor(node.id()).detectionState() == AsteroidDetectionState.HIDDEN)
             .findFirst();
     }
@@ -119,12 +126,37 @@ public final class AsteroidFieldKnowledge {
     }
 
     public Optional<AsteroidFieldNode> nextProspectingCandidate(Predicate<AsteroidFieldNode> scope) {
+        return nextProspectingCandidate(scope, AsteroidFieldScanOrder.byIndex());
+    }
+
+    public Optional<AsteroidFieldNode> nextProspectingCandidate(Predicate<AsteroidFieldNode> scope,
+        Comparator<AsteroidFieldNode> order) {
         Objects.requireNonNull(scope, "scope cannot be null");
+        Objects.requireNonNull(order, "order cannot be null");
         if (!canProspect(scope)) return Optional.empty();
-        return nodes.stream()
-            .filter(scope)
+        Optional<AsteroidFieldNode> signatureCandidate = nextSignatureCandidate(scope, order);
+        return signatureCandidate.isPresent() ? signatureCandidate : nextProfileCandidate(scope, order);
+    }
+
+    public Optional<AsteroidFieldNode> nextSignatureCandidate(Predicate<AsteroidFieldNode> scope,
+        Comparator<AsteroidFieldNode> order) {
+        Objects.requireNonNull(scope, "scope cannot be null");
+        Objects.requireNonNull(order, "order cannot be null");
+        if (!canProspect(scope)) return Optional.empty();
+        return scopedNodes(scope, order)
             .filter(node -> entryFor(node.id()).detectionState() == AsteroidDetectionState.DETECTED)
-            .filter(node -> entryFor(node.id()).oreKnowledgeState() != AsteroidOreKnowledgeState.PROFILE)
+            .filter(node -> entryFor(node.id()).oreKnowledgeState() == AsteroidOreKnowledgeState.UNKNOWN)
+            .findFirst();
+    }
+
+    public Optional<AsteroidFieldNode> nextProfileCandidate(Predicate<AsteroidFieldNode> scope,
+        Comparator<AsteroidFieldNode> order) {
+        Objects.requireNonNull(scope, "scope cannot be null");
+        Objects.requireNonNull(order, "order cannot be null");
+        if (!canProspect(scope) || nextSignatureCandidate(scope, order).isPresent()) return Optional.empty();
+        return scopedNodes(scope, order)
+            .filter(node -> entryFor(node.id()).detectionState() == AsteroidDetectionState.DETECTED)
+            .filter(node -> entryFor(node.id()).oreKnowledgeState() == AsteroidOreKnowledgeState.SIGNATURE)
             .findFirst();
     }
 
@@ -168,6 +200,13 @@ public final class AsteroidFieldKnowledge {
             case UNKNOWN -> AsteroidOreKnowledgeState.SIGNATURE;
             case SIGNATURE, PROFILE -> AsteroidOreKnowledgeState.PROFILE;
         };
+    }
+
+    private Stream<AsteroidFieldNode> scopedNodes(Predicate<AsteroidFieldNode> scope,
+        Comparator<AsteroidFieldNode> order) {
+        return nodes.stream()
+            .filter(scope)
+            .sorted(order);
     }
 
     public AsteroidFieldKnowledgeSnapshot snapshot(CelestialObjectId beltId) {

@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,8 +38,13 @@ public final class AsteroidFieldKnowledgeStore {
 
     public Optional<AsteroidFieldNode> detectNext(UUID teamId, CelestialObjectId beltId, AsteroidFieldProfile profile,
         Predicate<AsteroidFieldNode> scope) {
+        return detectNext(teamId, beltId, profile, scope, AsteroidFieldScanOrder.byIndex());
+    }
+
+    public Optional<AsteroidFieldNode> detectNext(UUID teamId, CelestialObjectId beltId, AsteroidFieldProfile profile,
+        Predicate<AsteroidFieldNode> scope, Comparator<AsteroidFieldNode> order) {
         AsteroidFieldKnowledge knowledge = getOrCreate(teamId, beltId, profile);
-        Optional<AsteroidFieldNode> candidate = knowledge.nextDetectionCandidate(scope);
+        Optional<AsteroidFieldNode> candidate = knowledge.nextDetectionCandidate(scope, order);
         candidate.ifPresent(node -> knowledge.detect(node.id()));
         return candidate;
     }
@@ -50,8 +56,13 @@ public final class AsteroidFieldKnowledgeStore {
 
     public Optional<AsteroidFieldNode> prospectNext(UUID teamId, CelestialObjectId beltId, AsteroidFieldProfile profile,
         Predicate<AsteroidFieldNode> scope) {
+        return prospectNext(teamId, beltId, profile, scope, AsteroidFieldScanOrder.byIndex());
+    }
+
+    public Optional<AsteroidFieldNode> prospectNext(UUID teamId, CelestialObjectId beltId, AsteroidFieldProfile profile,
+        Predicate<AsteroidFieldNode> scope, Comparator<AsteroidFieldNode> order) {
         AsteroidFieldKnowledge knowledge = getOrCreate(teamId, beltId, profile);
-        Optional<AsteroidFieldNode> candidate = knowledge.nextProspectingCandidate(scope);
+        Optional<AsteroidFieldNode> candidate = knowledge.nextProspectingCandidate(scope, order);
         candidate.ifPresent(node -> knowledge.prospect(node.id(), scope));
         return candidate;
     }
