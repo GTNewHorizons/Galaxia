@@ -24,6 +24,8 @@ import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 
 public final class OrbitalPinnedInfoContentBuilder {
 
@@ -36,12 +38,16 @@ public final class OrbitalPinnedInfoContentBuilder {
         rows.add(new PinnedInfoRow("Dangers", buildDangerSummary(body)));
         if (body.objectClass() != CelestialObject.Class.STAR && body.objectClass() != CelestialObject.Class.GALAXY) {
             rows.add(new PinnedInfoRow("Surface", formatSurfaceType(body)));
-            List<ItemStack> gtOres = body.properties()
-                .getResolvedGtVeinOreStacks();
-            if (gtOres.isEmpty()) {
-                rows.add(new PinnedInfoRow("Ores", "Undefined"));
+            if (!canShowOreDetails(body)) {
+                rows.add(new PinnedInfoRow("Ores", "Unknown"));
             } else {
-                rows.add(new PinnedInfoRow("Ores", "", gtOres));
+                List<ItemStack> gtOres = body.properties()
+                    .getResolvedGtVeinOreStacks();
+                if (gtOres.isEmpty()) {
+                    rows.add(new PinnedInfoRow("Ores", "Undefined"));
+                } else {
+                    rows.add(new PinnedInfoRow("Ores", "", gtOres));
+                }
             }
         }
         return rows;
@@ -79,15 +85,31 @@ public final class OrbitalPinnedInfoContentBuilder {
             .get("surface");
         signature.append('|')
             .append(surfaceType == null ? "" : surfaceType);
-        List<String> gtOreVeinIds = body.properties()
-            .gtOreVeinIds();
-        signature.append('|')
-            .append(gtOreVeinIds.size());
-        for (String veinId : gtOreVeinIds) {
+        if (!canShowOreDetails(body)) {
+            signature.append("|asteroidOre:")
+                .append(asteroidOreKnowledge(body));
+        } else {
+            List<String> gtOreVeinIds = body.properties()
+                .gtOreVeinIds();
             signature.append('|')
-                .append(veinId)
-                .append(',');
+                .append(gtOreVeinIds.size());
+            for (String veinId : gtOreVeinIds) {
+                signature.append('|')
+                    .append(veinId)
+                    .append(',');
+            }
         }
+    }
+
+    private boolean canShowOreDetails(CelestialObject body) {
+        if (!body.id()
+            .isMinorBody()) return true;
+        return asteroidOreKnowledge(body) == AsteroidOreKnowledgeState.PROFILE;
+    }
+
+    private AsteroidOreKnowledgeState asteroidOreKnowledge(CelestialObject body) {
+        return AsteroidFieldClientState.oreKnowledge(body.id())
+            .orElse(AsteroidOreKnowledgeState.UNKNOWN);
     }
 
     private String buildDangerSummary(CelestialObject body) {
