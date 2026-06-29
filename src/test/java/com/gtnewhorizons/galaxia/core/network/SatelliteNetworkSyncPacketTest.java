@@ -9,6 +9,9 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteBandwidthFormatter;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataKey;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
@@ -47,6 +50,31 @@ final class SatelliteNetworkSyncPacketTest {
         read.fromBytes(buf);
 
         assertEquals(state, read.state());
+    }
+
+    @Test
+    void roundTripPreservesAsteroidKnowledgeSnapshots() {
+        UUID teamId = new UUID(5L, 7L);
+        SatelliteNetworkState state = SatelliteNetworkState.empty(teamId, 21);
+        AsteroidFieldKnowledgeSnapshot snapshot = new AsteroidFieldKnowledgeSnapshot(
+            CelestialObjectId.FROZEN_BELT,
+            List.of(
+                new AsteroidFieldKnowledgeSnapshot.Entry(
+                    2,
+                    AsteroidDetectionState.DETECTED,
+                    AsteroidOreKnowledgeState.SIGNATURE),
+                new AsteroidFieldKnowledgeSnapshot.Entry(
+                    3,
+                    AsteroidDetectionState.HIDDEN,
+                    AsteroidOreKnowledgeState.UNKNOWN)));
+
+        SatelliteNetworkSyncPacket packet = new SatelliteNetworkSyncPacket(state, List.of(snapshot));
+        ByteBuf buf = Unpooled.buffer();
+        packet.toBytes(buf);
+        SatelliteNetworkSyncPacket read = new SatelliteNetworkSyncPacket();
+        read.fromBytes(buf);
+
+        assertEquals(List.of(snapshot), read.asteroidKnowledge());
     }
 
     @Test
