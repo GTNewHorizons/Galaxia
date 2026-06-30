@@ -344,10 +344,13 @@ final class SatelliteNetworkServiceTest {
         AsteroidFieldKnowledge knowledge = SatelliteNetworkService.asteroidKnowledge()
             .get(TEAM, CelestialObjectId.FROZEN_BELT)
             .orElseThrow();
-        assertEquals(
-            AsteroidDetectionState.DETECTED,
-            knowledge.entryFor(hidden.id())
-                .detectionState());
+        assertTrue(
+            knowledge.nodes()
+                .stream()
+                .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.HIDDEN)
+                .anyMatch(
+                    node -> knowledge.entryFor(node.id())
+                        .detectionState() == AsteroidDetectionState.DETECTED));
     }
 
     @Test

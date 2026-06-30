@@ -3,9 +3,14 @@ package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayDeque;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Queue;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
@@ -131,6 +136,93 @@ final class AsteroidFieldResolverTest {
         assertEquals(AsteroidNodeKind.UNIQUE, node.kind());
         assertEquals("The Anvil", node.displayName());
         assertEquals(AsteroidDetectionState.DETECTED, AsteroidFieldResolver.initialDetectionState(node));
+    }
+
+    @Test
+    void generatedHiddenAsteroidsAreReachableFromDetectedAsteroids() {
+        AsteroidFieldProfile profile = AsteroidFieldProfile.builder()
+            .seedSalt(99L)
+            .generationVersion(1)
+            .sizeCounts(1, 4, 6)
+            .radialBand(1000.0, 2000.0)
+            .satelliteScanRadius(75.0)
+            .oreProfile(new AsteroidOreProfile("metallic", 2.0, List.of("galaxia:iron")))
+            .build();
+
+        List<AsteroidFieldNode> nodes = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile);
+
+        assertEveryHiddenNodeReachableFromDetectedNode(profile, nodes);
+    }
+
+    @Test
+    void authoredHiddenAsteroidOutsideScanGraphFailsLoudly() {
+        AsteroidFieldProfile profile = AsteroidFieldProfile.builder()
+            .seedSalt(99L)
+            .generationVersion(1)
+            .sizeCounts(1, 0, 0)
+            .radialBand(1000.0, 2000.0)
+            .satelliteScanRadius(50.0)
+            .oreProfile(new AsteroidOreProfile("metallic", 2.0, List.of("galaxia:iron")))
+            .nodePreset(
+                new AsteroidNodePreset(
+                    1,
+                    AsteroidNodeKind.UNIQUE,
+                    "isolated_hidden",
+                    "Isolated Hidden",
+                    AsteroidSizeClass.MEDIUM,
+                    AsteroidDetectionState.HIDDEN,
+                    null,
+                    180.0,
+                    1.0,
+                    null,
+                    null))
+            .build();
+
+        IllegalStateException error = assertThrows(
+            IllegalStateException.class,
+            () -> AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile));
+
+        assertTrue(
+            error.getMessage()
+                .contains("unreachable hidden asteroid"));
+    }
+
+    private static void assertEveryHiddenNodeReachableFromDetectedNode(AsteroidFieldProfile profile,
+        List<AsteroidFieldNode> nodes) {
+        Set<MinorCelestialBodyId> visited = new HashSet<>();
+        Queue<AsteroidFieldNode> queue = new ArrayDeque<>();
+        for (AsteroidFieldNode node : nodes) {
+            if (AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.DETECTED) {
+                visited.add(node.id());
+                queue.add(node);
+            }
+        }
+
+        while (!queue.isEmpty()) {
+            AsteroidFieldNode current = queue.remove();
+            for (AsteroidFieldNode candidate : nodes) {
+                if (!visited.contains(candidate.id())
+                    && distance(profile, current, candidate) <= profile.satelliteScanRadius()) {
+                    visited.add(candidate.id());
+                    queue.add(candidate);
+                }
+            }
+        }
+
+        assertTrue(
+            nodes.stream()
+                .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.HIDDEN)
+                .allMatch(node -> visited.contains(node.id())));
+    }
+
+    private static double distance(AsteroidFieldProfile profile, AsteroidFieldNode first, AsteroidFieldNode second) {
+        double firstRadius = AsteroidFieldOrbitModel.resolveRadius(profile, first);
+        double firstAngle = Math.toRadians(first.angleOffsetDeg());
+        double secondRadius = AsteroidFieldOrbitModel.resolveRadius(profile, second);
+        double secondAngle = Math.toRadians(second.angleOffsetDeg());
+        double dx = Math.cos(firstAngle) * firstRadius - Math.cos(secondAngle) * secondRadius;
+        double dy = Math.sin(firstAngle) * firstRadius - Math.sin(secondAngle) * secondRadius;
+        return Math.sqrt(dx * dx + dy * dy);
     }
 
     private static AsteroidFieldProfile profile(int generationVersion) {

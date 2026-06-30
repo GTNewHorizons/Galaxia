@@ -48,6 +48,7 @@ final class AsteroidContentBuilderTest {
                     .slot(AsteroidSlotRanges.UNIQUE_SLOT_MIN)
                     .name("Icelock")
                     .size(AsteroidSizeClass.MEDIUM)
+                    .position(184.5, 0.73)
                     .hidden()
                     .useBeltOrePool())
             .buildProfiles();

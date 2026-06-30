@@ -1,9 +1,13 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Queue;
+import java.util.Set;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 
@@ -20,13 +24,24 @@ public final class AsteroidFieldResolver {
         List<AsteroidFieldNode> nodes = new ArrayList<>(
             profile.totalNodes() + profile.nodePresets()
                 .size());
+        List<AsteroidFieldNode> reachableAnchors = new ArrayList<>();
         for (AsteroidNodePreset preset : profile.nodePresets()) {
-            nodes.add(resolveNode(beltId, profile, preset.index()));
+            AsteroidFieldNode node = resolveNodeUnchecked(beltId, profile, preset.index());
+            nodes.add(node);
+            if (initialDetectionState(node) == AsteroidDetectionState.DETECTED) {
+                reachableAnchors.add(node);
+            }
         }
         for (int ordinal = 0; ordinal < profile.totalNodes(); ordinal++) {
-            nodes.add(resolveNode(beltId, profile, AsteroidSlotRanges.generatedSlot(ordinal)));
+            int index = AsteroidSlotRanges.generatedSlot(ordinal);
+            AsteroidFieldNode node = generatedSizeClass(profile, index) == AsteroidSizeClass.LARGE
+                ? resolveNodeUnchecked(beltId, profile, index)
+                : resolveReachableGeneratedNode(beltId, profile, index, reachableAnchors);
+            nodes.add(node);
+            reachableAnchors.add(node);
         }
         nodes.sort(Comparator.comparingInt(AsteroidFieldNode::index));
+        validateReachability(profile, nodes);
         return List.copyOf(nodes);
     }
 
@@ -36,14 +51,20 @@ public final class AsteroidFieldResolver {
         if (!profile.hasNodeIndex(index)) {
             throw new IllegalArgumentException("node index must be within the asteroid field profile");
         }
-        return resolveNodeUnchecked(beltId, profile, index);
+        return resolveAll(beltId, profile).stream()
+            .filter(node -> node.index() == index)
+            .findFirst()
+            .orElseThrow();
     }
 
     public static AsteroidFieldNode resolveSavedNode(CelestialObjectId beltId, AsteroidFieldProfile profile,
         int index) {
         Objects.requireNonNull(beltId, "beltId cannot be null");
         Objects.requireNonNull(profile, "profile cannot be null");
-        if (profile.hasNodeIndex(index) || AsteroidSlotRanges.isGeneratedSlot(index)) {
+        if (profile.hasNodeIndex(index)) {
+            return resolveNode(beltId, profile, index);
+        }
+        if (AsteroidSlotRanges.isGeneratedSlot(index)) {
             return resolveNodeUnchecked(beltId, profile, index);
         }
         return resolveUnregisteredSavedNode(beltId, profile, index);
@@ -97,14 +118,63 @@ public final class AsteroidFieldResolver {
                 : new AsteroidAppearanceProfile("generated_asteroid_tiles", mix(baseSeed, 4L)));
     }
 
+    private static AsteroidFieldNode resolveReachableGeneratedNode(CelestialObjectId beltId,
+        AsteroidFieldProfile profile, int index, List<AsteroidFieldNode> reachableAnchors) {
+        if (reachableAnchors.isEmpty()) {
+            throw new IllegalStateException("Asteroid field has hidden generated asteroids but no visible anchor");
+        }
+        long baseSeed = nodeSeed(beltId, profile, index);
+        AsteroidFieldNode anchor = reachableAnchors
+            .get((int) Math.floorMod(mix(baseSeed, 8L), reachableAnchors.size()));
+        double anchorRadius = AsteroidFieldOrbitModel.resolveRadius(profile, anchor);
+        double anchorAngle = Math.toRadians(anchor.angleOffsetDeg());
+        double anchorX = Math.cos(anchorAngle) * anchorRadius;
+        double anchorY = Math.sin(anchorAngle) * anchorRadius;
+
+        for (int attempt = 0; attempt < 32; attempt++) {
+            double scanRadius = profile.satelliteScanRadius();
+            double distance = scanRadius == 0.0 ? 0.0
+                : scanRadius * (0.2 + unitDouble(mix(baseSeed, 11L + attempt)) * 0.75);
+            double offsetAngle = unitDouble(mix(baseSeed, 47L + attempt)) * Math.PI * 2.0;
+            double x = anchorX + Math.cos(offsetAngle) * distance;
+            double y = anchorY + Math.sin(offsetAngle) * distance;
+            double radius = Math.sqrt(x * x + y * y);
+            if (radius >= profile.innerOrbitalRadius() && radius <= profile.outerOrbitalRadius()) {
+                return resolveGeneratedNodeAtPosition(
+                    beltId,
+                    profile,
+                    index,
+                    normalizeDegrees(Math.toDegrees(Math.atan2(y, x))),
+                    (radius - profile.innerOrbitalRadius())
+                        / (profile.outerOrbitalRadius() - profile.innerOrbitalRadius()));
+            }
+        }
+
+        return resolveGeneratedNodeAtPosition(beltId, profile, index, anchor.angleOffsetDeg(), anchor.orbitalDepth01());
+    }
+
+    private static AsteroidFieldNode resolveGeneratedNodeAtPosition(CelestialObjectId beltId,
+        AsteroidFieldProfile profile, int index, double angleOffsetDeg, double orbitalDepth01) {
+        long baseSeed = nodeSeed(beltId, profile, index);
+        AsteroidSizeClass sizeClass = generatedSizeClass(profile, index);
+        return new AsteroidFieldNode(
+            new MinorCelestialBodyId(beltId, index),
+            beltId,
+            index,
+            displayName(beltId, index),
+            AsteroidNodeKind.GENERATED,
+            sizeClass,
+            defaultInitialDetectionState(sizeClass),
+            null,
+            angleOffsetDeg,
+            orbitalDepth01,
+            selectOreProfile(profile, unitDouble(mix(baseSeed, 3L))),
+            new AsteroidAppearanceProfile("generated_asteroid_tiles", mix(baseSeed, 4L)));
+    }
+
     private static AsteroidFieldNode resolveUnregisteredSavedNode(CelestialObjectId beltId,
         AsteroidFieldProfile profile, int index) {
-        long baseSeed = mix(
-            beltId.name()
-                .hashCode(),
-            profile.seedSalt(),
-            profile.generationVersion(),
-            index);
+        long baseSeed = nodeSeed(beltId, profile, index);
         AsteroidSizeClass sizeClass = AsteroidSizeClass.SMALL;
         return new AsteroidFieldNode(
             new MinorCelestialBodyId(beltId, index),
@@ -135,6 +205,58 @@ public final class AsteroidFieldResolver {
         if (ordinal < profile.largeCount()) return AsteroidSizeClass.LARGE;
         if (ordinal < profile.largeCount() + profile.mediumCount()) return AsteroidSizeClass.MEDIUM;
         return AsteroidSizeClass.SMALL;
+    }
+
+    private static void validateReachability(AsteroidFieldProfile profile, List<AsteroidFieldNode> nodes) {
+        Set<MinorCelestialBodyId> visited = new HashSet<>();
+        Queue<AsteroidFieldNode> queue = new ArrayDeque<>();
+        for (AsteroidFieldNode node : nodes) {
+            if (initialDetectionState(node) == AsteroidDetectionState.DETECTED) {
+                visited.add(node.id());
+                queue.add(node);
+            }
+        }
+
+        while (!queue.isEmpty()) {
+            AsteroidFieldNode current = queue.remove();
+            for (AsteroidFieldNode candidate : nodes) {
+                if (!visited.contains(candidate.id())
+                    && distance(profile, current, candidate) <= profile.satelliteScanRadius()) {
+                    visited.add(candidate.id());
+                    queue.add(candidate);
+                }
+            }
+        }
+
+        for (AsteroidFieldNode node : nodes) {
+            if (initialDetectionState(node) == AsteroidDetectionState.HIDDEN && !visited.contains(node.id())) {
+                throw new IllegalStateException("unreachable hidden asteroid in scan graph: " + node.id());
+            }
+        }
+    }
+
+    private static double distance(AsteroidFieldProfile profile, AsteroidFieldNode first, AsteroidFieldNode second) {
+        double firstRadius = AsteroidFieldOrbitModel.resolveRadius(profile, first);
+        double firstAngle = Math.toRadians(first.angleOffsetDeg());
+        double secondRadius = AsteroidFieldOrbitModel.resolveRadius(profile, second);
+        double secondAngle = Math.toRadians(second.angleOffsetDeg());
+        double dx = Math.cos(firstAngle) * firstRadius - Math.cos(secondAngle) * secondRadius;
+        double dy = Math.sin(firstAngle) * firstRadius - Math.sin(secondAngle) * secondRadius;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    private static long nodeSeed(CelestialObjectId beltId, AsteroidFieldProfile profile, int index) {
+        return mix(
+            beltId.name()
+                .hashCode(),
+            profile.seedSalt(),
+            profile.generationVersion(),
+            index);
+    }
+
+    private static double normalizeDegrees(double value) {
+        double normalized = value % 360.0;
+        return normalized < 0.0 ? normalized + 360.0 : normalized;
     }
 
     private static AsteroidOreProfile selectOreProfile(AsteroidFieldProfile profile, double roll) {
