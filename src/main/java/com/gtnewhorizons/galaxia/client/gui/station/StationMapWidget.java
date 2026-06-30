@@ -459,24 +459,17 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             : EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_WARNING.getColor();
     }
 
-    private static StationTileCoord alertBadgeCoord(ModuleInstance module, Map<StationTileCoord, PlacedTile> tiles) {
-        int minDx = module.anchor()
-            .dx();
-        int minDy = module.anchor()
-            .dy();
+    static StationTileCoord alertBadgeCoord(ModuleInstance module, Map<StationTileCoord, PlacedTile> tiles) {
+        StationTileCoord best = module.anchor();
         for (Map.Entry<StationTileCoord, PlacedTile> entry : tiles.entrySet()) {
             ModuleInstance tileModule = moduleOf(entry.getValue());
             if (tileModule == null || !module.id.equals(tileModule.id)) continue;
-            minDx = Math.min(
-                minDx,
-                entry.getKey()
-                    .dx());
-            minDy = Math.min(
-                minDy,
-                entry.getKey()
-                    .dy());
+            StationTileCoord coord = entry.getKey();
+            if (coord.dy() < best.dy() || coord.dy() == best.dy() && coord.dx() < best.dx()) {
+                best = coord;
+            }
         }
-        return StationTileCoord.of(minDx, minDy);
+        return best;
     }
 
     private void updateHover(StationLayout layout) {
