@@ -237,7 +237,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             (copySource == null ? "Build " : "Copy ") + kind.getDisplayName(),
             "Confirm",
             (coord, selected) -> ModuleBuildPickerModel
-                .isCompatibleTarget(facility, kind, shape, tier, coord, selected),
+                .isCompatibleTarget(facility, kind, shape, tier, coord, selected, controller.footprintRotation()),
             coord -> coord,
             targets -> {
                 boolean sent;
@@ -246,6 +246,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                         assetId,
                         request.copySourceModuleIndex(),
                         request.copySourceModuleId(),
+                        controller.footprintRotation(),
                         request.creativeBuildMode(),
                         targets);
                 } else {
@@ -257,13 +258,15 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                         request.hammerVariant(),
                         request.minerFocusTier(),
                         request.settingsGroupId(),
+                        controller.footprintRotation(),
                         request.creativeBuildMode(),
                         targets);
                 }
                 if (!sent) StationNotificationHelper.showFailure("Module build request failed");
             },
-            targets -> ModuleBuildPickerModel.connectedTargets(facility, targets, shape));
-        controller.setSelectionFootprint(shape, shape == ModuleShape.QUAD_2x2);
+            targets -> ModuleBuildPickerModel
+                .connectedTargets(facility, targets, shape, controller.footprintRotation()));
+        controller.setSelectionFootprint(shape, shape != ModuleShape.SINGLE);
         controller.setPreviewModuleKind(kind);
     }
 

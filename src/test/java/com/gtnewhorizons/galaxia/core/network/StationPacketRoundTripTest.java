@@ -197,6 +197,31 @@ final class StationPacketRoundTripTest {
     }
 
     @Test
+    void fullSyncRoundTripPreservesModuleRotation() {
+        AutomatedFacility server = createFacility();
+        ModuleInstance module = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.HAMMER,
+            StationTileCoord.of(5, 5),
+            ModuleShape.QUAD_2x2,
+            ModuleTier.IV);
+        module.setRotation(1);
+        server.addModule(module);
+        server.stationLayout()
+            .place(module);
+
+        AutomatedFacility client = createFacility();
+        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
+
+        ModuleInstance clientModule = client.modules()
+            .get(0);
+        assertEquals(1, clientModule.rotation());
+        assertTrue(
+            client.stationLayout()
+                .isOccupied(StationTileCoord.of(4, 5)));
+    }
+
+    @Test
     void fullSyncRoundTripPreservesMinerBlacklist() {
         AutomatedFacility server = createFacility();
         ModuleInstance miner = buildModule(server, FacilityModuleKind.MINER, StationTileCoord.of(1, 0));
@@ -649,8 +674,7 @@ final class StationPacketRoundTripTest {
         facility.addModule(module);
         StationLayout layout = facility.stationLayout();
         StationTileState state = StationTileState.fromModuleStatus(module.status());
-        for (StationTileCoord coord : module.shape()
-            .tiles(module.anchor())) {
+        for (StationTileCoord coord : module.tiles()) {
             layout.place(coord, new PlacedTile(module, state));
         }
         return module;

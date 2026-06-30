@@ -18,20 +18,56 @@ public enum ModuleShape {
     }
 
     public StationTileCoord[] tiles(StationTileCoord anchor) {
+        return tiles(anchor, 0);
+    }
+
+    public StationTileCoord[] tiles(StationTileCoord anchor, int rotation) {
         StationTileCoord[] result = new StationTileCoord[offsets.length];
+        int normalizedRotation = normalizeRotation(rotation);
         for (int i = 0; i < offsets.length; i++) {
-            result[i] = StationTileCoord.of(anchor.dx() + offsets[i][0], anchor.dy() + offsets[i][1]);
+            int dx = offsets[i][0];
+            int dy = offsets[i][1];
+            int rotatedDx;
+            int rotatedDy;
+            switch (normalizedRotation) {
+                case 1 -> {
+                    rotatedDx = -dy;
+                    rotatedDy = dx;
+                }
+                case 2 -> {
+                    rotatedDx = -dx;
+                    rotatedDy = -dy;
+                }
+                case 3 -> {
+                    rotatedDx = dy;
+                    rotatedDy = -dx;
+                }
+                default -> {
+                    rotatedDx = dx;
+                    rotatedDy = dy;
+                }
+            }
+            result[i] = StationTileCoord.of(anchor.dx() + rotatedDx, anchor.dy() + rotatedDy);
         }
         return result;
     }
 
     public boolean fitsAt(StationTileCoord anchor) {
-        return switch (this) {
-            case SINGLE -> true;
-            case QUAD_2x2 -> anchor.dx() + 1 <= StationTileCoord.MAX && anchor.dy() + 1 <= StationTileCoord.MAX;
-            case BLOCK_3x3 -> anchor.dx() - 1 >= StationTileCoord.MIN && anchor.dx() + 1 <= StationTileCoord.MAX
-                && anchor.dy() - 1 >= StationTileCoord.MIN
-                && anchor.dy() + 1 <= StationTileCoord.MAX;
-        };
+        return fitsAt(anchor, 0);
+    }
+
+    public boolean fitsAt(StationTileCoord anchor, int rotation) {
+        for (StationTileCoord tile : tiles(anchor, rotation)) {
+            if (tile.dx() < StationTileCoord.MIN || tile.dx() > StationTileCoord.MAX
+                || tile.dy() < StationTileCoord.MIN
+                || tile.dy() > StationTileCoord.MAX) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static int normalizeRotation(int rotation) {
+        return Math.floorMod(rotation, 4);
     }
 }

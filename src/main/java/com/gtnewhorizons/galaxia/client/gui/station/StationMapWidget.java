@@ -313,7 +313,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             StationTileCoord coord = e.getKey();
             int tx = tileLocalX(coord);
             int ty = tileLocalY(coord);
-            ModuleLayerRenderer.drawOccupied(context, tx, ty, e.getValue());
+            ModuleLayerRenderer.drawOccupied(context, tx, ty, coord, e.getValue());
         }
         drawModuleAlerts(tiles, moduleAlerts);
 
@@ -500,10 +500,18 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
         Set<StationTileCoord> candidateAnchors = new LinkedHashSet<>();
         Set<StationTileCoord> clickableTiles = new LinkedHashSet<>();
         for (StationTileCoord selectedTarget : tilePickerController.selectedTargets()) {
-            addFootprintOrthogonalCandidates(touchTiles, selectedTarget, footprint);
+            addFootprintOrthogonalCandidates(
+                touchTiles,
+                selectedTarget,
+                footprint,
+                tilePickerController.footprintRotation());
             drawPickerFootprint(selectedTarget, footprint, true, pickerPrimaryTile(selectedTarget, footprint));
         }
-        addFootprintAnchorsContaining(candidateAnchors, touchTiles, footprint);
+        addFootprintAnchorsContaining(
+            candidateAnchors,
+            touchTiles,
+            footprint,
+            tilePickerController.footprintRotation());
         for (StationTileCoord anchor : candidateAnchors) {
             if (!tilePickerController.isCompatibleNormalized(anchor) || tilePickerController.isSelected(anchor))
                 continue;
@@ -544,7 +552,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
         StationTileCoord primaryTile, boolean selected) {
         FacilityModuleKind kind = tilePickerController.previewModuleKind();
         if (kind == null || anchor == null || footprint == null) return;
-        for (StationTileCoord tile : footprint.tiles(anchor)) {
+        for (StationTileCoord tile : footprint.tiles(anchor, tilePickerController.footprintRotation())) {
             int x = tileLocalX(tile);
             int y = tileLocalY(tile);
             ModuleLayerRenderer.drawPreview(context, x, y, kind);
@@ -564,7 +572,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
     private void drawPickerFootprint(StationTileCoord anchor, ModuleShape footprint, boolean selected,
         @Nullable StationTileCoord primaryTile) {
         if (anchor == null || footprint == null) return;
-        for (StationTileCoord tile : footprint.tiles(anchor)) {
+        for (StationTileCoord tile : footprint.tiles(anchor, tilePickerController.footprintRotation())) {
             int x = tileLocalX(tile);
             int y = tileLocalY(tile);
             drawPickerTileOutline(x, y, selected, tile.equals(primaryTile));
@@ -759,35 +767,35 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
     }
 
     private static void addFootprintOrthogonalCandidates(Set<StationTileCoord> candidates, StationTileCoord anchor,
-        ModuleShape footprint) {
+        ModuleShape footprint, int rotation) {
         if (footprint == null) return;
-        for (StationTileCoord tile : footprint.tiles(anchor)) {
+        for (StationTileCoord tile : footprint.tiles(anchor, rotation)) {
             addOrthogonalCandidates(candidates, tile);
         }
     }
 
     private static void addFootprintAnchorsContaining(Set<StationTileCoord> anchors, Set<StationTileCoord> tiles,
-        ModuleShape footprint) {
+        ModuleShape footprint, int rotation) {
         if (footprint == null || tiles == null) return;
         for (StationTileCoord tile : tiles) {
-            addFootprintAnchorsContaining(anchors, tile, footprint);
+            addFootprintAnchorsContaining(anchors, tile, footprint, rotation);
         }
     }
 
     private static void addFootprintAnchorsContaining(Set<StationTileCoord> anchors, StationTileCoord tile,
-        ModuleShape footprint) {
+        ModuleShape footprint, int rotation) {
         if (tile == null) return;
         if (footprint == ModuleShape.SINGLE) {
             anchors.add(tile);
             return;
         }
-        for (StationTileCoord offset : footprint.tiles(StationTileCoord.CORE)) {
+        for (StationTileCoord offset : footprint.tiles(StationTileCoord.CORE, rotation)) {
             int anchorDx = tile.dx() - offset.dx();
             int anchorDy = tile.dy() - offset.dy();
             if (anchorDx < StationTileCoord.MIN || anchorDx > StationTileCoord.MAX) continue;
             if (anchorDy < StationTileCoord.MIN || anchorDy > StationTileCoord.MAX) continue;
             StationTileCoord anchor = StationTileCoord.of(anchorDx, anchorDy);
-            if (footprint.fitsAt(anchor)) anchors.add(anchor);
+            if (footprint.fitsAt(anchor, rotation)) anchors.add(anchor);
         }
     }
 

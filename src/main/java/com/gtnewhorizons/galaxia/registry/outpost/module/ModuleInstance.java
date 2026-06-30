@@ -30,6 +30,7 @@ public class ModuleInstance implements Buildable {
 
     private StationTileCoord anchor;
     private final ModuleShape shape;
+    private int rotation = 0;
     private ModuleTier tier = ModuleTier.NONE;
     private ModulePriority priorityOverride = ModulePriority.NORMAL;
     private boolean enabled = true;
@@ -152,6 +153,18 @@ public class ModuleInstance implements Buildable {
 
     public ModuleShape shape() {
         return shape;
+    }
+
+    public int rotation() {
+        return rotation;
+    }
+
+    public void setRotation(int rotation) {
+        this.rotation = ModuleShape.normalizeRotation(rotation);
+    }
+
+    public StationTileCoord[] tiles() {
+        return shape.tiles(anchor(), rotation);
     }
 
     public ModuleTier tier() {

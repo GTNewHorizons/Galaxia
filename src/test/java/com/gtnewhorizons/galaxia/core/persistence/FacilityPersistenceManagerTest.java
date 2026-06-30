@@ -752,6 +752,7 @@ final class FacilityPersistenceManagerTest {
             .create(ModuleInstance.ID.create(), FacilityModuleKind.HAMMER, null, ModuleShape.QUAD_2x2, ModuleTier.IV);
         quad.updateStatus(Buildable.Status.OPERATIONAL);
         quad.initAnchor(StationTileCoord.of(5, 5));
+        quad.setRotation(1);
         station.addModule(quad);
         StationLayout layout = station.stationLayout();
         assertNotNull(layout);
@@ -769,6 +770,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         // Only 2 anchor tiles saved (not 2 + 4 + 9 = 15)
         assertEquals(2, encoded.layoutTiles.size());
+        assertEquals(1, encoded.modules.get(0).rotation);
 
         // Decode
         AutomatedFacility decoded = new AutomatedFacility(
@@ -784,9 +786,9 @@ final class FacilityPersistenceManagerTest {
         // Assert QUAD_2x2 tiles exist
         StationTileCoord qa = StationTileCoord.of(5, 5);
         assertTrue(decodedLayout.isOccupied(qa));
-        assertTrue(decodedLayout.isOccupied(StationTileCoord.of(6, 5)));
+        assertTrue(decodedLayout.isOccupied(StationTileCoord.of(4, 5)));
         assertTrue(decodedLayout.isOccupied(StationTileCoord.of(5, 6)));
-        assertTrue(decodedLayout.isOccupied(StationTileCoord.of(6, 6)));
+        assertTrue(decodedLayout.isOccupied(StationTileCoord.of(4, 6)));
 
         // Assert tile states — all tiles derive OCCUPIED_OPERATIONAL from module status
         assertEquals(
@@ -795,7 +797,7 @@ final class FacilityPersistenceManagerTest {
                 .state());
         assertEquals(
             StationTileState.OCCUPIED_OPERATIONAL,
-            decodedLayout.get(StationTileCoord.of(6, 5))
+            decodedLayout.get(StationTileCoord.of(4, 5))
                 .state());
         assertEquals(
             StationTileState.OCCUPIED_OPERATIONAL,
@@ -803,7 +805,7 @@ final class FacilityPersistenceManagerTest {
                 .state());
         assertEquals(
             StationTileState.OCCUPIED_OPERATIONAL,
-            decodedLayout.get(StationTileCoord.of(6, 6))
+            decodedLayout.get(StationTileCoord.of(4, 6))
                 .state());
 
         // Assert BLOCK_3x3 tiles exist
@@ -834,9 +836,10 @@ final class FacilityPersistenceManagerTest {
         // Assert child tiles reference same module as anchor
         ModuleInstance quadAnchor = decodedLayout.moduleAt(qa);
         assertNotNull(quadAnchor);
-        assertSame(quadAnchor, decodedLayout.moduleAt(StationTileCoord.of(6, 5)));
+        assertEquals(1, quadAnchor.rotation());
+        assertSame(quadAnchor, decodedLayout.moduleAt(StationTileCoord.of(4, 5)));
         assertSame(quadAnchor, decodedLayout.moduleAt(StationTileCoord.of(5, 6)));
-        assertSame(quadAnchor, decodedLayout.moduleAt(StationTileCoord.of(6, 6)));
+        assertSame(quadAnchor, decodedLayout.moduleAt(StationTileCoord.of(4, 6)));
 
         ModuleInstance blockAnchor = decodedLayout.moduleAt(ba);
         assertNotNull(blockAnchor);
@@ -1374,8 +1377,7 @@ final class FacilityPersistenceManagerTest {
                 decodedLayout.isOccupied(anchor),
                 "Layout missing anchor tile " + anchor + " for module " + m.kind());
             // Also verify at least one child tile exists (for multi-tile)
-            StationTileCoord[] tiles = m.shape()
-                .tiles(anchor);
+            StationTileCoord[] tiles = m.tiles();
             assertTrue(tiles.length >= 1);
             for (StationTileCoord tile : tiles) {
                 assertTrue(

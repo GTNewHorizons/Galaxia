@@ -141,6 +141,22 @@ public final class CelestialClient {
     public static boolean createModules(ID assetId, FacilityModuleKind kind, ModuleShape shape, ModuleTier tier,
         @Nullable HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId,
         boolean creativeBuildModeEnabled, List<StationTileCoord> tileCoords) {
+        return createModules(
+            assetId,
+            kind,
+            shape,
+            tier,
+            hammerVariant,
+            minerFocusTier,
+            settingsGroupId,
+            0,
+            creativeBuildModeEnabled,
+            tileCoords);
+    }
+
+    public static boolean createModules(ID assetId, FacilityModuleKind kind, ModuleShape shape, ModuleTier tier,
+        @Nullable HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId, int rotation,
+        boolean creativeBuildModeEnabled, List<StationTileCoord> tileCoords) {
         AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null) return false;
         if (!kind.isAllowedOn(state.kind)) return false;
@@ -152,11 +168,17 @@ public final class CelestialClient {
             hammerVariant,
             minerFocusTier,
             settingsGroupId,
+            rotation,
             creativeBuildModeEnabled,
             tileCoords);
     }
 
     public static boolean copyModule(ID assetId, int sourceModuleIndex, ModuleInstance.ID sourceModuleId,
+        boolean creativeBuildModeEnabled, List<StationTileCoord> tileCoords) {
+        return copyModule(assetId, sourceModuleIndex, sourceModuleId, 0, creativeBuildModeEnabled, tileCoords);
+    }
+
+    public static boolean copyModule(ID assetId, int sourceModuleIndex, ModuleInstance.ID sourceModuleId, int rotation,
         boolean creativeBuildModeEnabled, List<StationTileCoord> tileCoords) {
         AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null || sourceModuleIndex < 0
@@ -165,7 +187,7 @@ public final class CelestialClient {
             return false;
         }
         return StarmapActionSyncHandler
-            .sendCopyModule(assetId, sourceModuleIndex, sourceModuleId, creativeBuildModeEnabled, tileCoords);
+            .sendCopyModule(assetId, sourceModuleIndex, sourceModuleId, rotation, creativeBuildModeEnabled, tileCoords);
     }
 
     public static boolean destroyAsset(ID assetId) {

@@ -159,6 +159,42 @@ final class StarmapServerActionsTest {
     }
 
     @Test
+    void buildModuleAppliesRequestedFootprintRotation() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
+        StationTileCoord anchor = StationTileCoord.of(2, 0);
+
+        AssetBuildModulePacket packet = AssetBuildModulePacket.createManyWithSpec(
+            facility.assetId,
+            FacilityModuleKind.MINER,
+            FacilityModuleKind.MINER.defaultShape(),
+            FacilityModuleKind.MINER.defaultTier(),
+            null,
+            MinerFocusTier.NONE,
+            (short) 0,
+            1,
+            true,
+            List.of(anchor));
+
+        AssetSyncPacket result = packet.apply(TEAM, true);
+
+        assertNotNull(result, "rotated miner build must sync the new footprint");
+        ModuleInstance module = facility.modules()
+            .get(0);
+        assertEquals(1, module.rotation());
+        assertTrue(
+            facility.stationLayout()
+                .isOccupied(StationTileCoord.of(1, 0)));
+        assertNull(
+            facility.stationLayout()
+                .get(StationTileCoord.of(3, 0)));
+    }
+
+    @Test
     void buildModuleRejectsShapeThatDoesNotMatchModuleKind() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),

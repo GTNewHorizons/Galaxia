@@ -17,14 +17,29 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationModuleCategory;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 public final class ModuleLayerRenderer {
 
     private ModuleLayerRenderer() {}
 
     public static void drawOccupied(GuiContext ctx, int x, int y, PlacedTile tile) {
+        drawOccupied(ctx, x, y, null, tile);
+    }
+
+    public static void drawOccupied(GuiContext ctx, int x, int y, StationTileCoord coord, PlacedTile tile) {
         int size = StationMapViewport.TILE_SIZE;
-        if (!drawModuleTexture(x, y, size, moduleKindOf(tile))) {
+        TextureRegion region = textureRegion(tile == null ? null : tile.module(), coord);
+        if (!drawModuleTextureRegion(
+            x,
+            y,
+            size,
+            size,
+            moduleKindOf(tile),
+            region.u0(),
+            region.v0(),
+            region.u1(),
+            region.v1())) {
             int fillColor = categoryColor(categoryOf(tile));
             Gui.drawRect(x, y, x + size, y + size, fillColor);
             drawLabel(ctx, x, y, size, labelOf(tile));
@@ -70,6 +85,39 @@ public final class ModuleLayerRenderer {
     public static boolean drawModuleTextureRegion(int x, int y, int w, int h, FacilityModuleKind kind, float u0,
         float v0, float u1, float v1) {
         return drawModuleTextureRegion(x, y, w, h, kind, u0, v0, u1, v1, 1f, 1f, 1f, 1f);
+    }
+
+    static TextureRegion textureRegion(ModuleInstance module, StationTileCoord coord) {
+        if (module == null || coord == null || module.anchorOrNull() == null) return TextureRegion.FULL;
+        StationTileCoord anchor = module.anchor();
+        StationTileCoord[] tiles = module.tiles();
+        int minDx = 0;
+        int minDy = 0;
+        int maxDx = 0;
+        int maxDy = 0;
+        for (StationTileCoord tile : tiles) {
+            int dx = tile.dx() - anchor.dx();
+            int dy = tile.dy() - anchor.dy();
+            minDx = Math.min(minDx, dx);
+            minDy = Math.min(minDy, dy);
+            maxDx = Math.max(maxDx, dx);
+            maxDy = Math.max(maxDy, dy);
+        }
+
+        int width = maxDx - minDx + 1;
+        int height = maxDy - minDy + 1;
+        if (width <= 0 || height <= 0) return TextureRegion.FULL;
+        int column = coord.dx() - anchor.dx() - minDx;
+        int row = coord.dy() - anchor.dy() - minDy;
+        if (column < 0 || column >= width || row < 0 || row >= height) return TextureRegion.FULL;
+        float u0 = (float) column / width;
+        float v0 = (float) row / height;
+        return new TextureRegion(u0, v0, (float) (column + 1) / width, (float) (row + 1) / height);
+    }
+
+    record TextureRegion(float u0, float v0, float u1, float v1) {
+
+        private static final TextureRegion FULL = new TextureRegion(0f, 0f, 1f, 1f);
     }
 
     private static StationModuleCategory categoryOf(PlacedTile tile) {

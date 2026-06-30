@@ -41,6 +41,7 @@ public final class AssetBuildModulePacket implements IMessage {
     private FacilityModuleKind moduleKind = FacilityModuleKind.POWER;
     private ModuleShape shape = ModuleShape.SINGLE;
     private ModuleTier tier = ModuleTier.HV;
+    private int rotation;
     private HammerVariant hammerVariant;
     private MinerFocusTier minerFocusTier = MinerFocusTier.NONE;
     private short settingsGroupId;
@@ -58,6 +59,11 @@ public final class AssetBuildModulePacket implements IMessage {
 
     public static AssetBuildModulePacket createMany(CelestialAsset.ID assetId, FacilityModuleKind kind,
         ModuleShape shape, ModuleTier tier, boolean instantBuild, List<StationTileCoord> tileCoords) {
+        return createMany(assetId, kind, shape, tier, 0, instantBuild, tileCoords);
+    }
+
+    public static AssetBuildModulePacket createMany(CelestialAsset.ID assetId, FacilityModuleKind kind,
+        ModuleShape shape, ModuleTier tier, int rotation, boolean instantBuild, List<StationTileCoord> tileCoords) {
         requireBuildSpec(kind, shape, tier);
         if (tileCoords != null && tileCoords.size() > MAX_BUILD_TARGETS) {
             throw new IllegalArgumentException("too many module build targets: " + tileCoords.size());
@@ -67,6 +73,7 @@ public final class AssetBuildModulePacket implements IMessage {
         pkt.moduleKind = kind;
         pkt.shape = shape;
         pkt.tier = tier;
+        pkt.rotation = ModuleShape.normalizeRotation(rotation);
         pkt.minerFocusTier = MinerFocusTier.NONE;
         pkt.instantBuild = instantBuild;
         pkt.tileCoords = tileCoords == null ? null : List.copyOf(tileCoords);
@@ -76,7 +83,23 @@ public final class AssetBuildModulePacket implements IMessage {
     public static AssetBuildModulePacket createManyWithSpec(CelestialAsset.ID assetId, FacilityModuleKind kind,
         ModuleShape shape, ModuleTier tier, HammerVariant hammerVariant, MinerFocusTier minerFocusTier,
         short settingsGroupId, boolean instantBuild, List<StationTileCoord> tileCoords) {
-        AssetBuildModulePacket pkt = createMany(assetId, kind, shape, tier, instantBuild, tileCoords);
+        return createManyWithSpec(
+            assetId,
+            kind,
+            shape,
+            tier,
+            hammerVariant,
+            minerFocusTier,
+            settingsGroupId,
+            0,
+            instantBuild,
+            tileCoords);
+    }
+
+    public static AssetBuildModulePacket createManyWithSpec(CelestialAsset.ID assetId, FacilityModuleKind kind,
+        ModuleShape shape, ModuleTier tier, HammerVariant hammerVariant, MinerFocusTier minerFocusTier,
+        short settingsGroupId, int rotation, boolean instantBuild, List<StationTileCoord> tileCoords) {
+        AssetBuildModulePacket pkt = createMany(assetId, kind, shape, tier, rotation, instantBuild, tileCoords);
         pkt.hammerVariant = hammerVariant;
         pkt.minerFocusTier = minerFocusTier == null ? MinerFocusTier.NONE : minerFocusTier;
         pkt.settingsGroupId = settingsGroupId;
@@ -85,6 +108,11 @@ public final class AssetBuildModulePacket implements IMessage {
 
     public static AssetBuildModulePacket copyFromModule(CelestialAsset.ID assetId, int sourceModuleIndex,
         ModuleInstance.ID sourceModuleId, boolean instantBuild, List<StationTileCoord> tileCoords) {
+        return copyFromModule(assetId, sourceModuleIndex, sourceModuleId, 0, instantBuild, tileCoords);
+    }
+
+    public static AssetBuildModulePacket copyFromModule(CelestialAsset.ID assetId, int sourceModuleIndex,
+        ModuleInstance.ID sourceModuleId, int rotation, boolean instantBuild, List<StationTileCoord> tileCoords) {
         if (sourceModuleIndex < 0) {
             throw new IllegalArgumentException("copy module source index must be >= 0");
         }
@@ -100,6 +128,7 @@ public final class AssetBuildModulePacket implements IMessage {
         pkt.tileCoords = tileCoords == null ? null : List.copyOf(tileCoords);
         pkt.copySourceModuleIndex = sourceModuleIndex;
         pkt.copySourceModuleId = sourceModuleId;
+        pkt.rotation = ModuleShape.normalizeRotation(rotation);
         return pkt;
     }
 
@@ -129,6 +158,7 @@ public final class AssetBuildModulePacket implements IMessage {
         if (copySourceModuleId != null) {
             PacketUtil.writeId(buf, copySourceModuleId);
         }
+        buf.writeByte(rotation);
     }
 
     @Override
@@ -162,6 +192,7 @@ public final class AssetBuildModulePacket implements IMessage {
         settingsGroupId = (short) buf.readUnsignedShort();
         copySourceModuleIndex = buf.readInt();
         copySourceModuleId = buf.readBoolean() ? PacketUtil.readModuleId(buf) : null;
+        rotation = ModuleShape.normalizeRotation(buf.readByte());
     }
 
     public static class Handler implements IMessageHandler<AssetBuildModulePacket, IMessage> {
@@ -204,6 +235,7 @@ public final class AssetBuildModulePacket implements IMessage {
         FacilityModuleKind buildKind = copySource == null ? moduleKind : copySource.kind();
         ModuleShape buildShape = copySource == null ? shape : copySource.shape();
         ModuleTier buildTier = copySource == null ? tier : copySource.tier();
+        int buildRotation = ModuleShape.normalizeRotation(rotation);
         HammerVariant buildHammerVariant = copySource == null ? hammerVariant : hammerVariantFor(copySource);
         MinerFocusTier buildMinerFocusTier = copySource == null ? normalizedMinerFocusTier()
             : minerFocusTierFor(copySource);
@@ -237,13 +269,14 @@ public final class AssetBuildModulePacket implements IMessage {
             .anyMatch(coord -> coord == null)) {
             return null;
         }
-        if (!validateAllTargets(facility, anchors, buildKind, buildShape)) {
+        if (!validateAllTargets(facility, anchors, buildKind, buildShape, buildRotation)) {
             return null;
         }
 
         boolean shouldInstantBuild = instantBuild && debugActionAuthorized;
         for (StationTileCoord anchor : anchors) {
             ModuleInstance module = buildKind.create(anchor, buildShape, buildTier);
+            module.setRotation(buildRotation);
             if (!applyPhysicalSpec(module, buildTier, buildHammerVariant, buildMinerFocusTier)) return null;
             boolean copyRuntimeSettings = copySource != null && FacilityModuleRegistry.get(buildKind)
                 .settingsGroups();
@@ -261,8 +294,7 @@ public final class AssetBuildModulePacket implements IMessage {
 
             if (facility.hasStationLayout() && module.anchorOrNull() != null) {
                 StationTileState initialState = StationTileState.fromModuleStatus(module.status());
-                for (StationTileCoord coord : module.shape()
-                    .tiles(module.anchor())) {
+                for (StationTileCoord coord : module.tiles()) {
                     facility.stationLayout()
                         .place(coord, new PlacedTile(module, initialState));
                 }
@@ -273,7 +305,7 @@ public final class AssetBuildModulePacket implements IMessage {
     }
 
     private boolean validateAllTargets(AutomatedFacility facility, List<StationTileCoord> anchors,
-        FacilityModuleKind moduleKind, ModuleShape shape) {
+        FacilityModuleKind moduleKind, ModuleShape shape, int rotation) {
         if (anchors.size() == 1 && StationTileCoord.CORE.equals(anchors.get(0)) && !facility.hasStationLayout()) {
             return true;
         }
@@ -284,12 +316,12 @@ public final class AssetBuildModulePacket implements IMessage {
             .snapshot()
             .keySet();
         for (StationTileCoord anchor : anchors) {
-            if (!shape.fitsAt(anchor)) return false;
+            if (!shape.fitsAt(anchor, rotation)) return false;
             if (requiredAnchorFeature != null && !facility.planetaryFeaturesAt(anchor)
                 .contains(requiredAnchorFeature)) {
                 return false;
             }
-            StationTileCoord[] footprint = shape.tiles(anchor);
+            StationTileCoord[] footprint = shape.tiles(anchor, rotation);
             boolean hasAdjacent = false;
             for (StationTileCoord coord : footprint) {
                 if (originalTiles.contains(coord) || plannedTiles.contains(coord)) return false;
