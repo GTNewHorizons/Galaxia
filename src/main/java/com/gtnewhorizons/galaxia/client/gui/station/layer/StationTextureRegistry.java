@@ -31,6 +31,8 @@ public final class StationTextureRegistry {
     private static final Map<FacilityModuleKind, ResourceLocation> moduleTextures = new EnumMap<>(
         FacilityModuleKind.class);
     private static final Map<ConnectorKind, ResourceLocation> connectorTextures = new EnumMap<>(ConnectorKind.class);
+    private static final Map<FacilityModuleKind, Map<ConnectorKind, ResourceLocation>> capacityConnectorTextures = new EnumMap<>(
+        FacilityModuleKind.class);
 
     static {
         for (FacilityModuleKind kind : FacilityModuleKind.values()) {
@@ -44,6 +46,19 @@ public final class StationTextureRegistry {
         for (ConnectorKind kind : ConnectorKind.values()) {
             connectorTextures.put(kind, new ResourceLocation(DOMAIN, CONNECTOR_BASE + kind.textureName + ".png"));
         }
+        for (FacilityModuleKind kind : FacilityModuleKind.values()) {
+            if (!kind.isCapacityModule()) continue;
+            Map<ConnectorKind, ResourceLocation> textures = new EnumMap<>(ConnectorKind.class);
+            for (ConnectorKind connectorKind : ConnectorKind.values()) {
+                textures.put(
+                    connectorKind,
+                    new ResourceLocation(
+                        DOMAIN,
+                        CONNECTOR_BASE + kind.name()
+                            .toLowerCase() + "_connector_" + connectorKind.textureName + ".png"));
+            }
+            capacityConnectorTextures.put(kind, textures);
+        }
     }
 
     private StationTextureRegistry() {}
@@ -56,6 +71,13 @@ public final class StationTextureRegistry {
     @Nullable
     public static ResourceLocation connectorTexture(ConnectorKind kind) {
         return connectorTextures.get(kind);
+    }
+
+    @Nullable
+    public static ResourceLocation capacityConnectorTexture(FacilityModuleKind moduleKind,
+        ConnectorKind connectorKind) {
+        Map<ConnectorKind, ResourceLocation> textures = capacityConnectorTextures.get(moduleKind);
+        return textures == null ? null : textures.get(connectorKind);
     }
 
     private static final Map<String, Boolean> textureExistsCache = new java.util.HashMap<>();
