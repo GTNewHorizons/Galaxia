@@ -7,10 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayDeque;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 
@@ -157,11 +155,11 @@ final class AsteroidFieldResolverTest {
     }
 
     @Test
-    void generatedHiddenAsteroidsCanChainBeyondInitialDetectedAnchors() {
+    void generatedHiddenAsteroidsAvoidSingleLineAndOvercrowdedClusters() {
         AsteroidFieldProfile profile = AsteroidFieldProfile.builder()
             .seedSalt(99L)
             .generationVersion(1)
-            .sizeCounts(0, 12, 0)
+            .sizeCounts(0, 24, 0)
             .radialBand(1000.0, 2000.0)
             .satelliteScanRadius(75.0)
             .oreProfile(new AsteroidOreProfile("metallic", 2.0, List.of("galaxia:iron")))
@@ -181,19 +179,14 @@ final class AsteroidFieldResolverTest {
             .build();
 
         List<AsteroidFieldNode> nodes = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile);
-        AsteroidFieldNode detectedAnchor = nodes.stream()
-            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.DETECTED)
-            .findFirst()
-            .orElseThrow();
 
         assertEveryHiddenNodeReachableFromDetectedNode(profile, nodes);
         assertTrue(
-            maxScanDepthFromDetectedNodes(profile, nodes) >= 4,
-            "hidden asteroids should form scan chains instead of only clustering around detected anchors");
+            maxHiddenNeighborsWithinScanRadius(profile, nodes) >= 3,
+            "hidden asteroid placement should branch instead of collapsing into one chain");
         assertTrue(
-            nodes.stream()
-                .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.HIDDEN)
-                .anyMatch(node -> distance(profile, detectedAnchor, node) > profile.satelliteScanRadius()));
+            maxHiddenNeighborsWithinScanRadius(profile, nodes) <= 8,
+            "hidden asteroid placement should discourage overcrowded scan neighborhoods");
     }
 
     @Test
@@ -267,33 +260,21 @@ final class AsteroidFieldResolverTest {
         return Math.sqrt(dx * dx + dy * dy);
     }
 
-    private static int maxScanDepthFromDetectedNodes(AsteroidFieldProfile profile, List<AsteroidFieldNode> nodes) {
-        Map<MinorCelestialBodyId, Integer> depths = new HashMap<>();
-        Queue<AsteroidFieldNode> queue = new ArrayDeque<>();
+    private static int maxHiddenNeighborsWithinScanRadius(AsteroidFieldProfile profile, List<AsteroidFieldNode> nodes) {
+        int maxNeighbors = 0;
         for (AsteroidFieldNode node : nodes) {
-            if (AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.DETECTED) {
-                depths.put(node.id(), 0);
-                queue.add(node);
-            }
-        }
-
-        while (!queue.isEmpty()) {
-            AsteroidFieldNode current = queue.remove();
-            int nextDepth = depths.get(current.id()) + 1;
+            if (AsteroidFieldResolver.initialDetectionState(node) != AsteroidDetectionState.HIDDEN) continue;
+            int neighbors = 0;
             for (AsteroidFieldNode candidate : nodes) {
-                if (!depths.containsKey(candidate.id())
-                    && distance(profile, current, candidate) <= profile.satelliteScanRadius()) {
-                    depths.put(candidate.id(), nextDepth);
-                    queue.add(candidate);
+                if (candidate != node
+                    && AsteroidFieldResolver.initialDetectionState(candidate) == AsteroidDetectionState.HIDDEN
+                    && distance(profile, node, candidate) <= profile.satelliteScanRadius()) {
+                    neighbors++;
                 }
             }
+            maxNeighbors = Math.max(maxNeighbors, neighbors);
         }
-
-        return depths.values()
-            .stream()
-            .mapToInt(Integer::intValue)
-            .max()
-            .orElse(0);
+        return maxNeighbors;
     }
 
     private static AsteroidFieldProfile profile(int generationVersion) {
