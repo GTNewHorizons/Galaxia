@@ -123,6 +123,24 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
     public static boolean sendBuildModules(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
         ModuleTier tier, HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId,
         int rotation, boolean instantBuild, List<StationTileCoord> coords) {
+        return sendBuildModules(
+            assetId,
+            kind,
+            shape,
+            tier,
+            hammerVariant,
+            minerFocusTier,
+            settingsGroupId,
+            coords == null ? null
+                : java.util.Collections.nCopies(coords.size(), ModuleShape.normalizeRotation(rotation)),
+            instantBuild,
+            coords);
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static boolean sendBuildModules(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
+        ModuleTier tier, HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId,
+        List<Integer> rotations, boolean instantBuild, List<StationTileCoord> coords) {
         AssetBuildModulePacket packet = AssetBuildModulePacket.createManyWithSpec(
             assetId,
             kind,
@@ -131,7 +149,7 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
             hammerVariant,
             minerFocusTier,
             settingsGroupId,
-            rotation,
+            rotations,
             instantBuild,
             coords);
         Galaxia.GALAXIA_NETWORK.sendToServer(packet);
@@ -147,8 +165,22 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
     @SideOnly(Side.CLIENT)
     public static boolean sendCopyModule(CelestialAsset.ID assetId, int sourceModuleIndex,
         ModuleInstance.ID sourceModuleId, int rotation, boolean instantBuild, List<StationTileCoord> coords) {
+        return sendCopyModule(
+            assetId,
+            sourceModuleIndex,
+            sourceModuleId,
+            coords == null ? null
+                : java.util.Collections.nCopies(coords.size(), ModuleShape.normalizeRotation(rotation)),
+            instantBuild,
+            coords);
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static boolean sendCopyModule(CelestialAsset.ID assetId, int sourceModuleIndex,
+        ModuleInstance.ID sourceModuleId, List<Integer> rotations, boolean instantBuild,
+        List<StationTileCoord> coords) {
         AssetBuildModulePacket packet = AssetBuildModulePacket
-            .copyFromModule(assetId, sourceModuleIndex, sourceModuleId, rotation, instantBuild, coords);
+            .copyFromModule(assetId, sourceModuleIndex, sourceModuleId, rotations, instantBuild, coords);
         Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
     }

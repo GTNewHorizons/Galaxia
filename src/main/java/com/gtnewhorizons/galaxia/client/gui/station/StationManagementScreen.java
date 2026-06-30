@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import java.util.List;
+
 import javax.annotation.Nullable;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
@@ -25,6 +27,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.relauncher.Side;
@@ -232,21 +235,30 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         ModuleShape shape = copySource == null ? request.shape() : copySource.shape();
         ModuleTier tier = copySource == null ? request.tier() : copySource.tier();
         if (kind == null || shape == null || tier == null) return;
-        controller.startTileMode(
+        controller.startTileModeWithTargetSelections(
             copySource == null ? StationEditModeController.Mode.MASS_BUILD : StationEditModeController.Mode.COPY_MODULE,
             (copySource == null ? "Build " : "Copy ") + kind.getDisplayName(),
             "Confirm",
-            (coord, selected) -> ModuleBuildPickerModel
-                .isCompatibleTarget(facility, kind, shape, tier, coord, selected, controller.footprintRotation()),
+            (coord, selected) -> ModuleBuildPickerModel.isCompatibleTarget(
+                facility,
+                kind,
+                shape,
+                tier,
+                coord,
+                selected,
+                controller.selectedTargetRotations(),
+                controller.footprintRotation()),
             coord -> coord,
-            targets -> {
+            selections -> {
+                List<StationTileCoord> targets = targetCoords(selections);
+                List<Integer> rotations = targetRotations(selections);
                 boolean sent;
                 if (copySource != null) {
                     sent = com.gtnewhorizons.galaxia.client.CelestialClient.copyModule(
                         assetId,
                         request.copySourceModuleIndex(),
                         request.copySourceModuleId(),
-                        controller.footprintRotation(),
+                        rotations,
                         request.creativeBuildMode(),
                         targets);
                 } else {
@@ -258,16 +270,36 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                         request.hammerVariant(),
                         request.minerFocusTier(),
                         request.settingsGroupId(),
-                        controller.footprintRotation(),
+                        rotations,
                         request.creativeBuildMode(),
                         targets);
                 }
                 if (!sent) StationNotificationHelper.showFailure("Module build request failed");
             },
-            targets -> ModuleBuildPickerModel
-                .connectedTargets(facility, targets, shape, controller.footprintRotation()));
+            targets -> ModuleBuildPickerModel.connectedTargets(
+                facility,
+                targets,
+                shape,
+                controller.selectedTargetRotations(),
+                controller.footprintRotation()));
         controller.setSelectionFootprint(shape, shape != ModuleShape.SINGLE);
         controller.setPreviewModuleKind(kind);
+    }
+
+    private static List<StationTileCoord> targetCoords(List<StationTilePickerController.TargetSelection> selections) {
+        List<StationTileCoord> result = new java.util.ArrayList<>(selections.size());
+        for (StationTilePickerController.TargetSelection selection : selections) {
+            result.add(selection.coord());
+        }
+        return result;
+    }
+
+    private static List<Integer> targetRotations(List<StationTilePickerController.TargetSelection> selections) {
+        List<Integer> result = new java.util.ArrayList<>(selections.size());
+        for (StationTilePickerController.TargetSelection selection : selections) {
+            result.add(selection.rotation());
+        }
+        return result;
     }
 
     private static final class StationScreenBackground extends ParentWidget<StationScreenBackground> {

@@ -195,6 +195,54 @@ final class StarmapServerActionsTest {
     }
 
     @Test
+    void buildModulesApplyRotationPerTarget() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
+        StationTileCoord first = StationTileCoord.of(1, 0);
+        StationTileCoord second = StationTileCoord.of(4, 0);
+
+        AssetBuildModulePacket packet = AssetBuildModulePacket.createManyWithSpec(
+            facility.assetId,
+            FacilityModuleKind.MACERATOR,
+            FacilityModuleKind.MACERATOR.defaultShape(),
+            FacilityModuleKind.MACERATOR.defaultTier(),
+            null,
+            MinerFocusTier.NONE,
+            (short) 0,
+            List.of(0, 1),
+            true,
+            List.of(first, second));
+
+        AssetSyncPacket result = packet.apply(TEAM, true);
+
+        assertNotNull(result, "batch build must sync modules with their individual rotations");
+        assertEquals(
+            2,
+            facility.modules()
+                .size());
+        assertEquals(
+            0,
+            facility.modules()
+                .get(0)
+                .rotation());
+        assertEquals(
+            1,
+            facility.modules()
+                .get(1)
+                .rotation());
+        assertTrue(
+            facility.stationLayout()
+                .isOccupied(StationTileCoord.of(1, 1)));
+        assertTrue(
+            facility.stationLayout()
+                .isOccupied(StationTileCoord.of(3, 1)));
+    }
+
+    @Test
     void buildModuleRejectsShapeThatDoesNotMatchModuleKind() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),

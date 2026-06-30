@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -67,10 +68,26 @@ final class StationEditModeController {
     void startTileMode(Mode mode, String title, String confirmLabel,
         BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility, UnaryOperator<StationTileCoord> normalizer,
         Consumer<List<StationTileCoord>> confirmHandler, UnaryOperator<List<StationTileCoord>> selectionPruner) {
+        startTileModeWithTargetSelections(mode, title, confirmLabel, compatibility, normalizer, selections -> {
+            if (confirmHandler != null) {
+                List<StationTileCoord> coords = new java.util.ArrayList<>(selections.size());
+                for (StationTilePickerController.TargetSelection selection : selections) {
+                    coords.add(selection.coord());
+                }
+                confirmHandler.accept(coords);
+            }
+        }, selectionPruner);
+    }
+
+    void startTileModeWithTargetSelections(Mode mode, String title, String confirmLabel,
+        BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility, UnaryOperator<StationTileCoord> normalizer,
+        Consumer<List<StationTilePickerController.TargetSelection>> confirmHandler,
+        UnaryOperator<List<StationTileCoord>> selectionPruner) {
         if (mode == null || mode == Mode.IDLE) {
             throw new IllegalArgumentException("Station edit mode must be a concrete active mode");
         }
-        tilePicker.start(title, confirmLabel, compatibility, normalizer, confirmHandler, selectionPruner);
+        tilePicker
+            .startWithTargetSelections(title, confirmLabel, compatibility, normalizer, confirmHandler, selectionPruner);
         this.mode = mode;
     }
 
@@ -140,6 +157,10 @@ final class StationEditModeController {
 
     int footprintRotation() {
         return tilePicker.footprintRotation();
+    }
+
+    Map<StationTileCoord, Integer> selectedTargetRotations() {
+        return tilePicker.selectedTargetRotations();
     }
 
     @Nullable

@@ -2,8 +2,9 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -28,14 +29,16 @@ final class StationTilePickerController {
     private BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility = (coord, selected) -> false;
     private UnaryOperator<StationTileCoord> normalizer = coord -> coord;
     private UnaryOperator<List<StationTileCoord>> selectionPruner = targets -> targets;
-    private Consumer<List<StationTileCoord>> confirmHandler = selected -> {};
+    private Consumer<List<TargetSelection>> confirmHandler = selected -> {};
     private ModuleShape selectionFootprint = ModuleShape.SINGLE;
     private @Nullable FacilityModuleKind previewModuleKind;
     private VisualStyle visualStyle = VisualStyle.BUILD;
     private boolean footprintRotationEnabled;
     private int footprintRotation;
-    private final Set<StationTileCoord> selected = new LinkedHashSet<>();
+    private final LinkedHashMap<StationTileCoord, Integer> selected = new LinkedHashMap<>();
     private boolean active;
+
+    record TargetSelection(StationTileCoord coord, int rotation) {}
 
     void start(String title, String confirmLabel, Predicate<StationTileCoord> compatibility,
         UnaryOperator<StationTileCoord> normalizer, Consumer<List<StationTileCoord>> confirmHandler) {
@@ -55,6 +58,18 @@ final class StationTilePickerController {
     void start(String title, String confirmLabel, BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility,
         UnaryOperator<StationTileCoord> normalizer, Consumer<List<StationTileCoord>> confirmHandler,
         UnaryOperator<List<StationTileCoord>> selectionPruner) {
+        startWithTargetSelections(
+            title,
+            confirmLabel,
+            compatibility,
+            normalizer,
+            selections -> { if (confirmHandler != null) confirmHandler.accept(coords(selections)); },
+            selectionPruner);
+    }
+
+    void startWithTargetSelections(String title, String confirmLabel,
+        BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility, UnaryOperator<StationTileCoord> normalizer,
+        Consumer<List<TargetSelection>> confirmHandler, UnaryOperator<List<StationTileCoord>> selectionPruner) {
         this.title = title == null ? "" : title;
         this.confirmLabel = confirmLabel == null || confirmLabel.isBlank() ? "Confirm" : confirmLabel;
         this.compatibility = compatibility == null ? (coord, selected) -> false : compatibility;
@@ -85,7 +100,6 @@ final class StationTilePickerController {
     boolean rotateSelectionFootprint() {
         if (!active || !footprintRotationEnabled) return false;
         footprintRotation = (footprintRotation + 1) & 3;
-        pruneSelection();
         return true;
     }
 
@@ -116,13 +130,14 @@ final class StationTilePickerController {
 
     boolean isCompatibleNormalized(StationTileCoord normalized) {
         return active && normalized != null
-            && (selected.contains(normalized) || compatibility.test(normalized, Collections.unmodifiableSet(selected)));
+            && (selected.containsKey(normalized)
+                || compatibility.test(normalized, Collections.unmodifiableSet(selected.keySet())));
     }
 
     boolean isSelected(StationTileCoord coord) {
         if (!active || coord == null) return false;
         StationTileCoord normalized = normalize(coord);
-        return normalized != null && selected.contains(normalized);
+        return normalized != null && selected.containsKey(normalized);
     }
 
     boolean toggle(StationTileCoord coord) {
@@ -131,11 +146,11 @@ final class StationTilePickerController {
 
     boolean toggleNormalized(StationTileCoord normalized) {
         if (normalized == null) return false;
-        if (selected.contains(normalized)) {
+        if (selected.containsKey(normalized)) {
             selected.remove(normalized);
         } else {
             if (!isCompatibleNormalized(normalized)) return false;
-            selected.add(normalized);
+            selected.put(normalized, ModuleShape.normalizeRotation(footprintRotation));
         }
         pruneSelection();
         return true;
@@ -157,6 +172,15 @@ final class StationTilePickerController {
         return footprintRotation;
     }
 
+    int selectedTargetRotation(StationTileCoord coord) {
+        if (coord == null) return ModuleShape.normalizeRotation(footprintRotation);
+        return selected.getOrDefault(coord, ModuleShape.normalizeRotation(footprintRotation));
+    }
+
+    Map<StationTileCoord, Integer> selectedTargetRotations() {
+        return Collections.unmodifiableMap(selected);
+    }
+
     @Nullable
     FacilityModuleKind previewModuleKind() {
         return previewModuleKind;
@@ -167,13 +191,13 @@ final class StationTilePickerController {
     }
 
     Set<StationTileCoord> selectedTargets() {
-        return Collections.unmodifiableSet(selected);
+        return Collections.unmodifiableSet(selected.keySet());
     }
 
     void confirm() {
         if (!canConfirm()) return;
-        List<StationTileCoord> confirmed = new ArrayList<>(selected);
-        Consumer<List<StationTileCoord>> handler = confirmHandler;
+        List<TargetSelection> confirmed = selections();
+        Consumer<List<TargetSelection>> handler = confirmHandler;
         clear();
         handler.accept(confirmed);
     }
@@ -199,10 +223,31 @@ final class StationTilePickerController {
     }
 
     private void pruneSelection() {
-        List<StationTileCoord> current = new ArrayList<>(selected);
+        LinkedHashMap<StationTileCoord, Integer> currentRotations = new LinkedHashMap<>(selected);
+        List<StationTileCoord> current = new ArrayList<>(selected.keySet());
         List<StationTileCoord> pruned = selectionPruner.apply(Collections.unmodifiableList(current));
         selected.clear();
         if (pruned == null) return;
-        selected.addAll(pruned);
+        for (StationTileCoord coord : pruned) {
+            if (currentRotations.containsKey(coord)) {
+                selected.put(coord, currentRotations.get(coord));
+            }
+        }
+    }
+
+    private List<TargetSelection> selections() {
+        List<TargetSelection> result = new ArrayList<>(selected.size());
+        for (Map.Entry<StationTileCoord, Integer> entry : selected.entrySet()) {
+            result.add(new TargetSelection(entry.getKey(), entry.getValue()));
+        }
+        return result;
+    }
+
+    private static List<StationTileCoord> coords(List<TargetSelection> selections) {
+        List<StationTileCoord> result = new ArrayList<>(selections.size());
+        for (TargetSelection selection : selections) {
+            result.add(selection.coord());
+        }
+        return result;
     }
 }

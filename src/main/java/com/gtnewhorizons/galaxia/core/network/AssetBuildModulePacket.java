@@ -41,7 +41,6 @@ public final class AssetBuildModulePacket implements IMessage {
     private FacilityModuleKind moduleKind = FacilityModuleKind.POWER;
     private ModuleShape shape = ModuleShape.SINGLE;
     private ModuleTier tier = ModuleTier.HV;
-    private int rotation;
     private HammerVariant hammerVariant;
     private MinerFocusTier minerFocusTier = MinerFocusTier.NONE;
     private short settingsGroupId;
@@ -49,6 +48,7 @@ public final class AssetBuildModulePacket implements IMessage {
     private ModuleInstance.ID copySourceModuleId;
     private boolean instantBuild;
     private List<StationTileCoord> tileCoords;
+    private List<Integer> targetRotations;
 
     public AssetBuildModulePacket() {}
 
@@ -64,6 +64,12 @@ public final class AssetBuildModulePacket implements IMessage {
 
     public static AssetBuildModulePacket createMany(CelestialAsset.ID assetId, FacilityModuleKind kind,
         ModuleShape shape, ModuleTier tier, int rotation, boolean instantBuild, List<StationTileCoord> tileCoords) {
+        return createMany(assetId, kind, shape, tier, rotationsFor(tileCoords, rotation), instantBuild, tileCoords);
+    }
+
+    public static AssetBuildModulePacket createMany(CelestialAsset.ID assetId, FacilityModuleKind kind,
+        ModuleShape shape, ModuleTier tier, List<Integer> rotations, boolean instantBuild,
+        List<StationTileCoord> tileCoords) {
         requireBuildSpec(kind, shape, tier);
         if (tileCoords != null && tileCoords.size() > MAX_BUILD_TARGETS) {
             throw new IllegalArgumentException("too many module build targets: " + tileCoords.size());
@@ -73,10 +79,10 @@ public final class AssetBuildModulePacket implements IMessage {
         pkt.moduleKind = kind;
         pkt.shape = shape;
         pkt.tier = tier;
-        pkt.rotation = ModuleShape.normalizeRotation(rotation);
         pkt.minerFocusTier = MinerFocusTier.NONE;
         pkt.instantBuild = instantBuild;
         pkt.tileCoords = tileCoords == null ? null : List.copyOf(tileCoords);
+        pkt.targetRotations = normalizeTargetRotations(pkt.tileCoords, rotations);
         return pkt;
     }
 
@@ -99,7 +105,23 @@ public final class AssetBuildModulePacket implements IMessage {
     public static AssetBuildModulePacket createManyWithSpec(CelestialAsset.ID assetId, FacilityModuleKind kind,
         ModuleShape shape, ModuleTier tier, HammerVariant hammerVariant, MinerFocusTier minerFocusTier,
         short settingsGroupId, int rotation, boolean instantBuild, List<StationTileCoord> tileCoords) {
-        AssetBuildModulePacket pkt = createMany(assetId, kind, shape, tier, rotation, instantBuild, tileCoords);
+        return createManyWithSpec(
+            assetId,
+            kind,
+            shape,
+            tier,
+            hammerVariant,
+            minerFocusTier,
+            settingsGroupId,
+            rotationsFor(tileCoords, rotation),
+            instantBuild,
+            tileCoords);
+    }
+
+    public static AssetBuildModulePacket createManyWithSpec(CelestialAsset.ID assetId, FacilityModuleKind kind,
+        ModuleShape shape, ModuleTier tier, HammerVariant hammerVariant, MinerFocusTier minerFocusTier,
+        short settingsGroupId, List<Integer> rotations, boolean instantBuild, List<StationTileCoord> tileCoords) {
+        AssetBuildModulePacket pkt = createMany(assetId, kind, shape, tier, rotations, instantBuild, tileCoords);
         pkt.hammerVariant = hammerVariant;
         pkt.minerFocusTier = minerFocusTier == null ? MinerFocusTier.NONE : minerFocusTier;
         pkt.settingsGroupId = settingsGroupId;
@@ -113,6 +135,18 @@ public final class AssetBuildModulePacket implements IMessage {
 
     public static AssetBuildModulePacket copyFromModule(CelestialAsset.ID assetId, int sourceModuleIndex,
         ModuleInstance.ID sourceModuleId, int rotation, boolean instantBuild, List<StationTileCoord> tileCoords) {
+        return copyFromModule(
+            assetId,
+            sourceModuleIndex,
+            sourceModuleId,
+            rotationsFor(tileCoords, rotation),
+            instantBuild,
+            tileCoords);
+    }
+
+    public static AssetBuildModulePacket copyFromModule(CelestialAsset.ID assetId, int sourceModuleIndex,
+        ModuleInstance.ID sourceModuleId, List<Integer> rotations, boolean instantBuild,
+        List<StationTileCoord> tileCoords) {
         if (sourceModuleIndex < 0) {
             throw new IllegalArgumentException("copy module source index must be >= 0");
         }
@@ -126,9 +160,9 @@ public final class AssetBuildModulePacket implements IMessage {
         pkt.assetId = assetId;
         pkt.instantBuild = instantBuild;
         pkt.tileCoords = tileCoords == null ? null : List.copyOf(tileCoords);
+        pkt.targetRotations = normalizeTargetRotations(pkt.tileCoords, rotations);
         pkt.copySourceModuleIndex = sourceModuleIndex;
         pkt.copySourceModuleId = sourceModuleId;
-        pkt.rotation = ModuleShape.normalizeRotation(rotation);
         return pkt;
     }
 
@@ -143,8 +177,9 @@ public final class AssetBuildModulePacket implements IMessage {
             buf.writeInt(-1);
         } else {
             buf.writeInt(tileCoords.size());
-            for (StationTileCoord coord : tileCoords) {
-                PacketUtil.writeStationTileCoord(buf, coord);
+            for (int i = 0; i < tileCoords.size(); i++) {
+                PacketUtil.writeStationTileCoord(buf, tileCoords.get(i));
+                buf.writeByte(targetRotation(i));
             }
         }
         buf.writeBoolean(hammerVariant != null);
@@ -158,7 +193,6 @@ public final class AssetBuildModulePacket implements IMessage {
         if (copySourceModuleId != null) {
             PacketUtil.writeId(buf, copySourceModuleId);
         }
-        buf.writeByte(rotation);
     }
 
     @Override
@@ -176,8 +210,10 @@ public final class AssetBuildModulePacket implements IMessage {
                 throw new IllegalArgumentException("too many module build targets: " + targetCount);
             }
             tileCoords = new ArrayList<>(targetCount);
+            targetRotations = new ArrayList<>(targetCount);
             for (int i = 0; i < targetCount; i++) {
                 tileCoords.add(PacketUtil.readStationTileCoord(buf));
+                targetRotations.add(ModuleShape.normalizeRotation(buf.readByte()));
             }
         }
         if (!buf.isReadable()) {
@@ -192,7 +228,6 @@ public final class AssetBuildModulePacket implements IMessage {
         settingsGroupId = (short) buf.readUnsignedShort();
         copySourceModuleIndex = buf.readInt();
         copySourceModuleId = buf.readBoolean() ? PacketUtil.readModuleId(buf) : null;
-        rotation = ModuleShape.normalizeRotation(buf.readByte());
     }
 
     public static class Handler implements IMessageHandler<AssetBuildModulePacket, IMessage> {
@@ -235,7 +270,6 @@ public final class AssetBuildModulePacket implements IMessage {
         FacilityModuleKind buildKind = copySource == null ? moduleKind : copySource.kind();
         ModuleShape buildShape = copySource == null ? shape : copySource.shape();
         ModuleTier buildTier = copySource == null ? tier : copySource.tier();
-        int buildRotation = ModuleShape.normalizeRotation(rotation);
         HammerVariant buildHammerVariant = copySource == null ? hammerVariant : hammerVariantFor(copySource);
         MinerFocusTier buildMinerFocusTier = copySource == null ? normalizedMinerFocusTier()
             : minerFocusTierFor(copySource);
@@ -269,12 +303,14 @@ public final class AssetBuildModulePacket implements IMessage {
             .anyMatch(coord -> coord == null)) {
             return null;
         }
-        if (!validateAllTargets(facility, anchors, buildKind, buildShape, buildRotation)) {
+        if (!validateAllTargets(facility, anchors, buildKind, buildShape)) {
             return null;
         }
 
         boolean shouldInstantBuild = instantBuild && debugActionAuthorized;
-        for (StationTileCoord anchor : anchors) {
+        for (int i = 0; i < anchors.size(); i++) {
+            StationTileCoord anchor = anchors.get(i);
+            int buildRotation = targetRotation(i);
             ModuleInstance module = buildKind.create(anchor, buildShape, buildTier);
             module.setRotation(buildRotation);
             if (!applyPhysicalSpec(module, buildTier, buildHammerVariant, buildMinerFocusTier)) return null;
@@ -305,7 +341,7 @@ public final class AssetBuildModulePacket implements IMessage {
     }
 
     private boolean validateAllTargets(AutomatedFacility facility, List<StationTileCoord> anchors,
-        FacilityModuleKind moduleKind, ModuleShape shape, int rotation) {
+        FacilityModuleKind moduleKind, ModuleShape shape) {
         if (anchors.size() == 1 && StationTileCoord.CORE.equals(anchors.get(0)) && !facility.hasStationLayout()) {
             return true;
         }
@@ -315,7 +351,9 @@ public final class AssetBuildModulePacket implements IMessage {
         Set<StationTileCoord> originalTiles = facility.stationLayout()
             .snapshot()
             .keySet();
-        for (StationTileCoord anchor : anchors) {
+        for (int i = 0; i < anchors.size(); i++) {
+            StationTileCoord anchor = anchors.get(i);
+            int rotation = targetRotation(i);
             if (!shape.fitsAt(anchor, rotation)) return false;
             if (requiredAnchorFeature != null && !facility.planetaryFeaturesAt(anchor)
                 .contains(requiredAnchorFeature)) {
@@ -333,6 +371,32 @@ public final class AssetBuildModulePacket implements IMessage {
             }
         }
         return true;
+    }
+
+    private int targetRotation(int index) {
+        if (targetRotations == null || index < 0 || index >= targetRotations.size()) return 0;
+        return ModuleShape.normalizeRotation(targetRotations.get(index));
+    }
+
+    private static List<Integer> rotationsFor(List<StationTileCoord> tileCoords, int rotation) {
+        if (tileCoords == null) return null;
+        List<Integer> rotations = new ArrayList<>(tileCoords.size());
+        int normalized = ModuleShape.normalizeRotation(rotation);
+        for (int i = 0; i < tileCoords.size(); i++) {
+            rotations.add(normalized);
+        }
+        return rotations;
+    }
+
+    private static List<Integer> normalizeTargetRotations(List<StationTileCoord> tileCoords, List<Integer> rotations) {
+        if (tileCoords == null) return null;
+        List<Integer> normalized = new ArrayList<>(tileCoords.size());
+        for (int i = 0; i < tileCoords.size(); i++) {
+            int rotation = rotations == null || i >= rotations.size() || rotations.get(i) == null ? 0
+                : rotations.get(i);
+            normalized.add(ModuleShape.normalizeRotation(rotation));
+        }
+        return List.copyOf(normalized);
     }
 
     private boolean validatePhysicalSpec(FacilityModuleKind kind, ModuleTier targetTier,

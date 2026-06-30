@@ -500,12 +500,14 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
         Set<StationTileCoord> candidateAnchors = new LinkedHashSet<>();
         Set<StationTileCoord> clickableTiles = new LinkedHashSet<>();
         for (StationTileCoord selectedTarget : tilePickerController.selectedTargets()) {
-            addFootprintOrthogonalCandidates(
-                touchTiles,
+            int selectedRotation = tilePickerController.selectedTargetRotation(selectedTarget);
+            addFootprintOrthogonalCandidates(touchTiles, selectedTarget, footprint, selectedRotation);
+            drawPickerFootprint(
                 selectedTarget,
                 footprint,
-                tilePickerController.footprintRotation());
-            drawPickerFootprint(selectedTarget, footprint, true, pickerPrimaryTile(selectedTarget, footprint));
+                selectedRotation,
+                true,
+                pickerPrimaryTile(selectedTarget, footprint, selectedRotation));
         }
         addFootprintAnchorsContaining(
             candidateAnchors,
@@ -545,14 +547,23 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
         if (hov == null) return;
         StationTileCoord normalized = normalizePickerTarget(hov);
         if (!tilePickerController.isCompatibleNormalized(normalized)) return;
-        drawPickerModulePreview(context, normalized, footprint, hov, tilePickerController.isSelected(normalized));
+        int rotation = tilePickerController.isSelected(normalized)
+            ? tilePickerController.selectedTargetRotation(normalized)
+            : tilePickerController.footprintRotation();
+        drawPickerModulePreview(
+            context,
+            normalized,
+            footprint,
+            rotation,
+            hov,
+            tilePickerController.isSelected(normalized));
     }
 
     private void drawPickerModulePreview(ModularGuiContext context, StationTileCoord anchor, ModuleShape footprint,
-        StationTileCoord primaryTile, boolean selected) {
+        int rotation, StationTileCoord primaryTile, boolean selected) {
         FacilityModuleKind kind = tilePickerController.previewModuleKind();
         if (kind == null || anchor == null || footprint == null) return;
-        for (StationTileCoord tile : footprint.tiles(anchor, tilePickerController.footprintRotation())) {
+        for (StationTileCoord tile : footprint.tiles(anchor, rotation)) {
             int x = tileLocalX(tile);
             int y = tileLocalY(tile);
             ModuleLayerRenderer.drawPreview(context, x, y, kind);
@@ -561,18 +572,18 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
     }
 
     private void drawPickerFootprint(StationTileCoord anchor, ModuleShape footprint, boolean selected) {
-        drawPickerFootprint(anchor, footprint, selected, pickerPrimaryTile(anchor, footprint));
+        int rotation = tilePickerController.footprintRotation();
+        drawPickerFootprint(anchor, footprint, rotation, selected, pickerPrimaryTile(anchor, footprint, rotation));
     }
 
-    private StationTileCoord pickerPrimaryTile(StationTileCoord anchor, ModuleShape footprint) {
-        return ModuleBuildPickerModel
-            .tileForAnchorRotation(anchor, footprint, tilePickerController.footprintRotation());
+    private StationTileCoord pickerPrimaryTile(StationTileCoord anchor, ModuleShape footprint, int rotation) {
+        return ModuleBuildPickerModel.tileForAnchorRotation(anchor, footprint, rotation);
     }
 
-    private void drawPickerFootprint(StationTileCoord anchor, ModuleShape footprint, boolean selected,
+    private void drawPickerFootprint(StationTileCoord anchor, ModuleShape footprint, int rotation, boolean selected,
         @Nullable StationTileCoord primaryTile) {
         if (anchor == null || footprint == null) return;
-        for (StationTileCoord tile : footprint.tiles(anchor, tilePickerController.footprintRotation())) {
+        for (StationTileCoord tile : footprint.tiles(anchor, rotation)) {
             int x = tileLocalX(tile);
             int y = tileLocalY(tile);
             drawPickerTileOutline(x, y, selected, tile.equals(primaryTile));

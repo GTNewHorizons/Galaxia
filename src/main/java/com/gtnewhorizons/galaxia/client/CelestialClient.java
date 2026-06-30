@@ -157,6 +157,22 @@ public final class CelestialClient {
     public static boolean createModules(ID assetId, FacilityModuleKind kind, ModuleShape shape, ModuleTier tier,
         @Nullable HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId, int rotation,
         boolean creativeBuildModeEnabled, List<StationTileCoord> tileCoords) {
+        return createModules(
+            assetId,
+            kind,
+            shape,
+            tier,
+            hammerVariant,
+            minerFocusTier,
+            settingsGroupId,
+            rotationsFor(tileCoords, rotation),
+            creativeBuildModeEnabled,
+            tileCoords);
+    }
+
+    public static boolean createModules(ID assetId, FacilityModuleKind kind, ModuleShape shape, ModuleTier tier,
+        @Nullable HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId,
+        List<Integer> rotations, boolean creativeBuildModeEnabled, List<StationTileCoord> tileCoords) {
         AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null) return false;
         if (!kind.isAllowedOn(state.kind)) return false;
@@ -168,7 +184,7 @@ public final class CelestialClient {
             hammerVariant,
             minerFocusTier,
             settingsGroupId,
-            rotation,
+            rotations,
             creativeBuildModeEnabled,
             tileCoords);
     }
@@ -180,14 +196,36 @@ public final class CelestialClient {
 
     public static boolean copyModule(ID assetId, int sourceModuleIndex, ModuleInstance.ID sourceModuleId, int rotation,
         boolean creativeBuildModeEnabled, List<StationTileCoord> tileCoords) {
+        return copyModule(
+            assetId,
+            sourceModuleIndex,
+            sourceModuleId,
+            rotationsFor(tileCoords, rotation),
+            creativeBuildModeEnabled,
+            tileCoords);
+    }
+
+    public static boolean copyModule(ID assetId, int sourceModuleIndex, ModuleInstance.ID sourceModuleId,
+        List<Integer> rotations, boolean creativeBuildModeEnabled, List<StationTileCoord> tileCoords) {
         AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null || sourceModuleIndex < 0
             || sourceModuleIndex >= state.modules()
                 .size()) {
             return false;
         }
-        return StarmapActionSyncHandler
-            .sendCopyModule(assetId, sourceModuleIndex, sourceModuleId, rotation, creativeBuildModeEnabled, tileCoords);
+        return StarmapActionSyncHandler.sendCopyModule(
+            assetId,
+            sourceModuleIndex,
+            sourceModuleId,
+            rotations,
+            creativeBuildModeEnabled,
+            tileCoords);
+    }
+
+    private static List<Integer> rotationsFor(List<StationTileCoord> tileCoords, int rotation) {
+        if (tileCoords == null) return null;
+        Integer normalized = ModuleShape.normalizeRotation(rotation);
+        return java.util.Collections.nCopies(tileCoords.size(), normalized);
     }
 
     public static boolean destroyAsset(ID assetId) {
