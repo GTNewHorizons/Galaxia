@@ -517,6 +517,10 @@ public final class CelestialClient {
         showHiddenAsteroidObjects = !showHiddenAsteroidObjects;
     }
 
+    public static void setShowHiddenAsteroidObjects(boolean value) {
+        showHiddenAsteroidObjects = value;
+    }
+
     public static boolean isDebugHiddenAsteroid(CelestialObject body) {
         if (!showHiddenAsteroidObjects || body == null
             || !body.id()

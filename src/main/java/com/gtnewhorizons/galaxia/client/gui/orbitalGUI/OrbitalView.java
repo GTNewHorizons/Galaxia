@@ -1119,10 +1119,18 @@ public class OrbitalView {
         }
 
         public boolean areHiddenObjectsShown() {
+            if (!isCreativeBuildModeEnabled()) {
+                CelestialClient.setShowHiddenAsteroidObjects(false);
+                return false;
+            }
             return CelestialClient.showHiddenAsteroidObjects();
         }
 
         public void toggleHiddenObjectsShown() {
+            if (!isCreativeBuildModeEnabled()) {
+                CelestialClient.setShowHiddenAsteroidObjects(false);
+                return;
+            }
             CelestialClient.toggleShowHiddenAsteroidObjects();
         }
 
@@ -1193,7 +1201,10 @@ public class OrbitalView {
             }
             creativeBuildMode = !creativeBuildMode;
             creativeBuildModePersisted = creativeBuildMode;
-            if (!creativeBuildMode) transferSimulatorState.close();
+            if (!creativeBuildMode) {
+                transferSimulatorState.close();
+                CelestialClient.setShowHiddenAsteroidObjects(false);
+            }
             showActionStatus("Creative build mode " + (creativeBuildMode ? "enabled" : "disabled"));
         }
 

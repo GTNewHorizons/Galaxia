@@ -5,15 +5,18 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 
 public final class AsteroidFieldResolver {
 
     private static final double UINT53_TO_UNIT = 1.0 / (1L << 53);
+    private static final Map<ResolveAllKey, List<AsteroidFieldNode>> RESOLVE_ALL_CACHE = new ConcurrentHashMap<>();
 
     private record ReachableAnchor(AsteroidFieldNode node, int depth) {}
 
@@ -21,12 +24,19 @@ public final class AsteroidFieldResolver {
 
     private record GeneratedCandidate(AsteroidFieldNode node, int depth, double naturalDistance) {}
 
+    private record ResolveAllKey(CelestialObjectId beltId, AsteroidFieldProfile profile) {}
+
     private AsteroidFieldResolver() {}
 
     public static List<AsteroidFieldNode> resolveAll(CelestialObjectId beltId, AsteroidFieldProfile profile) {
         Objects.requireNonNull(beltId, "beltId cannot be null");
         Objects.requireNonNull(profile, "profile cannot be null");
+        return RESOLVE_ALL_CACHE.computeIfAbsent(
+            new ResolveAllKey(beltId, profile),
+            key -> resolveAllUncached(key.beltId(), key.profile()));
+    }
 
+    private static List<AsteroidFieldNode> resolveAllUncached(CelestialObjectId beltId, AsteroidFieldProfile profile) {
         List<AsteroidFieldNode> nodes = new ArrayList<>(
             profile.totalNodes() + profile.nodePresets()
                 .size());

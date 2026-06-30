@@ -273,7 +273,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     }
 
     private boolean shouldShowHiddenObjectsButton() {
-        return shouldShowCreativeButton();
+        return map.isCreativeBuildModeEnabled();
     }
 
     private int getSearchOffset() {
