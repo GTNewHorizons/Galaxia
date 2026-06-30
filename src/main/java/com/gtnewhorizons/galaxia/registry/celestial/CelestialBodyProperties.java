@@ -15,6 +15,8 @@ import net.minecraftforge.fluids.Fluid;
 
 import com.gtnewhorizons.galaxia.compat.GTCompat;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 
 public record CelestialBodyProperties(boolean visitable, boolean canCreateStation, boolean canCreateOutpost,
     double localGravityG, double massEarthRelative, double orbitalRadiusEarthRelative, double radiusEarthRelative,
@@ -22,7 +24,7 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
     List<String> gtOreVeinIds, double radiation, double temperature, double surfacePressurePa,
     double starmapAtmosphericDrag, List<AtmosphereIngredient> atmosphereIngredients,
     CelestialBodyProperties atmosphereCompositionSource, AsteroidFieldProfile asteroidFieldProfile,
-    Map<String, String> metadata) {
+    AsteroidNodeKind asteroidNodeKind, AsteroidSizeClass asteroidSizeClass, Map<String, String> metadata) {
 
     public CelestialBodyProperties {
         localGravityG = requireNonNegativeFinite("localGravityG", localGravityG);
@@ -66,6 +68,9 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
         }
         if (surfacePressurePa == 0.0 && (!atmosphereIngredients.isEmpty() || atmosphereCompositionSource != null)) {
             throw new IllegalStateException("Atmosphere composition requires positive surface pressure");
+        }
+        if ((asteroidNodeKind == null) != (asteroidSizeClass == null)) {
+            throw new IllegalStateException("Asteroid node kind and size class must be set together");
         }
     }
 
@@ -149,6 +154,8 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
         private final List<AtmosphereIngredient> atmosphereIngredients = new ArrayList<>();
         private CelestialBodyProperties atmosphereCompositionSource;
         private AsteroidFieldProfile asteroidFieldProfile;
+        private AsteroidNodeKind asteroidNodeKind;
+        private AsteroidSizeClass asteroidSizeClass;
         private final Map<String, String> metadata = new LinkedHashMap<>();
 
         public Builder() {}
@@ -173,10 +180,11 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
             this.starmapAtmosphericDrag = source.starmapAtmosphericDrag;
             this.atmosphereCompositionSource = source.atmosphereCompositionSource;
             this.asteroidFieldProfile = source.asteroidFieldProfile;
+            this.asteroidNodeKind = source.asteroidNodeKind;
+            this.asteroidSizeClass = source.asteroidSizeClass;
             if (source.atmosphereCompositionSource == null) {
                 this.atmosphereIngredients.addAll(source.atmosphereIngredients);
             }
-            this.asteroidFieldProfile = source.asteroidFieldProfile;
             this.metadata.putAll(source.metadata);
         }
 
@@ -307,6 +315,12 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
             return this;
         }
 
+        public Builder asteroidMetadata(AsteroidNodeKind kind, AsteroidSizeClass sizeClass) {
+            this.asteroidNodeKind = Objects.requireNonNull(kind, "asteroid node kind cannot be null");
+            this.asteroidSizeClass = Objects.requireNonNull(sizeClass, "asteroid size class cannot be null");
+            return this;
+        }
+
         public Builder metadata(String key, String value) {
             this.metadata.put(key, value);
             return this;
@@ -343,6 +357,8 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
                 atmosphereIngredients,
                 atmosphereCompositionSource,
                 asteroidFieldProfile,
+                asteroidNodeKind,
+                asteroidSizeClass,
                 metadata);
         }
     }

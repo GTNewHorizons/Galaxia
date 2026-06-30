@@ -18,6 +18,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowle
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
@@ -85,10 +86,13 @@ final class AsteroidDynamicCelestialObjectTest {
 
         assertEquals("Karnyx", asteroid.name());
         assertEquals(
-            "lore",
+            AsteroidNodeKind.LORE,
             asteroid.properties()
-                .metadata()
-                .get("minorBodies"));
+                .asteroidNodeKind());
+        assertEquals(
+            AsteroidSizeClass.LARGE,
+            asteroid.properties()
+                .asteroidSizeClass());
         assertTrue(
             GalaxiaCelestialAPI.getChildren(CelestialObjectId.FROZEN_BELT)
                 .stream()

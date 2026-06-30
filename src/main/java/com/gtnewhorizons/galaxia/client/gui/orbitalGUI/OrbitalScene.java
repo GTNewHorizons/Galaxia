@@ -17,6 +17,8 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
@@ -34,8 +36,34 @@ public class OrbitalScene {
         return !isAsteroidBeltContainer(body);
     }
 
+    static boolean drawsDefaultBodyLabel(CelestialObject body) {
+        if (body == null) return false;
+        if (body.objectClass() != CelestialObject.Class.ASTEROID) return true;
+        return body.properties()
+            .asteroidNodeKind() == AsteroidNodeKind.LORE
+            || body.properties()
+                .asteroidSizeClass() == AsteroidSizeClass.LARGE;
+    }
+
     private static boolean isAsteroidBeltContainer(CelestialObject body) {
         return body != null && body.objectClass() == CelestialObject.Class.ASTEROID_BELT;
+    }
+
+    private static boolean isAsteroid(CelestialObject body) {
+        return body != null && body.objectClass() == CelestialObject.Class.ASTEROID;
+    }
+
+    private static int asteroidPresentationPriority(CelestialObject body) {
+        if (!isAsteroid(body)) return 1000;
+        AsteroidSizeClass sizeClass = body.properties()
+            .asteroidSizeClass();
+        int priority = 0;
+        if (sizeClass == AsteroidSizeClass.LARGE) priority = 80;
+        else if (sizeClass == AsteroidSizeClass.MEDIUM) priority = 50;
+        else if (sizeClass == AsteroidSizeClass.SMALL) priority = 20;
+        if (body.properties()
+            .asteroidNodeKind() == AsteroidNodeKind.LORE) priority += 30;
+        return priority;
     }
 
     static int visibleSatelliteMarkerCount(List<CelestialAsset> assetState) {
@@ -124,6 +152,11 @@ public class OrbitalScene {
 
         boolean drawLabel() {
             return drawLabel;
+        }
+
+        void hideBodyAndLabel() {
+            this.renderBody = false;
+            this.drawLabel = false;
         }
 
         float labelY() {
@@ -438,6 +471,9 @@ public class OrbitalScene {
             ResolvedBodyDrawState state = frame
                 .addResolvedBody(body, parent, worldX, worldY, 0f, 0f, 0f, 0f, false, false, 0f, 0);
             callbacks.fillResolvedBodyDrawState(state, body, parent, worldX, worldY, labelAlpha);
+            if (state.renderBody() && isDeclutteredByExistingBody(frame, state)) {
+                state.hideBodyAndLabel();
+            }
             if (state.body()
                 .objectClass() != CelestialObject.Class.GALAXY && state.bodyAlpha() > 0.01f
                 && state.renderBody()
@@ -454,11 +490,38 @@ public class OrbitalScene {
                     state.labelColor());
             }
             if (!callbacks.shouldTraverseChildren(body)) return;
-            for (CelestialObject child : CelestialClient.getChildren(body)) {
+            for (CelestialObject child : childrenInPresentationOrder(body)) {
                 OrbitalMechanics.OrbitalState childWorldState = OrbitalView.OrbitalWorldStateCache
                     .resolveChildWorldState(body, child, worldX, worldY, globalTime);
                 collectRecursive(frame, child, body, childWorldState.x(), childWorldState.y(), globalTime, labelAlpha);
             }
+        }
+
+        private List<CelestialObject> childrenInPresentationOrder(CelestialObject body) {
+            List<CelestialObject> children = CelestialClient.getChildren(body);
+            if (children.size() < 2) return children;
+            boolean hasAsteroid = false;
+            for (CelestialObject child : children) {
+                if (isAsteroid(child)) {
+                    hasAsteroid = true;
+                    break;
+                }
+            }
+            if (!hasAsteroid) return children;
+            List<CelestialObject> sorted = new ArrayList<>(children);
+            sorted.sort(
+                (left, right) -> Integer
+                    .compare(asteroidPresentationPriority(right), asteroidPresentationPriority(left)));
+            return sorted;
+        }
+
+        private boolean isDeclutteredByExistingBody(OrbitalSceneFrame frame, ResolvedBodyDrawState state) {
+            return shouldDeclutterBody(
+                state.body(),
+                state.screenX(),
+                state.screenY(),
+                callbacks.getInteractionRadius(state.renderedRadius()),
+                frame.screenBodies);
         }
 
         private void registerHitboxes(OrbitalSceneFrame frame, ResolvedBodyDrawState state) {
@@ -506,6 +569,22 @@ public class OrbitalScene {
                 index++;
             }
         }
+    }
+
+    static boolean shouldDeclutterBody(CelestialObject body, float screenX, float screenY, float interactionRadius,
+        List<ScreenBodyBounds> screenBodies) {
+        if (!isAsteroid(body)) return false;
+        for (ScreenBodyBounds bounds : screenBodies) {
+            if (isAsteroid(bounds.body())
+                && asteroidPresentationPriority(body) > asteroidPresentationPriority(bounds.body())) {
+                continue;
+            }
+            float minimumDistance = Math.max(6f, Math.min(interactionRadius, bounds.interactionRadius()));
+            double dx = screenX - bounds.centerX();
+            double dy = screenY - bounds.centerY();
+            if (dx * dx + dy * dy < minimumDistance * minimumDistance) return true;
+        }
+        return false;
     }
 
     public static final class OrbitalSceneRenderer {

@@ -475,17 +475,8 @@ public final class CelestialRegistry {
                         node.oreProfile()
                             .gtOreVeinIds()
                             .toArray(new String[0]))
-                    .metadata("surface", "undefined")
-                    .metadata(
-                        "sizeClass",
-                        node.sizeClass()
-                            .name()
-                            .toLowerCase())
-                    .metadata(
-                        "minorBodies",
-                        node.kind()
-                            .name()
-                            .toLowerCase()))
+                    .asteroidMetadata(node.kind(), node.sizeClass())
+                    .metadata("surface", "undefined"))
             .build();
     }
 

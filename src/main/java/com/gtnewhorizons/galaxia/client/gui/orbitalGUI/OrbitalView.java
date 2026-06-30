@@ -2156,7 +2156,10 @@ public class OrbitalView {
             boolean drawLabel = false;
             float labelY = 0f;
             int labelColor = 0;
-            if (labelAlpha > 0.02f && !sameBody(body, root) && !sameBody(body, focusedBody) && renderBody) {
+            if (labelAlpha > 0.02f && !sameBody(body, root)
+                && !sameBody(body, focusedBody)
+                && renderBody
+                && OrbitalScene.drawsDefaultBodyLabel(body)) {
                 float actualLabelAlpha = getLabelRenderAlpha(body, labelAlpha);
                 if (actualLabelAlpha > 0.01f) {
                     drawLabel = true;
@@ -2914,6 +2917,7 @@ public class OrbitalView {
         private boolean shouldRenderBodyAtCurrentZoom(CelestialObject body) {
             if (viewState.isometricProgress > 0.01 || sameBody(body, viewRoot) || sameBody(body, focusedBody))
                 return true;
+            if (shouldCullAsteroidAtCurrentZoom(body)) return false;
             if (!shouldUseOverlapDeclutter(body)) return true;
             CelestialObject parent = findParent(root, body);
             if (parent == null || parent.objectClass() == CelestialObject.Class.GALAXY) return true;
@@ -2926,6 +2930,21 @@ public class OrbitalView {
 
         private boolean shouldUseOverlapDeclutter(CelestialObject body) {
             return !sameBody(body, root);
+        }
+
+        private boolean shouldCullAsteroidAtCurrentZoom(CelestialObject body) {
+            if (body == null || body.objectClass() != CelestialObject.Class.ASTEROID) return false;
+            float naturalRadius = getNaturalSpriteRadius(body);
+            double spriteSize = body.spriteSize();
+            if (spriteSize >= 0.05) return naturalRadius < 1.0f;
+            if (spriteSize >= 0.035) return naturalRadius < 1.35f;
+            return naturalRadius < 1.7f;
+        }
+
+        private float getNaturalSpriteRadius(CelestialObject body) {
+            float spriteSize = getDisplaySpriteSize(body);
+            if (spriteSize <= 0.0001f) return 0f;
+            return spriteSize * (MAP_ICON_BASE_SCALE + (float) getScale() * MAP_ICON_ZOOM_SCALE);
         }
 
         private void showActionStatus(String message) {
