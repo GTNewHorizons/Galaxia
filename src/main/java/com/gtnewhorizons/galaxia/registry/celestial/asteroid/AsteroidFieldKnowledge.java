@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -49,7 +50,7 @@ public final class AsteroidFieldKnowledge {
                 "Asteroid snapshot belt does not match requested belt: " + snapshot.beltId());
         }
 
-        List<AsteroidFieldNode> nodes = AsteroidFieldResolver.resolveAll(beltId, profile);
+        List<AsteroidFieldNode> nodes = new ArrayList<>(AsteroidFieldResolver.resolveAll(beltId, profile));
         Map<Integer, AsteroidFieldNode> nodesByIndex = new LinkedHashMap<>();
         Map<MinorCelestialBodyId, Entry> entries = new LinkedHashMap<>();
         for (AsteroidFieldNode node : nodes) {
@@ -66,8 +67,9 @@ public final class AsteroidFieldKnowledge {
             int index = snapshotEntry.index();
             AsteroidFieldNode node = nodesByIndex.get(index);
             if (node == null) {
-                throw new IllegalStateException(
-                    "Asteroid snapshot index is outside profile for " + beltId + ": " + index);
+                node = AsteroidFieldResolver.resolveSavedNode(beltId, profile, index);
+                nodesByIndex.put(index, node);
+                nodes.add(node);
             }
             if (!seen.add(index)) {
                 throw new IllegalStateException(
@@ -79,6 +81,7 @@ public final class AsteroidFieldKnowledge {
             }
             entries.put(node.id(), new Entry(snapshotEntry.detectionState(), snapshotEntry.oreKnowledgeState()));
         }
+        nodes.sort(Comparator.comparingInt(AsteroidFieldNode::index));
         return new AsteroidFieldKnowledge(nodes, entries);
     }
 

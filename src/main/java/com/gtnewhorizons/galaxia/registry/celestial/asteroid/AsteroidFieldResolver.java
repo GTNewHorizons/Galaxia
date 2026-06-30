@@ -39,6 +39,16 @@ public final class AsteroidFieldResolver {
         return resolveNodeUnchecked(beltId, profile, index);
     }
 
+    public static AsteroidFieldNode resolveSavedNode(CelestialObjectId beltId, AsteroidFieldProfile profile,
+        int index) {
+        Objects.requireNonNull(beltId, "beltId cannot be null");
+        Objects.requireNonNull(profile, "profile cannot be null");
+        if (profile.hasNodeIndex(index) || AsteroidSlotRanges.isGeneratedSlot(index)) {
+            return resolveNodeUnchecked(beltId, profile, index);
+        }
+        return resolveUnregisteredSavedNode(beltId, profile, index);
+    }
+
     public static AsteroidDetectionState initialDetectionState(AsteroidFieldNode node) {
         Objects.requireNonNull(node, "node cannot be null");
         return node.initialDetectionState();
@@ -85,6 +95,35 @@ public final class AsteroidFieldResolver {
                 : selectOreProfile(profile, unitDouble(mix(baseSeed, 3L))),
             preset != null && preset.appearance() != null ? preset.appearance()
                 : new AsteroidAppearanceProfile("generated_asteroid_tiles", mix(baseSeed, 4L)));
+    }
+
+    private static AsteroidFieldNode resolveUnregisteredSavedNode(CelestialObjectId beltId,
+        AsteroidFieldProfile profile, int index) {
+        long baseSeed = mix(
+            beltId.name()
+                .hashCode(),
+            profile.seedSalt(),
+            profile.generationVersion(),
+            index);
+        AsteroidSizeClass sizeClass = AsteroidSizeClass.SMALL;
+        return new AsteroidFieldNode(
+            new MinorCelestialBodyId(beltId, index),
+            beltId,
+            index,
+            displayName(beltId, index),
+            savedNodeKind(index),
+            sizeClass,
+            defaultInitialDetectionState(sizeClass),
+            unitDouble(mix(baseSeed, 1L)) * 360.0,
+            unitDouble(mix(baseSeed, 2L)),
+            selectOreProfile(profile, unitDouble(mix(baseSeed, 3L))),
+            new AsteroidAppearanceProfile("generated_asteroid_tiles", mix(baseSeed, 4L)));
+    }
+
+    private static AsteroidNodeKind savedNodeKind(int index) {
+        if (AsteroidSlotRanges.isLoreSlot(index)) return AsteroidNodeKind.LORE;
+        if (AsteroidSlotRanges.isUniqueSlot(index)) return AsteroidNodeKind.UNIQUE;
+        return AsteroidNodeKind.GENERATED;
     }
 
     private static AsteroidDetectionState defaultInitialDetectionState(AsteroidSizeClass sizeClass) {

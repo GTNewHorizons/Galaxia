@@ -192,6 +192,95 @@ final class AsteroidFieldKnowledgeTest {
                 .detectionState());
     }
 
+    @Test
+    void restorePreservesSavedGeneratedAsteroidWhenCurrentProfileShrinks() {
+        AsteroidFieldProfile oldProfile = AsteroidFieldProfile.builder()
+            .seedSalt(31L)
+            .generationVersion(1)
+            .sizeCounts(2, 0, 0)
+            .radialBand(1.20, 1.40)
+            .satelliteScanRadius(1000.0)
+            .oreProfile(new AsteroidOreProfile("volatile_ice", 1.0, List.of("ice", "sulfur")))
+            .build();
+        AsteroidFieldKnowledge oldKnowledge = AsteroidFieldKnowledge
+            .initialize(CelestialObjectId.FROZEN_BELT, oldProfile);
+
+        AsteroidFieldProfile newProfile = AsteroidFieldProfile.builder()
+            .seedSalt(31L)
+            .generationVersion(1)
+            .sizeCounts(1, 0, 0)
+            .radialBand(1.20, 1.40)
+            .satelliteScanRadius(1000.0)
+            .oreProfile(new AsteroidOreProfile("volatile_ice", 1.0, List.of("ice", "sulfur")))
+            .build();
+
+        AsteroidFieldKnowledge restored = AsteroidFieldKnowledge.fromSnapshot(
+            CelestialObjectId.FROZEN_BELT,
+            newProfile,
+            oldKnowledge.snapshot(CelestialObjectId.FROZEN_BELT));
+        MinorCelestialBodyId savedId = new MinorCelestialBodyId(
+            CelestialObjectId.FROZEN_BELT,
+            AsteroidSlotRanges.GENERATED_SLOT_MIN + 1);
+
+        assertEquals(
+            oldKnowledge.entryFor(savedId)
+                .detectionState(),
+            restored.entryFor(savedId)
+                .detectionState());
+        assertEquals(
+            oldKnowledge.entryFor(savedId)
+                .oreKnowledgeState(),
+            restored.entryFor(savedId)
+                .oreKnowledgeState());
+        assertTrue(
+            restored.nodes()
+                .stream()
+                .anyMatch(
+                    node -> node.id()
+                        .equals(savedId)));
+    }
+
+    @Test
+    void restorePreservesSavedAuthoredAsteroidWhenCurrentProfileOmitsIt() {
+        AsteroidFieldProfile oldProfile = AsteroidFieldProfile.builder()
+            .seedSalt(31L)
+            .generationVersion(1)
+            .sizeCounts(1, 0, 0)
+            .radialBand(1.20, 1.40)
+            .satelliteScanRadius(1000.0)
+            .oreProfile(new AsteroidOreProfile("volatile_ice", 1.0, List.of("ice", "sulfur")))
+            .nodePreset(1, AsteroidNodeKind.LORE, "Karnyx", AsteroidDetectionState.DETECTED)
+            .build();
+        AsteroidFieldKnowledge oldKnowledge = AsteroidFieldKnowledge
+            .initialize(CelestialObjectId.FROZEN_BELT, oldProfile);
+
+        AsteroidFieldProfile newProfile = AsteroidFieldProfile.builder()
+            .seedSalt(31L)
+            .generationVersion(1)
+            .sizeCounts(1, 0, 0)
+            .radialBand(1.20, 1.40)
+            .satelliteScanRadius(1000.0)
+            .oreProfile(new AsteroidOreProfile("volatile_ice", 1.0, List.of("ice", "sulfur")))
+            .build();
+        MinorCelestialBodyId savedId = new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 1);
+
+        AsteroidFieldKnowledge restored = AsteroidFieldKnowledge.fromSnapshot(
+            CelestialObjectId.FROZEN_BELT,
+            newProfile,
+            oldKnowledge.snapshot(CelestialObjectId.FROZEN_BELT));
+
+        assertEquals(
+            AsteroidDetectionState.DETECTED,
+            restored.entryFor(savedId)
+                .detectionState());
+        assertTrue(
+            restored.nodes()
+                .stream()
+                .anyMatch(
+                    node -> node.id()
+                        .equals(savedId)));
+    }
+
     private static AsteroidFieldNode node(AsteroidFieldKnowledge knowledge, AsteroidSizeClass sizeClass) {
         return knowledge.nodes()
             .stream()
