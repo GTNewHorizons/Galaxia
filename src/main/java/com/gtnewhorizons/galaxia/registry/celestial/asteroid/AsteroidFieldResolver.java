@@ -15,6 +15,12 @@ public final class AsteroidFieldResolver {
 
     private static final double UINT53_TO_UNIT = 1.0 / (1L << 53);
 
+    private record ReachableAnchor(AsteroidFieldNode node, int depth) {}
+
+    private record ResolvedGeneratedNode(AsteroidFieldNode node, int depth) {}
+
+    private record GeneratedCandidate(AsteroidFieldNode node, int depth, double naturalDistance) {}
+
     private AsteroidFieldResolver() {}
 
     public static List<AsteroidFieldNode> resolveAll(CelestialObjectId beltId, AsteroidFieldProfile profile) {
@@ -24,21 +30,29 @@ public final class AsteroidFieldResolver {
         List<AsteroidFieldNode> nodes = new ArrayList<>(
             profile.totalNodes() + profile.nodePresets()
                 .size());
-        List<AsteroidFieldNode> reachableAnchors = new ArrayList<>();
+        List<ReachableAnchor> reachableAnchors = new ArrayList<>();
         for (AsteroidNodePreset preset : profile.nodePresets()) {
             AsteroidFieldNode node = resolveNodeUnchecked(beltId, profile, preset.index());
             nodes.add(node);
             if (initialDetectionState(node) == AsteroidDetectionState.DETECTED) {
-                reachableAnchors.add(node);
+                reachableAnchors.add(new ReachableAnchor(node, 0));
             }
         }
         for (int ordinal = 0; ordinal < profile.totalNodes(); ordinal++) {
             int index = AsteroidSlotRanges.generatedSlot(ordinal);
-            AsteroidFieldNode node = generatedSizeClass(profile, index) == AsteroidSizeClass.LARGE
-                ? resolveNodeUnchecked(beltId, profile, index)
-                : resolveReachableGeneratedNode(beltId, profile, index, reachableAnchors);
-            nodes.add(node);
-            reachableAnchors.add(node);
+            if (generatedSizeClass(profile, index) == AsteroidSizeClass.LARGE) {
+                AsteroidFieldNode node = resolveNodeUnchecked(beltId, profile, index);
+                nodes.add(node);
+                reachableAnchors.add(new ReachableAnchor(node, 0));
+            } else {
+                ResolvedGeneratedNode resolved = resolveReachableGeneratedNode(
+                    beltId,
+                    profile,
+                    index,
+                    reachableAnchors);
+                nodes.add(resolved.node());
+                reachableAnchors.add(new ReachableAnchor(resolved.node(), resolved.depth()));
+            }
         }
         nodes.sort(Comparator.comparingInt(AsteroidFieldNode::index));
         validateReachability(profile, nodes);
@@ -118,39 +132,93 @@ public final class AsteroidFieldResolver {
                 : new AsteroidAppearanceProfile("generated_asteroid_tiles", mix(baseSeed, 4L)));
     }
 
-    private static AsteroidFieldNode resolveReachableGeneratedNode(CelestialObjectId beltId,
-        AsteroidFieldProfile profile, int index, List<AsteroidFieldNode> reachableAnchors) {
+    private static ResolvedGeneratedNode resolveReachableGeneratedNode(CelestialObjectId beltId,
+        AsteroidFieldProfile profile, int index, List<ReachableAnchor> reachableAnchors) {
         if (reachableAnchors.isEmpty()) {
             throw new IllegalStateException("Asteroid field has hidden generated asteroids but no visible anchor");
         }
         long baseSeed = nodeSeed(beltId, profile, index);
-        AsteroidFieldNode anchor = reachableAnchors
-            .get((int) Math.floorMod(mix(baseSeed, 8L), reachableAnchors.size()));
-        double anchorRadius = AsteroidFieldOrbitModel.resolveRadius(profile, anchor);
-        double anchorAngle = Math.toRadians(anchor.angleOffsetDeg());
-        double anchorX = Math.cos(anchorAngle) * anchorRadius;
-        double anchorY = Math.sin(anchorAngle) * anchorRadius;
+        AsteroidFieldNode naturalNode = resolveNodeUnchecked(beltId, profile, index);
+        GeneratedCandidate best = null;
 
-        for (int attempt = 0; attempt < 32; attempt++) {
-            double scanRadius = profile.satelliteScanRadius();
-            double distance = scanRadius == 0.0 ? 0.0
-                : scanRadius * (0.2 + unitDouble(mix(baseSeed, 11L + attempt)) * 0.75);
-            double offsetAngle = unitDouble(mix(baseSeed, 47L + attempt)) * Math.PI * 2.0;
-            double x = anchorX + Math.cos(offsetAngle) * distance;
-            double y = anchorY + Math.sin(offsetAngle) * distance;
-            double radius = Math.sqrt(x * x + y * y);
-            if (radius >= profile.innerOrbitalRadius() && radius <= profile.outerOrbitalRadius()) {
-                return resolveGeneratedNodeAtPosition(
-                    beltId,
-                    profile,
-                    index,
-                    normalizeDegrees(Math.toDegrees(Math.atan2(y, x))),
-                    (radius - profile.innerOrbitalRadius())
-                        / (profile.outerOrbitalRadius() - profile.innerOrbitalRadius()));
+        for (ReachableAnchor anchor : reachableAnchors) {
+            if (distance(profile, anchor.node(), naturalNode) <= profile.satelliteScanRadius()) {
+                best = betterCandidate(new GeneratedCandidate(naturalNode, anchor.depth() + 1, 0.0), best);
+            }
+
+            double anchorRadius = AsteroidFieldOrbitModel.resolveRadius(profile, anchor.node());
+            double anchorAngle = Math.toRadians(
+                anchor.node()
+                    .angleOffsetDeg());
+            double anchorX = Math.cos(anchorAngle) * anchorRadius;
+            double anchorY = Math.sin(anchorAngle) * anchorRadius;
+
+            for (int attempt = 0; attempt < 32; attempt++) {
+                double scanRadius = profile.satelliteScanRadius();
+                double candidateDistance = scanRadius == 0.0 ? 0.0
+                    : scanRadius * (0.2 + unitDouble(
+                        mix(
+                            baseSeed,
+                            anchor.node()
+                                .index(),
+                            11L + attempt))
+                        * 0.75);
+                double offsetAngle = unitDouble(
+                    mix(
+                        baseSeed,
+                        anchor.node()
+                            .index(),
+                        47L + attempt))
+                    * Math.PI
+                    * 2.0;
+                double x = anchorX + Math.cos(offsetAngle) * candidateDistance;
+                double y = anchorY + Math.sin(offsetAngle) * candidateDistance;
+                double radius = Math.sqrt(x * x + y * y);
+                if (radius >= profile.innerOrbitalRadius() && radius <= profile.outerOrbitalRadius()) {
+                    AsteroidFieldNode candidate = resolveGeneratedNodeAtPosition(
+                        beltId,
+                        profile,
+                        index,
+                        normalizeDegrees(Math.toDegrees(Math.atan2(y, x))),
+                        (radius - profile.innerOrbitalRadius())
+                            / (profile.outerOrbitalRadius() - profile.innerOrbitalRadius()));
+                    best = betterCandidate(
+                        new GeneratedCandidate(
+                            candidate,
+                            anchor.depth() + 1,
+                            distance(profile, naturalNode, candidate)),
+                        best);
+                }
             }
         }
 
-        return resolveGeneratedNodeAtPosition(beltId, profile, index, anchor.angleOffsetDeg(), anchor.orbitalDepth01());
+        if (best != null) return new ResolvedGeneratedNode(best.node(), best.depth());
+
+        ReachableAnchor anchor = reachableAnchors.stream()
+            .max(Comparator.comparingInt(ReachableAnchor::depth))
+            .orElseThrow();
+        return new ResolvedGeneratedNode(
+            resolveGeneratedNodeAtPosition(
+                beltId,
+                profile,
+                index,
+                anchor.node()
+                    .angleOffsetDeg(),
+                anchor.node()
+                    .orbitalDepth01()),
+            anchor.depth() + 1);
+    }
+
+    private static GeneratedCandidate betterCandidate(GeneratedCandidate candidate, GeneratedCandidate currentBest) {
+        if (currentBest == null) return candidate;
+        if (candidate.depth() != currentBest.depth())
+            return candidate.depth() > currentBest.depth() ? candidate : currentBest;
+        if (Double.compare(candidate.naturalDistance(), currentBest.naturalDistance()) != 0)
+            return candidate.naturalDistance() < currentBest.naturalDistance() ? candidate : currentBest;
+        return candidate.node()
+            .angleOffsetDeg()
+            < currentBest.node()
+                .angleOffsetDeg() ? candidate : currentBest;
     }
 
     private static AsteroidFieldNode resolveGeneratedNodeAtPosition(CelestialObjectId beltId,

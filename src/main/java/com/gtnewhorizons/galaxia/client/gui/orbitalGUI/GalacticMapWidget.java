@@ -24,24 +24,20 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
     private static final int TRANSFERS_W = 92;
     private static final int SATELLITE_LINKS_X = 180;
     private static final int SATELLITE_LINKS_W = 98;
-    private static final int HIDDEN_OBJECTS_X = 284;
-    private static final int HIDDEN_OBJECTS_W = 120;
-    private static final int ASSETS_X = 410;
+    private static final int ASSETS_X = 284;
     private static final int ASSETS_W = 66;
-    private static final int HIERARCHY_TOGGLE_X = 482;
+    private static final int HIERARCHY_TOGGLE_X = 356;
     private static final int HIERARCHY_TOGGLE_W = 74;
 
     private final OrbitalView.OrbitalMapWidget mapWidget;
     private final ButtonWidget<?> signalsButton;
     private final ButtonWidget<?> transferVisibilityButton;
     private final ButtonWidget<?> satelliteLinksButton;
-    private final ButtonWidget<?> hiddenObjectsButton;
     private final ButtonWidget<?> assetsPanelButton;
     private final ButtonWidget<?> hierarchyToggleButton;
     private String signalsLabel = "Signals";
     private String transfersLabel = "Hide Transfers";
     private String satelliteLinksLabel = "Hide Sat Links";
-    private String hiddenObjectsLabel = "Show Hidden";
     private String assetsLabel = "Assets";
 
     public GalacticMapWidget(CelestialObject galaxyRoot, CelestialObject initialLayer, TextFieldWidget renameField) {
@@ -66,11 +62,6 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
             updateTopBarLabels();
         }).pos(SATELLITE_LINKS_X, TOP_BUTTON_Y)
             .size(SATELLITE_LINKS_W, TOP_BUTTON_H);
-        this.hiddenObjectsButton = createTopBarButton(() -> hiddenObjectsLabel, () -> {
-            mapWidget.toggleHiddenObjectsShown();
-            updateTopBarLabels();
-        }).pos(HIDDEN_OBJECTS_X, TOP_BUTTON_Y)
-            .size(HIDDEN_OBJECTS_W, TOP_BUTTON_H);
         this.assetsPanelButton = createTopBarButton(() -> assetsLabel, () -> {
             mapWidget.toggleAssetsPanel();
             updateTopBarLabels();
@@ -120,7 +111,6 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
                 .height(1));
         child(transferVisibilityButton);
         child(satelliteLinksButton);
-        child(hiddenObjectsButton);
         child(assetsPanelButton);
         child(hierarchyToggleButton);
         child(
@@ -151,7 +141,6 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
         signalsLabel = mapWidget.isSignalsOpen() ? "Signals \u25b2" : "Signals";
         transfersLabel = mapWidget.areTransfersHidden() ? "Show Transfers" : "Hide Transfers";
         satelliteLinksLabel = mapWidget.isSatelliteNetworkHidden() ? "Show Sat Links" : "Hide Sat Links";
-        hiddenObjectsLabel = mapWidget.areHiddenObjectsShown() ? "Hide Hidden" : "Show Hidden";
         assetsLabel = mapWidget.isAssetsPanelOpen() ? "Assets \u25b2" : "Assets";
     }
 
