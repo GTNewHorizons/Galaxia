@@ -26,6 +26,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientState;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
@@ -99,6 +100,7 @@ public final class CelestialClient {
     private static int deliveryRevision = 0;
     private static int signalRevision = 0;
     private static HammerTrajectoryLoadSample hammerTrajectoryLoadSample = new HammerTrajectoryLoadSample(0.0, 0.0);
+    private static boolean showHiddenAsteroidObjects = false;
 
     private static final Map<CelestialObjectKey, Map<String, Long>> systemSignals = new LinkedHashMap<>();
     private static final Map<CelestialObjectKey, Map<String, Long>> planetSignals = new LinkedHashMap<>();
@@ -122,6 +124,7 @@ public final class CelestialClient {
         deliveries.clear();
         deliveryRevision = 0;
         signalRevision = 0;
+        showHiddenAsteroidObjects = false;
         AsteroidFieldClientState.clear();
         hammerTrajectoryLoadSample = new HammerTrajectoryLoadSample(0.0, 0.0);
     }
@@ -502,7 +505,25 @@ public final class CelestialClient {
     }
 
     public static List<CelestialObject> getChildren(CelestialObjectKey parentId) {
-        return GalaxiaCelestialAPI.getChildren(parentId, AsteroidFieldClientState.snapshots());
+        return GalaxiaCelestialAPI
+            .getChildren(parentId, AsteroidFieldClientState.snapshots(), showHiddenAsteroidObjects);
+    }
+
+    public static boolean showHiddenAsteroidObjects() {
+        return showHiddenAsteroidObjects;
+    }
+
+    public static void toggleShowHiddenAsteroidObjects() {
+        showHiddenAsteroidObjects = !showHiddenAsteroidObjects;
+    }
+
+    public static boolean isDebugHiddenAsteroid(CelestialObject body) {
+        if (!showHiddenAsteroidObjects || body == null
+            || !body.id()
+                .isMinorBody())
+            return false;
+        return AsteroidFieldClientState.detectionState(body.id())
+            .orElse(null) == AsteroidDetectionState.HIDDEN;
     }
 
     // ── Helpers ──

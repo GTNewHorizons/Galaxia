@@ -82,6 +82,12 @@ public final class GalaxiaCelestialAPI {
         return parentId == null ? List.of() : getChildren(CelestialObjectKey.registered(parentId), asteroidKnowledge);
     }
 
+    public static List<CelestialObject> getChildren(CelestialObjectId parentId,
+        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge, boolean includeHiddenMinorBodies) {
+        return parentId == null ? List.of()
+            : getChildren(CelestialObjectKey.registered(parentId), asteroidKnowledge, includeHiddenMinorBodies);
+    }
+
     public static List<CelestialObject> getChildren(CelestialObjectKey parentId) {
         return CelestialRegistry.getChildren(parentId);
     }
@@ -89,6 +95,11 @@ public final class GalaxiaCelestialAPI {
     public static List<CelestialObject> getChildren(CelestialObjectKey parentId,
         List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge) {
         return CelestialRegistry.getChildren(parentId, asteroidKnowledge);
+    }
+
+    public static List<CelestialObject> getChildren(CelestialObjectKey parentId,
+        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge, boolean includeHiddenMinorBodies) {
+        return CelestialRegistry.getChildren(parentId, asteroidKnowledge, includeHiddenMinorBodies);
     }
 
     public static Map<CelestialObjectKey, CelestialObject> getAllBodies() {

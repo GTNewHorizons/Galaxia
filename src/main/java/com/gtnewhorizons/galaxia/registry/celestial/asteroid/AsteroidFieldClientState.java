@@ -50,6 +50,19 @@ public final class AsteroidFieldClientState {
         return Optional.empty();
     }
 
+    public static Optional<AsteroidDetectionState> detectionState(CelestialObjectKey key) {
+        if (key == null || !key.isMinorBody()) return Optional.empty();
+        for (AsteroidFieldKnowledgeSnapshot snapshot : snapshots) {
+            if (snapshot.beltId() != key.minorBodyId()
+                .parentBeltId()) continue;
+            for (AsteroidFieldKnowledgeSnapshot.Entry entry : snapshot.entries()) {
+                if (entry.index() == key.minorBodyId()
+                    .index()) return Optional.of(entry.detectionState());
+            }
+        }
+        return Optional.empty();
+    }
+
     public static Optional<AsteroidSatelliteScanSnapshot> scanSnapshot(CelestialObjectKey key) {
         if (key == null || !key.isMinorBody()) return Optional.empty();
         return scanSnapshots.stream()

@@ -513,6 +513,11 @@ public final class CelestialRegistry {
 
     public static List<CelestialObject> getChildren(CelestialObjectKey parentId,
         List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge) {
+        return getChildren(parentId, asteroidKnowledge, false);
+    }
+
+    public static List<CelestialObject> getChildren(CelestialObjectKey parentId,
+        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge, boolean includeHiddenMinorBodies) {
         registerDefaults();
         if (parentId == null) return List.of();
 
@@ -520,17 +525,18 @@ public final class CelestialRegistry {
             hierarchy.childrenByParentId()
                 .getOrDefault(parentId, List.of()));
         if (parentId.isRegistered()) {
-            children.addAll(resolveKnownMinorBodies(parentId.registeredBodyId(), asteroidKnowledge));
+            children.addAll(
+                resolveKnownMinorBodies(parentId.registeredBodyId(), asteroidKnowledge, includeHiddenMinorBodies));
         }
         return Collections.unmodifiableList(children);
     }
 
     private static List<CelestialObject> resolveInitiallyDetectedMinorBodies(CelestialObjectId parentId) {
-        return resolveKnownMinorBodies(parentId, List.of());
+        return resolveKnownMinorBodies(parentId, List.of(), false);
     }
 
     private static List<CelestialObject> resolveKnownMinorBodies(CelestialObjectId parentId,
-        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge) {
+        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge, boolean includeHiddenMinorBodies) {
         CelestialObject parent = REGISTRATIONS.get(CelestialObjectKey.registered(parentId));
         if (parent == null || parent.properties()
             .asteroidFieldProfile() == null) {
@@ -545,7 +551,7 @@ public final class CelestialRegistry {
                 .findFirst();
         return AsteroidFieldResolver.resolveAll(parentId, profile)
             .stream()
-            .filter(node -> isVisibleMinorBody(node, snapshot.orElse(null)))
+            .filter(node -> includeHiddenMinorBodies || isVisibleMinorBody(node, snapshot.orElse(null)))
             .map(node -> toDynamicAsteroidObject(node, profile))
             .toList();
     }

@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -151,6 +152,28 @@ final class OrbitalPinnedInfoContentBuilderTest {
         PinnedInfoRow profileRow = oreRow(builder.buildRows(asteroid));
         assertNotEquals(unknownRow.value(), profileRow.value());
         assertNotEquals(signatureRow.value(), profileRow.value());
+
+        AsteroidFieldClientState.clear();
+    }
+
+    @Test
+    void clientStateExposesAsteroidDetectionStateByKey() {
+        AsteroidFieldClientState.update(
+            List.of(
+                new AsteroidFieldKnowledgeSnapshot(
+                    CelestialObjectId.FROZEN_BELT,
+                    List.of(
+                        new AsteroidFieldKnowledgeSnapshot.Entry(
+                            8,
+                            AsteroidDetectionState.HIDDEN,
+                            AsteroidOreKnowledgeState.UNKNOWN)))));
+        CelestialObjectKey asteroidKey = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 8));
+
+        assertEquals(
+            AsteroidDetectionState.HIDDEN,
+            AsteroidFieldClientState.detectionState(asteroidKey)
+                .orElseThrow());
 
         AsteroidFieldClientState.clear();
     }

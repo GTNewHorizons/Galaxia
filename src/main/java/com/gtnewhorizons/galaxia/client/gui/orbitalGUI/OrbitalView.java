@@ -1118,6 +1118,14 @@ public class OrbitalView {
             transfersHidden = !transfersHidden;
         }
 
+        public boolean areHiddenObjectsShown() {
+            return CelestialClient.showHiddenAsteroidObjects();
+        }
+
+        public void toggleHiddenObjectsShown() {
+            CelestialClient.toggleShowHiddenAsteroidObjects();
+        }
+
         public void toggleClickMode() {
             setClickMode(
                 getClickMode() == OrbitalMapClickMode.HIERARCHY ? OrbitalMapClickMode.FOLLOW
@@ -2131,6 +2139,7 @@ public class OrbitalView {
             float screenY = snapToPixel(
                 (float) lerp(worldToScreenY(worldY), isoScratchPos[1], viewState.isometricProgress));
             float bodyAlpha = getBodyRenderAlpha(body);
+            if (CelestialClient.isDebugHiddenAsteroid(body)) bodyAlpha *= 0.35f;
             float renderedRadius = getRenderedBodyRadius(body);
             boolean renderBody = shouldRenderBodyAtCurrentZoom(body);
             boolean drawLabel = false;

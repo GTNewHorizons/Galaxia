@@ -161,6 +161,35 @@ final class AsteroidDynamicCelestialObjectTest {
     }
 
     @Test
+    void asteroidBeltChildrenCanIncludeHiddenAsteroidsForDebugViews() {
+        CelestialObject frozenBelt = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
+            .orElseThrow();
+        AsteroidFieldProfile profile = frozenBelt.properties()
+            .asteroidFieldProfile();
+        Set<CelestialObjectKey> allAsteroidKeys = AsteroidFieldResolver
+            .resolveAll(CelestialObjectId.FROZEN_BELT, profile)
+            .stream()
+            .map(AsteroidFieldNode::id)
+            .map(CelestialObjectKey::minorBody)
+            .collect(Collectors.toSet());
+        Set<CelestialObjectKey> normalAsteroidKeys = GalaxiaCelestialAPI.getChildren(CelestialObjectId.FROZEN_BELT)
+            .stream()
+            .map(CelestialObject::id)
+            .filter(CelestialObjectKey::isMinorBody)
+            .collect(Collectors.toSet());
+
+        Set<CelestialObjectKey> debugAsteroidKeys = GalaxiaCelestialAPI
+            .getChildren(CelestialObjectId.FROZEN_BELT, List.of(), true)
+            .stream()
+            .map(CelestialObject::id)
+            .filter(CelestialObjectKey::isMinorBody)
+            .collect(Collectors.toSet());
+
+        assertEquals(allAsteroidKeys, debugAsteroidKeys);
+        assertTrue(debugAsteroidKeys.size() > normalAsteroidKeys.size());
+    }
+
+    @Test
     void detectedSmallAsteroidsAreVisitableOutpostTargets() {
         CelestialObject frozenBelt = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
             .orElseThrow();
