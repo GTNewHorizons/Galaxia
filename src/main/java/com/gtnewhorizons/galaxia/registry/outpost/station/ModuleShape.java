@@ -5,7 +5,8 @@ public enum ModuleShape {
     SINGLE(new byte[][] { { 0, 0 } }),
     QUAD_2x2(new byte[][] { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } }),
     BLOCK_3x3(new byte[][] { { -1, -1 }, { 0, -1 }, { 1, -1 }, { -1, 0 }, { 0, 0 }, { 1, 0 }, { -1, 1 }, { 0, 1 },
-        { 1, 1 } });
+        { 1, 1 } }),
+    L_2x2(new byte[][] { { 0, 0 }, { 0, 1 }, { 1, 1 } });
 
     private final byte[][] offsets;
 
