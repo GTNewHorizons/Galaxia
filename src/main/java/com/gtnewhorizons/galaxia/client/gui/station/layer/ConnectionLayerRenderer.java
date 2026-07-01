@@ -15,7 +15,6 @@ import com.cleanroommc.modularui.utils.GlStateManager;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.station.StationMapViewport;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.StationTextureRegistry.ConnectorKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -82,7 +81,7 @@ public final class ConnectionLayerRenderer {
     }
 
     static boolean shouldDrawConnectorBetween(PlacedTile a, PlacedTile b) {
-        return a != null && b != null && !sameModule(a, b);
+        return ConnectorRoutePolicy.hasModuleConnector(a, b);
     }
 
     private static void drawConnector(int x, int y, int w, int h, boolean active, boolean hasTexture,
@@ -125,13 +124,6 @@ public final class ConnectionLayerRenderer {
             && b.state() != null
             && b.state()
                 .isConnectorActive();
-    }
-
-    private static boolean sameModule(PlacedTile a, PlacedTile b) {
-        if (a == null || b == null) return false;
-        ModuleInstance moduleA = a.module();
-        ModuleInstance moduleB = b.module();
-        return moduleA != null && moduleB != null && moduleA.id.equals(moduleB.id);
     }
 
     private record ConnectorQuad(int x, int y, int w, int h) {}

@@ -14,7 +14,6 @@ import com.cleanroommc.modularui.utils.GlStateManager;
 import com.gtnewhorizons.galaxia.client.gui.station.StationMapViewport;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.StationTextureRegistry.ConnectorKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -35,51 +34,35 @@ public final class CapacityConnectorLayer {
         for (Map.Entry<StationTileCoord, PlacedTile> e : tiles.entrySet()) {
             StationTileCoord coord = e.getKey();
             PlacedTile a = e.getValue();
-            FacilityModuleKind kindA = moduleKindOf(a);
+            FacilityModuleKind kindA = ConnectorRoutePolicy.moduleKindOf(a);
             if (kindA == null || !kindA.isCapacityModule()) continue;
 
             // Check right neighbor
             StationTileCoord right = StationTileCoord.of(coord.dx() + 1, coord.dy());
             PlacedTile b = tiles.get(right);
-            if (b != null && !sameModule(a, b) && sameCapacityKind(kindA, b)) {
+            FacilityModuleKind horizontalKind = ConnectorRoutePolicy.capacityConnectorKind(a, b);
+            if (horizontalKind != null) {
                 int cx = StationMapViewport.connectorLeftX(coord, widgetWidth, contentLeft, contentRightPadding, panX);
                 int cy = StationMapViewport.tileTopY(coord, widgetHeight, contentVerticalPadding, panY)
                     + (tileSize - connH) / 2;
-                addConnector(cx, cy, connW, connH, kindA, ConnectorKind.HORIZONTAL);
+                addConnector(cx, cy, connW, connH, horizontalKind, ConnectorKind.HORIZONTAL);
             }
 
             // Check down neighbor
             StationTileCoord down = StationTileCoord.of(coord.dx(), coord.dy() + 1);
             PlacedTile c = tiles.get(down);
-            if (c != null && !sameModule(a, c) && sameCapacityKind(kindA, c)) {
+            FacilityModuleKind verticalKind = ConnectorRoutePolicy.capacityConnectorKind(a, c);
+            if (verticalKind != null) {
                 int cx = StationMapViewport.tileLeftX(coord, widgetWidth, contentLeft, contentRightPadding, panX)
                     + (tileSize - connW) / 2;
                 int cy = StationMapViewport.connectorTopY(coord, widgetHeight, contentVerticalPadding, panY);
-                addConnector(cx, cy, connW, connH, kindA, ConnectorKind.VERTICAL);
+                addConnector(cx, cy, connW, connH, verticalKind, ConnectorKind.VERTICAL);
             }
         }
 
         for (Map.Entry<ResourceLocation, List<CapacityConnectorQuad>> entry : QUADS_BY_TEXTURE.entrySet()) {
             drawBatch(entry.getKey(), entry.getValue());
         }
-    }
-
-    private static FacilityModuleKind moduleKindOf(PlacedTile tile) {
-        if (tile == null) return null;
-        ModuleInstance module = tile.module();
-        return module == null ? null : module.kind();
-    }
-
-    private static boolean sameCapacityKind(FacilityModuleKind kindA, PlacedTile tileB) {
-        FacilityModuleKind kindB = moduleKindOf(tileB);
-        return kindB != null && kindB.isCapacityModule() && kindA == kindB;
-    }
-
-    private static boolean sameModule(PlacedTile a, PlacedTile b) {
-        if (a == null || b == null) return false;
-        ModuleInstance moduleA = a.module();
-        ModuleInstance moduleB = b.module();
-        return moduleA != null && moduleB != null && moduleA.id.equals(moduleB.id);
     }
 
     private static void addConnector(int x, int y, int w, int h, FacilityModuleKind kind, ConnectorKind connectorKind) {
