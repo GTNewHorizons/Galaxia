@@ -1,13 +1,67 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+
 final class AsteroidFieldProfileTest {
+
+    @Test
+    void generatedAsteroidSizesAreInterleavedAcrossSlots() {
+        AsteroidFieldProfile profile = AsteroidFieldProfile.builder()
+            .seedSalt(123L)
+            .generationVersion(4)
+            .sizeCounts(4, 8, 12)
+            .radialBand(10.0, 20.0)
+            .satelliteScanRadius(1000.0)
+            .oreProfile(new AsteroidOreProfile("metallic", 1.0, List.of("galaxia:iron")))
+            .build();
+        List<AsteroidSizeClass> resolvedSizes = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile)
+            .stream()
+            .map(AsteroidFieldNode::sizeClass)
+            .toList();
+        List<AsteroidSizeClass> firstSlots = resolvedSizes.stream()
+            .limit(8)
+            .toList();
+
+        assertNotEquals(
+            List.of(
+                AsteroidSizeClass.LARGE,
+                AsteroidSizeClass.LARGE,
+                AsteroidSizeClass.LARGE,
+                AsteroidSizeClass.LARGE,
+                AsteroidSizeClass.MEDIUM,
+                AsteroidSizeClass.MEDIUM,
+                AsteroidSizeClass.MEDIUM,
+                AsteroidSizeClass.MEDIUM),
+            firstSlots);
+        assertTrue(
+            firstSlots.stream()
+                .distinct()
+                .count() > 1);
+        assertEquals(
+            4,
+            resolvedSizes.stream()
+                .filter(size -> size == AsteroidSizeClass.LARGE)
+                .count());
+        assertEquals(
+            8,
+            resolvedSizes.stream()
+                .filter(size -> size == AsteroidSizeClass.MEDIUM)
+                .count());
+        assertEquals(
+            12,
+            resolvedSizes.stream()
+                .filter(size -> size == AsteroidSizeClass.SMALL)
+                .count());
+    }
 
     @Test
     void profileDefinesCountsBandAndOrePool() {
