@@ -1,10 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.station.layer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -70,32 +66,6 @@ final class ModuleLayerRendererTest {
     }
 
     @Test
-    void footprintOverlaySegmentsCoverConnectorGapsWithoutMissingLQuadrant() {
-        List<ModuleLayerRenderer.FootprintSegment> segments = ModuleLayerRenderer
-            .footprintOverlaySegments(ModuleShape.L_2x2, StationTileCoord.of(0, 0), 0, 200, 200, 0, 0, 0, 0, 0);
-
-        int topLeftX = StationMapViewport.tileLeftX(0, 200, 0, 0, 0);
-        int topLeftY = StationMapViewport.tileTopY(0, 200, 0, 0);
-        int lowerLeftY = StationMapViewport.tileTopY(1, 200, 0, 0);
-        int topRightX = StationMapViewport.tileLeftX(1, 200, 0, 0, 0);
-
-        assertTrue(containsPoint(segments, topLeftX + 1, topLeftY + StationMapViewport.TILE_SIZE));
-        assertTrue(containsPoint(segments, topLeftX + StationMapViewport.TILE_SIZE, lowerLeftY + 1));
-        assertFalse(containsPoint(segments, topRightX + 1, topLeftY + 1));
-    }
-
-    @Test
-    void footprintOverlaySegmentsCoverCenterGapWhenFourTilesMeet() {
-        List<ModuleLayerRenderer.FootprintSegment> segments = ModuleLayerRenderer
-            .footprintOverlaySegments(ModuleShape.QUAD_2x2, StationTileCoord.of(0, 0), 0, 200, 200, 0, 0, 0, 0, 0);
-
-        int centerGapX = StationMapViewport.tileLeftX(0, 200, 0, 0, 0) + StationMapViewport.TILE_SIZE;
-        int centerGapY = StationMapViewport.tileTopY(0, 200, 0, 0) + StationMapViewport.TILE_SIZE;
-
-        assertTrue(containsPoint(segments, centerGapX, centerGapY));
-    }
-
-    @Test
     void textureRegionFollowsRotatedModuleFootprint() {
         GalaxiaTestBootstrap.ensureFacilityModules();
         ModuleInstance module = FacilityModuleRegistry.create(
@@ -121,13 +91,5 @@ final class ModuleLayerRendererTest {
         assertEquals(v0, region.v0());
         assertEquals(u1, region.u1());
         assertEquals(v1, region.v1());
-    }
-
-    private static boolean containsPoint(List<ModuleLayerRenderer.FootprintSegment> segments, int x, int y) {
-        return segments.stream()
-            .anyMatch(
-                segment -> x >= segment.x() && x < segment.x() + segment.width()
-                    && y >= segment.y()
-                    && y < segment.y() + segment.height());
     }
 }

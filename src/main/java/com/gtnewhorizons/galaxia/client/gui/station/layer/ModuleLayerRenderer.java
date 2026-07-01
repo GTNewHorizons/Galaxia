@@ -18,6 +18,7 @@ import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
+import com.gtnewhorizons.galaxia.client.gui.station.ModuleFootprintProjection;
 import com.gtnewhorizons.galaxia.client.gui.station.StationMapViewport;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -144,7 +145,7 @@ public final class ModuleLayerRenderer {
             0.7f)) {
             return false;
         }
-        for (FootprintSegment segment : footprintOverlaySegments(
+        for (ModuleFootprintProjection.Segment segment : ModuleFootprintProjection.filledSegments(
             footprint,
             anchor,
             rotation,
@@ -224,41 +225,19 @@ public final class ModuleLayerRenderer {
     public static List<FootprintSegment> footprintOverlaySegments(ModuleShape shape, StationTileCoord anchor,
         int rotation, int widgetWidth, int widgetHeight, int contentLeft, int contentRightPadding,
         int contentVerticalPadding, int panX, int panY) {
-        StationTileCoord[] tiles = shape.tiles(anchor, rotation);
-        Set<StationTileCoord> occupied = new HashSet<>();
-        for (StationTileCoord tile : tiles) {
-            occupied.add(tile);
-        }
         List<FootprintSegment> segments = new ArrayList<>();
-        for (StationTileCoord tile : tiles) {
-            int x = StationMapViewport.tileLeftX(tile.dx(), widgetWidth, contentLeft, contentRightPadding, panX);
-            int y = StationMapViewport.tileTopY(tile.dy(), widgetHeight, contentVerticalPadding, panY);
-            segments.add(new FootprintSegment(x, y, StationMapViewport.TILE_SIZE, StationMapViewport.TILE_SIZE));
-            if (isOccupied(occupied, tile.dx() + 1, tile.dy())) {
-                segments.add(
-                    new FootprintSegment(
-                        x + StationMapViewport.TILE_SIZE,
-                        y,
-                        StationMapViewport.CONNECTOR_GAP,
-                        StationMapViewport.TILE_SIZE));
-            }
-            if (isOccupied(occupied, tile.dx(), tile.dy() + 1)) {
-                segments.add(
-                    new FootprintSegment(
-                        x,
-                        y + StationMapViewport.TILE_SIZE,
-                        StationMapViewport.TILE_SIZE,
-                        StationMapViewport.CONNECTOR_GAP));
-            }
-            if (isOccupied(occupied, tile.dx() + 1, tile.dy()) && isOccupied(occupied, tile.dx(), tile.dy() + 1)
-                && isOccupied(occupied, tile.dx() + 1, tile.dy() + 1)) {
-                segments.add(
-                    new FootprintSegment(
-                        x + StationMapViewport.TILE_SIZE,
-                        y + StationMapViewport.TILE_SIZE,
-                        StationMapViewport.CONNECTOR_GAP,
-                        StationMapViewport.CONNECTOR_GAP));
-            }
+        for (ModuleFootprintProjection.Segment segment : ModuleFootprintProjection.filledSegments(
+            shape,
+            anchor,
+            rotation,
+            widgetWidth,
+            widgetHeight,
+            contentLeft,
+            contentRightPadding,
+            contentVerticalPadding,
+            panX,
+            panY)) {
+            segments.add(new FootprintSegment(segment.x(), segment.y(), segment.width(), segment.height()));
         }
         return segments;
     }
@@ -389,7 +368,7 @@ public final class ModuleLayerRenderer {
         int panX, int panY, StationTileState state) {
         int color = stateOverlayColor(state);
         if (color == 0) return;
-        for (FootprintSegment segment : footprintOverlaySegments(
+        for (ModuleFootprintProjection.Segment segment : ModuleFootprintProjection.filledSegments(
             shape,
             anchor,
             rotation,
@@ -423,12 +402,6 @@ public final class ModuleLayerRenderer {
             case BLOCKED -> EnumColors.MAP_COLOR_STATION_TILE_BLOCKED.getColor();
             case OCCUPIED_OPERATIONAL, EMPTY -> 0;
         };
-    }
-
-    private static boolean isOccupied(Set<StationTileCoord> occupied, int dx, int dy) {
-        if (dx < StationTileCoord.MIN || dx > StationTileCoord.MAX) return false;
-        if (dy < StationTileCoord.MIN || dy > StationTileCoord.MAX) return false;
-        return occupied.contains(StationTileCoord.of(dx, dy));
     }
 
     static TextureCorners textureCorners(int rotation) {
