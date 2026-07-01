@@ -37,6 +37,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -70,6 +71,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
+import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanCompletionSnapshot;
+import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanPass;
+import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 import com.gtnewhorizons.galaxia.testing.TestFluidStacks;
 
@@ -147,11 +152,43 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
+    void asteroidScanProgressAndCompletionsRoundTripThroughSaveFile(@TempDir Path tempDir) {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        UUID teamId = UUID.fromString("00000000-0000-0000-0000-000000000271");
+        MinorCelestialBodyId progressAsteroid = new MinorCelestialBodyId(
+            CelestialObjectId.FROZEN_BELT,
+            AsteroidSlotRanges.GENERATED_SLOT_MIN);
+        MinorCelestialBodyId completedAsteroid = new MinorCelestialBodyId(
+            CelestialObjectId.FROZEN_BELT,
+            AsteroidSlotRanges.GENERATED_SLOT_MIN + 1);
+        AsteroidSatelliteScanSnapshot progress = new AsteroidSatelliteScanSnapshot(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.FROZEN_BELT,
+            progressAsteroid,
+            AsteroidSatelliteScanPass.SIGNATURE,
+            600);
+        AsteroidSatelliteScanCompletionSnapshot completion = new AsteroidSatelliteScanCompletionSnapshot(
+            CelestialObjectId.FROZEN_BELT,
+            completedAsteroid,
+            1);
+        SatelliteNetworkService.restoreAsteroidScans(teamId, List.of(progress));
+        SatelliteNetworkService.restoreAsteroidScanCompletions(teamId, List.of(completion));
+
+        manager.saveToSaveDirectory(tempDir.toFile());
+        SatelliteNetworkService.clear();
+
+        manager.loadFromSaveDirectory(tempDir.toFile());
+
+        assertEquals(List.of(progress), SatelliteNetworkService.asteroidScanSnapshots(teamId));
+        assertEquals(List.of(completion), SatelliteNetworkService.asteroidScanCompletionSnapshots(teamId));
+    }
+
+    @Test
     void saveFileRoundTripsStructuredMinorCelestialObjectKey(@TempDir Path tempDir) throws Exception {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         UUID teamId = UUID.randomUUID();
         CelestialObjectKey key = CelestialObjectKey
-            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 3));
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN));
         CelestialAsset asset = CelestialAsset
             .create(key, CelestialAsset.Kind.AUTOMATED_OUTPOST, Buildable.Status.OPERATIONAL);
 
@@ -181,7 +218,7 @@ final class FacilityPersistenceManagerTest {
             keyJson.get("parentBeltId")
                 .getAsString());
         assertEquals(
-            3,
+            AsteroidSlotRanges.GENERATED_SLOT_MIN,
             keyJson.get("index")
                 .getAsInt());
 
