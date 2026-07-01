@@ -7,6 +7,15 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanCompletionSnapshot;
+import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanPass;
+import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataKey;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkClientState;
@@ -20,15 +29,45 @@ import io.netty.buffer.ByteBuf;
 public final class SatelliteNetworkSyncPacket implements IMessage {
 
     private SatelliteNetworkState state;
+    private List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge = List.of();
+    private List<AsteroidSatelliteScanSnapshot> asteroidScans = List.of();
+    private List<AsteroidSatelliteScanCompletionSnapshot> asteroidScanCompletions = List.of();
 
     public SatelliteNetworkSyncPacket() {}
 
     public SatelliteNetworkSyncPacket(SatelliteNetworkState state) {
+        this(state, List.of());
+    }
+
+    public SatelliteNetworkSyncPacket(SatelliteNetworkState state,
+        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge) {
+        this(state, asteroidKnowledge, List.of(), List.of());
+    }
+
+    public SatelliteNetworkSyncPacket(SatelliteNetworkState state,
+        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge, List<AsteroidSatelliteScanSnapshot> asteroidScans,
+        List<AsteroidSatelliteScanCompletionSnapshot> asteroidScanCompletions) {
         this.state = state;
+        this.asteroidKnowledge = List.copyOf(asteroidKnowledge == null ? List.of() : asteroidKnowledge);
+        this.asteroidScans = List.copyOf(asteroidScans == null ? List.of() : asteroidScans);
+        this.asteroidScanCompletions = List
+            .copyOf(asteroidScanCompletions == null ? List.of() : asteroidScanCompletions);
     }
 
     public SatelliteNetworkState state() {
         return state;
+    }
+
+    public List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge() {
+        return asteroidKnowledge;
+    }
+
+    public List<AsteroidSatelliteScanSnapshot> asteroidScans() {
+        return asteroidScans;
+    }
+
+    public List<AsteroidSatelliteScanCompletionSnapshot> asteroidScanCompletions() {
+        return asteroidScanCompletions;
     }
 
     @Override
@@ -81,6 +120,32 @@ public final class SatelliteNetworkSyncPacket implements IMessage {
                         .origin());
             buf.writeLong(pending.deciKb());
         }
+        buf.writeInt(asteroidKnowledge.size());
+        for (AsteroidFieldKnowledgeSnapshot snapshot : asteroidKnowledge) {
+            PacketUtil.writeEnum(buf, snapshot.beltId());
+            buf.writeInt(
+                snapshot.entries()
+                    .size());
+            for (AsteroidFieldKnowledgeSnapshot.Entry entry : snapshot.entries()) {
+                buf.writeInt(entry.index());
+                PacketUtil.writeEnum(buf, entry.detectionState());
+                PacketUtil.writeEnum(buf, entry.oreKnowledgeState());
+            }
+        }
+        buf.writeInt(asteroidScans.size());
+        for (AsteroidSatelliteScanSnapshot snapshot : asteroidScans) {
+            PacketUtil.writeId(buf, snapshot.satelliteId());
+            PacketUtil.writeEnum(buf, snapshot.beltId());
+            PacketUtil.writeCelestialObjectKey(buf, CelestialObjectKey.minorBody(snapshot.asteroidId()));
+            PacketUtil.writeEnum(buf, snapshot.pass());
+            buf.writeInt(snapshot.elapsedTicks());
+        }
+        buf.writeInt(asteroidScanCompletions.size());
+        for (AsteroidSatelliteScanCompletionSnapshot snapshot : asteroidScanCompletions) {
+            PacketUtil.writeEnum(buf, snapshot.beltId());
+            PacketUtil.writeCelestialObjectKey(buf, CelestialObjectKey.minorBody(snapshot.anchorAsteroidId()));
+            buf.writeInt(snapshot.generationVersion());
+        }
     }
 
     @Override
@@ -124,6 +189,46 @@ public final class SatelliteNetworkSyncPacket implements IMessage {
             pendingData.add(new SatelliteNetworkState.PendingData(bodyId, destinationBodyIds, key, deciKb));
         }
         state = new SatelliteNetworkState(teamId, revision, bodies, links, pendingData);
+        int asteroidSnapshotCount = buf.readInt();
+        List<AsteroidFieldKnowledgeSnapshot> snapshots = new ArrayList<>(asteroidSnapshotCount);
+        for (int i = 0; i < asteroidSnapshotCount; i++) {
+            CelestialObjectId beltId = PacketUtil.readEnum(buf, CelestialObjectId.class);
+            int entryCount = buf.readInt();
+            List<AsteroidFieldKnowledgeSnapshot.Entry> entries = new ArrayList<>(entryCount);
+            for (int entryIndex = 0; entryIndex < entryCount; entryIndex++) {
+                entries.add(
+                    new AsteroidFieldKnowledgeSnapshot.Entry(
+                        buf.readInt(),
+                        PacketUtil.readEnum(buf, AsteroidDetectionState.class),
+                        PacketUtil.readEnum(buf, AsteroidOreKnowledgeState.class)));
+            }
+            snapshots.add(new AsteroidFieldKnowledgeSnapshot(beltId, entries));
+        }
+        asteroidKnowledge = List.copyOf(snapshots);
+        int asteroidScanCount = buf.readInt();
+        List<AsteroidSatelliteScanSnapshot> scanSnapshots = new ArrayList<>(asteroidScanCount);
+        for (int i = 0; i < asteroidScanCount; i++) {
+            var satelliteId = PacketUtil.readAssetId(buf);
+            CelestialObjectId beltId = PacketUtil.readEnum(buf, CelestialObjectId.class);
+            MinorCelestialBodyId asteroidId = PacketUtil.readCelestialObjectKey(buf)
+                .minorBodyId();
+            AsteroidSatelliteScanPass pass = PacketUtil.readEnum(buf, AsteroidSatelliteScanPass.class);
+            int elapsedTicks = buf.readInt();
+            scanSnapshots.add(new AsteroidSatelliteScanSnapshot(satelliteId, beltId, asteroidId, pass, elapsedTicks));
+        }
+        asteroidScans = List.copyOf(scanSnapshots);
+        int asteroidScanCompletionCount = buf.readInt();
+        List<AsteroidSatelliteScanCompletionSnapshot> completionSnapshots = new ArrayList<>(
+            asteroidScanCompletionCount);
+        for (int i = 0; i < asteroidScanCompletionCount; i++) {
+            CelestialObjectId beltId = PacketUtil.readEnum(buf, CelestialObjectId.class);
+            MinorCelestialBodyId anchorAsteroidId = PacketUtil.readCelestialObjectKey(buf)
+                .minorBodyId();
+            int generationVersion = buf.readInt();
+            completionSnapshots
+                .add(new AsteroidSatelliteScanCompletionSnapshot(beltId, anchorAsteroidId, generationVersion));
+        }
+        asteroidScanCompletions = List.copyOf(completionSnapshots);
     }
 
     public static final class Handler implements IMessageHandler<SatelliteNetworkSyncPacket, IMessage> {
@@ -131,6 +236,8 @@ public final class SatelliteNetworkSyncPacket implements IMessage {
         @Override
         public IMessage onMessage(SatelliteNetworkSyncPacket message, MessageContext ctx) {
             SatelliteNetworkClientState.update(message.state);
+            AsteroidFieldClientState.update(message.asteroidKnowledge);
+            AsteroidFieldClientState.updateScans(message.asteroidScans, message.asteroidScanCompletions);
             return null;
         }
     }
