@@ -44,7 +44,7 @@ public final class ModuleLayerRenderer {
                 y,
                 size,
                 size,
-                moduleKindOf(tile),
+                module,
                 region.u0(),
                 region.v0(),
                 region.u1(),
@@ -169,6 +169,11 @@ public final class ModuleLayerRenderer {
         return drawModuleTextureRegion(x, y, w, h, kind, u0, v0, u1, v1, 1f, 1f, 1f, 1f);
     }
 
+    public static boolean drawModuleTextureRegion(int x, int y, int w, int h, ModuleInstance module, float u0, float v0,
+        float u1, float v1) {
+        return drawModuleTextureRegion(x, y, w, h, module, u0, v0, u1, v1, 1f, 1f, 1f, 1f);
+    }
+
     static TextureRegion textureRegion(ModuleInstance module, StationTileCoord coord) {
         if (module == null || coord == null || module.anchorOrNull() == null) return TextureRegion.FULL;
         ModuleShape shape = module.shape();
@@ -225,7 +230,7 @@ public final class ModuleLayerRenderer {
             .tileCount() <= 1) {
             return false;
         }
-        return StationTextureRegistry.hasTexture(StationTextureRegistry.moduleTexture(module.kind()));
+        return StationTextureRegistry.hasTexture(StationTextureRegistry.moduleTexture(module));
     }
 
     record TextureRegion(float u0, float v0, float u1, float v1) {
@@ -291,13 +296,19 @@ public final class ModuleLayerRenderer {
 
     private static boolean drawModuleTextureFootprint(int x, int y, int w, int h, ModuleInstance module) {
         if (module == null) return false;
-        return drawModuleTextureFootprint(x, y, w, h, module.kind(), module.rotation(), 1f, 1f, 1f, 1f);
+        return drawModuleTextureFootprint(x, y, w, h, module, module.rotation(), 1f, 1f, 1f, 1f);
     }
 
     private static boolean drawModuleTextureFootprint(int x, int y, int w, int h, FacilityModuleKind kind, int rotation,
         float red, float green, float blue, float alpha) {
         TextureCorners corners = textureCorners(rotation);
         return drawModuleTextureQuad(x, y, w, h, kind, corners, red, green, blue, alpha);
+    }
+
+    private static boolean drawModuleTextureFootprint(int x, int y, int w, int h, ModuleInstance module, int rotation,
+        float red, float green, float blue, float alpha) {
+        TextureCorners corners = textureCorners(rotation);
+        return drawModuleTextureQuad(x, y, w, h, module, corners, red, green, blue, alpha);
     }
 
     private static boolean drawModuleTextureRegion(int x, int y, int w, int h, FacilityModuleKind kind, float u0,
@@ -315,10 +326,36 @@ public final class ModuleLayerRenderer {
             alpha);
     }
 
+    private static boolean drawModuleTextureRegion(int x, int y, int w, int h, ModuleInstance module, float u0,
+        float v0, float u1, float v1, float red, float green, float blue, float alpha) {
+        return drawModuleTextureQuad(
+            x,
+            y,
+            w,
+            h,
+            module,
+            new TextureCorners(u0, v1, u1, v1, u1, v0, u0, v0),
+            red,
+            green,
+            blue,
+            alpha);
+    }
+
     private static boolean drawModuleTextureQuad(int x, int y, int w, int h, FacilityModuleKind kind,
         TextureCorners corners, float red, float green, float blue, float alpha) {
         if (kind == null) return false;
         ResourceLocation texture = StationTextureRegistry.moduleTexture(kind);
+        return drawModuleTextureQuad(x, y, w, h, texture, corners, red, green, blue, alpha);
+    }
+
+    private static boolean drawModuleTextureQuad(int x, int y, int w, int h, ModuleInstance module,
+        TextureCorners corners, float red, float green, float blue, float alpha) {
+        ResourceLocation texture = StationTextureRegistry.moduleTexture(module);
+        return drawModuleTextureQuad(x, y, w, h, texture, corners, red, green, blue, alpha);
+    }
+
+    private static boolean drawModuleTextureQuad(int x, int y, int w, int h, ResourceLocation texture,
+        TextureCorners corners, float red, float green, float blue, float alpha) {
         if (!StationTextureRegistry.hasTexture(texture)) return false;
         Minecraft.getMinecraft()
             .getTextureManager()

@@ -10,13 +10,25 @@ import java.util.Set;
 
 import net.minecraft.util.ResourceLocation;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.client.gui.station.layer.StationTextureRegistry.ConnectorKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class StationTextureRegistryTest {
+
+    @BeforeAll
+    static void initModules() {
+        GalaxiaTestBootstrap.ensureFacilityModules();
+    }
 
     @Test
     void everyModuleTexturePathHasPackagedAsset() {
@@ -65,6 +77,21 @@ final class StationTextureRegistryTest {
         assertEquals(
             new ResourceLocation("galaxia", "textures/gui/station/modules/big_hammer.png"),
             StationTextureRegistry.moduleVariantTexture(FacilityModuleKind.HAMMER, HammerVariant.BIG.name()));
+    }
+
+    @Test
+    void hammerModuleTextureUsesVariantAsset() {
+        ModuleInstance hammer = FacilityModuleKind.HAMMER
+            .create(StationTileCoord.CORE, ModuleShape.SINGLE, ModuleTier.EV);
+        assertEquals(
+            new ResourceLocation("galaxia", "textures/gui/station/modules/hammer.png"),
+            StationTextureRegistry.moduleTexture(hammer));
+
+        ((ModuleHammer) hammer.component()).setVariant(HammerVariant.BIG);
+
+        assertEquals(
+            new ResourceLocation("galaxia", "textures/gui/station/modules/big_hammer.png"),
+            StationTextureRegistry.moduleTexture(hammer));
     }
 
     @Test

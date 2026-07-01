@@ -12,6 +12,8 @@ import net.minecraft.util.ResourceLocation;
 
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 
 public final class StationTextureRegistry {
 
@@ -72,6 +74,19 @@ public final class StationTextureRegistry {
     @Nullable
     public static ResourceLocation moduleTexture(FacilityModuleKind kind) {
         return moduleTextures.get(kind);
+    }
+
+    @Nullable
+    public static ResourceLocation moduleTexture(ModuleInstance module) {
+        if (module == null) return null;
+        if (module.component() instanceof ModuleHammer hammer) {
+            ResourceLocation variantTexture = moduleVariantTexture(
+                module.kind(),
+                hammer.variant()
+                    .name());
+            if (variantTexture != null) return variantTexture;
+        }
+        return moduleTexture(module.kind());
     }
 
     @Nullable
