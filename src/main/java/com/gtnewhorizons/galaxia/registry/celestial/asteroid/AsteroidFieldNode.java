@@ -1,13 +1,34 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 
 public record AsteroidFieldNode(@Nonnull MinorCelestialBodyId id, @Nonnull CelestialObjectId beltId, int index,
     @Nonnull String displayName, @Nonnull AsteroidNodeKind kind, @Nonnull AsteroidSizeClass sizeClass,
-    double angleOffsetDeg, double orbitalDepth01, @Nonnull AsteroidOreProfile oreProfile,
-    @Nonnull AsteroidAppearanceProfile appearance) {
+    @Nonnull AsteroidDetectionState initialDetectionState,
+    @Nullable AsteroidOreKnowledgeState initialOreKnowledgeState, double angleOffsetDeg, double orbitalDepth01,
+    @Nonnull AsteroidOreProfile oreProfile, @Nonnull AsteroidAppearanceProfile appearance) {
+
+    public AsteroidFieldNode(@Nonnull MinorCelestialBodyId id, @Nonnull CelestialObjectId beltId, int index,
+        @Nonnull String displayName, @Nonnull AsteroidNodeKind kind, @Nonnull AsteroidSizeClass sizeClass,
+        @Nonnull AsteroidDetectionState initialDetectionState, double angleOffsetDeg, double orbitalDepth01,
+        @Nonnull AsteroidOreProfile oreProfile, @Nonnull AsteroidAppearanceProfile appearance) {
+        this(
+            id,
+            beltId,
+            index,
+            displayName,
+            kind,
+            sizeClass,
+            initialDetectionState,
+            null,
+            angleOffsetDeg,
+            orbitalDepth01,
+            oreProfile,
+            appearance);
+    }
 
     public AsteroidFieldNode {
         if (index < 0) {
@@ -22,6 +43,10 @@ public record AsteroidFieldNode(@Nonnull MinorCelestialBodyId id, @Nonnull Celes
         }
         if (displayName == null || displayName.isBlank()) {
             throw new IllegalArgumentException("displayName is required");
+        }
+        if (initialOreKnowledgeState != null && initialDetectionState == AsteroidDetectionState.HIDDEN
+            && initialOreKnowledgeState != AsteroidOreKnowledgeState.UNKNOWN) {
+            throw new IllegalArgumentException("hidden asteroid nodes cannot expose ore knowledge");
         }
         if (!Double.isFinite(angleOffsetDeg) || angleOffsetDeg < 0.0 || angleOffsetDeg >= 360.0) {
             throw new IllegalArgumentException("angleOffsetDeg must be in [0, 360)");

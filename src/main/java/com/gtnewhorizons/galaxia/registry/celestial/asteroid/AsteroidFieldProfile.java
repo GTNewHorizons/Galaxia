@@ -2,13 +2,17 @@ package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
 
 public record AsteroidFieldProfile(long seedSalt, int generationVersion, int totalNodes, int largeCount,
     int mediumCount, int smallCount, double innerOrbitalRadius, double outerOrbitalRadius,
-    @Nonnull List<AsteroidOreProfile> oreProfiles) {
+    double satelliteScanRadius, @Nonnull List<AsteroidOreProfile> oreProfiles,
+    @Nonnull List<AsteroidNodePreset> nodePresets) {
 
     public AsteroidFieldProfile {
         generationVersion = requirePositive("generationVersion", generationVersion);
@@ -27,6 +31,7 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
         if (outerOrbitalRadius <= innerOrbitalRadius) {
             throw new IllegalArgumentException("outerOrbitalRadius must be greater than innerOrbitalRadius");
         }
+        satelliteScanRadius = requireNonNegativeFinite("satelliteScanRadius", satelliteScanRadius);
         if (oreProfiles == null || oreProfiles.isEmpty()) {
             throw new IllegalStateException("Asteroid field profile requires at least one ore profile");
         }
@@ -38,10 +43,42 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
             copiedOreProfiles.add(oreProfile);
         }
         oreProfiles = Collections.unmodifiableList(copiedOreProfiles);
+        if (nodePresets == null) {
+            nodePresets = List.of();
+        }
+        List<AsteroidNodePreset> copiedNodePresets = new ArrayList<>(nodePresets.size());
+        Set<Integer> seenPresetIndexes = new HashSet<>();
+        for (AsteroidNodePreset preset : nodePresets) {
+            if (preset == null) {
+                throw new IllegalArgumentException("node preset cannot be null");
+            }
+            if (AsteroidSlotRanges.isGeneratedSlot(preset.index())) {
+                throw new IllegalArgumentException(
+                    "node preset index must be in a reserved authored asteroid slot range");
+            }
+            if (!seenPresetIndexes.add(preset.index())) {
+                throw new IllegalArgumentException("duplicate asteroid node preset index: " + preset.index());
+            }
+            copiedNodePresets.add(preset);
+        }
+        nodePresets = Collections.unmodifiableList(copiedNodePresets);
     }
 
     public static Builder builder() {
         return new Builder();
+    }
+
+    public Optional<AsteroidNodePreset> nodePreset(int index) {
+        return nodePresets.stream()
+            .filter(preset -> preset.index() == index)
+            .findFirst();
+    }
+
+    public boolean hasNodeIndex(int index) {
+        if (AsteroidSlotRanges.isGeneratedSlot(index)) {
+            return AsteroidSlotRanges.generatedOrdinal(index) < totalNodes;
+        }
+        return nodePreset(index).isPresent();
     }
 
     private static int requireNonNegative(String name, int value) {
@@ -65,6 +102,13 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
         return value;
     }
 
+    private static double requireNonNegativeFinite(String name, double value) {
+        if (!Double.isFinite(value) || value < 0.0) {
+            throw new IllegalArgumentException(name + " must be finite and non-negative");
+        }
+        return value;
+    }
+
     public static final class Builder {
 
         private long seedSalt;
@@ -74,7 +118,9 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
         private int smallCount;
         private double innerOrbitalRadius;
         private double outerOrbitalRadius;
+        private double satelliteScanRadius = Double.NaN;
         private final List<AsteroidOreProfile> oreProfiles = new ArrayList<>();
+        private final List<AsteroidNodePreset> nodePresets = new ArrayList<>();
 
         public Builder seedSalt(long value) {
             this.seedSalt = value;
@@ -102,8 +148,24 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
             return this;
         }
 
+        public Builder satelliteScanRadius(double value) {
+            this.satelliteScanRadius = requireNonNegativeFinite("satelliteScanRadius", value);
+            return this;
+        }
+
         public Builder oreProfile(@Nonnull AsteroidOreProfile value) {
             this.oreProfiles.add(value);
+            return this;
+        }
+
+        public Builder nodePreset(int index, AsteroidNodeKind kind, String displayName,
+            AsteroidDetectionState initialDetectionState) {
+            this.nodePresets.add(new AsteroidNodePreset(index, kind, displayName, initialDetectionState));
+            return this;
+        }
+
+        public Builder nodePreset(@Nonnull AsteroidNodePreset value) {
+            this.nodePresets.add(value);
             return this;
         }
 
@@ -118,7 +180,9 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
                 smallCount,
                 innerOrbitalRadius,
                 outerOrbitalRadius,
-                oreProfiles);
+                satelliteScanRadius,
+                oreProfiles,
+                nodePresets);
         }
     }
 }
