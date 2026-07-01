@@ -2,6 +2,12 @@ package com.gtnewhorizons.galaxia.registry.orbital;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitModel;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 
 public final class OrbitalMechanics {
 
@@ -43,11 +49,46 @@ public final class OrbitalMechanics {
             AbsolutePosition absolute = child.absolutePosition();
             return new OrbitalState(absolute.x(), absolute.y(), 0.0, 0.0);
         }
+        OrbitalState asteroidFieldState = resolveFieldAsteroidChildWorldState(parent, child, safeParentState);
+        if (asteroidFieldState != null) return asteroidFieldState;
         OrbitalState localState = calculateOrbitalState(
             child.orbitalParams(),
             resolveAttractorMu(parent, child.orbitalParams()),
             globalTime);
         return safeParentState.add(localState);
+    }
+
+    public static boolean usesAsteroidFieldPosition(CelestialObject parent, CelestialObject child) {
+        return resolveFieldAsteroidChildWorldState(parent, child, new OrbitalState(0.0, 0.0, 0.0, 0.0)) != null;
+    }
+
+    private static OrbitalState resolveFieldAsteroidChildWorldState(CelestialObject parent, CelestialObject child,
+        OrbitalState parentState) {
+        if (child == null || child.id() == null
+            || !child.id()
+                .isMinorBody()) {
+            return null;
+        }
+        if (parent == null || parent.id() == null
+            || !parent.id()
+                .isRegistered()) {
+            throw new IllegalStateException("Minor celestial body requires a registered parent body");
+        }
+
+        MinorCelestialBodyId minorId = child.id()
+            .minorBodyId();
+        CelestialObjectId parentId = parent.id()
+            .registeredBodyId();
+        if (minorId.parentBeltId() != parentId) {
+            throw new IllegalStateException(
+                "Minor celestial body parent does not match traversal parent: " + child.id());
+        }
+        AsteroidFieldProfile profile = parent.properties()
+            .asteroidFieldProfile();
+        if (profile == null) return null;
+
+        AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(parentId, profile, minorId.index());
+        return AsteroidFieldOrbitModel.resolveWorldState(profile, node, parentState);
     }
 
     public static OrbitalState calculateOrbitalState(OrbitalParams params, double attractorMu, double globalTime) {
