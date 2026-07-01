@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.station.layer;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 

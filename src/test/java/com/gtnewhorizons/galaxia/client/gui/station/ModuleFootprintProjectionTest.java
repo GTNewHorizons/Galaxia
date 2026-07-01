@@ -16,17 +16,8 @@ final class ModuleFootprintProjectionTest {
 
     @Test
     void filledSegmentsCoverCenterGapWhenFourTilesMeet() {
-        List<ModuleFootprintProjection.Segment> segments = ModuleFootprintProjection.filledSegments(
-            ModuleShape.QUAD_2x2,
-            StationTileCoord.CORE,
-            0,
-            WIDGET_SIZE,
-            WIDGET_SIZE,
-            0,
-            0,
-            0,
-            0,
-            0);
+        List<ModuleFootprintProjection.Segment> segments = ModuleFootprintProjection
+            .filledSegments(ModuleShape.QUAD_2x2, StationTileCoord.CORE, 0, WIDGET_SIZE, WIDGET_SIZE, 0, 0, 0, 0, 0);
 
         int centerGapX = StationMapViewport.tileLeftX(0, WIDGET_SIZE, 0, 0, 0) + StationMapViewport.TILE_SIZE;
         int centerGapY = StationMapViewport.tileTopY(0, WIDGET_SIZE, 0, 0) + StationMapViewport.TILE_SIZE;
@@ -36,17 +27,8 @@ final class ModuleFootprintProjectionTest {
 
     @Test
     void filledSegmentsKeepMissingCornerOutOfLShape() {
-        List<ModuleFootprintProjection.Segment> segments = ModuleFootprintProjection.filledSegments(
-            ModuleShape.L_2x2,
-            StationTileCoord.CORE,
-            0,
-            WIDGET_SIZE,
-            WIDGET_SIZE,
-            0,
-            0,
-            0,
-            0,
-            0);
+        List<ModuleFootprintProjection.Segment> segments = ModuleFootprintProjection
+            .filledSegments(ModuleShape.L_2x2, StationTileCoord.CORE, 0, WIDGET_SIZE, WIDGET_SIZE, 0, 0, 0, 0, 0);
 
         int missingCornerX = StationMapViewport.tileLeftX(1, WIDGET_SIZE, 0, 0, 0) + StationMapViewport.TILE_SIZE / 2;
         int missingCornerY = StationMapViewport.tileTopY(0, WIDGET_SIZE, 0, 0) + StationMapViewport.TILE_SIZE / 2;
@@ -56,17 +38,8 @@ final class ModuleFootprintProjectionTest {
 
     @Test
     void outlineSegmentsSkipInternalCenterGapWhenFourTilesMeet() {
-        List<ModuleFootprintProjection.Segment> outline = ModuleFootprintProjection.outlineSegments(
-            ModuleShape.QUAD_2x2,
-            StationTileCoord.CORE,
-            0,
-            WIDGET_SIZE,
-            WIDGET_SIZE,
-            0,
-            0,
-            0,
-            0,
-            0);
+        List<ModuleFootprintProjection.Segment> outline = ModuleFootprintProjection
+            .outlineSegments(ModuleShape.QUAD_2x2, StationTileCoord.CORE, 0, WIDGET_SIZE, WIDGET_SIZE, 0, 0, 0, 0, 0);
 
         int centerGapX = StationMapViewport.tileLeftX(0, WIDGET_SIZE, 0, 0, 0) + StationMapViewport.TILE_SIZE;
         int centerGapY = StationMapViewport.tileTopY(0, WIDGET_SIZE, 0, 0) + StationMapViewport.TILE_SIZE;
