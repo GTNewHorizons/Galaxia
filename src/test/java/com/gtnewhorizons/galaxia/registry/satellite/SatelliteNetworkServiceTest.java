@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.satellite;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -15,10 +16,17 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -170,6 +178,41 @@ final class SatelliteNetworkServiceTest {
     }
 
     @Test
+    void prospectingDataJobsAdvanceAsteroidBeltKnowledge() {
+        AsteroidFieldProfile profile = GalaxiaCelestialAPI.get(CelestialObjectId.FROZEN_BELT)
+            .orElseThrow()
+            .properties()
+            .asteroidFieldProfile();
+        long initiallyDetected = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile)
+            .stream()
+            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.DETECTED)
+            .count();
+        AutomatedFacility facility = facility(CelestialObjectId.FROZEN_BELT);
+        CelestialAssetStore.registerAsset(TEAM, facility);
+        ModuleDebugDataGenerator producer = addDebugModule(facility);
+        ModuleDebugDataGenerator consumer = addDebugModule(facility);
+        producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
+        consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
+        SatelliteNetworkService.refreshFacilityEndpoints(facility);
+
+        SatelliteNetworkService.tickDataJobs();
+
+        AsteroidFieldKnowledge knowledge = SatelliteNetworkService.asteroidKnowledge()
+            .get(TEAM, CelestialObjectId.FROZEN_BELT)
+            .orElseThrow();
+        long detectedAfterTick = knowledge.nodes()
+            .stream()
+            .filter(
+                node -> knowledge.entryFor(node.id())
+                    .detectionState() == AsteroidDetectionState.DETECTED)
+            .count();
+        assertTrue(detectedAfterTick > initiallyDetected);
+        assertFalse(
+            SatelliteNetworkService.asteroidKnowledgeSnapshots(TEAM)
+                .isEmpty());
+    }
+
+    @Test
     void registeredDebugDataEndpointsProduceTransferUsageOnServiceTick() {
         AutomatedFacility source = facility(CelestialObjectId.MARS);
         AutomatedFacility destination = facility(CelestialObjectId.EGORA);
@@ -276,6 +319,38 @@ final class SatelliteNetworkServiceTest {
 
         assertEquals(CelestialObjectId.EGORA, producer.detectedCounterpartBodyId());
         assertEquals(CelestialObjectId.MARS, consumer.detectedCounterpartBodyId());
+    }
+
+    @Test
+    void tickDataJobsAdvancesProspectingSatellitesAnchoredOnAsteroids() {
+        AsteroidFieldProfile profile = GalaxiaCelestialAPI.get(CelestialObjectId.FROZEN_BELT)
+            .orElseThrow()
+            .properties()
+            .asteroidFieldProfile();
+        AsteroidFieldNode hidden = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile)
+            .stream()
+            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.HIDDEN)
+            .findFirst()
+            .orElseThrow();
+        CelestialAsset satellite = CelestialAsset.create(
+            CelestialObjectKey.minorBody(hidden.id()),
+            CelestialAsset.Kind.SATELLITE,
+            Buildable.Status.OPERATIONAL,
+            SatelliteKind.PROSPECTING);
+        CelestialAssetStore.registerAsset(TEAM, satellite);
+
+        SatelliteNetworkService.tickDataJobs(AsteroidSatelliteScanPass.DETECTION.durationTicks());
+
+        AsteroidFieldKnowledge knowledge = SatelliteNetworkService.asteroidKnowledge()
+            .get(TEAM, CelestialObjectId.FROZEN_BELT)
+            .orElseThrow();
+        assertTrue(
+            knowledge.nodes()
+                .stream()
+                .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.HIDDEN)
+                .anyMatch(
+                    node -> knowledge.entryFor(node.id())
+                        .detectionState() == AsteroidDetectionState.DETECTED));
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.satellite;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -12,6 +13,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeService;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -33,6 +37,14 @@ public final class SatelliteNetworkService {
     private static final Map<UUID, Map<SatelliteNetworkGraph.DirectedEdge, ActiveDataUsage>> ACTIVE_DIRECTIONAL_DATA_USAGE = new HashMap<>();
     private static final SatelliteDataBufferStore DATA_BUFFERS = new SatelliteDataBufferStore();
     private static final SatelliteDataEndpointRegistry DATA_ENDPOINTS = new SatelliteDataEndpointRegistry();
+    private static final AsteroidSatelliteScanService ASTEROID_SCANS = new AsteroidSatelliteScanService(
+        AsteroidFieldKnowledgeService.store(),
+        bodyId -> GalaxiaCelestialAPI.get(bodyId)
+            .map(
+                body -> body.properties()
+                    .asteroidFieldProfile()));
+    private static final AsteroidProspectingDataHandler ASTEROID_PROSPECTING = AsteroidProspectingDataHandler
+        .live(AsteroidFieldKnowledgeService.store());
 
     private SatelliteNetworkService() {}
 
@@ -107,10 +119,59 @@ public final class SatelliteNetworkService {
         ACTIVE_DIRECTIONAL_DATA_USAGE.clear();
         DATA_BUFFERS.clear();
         DATA_ENDPOINTS.clear();
+        AsteroidFieldKnowledgeService.clear();
+        ASTEROID_SCANS.clear();
     }
 
     static SatelliteDataBufferStore dataBuffers() {
         return DATA_BUFFERS;
+    }
+
+    static AsteroidFieldKnowledgeStore asteroidKnowledge() {
+        return AsteroidFieldKnowledgeService.store();
+    }
+
+    public static List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledgeSnapshots(UUID teamId) {
+        return AsteroidFieldKnowledgeService.snapshots(teamId);
+    }
+
+    public static Map<UUID, List<AsteroidFieldKnowledgeSnapshot>> asteroidKnowledgeSnapshotsByTeam() {
+        return AsteroidFieldKnowledgeService.snapshotsByTeam();
+    }
+
+    public static List<AsteroidSatelliteScanSnapshot> asteroidScanSnapshots(UUID teamId) {
+        return ASTEROID_SCANS.snapshots(teamId);
+    }
+
+    public static Map<UUID, List<AsteroidSatelliteScanSnapshot>> asteroidScanSnapshotsByTeam() {
+        return ASTEROID_SCANS.snapshotsByTeam();
+    }
+
+    public static List<AsteroidSatelliteScanCompletionSnapshot> asteroidScanCompletionSnapshots(UUID teamId) {
+        return ASTEROID_SCANS.completionSnapshots(teamId);
+    }
+
+    public static Map<UUID, List<AsteroidSatelliteScanCompletionSnapshot>> asteroidScanCompletionSnapshotsByTeam() {
+        return ASTEROID_SCANS.completionSnapshotsByTeam();
+    }
+
+    public static void restoreAsteroidKnowledge(UUID teamId, List<AsteroidFieldKnowledgeSnapshot> snapshots) {
+        AsteroidFieldKnowledgeService.restore(
+            teamId,
+            snapshots,
+            bodyId -> GalaxiaCelestialAPI.get(bodyId)
+                .map(
+                    body -> body.properties()
+                        .asteroidFieldProfile()));
+    }
+
+    public static void restoreAsteroidScans(UUID teamId, List<AsteroidSatelliteScanSnapshot> snapshots) {
+        ASTEROID_SCANS.restore(teamId, snapshots);
+    }
+
+    public static void restoreAsteroidScanCompletions(UUID teamId,
+        List<AsteroidSatelliteScanCompletionSnapshot> snapshots) {
+        ASTEROID_SCANS.restoreCompletions(teamId, snapshots);
     }
 
     public static boolean canStartProcess(UUID teamId, CelestialObjectId bodyId, SatelliteDataKey outputKey) {
@@ -122,11 +183,44 @@ public final class SatelliteNetworkService {
      * rebuild packages it into the synced network snapshot.
      */
     public static void tickDataJobs() {
+        tickDataJobs(1);
+    }
+
+    static void tickDataJobs(int elapsedTicks) {
+        if (elapsedTicks < 0) throw new IllegalArgumentException("elapsedTicks must be non-negative");
+        for (int tick = 0; tick < elapsedTicks; tick++) {
+            tickDataJobsSingleTick();
+        }
+    }
+
+    private static void tickDataJobsSingleTick() {
         tickActiveUsage();
         for (UUID teamId : DATA_ENDPOINTS.teamIds()) {
-            SatelliteDataJobService.Usage usage = SatelliteDataJobService
-                .tickEndpointsUsage(teamId, DATA_ENDPOINTS.endpoints(teamId), DATA_BUFFERS, current(teamId));
+            SatelliteDataJobService.Usage usage = SatelliteDataJobService.tickEndpointsUsage(
+                teamId,
+                DATA_ENDPOINTS.endpoints(teamId),
+                DATA_BUFFERS,
+                current(teamId),
+                ASTEROID_PROSPECTING);
             recordActiveUsage(teamId, usage);
+        }
+        tickAsteroidScans();
+    }
+
+    private static void tickAsteroidScans() {
+        Map<UUID, List<CelestialAsset>> prospectingSatellitesByTeam = new HashMap<>();
+        for (CelestialAsset asset : CelestialAssetStore.allAssets()) {
+            if (!(asset instanceof Satellite satellite)) continue;
+            if (satellite.satelliteKind() != SatelliteKind.PROSPECTING || !satellite.celestialObjectId.isMinorBody()) {
+                continue;
+            }
+            UUID teamId = CelestialAssetStore.getTeamId(satellite.assetId);
+            if (teamId == null) continue;
+            prospectingSatellitesByTeam.computeIfAbsent(teamId, ignored -> new ArrayList<>())
+                .add(satellite);
+        }
+        for (Map.Entry<UUID, List<CelestialAsset>> entry : prospectingSatellitesByTeam.entrySet()) {
+            ASTEROID_SCANS.tick(entry.getKey(), entry.getValue(), 1);
         }
     }
 
