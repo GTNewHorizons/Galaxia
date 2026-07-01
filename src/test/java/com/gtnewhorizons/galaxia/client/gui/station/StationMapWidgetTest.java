@@ -114,7 +114,7 @@ final class StationMapWidgetTest {
             StationTileCoord.CORE,
             ModuleShape.L_2x2,
             ModuleTier.EV);
-        List<StationMapWidget.OverlaySegment> segments = StationMapWidget
+        List<ModuleFootprintProjection.Segment> segments = StationMapWidget
             .moduleOverlaySegments(module, 200, 200, 0, 0, 0, 0, 0);
         int xInsideLeftColumn = StationMapViewport.tileLeftX(0, 200, 0, 0, 0) + StationMapViewport.TILE_SIZE / 2;
         int internalTopBottomJoin = StationMapViewport.tileTopY(0, 200, 0, 0) + StationMapViewport.TILE_SIZE;
@@ -133,7 +133,7 @@ final class StationMapWidgetTest {
             StationTileCoord.CORE,
             ModuleShape.QUAD_2x2,
             ModuleTier.EV);
-        List<StationMapWidget.OverlaySegment> segments = StationMapWidget
+        List<ModuleFootprintProjection.Segment> segments = StationMapWidget
             .moduleOverlaySegments(module, 200, 200, 0, 0, 0, 0, 0);
         int centerGapX = StationMapViewport.tileLeftX(0, 200, 0, 0, 0) + StationMapViewport.TILE_SIZE;
         int centerGapY = StationMapViewport.tileTopY(0, 200, 0, 0) + StationMapViewport.TILE_SIZE;
@@ -149,7 +149,7 @@ final class StationMapWidgetTest {
             StationTileCoord.CORE,
             ModuleShape.L_2x2,
             ModuleTier.EV);
-        List<StationMapWidget.OverlaySegment> segments = StationMapWidget
+        List<ModuleFootprintProjection.Segment> segments = StationMapWidget
             .moduleOverlaySegments(module, 200, 200, 0, 0, 0, 0, 0);
         int topLeftRightEdge = StationMapViewport.tileLeftX(0, 200, 0, 0, 0) + StationMapViewport.TILE_SIZE - 1;
         int centerGapX = topLeftRightEdge + 1 + StationMapViewport.CONNECTOR_GAP / 2;
@@ -182,13 +182,9 @@ final class StationMapWidgetTest {
         assertNull(StationMapWidget.hitTestModuleFootprint(layout, x, y, 200, 200, 0, 0, 0, 0, 0));
     }
 
-    private static boolean covers(List<StationMapWidget.OverlaySegment> segments, int x, int y) {
-        for (StationMapWidget.OverlaySegment segment : segments) {
-            if (x >= segment.x() && x < segment.x() + segment.width()
-                && y >= segment.y()
-                && y < segment.y() + segment.height()) {
-                return true;
-            }
+    private static boolean covers(List<ModuleFootprintProjection.Segment> segments, int x, int y) {
+        for (ModuleFootprintProjection.Segment segment : segments) {
+            if (segment.contains(x, y)) return true;
         }
         return false;
     }

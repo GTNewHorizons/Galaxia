@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.client.gui.station.layer;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -222,26 +221,6 @@ public final class ModuleLayerRenderer {
         return new FootprintTextureBounds(x, y, width, height);
     }
 
-    public static List<FootprintSegment> footprintOverlaySegments(ModuleShape shape, StationTileCoord anchor,
-        int rotation, int widgetWidth, int widgetHeight, int contentLeft, int contentRightPadding,
-        int contentVerticalPadding, int panX, int panY) {
-        List<FootprintSegment> segments = new ArrayList<>();
-        for (ModuleFootprintProjection.Segment segment : ModuleFootprintProjection.filledSegments(
-            shape,
-            anchor,
-            rotation,
-            widgetWidth,
-            widgetHeight,
-            contentLeft,
-            contentRightPadding,
-            contentVerticalPadding,
-            panX,
-            panY)) {
-            segments.add(new FootprintSegment(segment.x(), segment.y(), segment.width(), segment.height()));
-        }
-        return segments;
-    }
-
     static boolean shouldDrawFootprintTexture(ModuleInstance module) {
         if (module == null || module.shape()
             .tileCount() <= 1) {
@@ -256,8 +235,6 @@ public final class ModuleLayerRenderer {
     }
 
     record FootprintTextureBounds(int x, int y, int width, int height) {}
-
-    public record FootprintSegment(int x, int y, int width, int height) {}
 
     private static StationModuleCategory categoryOf(PlacedTile tile) {
         if (tile == null) return StationModuleCategory.COMMAND;

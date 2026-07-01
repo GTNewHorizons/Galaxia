@@ -493,7 +493,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
     }
 
     private void drawModuleOverlay(ModuleInstance module, int color) {
-        for (OverlaySegment segment : moduleOverlaySegments(
+        for (ModuleFootprintProjection.Segment segment : moduleOverlaySegments(
             module,
             getArea().width,
             getArea().height,
@@ -511,10 +511,10 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
         }
     }
 
-    static List<OverlaySegment> moduleOverlaySegments(ModuleInstance module, int widgetWidth, int widgetHeight,
-        int contentLeft, int contentRightPadding, int contentVerticalPadding, int panX, int panY) {
+    static List<ModuleFootprintProjection.Segment> moduleOverlaySegments(ModuleInstance module, int widgetWidth,
+        int widgetHeight, int contentLeft, int contentRightPadding, int contentVerticalPadding, int panX, int panY) {
         if (module == null) return List.of();
-        List<ModuleLayerRenderer.FootprintSegment> footprint = ModuleLayerRenderer.footprintOverlaySegments(
+        return ModuleFootprintProjection.outlineSegments(
             module.shape(),
             module.anchor(),
             module.rotation(),
@@ -525,103 +525,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             contentVerticalPadding,
             panX,
             panY);
-        if (footprint.isEmpty()) return List.of();
-        int minX = Integer.MAX_VALUE;
-        int minY = Integer.MAX_VALUE;
-        int maxX = Integer.MIN_VALUE;
-        int maxY = Integer.MIN_VALUE;
-        for (ModuleLayerRenderer.FootprintSegment segment : footprint) {
-            minX = Math.min(minX, segment.x());
-            minY = Math.min(minY, segment.y());
-            maxX = Math.max(maxX, segment.x() + segment.width());
-            maxY = Math.max(maxY, segment.y() + segment.height());
-        }
-        int width = maxX - minX;
-        int height = maxY - minY;
-        boolean[][] filled = new boolean[height][width];
-        for (ModuleLayerRenderer.FootprintSegment segment : footprint) {
-            markRect(filled, segment.x() - minX, segment.y() - minY, segment.width(), segment.height());
-        }
-        List<OverlaySegment> segments = new ArrayList<>();
-        addHorizontalOverlaySegments(segments, filled, minX, minY, true);
-        addHorizontalOverlaySegments(segments, filled, minX, minY, false);
-        addVerticalOverlaySegments(segments, filled, minX, minY, true);
-        addVerticalOverlaySegments(segments, filled, minX, minY, false);
-        addConcaveCornerOverlaySegments(segments, filled, minX, minY);
-        return segments;
     }
-
-    private static void markRect(boolean[][] filled, int x, int y, int width, int height) {
-        for (int py = y; py < y + height; py++) {
-            for (int px = x; px < x + width; px++) {
-                filled[py][px] = true;
-            }
-        }
-    }
-
-    private static void addHorizontalOverlaySegments(List<OverlaySegment> segments, boolean[][] filled, int baseX,
-        int baseY, boolean top) {
-        int height = filled.length;
-        int width = filled[0].length;
-        for (int y = 0; y < height; y++) {
-            int runStart = -1;
-            for (int x = 0; x <= width; x++) {
-                boolean edge = x < width && filled[y][x]
-                    && (top ? y == 0 || !filled[y - 1][x] : y == height - 1 || !filled[y + 1][x]);
-                if (edge && runStart < 0) {
-                    runStart = x;
-                } else if (!edge && runStart >= 0) {
-                    segments.add(new OverlaySegment(baseX + runStart, baseY + y, x - runStart, 1));
-                    runStart = -1;
-                }
-            }
-        }
-    }
-
-    private static void addVerticalOverlaySegments(List<OverlaySegment> segments, boolean[][] filled, int baseX,
-        int baseY, boolean left) {
-        int height = filled.length;
-        int width = filled[0].length;
-        for (int x = 0; x < width; x++) {
-            int runStart = -1;
-            for (int y = 0; y <= height; y++) {
-                boolean edge = y < height && filled[y][x]
-                    && (left ? x == 0 || !filled[y][x - 1] : x == width - 1 || !filled[y][x + 1]);
-                if (edge && runStart < 0) {
-                    runStart = y;
-                } else if (!edge && runStart >= 0) {
-                    segments.add(new OverlaySegment(baseX + x, baseY + runStart, 1, y - runStart));
-                    runStart = -1;
-                }
-            }
-        }
-    }
-
-    private static void addConcaveCornerOverlaySegments(List<OverlaySegment> segments, boolean[][] filled, int baseX,
-        int baseY) {
-        int height = filled.length;
-        int width = filled[0].length;
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                if (!filled[y][x]) continue;
-                if (isConcaveCorner(filled, x, y, 1, -1) || isConcaveCorner(filled, x, y, -1, -1)
-                    || isConcaveCorner(filled, x, y, 1, 1)
-                    || isConcaveCorner(filled, x, y, -1, 1)) {
-                    segments.add(new OverlaySegment(baseX + x, baseY + y, 1, 1));
-                }
-            }
-        }
-    }
-
-    private static boolean isConcaveCorner(boolean[][] filled, int x, int y, int dx, int dy) {
-        return isFilled(filled, x + dx, y) && isFilled(filled, x, y + dy) && !isFilled(filled, x + dx, y + dy);
-    }
-
-    private static boolean isFilled(boolean[][] filled, int x, int y) {
-        return y >= 0 && y < filled.length && x >= 0 && x < filled[0].length && filled[y][x];
-    }
-
-    record OverlaySegment(int x, int y, int width, int height) {}
 
     static StationTileCoord alertBadgeCoord(ModuleInstance module, Map<StationTileCoord, PlacedTile> tiles) {
         StationTileCoord best = module.anchor();
@@ -956,8 +860,10 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
                 .tileCount() <= 1 || !checked.add(module.id)) {
                 continue;
             }
-            StationTileCoord hit = hitTestModuleFootprint(
-                module,
+            if (ModuleFootprintProjection.contains(
+                module.shape(),
+                module.anchor(),
+                module.rotation(),
                 localX,
                 localY,
                 widgetWidth,
@@ -966,34 +872,11 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
                 contentRightPadding,
                 contentVerticalPadding,
                 panX,
-                panY);
-            if (hit != null) return hit;
-        }
-        return null;
-    }
-
-    private static @Nullable StationTileCoord hitTestModuleFootprint(ModuleInstance module, int localX, int localY,
-        int widgetWidth, int widgetHeight, int contentLeft, int contentRightPadding, int contentVerticalPadding,
-        int panX, int panY) {
-        for (ModuleLayerRenderer.FootprintSegment segment : ModuleLayerRenderer.footprintOverlaySegments(
-            module.shape(),
-            module.anchor(),
-            module.rotation(),
-            widgetWidth,
-            widgetHeight,
-            contentLeft,
-            contentRightPadding,
-            contentVerticalPadding,
-            panX,
-            panY)) {
-            if (contains(localX, localY, segment.x(), segment.y(), segment.width(), segment.height()))
+                panY)) {
                 return module.anchor();
+            }
         }
         return null;
-    }
-
-    private static boolean contains(int px, int py, int x, int y, int width, int height) {
-        return px >= x && px < x + width && py >= y && py < y + height;
     }
 
     private StationTileCoord normalizePickerTarget(StationTileCoord coord) {
