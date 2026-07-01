@@ -49,4 +49,19 @@ final class ModuleShapeTest {
 
         assertEquals(3, module.rotation());
     }
+
+    @Test
+    void rotatedShapeTilesKeepTheirBaseTextureCells() {
+        StationTileCoord anchor = StationTileCoord.of(4, 4);
+
+        assertEquals(2, ModuleShape.L_2x2.textureGridWidth());
+        assertEquals(2, ModuleShape.L_2x2.textureGridHeight());
+        assertEquals(new ModuleShape.TextureTile(0, 0), ModuleShape.L_2x2.textureTile(anchor, anchor, 1));
+        assertEquals(
+            new ModuleShape.TextureTile(0, 1),
+            ModuleShape.L_2x2.textureTile(anchor, StationTileCoord.of(3, 4), 1));
+        assertEquals(
+            new ModuleShape.TextureTile(1, 1),
+            ModuleShape.L_2x2.textureTile(anchor, StationTileCoord.of(3, 5), 1));
+    }
 }

@@ -30,9 +30,9 @@ final class ModuleLayerRendererTest {
         ModuleLayerRenderer.TextureRegion lowerLeft = ModuleLayerRenderer
             .textureRegion(module, StationTileCoord.of(3, 5));
 
-        assertRegion(anchor, 0.5f, 0f, 1f, 0.5f);
-        assertRegion(left, 0f, 0f, 0.5f, 0.5f);
-        assertRegion(lowerLeft, 0f, 0.5f, 0.5f, 1f);
+        assertRegion(anchor, 0f, 0f, 0.5f, 0.5f);
+        assertRegion(left, 0f, 0.5f, 0.5f, 1f);
+        assertRegion(lowerLeft, 0.5f, 0.5f, 1f, 1f);
     }
 
     private static void assertRegion(ModuleLayerRenderer.TextureRegion region, float u0, float v0, float u1, float v1) {

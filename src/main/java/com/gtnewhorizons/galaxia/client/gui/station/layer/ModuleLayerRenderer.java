@@ -15,6 +15,7 @@ import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.station.StationMapViewport;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationModuleCategory;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -89,26 +90,13 @@ public final class ModuleLayerRenderer {
 
     static TextureRegion textureRegion(ModuleInstance module, StationTileCoord coord) {
         if (module == null || coord == null || module.anchorOrNull() == null) return TextureRegion.FULL;
-        StationTileCoord anchor = module.anchor();
-        StationTileCoord[] tiles = module.tiles();
-        int minDx = 0;
-        int minDy = 0;
-        int maxDx = 0;
-        int maxDy = 0;
-        for (StationTileCoord tile : tiles) {
-            int dx = tile.dx() - anchor.dx();
-            int dy = tile.dy() - anchor.dy();
-            minDx = Math.min(minDx, dx);
-            minDy = Math.min(minDy, dy);
-            maxDx = Math.max(maxDx, dx);
-            maxDy = Math.max(maxDy, dy);
-        }
-
-        int width = maxDx - minDx + 1;
-        int height = maxDy - minDy + 1;
+        ModuleShape shape = module.shape();
+        int width = shape.textureGridWidth();
+        int height = shape.textureGridHeight();
         if (width <= 0 || height <= 0) return TextureRegion.FULL;
-        int column = coord.dx() - anchor.dx() - minDx;
-        int row = coord.dy() - anchor.dy() - minDy;
+        ModuleShape.TextureTile textureTile = shape.textureTile(module.anchor(), coord, module.rotation());
+        int column = textureTile.column();
+        int row = textureTile.row();
         if (column < 0 || column >= width || row < 0 || row >= height) return TextureRegion.FULL;
         float u0 = (float) column / width;
         float v0 = (float) row / height;
