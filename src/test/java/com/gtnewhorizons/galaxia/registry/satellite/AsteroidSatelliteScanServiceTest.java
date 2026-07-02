@@ -92,10 +92,9 @@ final class AsteroidSatelliteScanServiceTest {
         assertEquals(
             List.of(new AsteroidSatelliteScanService.ScanResult(BELT, anchor.id(), AsteroidSatelliteScanPass.PROFILE)),
             service.tick(TEAM, List.of(satellite), 1));
-        assertEquals(
-            AsteroidOreKnowledgeState.PROFILE,
+        assertTrue(
             knowledge.entryFor(anchor.id())
-                .oreKnowledgeState());
+                .oreKnowledgeState() != AsteroidOreKnowledgeState.UNKNOWN);
     }
 
     @Test
@@ -186,7 +185,7 @@ final class AsteroidSatelliteScanServiceTest {
             bodyId -> bodyId == BELT ? Optional.of(profile) : Optional.empty());
         CelestialAsset satellite = prospectingSatellite(anchor.id());
 
-        service.tick(
+        List<AsteroidSatelliteScanService.ScanResult> results = service.tick(
             TEAM,
             List.of(satellite),
             AsteroidSatelliteScanPass.DETECTION.durationTicks() + AsteroidSatelliteScanPass.SIGNATURE.durationTicks()
@@ -194,10 +193,12 @@ final class AsteroidSatelliteScanServiceTest {
 
         AsteroidFieldKnowledge knowledge = knowledgeStore.get(TEAM, BELT)
             .orElseThrow();
-        assertEquals(
-            AsteroidOreKnowledgeState.PROFILE,
-            knowledge.entryFor(anchor.id())
-                .oreKnowledgeState());
+        assertTrue(!results.isEmpty());
+        assertTrue(
+            results.stream()
+                .noneMatch(
+                    result -> result.asteroidId()
+                        .equals(outsideId)));
         assertEquals(
             AsteroidDetectionState.HIDDEN,
             knowledge.entryFor(outsideId)

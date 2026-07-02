@@ -140,7 +140,7 @@ final class CelestialBodyPropertiesTest {
                 .surfacePressurePa(Double.POSITIVE_INFINITY));
 
         assertThrows(
-            NullPointerException.class,
+            IllegalArgumentException.class,
             () -> CelestialBodyProperties.builder()
                 .addAtmosphereIngredient(null, 1.0));
         assertThrows(
@@ -177,7 +177,7 @@ final class CelestialBodyPropertiesTest {
     @Test
     void directRecordConstructionRejectsInvalidAtmosphereIngredients() {
         assertThrows(
-            NullPointerException.class,
+            IllegalArgumentException.class,
             () -> new CelestialBodyProperties(
                 false,
                 false,

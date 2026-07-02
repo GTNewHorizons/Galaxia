@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.ToDoubleFunction;
 
 import javax.annotation.Nonnull;
@@ -49,7 +48,10 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
         else {
             List<AtmosphereIngredient> ingredients = new ArrayList<>(atmosphereIngredients.size());
             for (AtmosphereIngredient ingredient : atmosphereIngredients) {
-                ingredients.add(Objects.requireNonNull(ingredient, "atmosphere ingredient cannot be null"));
+                if (ingredient == null) {
+                    throw new IllegalArgumentException("atmosphere ingredient cannot be null");
+                }
+                ingredients.add(ingredient);
             }
             atmosphereIngredients = Collections.unmodifiableList(ingredients);
         }
@@ -78,10 +80,12 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
      * One weighted component of a body's atmosphere. Weights are relative fractions; they do not need to sum to any
      * specific value.
      */
-    public record AtmosphereIngredient(Fluid fluid, double weight) {
+    public record AtmosphereIngredient(@Nonnull Fluid fluid, double weight) {
 
         public AtmosphereIngredient {
-            fluid = Objects.requireNonNull(fluid, "Atmosphere ingredient fluid cannot be null");
+            if (fluid == null) {
+                throw new IllegalArgumentException("Atmosphere ingredient fluid cannot be null");
+            }
             weight = requirePositiveFinite("atmosphere ingredient weight", weight);
         }
     }
@@ -97,8 +101,7 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
 
     // TODO: come up with some kind of atmosphere recipe autogen that accounts for weights and atmosphere density (low
     // pressure = hard to capture)
-    public double atmosphereWeightedAverage(ToDoubleFunction<Fluid> valueProvider) {
-        Objects.requireNonNull(valueProvider, "valueProvider cannot be null");
+    public double atmosphereWeightedAverage(@Nonnull ToDoubleFunction<Fluid> valueProvider) {
         if (surfacePressurePa <= 0.0 || atmosphereIngredients.isEmpty()) return 0.0;
 
         double weightedSum = 0.0;
@@ -302,7 +305,6 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
          * pressure to allow balancing.
          */
         public Builder copyAtmosphereCompositionFrom(@Nonnull CelestialBodyProperties source) {
-            Objects.requireNonNull(source, "Atmosphere composition source cannot be null");
             if (!atmosphereIngredients.isEmpty()) {
                 throw new IllegalStateException("Cannot set a composition source after adding atmosphere ingredients");
             }
@@ -310,14 +312,14 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
             return this;
         }
 
-        public Builder asteroidFieldProfile(AsteroidFieldProfile value) {
+        public Builder asteroidFieldProfile(@Nonnull AsteroidFieldProfile value) {
             this.asteroidFieldProfile = value;
             return this;
         }
 
-        public Builder asteroidMetadata(AsteroidNodeKind kind, AsteroidSizeClass sizeClass) {
-            this.asteroidNodeKind = Objects.requireNonNull(kind, "asteroid node kind cannot be null");
-            this.asteroidSizeClass = Objects.requireNonNull(sizeClass, "asteroid size class cannot be null");
+        public Builder asteroidMetadata(@Nonnull AsteroidNodeKind kind, @Nonnull AsteroidSizeClass sizeClass) {
+            this.asteroidNodeKind = kind;
+            this.asteroidSizeClass = sizeClass;
             return this;
         }
 

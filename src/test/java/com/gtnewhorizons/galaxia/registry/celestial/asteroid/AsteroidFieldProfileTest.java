@@ -113,7 +113,7 @@ final class AsteroidFieldProfileTest {
             () -> AsteroidFieldProfile.builder()
                 .satelliteScanRadius(-1.0));
         assertThrows(
-            NullPointerException.class,
+            IllegalArgumentException.class,
             () -> AsteroidFieldProfile.builder()
                 .oreProfile(null));
         assertThrows(

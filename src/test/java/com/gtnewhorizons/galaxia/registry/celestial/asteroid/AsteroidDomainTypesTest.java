@@ -62,7 +62,7 @@ final class AsteroidDomainTypesTest {
 
         assertEquals(CelestialObjectId.FROZEN_BELT, id.parentBeltId());
         assertEquals(42, id.index());
-        assertThrows(NullPointerException.class, () -> new MinorCelestialBodyId(null, 0));
+        assertThrows(IllegalArgumentException.class, () -> new MinorCelestialBodyId(null, 0));
         assertThrows(IllegalArgumentException.class, () -> new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, -1));
     }
 }

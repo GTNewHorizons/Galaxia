@@ -10,9 +10,8 @@ import java.util.Set;
 import javax.annotation.Nonnull;
 
 public record AsteroidFieldProfile(long seedSalt, int generationVersion, int totalNodes, int largeCount,
-    int mediumCount, int smallCount, double innerOrbitalRadius, double outerOrbitalRadius,
-    double satelliteScanRadius, @Nonnull List<AsteroidOreProfile> oreProfiles,
-    @Nonnull List<AsteroidNodePreset> nodePresets) {
+    int mediumCount, int smallCount, double innerOrbitalRadius, double outerOrbitalRadius, double satelliteScanRadius,
+    @Nonnull List<AsteroidOreProfile> oreProfiles, @Nonnull List<AsteroidNodePreset> nodePresets) {
 
     public AsteroidFieldProfile {
         generationVersion = requirePositive("generationVersion", generationVersion);
@@ -154,6 +153,9 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
         }
 
         public Builder oreProfile(@Nonnull AsteroidOreProfile value) {
+            if (value == null) {
+                throw new IllegalArgumentException("ore profile cannot be null");
+            }
             this.oreProfiles.add(value);
             return this;
         }

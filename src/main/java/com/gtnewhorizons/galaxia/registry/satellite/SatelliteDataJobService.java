@@ -4,8 +4,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
+
+import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -32,12 +33,10 @@ public final class SatelliteDataJobService {
         }
     }
 
-    public record ProductionEvent(UUID teamId, CelestialObjectId bodyId, SatelliteDataKey key, long deciKb) {
+    public record ProductionEvent(@Nonnull UUID teamId, @Nonnull CelestialObjectId bodyId,
+        @Nonnull SatelliteDataKey key, long deciKb) {
 
         public ProductionEvent {
-            teamId = Objects.requireNonNull(teamId, "teamId cannot be null");
-            bodyId = Objects.requireNonNull(bodyId, "bodyId cannot be null");
-            key = Objects.requireNonNull(key, "key cannot be null");
             if (deciKb <= 0L) throw new IllegalArgumentException("deciKb must be positive");
         }
     }
@@ -83,8 +82,11 @@ public final class SatelliteDataJobService {
     }
 
     public static Usage tickEndpointsUsage(UUID teamId, List<SatelliteDataEndpointRegistry.Endpoint> endpoints,
-        SatelliteDataBufferStore store, SatelliteNetworkState networkState, ProductionListener productionListener) {
-        Objects.requireNonNull(productionListener, "productionListener cannot be null");
+        SatelliteDataBufferStore store, SatelliteNetworkState networkState,
+        @Nonnull ProductionListener productionListener) {
+        if (productionListener == null) {
+            throw new IllegalArgumentException("productionListener cannot be null");
+        }
         if (teamId == null || endpoints == null || store == null || networkState == null) {
             return new Usage(Map.of(), Map.of());
         }

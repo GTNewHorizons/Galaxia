@@ -1,7 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
-import java.util.Objects;
 import java.util.function.Predicate;
+
+import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 
@@ -12,11 +13,9 @@ public final class AsteroidFieldScanScope {
 
     private AsteroidFieldScanScope() {}
 
-    public static Predicate<AsteroidFieldNode> withinRadius(AsteroidFieldProfile profile,
-        OrbitalMechanics.OrbitalState beltState, OrbitalMechanics.OrbitalState centerState, double radius) {
-        Objects.requireNonNull(profile, "profile cannot be null");
-        Objects.requireNonNull(beltState, "beltState cannot be null");
-        Objects.requireNonNull(centerState, "centerState cannot be null");
+    public static Predicate<AsteroidFieldNode> withinRadius(@Nonnull AsteroidFieldProfile profile,
+        @Nonnull OrbitalMechanics.OrbitalState beltState, @Nonnull OrbitalMechanics.OrbitalState centerState,
+        double radius) {
         if (!Double.isFinite(radius) || radius < 0.0) {
             throw new IllegalArgumentException("scan radius must be finite and non-negative");
         }

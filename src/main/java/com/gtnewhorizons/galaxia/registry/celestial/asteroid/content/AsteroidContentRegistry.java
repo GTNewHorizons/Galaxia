@@ -1,7 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid.content;
 
 import java.util.Map;
-import java.util.Objects;
+
+import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
@@ -12,8 +13,8 @@ public final class AsteroidContentRegistry {
 
     private AsteroidContentRegistry() {}
 
-    public static AsteroidFieldProfile profile(CelestialObjectId beltId) {
-        AsteroidFieldProfile profile = PROFILES.get(Objects.requireNonNull(beltId, "beltId cannot be null"));
+    public static AsteroidFieldProfile profile(@Nonnull CelestialObjectId beltId) {
+        AsteroidFieldProfile profile = PROFILES.get(beltId);
         if (profile == null) throw new IllegalStateException("No asteroid field content registered for " + beltId);
         return profile;
     }

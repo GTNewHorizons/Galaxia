@@ -7,9 +7,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 
 public record AsteroidFieldNode(@Nonnull MinorCelestialBodyId id, @Nonnull CelestialObjectId beltId, int index,
     @Nonnull String displayName, @Nonnull AsteroidNodeKind kind, @Nonnull AsteroidSizeClass sizeClass,
-    @Nonnull AsteroidDetectionState initialDetectionState,
-    @Nullable AsteroidOreKnowledgeState initialOreKnowledgeState, double angleOffsetDeg, double orbitalDepth01,
-    @Nonnull AsteroidOreProfile oreProfile, @Nonnull AsteroidAppearanceProfile appearance) {
+    @Nonnull AsteroidDetectionState initialDetectionState, @Nullable AsteroidOreKnowledgeState initialOreKnowledgeState,
+    double angleOffsetDeg, double orbitalDepth01, @Nonnull AsteroidOreProfile oreProfile,
+    @Nonnull AsteroidAppearanceProfile appearance) {
 
     public AsteroidFieldNode(@Nonnull MinorCelestialBodyId id, @Nonnull CelestialObjectId beltId, int index,
         @Nonnull String displayName, @Nonnull AsteroidNodeKind kind, @Nonnull AsteroidSizeClass sizeClass,

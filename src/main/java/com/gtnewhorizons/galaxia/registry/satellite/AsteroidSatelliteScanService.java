@@ -5,12 +5,13 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Predicate;
+
+import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -47,10 +48,10 @@ public final class AsteroidSatelliteScanService {
     // rescan, while an unchanged field stays permanently idle after a full pass.
     private final Set<CompletionKey> completions = new HashSet<>();
 
-    public AsteroidSatelliteScanService(AsteroidFieldKnowledgeStore knowledgeStore,
-        Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver) {
-        this.knowledgeStore = Objects.requireNonNull(knowledgeStore, "knowledgeStore cannot be null");
-        this.profileResolver = Objects.requireNonNull(profileResolver, "profileResolver cannot be null");
+    public AsteroidSatelliteScanService(@Nonnull AsteroidFieldKnowledgeStore knowledgeStore,
+        @Nonnull Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver) {
+        this.knowledgeStore = knowledgeStore;
+        this.profileResolver = profileResolver;
     }
 
     public void clear() {
@@ -58,8 +59,7 @@ public final class AsteroidSatelliteScanService {
         completions.clear();
     }
 
-    public List<AsteroidSatelliteScanSnapshot> snapshots(UUID teamId) {
-        Objects.requireNonNull(teamId, "teamId cannot be null");
+    public List<AsteroidSatelliteScanSnapshot> snapshots(@Nonnull UUID teamId) {
         List<AsteroidSatelliteScanSnapshot> snapshots = new ArrayList<>();
         for (Map.Entry<ScanKey, Progress> entry : progressBySatellite.entrySet()) {
             if (!entry.getKey()
@@ -87,8 +87,7 @@ public final class AsteroidSatelliteScanService {
         return Map.copyOf(snapshots);
     }
 
-    public List<AsteroidSatelliteScanCompletionSnapshot> completionSnapshots(UUID teamId) {
-        Objects.requireNonNull(teamId, "teamId cannot be null");
+    public List<AsteroidSatelliteScanCompletionSnapshot> completionSnapshots(@Nonnull UUID teamId) {
         return completions.stream()
             .filter(
                 key -> key.teamId()
@@ -109,15 +108,15 @@ public final class AsteroidSatelliteScanService {
         return Map.copyOf(snapshots);
     }
 
-    public void restore(UUID teamId, List<AsteroidSatelliteScanSnapshot> snapshots) {
-        Objects.requireNonNull(teamId, "teamId cannot be null");
-        Objects.requireNonNull(snapshots, "snapshots cannot be null");
+    public void restore(@Nonnull UUID teamId, @Nonnull List<AsteroidSatelliteScanSnapshot> snapshots) {
         progressBySatellite.keySet()
             .removeIf(
                 key -> key.teamId()
                     .equals(teamId));
         for (AsteroidSatelliteScanSnapshot snapshot : snapshots) {
-            Objects.requireNonNull(snapshot, "snapshot cannot be null");
+            if (snapshot == null) {
+                throw new IllegalArgumentException("snapshot cannot be null");
+            }
             ScanKey key = new ScanKey(teamId, snapshot.satelliteId());
             if (progressBySatellite.containsKey(key)) {
                 throw new IllegalStateException(
@@ -127,14 +126,15 @@ public final class AsteroidSatelliteScanService {
         }
     }
 
-    public void restoreCompletions(UUID teamId, List<AsteroidSatelliteScanCompletionSnapshot> snapshots) {
-        Objects.requireNonNull(teamId, "teamId cannot be null");
-        Objects.requireNonNull(snapshots, "snapshots cannot be null");
+    public void restoreCompletions(@Nonnull UUID teamId,
+        @Nonnull List<AsteroidSatelliteScanCompletionSnapshot> snapshots) {
         completions.removeIf(
             key -> key.teamId()
                 .equals(teamId));
         for (AsteroidSatelliteScanCompletionSnapshot snapshot : snapshots) {
-            Objects.requireNonNull(snapshot, "snapshot cannot be null");
+            if (snapshot == null) {
+                throw new IllegalArgumentException("completion snapshot cannot be null");
+            }
             CompletionKey key = new CompletionKey(
                 teamId,
                 snapshot.beltId(),
@@ -147,9 +147,7 @@ public final class AsteroidSatelliteScanService {
         }
     }
 
-    public List<ScanResult> tick(UUID teamId, List<CelestialAsset> assets, int elapsedTicks) {
-        Objects.requireNonNull(teamId, "teamId cannot be null");
-        Objects.requireNonNull(assets, "assets cannot be null");
+    public List<ScanResult> tick(@Nonnull UUID teamId, @Nonnull List<CelestialAsset> assets, int elapsedTicks) {
         if (elapsedTicks < 0) throw new IllegalArgumentException("elapsedTicks must be non-negative");
         if (elapsedTicks == 0) return List.of();
 
@@ -179,8 +177,10 @@ public final class AsteroidSatelliteScanService {
 
         MinorCelestialBodyId anchorId = satellite.celestialObjectId.minorBodyId();
         CelestialObjectId beltId = anchorId.parentBeltId();
-        Optional<AsteroidFieldProfile> profile = Objects
-            .requireNonNull(profileResolver.apply(beltId), "profileResolver cannot return null");
+        Optional<AsteroidFieldProfile> profile = profileResolver.apply(beltId);
+        if (profile == null) {
+            throw new IllegalStateException("profileResolver cannot return null");
+        }
         if (profile.isEmpty()) {
             progressBySatellite.remove(key);
             return List.of();
@@ -279,31 +279,15 @@ public final class AsteroidSatelliteScanService {
         knowledge.prospect(work.asteroidId(), scope);
     }
 
-    public record ScanResult(CelestialObjectId beltId, MinorCelestialBodyId asteroidId,
-        AsteroidSatelliteScanPass pass) {
+    public record ScanResult(@Nonnull CelestialObjectId beltId, @Nonnull MinorCelestialBodyId asteroidId,
+        @Nonnull AsteroidSatelliteScanPass pass) {}
 
-        public ScanResult {
-            beltId = Objects.requireNonNull(beltId, "beltId cannot be null");
-            asteroidId = Objects.requireNonNull(asteroidId, "asteroidId cannot be null");
-            pass = Objects.requireNonNull(pass, "pass cannot be null");
-        }
-    }
+    private record ScanKey(@Nonnull UUID teamId, @Nonnull CelestialAsset.ID satelliteId) {}
 
-    private record ScanKey(UUID teamId, CelestialAsset.ID satelliteId) {
-
-        private ScanKey {
-            teamId = Objects.requireNonNull(teamId, "teamId cannot be null");
-            satelliteId = Objects.requireNonNull(satelliteId, "satelliteId cannot be null");
-        }
-    }
-
-    private record CompletionKey(UUID teamId, CelestialObjectId beltId, MinorCelestialBodyId anchorAsteroidId,
-        int generationVersion) {
+    private record CompletionKey(@Nonnull UUID teamId, @Nonnull CelestialObjectId beltId,
+        @Nonnull MinorCelestialBodyId anchorAsteroidId, int generationVersion) {
 
         private CompletionKey {
-            teamId = Objects.requireNonNull(teamId, "teamId cannot be null");
-            beltId = Objects.requireNonNull(beltId, "beltId cannot be null");
-            anchorAsteroidId = Objects.requireNonNull(anchorAsteroidId, "anchorAsteroidId cannot be null");
             if (!anchorAsteroidId.parentBeltId()
                 .equals(beltId)) {
                 throw new IllegalArgumentException("anchor asteroid parent belt must match completion belt");
@@ -312,31 +296,25 @@ public final class AsteroidSatelliteScanService {
         }
     }
 
-    private record ScanWork(AsteroidSatelliteScanPass pass, MinorCelestialBodyId asteroidId) {
+    private record ScanWork(@Nonnull AsteroidSatelliteScanPass pass, @Nonnull MinorCelestialBodyId asteroidId) {
 
-        private ScanWork {
-            pass = Objects.requireNonNull(pass, "pass cannot be null");
-            asteroidId = Objects.requireNonNull(asteroidId, "asteroidId cannot be null");
-        }
-
-        private static ScanWork from(AsteroidSatelliteScanPass pass, AsteroidFieldNode node) {
+        private static ScanWork from(@Nonnull AsteroidSatelliteScanPass pass, @Nonnull AsteroidFieldNode node) {
             return new ScanWork(pass, node.id());
         }
     }
 
-    private record Progress(AsteroidSatelliteScanPass pass, MinorCelestialBodyId asteroidId, int elapsedTicks) {
+    private record Progress(@Nonnull AsteroidSatelliteScanPass pass, @Nonnull MinorCelestialBodyId asteroidId,
+        int elapsedTicks) {
 
         private Progress {
-            pass = Objects.requireNonNull(pass, "pass cannot be null");
-            asteroidId = Objects.requireNonNull(asteroidId, "asteroidId cannot be null");
             if (elapsedTicks < 0) throw new IllegalArgumentException("elapsedTicks must be non-negative");
         }
 
-        private static Progress empty(ScanWork work) {
+        private static Progress empty(@Nonnull ScanWork work) {
             return new Progress(work.pass(), work.asteroidId(), 0);
         }
 
-        private boolean matches(ScanWork work) {
+        private boolean matches(@Nonnull ScanWork work) {
             return pass == work.pass() && asteroidId.equals(work.asteroidId());
         }
 

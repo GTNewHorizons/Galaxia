@@ -82,8 +82,8 @@ public final class AsteroidFieldResolver {
         return List.copyOf(nodes);
     }
 
-    public static AsteroidFieldNode resolveNode(@Nonnull CelestialObjectId beltId, @Nonnull AsteroidFieldProfile profile,
-        int index) {
+    public static AsteroidFieldNode resolveNode(@Nonnull CelestialObjectId beltId,
+        @Nonnull AsteroidFieldProfile profile, int index) {
         if (!profile.hasNodeIndex(index)) {
             throw new IllegalArgumentException("node index must be within the asteroid field profile");
         }

@@ -1,8 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.satellite;
 
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+
+import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -15,13 +16,13 @@ public final class AsteroidProspectingDataHandler implements SatelliteDataJobSer
     private final AsteroidFieldKnowledgeStore store;
     private final Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver;
 
-    public AsteroidProspectingDataHandler(AsteroidFieldKnowledgeStore store,
-        Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver) {
-        this.store = Objects.requireNonNull(store, "store cannot be null");
-        this.profileResolver = Objects.requireNonNull(profileResolver, "profileResolver cannot be null");
+    public AsteroidProspectingDataHandler(@Nonnull AsteroidFieldKnowledgeStore store,
+        @Nonnull Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver) {
+        this.store = store;
+        this.profileResolver = profileResolver;
     }
 
-    public static AsteroidProspectingDataHandler live(AsteroidFieldKnowledgeStore store) {
+    public static AsteroidProspectingDataHandler live(@Nonnull AsteroidFieldKnowledgeStore store) {
         return new AsteroidProspectingDataHandler(
             store,
             bodyId -> GalaxiaCelestialAPI.get(bodyId)
@@ -35,8 +36,7 @@ public final class AsteroidProspectingDataHandler implements SatelliteDataJobSer
         handle(event);
     }
 
-    public Optional<AsteroidFieldNode> handle(SatelliteDataJobService.ProductionEvent event) {
-        Objects.requireNonNull(event, "event cannot be null");
+    public Optional<AsteroidFieldNode> handle(@Nonnull SatelliteDataJobService.ProductionEvent event) {
         SatelliteDataKey key = event.key();
         if (key.type() != SatelliteDataType.PROSPECTING) return Optional.empty();
         if (!key.hasOrigin()) {
@@ -46,8 +46,10 @@ public final class AsteroidProspectingDataHandler implements SatelliteDataJobSer
             throw new IllegalStateException("Prospecting production event origin does not match source body");
         }
 
-        Optional<AsteroidFieldProfile> profile = Objects
-            .requireNonNull(profileResolver.apply(event.bodyId()), "profileResolver cannot return null");
+        Optional<AsteroidFieldProfile> profile = profileResolver.apply(event.bodyId());
+        if (profile == null) {
+            throw new IllegalStateException("profileResolver cannot return null");
+        }
         if (profile.isEmpty()) return Optional.empty();
 
         if (store.getOrCreate(event.teamId(), event.bodyId(), profile.get())

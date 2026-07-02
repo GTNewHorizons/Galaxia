@@ -1,19 +1,15 @@
 package com.gtnewhorizons.galaxia.registry.satellite;
 
-import java.util.Objects;
+import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 
-public record AsteroidSatelliteScanSnapshot(CelestialAsset.ID satelliteId, CelestialObjectId beltId,
-    MinorCelestialBodyId asteroidId, AsteroidSatelliteScanPass pass, int elapsedTicks) {
+public record AsteroidSatelliteScanSnapshot(@Nonnull CelestialAsset.ID satelliteId, @Nonnull CelestialObjectId beltId,
+    @Nonnull MinorCelestialBodyId asteroidId, @Nonnull AsteroidSatelliteScanPass pass, int elapsedTicks) {
 
     public AsteroidSatelliteScanSnapshot {
-        satelliteId = Objects.requireNonNull(satelliteId, "satelliteId cannot be null");
-        beltId = Objects.requireNonNull(beltId, "beltId cannot be null");
-        asteroidId = Objects.requireNonNull(asteroidId, "asteroidId cannot be null");
-        pass = Objects.requireNonNull(pass, "pass cannot be null");
         if (!asteroidId.parentBeltId()
             .equals(beltId)) {
             throw new IllegalArgumentException("asteroid parent belt must match scan belt");

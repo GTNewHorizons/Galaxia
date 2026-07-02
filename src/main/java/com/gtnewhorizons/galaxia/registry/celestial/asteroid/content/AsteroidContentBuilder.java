@@ -5,9 +5,10 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Consumer;
+
+import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidAppearanceProfile;
@@ -31,9 +32,7 @@ public final class AsteroidContentBuilder {
     private final Map<CelestialObjectId, FieldBuilder> fieldsByBelt = new LinkedHashMap<>();
     private final List<AuthoredAsteroidBuilder> authoredAsteroids = new ArrayList<>();
 
-    public AsteroidContentBuilder field(CelestialObjectId beltId, Consumer<FieldBuilder> config) {
-        Objects.requireNonNull(beltId, "beltId cannot be null");
-        Objects.requireNonNull(config, "config cannot be null");
+    public AsteroidContentBuilder field(@Nonnull CelestialObjectId beltId, @Nonnull Consumer<FieldBuilder> config) {
         FieldBuilder builder = fieldsByBelt.computeIfAbsent(beltId, ignored -> new FieldBuilder());
         config.accept(builder);
         return this;
@@ -47,9 +46,8 @@ public final class AsteroidContentBuilder {
         return authored(contentId, AsteroidNodeKind.UNIQUE, config);
     }
 
-    private AsteroidContentBuilder authored(String contentId, AsteroidNodeKind kind,
-        Consumer<AuthoredAsteroidBuilder> config) {
-        Objects.requireNonNull(config, "config cannot be null");
+    private AsteroidContentBuilder authored(@Nonnull String contentId, @Nonnull AsteroidNodeKind kind,
+        @Nonnull Consumer<AuthoredAsteroidBuilder> config) {
         AuthoredAsteroidBuilder builder = new AuthoredAsteroidBuilder(contentId, kind);
         config.accept(builder);
         authoredAsteroids.add(builder);
@@ -142,8 +140,8 @@ public final class AsteroidContentBuilder {
             return this;
         }
 
-        public FieldBuilder oreProfile(AsteroidOreProfile value) {
-            this.oreProfiles.add(Objects.requireNonNull(value, "ore profile cannot be null"));
+        public FieldBuilder oreProfile(@Nonnull AsteroidOreProfile value) {
+            this.oreProfiles.add(value);
             return this;
         }
 
@@ -176,16 +174,16 @@ public final class AsteroidContentBuilder {
         private String oreProfileId;
         private AsteroidAppearanceProfile appearance;
 
-        private AuthoredAsteroidBuilder(String contentId, AsteroidNodeKind kind) {
+        private AuthoredAsteroidBuilder(@Nonnull String contentId, @Nonnull AsteroidNodeKind kind) {
             if (contentId == null || contentId.isBlank()) {
                 throw new IllegalArgumentException("contentId is required");
             }
             this.contentId = contentId;
-            this.kind = Objects.requireNonNull(kind, "kind cannot be null");
+            this.kind = kind;
         }
 
-        public AuthoredAsteroidBuilder belt(CelestialObjectId value) {
-            this.beltId = Objects.requireNonNull(value, "beltId cannot be null");
+        public AuthoredAsteroidBuilder belt(@Nonnull CelestialObjectId value) {
+            this.beltId = value;
             return this;
         }
 
@@ -209,8 +207,8 @@ public final class AsteroidContentBuilder {
             return this;
         }
 
-        public AuthoredAsteroidBuilder size(AsteroidSizeClass value) {
-            this.sizeClass = Objects.requireNonNull(value, "sizeClass cannot be null");
+        public AuthoredAsteroidBuilder size(@Nonnull AsteroidSizeClass value) {
+            this.sizeClass = value;
             return this;
         }
 
@@ -257,8 +255,8 @@ public final class AsteroidContentBuilder {
             return this;
         }
 
-        public AuthoredAsteroidBuilder appearance(AsteroidAppearanceProfile value) {
-            this.appearance = Objects.requireNonNull(value, "appearance cannot be null");
+        public AuthoredAsteroidBuilder appearance(@Nonnull AsteroidAppearanceProfile value) {
+            this.appearance = value;
             return this;
         }
 

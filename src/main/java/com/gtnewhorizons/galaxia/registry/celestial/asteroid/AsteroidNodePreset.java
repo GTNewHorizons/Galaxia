@@ -1,14 +1,16 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
-import java.util.Objects;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-public record AsteroidNodePreset(int index, AsteroidNodeKind kind, String contentId, String displayName,
-    AsteroidSizeClass sizeClass, AsteroidDetectionState initialDetectionState,
-    AsteroidOreKnowledgeState initialOreKnowledgeState, Double angleOffsetDeg, Double orbitalDepth01,
-    String oreProfileId, AsteroidAppearanceProfile appearance) {
+public record AsteroidNodePreset(int index, @Nonnull AsteroidNodeKind kind, @Nullable String contentId,
+    @Nonnull String displayName, @Nonnull AsteroidSizeClass sizeClass,
+    @Nonnull AsteroidDetectionState initialDetectionState, @Nullable AsteroidOreKnowledgeState initialOreKnowledgeState,
+    @Nullable Double angleOffsetDeg, @Nullable Double orbitalDepth01, @Nullable String oreProfileId,
+    @Nullable AsteroidAppearanceProfile appearance) {
 
-    public AsteroidNodePreset(int index, AsteroidNodeKind kind, String displayName,
-        AsteroidDetectionState initialDetectionState) {
+    public AsteroidNodePreset(int index, @Nonnull AsteroidNodeKind kind, @Nonnull String displayName,
+        @Nonnull AsteroidDetectionState initialDetectionState) {
         this(
             index,
             kind,
@@ -27,15 +29,12 @@ public record AsteroidNodePreset(int index, AsteroidNodeKind kind, String conten
         if (index < 0) {
             throw new IllegalArgumentException("preset index must be non-negative");
         }
-        kind = Objects.requireNonNull(kind, "kind cannot be null");
         if (contentId != null && contentId.isBlank()) {
             throw new IllegalArgumentException("contentId cannot be blank");
         }
         if (displayName == null || displayName.isBlank()) {
             throw new IllegalArgumentException("displayName is required");
         }
-        sizeClass = Objects.requireNonNull(sizeClass, "sizeClass cannot be null");
-        initialDetectionState = Objects.requireNonNull(initialDetectionState, "initialDetectionState cannot be null");
         if (initialDetectionState == AsteroidDetectionState.HIDDEN && initialOreKnowledgeState != null
             && initialOreKnowledgeState != AsteroidOreKnowledgeState.UNKNOWN) {
             throw new IllegalArgumentException("hidden asteroid presets cannot expose ore knowledge");
