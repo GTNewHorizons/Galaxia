@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -94,11 +96,70 @@ final class StationMapOverlayPainter {
 
     static void drawMaintenanceBayCoverage(@Nullable StationTileCoord selected, Map<StationTileCoord, PlacedTile> tiles,
         StationMapFrame frame) {
-        if (selected == null || !tiles.containsKey(selected)) return;
+        drawSegments(
+            maintenanceCoverageFillSegments(selected, tiles, frame),
+            EnumColors.MAP_COLOR_STATION_DEBUG_NEIGHBOR_FILL.getColor());
+        for (MaintenanceCoverageTarget target : maintenanceCoverageTargets(selected, tiles)) {
+            ModuleInstance module = target.module();
+            if (module != null) {
+                drawModuleOverlay(module, EnumColors.MAP_COLOR_STATION_DEBUG_NEIGHBOR_BORDER.getColor(), frame);
+                continue;
+            }
+            StationTileCoord coord = target.tile();
+            if (coord != null) {
+                BorderedRect.draw(
+                    frame.tileLocalX(coord),
+                    frame.tileLocalY(coord),
+                    StationMapViewport.TILE_SIZE,
+                    StationMapViewport.TILE_SIZE,
+                    EnumColors.MAP_COLOR_STATION_DEBUG_NEIGHBOR_FILL.getColor(),
+                    EnumColors.MAP_COLOR_STATION_DEBUG_NEIGHBOR_BORDER.getColor());
+            }
+        }
+    }
+
+    static List<ModuleFootprintProjection.Segment> maintenanceCoverageFillSegments(@Nullable StationTileCoord selected,
+        Map<StationTileCoord, PlacedTile> tiles, StationMapFrame frame) {
+        List<ModuleFootprintProjection.Segment> segments = new ArrayList<>();
+        for (MaintenanceCoverageTarget target : maintenanceCoverageTargets(selected, tiles)) {
+            ModuleInstance module = target.module();
+            if (module != null) {
+                segments.addAll(
+                    ModuleFootprintProjection.filledSegments(
+                        module.shape(),
+                        module.anchor(),
+                        module.rotation(),
+                        frame.widgetWidth(),
+                        frame.widgetHeight(),
+                        frame.contentLeft(),
+                        frame.contentRightPadding(),
+                        frame.contentVerticalPadding(),
+                        frame.panX(),
+                        frame.panY()));
+                continue;
+            }
+            StationTileCoord tile = target.tile();
+            if (tile != null) {
+                segments.add(
+                    new ModuleFootprintProjection.Segment(
+                        frame.tileLocalX(tile),
+                        frame.tileLocalY(tile),
+                        StationMapViewport.TILE_SIZE,
+                        StationMapViewport.TILE_SIZE));
+            }
+        }
+        return segments;
+    }
+
+    static List<MaintenanceCoverageTarget> maintenanceCoverageTargets(@Nullable StationTileCoord selected,
+        Map<StationTileCoord, PlacedTile> tiles) {
+        if (selected == null || !tiles.containsKey(selected)) return List.of();
         PlacedTile selectedTile = tiles.get(selected);
         ModuleInstance selectedModule = selectedTile != null ? selectedTile.module() : null;
-        if (selectedModule == null || selectedModule.kind() != FacilityModuleKind.MAINTENANCE_BAY) return;
+        if (selectedModule == null || selectedModule.kind() != FacilityModuleKind.MAINTENANCE_BAY) return List.of();
 
+        List<MaintenanceCoverageTarget> targets = new ArrayList<>();
+        Set<ModuleInstance.ID> targetedModules = new HashSet<>();
         StationTileCoord anchor = selectedModule.anchor();
         for (int dy = -1; dy <= 1; dy++) {
             for (int dx = -1; dx <= 1; dx++) {
@@ -109,15 +170,15 @@ final class StationMapOverlayPainter {
                     || ny < StationTileCoord.MIN
                     || ny > StationTileCoord.MAX) continue;
                 StationTileCoord coord = StationTileCoord.of(nx, ny);
-                BorderedRect.draw(
-                    frame.tileLocalX(coord),
-                    frame.tileLocalY(coord),
-                    StationMapViewport.TILE_SIZE,
-                    StationMapViewport.TILE_SIZE,
-                    EnumColors.MAP_COLOR_STATION_DEBUG_NEIGHBOR_FILL.getColor(),
-                    EnumColors.MAP_COLOR_STATION_DEBUG_NEIGHBOR_BORDER.getColor());
+                ModuleInstance module = moduleOf(tiles.get(coord));
+                if (module != null) {
+                    if (targetedModules.add(module.id)) targets.add(MaintenanceCoverageTarget.module(module));
+                } else {
+                    targets.add(MaintenanceCoverageTarget.tile(coord));
+                }
             }
         }
+        return targets;
     }
 
     static void drawCoreDirectionIndicator(Set<StationTileCoord> occupiedTiles, StationMapFrame frame) {
@@ -261,15 +322,21 @@ final class StationMapOverlayPainter {
     }
 
     private static void drawModuleOverlay(ModuleInstance module, int color, StationMapFrame frame) {
-        for (ModuleFootprintProjection.Segment segment : moduleOverlaySegments(
-            module,
-            frame.widgetWidth(),
-            frame.widgetHeight(),
-            frame.contentLeft(),
-            frame.contentRightPadding(),
-            frame.contentVerticalPadding(),
-            frame.panX(),
-            frame.panY())) {
+        drawSegments(
+            moduleOverlaySegments(
+                module,
+                frame.widgetWidth(),
+                frame.widgetHeight(),
+                frame.contentLeft(),
+                frame.contentRightPadding(),
+                frame.contentVerticalPadding(),
+                frame.panX(),
+                frame.panY()),
+            color);
+    }
+
+    private static void drawSegments(List<ModuleFootprintProjection.Segment> segments, int color) {
+        for (ModuleFootprintProjection.Segment segment : segments) {
             Gui.drawRect(
                 segment.x(),
                 segment.y(),
@@ -321,5 +388,16 @@ final class StationMapOverlayPainter {
     private static int alertTitleColor(StationModuleAlert alert) {
         return alert.severity() == StationModuleAlert.Severity.RED ? EnumColors.MAP_COLOR_TEXT_DANGER.getColor()
             : EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_WARNING.getColor();
+    }
+
+    record MaintenanceCoverageTarget(@Nullable ModuleInstance module, @Nullable StationTileCoord tile) {
+
+        static MaintenanceCoverageTarget module(ModuleInstance module) {
+            return new MaintenanceCoverageTarget(module, null);
+        }
+
+        static MaintenanceCoverageTarget tile(StationTileCoord tile) {
+            return new MaintenanceCoverageTarget(null, tile);
+        }
     }
 }

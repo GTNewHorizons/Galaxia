@@ -182,6 +182,75 @@ final class StationMapWidgetTest {
         assertNull(StationMapWidget.hitTestModuleFootprint(layout, x, y, 200, 200, 0, 0, 0, 0, 0));
     }
 
+    @Test
+    void maintenanceCoverageTargetsWholeAdjacentModulesAndEmptyTiles() {
+        ModuleInstance maintenanceBay = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.MAINTENANCE_BAY,
+            StationTileCoord.CORE,
+            ModuleShape.SINGLE,
+            ModuleTier.EV);
+        ModuleInstance macerator = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.MACERATOR,
+            StationTileCoord.of(1, 0),
+            ModuleShape.L_2x2,
+            ModuleTier.EV);
+        Map<StationTileCoord, PlacedTile> tiles = new LinkedHashMap<>();
+        tiles.put(StationTileCoord.CORE, new PlacedTile(maintenanceBay, StationTileState.OCCUPIED_OPERATIONAL));
+        for (StationTileCoord tile : macerator.tiles()) {
+            tiles.put(tile, new PlacedTile(macerator, StationTileState.OCCUPIED_OPERATIONAL));
+        }
+
+        List<StationMapOverlayPainter.MaintenanceCoverageTarget> targets = StationMapOverlayPainter
+            .maintenanceCoverageTargets(StationTileCoord.CORE, tiles);
+
+        assertEquals(
+            1,
+            targets.stream()
+                .filter(target -> target.module() == macerator)
+                .count());
+        assertTrue(
+            targets.stream()
+                .anyMatch(
+                    target -> target.tile() != null && target.tile()
+                        .equals(StationTileCoord.of(-1, 0))));
+        assertFalse(
+            targets.stream()
+                .anyMatch(
+                    target -> target.tile() != null && target.tile()
+                        .equals(StationTileCoord.of(1, 0))));
+    }
+
+    @Test
+    void maintenanceCoverageFillsWholeAdjacentModuleFootprint() {
+        ModuleInstance maintenanceBay = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.MAINTENANCE_BAY,
+            StationTileCoord.CORE,
+            ModuleShape.SINGLE,
+            ModuleTier.EV);
+        ModuleInstance macerator = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.MACERATOR,
+            StationTileCoord.of(1, 0),
+            ModuleShape.L_2x2,
+            ModuleTier.EV);
+        Map<StationTileCoord, PlacedTile> tiles = new LinkedHashMap<>();
+        tiles.put(StationTileCoord.CORE, new PlacedTile(maintenanceBay, StationTileState.OCCUPIED_OPERATIONAL));
+        for (StationTileCoord tile : macerator.tiles()) {
+            tiles.put(tile, new PlacedTile(macerator, StationTileState.OCCUPIED_OPERATIONAL));
+        }
+        StationMapFrame frame = new StationMapFrame(240, 240, 0, 0, 0, 0, 0);
+
+        List<ModuleFootprintProjection.Segment> segments = StationMapOverlayPainter
+            .maintenanceCoverageFillSegments(StationTileCoord.CORE, tiles, frame);
+        int x = StationMapViewport.tileLeftX(1, 240, 0, 0, 0) + StationMapViewport.TILE_SIZE / 2;
+        int y = StationMapViewport.tileTopY(0, 240, 0, 0) + StationMapViewport.TILE_SIZE / 2;
+
+        assertTrue(covers(segments, x, y));
+    }
+
     private static boolean covers(List<ModuleFootprintProjection.Segment> segments, int x, int y) {
         for (ModuleFootprintProjection.Segment segment : segments) {
             if (segment.contains(x, y)) return true;
