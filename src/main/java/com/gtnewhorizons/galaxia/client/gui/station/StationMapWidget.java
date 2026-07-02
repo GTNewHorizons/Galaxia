@@ -10,11 +10,6 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.client.gui.Gui;
-import net.minecraft.util.ResourceLocation;
-
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
@@ -24,13 +19,9 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
-import com.gtnewhorizons.galaxia.client.EnumColors;
-import com.gtnewhorizons.galaxia.client.EnumTextures;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.CapacityConnectorLayer;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.ConnectionLayerRenderer;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.ModuleLayerRenderer;
-import com.gtnewhorizons.galaxia.client.gui.station.layer.PlanetaryFeatureOverlayRenderer;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureDefinition;
@@ -74,9 +65,6 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
 
     private boolean listenersRegistered;
     private static final int CLICK_DRAG_THRESHOLD = 3;
-    private static final int ALERT_ICON_SIZE = 8;
-    private static final ResourceLocation DEFAULT_ALERT_ICON = EnumTextures.ICON_STATION_ALERT_WARNING.get();
-    private static final ResourceLocation DEFAULT_RED_ALERT_ICON = EnumTextures.ICON_STATION_ALERT_ERROR.get();
 
     public StationMapWidget(CelestialAsset.ID assetId) {
         this(assetId, null, null);
@@ -279,8 +267,16 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
 
         int widgetWidth = getArea().width;
         int widgetHeight = getArea().height;
+        StationMapFrame frame = new StationMapFrame(
+            widgetWidth,
+            widgetHeight,
+            contentLeft,
+            contentRightPadding,
+            contentVerticalPadding,
+            panX,
+            panY);
 
-        drawFeatureOverlay(facility);
+        StationMapOverlayPainter.drawFeatureOverlay(facility, frame, visibleFeatureTiles);
 
         ConnectionLayerRenderer.draw(
             context,
@@ -326,198 +322,35 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             int ty = tileLocalY(coord);
             ModuleLayerRenderer.drawOccupied(context, tx, ty, coord, e.getValue());
         }
-        drawModuleAlerts(tiles, moduleAlerts);
+        StationMapOverlayPainter.drawModuleAlerts(tiles, moduleAlerts, frame);
 
         drawPickerOverlay(context, tiles);
 
-        drawCoreDirectionIndicator(tiles.keySet());
+        StationMapOverlayPainter.drawCoreDirectionIndicator(tiles.keySet(), frame);
 
         StationTileCoord hov = hovered;
         if (hov != null && (tiles.containsKey(hov) || expansionSlots.contains(hov))) {
-            drawHoverOverlay(hov, tiles);
+            StationMapOverlayPainter.drawHoverOverlay(hov, tiles, frame);
         }
 
         StationTileCoord sel = selected;
         if (!isPickerActive() && sel != null && (tiles.containsKey(sel) || expansionSlots.contains(sel))) {
-            drawSelectionOverlay(sel, tiles);
+            StationMapOverlayPainter.drawSelectionOverlay(sel, tiles, frame);
         }
 
-        // T3.9: Maintenance Bay coverage overlay — highlight 8 affected tiles when a bay is selected
-        if (sel != null && tiles.containsKey(sel)) {
-            PlacedTile selTile = tiles.get(sel);
-            ModuleInstance selModule = selTile != null ? selTile.module() : null;
-            if (selModule != null && selModule.kind() == FacilityModuleKind.MAINTENANCE_BAY) {
-                StationTileCoord anchor = selModule.anchor();
-                for (int dy = -1; dy <= 1; dy++) {
-                    for (int dx = -1; dx <= 1; dx++) {
-                        if (dx == 0 && dy == 0) continue;
-                        int nx = anchor.dx() + dx;
-                        int ny = anchor.dy() + dy;
-                        if (nx < StationTileCoord.MIN || nx > StationTileCoord.MAX
-                            || ny < StationTileCoord.MIN
-                            || ny > StationTileCoord.MAX) continue;
-                        StationTileCoord ncoord = StationTileCoord.of(nx, ny);
-                        int hx = tileLocalX(ncoord);
-                        int hy = tileLocalY(ncoord);
-                        BorderedRect.draw(
-                            hx,
-                            hy,
-                            StationMapViewport.TILE_SIZE,
-                            StationMapViewport.TILE_SIZE,
-                            EnumColors.MAP_COLOR_STATION_DEBUG_NEIGHBOR_FILL.getColor(),
-                            EnumColors.MAP_COLOR_STATION_DEBUG_NEIGHBOR_BORDER.getColor());
-                    }
-                }
-            }
-        }
+        StationMapOverlayPainter.drawMaintenanceBayCoverage(sel, tiles, frame);
 
-        drawFeatureTooltip(facility);
-        drawModuleAlertTooltip(tiles, moduleAlerts);
-    }
-
-    private void drawModuleAlerts(Map<StationTileCoord, PlacedTile> tiles,
-        Map<ModuleInstance.ID, List<StationModuleAlert>> moduleAlerts) {
-        if (moduleAlerts.isEmpty()) return;
-        for (Map.Entry<StationTileCoord, PlacedTile> entry : tiles.entrySet()) {
-            ModuleInstance module = moduleOf(entry.getValue());
-            if (module == null || !entry.getKey()
-                .equals(alertBadgeCoord(module, tiles))) {
-                continue;
-            }
-            StationModuleAlert alert = firstAlert(moduleAlerts, module);
-            if (alert == null) continue;
-            drawModuleAlertIcon(tileLocalX(entry.getKey()), tileLocalY(entry.getKey()), alert);
-        }
-    }
-
-    private static void drawModuleAlertIcon(int tileX, int tileY, StationModuleAlert alert) {
-        ResourceLocation icon = alert.icon() != null ? alert.icon() : defaultAlertIcon(alert.severity());
-        ModuleConfigModalSupport.renderTextureIcon(icon, tileX + 2, tileY + 2, ALERT_ICON_SIZE, ALERT_ICON_SIZE);
-    }
-
-    private void drawModuleAlertTooltip(Map<StationTileCoord, PlacedTile> tiles,
-        Map<ModuleInstance.ID, List<StationModuleAlert>> moduleAlerts) {
-        if (moduleAlerts.isEmpty() || hovered == null) return;
-        PlacedTile tile = tiles.get(hovered);
-        ModuleInstance module = moduleOf(tile);
-        if (module == null) return;
-        List<StationModuleAlert> alerts = moduleAlerts.get(module.id);
-        if (alerts == null || alerts.isEmpty()) return;
-
-        FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
-        int localX = toLocalMouseX(getContext().getMouseX());
-        int localY = toLocalMouseY(getContext().getMouseY());
-        int maxTextWidth = Math.max(40, Math.min(180, getArea().width - 20));
-        int tooltipWidth = 40;
-        for (StationModuleAlert alert : alerts) {
-            tooltipWidth = Math.max(tooltipWidth, fr.getStringWidth(fr.trimStringToWidth(alert.title(), maxTextWidth)));
-            tooltipWidth = Math
-                .max(tooltipWidth, fr.getStringWidth(fr.trimStringToWidth(alert.message(), maxTextWidth)));
-        }
-        tooltipWidth += 12;
-        int tooltipHeight = 8 + alerts.size() * (fr.FONT_HEIGHT * 2 + 6);
-        int tooltipX = Math.min(localX + 10, getArea().width - tooltipWidth - 2);
-        int tooltipY = Math.min(localY + 10, getArea().height - tooltipHeight - 2);
-        tooltipX = Math.max(2, tooltipX);
-        tooltipY = Math.max(2, tooltipY);
-        boolean red = hasRedAlert(alerts);
-        BorderedRect.draw(
-            tooltipX,
-            tooltipY,
-            tooltipWidth,
-            tooltipHeight,
-            EnumColors.MAP_COLOR_STATION_PANEL_BG.getColor(),
-            red ? EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_BLOCKING.getColor()
-                : EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_WARNING.getColor());
-        int textY = tooltipY + 4;
-        for (StationModuleAlert alert : alerts) {
-            String title = fr.trimStringToWidth(alert.title(), maxTextWidth);
-            String message = fr.trimStringToWidth(alert.message(), maxTextWidth);
-            fr.drawStringWithShadow(title, tooltipX + 6, textY, alertTitleColor(alert));
-            textY += fr.FONT_HEIGHT + 2;
-            fr.drawStringWithShadow(message, tooltipX + 6, textY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-            textY += fr.FONT_HEIGHT + 4;
-        }
-    }
-
-    private static @Nullable StationModuleAlert firstAlert(
-        Map<ModuleInstance.ID, List<StationModuleAlert>> moduleAlerts, ModuleInstance module) {
-        List<StationModuleAlert> alerts = moduleAlerts.get(module.id);
-        return alerts == null || alerts.isEmpty() ? null : alerts.get(0);
-    }
-
-    private static @Nullable ModuleInstance moduleOf(@Nullable PlacedTile tile) {
-        return tile == null ? null : tile.module();
-    }
-
-    private static ResourceLocation defaultAlertIcon(StationModuleAlert.Severity severity) {
-        return severity == StationModuleAlert.Severity.RED ? DEFAULT_RED_ALERT_ICON : DEFAULT_ALERT_ICON;
-    }
-
-    private static boolean hasRedAlert(List<StationModuleAlert> alerts) {
-        for (StationModuleAlert alert : alerts) {
-            if (alert.severity() == StationModuleAlert.Severity.RED) return true;
-        }
-        return false;
-    }
-
-    private static int alertTitleColor(StationModuleAlert alert) {
-        return alert.severity() == StationModuleAlert.Severity.RED ? EnumColors.MAP_COLOR_TEXT_DANGER.getColor()
-            : EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_WARNING.getColor();
-    }
-
-    private void drawHoverOverlay(StationTileCoord coord, Map<StationTileCoord, PlacedTile> tiles) {
-        PlacedTile placedTile = tiles.get(coord);
-        ModuleInstance module = moduleOf(placedTile);
-        if (module != null && module.shape()
-            .tileCount() > 1) {
-            drawModuleOverlay(module, EnumColors.MAP_COLOR_STATION_TILE_BORDER_HOVERED.getColor());
-            return;
-        }
-        int x = tileLocalX(coord);
-        int y = tileLocalY(coord);
-        StationTileRenderer.drawHoverOverlay(x, y, StationMapViewport.TILE_SIZE);
-    }
-
-    private void drawSelectionOverlay(StationTileCoord coord, Map<StationTileCoord, PlacedTile> tiles) {
-        PlacedTile placedTile = tiles.get(coord);
-        ModuleInstance module = moduleOf(placedTile);
-        if (module != null && module.shape()
-            .tileCount() > 1) {
-            drawModuleOverlay(module, EnumColors.MAP_COLOR_STATION_TILE_BORDER_SELECTED.getColor());
-            return;
-        }
-        int x = tileLocalX(coord);
-        int y = tileLocalY(coord);
-        StationTileRenderer.drawSelectionOverlay(x, y, StationMapViewport.TILE_SIZE);
-    }
-
-    private void drawModuleOverlay(ModuleInstance module, int color) {
-        for (ModuleFootprintProjection.Segment segment : moduleOverlaySegments(
-            module,
-            getArea().width,
-            getArea().height,
-            contentLeft,
-            contentRightPadding,
-            contentVerticalPadding,
-            panX,
-            panY)) {
-            Gui.drawRect(
-                segment.x(),
-                segment.y(),
-                segment.x() + segment.width(),
-                segment.y() + segment.height(),
-                color);
-        }
+        int localMouseX = toLocalMouseX(getContext().getMouseX());
+        int localMouseY = toLocalMouseY(getContext().getMouseY());
+        StationMapOverlayPainter
+            .drawFeatureTooltip(facility, featureSurface, localMouseX, localMouseY, frame, hoveredFeatureDefinitions);
+        StationMapOverlayPainter.drawModuleAlertTooltip(tiles, moduleAlerts, hovered, localMouseX, localMouseY, frame);
     }
 
     static List<ModuleFootprintProjection.Segment> moduleOverlaySegments(ModuleInstance module, int widgetWidth,
         int widgetHeight, int contentLeft, int contentRightPadding, int contentVerticalPadding, int panX, int panY) {
-        if (module == null) return List.of();
-        return ModuleFootprintProjection.outlineSegments(
-            module.shape(),
-            module.anchor(),
-            module.rotation(),
+        return StationMapOverlayPainter.moduleOverlaySegments(
+            module,
             widgetWidth,
             widgetHeight,
             contentLeft,
@@ -528,16 +361,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
     }
 
     static StationTileCoord alertBadgeCoord(ModuleInstance module, Map<StationTileCoord, PlacedTile> tiles) {
-        StationTileCoord best = module.anchor();
-        for (Map.Entry<StationTileCoord, PlacedTile> entry : tiles.entrySet()) {
-            ModuleInstance tileModule = moduleOf(entry.getValue());
-            if (tileModule == null || !module.id.equals(tileModule.id)) continue;
-            StationTileCoord coord = entry.getKey();
-            if (coord.dy() < best.dy() || coord.dy() == best.dy() && coord.dx() < best.dx()) {
-                best = coord;
-            }
-        }
-        return best;
+        return StationMapOverlayPainter.alertBadgeCoord(module, tiles);
     }
 
     private void updateHover(StationLayout layout) {
@@ -679,102 +503,6 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             } else {
                 StationTileRenderer.drawPickerCompatibleSecondaryOverlay(x, y, StationMapViewport.TILE_SIZE);
             }
-        }
-    }
-
-    private void drawFeatureOverlay(AutomatedFacility facility) {
-        StationMapViewport.collectVisibleTilePositions(
-            getArea().width,
-            getArea().height,
-            contentLeft,
-            contentRightPadding,
-            contentVerticalPadding,
-            panX,
-            panY,
-            visibleFeatureTiles);
-        for (StationMapViewport.TilePosition coord : visibleFeatureTiles) {
-            PlanetaryFeatureOverlayRenderer.draw(
-                tileLocalX(coord.dx()),
-                tileLocalY(coord.dy()),
-                facility.planetaryFeaturesAt(coord.dx(), coord.dy()));
-        }
-    }
-
-    private void drawCoreDirectionIndicator(Set<StationTileCoord> occupiedTiles) {
-        if (hasVisibleStationTile(occupiedTiles)) return;
-        StationCoreDirectionIndicator.Arrow arrow = StationCoreDirectionIndicator.towardCore(
-            getArea().width,
-            getArea().height,
-            contentLeft,
-            contentRightPadding,
-            contentVerticalPadding,
-            panX,
-            panY);
-        StationCoreDirectionIndicator.draw(
-            arrow,
-            EnumColors.MAP_COLOR_TEXT_TITLE.getColor(),
-            EnumColors.MAP_COLOR_STATION_TILE_BORDER_HOVERED.getColor());
-    }
-
-    private boolean hasVisibleStationTile(Set<StationTileCoord> occupiedTiles) {
-        for (StationTileCoord coord : occupiedTiles) {
-            if (StationCoreDirectionIndicator
-                .tileIntersectsScreen(tileLocalX(coord), tileLocalY(coord), getArea().width, getArea().height)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private void drawFeatureTooltip(AutomatedFacility facility) {
-        int localX = toLocalMouseX(getContext().getMouseX());
-        int localY = toLocalMouseY(getContext().getMouseY());
-        StationMapViewport.TilePosition coord = StationMapViewport.tilePositionAt(
-            localX,
-            localY,
-            getArea().width,
-            getArea().height,
-            contentLeft,
-            contentRightPadding,
-            contentVerticalPadding,
-            panX,
-            panY);
-        if (coord == null) return;
-        List<PlanetaryFeatureDefinition> features = featureSurface
-            .hoverDefinitions(facility, coord, hoveredFeatureDefinitions);
-        if (features.isEmpty()) return;
-
-        FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
-        int iconSize = 8;
-        int iconGap = 4;
-        int tooltipWidth = fr.getStringWidth("Features");
-        for (PlanetaryFeatureDefinition feature : features) {
-            tooltipWidth = Math.max(tooltipWidth, iconSize + iconGap + fr.getStringWidth(feature.displayName()));
-        }
-        tooltipWidth += 12;
-        int tooltipHeight = 8 + (features.size() + 1) * (fr.FONT_HEIGHT + 2);
-        int tooltipX = Math.min(localX + 10, getArea().width - tooltipWidth - 2);
-        int tooltipY = Math.min(localY + 10, getArea().height - tooltipHeight - 2);
-        tooltipX = Math.max(2, tooltipX);
-        tooltipY = Math.max(2, tooltipY);
-        BorderedRect.draw(
-            tooltipX,
-            tooltipY,
-            tooltipWidth,
-            tooltipHeight,
-            EnumColors.MAP_COLOR_STATION_PANEL_BG.getColor(),
-            EnumColors.MAP_COLOR_STATION_PANEL_BORDER.getColor());
-        int textY = tooltipY + 4;
-        fr.drawStringWithShadow("Features", tooltipX + 6, textY, EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
-        textY += fr.FONT_HEIGHT + 2;
-        for (PlanetaryFeatureDefinition feature : features) {
-            PlanetaryFeatureOverlayRenderer.drawIcon(feature, tooltipX + 6, textY, iconSize);
-            fr.drawStringWithShadow(
-                feature.displayName(),
-                tooltipX + 6 + iconSize + iconGap,
-                textY,
-                EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-            textY += fr.FONT_HEIGHT + 2;
         }
     }
 
