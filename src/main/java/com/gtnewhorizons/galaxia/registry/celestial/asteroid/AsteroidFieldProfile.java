@@ -3,11 +3,12 @@ package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
+
+import javax.annotation.Nonnull;
 
 public record AsteroidFieldProfile(long seedSalt, int generationVersion, int totalNodes, int largeCount,
     int mediumCount, int smallCount, double innerOrbitalRadius, double outerOrbitalRadius,
-    List<AsteroidOreProfile> oreProfiles) {
+    @Nonnull List<AsteroidOreProfile> oreProfiles) {
 
     public AsteroidFieldProfile {
         generationVersion = requirePositive("generationVersion", generationVersion);
@@ -31,7 +32,10 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
         }
         List<AsteroidOreProfile> copiedOreProfiles = new ArrayList<>(oreProfiles.size());
         for (AsteroidOreProfile oreProfile : oreProfiles) {
-            copiedOreProfiles.add(Objects.requireNonNull(oreProfile, "ore profile cannot be null"));
+            if (oreProfile == null) {
+                throw new IllegalArgumentException("ore profile cannot be null");
+            }
+            copiedOreProfiles.add(oreProfile);
         }
         oreProfiles = Collections.unmodifiableList(copiedOreProfiles);
     }
@@ -98,8 +102,8 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
             return this;
         }
 
-        public Builder oreProfile(AsteroidOreProfile value) {
-            this.oreProfiles.add(Objects.requireNonNull(value, "ore profile cannot be null"));
+        public Builder oreProfile(@Nonnull AsteroidOreProfile value) {
+            this.oreProfiles.add(value);
             return this;
         }
 

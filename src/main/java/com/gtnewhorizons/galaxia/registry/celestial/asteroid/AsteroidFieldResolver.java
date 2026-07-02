@@ -2,7 +2,8 @@ package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+
+import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 
@@ -12,10 +13,8 @@ public final class AsteroidFieldResolver {
 
     private AsteroidFieldResolver() {}
 
-    public static List<AsteroidFieldNode> resolveAll(CelestialObjectId beltId, AsteroidFieldProfile profile) {
-        Objects.requireNonNull(beltId, "beltId cannot be null");
-        Objects.requireNonNull(profile, "profile cannot be null");
-
+    public static List<AsteroidFieldNode> resolveAll(@Nonnull CelestialObjectId beltId,
+        @Nonnull AsteroidFieldProfile profile) {
         List<AsteroidFieldNode> nodes = new ArrayList<>(profile.totalNodes());
         for (int index = 0; index < profile.totalNodes(); index++) {
             nodes.add(resolveNode(beltId, profile, index));
@@ -23,29 +22,25 @@ public final class AsteroidFieldResolver {
         return List.copyOf(nodes);
     }
 
-    public static AsteroidFieldNode resolveNode(CelestialObjectId beltId, AsteroidFieldProfile profile, int index) {
-        Objects.requireNonNull(beltId, "beltId cannot be null");
-        Objects.requireNonNull(profile, "profile cannot be null");
+    public static AsteroidFieldNode resolveNode(@Nonnull CelestialObjectId beltId,
+        @Nonnull AsteroidFieldProfile profile, int index) {
         if (index < 0 || index >= profile.totalNodes()) {
             throw new IllegalArgumentException("node index must be within the asteroid field profile");
         }
         return resolveNodeUnchecked(beltId, profile, index);
     }
 
-    public static AsteroidDetectionState initialDetectionState(AsteroidFieldNode node) {
-        Objects.requireNonNull(node, "node cannot be null");
+    public static AsteroidDetectionState initialDetectionState(@Nonnull AsteroidFieldNode node) {
         return node.sizeClass() == AsteroidSizeClass.LARGE ? AsteroidDetectionState.DETECTED
             : AsteroidDetectionState.HIDDEN;
     }
 
-    public static AsteroidOreKnowledgeState initialOreKnowledge(AsteroidFieldNode node) {
-        Objects.requireNonNull(node, "node cannot be null");
+    public static AsteroidOreKnowledgeState initialOreKnowledge(@Nonnull AsteroidFieldNode node) {
         if (node.sizeClass() != AsteroidSizeClass.LARGE) return AsteroidOreKnowledgeState.UNKNOWN;
         return rolledOreKnowledge(node, 5L);
     }
 
-    public static AsteroidOreKnowledgeState oreKnowledgeAfterDetection(AsteroidFieldNode node) {
-        Objects.requireNonNull(node, "node cannot be null");
+    public static AsteroidOreKnowledgeState oreKnowledgeAfterDetection(@Nonnull AsteroidFieldNode node) {
         if (node.sizeClass() == AsteroidSizeClass.SMALL) return AsteroidOreKnowledgeState.UNKNOWN;
         return rolledOreKnowledge(node, 6L);
     }
