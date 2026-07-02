@@ -33,8 +33,8 @@ final class AsteroidGeneratedSlotAllocator {
         int ordinal = AsteroidSlotRanges.generatedOrdinal(index);
         int classOrdinal = generatedSizeClassOrdinal(profile, ordinal, sizeClass);
         int classCount = generatedSizeClassCount(profile, sizeClass);
-        if (classCount <= 0) return AsteroidFieldDeterminism.unitDouble(AsteroidFieldDeterminism.mix(baseSeed, 1L))
-            * 360.0;
+        if (classCount <= 0)
+            return AsteroidFieldDeterminism.unitDouble(AsteroidFieldDeterminism.mix(baseSeed, 1L)) * 360.0;
 
         double sectorWidth = 360.0 / classCount;
         double phase = AsteroidFieldDeterminism.unitDouble(
