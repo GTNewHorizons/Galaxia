@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
-import java.util.Objects;
+import javax.annotation.Nonnull;
 
 import net.minecraft.nbt.NBTTagCompound;
 
@@ -21,12 +21,12 @@ public record CelestialObjectKey(CelestialObjectId registeredBodyId, MinorCelest
         }
     }
 
-    public static CelestialObjectKey registered(CelestialObjectId id) {
-        return new CelestialObjectKey(Objects.requireNonNull(id, "id cannot be null"), null);
+    public static CelestialObjectKey registered(@Nonnull CelestialObjectId id) {
+        return new CelestialObjectKey(id, null);
     }
 
-    public static CelestialObjectKey minorBody(MinorCelestialBodyId id) {
-        return new CelestialObjectKey(null, Objects.requireNonNull(id, "id cannot be null"));
+    public static CelestialObjectKey minorBody(@Nonnull MinorCelestialBodyId id) {
+        return new CelestialObjectKey(null, id);
     }
 
     public boolean isRegistered() {
@@ -62,8 +62,10 @@ public record CelestialObjectKey(CelestialObjectId registeredBodyId, MinorCelest
         return tag;
     }
 
-    public static CelestialObjectKey fromNbt(NBTTagCompound tag) {
-        Objects.requireNonNull(tag, "tag cannot be null");
+    public static CelestialObjectKey fromNbt(@Nonnull NBTTagCompound tag) {
+        if (tag == null) {
+            throw new IllegalArgumentException("tag cannot be null");
+        }
         String kind = tag.getString("kind");
         // Invalid data is intentionally loud: a bad body key can attach assets to
         // the wrong place, which is worse than failing the load or packet decode.
