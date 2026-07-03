@@ -1,22 +1,30 @@
-package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
+package com.gtnewhorizons.galaxia.registry.celestial.knowledge;
 
 import java.util.List;
 import java.util.Optional;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanCompletionSnapshot;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
 
-public final class AsteroidFieldClientState {
+/**
+ * Client-side read model for object knowledge synced from the server.
+ *
+ * Asteroid snapshots are the first producer, but the state is intentionally
+ * anchored in the celestial knowledge package so future discoverable moons or
+ * surfaces do not need their own static client stores.
+ */
+public final class CelestialKnowledgeClientState {
 
     private static List<AsteroidFieldKnowledgeSnapshot> snapshots = List.of();
     private static List<AsteroidSatelliteScanSnapshot> scanSnapshots = List.of();
     private static List<AsteroidSatelliteScanCompletionSnapshot> scanCompletions = List.of();
 
-    private AsteroidFieldClientState() {}
+    private CelestialKnowledgeClientState() {}
 
-    public static List<AsteroidFieldKnowledgeSnapshot> snapshots() {
+    public static List<AsteroidFieldKnowledgeSnapshot> asteroidFieldSnapshots() {
         return snapshots;
     }
 
@@ -28,7 +36,7 @@ public final class AsteroidFieldClientState {
         return scanCompletions;
     }
 
-    public static void update(List<AsteroidFieldKnowledgeSnapshot> newSnapshots) {
+    public static void updateAsteroidFields(List<AsteroidFieldKnowledgeSnapshot> newSnapshots) {
         snapshots = List.copyOf(newSnapshots == null ? List.of() : newSnapshots);
     }
 
@@ -38,7 +46,7 @@ public final class AsteroidFieldClientState {
         scanCompletions = List.copyOf(newScanCompletions == null ? List.of() : newScanCompletions);
     }
 
-    public static Optional<AsteroidOreKnowledgeState> oreKnowledge(CelestialObjectKey key) {
+    public static Optional<AsteroidOreKnowledgeState> asteroidOreKnowledge(CelestialObjectKey key) {
         if (key == null || !key.isMinorBody()) return Optional.empty();
         for (AsteroidFieldKnowledgeSnapshot snapshot : snapshots) {
             if (snapshot.beltId() != key.minorBodyId()
@@ -51,7 +59,7 @@ public final class AsteroidFieldClientState {
         return Optional.empty();
     }
 
-    public static Optional<DiscoveryState> detectionState(CelestialObjectKey key) {
+    public static Optional<DiscoveryState> discoveryState(CelestialObjectKey key) {
         if (key == null || !key.isMinorBody()) return Optional.empty();
         for (AsteroidFieldKnowledgeSnapshot snapshot : snapshots) {
             if (snapshot.beltId() != key.minorBodyId()

@@ -10,10 +10,10 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanCompletionSnapshot;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanPass;
@@ -126,7 +126,7 @@ final class SatelliteNetworkSyncPacketTest {
 
     @Test
     void handlerStoresAsteroidKnowledgeSnapshotsOnClient() {
-        AsteroidFieldClientState.clear();
+        CelestialKnowledgeClientState.clear();
         SatelliteNetworkState state = SatelliteNetworkState.empty(new UUID(7L, 9L), 15);
         AsteroidFieldKnowledgeSnapshot snapshot = new AsteroidFieldKnowledgeSnapshot(
             CelestialObjectId.FROZEN_BELT,
@@ -139,13 +139,13 @@ final class SatelliteNetworkSyncPacketTest {
         new SatelliteNetworkSyncPacket.Handler()
             .onMessage(new SatelliteNetworkSyncPacket(state, List.of(snapshot)), null);
 
-        assertEquals(List.of(snapshot), AsteroidFieldClientState.snapshots());
-        AsteroidFieldClientState.clear();
+        assertEquals(List.of(snapshot), CelestialKnowledgeClientState.asteroidFieldSnapshots());
+        CelestialKnowledgeClientState.clear();
     }
 
     @Test
     void handlerStoresAsteroidScanSnapshotsOnClient() {
-        AsteroidFieldClientState.clear();
+        CelestialKnowledgeClientState.clear();
         SatelliteNetworkState state = SatelliteNetworkState.empty(new UUID(7L, 10L), 16);
         AsteroidSatelliteScanSnapshot progress = new AsteroidSatelliteScanSnapshot(
             new CelestialAsset.ID(new UUID(3L, 4L)),
@@ -161,9 +161,9 @@ final class SatelliteNetworkSyncPacketTest {
         new SatelliteNetworkSyncPacket.Handler()
             .onMessage(new SatelliteNetworkSyncPacket(state, List.of(), List.of(progress), List.of(completion)), null);
 
-        assertEquals(List.of(progress), AsteroidFieldClientState.scanSnapshots());
-        assertEquals(List.of(completion), AsteroidFieldClientState.scanCompletions());
-        AsteroidFieldClientState.clear();
+        assertEquals(List.of(progress), CelestialKnowledgeClientState.scanSnapshots());
+        assertEquals(List.of(completion), CelestialKnowledgeClientState.scanCompletions());
+        CelestialKnowledgeClientState.clear();
     }
 
     @Test
@@ -175,10 +175,10 @@ final class SatelliteNetworkSyncPacketTest {
                     1,
                     DiscoveryState.DISCOVERED,
                     AsteroidOreKnowledgeState.UNKNOWN)));
-        AsteroidFieldClientState.update(List.of(snapshot));
+        CelestialKnowledgeClientState.updateAsteroidFields(List.of(snapshot));
 
         AssetSyncPacket.Handler.handleClientSync(AssetSyncPacket.clear());
 
-        assertEquals(List.of(), AsteroidFieldClientState.snapshots());
+        assertEquals(List.of(), CelestialKnowledgeClientState.asteroidFieldSnapshots());
     }
 }
