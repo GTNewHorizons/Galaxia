@@ -21,7 +21,10 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.AsteroidContentRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.AsteroidContentBuilder;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.GeneratedAsteroids;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.LoreAsteroids;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.UniqueAsteroids;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.PlayableDimensionProfile;
@@ -286,7 +289,7 @@ public final class CelestialRegistry {
                         .temperature(67)
                         .radiation(0.28)
                         .oreProfile("undefined")
-                        .asteroidFieldProfile(AsteroidContentRegistry.profile(CelestialObjectId.FROZEN_BELT))
+                        .asteroidFieldProfile(frozenBeltAsteroidFieldProfile())
                         .metadata("surface", "undefined")
                         .metadata("minorBodies", "enabled"))
                 .playableDimensionProfile(
@@ -368,6 +371,17 @@ public final class CelestialRegistry {
     private static void configureOverworldProvider(WorldProviderBuilder builder) {
         builder.sky(true)
             .name(DimensionEnum.OVERWORLD);
+    }
+
+    private static AsteroidFieldProfile frozenBeltAsteroidFieldProfile() {
+        AsteroidContentBuilder builder = new AsteroidContentBuilder();
+        GeneratedAsteroids.register(builder);
+        LoreAsteroids.register(builder);
+        UniqueAsteroids.register(builder);
+        AsteroidFieldProfile profile = builder.buildProfiles()
+            .get(CelestialObjectId.FROZEN_BELT);
+        if (profile == null) throw new IllegalStateException("Frozen Belt asteroid field content was not registered");
+        return profile;
     }
 
     public static void register(CelestialObjectId id, @Nonnull Consumer<CelestialObject.Builder> registrationBuilder) {
