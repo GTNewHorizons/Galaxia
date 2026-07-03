@@ -129,7 +129,7 @@ final class AsteroidFieldResolverTest {
             .sizeCounts(0, 1, 1)
             .radialBand(10.0, 20.0)
             .satelliteScanRadius(1000.0)
-            .oreProfile(new AsteroidOreProfile("metallic", 2.0, List.of("galaxia:iron")))
+            .oreProfile(new AsteroidOreProfile("metallic", List.of("galaxia:iron")))
             .authoredAsteroid(1, AsteroidNodeKind.UNIQUE, "The Anvil", DiscoveryState.DISCOVERED)
             .build();
 
@@ -148,7 +148,7 @@ final class AsteroidFieldResolverTest {
             .sizeCounts(1, 4, 6)
             .radialBand(1000.0, 2000.0)
             .satelliteScanRadius(75.0)
-            .oreProfile(new AsteroidOreProfile("metallic", 2.0, List.of("galaxia:iron")))
+            .oreProfile(new AsteroidOreProfile("metallic", List.of("galaxia:iron")))
             .build();
 
         List<AsteroidFieldNode> nodes = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile);
@@ -164,7 +164,7 @@ final class AsteroidFieldResolverTest {
             .sizeCounts(0, 24, 0)
             .radialBand(1000.0, 2000.0)
             .satelliteScanRadius(75.0)
-            .oreProfile(new AsteroidOreProfile("metallic", 2.0, List.of("galaxia:iron")))
+            .oreProfile(new AsteroidOreProfile("metallic", List.of("galaxia:iron")))
             .authoredAsteroid(
                 new AuthoredAsteroidDefinition(
                     0,
@@ -199,7 +199,7 @@ final class AsteroidFieldResolverTest {
             .sizeCounts(1, 0, 0)
             .radialBand(1000.0, 2000.0)
             .satelliteScanRadius(50.0)
-            .oreProfile(new AsteroidOreProfile("metallic", 2.0, List.of("galaxia:iron")))
+            .oreProfile(new AsteroidOreProfile("metallic", List.of("galaxia:iron")))
             .authoredAsteroid(
                 new AuthoredAsteroidDefinition(
                     1,
@@ -285,8 +285,8 @@ final class AsteroidFieldResolverTest {
             .sizeCounts(1, 2, 3)
             .radialBand(10.0, 20.0)
             .satelliteScanRadius(1000.0)
-            .oreProfile(new AsteroidOreProfile("metallic", 2.0, List.of("galaxia:iron")))
-            .oreProfile(new AsteroidOreProfile("icy", 1.0, List.of("galaxia:ice")))
+            .oreProfile(new AsteroidOreProfile("metallic", List.of("galaxia:iron")))
+            .oreProfile(new AsteroidOreProfile("icy", List.of("galaxia:ice")))
             .build();
     }
 }

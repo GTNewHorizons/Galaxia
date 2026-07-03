@@ -1,9 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid.content;
 
-import java.util.List;
-
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfiles;
 
 public final class GeneratedAsteroids {
 
@@ -19,8 +17,8 @@ public final class GeneratedAsteroids {
                 .sizeCounts(6, 8, 12)
                 .radialBand(2.15 * EARTH_RADIUS_TO_AU, 2.45 * EARTH_RADIUS_TO_AU)
                 .satelliteScanRadius(0.12 * EARTH_RADIUS_TO_AU)
-                .oreProfile(new AsteroidOreProfile("metallic", 3.0, List.of("ore.mix.iron")))
-                .oreProfile(new AsteroidOreProfile("volatile_ice", 2.0, List.of("ore.mix.lapis")))
-                .oreProfile(new AsteroidOreProfile("rare_crystal", 1.0, List.of("ore.mix.redstone"))));
+                .oreProfile(AsteroidOreProfiles.METALLIC, 3.0)
+                .oreProfile(AsteroidOreProfiles.VOLATILE_ICE, 2.0)
+                .oreProfile(AsteroidOreProfiles.RARE_CRYSTAL, 1.0));
     }
 }

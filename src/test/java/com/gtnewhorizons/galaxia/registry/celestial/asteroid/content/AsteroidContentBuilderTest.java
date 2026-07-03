@@ -22,7 +22,7 @@ final class AsteroidContentBuilderTest {
 
     @Test
     void authoredLoreAndUniqueAsteroidsMergeIntoBeltProfileWithoutUsingGeneratedSlots() {
-        AsteroidOreProfile rareCrystal = new AsteroidOreProfile("rare_crystal", 1.0, List.of("ore.mix.redstone"));
+        AsteroidOreProfile rareCrystal = new AsteroidOreProfile("rare_crystal", List.of("ore.mix.redstone"));
         Map<CelestialObjectId, AsteroidFieldProfile> profiles = new AsteroidContentBuilder()
             .field(
                 CelestialObjectId.FROZEN_BELT,

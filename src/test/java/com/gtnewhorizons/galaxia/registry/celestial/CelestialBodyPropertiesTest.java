@@ -133,7 +133,7 @@ final class CelestialBodyPropertiesTest {
             .sizeCounts(1, 1, 1)
             .radialBand(10.0, 20.0)
             .satelliteScanRadius(1000.0)
-            .oreProfile(new AsteroidOreProfile("metallic", 1.0, List.of("galaxia:iron")))
+            .oreProfile(new AsteroidOreProfile("metallic", List.of("galaxia:iron")))
             .build();
 
         CelestialBodyProperties properties = CelestialBodyProperties.builder()

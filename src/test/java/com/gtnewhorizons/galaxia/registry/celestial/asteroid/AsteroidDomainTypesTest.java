@@ -42,19 +42,26 @@ final class AsteroidDomainTypesTest {
     }
 
     @Test
-    void oreProfileRequiresStablePositiveWeights() {
-        assertThrows(IllegalArgumentException.class, () -> new AsteroidOreProfile("", 1.0, List.of("vein")));
-        assertThrows(IllegalArgumentException.class, () -> new AsteroidOreProfile("metallic", 0.0, List.of("vein")));
-        assertThrows(IllegalArgumentException.class, () -> new AsteroidOreProfile("metallic", -1.0, List.of("vein")));
+    void oreProfileKeepsStableCompositionWhilePoolOwnsWeights() {
+        assertThrows(IllegalArgumentException.class, () -> new AsteroidOreProfile("", List.of("vein")));
 
         List<String> veins = new ArrayList<>();
         veins.add("galaxia:iron");
-        AsteroidOreProfile profile = new AsteroidOreProfile("metallic", 2.5, veins);
+        AsteroidOreProfile profile = new AsteroidOreProfile("metallic", veins);
         veins.add("galaxia:copper");
 
         assertEquals("metallic", profile.id());
-        assertEquals(2.5, profile.weight());
         assertEquals(List.of("galaxia:iron"), profile.gtOreVeinIds());
+        assertEquals(
+            profile,
+            AsteroidOreProfilePool.builder()
+                .profile(profile, 2.5)
+                .build()
+                .select(0.0));
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> AsteroidOreProfilePool.builder()
+                .profile(profile, -1.0));
     }
 
     @Test

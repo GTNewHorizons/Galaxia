@@ -21,7 +21,7 @@ final class AsteroidFieldProfileTest {
             .sizeCounts(4, 8, 12)
             .radialBand(10.0, 20.0)
             .satelliteScanRadius(1000.0)
-            .oreProfile(new AsteroidOreProfile("metallic", 1.0, List.of("galaxia:iron")))
+            .oreProfile(new AsteroidOreProfile("metallic", List.of("galaxia:iron")))
             .build();
         List<AsteroidSizeClass> resolvedSizes = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile)
             .stream()
@@ -65,7 +65,7 @@ final class AsteroidFieldProfileTest {
 
     @Test
     void profileDefinesCountsBandAndOrePool() {
-        AsteroidOreProfile metallic = new AsteroidOreProfile("metallic", 2.0, List.of("galaxia:iron"));
+        AsteroidOreProfile metallic = new AsteroidOreProfile("metallic", List.of("galaxia:iron"));
 
         AsteroidFieldProfile profile = AsteroidFieldProfile.builder()
             .seedSalt(123L)
@@ -90,7 +90,7 @@ final class AsteroidFieldProfileTest {
 
     @Test
     void profileRejectsInvalidAuthoring() {
-        AsteroidOreProfile metallic = new AsteroidOreProfile("metallic", 1.0, List.of("galaxia:iron"));
+        AsteroidOreProfile metallic = new AsteroidOreProfile("metallic", List.of("galaxia:iron"));
 
         assertThrows(
             IllegalArgumentException.class,

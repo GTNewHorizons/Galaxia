@@ -286,7 +286,7 @@ final class AsteroidSatelliteScanServiceTest {
             .sizeCounts(0, 0, smallCount)
             .radialBand(8.0, 10.0)
             .satelliteScanRadius(satelliteScanRadius)
-            .oreProfile(new AsteroidOreProfile("metallic", 1.0, List.of("ore.mix.iron")))
+            .oreProfile(new AsteroidOreProfile("metallic", List.of("ore.mix.iron")))
             .authoredAsteroid(
                 new AuthoredAsteroidDefinition(
                     1,

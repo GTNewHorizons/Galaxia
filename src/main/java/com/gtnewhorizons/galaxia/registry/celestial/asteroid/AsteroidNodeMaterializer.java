@@ -87,29 +87,13 @@ final class AsteroidNodeMaterializer {
     }
 
     private static AsteroidOreProfile selectOreProfile(AsteroidFieldProfile profile, double roll) {
-        double totalWeight = 0.0;
-        for (AsteroidOreProfile oreProfile : profile.oreProfiles()) {
-            totalWeight += oreProfile.weight();
-        }
-        double cursor = roll * totalWeight;
-        for (AsteroidOreProfile oreProfile : profile.oreProfiles()) {
-            cursor -= oreProfile.weight();
-            if (cursor <= 0.0) return oreProfile;
-        }
-        return profile.oreProfiles()
-            .get(
-                profile.oreProfiles()
-                    .size() - 1);
+        return profile.oreProfilePool()
+            .select(roll);
     }
 
     private static AsteroidOreProfile selectOreProfile(AsteroidFieldProfile profile, String oreProfileId) {
-        return profile.oreProfiles()
-            .stream()
-            .filter(
-                oreProfile -> oreProfile.id()
-                    .equals(oreProfileId))
-            .findFirst()
-            .orElseThrow(() -> new IllegalStateException("Unknown asteroid ore profile: " + oreProfileId));
+        return profile.oreProfilePool()
+            .requireProfile(oreProfileId);
     }
 
     private static String displayName(CelestialObjectId beltId, int index) {
