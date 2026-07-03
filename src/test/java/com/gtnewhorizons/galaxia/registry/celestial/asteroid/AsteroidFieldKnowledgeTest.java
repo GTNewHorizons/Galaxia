@@ -11,6 +11,7 @@ import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 final class AsteroidFieldKnowledgeTest {
 
@@ -23,15 +24,15 @@ final class AsteroidFieldKnowledgeTest {
         AsteroidFieldNode small = node(knowledge, AsteroidSizeClass.SMALL);
 
         assertEquals(
-            AsteroidDetectionState.DETECTED,
+            DiscoveryState.DISCOVERED,
             knowledge.entryFor(large.id())
                 .detectionState());
         assertEquals(
-            AsteroidDetectionState.HIDDEN,
+            DiscoveryState.HIDDEN,
             knowledge.entryFor(medium.id())
                 .detectionState());
         assertEquals(
-            AsteroidDetectionState.HIDDEN,
+            DiscoveryState.HIDDEN,
             knowledge.entryFor(small.id())
                 .detectionState());
         assertEquals(
@@ -74,7 +75,7 @@ final class AsteroidFieldKnowledgeTest {
         assertFalse(knowledge.hasDetectionWork());
         assertTrue(knowledge.canProspect());
         assertEquals(
-            AsteroidDetectionState.DETECTED,
+            DiscoveryState.DISCOVERED,
             knowledge.entryFor(small.id())
                 .detectionState());
         assertEquals(
@@ -174,7 +175,7 @@ final class AsteroidFieldKnowledgeTest {
             .radialBand(1.20, 1.40)
             .satelliteScanRadius(1000.0)
             .oreProfile(new AsteroidOreProfile("volatile_ice", 1.0, List.of("ice", "sulfur")))
-            .authoredAsteroid(1, AsteroidNodeKind.LORE, "Karnyx", AsteroidDetectionState.DETECTED)
+            .authoredAsteroid(1, AsteroidNodeKind.LORE, "Karnyx", DiscoveryState.DISCOVERED)
             .build();
 
         AsteroidFieldKnowledge restored = AsteroidFieldKnowledge.fromSnapshot(
@@ -187,7 +188,7 @@ final class AsteroidFieldKnowledgeTest {
             restored.entryFor(generatedId)
                 .oreKnowledgeState());
         assertEquals(
-            AsteroidDetectionState.DETECTED,
+            DiscoveryState.DISCOVERED,
             restored.entryFor(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 1))
                 .detectionState());
     }
@@ -249,7 +250,7 @@ final class AsteroidFieldKnowledgeTest {
             .radialBand(1.20, 1.40)
             .satelliteScanRadius(1000.0)
             .oreProfile(new AsteroidOreProfile("volatile_ice", 1.0, List.of("ice", "sulfur")))
-            .authoredAsteroid(1, AsteroidNodeKind.LORE, "Karnyx", AsteroidDetectionState.DETECTED)
+            .authoredAsteroid(1, AsteroidNodeKind.LORE, "Karnyx", DiscoveryState.DISCOVERED)
             .build();
         AsteroidFieldKnowledge oldKnowledge = AsteroidFieldKnowledge
             .initialize(CelestialObjectId.FROZEN_BELT, oldProfile);
@@ -270,7 +271,7 @@ final class AsteroidFieldKnowledgeTest {
             oldKnowledge.snapshot(CelestialObjectId.FROZEN_BELT));
 
         assertEquals(
-            AsteroidDetectionState.DETECTED,
+            DiscoveryState.DISCOVERED,
             restored.entryFor(savedId)
                 .detectionState());
         assertTrue(

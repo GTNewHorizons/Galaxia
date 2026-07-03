@@ -13,6 +13,7 @@ import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 final class AsteroidFieldKnowledgeStoreTest {
 
@@ -149,7 +150,7 @@ final class AsteroidFieldKnowledgeStoreTest {
             .filter(candidate -> candidate.index() == detected.index())
             .findFirst()
             .orElseThrow();
-        assertEquals(AsteroidDetectionState.DETECTED, entry.detectionState());
+        assertEquals(DiscoveryState.DISCOVERED, entry.detectionState());
     }
 
     private static AsteroidFieldProfile profile() {
@@ -178,7 +179,7 @@ final class AsteroidFieldKnowledgeStoreTest {
                     "scoped_target",
                     "Scoped Target",
                     AsteroidSizeClass.LARGE,
-                    AsteroidDetectionState.DETECTED,
+                    DiscoveryState.DISCOVERED,
                     AsteroidOreKnowledgeState.UNKNOWN,
                     0.0,
                     0.5,
@@ -192,7 +193,7 @@ final class AsteroidFieldKnowledgeStoreTest {
             .stream()
             .anyMatch(
                 node -> knowledge.entryFor(node.id())
-                    .detectionState() == AsteroidDetectionState.DETECTED
+                    .detectionState() == DiscoveryState.DISCOVERED
                     && knowledge.entryFor(node.id())
                         .oreKnowledgeState() == AsteroidOreKnowledgeState.UNKNOWN);
     }

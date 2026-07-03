@@ -10,6 +10,7 @@ import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 
 final class AsteroidFieldScanScopeTest {
@@ -55,7 +56,7 @@ final class AsteroidFieldScanScopeTest {
             "Test Asteroid " + index,
             AsteroidNodeKind.GENERATED,
             AsteroidSizeClass.LARGE,
-            AsteroidDetectionState.DETECTED,
+            DiscoveryState.DISCOVERED,
             angleOffsetDeg,
             orbitalDepth01,
             new AsteroidOreProfile("test", 1.0, List.of("test_vein")),

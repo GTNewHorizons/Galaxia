@@ -14,6 +14,7 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 /**
  * Mutable knowledge layer for one team's view of one resolved asteroid field.
@@ -82,7 +83,7 @@ public final class AsteroidFieldKnowledge {
                 throw new IllegalStateException(
                     "Asteroid snapshot contains duplicate index for " + beltId + ": " + index);
             }
-            if (snapshotEntry.detectionState() == AsteroidDetectionState.HIDDEN
+            if (snapshotEntry.detectionState() == DiscoveryState.HIDDEN
                 && snapshotEntry.oreKnowledgeState() != AsteroidOreKnowledgeState.UNKNOWN) {
                 throw new IllegalStateException("Hidden asteroid snapshot entry cannot expose ore knowledge: " + index);
             }
@@ -114,8 +115,7 @@ public final class AsteroidFieldKnowledge {
 
     public Optional<AsteroidFieldNode> nextDetectionCandidate(@Nonnull Predicate<AsteroidFieldNode> scope,
         @Nonnull Comparator<AsteroidFieldNode> order) {
-        return scopedNodes(scope, order)
-            .filter(node -> entryFor(node.id()).detectionState() == AsteroidDetectionState.HIDDEN)
+        return scopedNodes(scope, order).filter(node -> entryFor(node.id()).detectionState() == DiscoveryState.HIDDEN)
             .findFirst();
     }
 
@@ -156,7 +156,7 @@ public final class AsteroidFieldKnowledge {
         @Nonnull Comparator<AsteroidFieldNode> order) {
         if (!canProspect(scope)) return Optional.empty();
         return scopedNodes(scope, order)
-            .filter(node -> entryFor(node.id()).detectionState() == AsteroidDetectionState.DETECTED)
+            .filter(node -> entryFor(node.id()).detectionState() == DiscoveryState.DISCOVERED)
             .filter(node -> entryFor(node.id()).oreKnowledgeState() == AsteroidOreKnowledgeState.UNKNOWN)
             .findFirst();
     }
@@ -165,7 +165,7 @@ public final class AsteroidFieldKnowledge {
         @Nonnull Comparator<AsteroidFieldNode> order) {
         if (!canProspect(scope) || nextSignatureCandidate(scope, order).isPresent()) return Optional.empty();
         return scopedNodes(scope, order)
-            .filter(node -> entryFor(node.id()).detectionState() == AsteroidDetectionState.DETECTED)
+            .filter(node -> entryFor(node.id()).detectionState() == DiscoveryState.DISCOVERED)
             .filter(node -> entryFor(node.id()).oreKnowledgeState() == AsteroidOreKnowledgeState.SIGNATURE)
             .findFirst();
     }
@@ -173,11 +173,9 @@ public final class AsteroidFieldKnowledge {
     public Entry detect(@Nonnull MinorCelestialBodyId id) {
         AsteroidFieldNode node = requireNode(id);
         Entry current = entryFor(id);
-        if (current.detectionState() == AsteroidDetectionState.DETECTED) return current;
+        if (current.detectionState() == DiscoveryState.DISCOVERED) return current;
 
-        Entry updated = new Entry(
-            AsteroidDetectionState.DETECTED,
-            AsteroidFieldResolver.oreKnowledgeAfterDetection(node));
+        Entry updated = new Entry(DiscoveryState.DISCOVERED, AsteroidFieldResolver.oreKnowledgeAfterDetection(node));
         entriesById.put(id, updated);
         return updated;
     }
@@ -192,14 +190,14 @@ public final class AsteroidFieldKnowledge {
             throw new IllegalArgumentException("Asteroid node is outside prospecting scope: " + id);
         }
         Entry current = entryFor(id);
-        if (current.detectionState() == AsteroidDetectionState.HIDDEN) {
+        if (current.detectionState() == DiscoveryState.HIDDEN) {
             throw new IllegalStateException("Cannot prospect hidden asteroid node: " + id);
         }
         if (hasDetectionWork(scope)) {
             throw new IllegalStateException("Asteroid detection must finish before prospecting can start");
         }
 
-        Entry updated = new Entry(AsteroidDetectionState.DETECTED, nextOreKnowledgeState(current.oreKnowledgeState()));
+        Entry updated = new Entry(DiscoveryState.DISCOVERED, nextOreKnowledgeState(current.oreKnowledgeState()));
         entriesById.put(id, updated);
         return updated;
     }
@@ -241,6 +239,5 @@ public final class AsteroidFieldKnowledge {
             .orElseThrow(() -> new IllegalArgumentException("Unknown asteroid node id: " + id));
     }
 
-    public record Entry(@Nonnull AsteroidDetectionState detectionState,
-        @Nonnull AsteroidOreKnowledgeState oreKnowledgeState) {}
+    public record Entry(@Nonnull DiscoveryState detectionState, @Nonnull AsteroidOreKnowledgeState oreKnowledgeState) {}
 }

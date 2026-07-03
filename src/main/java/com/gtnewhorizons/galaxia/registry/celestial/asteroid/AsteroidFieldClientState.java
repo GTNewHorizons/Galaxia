@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanCompletionSnapshot;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
 
@@ -50,7 +51,7 @@ public final class AsteroidFieldClientState {
         return Optional.empty();
     }
 
-    public static Optional<AsteroidDetectionState> detectionState(CelestialObjectKey key) {
+    public static Optional<DiscoveryState> detectionState(CelestialObjectKey key) {
         if (key == null || !key.isMinorBody()) return Optional.empty();
         for (AsteroidFieldKnowledgeSnapshot snapshot : snapshots) {
             if (snapshot.beltId() != key.minorBodyId()

@@ -10,7 +10,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
@@ -20,6 +19,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledg
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AuthoredAsteroidDefinition;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 final class AsteroidProspectingDataHandlerTest {
 
@@ -41,7 +41,7 @@ final class AsteroidProspectingDataHandlerTest {
         AsteroidFieldKnowledge knowledge = store.get(TEAM, BELT)
             .orElseThrow();
         assertEquals(
-            AsteroidDetectionState.DETECTED,
+            DiscoveryState.DISCOVERED,
             knowledge.entryFor(
                 detected.get()
                     .id())
@@ -110,7 +110,7 @@ final class AsteroidProspectingDataHandlerTest {
                     "scan_anchor",
                     "Scan Anchor",
                     AsteroidSizeClass.LARGE,
-                    AsteroidDetectionState.DETECTED,
+                    DiscoveryState.DISCOVERED,
                     AsteroidOreKnowledgeState.PROFILE,
                     0.0,
                     0.5,

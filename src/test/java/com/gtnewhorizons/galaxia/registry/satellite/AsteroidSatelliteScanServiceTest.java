@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
@@ -26,6 +25,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AuthoredAsteroidDefinition;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.AsteroidFieldOrbitModel;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
@@ -54,7 +54,7 @@ final class AsteroidSatelliteScanServiceTest {
             service.tick(TEAM, List.of(satellite), 1199)
                 .isEmpty());
         assertEquals(
-            AsteroidDetectionState.HIDDEN,
+            DiscoveryState.HIDDEN,
             knowledgeStore.getOrCreate(TEAM, BELT, profile)
                 .entryFor(anchor.id())
                 .detectionState());
@@ -66,7 +66,7 @@ final class AsteroidSatelliteScanServiceTest {
         AsteroidFieldKnowledge knowledge = knowledgeStore.get(TEAM, BELT)
             .orElseThrow();
         assertEquals(
-            AsteroidDetectionState.DETECTED,
+            DiscoveryState.DISCOVERED,
             knowledge.entryFor(anchor.id())
                 .detectionState());
         assertEquals(
@@ -106,7 +106,7 @@ final class AsteroidSatelliteScanServiceTest {
             bodyId -> bodyId == BELT ? Optional.of(profile) : Optional.empty());
         List<AsteroidFieldNode> innerToOuter = AsteroidFieldResolver.resolveAll(BELT, profile)
             .stream()
-            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.HIDDEN)
+            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.HIDDEN)
             .sorted(AsteroidFieldScanOrder.innerToOuter())
             .toList();
         CelestialAsset satellite = prospectingSatellite(
@@ -171,7 +171,7 @@ final class AsteroidSatelliteScanServiceTest {
             .asteroidFieldProfile();
         List<AsteroidFieldNode> hiddenNodes = AsteroidFieldResolver.resolveAll(BELT, profile)
             .stream()
-            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.HIDDEN)
+            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.HIDDEN)
             .toList();
         AsteroidFieldNode anchor = hiddenNodes.get(0);
         MinorCelestialBodyId outsideId = hiddenNodes.stream()
@@ -200,7 +200,7 @@ final class AsteroidSatelliteScanServiceTest {
                     result -> result.asteroidId()
                         .equals(outsideId)));
         assertEquals(
-            AsteroidDetectionState.HIDDEN,
+            DiscoveryState.HIDDEN,
             knowledge.entryFor(outsideId)
                 .detectionState());
     }
@@ -294,7 +294,7 @@ final class AsteroidSatelliteScanServiceTest {
                     "scan_anchor",
                     "Scan Anchor",
                     AsteroidSizeClass.LARGE,
-                    AsteroidDetectionState.DETECTED,
+                    DiscoveryState.DISCOVERED,
                     AsteroidOreKnowledgeState.PROFILE,
                     0.0,
                     0.5,
@@ -306,7 +306,7 @@ final class AsteroidSatelliteScanServiceTest {
     private static AsteroidFieldNode hiddenAnchor(AsteroidFieldProfile profile) {
         return AsteroidFieldResolver.resolveAll(BELT, profile)
             .stream()
-            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.HIDDEN)
+            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.HIDDEN)
             .findFirst()
             .orElseThrow();
     }

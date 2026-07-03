@@ -15,6 +15,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.orbital.AsteroidFieldOrbitModel;
 
 final class AsteroidFieldResolverTest {
@@ -100,9 +101,9 @@ final class AsteroidFieldResolverTest {
             .findFirst()
             .orElseThrow();
 
-        assertEquals(AsteroidDetectionState.DETECTED, AsteroidFieldResolver.initialDetectionState(large));
-        assertEquals(AsteroidDetectionState.HIDDEN, AsteroidFieldResolver.initialDetectionState(medium));
-        assertEquals(AsteroidDetectionState.HIDDEN, AsteroidFieldResolver.initialDetectionState(small));
+        assertEquals(DiscoveryState.DISCOVERED, AsteroidFieldResolver.initialDetectionState(large));
+        assertEquals(DiscoveryState.HIDDEN, AsteroidFieldResolver.initialDetectionState(medium));
+        assertEquals(DiscoveryState.HIDDEN, AsteroidFieldResolver.initialDetectionState(small));
         assertTrue(
             List.of(
                 AsteroidOreKnowledgeState.UNKNOWN,
@@ -129,14 +130,14 @@ final class AsteroidFieldResolverTest {
             .radialBand(10.0, 20.0)
             .satelliteScanRadius(1000.0)
             .oreProfile(new AsteroidOreProfile("metallic", 2.0, List.of("galaxia:iron")))
-            .authoredAsteroid(1, AsteroidNodeKind.UNIQUE, "The Anvil", AsteroidDetectionState.DETECTED)
+            .authoredAsteroid(1, AsteroidNodeKind.UNIQUE, "The Anvil", DiscoveryState.DISCOVERED)
             .build();
 
         AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(CelestialObjectId.FROZEN_BELT, profile, 1);
 
         assertEquals(AsteroidNodeKind.UNIQUE, node.kind());
         assertEquals("The Anvil", node.displayName());
-        assertEquals(AsteroidDetectionState.DETECTED, AsteroidFieldResolver.initialDetectionState(node));
+        assertEquals(DiscoveryState.DISCOVERED, AsteroidFieldResolver.initialDetectionState(node));
     }
 
     @Test
@@ -171,7 +172,7 @@ final class AsteroidFieldResolverTest {
                     "detected_anchor",
                     "Detected Anchor",
                     AsteroidSizeClass.LARGE,
-                    AsteroidDetectionState.DETECTED,
+                    DiscoveryState.DISCOVERED,
                     AsteroidOreKnowledgeState.PROFILE,
                     0.0,
                     0.5,
@@ -206,7 +207,7 @@ final class AsteroidFieldResolverTest {
                     "isolated_hidden",
                     "Isolated Hidden",
                     AsteroidSizeClass.MEDIUM,
-                    AsteroidDetectionState.HIDDEN,
+                    DiscoveryState.HIDDEN,
                     null,
                     180.0,
                     1.0,
@@ -228,7 +229,7 @@ final class AsteroidFieldResolverTest {
         Set<MinorCelestialBodyId> visited = new HashSet<>();
         Queue<AsteroidFieldNode> queue = new ArrayDeque<>();
         for (AsteroidFieldNode node : nodes) {
-            if (AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.DETECTED) {
+            if (AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.DISCOVERED) {
                 visited.add(node.id());
                 queue.add(node);
             }
@@ -247,7 +248,7 @@ final class AsteroidFieldResolverTest {
 
         assertTrue(
             nodes.stream()
-                .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.HIDDEN)
+                .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.HIDDEN)
                 .allMatch(node -> visited.contains(node.id())));
     }
 
@@ -264,11 +265,10 @@ final class AsteroidFieldResolverTest {
     private static int maxHiddenNeighborsWithinScanRadius(AsteroidFieldProfile profile, List<AsteroidFieldNode> nodes) {
         int maxNeighbors = 0;
         for (AsteroidFieldNode node : nodes) {
-            if (AsteroidFieldResolver.initialDetectionState(node) != AsteroidDetectionState.HIDDEN) continue;
+            if (AsteroidFieldResolver.initialDetectionState(node) != DiscoveryState.HIDDEN) continue;
             int neighbors = 0;
             for (AsteroidFieldNode candidate : nodes) {
-                if (candidate != node
-                    && AsteroidFieldResolver.initialDetectionState(candidate) == AsteroidDetectionState.HIDDEN
+                if (candidate != node && AsteroidFieldResolver.initialDetectionState(candidate) == DiscoveryState.HIDDEN
                     && distance(profile, node, candidate) <= profile.satelliteScanRadius()) {
                     neighbors++;
                 }

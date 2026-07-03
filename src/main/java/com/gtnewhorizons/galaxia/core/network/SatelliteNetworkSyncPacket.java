@@ -8,11 +8,11 @@ import java.util.UUID;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanCompletionSnapshot;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanPass;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
@@ -199,7 +199,7 @@ public final class SatelliteNetworkSyncPacket implements IMessage {
                 entries.add(
                     new AsteroidFieldKnowledgeSnapshot.Entry(
                         buf.readInt(),
-                        PacketUtil.readEnum(buf, AsteroidDetectionState.class),
+                        PacketUtil.readEnum(buf, DiscoveryState.class),
                         PacketUtil.readEnum(buf, AsteroidOreKnowledgeState.class)));
             }
             snapshots.add(new AsteroidFieldKnowledgeSnapshot(beltId, entries));

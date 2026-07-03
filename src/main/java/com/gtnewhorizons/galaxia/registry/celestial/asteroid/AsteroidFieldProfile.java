@@ -9,6 +9,8 @@ import java.util.Set;
 
 import javax.annotation.Nonnull;
 
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
+
 public record AsteroidFieldProfile(long seedSalt, int generationVersion, int totalNodes, int largeCount,
     int mediumCount, int smallCount, double innerOrbitalRadius, double outerOrbitalRadius, double satelliteScanRadius,
     @Nonnull List<AsteroidOreProfile> oreProfiles, @Nonnull List<AuthoredAsteroidDefinition> authoredAsteroids) {
@@ -161,7 +163,7 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
         }
 
         public Builder authoredAsteroid(int index, AsteroidNodeKind kind, String displayName,
-            AsteroidDetectionState initialDetectionState) {
+            DiscoveryState initialDetectionState) {
             this.authoredAsteroids.add(new AuthoredAsteroidDefinition(index, kind, displayName, initialDetectionState));
             return this;
         }

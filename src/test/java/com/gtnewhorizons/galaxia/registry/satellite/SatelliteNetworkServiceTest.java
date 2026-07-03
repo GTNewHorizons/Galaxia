@@ -22,11 +22,11 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -185,7 +185,7 @@ final class SatelliteNetworkServiceTest {
             .asteroidFieldProfile();
         long initiallyDetected = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile)
             .stream()
-            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.DETECTED)
+            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.DISCOVERED)
             .count();
         AutomatedFacility facility = facility(CelestialObjectId.FROZEN_BELT);
         CelestialAssetStore.registerAsset(TEAM, facility);
@@ -204,7 +204,7 @@ final class SatelliteNetworkServiceTest {
             .stream()
             .filter(
                 node -> knowledge.entryFor(node.id())
-                    .detectionState() == AsteroidDetectionState.DETECTED)
+                    .detectionState() == DiscoveryState.DISCOVERED)
             .count();
         assertTrue(detectedAfterTick > initiallyDetected);
         assertFalse(
@@ -329,7 +329,7 @@ final class SatelliteNetworkServiceTest {
             .asteroidFieldProfile();
         AsteroidFieldNode hidden = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile)
             .stream()
-            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.HIDDEN)
+            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.HIDDEN)
             .findFirst()
             .orElseThrow();
         CelestialAsset satellite = CelestialAsset.create(
@@ -347,10 +347,10 @@ final class SatelliteNetworkServiceTest {
         assertTrue(
             knowledge.nodes()
                 .stream()
-                .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.HIDDEN)
+                .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.HIDDEN)
                 .anyMatch(
                     node -> knowledge.entryFor(node.id())
-                        .detectionState() == AsteroidDetectionState.DETECTED));
+                        .detectionState() == DiscoveryState.DISCOVERED));
     }
 
     @Test

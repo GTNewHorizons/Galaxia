@@ -10,11 +10,11 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanCompletionSnapshot;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanPass;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
@@ -67,12 +67,9 @@ final class SatelliteNetworkSyncPacketTest {
             List.of(
                 new AsteroidFieldKnowledgeSnapshot.Entry(
                     2,
-                    AsteroidDetectionState.DETECTED,
+                    DiscoveryState.DISCOVERED,
                     AsteroidOreKnowledgeState.SIGNATURE),
-                new AsteroidFieldKnowledgeSnapshot.Entry(
-                    3,
-                    AsteroidDetectionState.HIDDEN,
-                    AsteroidOreKnowledgeState.UNKNOWN)));
+                new AsteroidFieldKnowledgeSnapshot.Entry(3, DiscoveryState.HIDDEN, AsteroidOreKnowledgeState.UNKNOWN)));
 
         SatelliteNetworkSyncPacket packet = new SatelliteNetworkSyncPacket(state, List.of(snapshot));
         ByteBuf buf = Unpooled.buffer();
@@ -136,7 +133,7 @@ final class SatelliteNetworkSyncPacketTest {
             List.of(
                 new AsteroidFieldKnowledgeSnapshot.Entry(
                     1,
-                    AsteroidDetectionState.DETECTED,
+                    DiscoveryState.DISCOVERED,
                     AsteroidOreKnowledgeState.UNKNOWN)));
 
         new SatelliteNetworkSyncPacket.Handler()
@@ -176,7 +173,7 @@ final class SatelliteNetworkSyncPacketTest {
             List.of(
                 new AsteroidFieldKnowledgeSnapshot.Entry(
                     1,
-                    AsteroidDetectionState.DETECTED,
+                    DiscoveryState.DISCOVERED,
                     AsteroidOreKnowledgeState.UNKNOWN)));
         AsteroidFieldClientState.update(List.of(snapshot));
 

@@ -16,13 +16,13 @@ import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.AsteroidContentRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.PlayableDimensionProfile;
 import com.gtnewhorizons.galaxia.registry.dimension.SpaceStation;
@@ -548,14 +548,13 @@ public final class CelestialRegistry {
     }
 
     private static boolean isVisibleMinorBody(AsteroidFieldNode node, AsteroidFieldKnowledgeSnapshot snapshot) {
-        if (snapshot == null)
-            return AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.DETECTED;
+        if (snapshot == null) return AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.DISCOVERED;
         return snapshot.entries()
             .stream()
             .filter(entry -> entry.index() == node.index())
             .findFirst()
-            .map(entry -> entry.detectionState() == AsteroidDetectionState.DETECTED)
-            .orElseGet(() -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.DETECTED);
+            .map(entry -> entry.detectionState() == DiscoveryState.DISCOVERED)
+            .orElseGet(() -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.DISCOVERED);
     }
 
     public static List<CelestialObject> getRoots() {

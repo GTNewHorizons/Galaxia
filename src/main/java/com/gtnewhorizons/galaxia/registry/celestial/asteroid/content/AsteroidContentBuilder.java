@@ -12,7 +12,6 @@ import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidAppearanceProfile;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
@@ -20,6 +19,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AuthoredAsteroidDefinition;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 /**
  * Authoring facade for asteroid field content.
@@ -167,7 +167,7 @@ public final class AsteroidContentBuilder {
         private Integer slot;
         private String displayName;
         private AsteroidSizeClass sizeClass = AsteroidSizeClass.MEDIUM;
-        private AsteroidDetectionState detectionState = AsteroidDetectionState.HIDDEN;
+        private DiscoveryState detectionState = DiscoveryState.HIDDEN;
         private AsteroidOreKnowledgeState oreKnowledgeState;
         private Double angleOffsetDeg;
         private Double orbitalDepth01;
@@ -213,12 +213,12 @@ public final class AsteroidContentBuilder {
         }
 
         public AuthoredAsteroidBuilder detected() {
-            this.detectionState = AsteroidDetectionState.DETECTED;
+            this.detectionState = DiscoveryState.DISCOVERED;
             return this;
         }
 
         public AuthoredAsteroidBuilder hidden() {
-            this.detectionState = AsteroidDetectionState.HIDDEN;
+            this.detectionState = DiscoveryState.HIDDEN;
             this.oreKnowledgeState = AsteroidOreKnowledgeState.UNKNOWN;
             return this;
         }

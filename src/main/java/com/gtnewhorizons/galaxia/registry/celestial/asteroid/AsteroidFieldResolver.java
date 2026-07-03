@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 /**
  * Deterministically materializes asteroid definitions from a field profile.
@@ -43,7 +44,7 @@ public final class AsteroidFieldResolver {
         for (AuthoredAsteroidDefinition definition : profile.authoredAsteroids()) {
             AsteroidFieldNode node = AsteroidNodeMaterializer.resolveNode(beltId, profile, definition.index());
             nodes.add(node);
-            if (initialDetectionState(node) == AsteroidDetectionState.DETECTED) {
+            if (initialDetectionState(node) == DiscoveryState.DISCOVERED) {
                 reachableAnchors.add(AsteroidPlacementGraph.anchor(node, 0));
             }
         }
@@ -92,7 +93,7 @@ public final class AsteroidFieldResolver {
         return AsteroidNodeMaterializer.resolveUnregisteredSavedNode(beltId, profile, index);
     }
 
-    public static AsteroidDetectionState initialDetectionState(@Nonnull AsteroidFieldNode node) {
+    public static DiscoveryState initialDetectionState(@Nonnull AsteroidFieldNode node) {
         return AsteroidInitialKnowledgeRules.initialDetectionState(node);
     }
 

@@ -11,6 +11,7 @@ import javax.annotation.Nonnull;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 public final class AsteroidFieldKnowledgeService {
 
@@ -30,12 +31,12 @@ public final class AsteroidFieldKnowledgeService {
         if (knowledge.isPresent()) {
             return knowledge.get()
                 .entryFor(minorBodyId)
-                .detectionState() == AsteroidDetectionState.DETECTED;
+                .detectionState() == DiscoveryState.DISCOVERED;
         }
 
         AsteroidFieldNode node = AsteroidFieldResolver
             .resolveNode(minorBodyId.parentBeltId(), profile, minorBodyId.index());
-        return AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.DETECTED;
+        return AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.DISCOVERED;
     }
 
     public static List<AsteroidFieldKnowledgeSnapshot> snapshots(@Nonnull UUID teamId) {

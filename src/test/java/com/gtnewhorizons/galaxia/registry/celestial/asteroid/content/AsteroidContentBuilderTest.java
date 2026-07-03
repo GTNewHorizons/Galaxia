@@ -8,7 +8,6 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
@@ -17,6 +16,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledg
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 final class AsteroidContentBuilderTest {
 
@@ -69,12 +69,12 @@ final class AsteroidContentBuilderTest {
             "rare_crystal",
             lore.oreProfile()
                 .id());
-        assertEquals(AsteroidDetectionState.DETECTED, AsteroidFieldResolver.initialDetectionState(lore));
+        assertEquals(DiscoveryState.DISCOVERED, AsteroidFieldResolver.initialDetectionState(lore));
         assertEquals(AsteroidOreKnowledgeState.PROFILE, AsteroidFieldResolver.initialOreKnowledge(lore));
 
         assertEquals(AsteroidNodeKind.UNIQUE, unique.kind());
         assertEquals("Icelock", unique.displayName());
-        assertEquals(AsteroidDetectionState.HIDDEN, AsteroidFieldResolver.initialDetectionState(unique));
+        assertEquals(DiscoveryState.HIDDEN, AsteroidFieldResolver.initialDetectionState(unique));
         assertEquals(AsteroidNodeKind.GENERATED, generated.kind());
     }
 }

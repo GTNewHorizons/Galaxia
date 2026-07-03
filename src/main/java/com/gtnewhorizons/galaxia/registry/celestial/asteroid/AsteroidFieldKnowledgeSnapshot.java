@@ -7,6 +7,7 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 public record AsteroidFieldKnowledgeSnapshot(@Nonnull CelestialObjectId beltId, @Nonnull List<Entry> entries) {
 
@@ -20,7 +21,7 @@ public record AsteroidFieldKnowledgeSnapshot(@Nonnull CelestialObjectId beltId, 
         entries = Collections.unmodifiableList(copiedEntries);
     }
 
-    public record Entry(int index, @Nonnull AsteroidDetectionState detectionState,
+    public record Entry(int index, @Nonnull DiscoveryState detectionState,
         @Nonnull AsteroidOreKnowledgeState oreKnowledgeState) {
 
         public Entry {

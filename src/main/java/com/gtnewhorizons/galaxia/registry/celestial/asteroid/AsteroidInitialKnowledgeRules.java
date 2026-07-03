@@ -1,10 +1,12 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
+
 final class AsteroidInitialKnowledgeRules {
 
     private AsteroidInitialKnowledgeRules() {}
 
-    static AsteroidDetectionState initialDetectionState(AsteroidFieldNode node) {
+    static DiscoveryState initialDetectionState(AsteroidFieldNode node) {
         return node.initialDetectionState();
     }
 
@@ -19,8 +21,8 @@ final class AsteroidInitialKnowledgeRules {
         return rolledOreKnowledge(node, 6L);
     }
 
-    static AsteroidDetectionState defaultInitialDetectionState(AsteroidSizeClass sizeClass) {
-        return sizeClass == AsteroidSizeClass.LARGE ? AsteroidDetectionState.DETECTED : AsteroidDetectionState.HIDDEN;
+    static DiscoveryState defaultInitialDetectionState(AsteroidSizeClass sizeClass) {
+        return sizeClass == AsteroidSizeClass.LARGE ? DiscoveryState.DISCOVERED : DiscoveryState.HIDDEN;
     }
 
     private static AsteroidOreKnowledgeState rolledOreKnowledge(AsteroidFieldNode node, long salt) {

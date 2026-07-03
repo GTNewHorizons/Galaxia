@@ -3,14 +3,15 @@ package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
+
 public record AuthoredAsteroidDefinition(int index, @Nonnull AsteroidNodeKind kind, @Nullable String contentId,
-    @Nonnull String displayName, @Nonnull AsteroidSizeClass sizeClass,
-    @Nonnull AsteroidDetectionState initialDetectionState, @Nullable AsteroidOreKnowledgeState initialOreKnowledgeState,
-    @Nullable Double angleOffsetDeg, @Nullable Double orbitalDepth01, @Nullable String oreProfileId,
-    @Nullable AsteroidAppearanceProfile appearance) {
+    @Nonnull String displayName, @Nonnull AsteroidSizeClass sizeClass, @Nonnull DiscoveryState initialDetectionState,
+    @Nullable AsteroidOreKnowledgeState initialOreKnowledgeState, @Nullable Double angleOffsetDeg,
+    @Nullable Double orbitalDepth01, @Nullable String oreProfileId, @Nullable AsteroidAppearanceProfile appearance) {
 
     public AuthoredAsteroidDefinition(int index, @Nonnull AsteroidNodeKind kind, @Nonnull String displayName,
-        @Nonnull AsteroidDetectionState initialDetectionState) {
+        @Nonnull DiscoveryState initialDetectionState) {
         this(
             index,
             kind,
@@ -35,7 +36,7 @@ public record AuthoredAsteroidDefinition(int index, @Nonnull AsteroidNodeKind ki
         if (displayName == null || displayName.isBlank()) {
             throw new IllegalArgumentException("displayName is required");
         }
-        if (initialDetectionState == AsteroidDetectionState.HIDDEN && initialOreKnowledgeState != null
+        if (initialDetectionState == DiscoveryState.HIDDEN && initialOreKnowledgeState != null
             && initialOreKnowledgeState != AsteroidOreKnowledgeState.UNKNOWN) {
             throw new IllegalArgumentException("hidden authored asteroids cannot expose ore knowledge");
         }

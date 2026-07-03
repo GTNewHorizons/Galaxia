@@ -10,6 +10,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 final class AsteroidDomainTypesTest {
 
@@ -22,8 +23,8 @@ final class AsteroidDomainTypesTest {
             new AsteroidSizeClass[] { AsteroidSizeClass.LARGE, AsteroidSizeClass.MEDIUM, AsteroidSizeClass.SMALL },
             AsteroidSizeClass.values());
         assertArrayEquals(
-            new AsteroidDetectionState[] { AsteroidDetectionState.HIDDEN, AsteroidDetectionState.DETECTED },
-            AsteroidDetectionState.values());
+            new DiscoveryState[] { DiscoveryState.HIDDEN, DiscoveryState.DISCOVERED },
+            DiscoveryState.values());
         assertArrayEquals(
             new AsteroidOreKnowledgeState[] { AsteroidOreKnowledgeState.UNKNOWN, AsteroidOreKnowledgeState.SIGNATURE,
                 AsteroidOreKnowledgeState.PROFILE },

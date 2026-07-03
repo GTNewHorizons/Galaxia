@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
@@ -23,6 +22,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledg
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class AsteroidDynamicCelestialObjectTest {
@@ -120,7 +120,7 @@ final class AsteroidDynamicCelestialObjectTest {
         Set<CelestialObjectKey> initiallyDetectedKeys = AsteroidFieldResolver
             .resolveAll(CelestialObjectId.FROZEN_BELT, profile)
             .stream()
-            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.DETECTED)
+            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.DISCOVERED)
             .map(AsteroidFieldNode::id)
             .map(CelestialObjectKey::minorBody)
             .collect(Collectors.toSet());
@@ -155,7 +155,7 @@ final class AsteroidDynamicCelestialObjectTest {
             .asteroidFieldProfile();
         AsteroidFieldNode hiddenNode = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile)
             .stream()
-            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.HIDDEN)
+            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.HIDDEN)
             .findFirst()
             .orElseThrow();
         AsteroidFieldKnowledgeSnapshot snapshot = new AsteroidFieldKnowledgeSnapshot(
@@ -163,7 +163,7 @@ final class AsteroidDynamicCelestialObjectTest {
             List.of(
                 new AsteroidFieldKnowledgeSnapshot.Entry(
                     hiddenNode.index(),
-                    AsteroidDetectionState.DETECTED,
+                    DiscoveryState.DISCOVERED,
                     AsteroidOreKnowledgeState.UNKNOWN)));
 
         List<CelestialObject> children = GalaxiaCelestialAPI
@@ -184,7 +184,7 @@ final class AsteroidDynamicCelestialObjectTest {
         Set<CelestialObjectKey> initiallyDetectedKeys = AsteroidFieldResolver
             .resolveAll(CelestialObjectId.FROZEN_BELT, profile)
             .stream()
-            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == AsteroidDetectionState.DETECTED)
+            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.DISCOVERED)
             .map(AsteroidFieldNode::id)
             .map(CelestialObjectKey::minorBody)
             .collect(Collectors.toSet());
@@ -248,7 +248,7 @@ final class AsteroidDynamicCelestialObjectTest {
             List.of(
                 new AsteroidFieldKnowledgeSnapshot.Entry(
                     smallNode.index(),
-                    AsteroidDetectionState.DETECTED,
+                    DiscoveryState.DISCOVERED,
                     AsteroidOreKnowledgeState.UNKNOWN)));
 
         CelestialObject asteroid = GalaxiaCelestialAPI.getChildren(CelestialObjectId.FROZEN_BELT, List.of(snapshot))
