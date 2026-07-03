@@ -10,7 +10,9 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 
 final class SatelliteNetworkGraphTest {
 
@@ -87,9 +89,27 @@ final class SatelliteNetworkGraphTest {
         assertFalse(edges.contains(new SatelliteNetworkGraph.Edge(CelestialObjectId.MOON, CelestialObjectId.EGORA)));
     }
 
+    @Test
+    void networkCanConnectMinorBodiesWithoutRegisteredEnumSlots() {
+        CelestialObjectKey belt = CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT);
+        CelestialObjectKey asteroid = asteroidKey(7);
+
+        List<SatelliteNetworkGraph.Node> nodes = List.of(
+            new SatelliteNetworkGraph.Node(belt, null, 1.0D, 0.0D, 0.0D, 5.0D),
+            new SatelliteNetworkGraph.Node(asteroid, belt, 1.1D, 10.0D, 0.0D, 1.0D));
+
+        List<SatelliteNetworkGraph.Edge> edges = SatelliteNetworkGraph.build(nodes, 2);
+
+        assertEquals(List.of(new SatelliteNetworkGraph.Edge(belt, asteroid)), edges);
+    }
+
     private static SatelliteNetworkGraph.Node node(CelestialObjectId bodyId, CelestialObjectId parentId,
         double orbitalOrder, double x, double y) {
         return new SatelliteNetworkGraph.Node(bodyId, parentId, orbitalOrder, x, y, 5.0D);
+    }
+
+    private static CelestialObjectKey asteroidKey(int index) {
+        return CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, index));
     }
 
     private static void assertConnected(List<SatelliteNetworkGraph.Node> nodes,
