@@ -1,10 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.util.DeterministicHash;
 
 final class AsteroidFieldDeterminism {
-
-    private static final double UINT53_TO_UNIT = 1.0 / (1L << 53);
 
     private AsteroidFieldDeterminism() {}
 
@@ -23,21 +22,10 @@ final class AsteroidFieldDeterminism {
     }
 
     static double unitDouble(long value) {
-        return ((value >>> 11) & ((1L << 53) - 1)) * UINT53_TO_UNIT;
+        return DeterministicHash.unitDouble(value);
     }
 
     static long mix(long first, long... rest) {
-        long value = mix64(first);
-        for (long next : rest) {
-            value = mix64(value ^ next);
-        }
-        return value;
-    }
-
-    private static long mix64(long value) {
-        value += 0x9E3779B97F4A7C15L;
-        value = (value ^ (value >>> 30)) * 0xBF58476D1CE4E5B9L;
-        value = (value ^ (value >>> 27)) * 0x94D049BB133111EBL;
-        return value ^ (value >>> 31);
+        return DeterministicHash.mix(first, rest);
     }
 }
