@@ -12,12 +12,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 
 /**
@@ -30,6 +27,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyI
 public final class CelestialKnowledgeService {
 
     private static final AsteroidFieldKnowledgeStore ASTEROID_FIELDS = new AsteroidFieldKnowledgeStore();
+    private static final List<CelestialDiscoveryProvider> DISCOVERY_PROVIDERS = List.of(
+        new RegisteredCelestialDiscoveryProvider(),
+        new AsteroidFieldDiscoveryProvider(ASTEROID_FIELDS, CelestialKnowledgeService::profile));
 
     private CelestialKnowledgeService() {}
 
@@ -40,33 +40,15 @@ public final class CelestialKnowledgeService {
     public static DiscoveryState discoveryState(@Nonnull UUID teamId, @Nonnull CelestialObjectKey key) {
         if (teamId == null) throw new IllegalArgumentException("team id is required");
         if (key == null) throw new IllegalArgumentException("celestial object key is required");
-        if (key.isRegistered()) {
-            if (CelestialRegistry.get(key).isEmpty()) throw new IllegalStateException("Unknown celestial object: " + key);
-            return DiscoveryState.DISCOVERED;
-        }
-        return asteroidDiscoveryState(teamId, key.minorBodyId());
+        return DISCOVERY_PROVIDERS.stream()
+            .map(provider -> provider.discoveryState(teamId, key))
+            .flatMap(Optional::stream)
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("No discovery provider for celestial object: " + key));
     }
 
     public static boolean isDiscovered(@Nonnull UUID teamId, @Nonnull MinorCelestialBodyId minorBodyId) {
         return discoveryState(teamId, CelestialObjectKey.minorBody(minorBodyId)) == DiscoveryState.DISCOVERED;
-    }
-
-    private static DiscoveryState asteroidDiscoveryState(UUID teamId, MinorCelestialBodyId minorBodyId) {
-        AsteroidFieldProfile profile = profile(minorBodyId.parentBeltId()).orElse(null);
-        if (profile == null || !profile.hasNodeIndex(minorBodyId.index())) {
-            throw new IllegalStateException("Unknown asteroid field node: " + minorBodyId);
-        }
-
-        Optional<AsteroidFieldKnowledge> knowledge = ASTEROID_FIELDS.get(teamId, minorBodyId.parentBeltId());
-        if (knowledge.isPresent()) {
-            return knowledge.get()
-                .entryFor(minorBodyId)
-                .detectionState();
-        }
-
-        AsteroidFieldNode node = AsteroidFieldResolver
-            .resolveNode(minorBodyId.parentBeltId(), profile, minorBodyId.index());
-        return AsteroidFieldResolver.initialDetectionState(node);
     }
 
     public static List<AsteroidFieldKnowledgeSnapshot> asteroidFieldSnapshots(@Nonnull UUID teamId) {
