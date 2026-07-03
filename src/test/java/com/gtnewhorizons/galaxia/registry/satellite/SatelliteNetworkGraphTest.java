@@ -114,25 +114,28 @@ final class SatelliteNetworkGraphTest {
 
     private static void assertConnected(List<SatelliteNetworkGraph.Node> nodes,
         List<SatelliteNetworkGraph.Edge> edges) {
-        Set<CelestialObjectId> visited = new HashSet<>();
+        Set<CelestialObjectKey> visited = new HashSet<>();
         visit(
             nodes.get(0)
-                .bodyId(),
+                .bodyKey(),
             edges,
             visited);
         assertEquals(
             nodes.stream()
                 .map(SatelliteNetworkGraph.Node::bodyId)
+                .map(CelestialObjectKey::registered)
                 .collect(java.util.stream.Collectors.toSet()),
             visited);
     }
 
-    private static void visit(CelestialObjectId bodyId, List<SatelliteNetworkGraph.Edge> edges,
-        Set<CelestialObjectId> visited) {
-        if (!visited.add(bodyId)) return;
+    private static void visit(CelestialObjectKey bodyKey, List<SatelliteNetworkGraph.Edge> edges,
+        Set<CelestialObjectKey> visited) {
+        if (!visited.add(bodyKey)) return;
         for (SatelliteNetworkGraph.Edge edge : edges) {
-            if (edge.from() == bodyId) visit(edge.to(), edges, visited);
-            if (edge.to() == bodyId) visit(edge.from(), edges, visited);
+            if (edge.from()
+                .equals(bodyKey)) visit(edge.to(), edges, visited);
+            if (edge.to()
+                .equals(bodyKey)) visit(edge.from(), edges, visited);
         }
     }
 }

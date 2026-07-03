@@ -1,7 +1,7 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import java.util.ArrayList;
-import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -79,7 +79,7 @@ public final class SatelliteNetworkSyncPacket implements IMessage {
                 .size());
         for (SatelliteNetworkState.Body body : state.bodies()
             .values()) {
-            PacketUtil.writeEnum(buf, body.bodyId());
+            PacketUtil.writeCelestialObjectKey(buf, body.bodyKey());
             buf.writeLong(body.capacityKbps());
             buf.writeLong(body.usedKbps());
         }
@@ -87,8 +87,8 @@ public final class SatelliteNetworkSyncPacket implements IMessage {
             state.links()
                 .size());
         for (SatelliteNetworkState.Link link : state.links()) {
-            PacketUtil.writeEnum(buf, link.from());
-            PacketUtil.writeEnum(buf, link.to());
+            PacketUtil.writeCelestialObjectKey(buf, link.from());
+            PacketUtil.writeCelestialObjectKey(buf, link.to());
             buf.writeLong(link.capacityKbps());
             buf.writeLong(link.usedKbps());
             buf.writeLong(link.forwardUsedKbps());
@@ -98,12 +98,12 @@ public final class SatelliteNetworkSyncPacket implements IMessage {
             state.pendingData()
                 .size());
         for (SatelliteNetworkState.PendingData pending : state.pendingData()) {
-            PacketUtil.writeEnum(buf, pending.bodyId());
+            PacketUtil.writeCelestialObjectKey(buf, pending.bodyKey());
             buf.writeInt(
-                pending.destinationBodyIds()
+                pending.destinationBodyKeys()
                     .size());
-            for (CelestialObjectId destinationBodyId : pending.destinationBodyIds()) {
-                PacketUtil.writeEnum(buf, destinationBodyId);
+            for (CelestialObjectKey destinationBodyKey : pending.destinationBodyKeys()) {
+                PacketUtil.writeCelestialObjectKey(buf, destinationBodyKey);
             }
             PacketUtil.writeEnum(
                 buf,
@@ -153,18 +153,18 @@ public final class SatelliteNetworkSyncPacket implements IMessage {
         UUID teamId = PacketUtil.readId(buf);
         int revision = buf.readInt();
         int bodyCount = buf.readInt();
-        Map<CelestialObjectId, SatelliteNetworkState.Body> bodies = new EnumMap<>(CelestialObjectId.class);
+        Map<CelestialObjectKey, SatelliteNetworkState.Body> bodies = new HashMap<>();
         for (int i = 0; i < bodyCount; i++) {
-            CelestialObjectId bodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
+            CelestialObjectKey bodyKey = PacketUtil.readCelestialObjectKey(buf);
             long capacityKbps = buf.readLong();
             long usedKbps = buf.readLong();
-            bodies.put(bodyId, new SatelliteNetworkState.Body(bodyId, capacityKbps, usedKbps));
+            bodies.put(bodyKey, new SatelliteNetworkState.Body(bodyKey, capacityKbps, usedKbps));
         }
         int linkCount = buf.readInt();
         List<SatelliteNetworkState.Link> links = new ArrayList<>(linkCount);
         for (int i = 0; i < linkCount; i++) {
-            CelestialObjectId from = PacketUtil.readEnum(buf, CelestialObjectId.class);
-            CelestialObjectId to = PacketUtil.readEnum(buf, CelestialObjectId.class);
+            CelestialObjectKey from = PacketUtil.readCelestialObjectKey(buf);
+            CelestialObjectKey to = PacketUtil.readCelestialObjectKey(buf);
             long capacityKbps = buf.readLong();
             long usedKbps = buf.readLong();
             long forwardUsedKbps = buf.readLong();
@@ -175,18 +175,18 @@ public final class SatelliteNetworkSyncPacket implements IMessage {
         int pendingCount = buf.readInt();
         List<SatelliteNetworkState.PendingData> pendingData = new ArrayList<>(pendingCount);
         for (int i = 0; i < pendingCount; i++) {
-            CelestialObjectId bodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
+            CelestialObjectKey bodyKey = PacketUtil.readCelestialObjectKey(buf);
             int destinationCount = buf.readInt();
-            List<CelestialObjectId> destinationBodyIds = new ArrayList<>(destinationCount);
+            List<CelestialObjectKey> destinationBodyKeys = new ArrayList<>(destinationCount);
             for (int destinationIndex = 0; destinationIndex < destinationCount; destinationIndex++) {
-                destinationBodyIds.add(PacketUtil.readEnum(buf, CelestialObjectId.class));
+                destinationBodyKeys.add(PacketUtil.readCelestialObjectKey(buf));
             }
             SatelliteDataType type = PacketUtil.readEnum(buf, SatelliteDataType.class);
             SatelliteDataKey key = buf.readBoolean()
                 ? SatelliteDataKey.origin(type, PacketUtil.readEnum(buf, CelestialObjectId.class))
                 : SatelliteDataKey.any(type);
             long deciKb = buf.readLong();
-            pendingData.add(new SatelliteNetworkState.PendingData(bodyId, destinationBodyIds, key, deciKb));
+            pendingData.add(new SatelliteNetworkState.PendingData(bodyKey, destinationBodyKeys, key, deciKb));
         }
         state = new SatelliteNetworkState(teamId, revision, bodies, links, pendingData);
         int asteroidSnapshotCount = buf.readInt();

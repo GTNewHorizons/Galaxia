@@ -10,6 +10,7 @@ import java.util.UUID;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
@@ -85,13 +86,18 @@ public final class SatelliteDataEndpointRegistry {
                         teamId,
                         facility,
                         module,
-                        facility.celestialObjectId.requireRegisteredBodyId(),
+                        facility.celestialObjectId,
                         debugModule));
             }
         }
         return endpoints;
     }
 
-    public record Endpoint(UUID teamId, AutomatedFacility facility, ModuleInstance instance, CelestialObjectId bodyId,
-        ModuleDebugDataGenerator module) {}
+    public record Endpoint(UUID teamId, AutomatedFacility facility, ModuleInstance instance, CelestialObjectKey bodyKey,
+        ModuleDebugDataGenerator module) {
+
+        public CelestialObjectId bodyId() {
+            return bodyKey.requireRegisteredBodyId();
+        }
+    }
 }

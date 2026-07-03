@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 final class SatelliteNetworkClientStateTest {
 
@@ -78,7 +79,9 @@ final class SatelliteNetworkClientStateTest {
         return new SatelliteNetworkState(
             teamId,
             revision,
-            Map.of(CelestialObjectId.MARS, new SatelliteNetworkState.Body(CelestialObjectId.MARS, capacityKbps, 0L)),
+            Map.of(
+                CelestialObjectKey.registered(CelestialObjectId.MARS),
+                new SatelliteNetworkState.Body(CelestialObjectId.MARS, capacityKbps, 0L)),
             java.util.List.of());
     }
 }

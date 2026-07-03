@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -320,11 +321,15 @@ final class SatelliteDataJobServiceTest {
             0,
             List.of(node(first, 0.0D), node(second, 10.0D), node(third, 20.0D)),
             List.of(new SatelliteNetworkGraph.Edge(first, second), new SatelliteNetworkGraph.Edge(first, third)),
-            Map.of(first, 10L, second, 10L, third, 10L),
+            Map.of(key(first), 10L, key(second), 10L, key(third), 10L),
             Map.of());
     }
 
     private static SatelliteNetworkGraph.Node node(CelestialObjectId id, double x) {
         return new SatelliteNetworkGraph.Node(id, null, id.ordinal(), x, 0.0D, 1.0D);
+    }
+
+    private static CelestialObjectKey key(CelestialObjectId id) {
+        return CelestialObjectKey.registered(id);
     }
 }

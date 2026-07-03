@@ -45,6 +45,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
@@ -438,11 +439,9 @@ public class OrbitalView {
         private boolean satelliteNetworkHidden = false;
         private final OrbitalScene.OrbitalSceneFrameBuilder sceneFrameBuilder;
         private final List<SatelliteNetworkGraph.Edge> visibleSatelliteNetworkEdges = new ArrayList<>();
-        private final Set<CelestialObjectId> visibleSatelliteNetworkNodeIds = new HashSet<>();
-        private final Map<CelestialObjectId, SatelliteNetworkEndpoint> satelliteNetworkEndpoints = new EnumMap<>(
-            CelestialObjectId.class);
-        private final Map<CelestialObjectId, OrbitalScene.ResolvedBodyDrawState> satelliteNetworkWorldStates = new EnumMap<>(
-            CelestialObjectId.class);
+        private final Set<CelestialObjectKey> visibleSatelliteNetworkNodeIds = new HashSet<>();
+        private final Map<CelestialObjectKey, SatelliteNetworkEndpoint> satelliteNetworkEndpoints = new HashMap<>();
+        private final Map<CelestialObjectKey, OrbitalScene.ResolvedBodyDrawState> satelliteNetworkWorldStates = new HashMap<>();
         private final Map<SatelliteSignalKey, SatelliteSignalState> satelliteSignalStates = new HashMap<>();
         private final float[] satelliteThreadEndpointScratch = new float[4];
         private int lastRenderedLogisticsTaskRevision = Integer.MIN_VALUE;
@@ -2411,7 +2410,7 @@ public class OrbitalView {
                 .stream()
                 .map(SatelliteNetworkState.Link::asEdge)
                 .toList();
-            Set<CelestialObjectId> snapshotBodyIds = networkState.bodies()
+            Set<CelestialObjectKey> snapshotBodyIds = networkState.bodies()
                 .keySet();
             updateVisibleSatelliteNetworkEdges(snapshotEdges, snapshotBodyIds);
             if (visibleSatelliteNetworkEdges.isEmpty()) return;
@@ -2426,8 +2425,8 @@ public class OrbitalView {
                     || !snapshotBodyIds.contains(body.id())) {
                     continue;
                 }
-                satelliteNetworkWorldStates.put(body.requireRegisteredId(), state);
-                satelliteNetworkEndpoints.put(body.requireRegisteredId(), satelliteNetworkEndpoint(state));
+                satelliteNetworkWorldStates.put(body.id(), state);
+                satelliteNetworkEndpoints.put(body.id(), satelliteNetworkEndpoint(state));
             }
 
             GlStateManager.disableTexture2D();
@@ -2449,7 +2448,7 @@ public class OrbitalView {
         }
 
         private void updateVisibleSatelliteNetworkEdges(List<SatelliteNetworkGraph.Edge> candidateEdges,
-            Set<CelestialObjectId> candidateNodeIds) {
+            Set<CelestialObjectKey> candidateNodeIds) {
             if (candidateEdges.isEmpty()) {
                 visibleSatelliteNetworkEdges.clear();
                 visibleSatelliteNetworkNodeIds.clear();
@@ -2461,7 +2460,7 @@ public class OrbitalView {
         }
 
         private void replaceVisibleSatelliteNetworkEdges(List<SatelliteNetworkGraph.Edge> edges,
-            Collection<CelestialObjectId> nodeIds) {
+            Collection<CelestialObjectKey> nodeIds) {
             visibleSatelliteNetworkEdges.clear();
             visibleSatelliteNetworkEdges.addAll(edges);
             visibleSatelliteNetworkNodeIds.clear();
@@ -2492,8 +2491,8 @@ public class OrbitalView {
             return null;
         }
 
-        private int satelliteNetworkBodyColor(SatelliteNetworkState networkState, CelestialObjectId bodyId) {
-            return SatelliteNetworkLinkColor.forLoad(networkState.usedKbps(bodyId), networkState.capacityKbps(bodyId));
+        private int satelliteNetworkBodyColor(SatelliteNetworkState networkState, CelestialObjectKey bodyKey) {
+            return SatelliteNetworkLinkColor.forLoad(networkState.usedKbps(bodyKey), networkState.capacityKbps(bodyKey));
         }
 
         private void drawSatelliteThread(SatelliteNetworkState networkState, SatelliteNetworkGraph.Edge edge,
@@ -2570,7 +2569,7 @@ public class OrbitalView {
         }
 
         private long satelliteNetworkLinkUsage(SatelliteNetworkState networkState, SatelliteNetworkGraph.Edge edge,
-            CelestialObjectId source, CelestialObjectId destination) {
+            CelestialObjectKey source, CelestialObjectKey destination) {
             for (SatelliteNetworkState.Link link : networkState.links()) {
                 if (link.asEdge()
                     .equals(edge)) return link.usedKbps(source, destination);
@@ -2767,9 +2766,9 @@ public class OrbitalView {
         private static int satelliteSignalSeed(SatelliteNetworkGraph.Edge edge, int direction, int packetIndex,
             boolean keepAlive) {
             int seed = edge.from()
-                .ordinal() * 73471
+                .hashCode() * 73471
                 ^ edge.to()
-                    .ordinal() * 19349663
+                    .hashCode() * 19349663
                 ^ direction * 0x7f4a7c15
                 ^ packetIndex * 0x9e3779b9
                 ^ (keepAlive ? 0x45d9f3b : 0);
@@ -3099,20 +3098,32 @@ public class OrbitalView {
         }
 
         private String pendingDataDestinationLabel(SatelliteNetworkState.PendingData entry) {
-            if (entry.destinationBodyIds()
+            if (entry.destinationBodyKeys()
                 .isEmpty()) return " waiting";
-            return " to " + entry.destinationBodyIds()
+            return " to " + entry.destinationBodyKeys()
                 .stream()
                 .map(this::bodyDisplayName)
                 .collect(Collectors.joining(", "));
         }
 
+        private String bodyDisplayName(CelestialObjectKey bodyKey) {
+            return GalaxiaCelestialAPI.findBodyById(bodyKey)
+                .map(CelestialObject::displayName)
+                .orElseGet(
+                    () -> bodyKey.isRegistered() ? bodyKey.registeredBodyId()
+                        .name()
+                        .toLowerCase(Locale.ROOT)
+                        .replace('_', ' ') : bodyKey.minorBodyId()
+                            .parentBeltId()
+                            .name()
+                            .toLowerCase(Locale.ROOT)
+                            .replace('_', ' ')
+                            + " asteroid " + bodyKey.minorBodyId()
+                                .index());
+        }
+
         private String bodyDisplayName(CelestialObjectId bodyId) {
-            CelestialObject body = GalaxiaCelestialAPI.getAllBodies()
-                .get(bodyId);
-            return body == null ? bodyId.name()
-                .toLowerCase(Locale.ROOT)
-                .replace('_', ' ') : body.displayName();
+            return bodyDisplayName(CelestialObjectKey.registered(bodyId));
         }
 
         private String pendingDataLabel(SatelliteDataKey key) {

@@ -135,7 +135,7 @@ public final class SatelliteNetworkGraph {
         // Prefer explicit orbital hierarchy first, so child bodies tend to stay attached to their parent.
         for (int i = 0; i < validNodes.size(); i++) {
             Node node = validNodes.get(i);
-            int parentIndex = nodeIndex(validNodes, node.parentId());
+            int parentIndex = nodeIndex(validNodes, node.parentKey());
             if (parentIndex < 0) continue;
             if (addEdge(validNodes.get(parentIndex), node, maxEdgesPerNode, edgeCounts, edges)) {
                 union(components, parentIndex, i);

@@ -1,8 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.satellite;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -13,8 +15,13 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
@@ -57,17 +64,17 @@ public final class SatelliteNetworkService {
      * delegates to the snapshot builder that also accounts for buffered data traffic.
      */
     public static SatelliteNetworkState rebuild(UUID teamId, double orbitalTime) {
-        List<SatelliteNetworkGraph.Node> nodes = buildNodes(orbitalTime);
-        Map<CelestialObjectId, Long> capacityByBody = new HashMap<>();
+        List<SatelliteNetworkGraph.Node> nodes = buildNodes(teamId, orbitalTime);
+        Map<CelestialObjectKey, Long> capacityByBody = new HashMap<>();
         for (SatelliteNetworkGraph.Node node : nodes) {
-            long capacity = CelestialAssetStore.SERVER.satelliteBandwidth(teamId, node.bodyId());
-            if (capacity > 0L) capacityByBody.put(node.bodyId(), capacity);
+            long capacity = CelestialAssetStore.SERVER.satelliteBandwidth(teamId, node.bodyKey());
+            if (capacity > 0L) capacityByBody.put(node.bodyKey(), capacity);
         }
         return rebuild(teamId, nodes, capacityByBody, DATA_BUFFERS);
     }
 
     static SatelliteNetworkState rebuild(UUID teamId, List<SatelliteNetworkGraph.Node> nodes,
-        Map<CelestialObjectId, Long> capacityByBody, Map<SatelliteNetworkGraph.Edge, Long> usedByEdge) {
+        Map<CelestialObjectKey, Long> capacityByBody, Map<SatelliteNetworkGraph.Edge, Long> usedByEdge) {
         SatelliteNetworkState previous = current(teamId);
         SatelliteNetworkState next = SatelliteNetworkCalculator
             .forTeam(teamId, previous.revision() + 1, nodes, capacityByBody, usedByEdge);
@@ -77,7 +84,7 @@ public final class SatelliteNetworkService {
     }
 
     static SatelliteNetworkState rebuild(UUID teamId, List<SatelliteNetworkGraph.Node> nodes,
-        Map<CelestialObjectId, Long> capacityByBody, SatelliteDataBufferStore bufferStore) {
+        Map<CelestialObjectKey, Long> capacityByBody, SatelliteDataBufferStore bufferStore) {
         SatelliteNetworkState previous = current(teamId);
         List<SatelliteNetworkGraph.Node> activeNodes = activeNodes(nodes, capacityByBody);
         /*
@@ -316,41 +323,78 @@ public final class SatelliteNetworkService {
      * The graph is built from orbital-space positions, not screen-space positions. Zoom/culling should not change the
      * server-side topology or path capacity.
      */
-    private static List<SatelliteNetworkGraph.Node> buildNodes(double orbitalTime) {
+    private static List<SatelliteNetworkGraph.Node> buildNodes(UUID teamId, double orbitalTime) {
         CelestialObject root = GalaxiaCelestialAPI.root();
-        return GalaxiaCelestialAPI.getAllBodies()
+        List<SatelliteNetworkGraph.Node> nodes = GalaxiaCelestialAPI.getAllBodies()
             .values()
             .stream()
             .filter(body -> body.objectClass() != CelestialObject.Class.GALAXY)
             .filter(body -> body.objectClass() != CelestialObject.Class.STAR)
             .map(body -> nodeFor(root, body, orbitalTime))
             .toList();
+        Set<CelestialObjectKey> minorBodyKeys = minorSatelliteBodyKeys(teamId);
+        if (minorBodyKeys.isEmpty()) return nodes;
+        List<SatelliteNetworkGraph.Node> withMinorBodies = new ArrayList<>(nodes);
+        for (CelestialObjectKey key : minorBodyKeys) {
+            GalaxiaCelestialAPI.get(key)
+                .map(body -> nodeFor(root, body, orbitalTime))
+                .ifPresent(withMinorBodies::add);
+        }
+        return List.copyOf(withMinorBodies);
     }
 
     private static SatelliteNetworkGraph.Node nodeFor(CelestialObject root, CelestialObject body, double orbitalTime) {
-        OrbitalMechanics.OrbitalState state = OrbitalMechanics.resolveWorldState(root, body, orbitalTime);
+        OrbitalMechanics.OrbitalState state = resolveNodeWorldState(root, body, orbitalTime);
         return new SatelliteNetworkGraph.Node(
-            body.requireRegisteredId(),
-            body.parentId() == null ? null
-                : body.parentId()
-                    .requireRegisteredBodyId(),
+            body.id(),
+            body.parentId(),
             orbitalOrder(body),
             state.x(),
             state.y(),
             Math.max(0.0D, body.spriteSize()));
     }
 
+    private static OrbitalMechanics.OrbitalState resolveNodeWorldState(CelestialObject root, CelestialObject body,
+        double orbitalTime) {
+        if (!body.id()
+            .isMinorBody()) {
+            OrbitalMechanics.OrbitalState state = OrbitalMechanics.resolveWorldState(root, body, orbitalTime);
+            if (state == null) {
+                throw new IllegalStateException("Cannot resolve orbital state for satellite network body: " + body.id());
+            }
+            return state;
+        }
+
+        MinorCelestialBodyId minorId = body.id()
+            .minorBodyId();
+        CelestialObjectId beltId = minorId.parentBeltId();
+        CelestialObject belt = GalaxiaCelestialAPI.get(beltId)
+            .orElseThrow(() -> new IllegalStateException("Minor satellite body has no registered belt: " + body.id()));
+        AsteroidFieldProfile profile = belt.properties()
+            .asteroidFieldProfile();
+        if (profile == null) {
+            throw new IllegalStateException("Minor satellite body parent has no asteroid field profile: " + beltId);
+        }
+
+        OrbitalMechanics.OrbitalState beltState = OrbitalMechanics.resolveWorldState(root, belt, orbitalTime);
+        if (beltState == null) {
+            throw new IllegalStateException("Cannot resolve orbital state for asteroid belt: " + beltId);
+        }
+
+        AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(beltId, profile, minorId.index());
+        return OrbitalMechanics.resolveAsteroidFieldWorldState(profile, node, beltState);
+    }
+
     private static double orbitalOrder(CelestialObject body) {
         OrbitalParams params = body.orbitalParams();
-        return params == null ? body.requireRegisteredId()
-            .ordinal() : params.semiMajorAxis();
+        return params == null ? keySortOrdinal(body.id()) : params.semiMajorAxis();
     }
 
     private static List<SatelliteNetworkGraph.Node> activeNodes(List<SatelliteNetworkGraph.Node> nodes,
-        Map<CelestialObjectId, Long> capacityByBody) {
-        Map<CelestialObjectId, Long> capacities = capacityByBody == null ? Map.of() : capacityByBody;
+        Map<CelestialObjectKey, Long> capacityByBody) {
+        Map<CelestialObjectKey, Long> capacities = capacityByBody == null ? Map.of() : capacityByBody;
         return (nodes == null ? List.<SatelliteNetworkGraph.Node>of() : nodes).stream()
-            .filter(node -> capacities.getOrDefault(node.bodyId(), 0L) > 0L)
+            .filter(node -> capacities.getOrDefault(node.bodyKey(), 0L) > 0L)
             .toList();
     }
 
@@ -385,25 +429,48 @@ public final class SatelliteNetworkService {
             .stream()
             .map(
                 entry -> new SatelliteNetworkState.PendingData(
-                    entry.bodyId(),
+                    entry.bodyKey(),
                     pendingDestinations(entry, transfers),
                     entry.key(),
                     entry.deciKb()))
             .toList();
     }
 
-    private static List<CelestialObjectId> pendingDestinations(SatelliteDataBufferStore.Entry entry,
+    private static List<CelestialObjectKey> pendingDestinations(SatelliteDataBufferStore.Entry entry,
         List<SatelliteDataTransferPlanner.Transfer> transfers) {
         if (entry == null || transfers == null || transfers.isEmpty()) return List.of();
         return transfers.stream()
-            .filter(transfer -> transfer.sourceBodyId() == entry.bodyId())
+            .filter(
+                transfer -> transfer.sourceBodyKey()
+                    .equals(entry.bodyKey()))
             .filter(
                 transfer -> transfer.sourceKey()
                     .equals(entry.key()))
-            .map(SatelliteDataTransferPlanner.Transfer::destinationBodyId)
+            .map(SatelliteDataTransferPlanner.Transfer::destinationBodyKey)
             .distinct()
-            .sorted()
+            .sorted(Comparator.comparingInt(SatelliteNetworkService::keySortOrdinal))
             .toList();
+    }
+
+    private static Set<CelestialObjectKey> minorSatelliteBodyKeys(UUID teamId) {
+        if (teamId == null) return Set.of();
+        Set<CelestialObjectKey> keys = new LinkedHashSet<>();
+        for (CelestialAsset asset : CelestialAssetStore.getTeamAssets(teamId)
+            .values()
+            .stream()
+            .flatMap(Set::stream)
+            .toList()) {
+            if (asset instanceof Satellite && asset.celestialObjectId.isMinorBody()) keys.add(asset.celestialObjectId);
+        }
+        return keys;
+    }
+
+    private static int keySortOrdinal(CelestialObjectKey key) {
+        return key.isRegistered() ? key.registeredBodyId()
+            .ordinal()
+            : key.minorBodyId()
+                .parentBeltId()
+                .ordinal();
     }
 
     private static Map<SatelliteNetworkGraph.Edge, Long> activeUsage(UUID teamId) {

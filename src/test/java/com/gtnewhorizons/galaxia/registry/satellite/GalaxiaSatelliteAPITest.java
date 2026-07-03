@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaSatelliteAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 final class GalaxiaSatelliteAPITest {
 
@@ -33,7 +34,7 @@ final class GalaxiaSatelliteAPITest {
         SatelliteNetworkService.rebuild(
             TEAM,
             nodes(),
-            Map.of(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L),
+            capacity(),
             SatelliteNetworkService.dataBuffers());
 
         assertEquals(10L, GalaxiaSatelliteAPI.localCapacityKbps(TEAM, CelestialObjectId.MARS));
@@ -62,7 +63,7 @@ final class GalaxiaSatelliteAPITest {
         SatelliteNetworkService.rebuild(
             TEAM,
             nodes(),
-            Map.of(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L),
+            capacity(),
             SatelliteNetworkService.dataBuffers());
 
         assertTrue(GalaxiaSatelliteAPI.canStartProcess(TEAM, CelestialObjectId.MARS, prospecting));
@@ -74,5 +75,13 @@ final class GalaxiaSatelliteAPITest {
 
     private static SatelliteNetworkGraph.Node node(CelestialObjectId id, double x) {
         return new SatelliteNetworkGraph.Node(id, null, id.ordinal(), x, 0.0D, 1.0D);
+    }
+
+    private static Map<CelestialObjectKey, Long> capacity() {
+        return Map.of(
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            10L,
+            CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
+            10L);
     }
 }
