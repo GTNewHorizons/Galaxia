@@ -7,8 +7,10 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -16,8 +18,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeAccess;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
@@ -44,14 +46,63 @@ public final class SatelliteNetworkService {
     private static final Map<UUID, Map<SatelliteNetworkGraph.DirectedEdge, ActiveDataUsage>> ACTIVE_DIRECTIONAL_DATA_USAGE = new HashMap<>();
     private static final SatelliteDataBufferStore DATA_BUFFERS = new SatelliteDataBufferStore();
     private static final SatelliteDataEndpointRegistry DATA_ENDPOINTS = new SatelliteDataEndpointRegistry();
+    private static final AsteroidFieldKnowledgeAccess ASTEROID_KNOWLEDGE = new AsteroidFieldKnowledgeAccess() {
+
+        @Override
+        public boolean hasDetectionWork(UUID teamId, CelestialObjectId beltId, AsteroidFieldProfile profile) {
+            return CelestialKnowledgeService.hasAsteroidDetectionWork(teamId, beltId, profile);
+        }
+
+        @Override
+        public Optional<AsteroidFieldNode> nextDetectionCandidate(UUID teamId, CelestialObjectId beltId,
+            AsteroidFieldProfile profile, Predicate<AsteroidFieldNode> scope) {
+            return CelestialKnowledgeService.nextAsteroidDetectionCandidate(teamId, beltId, profile, scope);
+        }
+
+        @Override
+        public Optional<AsteroidFieldNode> nextSignatureCandidate(UUID teamId, CelestialObjectId beltId,
+            AsteroidFieldProfile profile, Predicate<AsteroidFieldNode> scope) {
+            return CelestialKnowledgeService.nextAsteroidSignatureCandidate(teamId, beltId, profile, scope);
+        }
+
+        @Override
+        public Optional<AsteroidFieldNode> nextProfileCandidate(UUID teamId, CelestialObjectId beltId,
+            AsteroidFieldProfile profile, Predicate<AsteroidFieldNode> scope) {
+            return CelestialKnowledgeService.nextAsteroidProfileCandidate(teamId, beltId, profile, scope);
+        }
+
+        @Override
+        public void detect(UUID teamId, CelestialObjectId beltId, AsteroidFieldProfile profile,
+            MinorCelestialBodyId asteroidId) {
+            CelestialKnowledgeService.detectAsteroid(teamId, beltId, profile, asteroidId);
+        }
+
+        @Override
+        public void prospect(UUID teamId, CelestialObjectId beltId, AsteroidFieldProfile profile,
+            MinorCelestialBodyId asteroidId, Predicate<AsteroidFieldNode> scope) {
+            CelestialKnowledgeService.prospectAsteroid(teamId, beltId, profile, asteroidId, scope);
+        }
+
+        @Override
+        public Optional<AsteroidFieldNode> detectNext(UUID teamId, CelestialObjectId beltId,
+            AsteroidFieldProfile profile) {
+            return CelestialKnowledgeService.detectNextAsteroid(teamId, beltId, profile);
+        }
+
+        @Override
+        public Optional<AsteroidFieldNode> prospectNext(UUID teamId, CelestialObjectId beltId,
+            AsteroidFieldProfile profile) {
+            return CelestialKnowledgeService.prospectNextAsteroid(teamId, beltId, profile);
+        }
+    };
     private static final AsteroidSatelliteScanService ASTEROID_SCANS = new AsteroidSatelliteScanService(
-        CelestialKnowledgeService.asteroidFields(),
+        ASTEROID_KNOWLEDGE,
         bodyId -> GalaxiaCelestialAPI.get(bodyId)
             .map(
                 body -> body.properties()
                     .asteroidFieldProfile()));
     private static final AsteroidProspectingDataHandler ASTEROID_PROSPECTING = AsteroidProspectingDataHandler
-        .live(CelestialKnowledgeService.asteroidFields());
+        .live(ASTEROID_KNOWLEDGE);
 
     private SatelliteNetworkService() {}
 
@@ -132,10 +183,6 @@ public final class SatelliteNetworkService {
 
     static SatelliteDataBufferStore dataBuffers() {
         return DATA_BUFFERS;
-    }
-
-    static AsteroidFieldKnowledgeStore asteroidKnowledge() {
-        return CelestialKnowledgeService.asteroidFields();
     }
 
     public static List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledgeSnapshots(UUID teamId) {

@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import javax.annotation.Nonnull;
 
@@ -14,6 +15,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 
@@ -33,10 +35,6 @@ public final class CelestialKnowledgeService {
 
     private CelestialKnowledgeService() {}
 
-    public static AsteroidFieldKnowledgeStore asteroidFields() {
-        return ASTEROID_FIELDS;
-    }
-
     public static DiscoveryState discoveryState(@Nonnull UUID teamId, @Nonnull CelestialObjectKey key) {
         if (teamId == null) throw new IllegalArgumentException("team id is required");
         if (key == null) throw new IllegalArgumentException("celestial object key is required");
@@ -49,6 +47,50 @@ public final class CelestialKnowledgeService {
 
     public static boolean isDiscovered(@Nonnull UUID teamId, @Nonnull MinorCelestialBodyId minorBodyId) {
         return discoveryState(teamId, CelestialObjectKey.minorBody(minorBodyId)) == DiscoveryState.DISCOVERED;
+    }
+
+    public static boolean hasAsteroidDetectionWork(@Nonnull UUID teamId, @Nonnull CelestialObjectId beltId,
+        @Nonnull AsteroidFieldProfile profile) {
+        return ASTEROID_FIELDS.hasDetectionWork(teamId, beltId, profile);
+    }
+
+    public static Optional<AsteroidFieldNode> nextAsteroidDetectionCandidate(@Nonnull UUID teamId,
+        @Nonnull CelestialObjectId beltId, @Nonnull AsteroidFieldProfile profile,
+        @Nonnull Predicate<AsteroidFieldNode> scope) {
+        return ASTEROID_FIELDS.nextDetectionCandidate(teamId, beltId, profile, scope);
+    }
+
+    public static Optional<AsteroidFieldNode> nextAsteroidSignatureCandidate(@Nonnull UUID teamId,
+        @Nonnull CelestialObjectId beltId, @Nonnull AsteroidFieldProfile profile,
+        @Nonnull Predicate<AsteroidFieldNode> scope) {
+        return ASTEROID_FIELDS.nextSignatureCandidate(teamId, beltId, profile, scope);
+    }
+
+    public static Optional<AsteroidFieldNode> nextAsteroidProfileCandidate(@Nonnull UUID teamId,
+        @Nonnull CelestialObjectId beltId, @Nonnull AsteroidFieldProfile profile,
+        @Nonnull Predicate<AsteroidFieldNode> scope) {
+        return ASTEROID_FIELDS.nextProfileCandidate(teamId, beltId, profile, scope);
+    }
+
+    public static void detectAsteroid(@Nonnull UUID teamId, @Nonnull CelestialObjectId beltId,
+        @Nonnull AsteroidFieldProfile profile, @Nonnull MinorCelestialBodyId asteroidId) {
+        ASTEROID_FIELDS.detect(teamId, beltId, profile, asteroidId);
+    }
+
+    public static void prospectAsteroid(@Nonnull UUID teamId, @Nonnull CelestialObjectId beltId,
+        @Nonnull AsteroidFieldProfile profile, @Nonnull MinorCelestialBodyId asteroidId,
+        @Nonnull Predicate<AsteroidFieldNode> scope) {
+        ASTEROID_FIELDS.prospect(teamId, beltId, profile, asteroidId, scope);
+    }
+
+    public static Optional<AsteroidFieldNode> detectNextAsteroid(@Nonnull UUID teamId,
+        @Nonnull CelestialObjectId beltId, @Nonnull AsteroidFieldProfile profile) {
+        return ASTEROID_FIELDS.detectNext(teamId, beltId, profile);
+    }
+
+    public static Optional<AsteroidFieldNode> prospectNextAsteroid(@Nonnull UUID teamId,
+        @Nonnull CelestialObjectId beltId, @Nonnull AsteroidFieldProfile profile) {
+        return ASTEROID_FIELDS.prospectNext(teamId, beltId, profile);
     }
 
     public static List<AsteroidFieldKnowledgeSnapshot> asteroidFieldSnapshots(@Nonnull UUID teamId) {

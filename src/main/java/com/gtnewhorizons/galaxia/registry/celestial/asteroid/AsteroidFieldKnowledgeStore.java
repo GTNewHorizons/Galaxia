@@ -20,7 +20,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
  * about those definitions so scanning can be persisted without mutating content
  * registration.
  */
-public final class AsteroidFieldKnowledgeStore {
+public final class AsteroidFieldKnowledgeStore implements AsteroidFieldKnowledgeAccess {
 
     private final Map<UUID, Map<CelestialObjectId, AsteroidFieldKnowledge>> knowledgeByTeam = new LinkedHashMap<>();
 
@@ -36,6 +36,45 @@ public final class AsteroidFieldKnowledgeStore {
             .computeIfAbsent(beltId, key -> AsteroidFieldKnowledge.initialize(beltId, profile));
     }
 
+    @Override
+    public boolean hasDetectionWork(@Nonnull UUID teamId, @Nonnull CelestialObjectId beltId,
+        @Nonnull AsteroidFieldProfile profile) {
+        return getOrCreate(teamId, beltId, profile).hasDetectionWork();
+    }
+
+    @Override
+    public Optional<AsteroidFieldNode> nextDetectionCandidate(@Nonnull UUID teamId, @Nonnull CelestialObjectId beltId,
+        @Nonnull AsteroidFieldProfile profile, @Nonnull Predicate<AsteroidFieldNode> scope) {
+        return getOrCreate(teamId, beltId, profile)
+            .nextDetectionCandidate(scope, AsteroidFieldScanOrder.innerToOuter());
+    }
+
+    @Override
+    public Optional<AsteroidFieldNode> nextSignatureCandidate(@Nonnull UUID teamId, @Nonnull CelestialObjectId beltId,
+        @Nonnull AsteroidFieldProfile profile, @Nonnull Predicate<AsteroidFieldNode> scope) {
+        return getOrCreate(teamId, beltId, profile)
+            .nextSignatureCandidate(scope, AsteroidFieldScanOrder.innerToOuter());
+    }
+
+    @Override
+    public Optional<AsteroidFieldNode> nextProfileCandidate(@Nonnull UUID teamId, @Nonnull CelestialObjectId beltId,
+        @Nonnull AsteroidFieldProfile profile, @Nonnull Predicate<AsteroidFieldNode> scope) {
+        return getOrCreate(teamId, beltId, profile).nextProfileCandidate(scope, AsteroidFieldScanOrder.innerToOuter());
+    }
+
+    @Override
+    public void detect(@Nonnull UUID teamId, @Nonnull CelestialObjectId beltId, @Nonnull AsteroidFieldProfile profile,
+        @Nonnull MinorCelestialBodyId asteroidId) {
+        getOrCreate(teamId, beltId, profile).detect(asteroidId);
+    }
+
+    @Override
+    public void prospect(@Nonnull UUID teamId, @Nonnull CelestialObjectId beltId, @Nonnull AsteroidFieldProfile profile,
+        @Nonnull MinorCelestialBodyId asteroidId, @Nonnull Predicate<AsteroidFieldNode> scope) {
+        getOrCreate(teamId, beltId, profile).prospect(asteroidId, scope);
+    }
+
+    @Override
     public Optional<AsteroidFieldNode> detectNext(@Nonnull UUID teamId, @Nonnull CelestialObjectId beltId,
         @Nonnull AsteroidFieldProfile profile) {
         return detectNext(teamId, beltId, profile, node -> true);
@@ -55,6 +94,7 @@ public final class AsteroidFieldKnowledgeStore {
         return candidate;
     }
 
+    @Override
     public Optional<AsteroidFieldNode> prospectNext(@Nonnull UUID teamId, @Nonnull CelestialObjectId beltId,
         @Nonnull AsteroidFieldProfile profile) {
         return prospectNext(teamId, beltId, profile, node -> true);

@@ -7,27 +7,27 @@ import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeAccess;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 
 public final class AsteroidProspectingDataHandler implements SatelliteDataJobService.ProductionListener {
 
-    private final AsteroidFieldKnowledgeStore store;
+    private final AsteroidFieldKnowledgeAccess knowledgeAccess;
     private final Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver;
 
-    public AsteroidProspectingDataHandler(@Nonnull AsteroidFieldKnowledgeStore store) {
-        this(store, AsteroidProspectingDataHandler::liveProfile);
+    public AsteroidProspectingDataHandler(@Nonnull AsteroidFieldKnowledgeAccess knowledgeAccess) {
+        this(knowledgeAccess, AsteroidProspectingDataHandler::liveProfile);
     }
 
-    AsteroidProspectingDataHandler(@Nonnull AsteroidFieldKnowledgeStore store,
+    AsteroidProspectingDataHandler(@Nonnull AsteroidFieldKnowledgeAccess knowledgeAccess,
         @Nonnull Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver) {
-        this.store = store;
+        this.knowledgeAccess = knowledgeAccess;
         this.profileResolver = profileResolver;
     }
 
-    public static AsteroidProspectingDataHandler live(@Nonnull AsteroidFieldKnowledgeStore store) {
-        return new AsteroidProspectingDataHandler(store);
+    public static AsteroidProspectingDataHandler live(@Nonnull AsteroidFieldKnowledgeAccess knowledgeAccess) {
+        return new AsteroidProspectingDataHandler(knowledgeAccess);
     }
 
     @Override
@@ -51,11 +51,10 @@ public final class AsteroidProspectingDataHandler implements SatelliteDataJobSer
         }
         if (profile.isEmpty()) return Optional.empty();
 
-        if (store.getOrCreate(event.teamId(), event.bodyId(), profile.get())
-            .hasDetectionWork()) {
-            return store.detectNext(event.teamId(), event.bodyId(), profile.get());
+        if (knowledgeAccess.hasDetectionWork(event.teamId(), event.bodyId(), profile.get())) {
+            return knowledgeAccess.detectNext(event.teamId(), event.bodyId(), profile.get());
         }
-        return store.prospectNext(event.teamId(), event.bodyId(), profile.get());
+        return knowledgeAccess.prospectNext(event.teamId(), event.bodyId(), profile.get());
     }
 
     private static Optional<AsteroidFieldProfile> liveProfile(CelestialObjectId bodyId) {

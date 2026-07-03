@@ -22,10 +22,10 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -197,14 +197,11 @@ final class SatelliteNetworkServiceTest {
 
         SatelliteNetworkService.tickDataJobs();
 
-        AsteroidFieldKnowledge knowledge = SatelliteNetworkService.asteroidKnowledge()
-            .get(TEAM, CelestialObjectId.FROZEN_BELT)
-            .orElseThrow();
-        long detectedAfterTick = knowledge.nodes()
+        long detectedAfterTick = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile)
             .stream()
             .filter(
-                node -> knowledge.entryFor(node.id())
-                    .detectionState() == DiscoveryState.DISCOVERED)
+                node -> CelestialKnowledgeService.discoveryState(TEAM, CelestialObjectKey.minorBody(node.id()))
+                    == DiscoveryState.DISCOVERED)
             .count();
         assertTrue(detectedAfterTick > initiallyDetected);
         assertFalse(
@@ -346,16 +343,13 @@ final class SatelliteNetworkServiceTest {
 
         SatelliteNetworkService.tickDataJobs(AsteroidSatelliteScanPass.DETECTION.durationTicks());
 
-        AsteroidFieldKnowledge knowledge = SatelliteNetworkService.asteroidKnowledge()
-            .get(TEAM, CelestialObjectId.FROZEN_BELT)
-            .orElseThrow();
         assertTrue(
-            knowledge.nodes()
+            AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile)
                 .stream()
                 .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.HIDDEN)
                 .anyMatch(
-                    node -> knowledge.entryFor(node.id())
-                        .detectionState() == DiscoveryState.DISCOVERED));
+                    node -> CelestialKnowledgeService.discoveryState(TEAM, CelestialObjectKey.minorBody(node.id()))
+                        == DiscoveryState.DISCOVERED));
     }
 
     @Test
