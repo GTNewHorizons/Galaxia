@@ -8,6 +8,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.orbital.AsteroidFieldOrbitModel;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 
 final class AsteroidFieldOrbitModelTest {

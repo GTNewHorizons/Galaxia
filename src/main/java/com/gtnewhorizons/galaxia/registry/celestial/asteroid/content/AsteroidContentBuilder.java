@@ -15,17 +15,17 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidAppearanceP
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodePreset;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AuthoredAsteroidDefinition;
 
 /**
  * Authoring facade for asteroid field content.
  *
  * Field entries define generated pools and counts. Lore/unique entries are
- * authored presets that reserve stable slots inside those fields.
+ * authored asteroid definitions that reserve stable slots inside those fields.
  */
 public final class AsteroidContentBuilder {
 
@@ -87,7 +87,7 @@ public final class AsteroidContentBuilder {
                 throw new IllegalStateException(
                     "Authored asteroid references belt without generated field: " + asteroid.beltId);
             }
-            profileBuilder.nodePreset(asteroid.toPreset());
+            profileBuilder.authoredAsteroid(asteroid.toDefinition());
         }
 
         Map<CelestialObjectId, AsteroidFieldProfile> profiles = new LinkedHashMap<>();
@@ -271,9 +271,9 @@ public final class AsteroidContentBuilder {
             }
         }
 
-        private AsteroidNodePreset toPreset() {
+        private AuthoredAsteroidDefinition toDefinition() {
             validate();
-            return new AsteroidNodePreset(
+            return new AuthoredAsteroidDefinition(
                 slot,
                 kind,
                 contentId,

@@ -36,12 +36,12 @@ public final class AsteroidFieldResolver {
 
     private static List<AsteroidFieldNode> resolveAllUncached(CelestialObjectId beltId, AsteroidFieldProfile profile) {
         List<AsteroidFieldNode> nodes = new ArrayList<>(
-            profile.totalNodes() + profile.nodePresets()
+            profile.totalNodes() + profile.authoredAsteroids()
                 .size());
         List<AsteroidPlacementGraph.ReachableAnchor> reachableAnchors = new ArrayList<>();
 
-        for (AsteroidNodePreset preset : profile.nodePresets()) {
-            AsteroidFieldNode node = AsteroidNodeMaterializer.resolveNode(beltId, profile, preset.index());
+        for (AuthoredAsteroidDefinition definition : profile.authoredAsteroids()) {
+            AsteroidFieldNode node = AsteroidNodeMaterializer.resolveNode(beltId, profile, definition.index());
             nodes.add(node);
             if (initialDetectionState(node) == AsteroidDetectionState.DETECTED) {
                 reachableAnchors.add(AsteroidPlacementGraph.anchor(node, 0));

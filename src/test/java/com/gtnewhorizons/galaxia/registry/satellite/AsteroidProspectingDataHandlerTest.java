@@ -16,10 +16,10 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowle
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodePreset;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AuthoredAsteroidDefinition;
 
 final class AsteroidProspectingDataHandlerTest {
 
@@ -103,8 +103,8 @@ final class AsteroidProspectingDataHandlerTest {
             .radialBand(10.0, 12.0)
             .satelliteScanRadius(1000.0)
             .oreProfile(new AsteroidOreProfile("metallic", 1.0, List.of("ore.mix.iron")))
-            .nodePreset(
-                new AsteroidNodePreset(
+            .authoredAsteroid(
+                new AuthoredAsteroidDefinition(
                     1,
                     AsteroidNodeKind.LORE,
                     "scan_anchor",

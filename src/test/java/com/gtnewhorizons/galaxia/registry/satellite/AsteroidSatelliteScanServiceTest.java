@@ -17,17 +17,17 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDetectionSt
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitModel;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanOrder;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodePreset;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AuthoredAsteroidDefinition;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.orbital.AsteroidFieldOrbitModel;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class AsteroidSatelliteScanServiceTest {
@@ -287,8 +287,8 @@ final class AsteroidSatelliteScanServiceTest {
             .radialBand(8.0, 10.0)
             .satelliteScanRadius(satelliteScanRadius)
             .oreProfile(new AsteroidOreProfile("metallic", 1.0, List.of("ore.mix.iron")))
-            .nodePreset(
-                new AsteroidNodePreset(
+            .authoredAsteroid(
+                new AuthoredAsteroidDefinition(
                     1,
                     AsteroidNodeKind.LORE,
                     "scan_anchor",

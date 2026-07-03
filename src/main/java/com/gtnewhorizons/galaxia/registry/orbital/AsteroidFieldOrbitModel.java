@@ -1,8 +1,9 @@
-package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
+package com.gtnewhorizons.galaxia.registry.orbital;
 
 import javax.annotation.Nonnull;
 
-import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 
 /**
  * Converts a node's polar belt-local coordinates into a world-space orbital

@@ -171,8 +171,8 @@ final class AsteroidFieldKnowledgeStoreTest {
             .radialBand(1.20, 1.40)
             .satelliteScanRadius(1000.0)
             .oreProfile(new AsteroidOreProfile("volatile_ice", 1.0, List.of("ice", "sulfur")))
-            .nodePreset(
-                new AsteroidNodePreset(
+            .authoredAsteroid(
+                new AuthoredAsteroidDefinition(
                     1,
                     AsteroidNodeKind.LORE,
                     "scoped_target",

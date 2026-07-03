@@ -15,6 +15,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.orbital.AsteroidFieldOrbitModel;
 
 final class AsteroidFieldResolverTest {
 
@@ -120,7 +121,7 @@ final class AsteroidFieldResolverTest {
     }
 
     @Test
-    void nodePresetOverridesGeneratedNameKindAndInitialVisibility() {
+    void authoredAsteroidOverridesGeneratedNameKindAndInitialVisibility() {
         AsteroidFieldProfile profile = AsteroidFieldProfile.builder()
             .seedSalt(99L)
             .generationVersion(1)
@@ -128,7 +129,7 @@ final class AsteroidFieldResolverTest {
             .radialBand(10.0, 20.0)
             .satelliteScanRadius(1000.0)
             .oreProfile(new AsteroidOreProfile("metallic", 2.0, List.of("galaxia:iron")))
-            .nodePreset(1, AsteroidNodeKind.UNIQUE, "The Anvil", AsteroidDetectionState.DETECTED)
+            .authoredAsteroid(1, AsteroidNodeKind.UNIQUE, "The Anvil", AsteroidDetectionState.DETECTED)
             .build();
 
         AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(CelestialObjectId.FROZEN_BELT, profile, 1);
@@ -163,8 +164,8 @@ final class AsteroidFieldResolverTest {
             .radialBand(1000.0, 2000.0)
             .satelliteScanRadius(75.0)
             .oreProfile(new AsteroidOreProfile("metallic", 2.0, List.of("galaxia:iron")))
-            .nodePreset(
-                new AsteroidNodePreset(
+            .authoredAsteroid(
+                new AuthoredAsteroidDefinition(
                     0,
                     AsteroidNodeKind.LORE,
                     "detected_anchor",
@@ -198,8 +199,8 @@ final class AsteroidFieldResolverTest {
             .radialBand(1000.0, 2000.0)
             .satelliteScanRadius(50.0)
             .oreProfile(new AsteroidOreProfile("metallic", 2.0, List.of("galaxia:iron")))
-            .nodePreset(
-                new AsteroidNodePreset(
+            .authoredAsteroid(
+                new AuthoredAsteroidDefinition(
                     1,
                     AsteroidNodeKind.UNIQUE,
                     "isolated_hidden",

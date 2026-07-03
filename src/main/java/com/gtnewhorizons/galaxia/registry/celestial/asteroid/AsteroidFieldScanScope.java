@@ -4,6 +4,7 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nonnull;
 
+import com.gtnewhorizons.galaxia.registry.orbital.AsteroidFieldOrbitModel;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 
 /**

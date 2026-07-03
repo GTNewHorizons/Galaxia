@@ -26,7 +26,7 @@ public final class AsteroidContentRegistry {
     private static Map<CelestialObjectId, AsteroidFieldProfile> buildProfiles() {
         AsteroidContentBuilder builder = new AsteroidContentBuilder();
         // Generated fields provide the base profile first. Authored lore/unique
-        // asteroids then overlay fixed node presets into those fields.
+        // asteroids then overlay fixed authored definitions into those fields.
         GeneratedAsteroids.register(builder);
         LoreAsteroids.register(builder);
         UniqueAsteroids.register(builder);

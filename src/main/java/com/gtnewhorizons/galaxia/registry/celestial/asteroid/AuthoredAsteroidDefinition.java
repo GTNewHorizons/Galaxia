@@ -3,13 +3,13 @@ package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public record AsteroidNodePreset(int index, @Nonnull AsteroidNodeKind kind, @Nullable String contentId,
+public record AuthoredAsteroidDefinition(int index, @Nonnull AsteroidNodeKind kind, @Nullable String contentId,
     @Nonnull String displayName, @Nonnull AsteroidSizeClass sizeClass,
     @Nonnull AsteroidDetectionState initialDetectionState, @Nullable AsteroidOreKnowledgeState initialOreKnowledgeState,
     @Nullable Double angleOffsetDeg, @Nullable Double orbitalDepth01, @Nullable String oreProfileId,
     @Nullable AsteroidAppearanceProfile appearance) {
 
-    public AsteroidNodePreset(int index, @Nonnull AsteroidNodeKind kind, @Nonnull String displayName,
+    public AuthoredAsteroidDefinition(int index, @Nonnull AsteroidNodeKind kind, @Nonnull String displayName,
         @Nonnull AsteroidDetectionState initialDetectionState) {
         this(
             index,
@@ -25,9 +25,9 @@ public record AsteroidNodePreset(int index, @Nonnull AsteroidNodeKind kind, @Nul
             null);
     }
 
-    public AsteroidNodePreset {
+    public AuthoredAsteroidDefinition {
         if (index < 0) {
-            throw new IllegalArgumentException("preset index must be non-negative");
+            throw new IllegalArgumentException("authored asteroid index must be non-negative");
         }
         if (contentId != null && contentId.isBlank()) {
             throw new IllegalArgumentException("contentId cannot be blank");
@@ -37,7 +37,7 @@ public record AsteroidNodePreset(int index, @Nonnull AsteroidNodeKind kind, @Nul
         }
         if (initialDetectionState == AsteroidDetectionState.HIDDEN && initialOreKnowledgeState != null
             && initialOreKnowledgeState != AsteroidOreKnowledgeState.UNKNOWN) {
-            throw new IllegalArgumentException("hidden asteroid presets cannot expose ore knowledge");
+            throw new IllegalArgumentException("hidden authored asteroids cannot expose ore knowledge");
         }
         if (angleOffsetDeg != null
             && (!Double.isFinite(angleOffsetDeg) || angleOffsetDeg < 0.0 || angleOffsetDeg >= 360.0)) {

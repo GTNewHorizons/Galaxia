@@ -16,19 +16,18 @@ public final class AsteroidProspectingDataHandler implements SatelliteDataJobSer
     private final AsteroidFieldKnowledgeStore store;
     private final Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver;
 
-    public AsteroidProspectingDataHandler(@Nonnull AsteroidFieldKnowledgeStore store,
+    public AsteroidProspectingDataHandler(@Nonnull AsteroidFieldKnowledgeStore store) {
+        this(store, AsteroidProspectingDataHandler::liveProfile);
+    }
+
+    AsteroidProspectingDataHandler(@Nonnull AsteroidFieldKnowledgeStore store,
         @Nonnull Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver) {
         this.store = store;
         this.profileResolver = profileResolver;
     }
 
     public static AsteroidProspectingDataHandler live(@Nonnull AsteroidFieldKnowledgeStore store) {
-        return new AsteroidProspectingDataHandler(
-            store,
-            bodyId -> GalaxiaCelestialAPI.get(bodyId)
-                .map(
-                    body -> body.properties()
-                        .asteroidFieldProfile()));
+        return new AsteroidProspectingDataHandler(store);
     }
 
     @Override
@@ -57,5 +56,12 @@ public final class AsteroidProspectingDataHandler implements SatelliteDataJobSer
             return store.detectNext(event.teamId(), event.bodyId(), profile.get());
         }
         return store.prospectNext(event.teamId(), event.bodyId(), profile.get());
+    }
+
+    private static Optional<AsteroidFieldProfile> liveProfile(CelestialObjectId bodyId) {
+        return GalaxiaCelestialAPI.get(bodyId)
+            .map(
+                body -> body.properties()
+                    .asteroidFieldProfile());
     }
 }
