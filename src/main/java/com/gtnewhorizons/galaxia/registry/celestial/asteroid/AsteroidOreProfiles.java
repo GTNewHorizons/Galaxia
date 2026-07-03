@@ -10,7 +10,9 @@ import javax.annotation.Nonnull;
 public final class AsteroidOreProfiles {
 
     public static final AsteroidOreProfile METALLIC = new AsteroidOreProfile("metallic", List.of("ore.mix.iron"));
-    public static final AsteroidOreProfile VOLATILE_ICE = new AsteroidOreProfile("volatile_ice", List.of("ore.mix.lapis"));
+    public static final AsteroidOreProfile VOLATILE_ICE = new AsteroidOreProfile(
+        "volatile_ice",
+        List.of("ore.mix.lapis"));
     public static final AsteroidOreProfile RARE_CRYSTAL = new AsteroidOreProfile(
         "rare_crystal",
         List.of("ore.mix.redstone"));

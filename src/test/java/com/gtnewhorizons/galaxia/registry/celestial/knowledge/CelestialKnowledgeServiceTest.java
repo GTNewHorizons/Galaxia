@@ -65,6 +65,8 @@ final class CelestialKnowledgeServiceTest {
             new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN + 999999));
 
         assertThrows(IllegalArgumentException.class, () -> CelestialKnowledgeService.discoveryState(TEAM, null));
-        assertThrows(IllegalStateException.class, () -> CelestialKnowledgeService.discoveryState(TEAM, missingAsteroid));
+        assertThrows(
+            IllegalStateException.class,
+            () -> CelestialKnowledgeService.discoveryState(TEAM, missingAsteroid));
     }
 }

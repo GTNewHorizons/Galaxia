@@ -33,9 +33,8 @@ public final class AsteroidContentBuilder {
 
     public AsteroidContentBuilder field(@Nonnull CelestialObjectId beltId,
         @Nonnull Consumer<AsteroidFieldProfile.Builder> config) {
-        AsteroidFieldProfile.Builder builder = fieldsByBelt.computeIfAbsent(
-            beltId,
-            ignored -> AsteroidFieldProfile.builder());
+        AsteroidFieldProfile.Builder builder = fieldsByBelt
+            .computeIfAbsent(beltId, ignored -> AsteroidFieldProfile.builder());
         config.accept(builder);
         return this;
     }
@@ -59,9 +58,7 @@ public final class AsteroidContentBuilder {
     public Map<CelestialObjectId, AsteroidFieldProfile> buildProfiles() {
         Map<CelestialObjectId, AsteroidFieldProfile.Builder> profileBuilders = new LinkedHashMap<>();
         for (Map.Entry<CelestialObjectId, AsteroidFieldProfile.Builder> entry : fieldsByBelt.entrySet()) {
-            profileBuilders.put(
-                entry.getKey(),
-                entry.getValue());
+            profileBuilders.put(entry.getKey(), entry.getValue());
         }
 
         Map<String, AuthoredAsteroidBuilder> contentIds = new LinkedHashMap<>();

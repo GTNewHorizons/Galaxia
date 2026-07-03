@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 /*
  * Immutable server-derived snapshot synced to clients. It intentionally contains topology, current throughput, and
@@ -56,8 +56,9 @@ public record SatelliteNetworkState(UUID teamId, int revision, Map<CelestialObje
 
     public List<PendingData> pendingData(CelestialObjectKey bodyKey) {
         return pendingData.stream()
-            .filter(entry -> entry.bodyKey()
-                .equals(bodyKey))
+            .filter(
+                entry -> entry.bodyKey()
+                    .equals(bodyKey))
             .toList();
     }
 
@@ -161,8 +162,8 @@ public record SatelliteNetworkState(UUID teamId, int revision, Map<CelestialObje
             deciKb = Math.max(0L, deciKb);
         }
 
-        public PendingData(CelestialObjectId bodyId, List<CelestialObjectId> destinationBodyIds,
-            SatelliteDataKey key, long deciKb) {
+        public PendingData(CelestialObjectId bodyId, List<CelestialObjectId> destinationBodyIds, SatelliteDataKey key,
+            long deciKb) {
             this(
                 CelestialObjectKey.registered(bodyId),
                 destinationBodyIds == null ? List.of()

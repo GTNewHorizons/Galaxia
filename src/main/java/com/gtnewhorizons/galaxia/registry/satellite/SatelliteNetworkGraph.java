@@ -6,8 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 /**
  * Low-level geometry helper for visible satellite links.
@@ -20,8 +20,8 @@ public final class SatelliteNetworkGraph {
 
     private SatelliteNetworkGraph() {}
 
-    public record Node(CelestialObjectKey bodyKey, CelestialObjectKey parentKey, double orbitalOrder, double x, double y,
-        double radius) {
+    public record Node(CelestialObjectKey bodyKey, CelestialObjectKey parentKey, double orbitalOrder, double x,
+        double y, double radius) {
 
         public Node {
             if (bodyKey == null) {
@@ -118,8 +118,7 @@ public final class SatelliteNetworkGraph {
             .filter(node -> node != null)
             .sorted(
                 Comparator.comparingDouble(Node::orbitalOrder)
-                    .thenComparingInt(
-                        node -> keySortOrdinal(node.bodyKey()))
+                    .thenComparingInt(node -> keySortOrdinal(node.bodyKey()))
                     .thenComparingInt(
                         node -> node.bodyKey()
                             .minorBodyId() == null ? -1
@@ -261,7 +260,11 @@ public final class SatelliteNetworkGraph {
         if (left.isRegistered() && right.isMinorBody()) return -1;
         if (left.isMinorBody() && right.isRegistered()) return 1;
         if (left.isRegistered()) return 0;
-        return Integer.compare(left.minorBodyId().index(), right.minorBodyId().index());
+        return Integer.compare(
+            left.minorBodyId()
+                .index(),
+            right.minorBodyId()
+                .index());
     }
 
     private static int keySortOrdinal(CelestialObjectKey key) {

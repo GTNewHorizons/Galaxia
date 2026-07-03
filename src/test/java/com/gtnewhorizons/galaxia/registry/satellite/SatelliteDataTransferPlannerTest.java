@@ -10,8 +10,8 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 
 final class SatelliteDataTransferPlannerTest {
@@ -149,18 +149,28 @@ final class SatelliteDataTransferPlannerTest {
                 Map.of()),
             store);
 
-        assertEquals(1, plan.transfers()
-            .size());
-        assertEquals(asteroid, plan.transfers()
-            .get(0)
-            .sourceBodyKey());
-        assertEquals(belt, plan.transfers()
-            .get(0)
-            .destinationBodyKey());
-        assertEquals(10L, plan.usedByBody()
-            .get(asteroid));
-        assertEquals(10L, plan.usedByBody()
-            .get(belt));
+        assertEquals(
+            1,
+            plan.transfers()
+                .size());
+        assertEquals(
+            asteroid,
+            plan.transfers()
+                .get(0)
+                .sourceBodyKey());
+        assertEquals(
+            belt,
+            plan.transfers()
+                .get(0)
+                .destinationBodyKey());
+        assertEquals(
+            10L,
+            plan.usedByBody()
+                .get(asteroid));
+        assertEquals(
+            10L,
+            plan.usedByBody()
+                .get(belt));
     }
 
     private static SatelliteNetworkState network() {

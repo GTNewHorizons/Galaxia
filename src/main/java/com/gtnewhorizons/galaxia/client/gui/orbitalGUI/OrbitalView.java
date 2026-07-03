@@ -4,7 +4,6 @@ import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTechLoaded;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -2492,7 +2491,8 @@ public class OrbitalView {
         }
 
         private int satelliteNetworkBodyColor(SatelliteNetworkState networkState, CelestialObjectKey bodyKey) {
-            return SatelliteNetworkLinkColor.forLoad(networkState.usedKbps(bodyKey), networkState.capacityKbps(bodyKey));
+            return SatelliteNetworkLinkColor
+                .forLoad(networkState.usedKbps(bodyKey), networkState.capacityKbps(bodyKey));
         }
 
         private void drawSatelliteThread(SatelliteNetworkState networkState, SatelliteNetworkGraph.Edge edge,
@@ -3113,12 +3113,13 @@ public class OrbitalView {
                     () -> bodyKey.isRegistered() ? bodyKey.registeredBodyId()
                         .name()
                         .toLowerCase(Locale.ROOT)
-                        .replace('_', ' ') : bodyKey.minorBodyId()
+                        .replace('_', ' ')
+                        : bodyKey.minorBodyId()
                             .parentBodyId()
                             .name()
                             .toLowerCase(Locale.ROOT)
-                            .replace('_', ' ')
-                            + " asteroid " + bodyKey.minorBodyId()
+                            .replace('_', ' ') + " asteroid "
+                            + bodyKey.minorBodyId()
                                 .index());
         }
 

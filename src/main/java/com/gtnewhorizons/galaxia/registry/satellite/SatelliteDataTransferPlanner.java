@@ -10,8 +10,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 /**
  * Matches buffered produced data to compatible demand and assigns it to network paths for the current tick.
@@ -133,8 +133,7 @@ public final class SatelliteDataTransferPlanner {
             if (route != null) routes.add(route);
         }
         routes.sort(
-            Comparator.comparingInt(
-                (Route route) -> keySortOrdinal(route.destinationBodyKey()))
+            Comparator.comparingInt((Route route) -> keySortOrdinal(route.destinationBodyKey()))
                 .thenComparingInt(
                     route -> route.destinationBodyKey()
                         .minorBodyId() == null ? -1
@@ -213,8 +212,9 @@ public final class SatelliteDataTransferPlanner {
         CelestialObjectKey current = sourceBodyKey;
         for (SatelliteNetworkGraph.Edge edge : path) {
             CelestialObjectKey next = edge.from()
-                .equals(current) ? edge.to() : edge.to()
-                    .equals(current) ? edge.from() : null;
+                .equals(current) ? edge.to()
+                    : edge.to()
+                        .equals(current) ? edge.from() : null;
             if (next == null) return bodies;
             bodies.add(next);
             current = next;
@@ -232,8 +232,9 @@ public final class SatelliteDataTransferPlanner {
         CelestialObjectKey current = source;
         for (SatelliteNetworkGraph.Edge edge : path) {
             CelestialObjectKey next = edge.from()
-                .equals(current) ? edge.to() : edge.to()
-                    .equals(current) ? edge.from() : null;
+                .equals(current) ? edge.to()
+                    : edge.to()
+                        .equals(current) ? edge.from() : null;
             if (next == null) return;
             target.merge(
                 new SatelliteNetworkGraph.DirectedEdge(current, next),
@@ -318,8 +319,9 @@ public final class SatelliteDataTransferPlanner {
         CelestialObjectKey current = transfer.sourceBodyKey();
         for (SatelliteNetworkGraph.Edge edge : transfer.path()) {
             CelestialObjectKey next = edge.from()
-                .equals(current) ? edge.to() : edge.to()
-                    .equals(current) ? edge.from() : null;
+                .equals(current) ? edge.to()
+                    : edge.to()
+                        .equals(current) ? edge.from() : null;
             if (next == null) return directedEdges;
             directedEdges.add(new SatelliteNetworkGraph.DirectedEdge(current, next));
             current = next;

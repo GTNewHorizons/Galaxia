@@ -33,7 +33,8 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
             throw new IllegalArgumentException("outerOrbitalRadius must be greater than innerOrbitalRadius");
         }
         satelliteScanRadius = requireNonNegativeFinite("satelliteScanRadius", satelliteScanRadius);
-        if (oreProfilePool == null) throw new IllegalStateException("Asteroid field profile requires an ore profile pool");
+        if (oreProfilePool == null)
+            throw new IllegalStateException("Asteroid field profile requires an ore profile pool");
         if (authoredAsteroids == null) {
             authoredAsteroids = List.of();
         }

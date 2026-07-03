@@ -23,8 +23,8 @@ final class CelestialKnowledgeClientStateTest {
 
     @Test
     void exposesSyncedDiscoveryThroughGenericClientView() {
-        CelestialObjectKey asteroidKey = CelestialObjectKey.minorBody(
-            new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 2000));
+        CelestialObjectKey asteroidKey = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 2000));
         CelestialKnowledgeClientState.updateAsteroidFields(
             List.of(
                 new AsteroidFieldKnowledgeSnapshot(

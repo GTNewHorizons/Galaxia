@@ -3,7 +3,8 @@ package com.gtnewhorizons.galaxia.registry.util;
 /**
  * Stable hash primitives for procedural registry content.
  *
- * <p>Generated content stores ids, indices, and authored seeds rather than full
+ * <p>
+ * Generated content stores ids, indices, and authored seeds rather than full
  * random state. Changing this algorithm changes generated worlds, so callers
  * should add a generation-version bump when intentionally changing inputs or
  * distribution rules.

@@ -31,11 +31,7 @@ final class GalaxiaSatelliteAPITest {
             .finishProduction(TEAM, CelestialObjectId.MARS, prospecting, SatelliteBandwidthFormatter.kilobits(15L));
         SatelliteNetworkService.dataBuffers()
             .requestData(TEAM, CelestialObjectId.OVERWORLD, prospecting, SatelliteBandwidthFormatter.kilobits(15L));
-        SatelliteNetworkService.rebuild(
-            TEAM,
-            nodes(),
-            capacity(),
-            SatelliteNetworkService.dataBuffers());
+        SatelliteNetworkService.rebuild(TEAM, nodes(), capacity(), SatelliteNetworkService.dataBuffers());
 
         assertEquals(10L, GalaxiaSatelliteAPI.localCapacityKbps(TEAM, CelestialObjectId.MARS));
         assertEquals(10L, GalaxiaSatelliteAPI.localUsedKbps(TEAM, CelestialObjectId.MARS));
@@ -60,11 +56,7 @@ final class GalaxiaSatelliteAPITest {
     @Test
     void processCanStartWhenBodyBufferIsWithinLocalCapacity() {
         SatelliteDataKey prospecting = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
-        SatelliteNetworkService.rebuild(
-            TEAM,
-            nodes(),
-            capacity(),
-            SatelliteNetworkService.dataBuffers());
+        SatelliteNetworkService.rebuild(TEAM, nodes(), capacity(), SatelliteNetworkService.dataBuffers());
 
         assertTrue(GalaxiaSatelliteAPI.canStartProcess(TEAM, CelestialObjectId.MARS, prospecting));
     }

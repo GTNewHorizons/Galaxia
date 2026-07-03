@@ -11,8 +11,8 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 
 final class SatelliteNetworkStateTest {
@@ -102,12 +102,16 @@ final class SatelliteNetworkStateTest {
 
         assertEquals(40L, state.capacityKbps(asteroid));
         assertEquals(5L, state.usedKbps(asteroid));
-        assertEquals(List.of(belt), state.pendingData(asteroid)
-            .get(0)
-            .destinationBodyKeys());
-        assertEquals(2L, state.links()
-            .get(0)
-            .usedKbps(belt, asteroid));
+        assertEquals(
+            List.of(belt),
+            state.pendingData(asteroid)
+                .get(0)
+                .destinationBodyKeys());
+        assertEquals(
+            2L,
+            state.links()
+                .get(0)
+                .usedKbps(belt, asteroid));
     }
 
     private static CelestialObjectKey asteroidKey(int index) {

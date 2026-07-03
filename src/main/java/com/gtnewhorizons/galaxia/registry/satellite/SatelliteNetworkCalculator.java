@@ -9,8 +9,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 /**
  * Builds the satellite communication graph and derives the immutable network snapshot used by API reads and client
@@ -184,8 +184,9 @@ public final class SatelliteNetworkCalculator {
             for (SatelliteNetworkState.Link link : links == null ? List.<SatelliteNetworkState.Link>of() : links) {
                 SatelliteNetworkGraph.Edge edge = link.asEdge();
                 CelestialObjectKey next = edge.from()
-                    .equals(current) ? edge.to() : edge.to()
-                        .equals(current) ? edge.from() : null;
+                    .equals(current) ? edge.to()
+                        : edge.to()
+                            .equals(current) ? edge.from() : null;
                 if (next == null || visited.contains(next)) continue;
                 long candidate = Math.min(currentBest, link.capacityKbps());
                 if (candidate > best.getOrDefault(next, 0L)) {

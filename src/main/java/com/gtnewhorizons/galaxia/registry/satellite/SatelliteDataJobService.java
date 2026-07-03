@@ -149,8 +149,10 @@ public final class SatelliteDataJobService {
                 producer,
                 consumers.get(0)
                     .bodyKey()
-                    .isRegistered() ? consumers.get(0)
-                        .bodyId() : null);
+                    .isRegistered()
+                        ? consumers.get(0)
+                            .bodyId()
+                        : null);
             for (SatelliteDataEndpointRegistry.Endpoint consumer : consumers) {
                 updateDetectedCounterpart(consumer, registeredBodyId(producer.bodyKey()));
             }

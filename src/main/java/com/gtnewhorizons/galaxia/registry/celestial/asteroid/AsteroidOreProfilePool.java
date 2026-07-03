@@ -44,8 +44,9 @@ public record AsteroidOreProfilePool(@Nonnull List<Entry> entries) {
     public AsteroidOreProfile requireProfile(String id) {
         return entries.stream()
             .map(Entry::profile)
-            .filter(profile -> profile.id()
-                .equals(id))
+            .filter(
+                profile -> profile.id()
+                    .equals(id))
             .findFirst()
             .orElseThrow(() -> new IllegalStateException("Unknown asteroid ore profile: " + id));
     }
