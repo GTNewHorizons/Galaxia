@@ -15,7 +15,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidAppearanceP
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AuthoredAsteroidDefinition;
@@ -29,11 +28,14 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
  */
 public final class AsteroidContentBuilder {
 
-    private final Map<CelestialObjectId, FieldBuilder> fieldsByBelt = new LinkedHashMap<>();
+    private final Map<CelestialObjectId, AsteroidFieldProfile.Builder> fieldsByBelt = new LinkedHashMap<>();
     private final List<AuthoredAsteroidBuilder> authoredAsteroids = new ArrayList<>();
 
-    public AsteroidContentBuilder field(@Nonnull CelestialObjectId beltId, @Nonnull Consumer<FieldBuilder> config) {
-        FieldBuilder builder = fieldsByBelt.computeIfAbsent(beltId, ignored -> new FieldBuilder());
+    public AsteroidContentBuilder field(@Nonnull CelestialObjectId beltId,
+        @Nonnull Consumer<AsteroidFieldProfile.Builder> config) {
+        AsteroidFieldProfile.Builder builder = fieldsByBelt.computeIfAbsent(
+            beltId,
+            ignored -> AsteroidFieldProfile.builder());
         config.accept(builder);
         return this;
     }
@@ -56,11 +58,10 @@ public final class AsteroidContentBuilder {
 
     public Map<CelestialObjectId, AsteroidFieldProfile> buildProfiles() {
         Map<CelestialObjectId, AsteroidFieldProfile.Builder> profileBuilders = new LinkedHashMap<>();
-        for (Map.Entry<CelestialObjectId, FieldBuilder> entry : fieldsByBelt.entrySet()) {
+        for (Map.Entry<CelestialObjectId, AsteroidFieldProfile.Builder> entry : fieldsByBelt.entrySet()) {
             profileBuilders.put(
                 entry.getKey(),
-                entry.getValue()
-                    .toProfileBuilder());
+                entry.getValue());
         }
 
         Map<String, AuthoredAsteroidBuilder> contentIds = new LinkedHashMap<>();
@@ -98,65 +99,6 @@ public final class AsteroidContentBuilder {
                     .build());
         }
         return Collections.unmodifiableMap(profiles);
-    }
-
-    public static final class FieldBuilder {
-
-        private long seedSalt;
-        private int generationVersion = 1;
-        private int largeCount;
-        private int mediumCount;
-        private int smallCount;
-        private double innerOrbitalRadius;
-        private double outerOrbitalRadius;
-        private double satelliteScanRadius = Double.NaN;
-        private final List<AsteroidOreProfile> oreProfiles = new ArrayList<>();
-
-        public FieldBuilder seedSalt(long value) {
-            this.seedSalt = value;
-            return this;
-        }
-
-        public FieldBuilder generationVersion(int value) {
-            this.generationVersion = value;
-            return this;
-        }
-
-        public FieldBuilder sizeCounts(int large, int medium, int small) {
-            this.largeCount = large;
-            this.mediumCount = medium;
-            this.smallCount = small;
-            return this;
-        }
-
-        public FieldBuilder radialBand(double innerRadius, double outerRadius) {
-            this.innerOrbitalRadius = innerRadius;
-            this.outerOrbitalRadius = outerRadius;
-            return this;
-        }
-
-        public FieldBuilder satelliteScanRadius(double value) {
-            this.satelliteScanRadius = value;
-            return this;
-        }
-
-        public FieldBuilder oreProfile(@Nonnull AsteroidOreProfile value) {
-            this.oreProfiles.add(value);
-            return this;
-        }
-
-        private AsteroidFieldProfile.Builder toProfileBuilder() {
-            AsteroidFieldProfile.Builder builder = AsteroidFieldProfile.builder()
-                .seedSalt(seedSalt)
-                .generationVersion(generationVersion)
-                .sizeCounts(largeCount, mediumCount, smallCount)
-                .radialBand(innerOrbitalRadius, outerOrbitalRadius)
-                .satelliteScanRadius(satelliteScanRadius);
-            for (AsteroidOreProfile oreProfile : oreProfiles) {
-                builder.oreProfile(oreProfile);
-            }
-            return builder;
-        }
     }
 
     public static final class AuthoredAsteroidBuilder {
