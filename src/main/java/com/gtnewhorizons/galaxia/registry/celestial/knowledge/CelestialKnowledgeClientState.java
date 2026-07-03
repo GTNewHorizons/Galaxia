@@ -36,6 +36,10 @@ public final class CelestialKnowledgeClientState {
         return scanCompletions;
     }
 
+    public static CelestialDiscoveryView discoveryView() {
+        return CelestialKnowledgeClientState::discoveryState;
+    }
+
     public static void updateAsteroidFields(List<AsteroidFieldKnowledgeSnapshot> newSnapshots) {
         snapshots = List.copyOf(newSnapshots == null ? List.of() : newSnapshots);
     }

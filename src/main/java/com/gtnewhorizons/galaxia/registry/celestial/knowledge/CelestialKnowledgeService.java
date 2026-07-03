@@ -10,6 +10,7 @@ import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
@@ -36,20 +37,36 @@ public final class CelestialKnowledgeService {
         return ASTEROID_FIELDS;
     }
 
+    public static DiscoveryState discoveryState(@Nonnull UUID teamId, @Nonnull CelestialObjectKey key) {
+        if (teamId == null) throw new IllegalArgumentException("team id is required");
+        if (key == null) throw new IllegalArgumentException("celestial object key is required");
+        if (key.isRegistered()) {
+            if (CelestialRegistry.get(key).isEmpty()) throw new IllegalStateException("Unknown celestial object: " + key);
+            return DiscoveryState.DISCOVERED;
+        }
+        return asteroidDiscoveryState(teamId, key.minorBodyId());
+    }
+
     public static boolean isDiscovered(@Nonnull UUID teamId, @Nonnull MinorCelestialBodyId minorBodyId) {
+        return discoveryState(teamId, CelestialObjectKey.minorBody(minorBodyId)) == DiscoveryState.DISCOVERED;
+    }
+
+    private static DiscoveryState asteroidDiscoveryState(UUID teamId, MinorCelestialBodyId minorBodyId) {
         AsteroidFieldProfile profile = profile(minorBodyId.parentBeltId()).orElse(null);
-        if (profile == null || !profile.hasNodeIndex(minorBodyId.index())) return false;
+        if (profile == null || !profile.hasNodeIndex(minorBodyId.index())) {
+            throw new IllegalStateException("Unknown asteroid field node: " + minorBodyId);
+        }
 
         Optional<AsteroidFieldKnowledge> knowledge = ASTEROID_FIELDS.get(teamId, minorBodyId.parentBeltId());
         if (knowledge.isPresent()) {
             return knowledge.get()
                 .entryFor(minorBodyId)
-                .detectionState() == DiscoveryState.DISCOVERED;
+                .detectionState();
         }
 
         AsteroidFieldNode node = AsteroidFieldResolver
             .resolveNode(minorBodyId.parentBeltId(), profile, minorBodyId.index());
-        return AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.DISCOVERED;
+        return AsteroidFieldResolver.initialDetectionState(node);
     }
 
     public static List<AsteroidFieldKnowledgeSnapshot> asteroidFieldSnapshots(@Nonnull UUID teamId) {
