@@ -78,7 +78,7 @@ public final class OrbitalMechanics {
             .minorBodyId();
         CelestialObjectId parentId = parent.id()
             .registeredBodyId();
-        if (minorId.parentBeltId() != parentId) {
+        if (minorId.parentBodyId() != parentId) {
             throw new IllegalStateException(
                 "Minor celestial body parent does not match traversal parent: " + child.id());
         }

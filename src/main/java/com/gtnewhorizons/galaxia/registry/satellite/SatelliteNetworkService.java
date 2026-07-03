@@ -367,7 +367,7 @@ public final class SatelliteNetworkService {
 
         MinorCelestialBodyId minorId = body.id()
             .minorBodyId();
-        CelestialObjectId beltId = minorId.parentBeltId();
+        CelestialObjectId beltId = minorId.parentBodyId();
         CelestialObject belt = GalaxiaCelestialAPI.get(beltId)
             .orElseThrow(() -> new IllegalStateException("Minor satellite body has no registered belt: " + body.id()));
         AsteroidFieldProfile profile = belt.properties()
@@ -469,7 +469,7 @@ public final class SatelliteNetworkService {
         return key.isRegistered() ? key.registeredBodyId()
             .ordinal()
             : key.minorBodyId()
-                .parentBeltId()
+                .parentBodyId()
                 .ordinal();
     }
 

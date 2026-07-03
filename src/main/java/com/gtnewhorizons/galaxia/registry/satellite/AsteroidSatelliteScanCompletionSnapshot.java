@@ -9,9 +9,9 @@ public record AsteroidSatelliteScanCompletionSnapshot(@Nonnull CelestialObjectId
     @Nonnull MinorCelestialBodyId anchorAsteroidId, int generationVersion) {
 
     public AsteroidSatelliteScanCompletionSnapshot {
-        if (!anchorAsteroidId.parentBeltId()
+        if (!anchorAsteroidId.parentBodyId()
             .equals(beltId)) {
-            throw new IllegalArgumentException("anchor asteroid parent belt must match completion belt");
+            throw new IllegalArgumentException("anchor asteroid parent body must match completion belt");
         }
         if (generationVersion <= 0) throw new IllegalArgumentException("generationVersion must be positive");
     }

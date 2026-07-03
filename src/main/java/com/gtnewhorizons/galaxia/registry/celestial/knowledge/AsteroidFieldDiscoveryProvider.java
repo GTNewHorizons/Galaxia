@@ -35,7 +35,7 @@ final class AsteroidFieldDiscoveryProvider implements CelestialDiscoveryProvider
         if (!key.isMinorBody()) return Optional.empty();
 
         MinorCelestialBodyId minorBodyId = key.minorBodyId();
-        CelestialObjectId beltId = minorBodyId.parentBeltId();
+        CelestialObjectId beltId = minorBodyId.parentBodyId();
         AsteroidFieldProfile profile = profileResolver.apply(beltId)
             .orElse(null);
         if (profile == null || !profile.hasNodeIndex(minorBodyId.index())) {

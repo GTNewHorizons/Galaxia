@@ -3114,7 +3114,7 @@ public class OrbitalView {
                         .name()
                         .toLowerCase(Locale.ROOT)
                         .replace('_', ' ') : bodyKey.minorBodyId()
-                            .parentBeltId()
+                            .parentBodyId()
                             .name()
                             .toLowerCase(Locale.ROOT)
                             .replace('_', ' ')

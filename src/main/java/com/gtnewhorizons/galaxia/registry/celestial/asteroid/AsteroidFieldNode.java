@@ -35,7 +35,7 @@ public record AsteroidFieldNode(@Nonnull MinorCelestialBodyId id, @Nonnull Celes
         if (index < 0) {
             throw new IllegalArgumentException("node index must be non-negative");
         }
-        if (!id.parentBeltId()
+        if (!id.parentBodyId()
             .equals(beltId)) {
             throw new IllegalArgumentException("node id parent must match belt id");
         }

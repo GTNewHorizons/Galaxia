@@ -68,7 +68,7 @@ final class AsteroidDomainTypesTest {
     void minorBodyIdKeepsParentAndIndexStructured() {
         MinorCelestialBodyId id = new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 42);
 
-        assertEquals(CelestialObjectId.FROZEN_BELT, id.parentBeltId());
+        assertEquals(CelestialObjectId.FROZEN_BELT, id.parentBodyId());
         assertEquals(42, id.index());
         assertThrows(IllegalArgumentException.class, () -> new MinorCelestialBodyId(null, 0));
         assertThrows(IllegalArgumentException.class, () -> new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, -1));

@@ -268,7 +268,7 @@ public final class SatelliteNetworkGraph {
         return key.isRegistered() ? key.registeredBodyId()
             .ordinal()
             : key.minorBodyId()
-                .parentBeltId()
+                .parentBodyId()
                 .ordinal();
     }
 }

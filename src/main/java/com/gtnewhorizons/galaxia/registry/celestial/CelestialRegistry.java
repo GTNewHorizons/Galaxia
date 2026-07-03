@@ -439,7 +439,7 @@ public final class CelestialRegistry {
         if (key == null || !key.isMinorBody()) return Optional.empty();
 
         MinorCelestialBodyId minorId = key.minorBodyId();
-        CelestialObject belt = REGISTRATIONS.get(CelestialObjectKey.registered(minorId.parentBeltId()));
+        CelestialObject belt = REGISTRATIONS.get(CelestialObjectKey.registered(minorId.parentBodyId()));
         if (belt == null || belt.properties()
             .asteroidFieldProfile() == null) {
             return Optional.empty();
@@ -449,7 +449,7 @@ public final class CelestialRegistry {
             .asteroidFieldProfile();
         if (!profile.hasNodeIndex(minorId.index())) return Optional.empty();
 
-        AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(minorId.parentBeltId(), profile, minorId.index());
+        AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(minorId.parentBodyId(), profile, minorId.index());
         return Optional.of(toDynamicAsteroidObject(node, profile));
     }
 

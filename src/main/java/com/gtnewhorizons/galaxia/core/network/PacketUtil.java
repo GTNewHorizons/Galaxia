@@ -137,7 +137,7 @@ public final class PacketUtil {
         writeEnum(
             buf,
             key.minorBodyId()
-                .parentBeltId());
+                .parentBodyId());
         buf.writeInt(
             key.minorBodyId()
                 .index());
@@ -150,9 +150,9 @@ public final class PacketUtil {
         }
         // Minor body packets always carry their registered belt plus stable slot
         // index; they never depend on a transient client-side object instance.
-        CelestialObjectId parentBeltId = readEnum(buf, CelestialObjectId.class);
+        CelestialObjectId parentBodyId = readEnum(buf, CelestialObjectId.class);
         int index = buf.readInt();
-        return CelestialObjectKey.minorBody(new MinorCelestialBodyId(parentBeltId, index));
+        return CelestialObjectKey.minorBody(new MinorCelestialBodyId(parentBodyId, index));
     }
 
     // ── ItemStack helpers ──────────────────────────────────────────────

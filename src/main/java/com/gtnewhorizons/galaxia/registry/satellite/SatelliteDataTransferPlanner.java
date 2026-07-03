@@ -421,7 +421,7 @@ public final class SatelliteDataTransferPlanner {
         return key.isRegistered() ? key.registeredBodyId()
             .ordinal()
             : key.minorBodyId()
-                .parentBeltId()
+                .parentBodyId()
                 .ordinal();
     }
 }

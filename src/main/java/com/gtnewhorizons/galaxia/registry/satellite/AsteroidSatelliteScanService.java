@@ -73,7 +73,7 @@ public final class AsteroidSatelliteScanService {
                     entry.getKey()
                         .satelliteId(),
                     work.asteroidId()
-                        .parentBeltId(),
+                        .parentBodyId(),
                     work.asteroidId(),
                     work.pass(),
                     progress.elapsedTicks()));
@@ -178,7 +178,7 @@ public final class AsteroidSatelliteScanService {
         }
 
         MinorCelestialBodyId anchorId = satellite.celestialObjectId.minorBodyId();
-        CelestialObjectId beltId = anchorId.parentBeltId();
+        CelestialObjectId beltId = anchorId.parentBodyId();
         Optional<AsteroidFieldProfile> profile = profileResolver.apply(beltId);
         if (profile == null) {
             throw new IllegalStateException("profileResolver cannot return null");
@@ -259,9 +259,9 @@ public final class AsteroidSatelliteScanService {
         @Nonnull MinorCelestialBodyId anchorAsteroidId, int generationVersion) {
 
         private CompletionKey {
-            if (!anchorAsteroidId.parentBeltId()
+            if (!anchorAsteroidId.parentBodyId()
                 .equals(beltId)) {
-                throw new IllegalArgumentException("anchor asteroid parent belt must match completion belt");
+                throw new IllegalArgumentException("anchor asteroid parent body must match completion belt");
             }
             if (generationVersion <= 0) throw new IllegalArgumentException("generationVersion must be positive");
         }

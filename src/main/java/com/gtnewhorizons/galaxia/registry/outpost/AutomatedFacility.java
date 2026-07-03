@@ -124,7 +124,7 @@ public final class AutomatedFacility extends CelestialAsset {
         if (bodyId.isRegistered()) return bodyId.registeredBodyId()
             .ordinal();
         return (((long) bodyId.minorBodyId()
-            .parentBeltId()
+            .parentBodyId()
             .ordinal()) << 32) ^ bodyId.minorBodyId()
                 .index();
     }

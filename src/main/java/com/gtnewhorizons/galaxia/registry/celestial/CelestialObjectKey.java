@@ -55,8 +55,8 @@ public record CelestialObjectKey(CelestialObjectId registeredBodyId, MinorCelest
         }
         tag.setString("kind", "minor");
         tag.setString(
-            "parentBeltId",
-            minorBodyId.parentBeltId()
+            "parentBodyId",
+            minorBodyId.parentBodyId()
                 .name());
         tag.setInteger("index", minorBodyId.index());
         return tag;
@@ -75,7 +75,7 @@ public record CelestialObjectKey(CelestialObjectId registeredBodyId, MinorCelest
         if ("minor".equals(kind)) {
             return minorBody(
                 new MinorCelestialBodyId(
-                    parseRegisteredId(tag.getString("parentBeltId"), "parentBeltId"),
+                    parseRegisteredId(tag.getString("parentBodyId"), "parentBodyId"),
                     tag.getInteger("index")));
         }
         throw new IllegalArgumentException("Unknown celestial object key kind: " + kind);

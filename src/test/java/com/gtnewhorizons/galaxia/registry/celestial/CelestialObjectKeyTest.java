@@ -30,7 +30,7 @@ final class CelestialObjectKeyTest {
         NBTTagCompound tag = key.toNbt();
 
         assertEquals("minor", tag.getString("kind"));
-        assertEquals("FROZEN_BELT", tag.getString("parentBeltId"));
+        assertEquals("FROZEN_BELT", tag.getString("parentBodyId"));
         assertEquals(4, tag.getInteger("index"));
         assertEquals(key, CelestialObjectKey.fromNbt(tag));
     }

@@ -215,7 +215,7 @@ final class FacilityPersistenceManagerTest {
                 .getAsString());
         assertEquals(
             "FROZEN_BELT",
-            keyJson.get("parentBeltId")
+            keyJson.get("parentBodyId")
                 .getAsString());
         assertEquals(
             AsteroidSlotRanges.GENERATED_SLOT_MIN,

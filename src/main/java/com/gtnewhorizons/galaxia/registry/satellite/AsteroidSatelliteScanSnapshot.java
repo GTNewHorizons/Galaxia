@@ -10,9 +10,9 @@ public record AsteroidSatelliteScanSnapshot(@Nonnull CelestialAsset.ID satellite
     @Nonnull MinorCelestialBodyId asteroidId, @Nonnull AsteroidSatelliteScanPass pass, int elapsedTicks) {
 
     public AsteroidSatelliteScanSnapshot {
-        if (!asteroidId.parentBeltId()
+        if (!asteroidId.parentBodyId()
             .equals(beltId)) {
-            throw new IllegalArgumentException("asteroid parent belt must match scan belt");
+            throw new IllegalArgumentException("asteroid parent body must match scan belt");
         }
         if (elapsedTicks < 0 || elapsedTicks >= pass.durationTicks()) {
             throw new IllegalArgumentException("elapsedTicks must be in [0, pass duration)");

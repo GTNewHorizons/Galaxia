@@ -587,7 +587,7 @@ public final class FacilityPersistenceManager {
         }
         MinorCelestialBodyId minorId = key.minorBodyId();
         json.kind = "minor";
-        json.parentBeltId = minorId.parentBeltId()
+        json.parentBodyId = minorId.parentBodyId()
             .name();
         json.index = minorId.index();
         return json;
@@ -613,18 +613,18 @@ public final class FacilityPersistenceManager {
             return CelestialObjectKey.registered(registeredId);
         }
         if ("minor".equals(json.kind)) {
-            CelestialObjectId parentBeltId = CelestialObjectId.fromString(json.parentBeltId);
-            if (parentBeltId == null) {
+            CelestialObjectId parentBodyId = CelestialObjectId.fromString(json.parentBodyId);
+            if (parentBodyId == null) {
                 throw invalidCelestialKey(
-                    "celestialObjectKey.parentBeltId",
-                    String.valueOf(json.parentBeltId),
-                    "invalid parentBeltId");
+                    "celestialObjectKey.parentBodyId",
+                    String.valueOf(json.parentBodyId),
+                    "invalid parentBodyId");
             }
             if (json.index == null) {
                 throw invalidCelestialKey("celestialObjectKey.index", "null", "index is required");
             }
             try {
-                return CelestialObjectKey.minorBody(new MinorCelestialBodyId(parentBeltId, json.index));
+                return CelestialObjectKey.minorBody(new MinorCelestialBodyId(parentBodyId, json.index));
             } catch (IllegalArgumentException ex) {
                 throw invalidCelestialKey("celestialObjectKey.index", String.valueOf(json.index), ex.getMessage());
             }
@@ -1401,7 +1401,7 @@ public final class FacilityPersistenceManager {
 
         String kind;
         String registeredBodyId;
-        String parentBeltId;
+        String parentBodyId;
         Integer index;
     }
 
