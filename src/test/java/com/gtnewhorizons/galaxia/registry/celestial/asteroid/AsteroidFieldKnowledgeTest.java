@@ -46,6 +46,23 @@ final class AsteroidFieldKnowledgeTest {
     }
 
     @Test
+    void snapshotDoesNotExposeHiddenAsteroidIndexes() {
+        AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledge.initialize(CelestialObjectId.FROZEN_BELT, profile());
+        AsteroidFieldNode hidden = node(knowledge, AsteroidSizeClass.MEDIUM);
+
+        AsteroidFieldKnowledgeSnapshot snapshot = knowledge.snapshot(CelestialObjectId.FROZEN_BELT);
+
+        assertTrue(
+            snapshot.entries()
+                .stream()
+                .allMatch(entry -> entry.detectionState() == DiscoveryState.DISCOVERED));
+        assertFalse(
+            snapshot.entries()
+                .stream()
+                .anyMatch(entry -> entry.index() == hidden.index()));
+    }
+
+    @Test
     void detectionWorkBlocksProspectingUntilEveryAsteroidIsDetected() {
         AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledge.initialize(CelestialObjectId.FROZEN_BELT, profile());
         AsteroidFieldNode medium = node(knowledge, AsteroidSizeClass.MEDIUM);

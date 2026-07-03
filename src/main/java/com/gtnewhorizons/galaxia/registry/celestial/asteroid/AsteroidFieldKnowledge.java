@@ -220,6 +220,7 @@ public final class AsteroidFieldKnowledge {
         return new AsteroidFieldKnowledgeSnapshot(
             beltId,
             nodes.stream()
+                .filter(node -> entryFor(node.id()).detectionState() == DiscoveryState.DISCOVERED)
                 .map(node -> {
                     Entry entry = entryFor(node.id());
                     return new AsteroidFieldKnowledgeSnapshot.Entry(
