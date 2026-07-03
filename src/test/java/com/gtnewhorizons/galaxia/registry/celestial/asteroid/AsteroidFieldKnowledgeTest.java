@@ -158,7 +158,7 @@ final class AsteroidFieldKnowledgeTest {
             .sizeCounts(1, 0, 0)
             .radialBand(1.20, 1.40)
             .satelliteScanRadius(1000.0)
-            .oreProfile(new AsteroidOreProfile("volatile_ice", 1.0, List.of("ice", "sulfur")))
+            .oreProfile(new AsteroidOreProfile("volatile_ice", List.of("ice", "sulfur")))
             .build();
         AsteroidFieldKnowledge oldKnowledge = AsteroidFieldKnowledge
             .initialize(CelestialObjectId.FROZEN_BELT, oldProfile);
@@ -174,7 +174,7 @@ final class AsteroidFieldKnowledgeTest {
             .sizeCounts(1, 0, 0)
             .radialBand(1.20, 1.40)
             .satelliteScanRadius(1000.0)
-            .oreProfile(new AsteroidOreProfile("volatile_ice", 1.0, List.of("ice", "sulfur")))
+            .oreProfile(new AsteroidOreProfile("volatile_ice", List.of("ice", "sulfur")))
             .authoredAsteroid(1, AsteroidNodeKind.LORE, "Karnyx", DiscoveryState.DISCOVERED)
             .build();
 
@@ -201,7 +201,7 @@ final class AsteroidFieldKnowledgeTest {
             .sizeCounts(2, 0, 0)
             .radialBand(1.20, 1.40)
             .satelliteScanRadius(1000.0)
-            .oreProfile(new AsteroidOreProfile("volatile_ice", 1.0, List.of("ice", "sulfur")))
+            .oreProfile(new AsteroidOreProfile("volatile_ice", List.of("ice", "sulfur")))
             .build();
         AsteroidFieldKnowledge oldKnowledge = AsteroidFieldKnowledge
             .initialize(CelestialObjectId.FROZEN_BELT, oldProfile);
@@ -212,7 +212,7 @@ final class AsteroidFieldKnowledgeTest {
             .sizeCounts(1, 0, 0)
             .radialBand(1.20, 1.40)
             .satelliteScanRadius(1000.0)
-            .oreProfile(new AsteroidOreProfile("volatile_ice", 1.0, List.of("ice", "sulfur")))
+            .oreProfile(new AsteroidOreProfile("volatile_ice", List.of("ice", "sulfur")))
             .build();
 
         AsteroidFieldKnowledge restored = AsteroidFieldKnowledge.fromSnapshot(
@@ -249,7 +249,7 @@ final class AsteroidFieldKnowledgeTest {
             .sizeCounts(1, 0, 0)
             .radialBand(1.20, 1.40)
             .satelliteScanRadius(1000.0)
-            .oreProfile(new AsteroidOreProfile("volatile_ice", 1.0, List.of("ice", "sulfur")))
+            .oreProfile(new AsteroidOreProfile("volatile_ice", List.of("ice", "sulfur")))
             .authoredAsteroid(1, AsteroidNodeKind.LORE, "Karnyx", DiscoveryState.DISCOVERED)
             .build();
         AsteroidFieldKnowledge oldKnowledge = AsteroidFieldKnowledge
@@ -261,7 +261,7 @@ final class AsteroidFieldKnowledgeTest {
             .sizeCounts(1, 0, 0)
             .radialBand(1.20, 1.40)
             .satelliteScanRadius(1000.0)
-            .oreProfile(new AsteroidOreProfile("volatile_ice", 1.0, List.of("ice", "sulfur")))
+            .oreProfile(new AsteroidOreProfile("volatile_ice", List.of("ice", "sulfur")))
             .build();
         MinorCelestialBodyId savedId = new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 1);
 
@@ -297,7 +297,7 @@ final class AsteroidFieldKnowledgeTest {
             .sizeCounts(1, 1, 1)
             .radialBand(1.20, 1.40)
             .satelliteScanRadius(1000.0)
-            .oreProfile(new AsteroidOreProfile("volatile_ice", 1.0, List.of("ice", "sulfur")))
+            .oreProfile(new AsteroidOreProfile("volatile_ice", List.of("ice", "sulfur")))
             .build();
     }
 }

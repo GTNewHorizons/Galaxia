@@ -160,7 +160,7 @@ final class AsteroidFieldKnowledgeStoreTest {
             .sizeCounts(1, 1, 1)
             .radialBand(1.20, 1.40)
             .satelliteScanRadius(1000.0)
-            .oreProfile(new AsteroidOreProfile("volatile_ice", 1.0, List.of("ice", "sulfur")))
+            .oreProfile(new AsteroidOreProfile("volatile_ice", List.of("ice", "sulfur")))
             .build();
     }
 
@@ -171,7 +171,7 @@ final class AsteroidFieldKnowledgeStoreTest {
             .sizeCounts(1, 0, 0)
             .radialBand(1.20, 1.40)
             .satelliteScanRadius(1000.0)
-            .oreProfile(new AsteroidOreProfile("volatile_ice", 1.0, List.of("ice", "sulfur")))
+            .oreProfile(new AsteroidOreProfile("volatile_ice", List.of("ice", "sulfur")))
             .authoredAsteroid(
                 new AuthoredAsteroidDefinition(
                     1,
