@@ -17,62 +17,237 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfil
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 
-public record CelestialBodyProperties(boolean visitable, boolean canCreateStation, boolean canCreateOutpost,
-    double localGravityG, double massEarthRelative, double orbitalRadiusEarthRelative, double radiusEarthRelative,
-    double standardGravitationalParameter, double sphereOfInfluenceRadius, double parkingOrbitRadius, String oreProfile,
-    List<String> gtOreVeinIds, double radiation, double temperature, double surfacePressurePa,
-    double starmapAtmosphericDrag, List<AtmosphereIngredient> atmosphereIngredients,
-    CelestialBodyProperties atmosphereCompositionSource, AsteroidFieldProfile asteroidFieldProfile,
-    AsteroidNodeKind asteroidNodeKind, AsteroidSizeClass asteroidSizeClass, Map<String, String> metadata) {
+public record CelestialBodyProperties(@Nonnull CelestialBodyCapabilities capabilities,
+    @Nonnull CelestialPhysicalProperties physical, @Nonnull CelestialOrbitalProperties orbital,
+    @Nonnull CelestialResourceProperties resources, @Nonnull CelestialAtmosphereProperties atmosphere,
+    AsteroidFieldProfile asteroidFieldProfile, @Nonnull AsteroidBodyProperties asteroidBody,
+    @Nonnull Map<String, String> metadata) {
 
     public CelestialBodyProperties {
-        localGravityG = requireNonNegativeFinite("localGravityG", localGravityG);
-        massEarthRelative = requireNonNegativeFinite("massEarthRelative", massEarthRelative);
-        orbitalRadiusEarthRelative = requireNonNegativeFinite("orbitalRadiusEarthRelative", orbitalRadiusEarthRelative);
-        radiusEarthRelative = requireNonNegativeFinite("radiusEarthRelative", radiusEarthRelative);
-        standardGravitationalParameter = requireNonNegativeFinite(
-            "standardGravitationalParameter",
-            standardGravitationalParameter);
-        sphereOfInfluenceRadius = requireNonNegativeFinite("sphereOfInfluenceRadius", sphereOfInfluenceRadius);
-        parkingOrbitRadius = requireNonNegativeFinite("parkingOrbitRadius", parkingOrbitRadius);
-        radiation = requireNonNegativeFinite("radiation", radiation);
-        temperature = requireNonNegativeFinite("temperature", temperature);
-        surfacePressurePa = requireNonNegativeFinite("surfacePressurePa", surfacePressurePa);
-        starmapAtmosphericDrag = requirePositiveFinite("starmapAtmosphericDrag", starmapAtmosphericDrag);
-        if (oreProfile == null) oreProfile = "";
+        if (capabilities == null) capabilities = CelestialBodyCapabilities.empty();
+        if (physical == null) physical = CelestialPhysicalProperties.empty();
+        if (orbital == null) orbital = CelestialOrbitalProperties.empty();
+        if (resources == null) resources = CelestialResourceProperties.empty();
+        if (atmosphere == null) atmosphere = CelestialAtmosphereProperties.empty();
+        if (asteroidBody == null) asteroidBody = AsteroidBodyProperties.empty();
         if (metadata == null) metadata = Collections.emptyMap();
         else metadata = Collections.unmodifiableMap(new LinkedHashMap<>(metadata));
-        if (gtOreVeinIds == null) gtOreVeinIds = List.of();
-        else gtOreVeinIds = Collections.unmodifiableList(new ArrayList<>(gtOreVeinIds));
-        if (atmosphereIngredients == null) atmosphereIngredients = List.of();
-        else {
-            List<AtmosphereIngredient> ingredients = new ArrayList<>(atmosphereIngredients.size());
-            for (AtmosphereIngredient ingredient : atmosphereIngredients) {
-                if (ingredient == null) {
-                    throw new IllegalArgumentException("atmosphere ingredient cannot be null");
+    }
+
+    public CelestialBodyProperties(boolean visitable, boolean canCreateStation, boolean canCreateOutpost,
+        double localGravityG, double massEarthRelative, double orbitalRadiusEarthRelative, double radiusEarthRelative,
+        double standardGravitationalParameter, double sphereOfInfluenceRadius, double parkingOrbitRadius,
+        String oreProfile, List<String> gtOreVeinIds, double radiation, double temperature, double surfacePressurePa,
+        double starmapAtmosphericDrag, List<AtmosphereIngredient> atmosphereIngredients,
+        CelestialBodyProperties atmosphereCompositionSource, AsteroidFieldProfile asteroidFieldProfile,
+        AsteroidNodeKind asteroidNodeKind, AsteroidSizeClass asteroidSizeClass, Map<String, String> metadata) {
+        this(
+            new CelestialBodyCapabilities(visitable, canCreateStation, canCreateOutpost),
+            new CelestialPhysicalProperties(
+                localGravityG,
+                massEarthRelative,
+                orbitalRadiusEarthRelative,
+                radiusEarthRelative,
+                radiation,
+                temperature),
+            new CelestialOrbitalProperties(standardGravitationalParameter, sphereOfInfluenceRadius, parkingOrbitRadius),
+            new CelestialResourceProperties(oreProfile, gtOreVeinIds),
+            new CelestialAtmosphereProperties(
+                surfacePressurePa,
+                starmapAtmosphericDrag,
+                atmosphereIngredients,
+                atmosphereCompositionSource),
+            asteroidFieldProfile,
+            new AsteroidBodyProperties(asteroidNodeKind, asteroidSizeClass),
+            metadata);
+    }
+
+    public boolean visitable() {
+        return capabilities.visitable();
+    }
+
+    public boolean canCreateStation() {
+        return capabilities.canCreateStation();
+    }
+
+    public boolean canCreateOutpost() {
+        return capabilities.canCreateOutpost();
+    }
+
+    public double localGravityG() {
+        return physical.localGravityG();
+    }
+
+    public double massEarthRelative() {
+        return physical.massEarthRelative();
+    }
+
+    public double orbitalRadiusEarthRelative() {
+        return physical.orbitalRadiusEarthRelative();
+    }
+
+    public double radiusEarthRelative() {
+        return physical.radiusEarthRelative();
+    }
+
+    public double radiation() {
+        return physical.radiation();
+    }
+
+    public double temperature() {
+        return physical.temperature();
+    }
+
+    public double standardGravitationalParameter() {
+        return orbital.standardGravitationalParameter();
+    }
+
+    public double sphereOfInfluenceRadius() {
+        return orbital.sphereOfInfluenceRadius();
+    }
+
+    public double parkingOrbitRadius() {
+        return orbital.parkingOrbitRadius();
+    }
+
+    public String oreProfile() {
+        return resources.oreProfile();
+    }
+
+    public List<String> gtOreVeinIds() {
+        return resources.gtOreVeinIds();
+    }
+
+    public double surfacePressurePa() {
+        return atmosphere.surfacePressurePa();
+    }
+
+    public double starmapAtmosphericDrag() {
+        return atmosphere.starmapAtmosphericDrag();
+    }
+
+    public List<AtmosphereIngredient> atmosphereIngredients() {
+        return atmosphere.ingredients();
+    }
+
+    public CelestialBodyProperties atmosphereCompositionSource() {
+        return atmosphere.compositionSource();
+    }
+
+    public AsteroidNodeKind asteroidNodeKind() {
+        return asteroidBody.nodeKind();
+    }
+
+    public AsteroidSizeClass asteroidSizeClass() {
+        return asteroidBody.sizeClass();
+    }
+
+    public record CelestialBodyCapabilities(boolean visitable, boolean canCreateStation, boolean canCreateOutpost) {
+
+        private static CelestialBodyCapabilities empty() {
+            return new CelestialBodyCapabilities(false, false, false);
+        }
+    }
+
+    public record CelestialPhysicalProperties(double localGravityG, double massEarthRelative,
+        double orbitalRadiusEarthRelative, double radiusEarthRelative, double radiation, double temperature) {
+
+        public CelestialPhysicalProperties {
+            localGravityG = requireNonNegativeFinite("localGravityG", localGravityG);
+            massEarthRelative = requireNonNegativeFinite("massEarthRelative", massEarthRelative);
+            orbitalRadiusEarthRelative = requireNonNegativeFinite(
+                "orbitalRadiusEarthRelative",
+                orbitalRadiusEarthRelative);
+            radiusEarthRelative = requireNonNegativeFinite("radiusEarthRelative", radiusEarthRelative);
+            radiation = requireNonNegativeFinite("radiation", radiation);
+            temperature = requireNonNegativeFinite("temperature", temperature);
+        }
+
+        private static CelestialPhysicalProperties empty() {
+            return new CelestialPhysicalProperties(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        }
+    }
+
+    public record CelestialOrbitalProperties(double standardGravitationalParameter, double sphereOfInfluenceRadius,
+        double parkingOrbitRadius) {
+
+        public CelestialOrbitalProperties {
+            standardGravitationalParameter = requireNonNegativeFinite(
+                "standardGravitationalParameter",
+                standardGravitationalParameter);
+            sphereOfInfluenceRadius = requireNonNegativeFinite("sphereOfInfluenceRadius", sphereOfInfluenceRadius);
+            parkingOrbitRadius = requireNonNegativeFinite("parkingOrbitRadius", parkingOrbitRadius);
+        }
+
+        private static CelestialOrbitalProperties empty() {
+            return new CelestialOrbitalProperties(0.0, 0.0, 0.0);
+        }
+    }
+
+    public record CelestialResourceProperties(@Nonnull String oreProfile, @Nonnull List<String> gtOreVeinIds) {
+
+        public CelestialResourceProperties {
+            if (oreProfile == null) oreProfile = "";
+            if (gtOreVeinIds == null) gtOreVeinIds = List.of();
+            else gtOreVeinIds = Collections.unmodifiableList(new ArrayList<>(gtOreVeinIds));
+        }
+
+        private static CelestialResourceProperties empty() {
+            return new CelestialResourceProperties("", List.of());
+        }
+    }
+
+    public record CelestialAtmosphereProperties(double surfacePressurePa, double starmapAtmosphericDrag,
+        @Nonnull List<AtmosphereIngredient> ingredients, CelestialBodyProperties compositionSource) {
+
+        public CelestialAtmosphereProperties {
+            surfacePressurePa = requireNonNegativeFinite("surfacePressurePa", surfacePressurePa);
+            starmapAtmosphericDrag = requirePositiveFinite("starmapAtmosphericDrag", starmapAtmosphericDrag);
+            if (ingredients == null) ingredients = List.of();
+            else {
+                List<AtmosphereIngredient> copiedIngredients = new ArrayList<>(ingredients.size());
+                for (AtmosphereIngredient ingredient : ingredients) {
+                    if (ingredient == null) {
+                        throw new IllegalArgumentException("atmosphere ingredient cannot be null");
+                    }
+                    copiedIngredients.add(ingredient);
                 }
-                ingredients.add(ingredient);
+                ingredients = Collections.unmodifiableList(copiedIngredients);
             }
-            atmosphereIngredients = Collections.unmodifiableList(ingredients);
-        }
-        if (atmosphereCompositionSource != null) {
-            if (!atmosphereIngredients.isEmpty()) {
-                throw new IllegalStateException("Atmosphere ingredients and composition source are mutually exclusive");
+            if (compositionSource != null) {
+                if (!ingredients.isEmpty()) {
+                    throw new IllegalStateException(
+                        "Atmosphere ingredients and composition source are mutually exclusive");
+                }
+                if (compositionSource.atmosphereCompositionSource() != null) {
+                    throw new IllegalStateException("Atmosphere composition source must define its own ingredients");
+                }
+                ingredients = compositionSource.atmosphereIngredients();
             }
-            if (atmosphereCompositionSource.atmosphereCompositionSource() != null) {
-                throw new IllegalStateException("Atmosphere composition source must define its own ingredients");
+            if (surfacePressurePa > 0.0 && ingredients.isEmpty()) {
+                throw new IllegalStateException(
+                    "Positive atmosphere pressure requires atmosphere ingredients or composition source");
             }
-            atmosphereIngredients = atmosphereCompositionSource.atmosphereIngredients();
+            if (surfacePressurePa == 0.0 && (!ingredients.isEmpty() || compositionSource != null)) {
+                throw new IllegalStateException("Atmosphere composition requires positive surface pressure");
+            }
         }
-        if (surfacePressurePa > 0.0 && atmosphereIngredients.isEmpty()) {
-            throw new IllegalStateException(
-                "Positive atmosphere pressure requires atmosphere ingredients or composition source");
+
+        private static CelestialAtmosphereProperties empty() {
+            return new CelestialAtmosphereProperties(0.0, 1.0, List.of(), null);
         }
-        if (surfacePressurePa == 0.0 && (!atmosphereIngredients.isEmpty() || atmosphereCompositionSource != null)) {
-            throw new IllegalStateException("Atmosphere composition requires positive surface pressure");
+    }
+
+    public record AsteroidBodyProperties(AsteroidNodeKind nodeKind, AsteroidSizeClass sizeClass) {
+
+        public AsteroidBodyProperties {
+            if ((nodeKind == null) != (sizeClass == null)) {
+                throw new IllegalStateException("Asteroid node kind and size class must be set together");
+            }
         }
-        if ((asteroidNodeKind == null) != (asteroidSizeClass == null)) {
-            throw new IllegalStateException("Asteroid node kind and size class must be set together");
+
+        private static AsteroidBodyProperties empty() {
+            return new AsteroidBodyProperties(null, null);
         }
     }
 
@@ -91,22 +266,22 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
     }
 
     public boolean hasGtOreVeinIds() {
-        return !gtOreVeinIds.isEmpty();
+        return !gtOreVeinIds().isEmpty();
     }
 
     public List<ItemStack> getResolvedGtVeinOreStacks() {
-        if (gtOreVeinIds.isEmpty()) return List.of();
-        return GTCompat.getGtVeinOreStacks(gtOreVeinIds.toArray(new String[0]));
+        if (gtOreVeinIds().isEmpty()) return List.of();
+        return GTCompat.getGtVeinOreStacks(gtOreVeinIds().toArray(new String[0]));
     }
 
     // TODO: come up with some kind of atmosphere recipe autogen that accounts for weights and atmosphere density (low
     // pressure = hard to capture)
     public double atmosphereWeightedAverage(@Nonnull ToDoubleFunction<Fluid> valueProvider) {
-        if (surfacePressurePa <= 0.0 || atmosphereIngredients.isEmpty()) return 0.0;
+        if (surfacePressurePa() <= 0.0 || atmosphereIngredients().isEmpty()) return 0.0;
 
         double weightedSum = 0.0;
         double totalWeight = 0.0;
-        for (AtmosphereIngredient ingredient : atmosphereIngredients) {
+        for (AtmosphereIngredient ingredient : atmosphereIngredients()) {
             double weight = ingredient.weight();
             weightedSum += valueProvider.applyAsDouble(ingredient.fluid()) * weight;
             totalWeight += weight;
@@ -165,30 +340,30 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
 
         public Builder(CelestialBodyProperties source) {
             if (source == null) return;
-            this.visitable = source.visitable;
-            this.canCreateStation = source.canCreateStation;
-            this.canCreateOutpost = source.canCreateOutpost;
-            this.localGravityG = source.localGravityG;
-            this.massEarthRelative = source.massEarthRelative;
-            this.orbitalRadiusEarthRelative = source.orbitalRadiusEarthRelative;
-            this.radiusEarthRelative = source.radiusEarthRelative;
-            this.standardGravitationalParameter = source.standardGravitationalParameter;
-            this.sphereOfInfluenceRadius = source.sphereOfInfluenceRadius;
-            this.parkingOrbitRadius = source.parkingOrbitRadius;
-            this.oreProfile = source.oreProfile;
-            this.resolvedGtOreVeinIds.addAll(source.gtOreVeinIds);
-            this.radiation = source.radiation;
-            this.temperature = source.temperature;
-            this.surfacePressurePa = source.surfacePressurePa;
-            this.starmapAtmosphericDrag = source.starmapAtmosphericDrag;
-            this.atmosphereCompositionSource = source.atmosphereCompositionSource;
-            this.asteroidFieldProfile = source.asteroidFieldProfile;
-            this.asteroidNodeKind = source.asteroidNodeKind;
-            this.asteroidSizeClass = source.asteroidSizeClass;
-            if (source.atmosphereCompositionSource == null) {
-                this.atmosphereIngredients.addAll(source.atmosphereIngredients);
+            this.visitable = source.visitable();
+            this.canCreateStation = source.canCreateStation();
+            this.canCreateOutpost = source.canCreateOutpost();
+            this.localGravityG = source.localGravityG();
+            this.massEarthRelative = source.massEarthRelative();
+            this.orbitalRadiusEarthRelative = source.orbitalRadiusEarthRelative();
+            this.radiusEarthRelative = source.radiusEarthRelative();
+            this.standardGravitationalParameter = source.standardGravitationalParameter();
+            this.sphereOfInfluenceRadius = source.sphereOfInfluenceRadius();
+            this.parkingOrbitRadius = source.parkingOrbitRadius();
+            this.oreProfile = source.oreProfile();
+            this.resolvedGtOreVeinIds.addAll(source.gtOreVeinIds());
+            this.radiation = source.radiation();
+            this.temperature = source.temperature();
+            this.surfacePressurePa = source.surfacePressurePa();
+            this.starmapAtmosphericDrag = source.starmapAtmosphericDrag();
+            this.atmosphereCompositionSource = source.atmosphereCompositionSource();
+            this.asteroidFieldProfile = source.asteroidFieldProfile();
+            this.asteroidNodeKind = source.asteroidNodeKind();
+            this.asteroidSizeClass = source.asteroidSizeClass();
+            if (source.atmosphereCompositionSource() == null) {
+                this.atmosphereIngredients.addAll(source.atmosphereIngredients());
             }
-            this.metadata.putAll(source.metadata);
+            this.metadata.putAll(source.metadata());
         }
 
         public Builder visitable(boolean value) {
@@ -268,8 +443,7 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
          *
          * <p>
          * Pressure is per body and is never copied by atmosphere composition override. Future atmosphere collection
-         * uses
-         * pressure to scale compressor difficulty/throughput.
+         * uses pressure to scale compressor difficulty/throughput.
          */
         public Builder surfacePressurePa(double value) {
             this.surfacePressurePa = requireNonNegativeFinite("surfacePressurePa", value);
@@ -340,27 +514,26 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
 
         public CelestialBodyProperties build() {
             return new CelestialBodyProperties(
-                visitable,
-                canCreateStation,
-                canCreateOutpost,
-                localGravityG,
-                massEarthRelative,
-                orbitalRadiusEarthRelative,
-                radiusEarthRelative,
-                standardGravitationalParameter,
-                sphereOfInfluenceRadius,
-                parkingOrbitRadius,
-                oreProfile,
-                resolvedGtOreVeinIds,
-                radiation,
-                temperature,
-                surfacePressurePa,
-                starmapAtmosphericDrag,
-                atmosphereIngredients,
-                atmosphereCompositionSource,
+                new CelestialBodyCapabilities(visitable, canCreateStation, canCreateOutpost),
+                new CelestialPhysicalProperties(
+                    localGravityG,
+                    massEarthRelative,
+                    orbitalRadiusEarthRelative,
+                    radiusEarthRelative,
+                    radiation,
+                    temperature),
+                new CelestialOrbitalProperties(
+                    standardGravitationalParameter,
+                    sphereOfInfluenceRadius,
+                    parkingOrbitRadius),
+                new CelestialResourceProperties(oreProfile, resolvedGtOreVeinIds),
+                new CelestialAtmosphereProperties(
+                    surfacePressurePa,
+                    starmapAtmosphericDrag,
+                    atmosphereIngredients,
+                    atmosphereCompositionSource),
                 asteroidFieldProfile,
-                asteroidNodeKind,
-                asteroidSizeClass,
+                new AsteroidBodyProperties(asteroidNodeKind, asteroidSizeClass),
                 metadata);
         }
     }

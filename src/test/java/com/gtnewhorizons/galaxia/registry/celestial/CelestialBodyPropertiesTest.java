@@ -102,6 +102,32 @@ final class CelestialBodyPropertiesTest {
     }
 
     @Test
+    void builderPopulatesTypedPropertyGroupsAndCompatibilityAccessors() {
+        CelestialBodyProperties properties = CelestialBodyProperties.builder()
+            .visitable(true)
+            .canCreateOutpost(true)
+            .localGravityG(0.25)
+            .radiusEarthRelative(0.5)
+            .orbitalGravity(10.0, 20.0)
+            .build();
+
+        assertEquals(
+            true,
+            properties.capabilities()
+                .visitable());
+        assertEquals(true, properties.canCreateOutpost());
+        assertEquals(
+            0.25,
+            properties.physical()
+                .localGravityG());
+        assertEquals(0.25, properties.localGravityG());
+        assertEquals(
+            20.0,
+            properties.orbital()
+                .sphereOfInfluenceRadius());
+    }
+
+    @Test
     void asteroidFieldProfileSurvivesBuilderRoundTrip() {
         AsteroidFieldProfile profile = AsteroidFieldProfile.builder()
             .sizeCounts(1, 1, 1)
