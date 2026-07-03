@@ -51,7 +51,8 @@ final class OrbitalMechanicsTest {
             .build();
         OrbitalMechanics.OrbitalState beltState = new OrbitalMechanics.OrbitalState(0.0, 100.0, -5.0, 0.0);
 
-        OrbitalMechanics.OrbitalState expected = AsteroidFieldOrbitModel.resolveWorldState(profile, node, beltState);
+        OrbitalMechanics.OrbitalState expected = OrbitalMechanics
+            .resolveAsteroidFieldWorldState(profile, node, beltState);
         OrbitalMechanics.OrbitalState actual = OrbitalMechanics.resolveChildWorldState(belt, asteroid, beltState, 0.0);
 
         assertAll(

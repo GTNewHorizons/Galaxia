@@ -23,7 +23,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolv
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanOrder;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanScope;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
-import com.gtnewhorizons.galaxia.registry.orbital.AsteroidFieldOrbitModel;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.progress.ProgressJobRunner;
 
@@ -218,8 +217,8 @@ public final class AsteroidSatelliteScanService {
     private static Predicate<AsteroidFieldNode> scanScope(CelestialObjectId beltId, AsteroidFieldProfile profile,
         MinorCelestialBodyId anchorId) {
         AsteroidFieldNode anchor = AsteroidFieldResolver.resolveNode(beltId, profile, anchorId.index());
-        OrbitalMechanics.OrbitalState center = AsteroidFieldOrbitModel
-            .resolveWorldState(profile, anchor, LOCAL_BELT_REFERENCE);
+        OrbitalMechanics.OrbitalState center = OrbitalMechanics
+            .resolveAsteroidFieldWorldState(profile, anchor, LOCAL_BELT_REFERENCE);
         return AsteroidFieldScanScope
             .withinRadius(profile, LOCAL_BELT_REFERENCE, center, profile.satelliteScanRadius());
     }

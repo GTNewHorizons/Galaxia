@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
+package com.gtnewhorizons.galaxia.registry.orbital;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -8,11 +8,16 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidAppearanceProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
-import com.gtnewhorizons.galaxia.registry.orbital.AsteroidFieldOrbitModel;
-import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 
-final class AsteroidFieldOrbitModelTest {
+final class OrbitalMechanicsAsteroidFieldTest {
 
     private static final double EPSILON = 1.0e-9;
 
@@ -22,8 +27,8 @@ final class AsteroidFieldOrbitModelTest {
         AsteroidFieldNode node = node(90.0, 0.5);
         OrbitalMechanics.OrbitalState beltState = new OrbitalMechanics.OrbitalState(0.0, 100.0, -5.0, 0.0);
 
-        OrbitalMechanics.OrbitalState asteroidState = AsteroidFieldOrbitModel
-            .resolveWorldState(profile, node, beltState);
+        OrbitalMechanics.OrbitalState asteroidState = OrbitalMechanics
+            .resolveAsteroidFieldWorldState(profile, node, beltState);
 
         assertAll(
             () -> assertEquals(-15.0, asteroidState.x(), EPSILON),
@@ -37,10 +42,10 @@ final class AsteroidFieldOrbitModelTest {
         AsteroidFieldProfile profile = profile(4.0, 9.0);
         OrbitalMechanics.OrbitalState beltState = new OrbitalMechanics.OrbitalState(100.0, 0.0, 0.0, 2.0);
 
-        OrbitalMechanics.OrbitalState innerState = AsteroidFieldOrbitModel
-            .resolveWorldState(profile, node(0.0, 0.0), beltState);
-        OrbitalMechanics.OrbitalState outerState = AsteroidFieldOrbitModel
-            .resolveWorldState(profile, node(0.0, 1.0), beltState);
+        OrbitalMechanics.OrbitalState innerState = OrbitalMechanics
+            .resolveAsteroidFieldWorldState(profile, node(0.0, 0.0), beltState);
+        OrbitalMechanics.OrbitalState outerState = OrbitalMechanics
+            .resolveAsteroidFieldWorldState(profile, node(0.0, 1.0), beltState);
 
         assertAll(
             () -> assertEquals(4.0, innerState.x(), EPSILON),

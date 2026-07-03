@@ -87,7 +87,28 @@ public final class OrbitalMechanics {
         if (profile == null) return null;
 
         AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(parentId, profile, minorId.index());
-        return AsteroidFieldOrbitModel.resolveWorldState(profile, node, parentState);
+        return resolveAsteroidFieldWorldState(profile, node, parentState);
+    }
+
+    public static OrbitalState resolveAsteroidFieldWorldState(AsteroidFieldProfile profile, AsteroidFieldNode node,
+        OrbitalState beltState) {
+        double radius = resolveAsteroidFieldRadius(profile, node);
+        double phaseRad = Math.atan2(beltState.y(), beltState.x()) + Math.toRadians(node.angleOffsetDeg());
+        double angularVelocity = resolveAngularVelocity(beltState);
+        // Asteroids ride the belt as rigid offsets: the belt supplies angular
+        // velocity, while each node supplies its radius and angle within the band.
+        double x = Math.cos(phaseRad) * radius;
+        double y = Math.sin(phaseRad) * radius;
+        double speed = angularVelocity * radius;
+        double vx = -Math.sin(phaseRad) * speed;
+        double vy = Math.cos(phaseRad) * speed;
+
+        return new OrbitalState(x, y, vx, vy);
+    }
+
+    public static double resolveAsteroidFieldRadius(AsteroidFieldProfile profile, AsteroidFieldNode node) {
+        return profile.innerOrbitalRadius()
+            + (profile.outerOrbitalRadius() - profile.innerOrbitalRadius()) * node.orbitalDepth01();
     }
 
     public static OrbitalState calculateOrbitalState(OrbitalParams params, double attractorMu, double globalTime) {
@@ -224,6 +245,12 @@ public final class OrbitalMechanics {
             eccentricAnomaly -= value / derivative;
         }
         return eccentricAnomaly;
+    }
+
+    private static double resolveAngularVelocity(OrbitalState state) {
+        double radiusSquared = state.x() * state.x() + state.y() * state.y();
+        if (radiusSquared <= MINIMUM_RADIUS * MINIMUM_RADIUS) return 0.0;
+        return (state.x() * state.vy() - state.y() * state.vx()) / radiusSquared;
     }
 
     private static double clampEccentricity(double eccentricity) {

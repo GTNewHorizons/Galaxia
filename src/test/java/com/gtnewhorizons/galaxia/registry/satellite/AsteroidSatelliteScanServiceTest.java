@@ -27,7 +27,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AuthoredAsteroidDef
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.orbital.AsteroidFieldOrbitModel;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class AsteroidSatelliteScanServiceTest {
@@ -312,9 +312,9 @@ final class AsteroidSatelliteScanServiceTest {
     }
 
     private static double distance(AsteroidFieldProfile profile, AsteroidFieldNode first, AsteroidFieldNode second) {
-        double firstRadius = AsteroidFieldOrbitModel.resolveRadius(profile, first);
+        double firstRadius = OrbitalMechanics.resolveAsteroidFieldRadius(profile, first);
         double firstAngle = Math.toRadians(first.angleOffsetDeg());
-        double secondRadius = AsteroidFieldOrbitModel.resolveRadius(profile, second);
+        double secondRadius = OrbitalMechanics.resolveAsteroidFieldRadius(profile, second);
         double secondAngle = Math.toRadians(second.angleOffsetDeg());
         double dx = Math.cos(firstAngle) * firstRadius - Math.cos(secondAngle) * secondRadius;
         double dy = Math.sin(firstAngle) * firstRadius - Math.sin(secondAngle) * secondRadius;
