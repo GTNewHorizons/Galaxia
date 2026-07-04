@@ -4,6 +4,7 @@ import javax.annotation.Nullable;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.MinorBodyOrbitSlot;
 import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.orbital.MinorBodyOrbitResolver;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
@@ -33,8 +34,9 @@ public final class AsteroidFieldOrbitResolver implements MinorBodyOrbitResolver 
 
     public static OrbitalMechanics.OrbitalState resolveWorldState(AsteroidFieldProfile profile, AsteroidFieldNode node,
         OrbitalMechanics.OrbitalState beltState) {
+        MinorBodyOrbitSlot slot = node.orbitSlot();
         double radius = resolveRadius(profile, node);
-        double phaseRad = Math.atan2(beltState.y(), beltState.x()) + Math.toRadians(node.angleOffsetDeg());
+        double phaseRad = Math.atan2(beltState.y(), beltState.x()) + Math.toRadians(slot.angleOffsetDeg());
         double angularVelocity = resolveAngularVelocity(beltState);
         // Asteroids ride the belt as rigid offsets: the belt supplies angular
         // velocity, while each node supplies its radius and angle within the band.
@@ -48,8 +50,8 @@ public final class AsteroidFieldOrbitResolver implements MinorBodyOrbitResolver 
     }
 
     public static double resolveRadius(AsteroidFieldProfile profile, AsteroidFieldNode node) {
-        return profile.innerOrbitalRadius()
-            + (profile.outerOrbitalRadius() - profile.innerOrbitalRadius()) * node.orbitalDepth01();
+        return node.orbitSlot()
+            .radiusBetween(profile.innerOrbitalRadius(), profile.outerOrbitalRadius());
     }
 
     private static double resolveAngularVelocity(OrbitalMechanics.OrbitalState state) {

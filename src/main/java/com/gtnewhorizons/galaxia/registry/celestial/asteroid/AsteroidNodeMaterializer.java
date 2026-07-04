@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.MinorBodyOrbitSlot;
 import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
 
 final class AsteroidNodeMaterializer {
@@ -25,10 +26,7 @@ final class AsteroidNodeMaterializer {
             definition == null ? AsteroidInitialKnowledgeRules.defaultInitialDetectionState(sizeClass)
                 : definition.initialDetectionState(),
             definition == null ? null : definition.initialOreKnowledgeState(),
-            definition == null
-                ? AsteroidGeneratedSlotAllocator.generatedAngleOffsetDeg(profile, index, nodeSeed, sizeClass)
-                : definition.angleOffsetDeg() != null ? definition.angleOffsetDeg() : nodeSeed.degrees(1L),
-            definition != null && definition.orbitalDepth01() != null ? definition.orbitalDepth01() : nodeSeed.unit(2L),
+            orbitSlot(profile, index, nodeSeed, definition, sizeClass),
             definition != null && definition.oreProfileId() != null
                 ? selectOreProfile(profile, definition.oreProfileId())
                 : selectOreProfile(profile, nodeSeed.unit(3L)),
@@ -49,8 +47,7 @@ final class AsteroidNodeMaterializer {
             sizeClass,
             AsteroidInitialKnowledgeRules.defaultInitialDetectionState(sizeClass),
             null,
-            angleOffsetDeg,
-            orbitalDepth01,
+            new MinorBodyOrbitSlot(angleOffsetDeg, orbitalDepth01),
             selectOreProfile(profile, nodeSeed.unit(3L)),
             new AsteroidAppearanceProfile("generated_asteroid_tiles", nodeSeed.seed(4L)));
     }
@@ -69,10 +66,20 @@ final class AsteroidNodeMaterializer {
             savedNodeKind(index),
             sizeClass,
             AsteroidInitialKnowledgeRules.defaultInitialDetectionState(sizeClass),
-            nodeSeed.degrees(1L),
-            nodeSeed.unit(2L),
+            null,
+            new MinorBodyOrbitSlot(nodeSeed.degrees(1L), nodeSeed.unit(2L)),
             selectOreProfile(profile, nodeSeed.unit(3L)),
             new AsteroidAppearanceProfile("generated_asteroid_tiles", nodeSeed.seed(4L)));
+    }
+
+    private static MinorBodyOrbitSlot orbitSlot(AsteroidFieldProfile profile, int index,
+        AsteroidFieldDeterminism nodeSeed, AuthoredAsteroidDefinition definition, AsteroidSizeClass sizeClass) {
+        double angleOffsetDeg = definition == null
+            ? AsteroidGeneratedSlotAllocator.generatedAngleOffsetDeg(profile, index, nodeSeed, sizeClass)
+            : definition.angleOffsetDeg() != null ? definition.angleOffsetDeg() : nodeSeed.degrees(1L);
+        double orbitalDepth01 = definition != null && definition.orbitalDepth01() != null ? definition.orbitalDepth01()
+            : nodeSeed.unit(2L);
+        return new MinorBodyOrbitSlot(angleOffsetDeg, orbitalDepth01);
     }
 
     private static AsteroidNodeKind savedNodeKind(int index) {

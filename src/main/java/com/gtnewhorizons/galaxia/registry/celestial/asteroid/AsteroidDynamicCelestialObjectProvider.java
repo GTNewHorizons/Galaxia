@@ -70,8 +70,8 @@ public final class AsteroidDynamicCelestialObjectProvider implements DynamicCele
     }
 
     private static CelestialObject toDynamicAsteroidObject(AsteroidFieldNode node, AsteroidFieldProfile profile) {
-        double radius = profile.innerOrbitalRadius()
-            + (profile.outerOrbitalRadius() - profile.innerOrbitalRadius()) * node.orbitalDepth01();
+        double radius = node.orbitSlot()
+            .radiusBetween(profile.innerOrbitalRadius(), profile.outerOrbitalRadius());
         double spriteSize = switch (node.sizeClass()) {
             case LARGE -> 0.04;
             case MEDIUM -> 0.01;
@@ -88,7 +88,12 @@ public final class AsteroidDynamicCelestialObjectProvider implements DynamicCele
             .name(node.displayName())
             .parent(CelestialObjectKey.registered(node.beltId()))
             .objectClass(CelestialObject.Class.ASTEROID)
-            .circularOrbit(radius, 0.00091, Math.toRadians(node.angleOffsetDeg()))
+            .circularOrbit(
+                radius,
+                0.00091,
+                Math.toRadians(
+                    node.orbitSlot()
+                        .angleOffsetDeg()))
             .texture(EnumTextures.ICON_MOON.get())
             .spriteSize(spriteSize)
             .properties(

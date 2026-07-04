@@ -15,6 +15,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.MinorBodyOrbitSlot;
 import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
@@ -83,6 +84,18 @@ final class AsteroidFieldResolverTest {
                 node.displayName()
                     .isBlank());
         }
+    }
+
+    @Test
+    void generatedNodesExposeMinorBodyOrbitSlot() {
+        AsteroidFieldNode node = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile(1))
+            .get(0);
+        MinorBodyOrbitSlot slot = node.orbitSlot();
+
+        assertEquals(node.angleOffsetDeg(), slot.angleOffsetDeg());
+        assertEquals(node.orbitalDepth01(), slot.orbitalDepth01());
+        assertTrue(slot.angleOffsetDeg() >= 0.0 && slot.angleOffsetDeg() < 360.0);
+        assertTrue(slot.orbitalDepth01() >= 0.0 && slot.orbitalDepth01() <= 1.0);
     }
 
     @Test

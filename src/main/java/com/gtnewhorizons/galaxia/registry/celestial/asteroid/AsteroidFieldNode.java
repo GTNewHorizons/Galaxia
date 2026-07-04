@@ -4,13 +4,14 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.MinorBodyOrbitSlot;
 import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 public record AsteroidFieldNode(@Nonnull MinorCelestialBodyId id, @Nonnull CelestialObjectId beltId, int index,
     @Nonnull String displayName, @Nonnull AsteroidNodeKind kind, @Nonnull AsteroidSizeClass sizeClass,
     @Nonnull DiscoveryState initialDetectionState, @Nullable AsteroidOreKnowledgeState initialOreKnowledgeState,
-    double angleOffsetDeg, double orbitalDepth01, @Nonnull AsteroidOreProfile oreProfile,
+    @Nonnull MinorBodyOrbitSlot orbitSlot, @Nonnull AsteroidOreProfile oreProfile,
     @Nonnull AsteroidAppearanceProfile appearance) {
 
     public AsteroidFieldNode(@Nonnull MinorCelestialBodyId id, @Nonnull CelestialObjectId beltId, int index,
@@ -26,8 +27,26 @@ public record AsteroidFieldNode(@Nonnull MinorCelestialBodyId id, @Nonnull Celes
             sizeClass,
             initialDetectionState,
             null,
-            angleOffsetDeg,
-            orbitalDepth01,
+            new MinorBodyOrbitSlot(angleOffsetDeg, orbitalDepth01),
+            oreProfile,
+            appearance);
+    }
+
+    public AsteroidFieldNode(@Nonnull MinorCelestialBodyId id, @Nonnull CelestialObjectId beltId, int index,
+        @Nonnull String displayName, @Nonnull AsteroidNodeKind kind, @Nonnull AsteroidSizeClass sizeClass,
+        @Nonnull DiscoveryState initialDetectionState, @Nullable AsteroidOreKnowledgeState initialOreKnowledgeState,
+        double angleOffsetDeg, double orbitalDepth01, @Nonnull AsteroidOreProfile oreProfile,
+        @Nonnull AsteroidAppearanceProfile appearance) {
+        this(
+            id,
+            beltId,
+            index,
+            displayName,
+            kind,
+            sizeClass,
+            initialDetectionState,
+            initialOreKnowledgeState,
+            new MinorBodyOrbitSlot(angleOffsetDeg, orbitalDepth01),
             oreProfile,
             appearance);
     }
@@ -50,11 +69,16 @@ public record AsteroidFieldNode(@Nonnull MinorCelestialBodyId id, @Nonnull Celes
             && initialOreKnowledgeState != AsteroidOreKnowledgeState.UNKNOWN) {
             throw new IllegalArgumentException("hidden asteroid nodes cannot expose ore knowledge");
         }
-        if (!Double.isFinite(angleOffsetDeg) || angleOffsetDeg < 0.0 || angleOffsetDeg >= 360.0) {
-            throw new IllegalArgumentException("angleOffsetDeg must be in [0, 360)");
+        if (orbitSlot == null) {
+            throw new IllegalArgumentException("orbit slot is required");
         }
-        if (!Double.isFinite(orbitalDepth01) || orbitalDepth01 < 0.0 || orbitalDepth01 > 1.0) {
-            throw new IllegalArgumentException("orbitalDepth01 must be in [0, 1]");
-        }
+    }
+
+    public double angleOffsetDeg() {
+        return orbitSlot.angleOffsetDeg();
+    }
+
+    public double orbitalDepth01() {
+        return orbitSlot.orbitalDepth01();
     }
 }
