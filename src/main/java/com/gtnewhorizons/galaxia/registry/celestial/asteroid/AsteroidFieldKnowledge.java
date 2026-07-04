@@ -8,6 +8,7 @@ import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryWork;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 public interface AsteroidFieldKnowledge {
@@ -44,7 +45,7 @@ public interface AsteroidFieldKnowledge {
     Optional<AsteroidFieldNode> nextProfileCandidate(@Nonnull Predicate<AsteroidFieldNode> scope,
         @Nonnull Comparator<AsteroidFieldNode> order);
 
-    Optional<AsteroidFieldScanWork> nextScanWork(@Nonnull Predicate<AsteroidFieldNode> scope,
+    Optional<CelestialDiscoveryWork> nextDiscoveryWork(@Nonnull Predicate<AsteroidFieldNode> scope,
         @Nonnull Comparator<AsteroidFieldNode> order);
 
     Entry detect(@Nonnull MinorCelestialBodyId id);
@@ -53,7 +54,7 @@ public interface AsteroidFieldKnowledge {
 
     Entry prospect(@Nonnull MinorCelestialBodyId id, @Nonnull Predicate<AsteroidFieldNode> scope);
 
-    Entry completeScanWork(@Nonnull AsteroidFieldScanWork work, @Nonnull Predicate<AsteroidFieldNode> scope);
+    Entry revealDiscovery(@Nonnull CelestialDiscoveryWork work, @Nonnull Predicate<AsteroidFieldNode> scope);
 
     AsteroidFieldKnowledgeSnapshot snapshot(@Nonnull CelestialObjectId beltId);
 

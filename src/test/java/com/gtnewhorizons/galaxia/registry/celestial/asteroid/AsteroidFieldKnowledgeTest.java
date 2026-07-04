@@ -11,6 +11,8 @@ import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryWork;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 final class AsteroidFieldKnowledgeTest {
@@ -129,46 +131,46 @@ final class AsteroidFieldKnowledgeTest {
     }
 
     @Test
-    void scanWorkOwnsPassPriorityAndKnowledgeMutation() {
+    void discoveryWorkOwnsUncoveredFactAndKnowledgeMutation() {
         AsteroidFieldKnowledge knowledge = MutableAsteroidFieldKnowledge
             .initialize(CelestialObjectId.FROZEN_BELT, profile());
         AsteroidFieldNode small = node(knowledge, AsteroidSizeClass.SMALL);
         Predicate<AsteroidFieldNode> smallOnly = node -> node.id()
             .equals(small.id());
 
-        AsteroidFieldScanWork detection = knowledge.nextScanWork(smallOnly, AsteroidFieldScanOrder.byIndex())
+        CelestialDiscoveryWork detection = knowledge.nextDiscoveryWork(smallOnly, AsteroidFieldScanOrder.byIndex())
             .orElseThrow();
 
-        assertEquals(AsteroidFieldScanPass.DETECTION, detection.pass());
-        assertEquals(small.id(), detection.asteroidId());
-        knowledge.completeScanWork(detection, smallOnly);
+        assertEquals(AsteroidFieldScanPass.DETECTION, detection.step());
+        assertEquals(CelestialObjectKey.minorBody(small.id()), detection.targetKey());
+        knowledge.revealDiscovery(detection, smallOnly);
 
-        AsteroidFieldScanWork signature = knowledge.nextScanWork(smallOnly, AsteroidFieldScanOrder.byIndex())
+        CelestialDiscoveryWork signature = knowledge.nextDiscoveryWork(smallOnly, AsteroidFieldScanOrder.byIndex())
             .orElseThrow();
 
-        assertEquals(AsteroidFieldScanPass.SIGNATURE, signature.pass());
+        assertEquals(AsteroidFieldScanPass.SIGNATURE, signature.step());
         assertEquals(
             AsteroidOreKnowledgeState.UNKNOWN,
             knowledge.entryFor(small.id())
                 .oreKnowledgeState());
-        knowledge.completeScanWork(signature, smallOnly);
+        knowledge.revealDiscovery(signature, smallOnly);
 
-        AsteroidFieldScanWork profile = knowledge.nextScanWork(smallOnly, AsteroidFieldScanOrder.byIndex())
+        CelestialDiscoveryWork profile = knowledge.nextDiscoveryWork(smallOnly, AsteroidFieldScanOrder.byIndex())
             .orElseThrow();
 
-        assertEquals(AsteroidFieldScanPass.PROFILE, profile.pass());
+        assertEquals(AsteroidFieldScanPass.PROFILE, profile.step());
         assertEquals(
             AsteroidOreKnowledgeState.SIGNATURE,
             knowledge.entryFor(small.id())
                 .oreKnowledgeState());
-        knowledge.completeScanWork(profile, smallOnly);
+        knowledge.revealDiscovery(profile, smallOnly);
 
         assertEquals(
             AsteroidOreKnowledgeState.PROFILE,
             knowledge.entryFor(small.id())
                 .oreKnowledgeState());
         assertFalse(
-            knowledge.nextScanWork(smallOnly, AsteroidFieldScanOrder.byIndex())
+            knowledge.nextDiscoveryWork(smallOnly, AsteroidFieldScanOrder.byIndex())
                 .isPresent());
     }
 
@@ -226,7 +228,7 @@ final class AsteroidFieldKnowledgeTest {
             .satelliteScanRadius(1000.0)
             .oreProfile(new AsteroidOreProfile("volatile_ice", List.of("ice", "sulfur")))
             .build();
-        AsteroidFieldKnowledge oldKnowledge = AsteroidFieldKnowledge
+        AsteroidFieldKnowledge oldKnowledge = MutableAsteroidFieldKnowledge
             .initialize(CelestialObjectId.FROZEN_BELT, oldProfile);
         MinorCelestialBodyId generatedId = new MinorCelestialBodyId(
             CelestialObjectId.FROZEN_BELT,
@@ -269,7 +271,7 @@ final class AsteroidFieldKnowledgeTest {
             .satelliteScanRadius(1000.0)
             .oreProfile(new AsteroidOreProfile("volatile_ice", List.of("ice", "sulfur")))
             .build();
-        AsteroidFieldKnowledge oldKnowledge = AsteroidFieldKnowledge
+        AsteroidFieldKnowledge oldKnowledge = MutableAsteroidFieldKnowledge
             .initialize(CelestialObjectId.FROZEN_BELT, oldProfile);
 
         AsteroidFieldProfile newProfile = AsteroidFieldProfile.builder()
@@ -318,7 +320,7 @@ final class AsteroidFieldKnowledgeTest {
             .oreProfile(new AsteroidOreProfile("volatile_ice", List.of("ice", "sulfur")))
             .authoredAsteroid(1, AsteroidNodeKind.LORE, "Karnyx", DiscoveryState.DISCOVERED)
             .build();
-        AsteroidFieldKnowledge oldKnowledge = AsteroidFieldKnowledge
+        AsteroidFieldKnowledge oldKnowledge = MutableAsteroidFieldKnowledge
             .initialize(CelestialObjectId.FROZEN_BELT, oldProfile);
 
         AsteroidFieldProfile newProfile = AsteroidFieldProfile.builder()

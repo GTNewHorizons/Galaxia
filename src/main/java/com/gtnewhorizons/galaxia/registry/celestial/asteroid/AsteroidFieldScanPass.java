@@ -1,6 +1,12 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
-public enum AsteroidFieldScanPass {
+import java.util.Locale;
+
+import javax.annotation.Nonnull;
+
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryStep;
+
+public enum AsteroidFieldScanPass implements CelestialDiscoveryStep {
 
     DETECTION(1200),
     SIGNATURE(2400),
@@ -15,5 +21,11 @@ public enum AsteroidFieldScanPass {
 
     public int durationTicks() {
         return durationTicks;
+    }
+
+    @Override
+    @Nonnull
+    public String id() {
+        return "asteroid_" + name().toLowerCase(Locale.ROOT);
     }
 }

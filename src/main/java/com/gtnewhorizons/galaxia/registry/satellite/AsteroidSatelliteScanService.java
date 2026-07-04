@@ -15,6 +15,8 @@ import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldDiscoveryWork;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
@@ -22,8 +24,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolv
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanOrder;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanPass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanScope;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanWork;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryWork;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.progress.ProgressJobRunner;
@@ -44,7 +46,7 @@ public final class AsteroidSatelliteScanService {
         0.0);
 
     private final Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver;
-    private final ProgressJobRunner<ScanKey, AsteroidFieldScanWork, ScanResult> progressRunner = new ProgressJobRunner<>();
+    private final ProgressJobRunner<ScanKey, CelestialDiscoveryWork, ScanResult> progressRunner = new ProgressJobRunner<>();
     // Completion is keyed by profile generation so a future belt reshuffle can
     // rescan, while an unchanged field stays permanently idle after a full pass.
     private final Set<CompletionKey> completions = new HashSet<>();
@@ -61,14 +63,14 @@ public final class AsteroidSatelliteScanService {
 
     public List<AsteroidSatelliteScanSnapshot> snapshots(@Nonnull UUID teamId) {
         List<AsteroidSatelliteScanSnapshot> snapshots = new ArrayList<>();
-        for (Map.Entry<ScanKey, ProgressJobRunner.Progress<AsteroidFieldScanWork>> entry : progressRunner
+        for (Map.Entry<ScanKey, ProgressJobRunner.Progress<CelestialDiscoveryWork>> entry : progressRunner
             .progressByKey()
             .entrySet()) {
             if (!entry.getKey()
                 .teamId()
                 .equals(teamId)) continue;
-            ProgressJobRunner.Progress<AsteroidFieldScanWork> progress = entry.getValue();
-            AsteroidFieldScanWork work = progress.work();
+            ProgressJobRunner.Progress<CelestialDiscoveryWork> progress = entry.getValue();
+            AsteroidFieldDiscoveryWork work = requireAsteroidWork(progress.work());
             snapshots.add(
                 new AsteroidSatelliteScanSnapshot(
                     entry.getKey()
@@ -76,7 +78,7 @@ public final class AsteroidSatelliteScanService {
                     work.asteroidId()
                         .parentBodyId(),
                     work.asteroidId(),
-                    work.pass(),
+                    work.step(),
                     progress.elapsedTicks()));
         }
         return List.copyOf(snapshots);
@@ -128,7 +130,7 @@ public final class AsteroidSatelliteScanService {
             }
             progressRunner.restore(
                 key,
-                new AsteroidFieldScanWork(snapshot.pass(), snapshot.asteroidId()),
+                new AsteroidFieldDiscoveryWork(CelestialObjectKey.minorBody(snapshot.asteroidId()), snapshot.pass()),
                 snapshot.elapsedTicks());
         }
     }
@@ -209,10 +211,11 @@ public final class AsteroidSatelliteScanService {
         ProgressJobRunner.TickResult<ScanResult> result = progressRunner.tick(
             key,
             elapsedTicks,
-            () -> knowledge.nextScanWork(scope, AsteroidFieldScanOrder.innerToOuter()),
+            () -> knowledge.nextDiscoveryWork(scope, AsteroidFieldScanOrder.innerToOuter()),
             work -> {
-                knowledge.completeScanWork(work, scope);
-                return new ScanResult(beltId, work.asteroidId(), work.pass());
+                AsteroidFieldDiscoveryWork asteroidWork = requireAsteroidWork(work);
+                knowledge.revealDiscovery(work, scope);
+                return new ScanResult(beltId, asteroidWork.asteroidId(), asteroidWork.step());
             });
         if (result.idle()) {
             // A full pass that finds no more work disables active scanning for
@@ -233,6 +236,11 @@ public final class AsteroidSatelliteScanService {
 
     public record ScanResult(@Nonnull CelestialObjectId beltId, @Nonnull MinorCelestialBodyId asteroidId,
         @Nonnull AsteroidFieldScanPass pass) {}
+
+    private static AsteroidFieldDiscoveryWork requireAsteroidWork(CelestialDiscoveryWork work) {
+        if (work instanceof AsteroidFieldDiscoveryWork asteroidWork) return asteroidWork;
+        throw new IllegalArgumentException("Expected asteroid field discovery work");
+    }
 
     private record ScanKey(@Nonnull UUID teamId, @Nonnull CelestialAsset.ID satelliteId) {}
 

@@ -7,12 +7,14 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Predicate;
 
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryWork;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 final class AsteroidFieldKnowledgeStoreTest {
@@ -38,24 +40,24 @@ final class AsteroidFieldKnowledgeStoreTest {
         AsteroidFieldKnowledgeStore store = new AsteroidFieldKnowledgeStore();
         AsteroidFieldProfile profile = profile();
 
+        AsteroidFieldKnowledge knowledge = store.getOrCreate(TEAM_A, CelestialObjectId.FROZEN_BELT, profile);
+
         assertFalse(
-            store.prospectNext(TEAM_A, CelestialObjectId.FROZEN_BELT, profile)
+            knowledge.nextProspectingCandidate()
                 .isPresent());
 
-        AsteroidFieldNode firstDetected = store.detectNext(TEAM_A, CelestialObjectId.FROZEN_BELT, profile)
+        AsteroidFieldNode firstDetected = revealNext(store, TEAM_A, CelestialObjectId.FROZEN_BELT, profile)
             .orElseThrow();
-        AsteroidFieldNode secondDetected = store.detectNext(TEAM_A, CelestialObjectId.FROZEN_BELT, profile)
+        AsteroidFieldNode secondDetected = revealNext(store, TEAM_A, CelestialObjectId.FROZEN_BELT, profile)
             .orElseThrow();
 
         assertEquals(AsteroidSizeClass.MEDIUM, firstDetected.sizeClass());
         assertEquals(AsteroidSizeClass.SMALL, secondDetected.sizeClass());
         assertFalse(
-            store.detectNext(TEAM_A, CelestialObjectId.FROZEN_BELT, profile)
+            knowledge.nextDetectionCandidate()
                 .isPresent());
 
-        AsteroidFieldNode prospected = store.prospectNext(TEAM_A, CelestialObjectId.FROZEN_BELT, profile)
-            .orElseThrow();
-        AsteroidFieldKnowledge knowledge = store.getOrCreate(TEAM_A, CelestialObjectId.FROZEN_BELT, profile);
+        AsteroidFieldNode prospected = revealNext(store, TEAM_A, CelestialObjectId.FROZEN_BELT, profile).orElseThrow();
 
         assertEquals(
             AsteroidOreKnowledgeState.SIGNATURE,
@@ -63,7 +65,7 @@ final class AsteroidFieldKnowledgeStoreTest {
                 .oreKnowledgeState());
 
         while (hasUnknownDetectedAsteroid(knowledge)) {
-            AsteroidFieldNode signature = store.prospectNext(TEAM_A, CelestialObjectId.FROZEN_BELT, profile)
+            AsteroidFieldNode signature = revealNext(store, TEAM_A, CelestialObjectId.FROZEN_BELT, profile)
                 .orElseThrow();
             assertEquals(
                 AsteroidOreKnowledgeState.SIGNATURE,
@@ -73,8 +75,7 @@ final class AsteroidFieldKnowledgeStoreTest {
 
         assertEquals(
             prospected.id(),
-            store.prospectNext(TEAM_A, CelestialObjectId.FROZEN_BELT, profile)
-                .orElseThrow()
+            revealNext(store, TEAM_A, CelestialObjectId.FROZEN_BELT, profile).orElseThrow()
                 .id());
         assertEquals(
             AsteroidOreKnowledgeState.PROFILE,
@@ -95,7 +96,7 @@ final class AsteroidFieldKnowledgeStoreTest {
         Predicate<AsteroidFieldNode> largeOnly = node -> node.id()
             .equals(large.id());
 
-        AsteroidFieldNode prospected = store.prospectNext(TEAM_A, CelestialObjectId.FROZEN_BELT, profile, largeOnly)
+        AsteroidFieldNode prospected = revealNext(store, TEAM_A, CelestialObjectId.FROZEN_BELT, profile, largeOnly)
             .orElseThrow();
 
         assertEquals(large.id(), prospected.id());
@@ -106,15 +107,14 @@ final class AsteroidFieldKnowledgeStoreTest {
                         .oreKnowledgeState()));
         assertEquals(
             large.id(),
-            store.prospectNext(TEAM_A, CelestialObjectId.FROZEN_BELT, profile, largeOnly)
-                .orElseThrow()
+            revealNext(store, TEAM_A, CelestialObjectId.FROZEN_BELT, profile, largeOnly).orElseThrow()
                 .id());
         assertEquals(
             AsteroidOreKnowledgeState.PROFILE,
             knowledge.entryFor(large.id())
                 .oreKnowledgeState());
         assertTrue(
-            store.detectNext(TEAM_A, CelestialObjectId.FROZEN_BELT, profile, largeOnly)
+            knowledge.nextDetectionCandidate(largeOnly)
                 .isEmpty());
     }
 
@@ -136,8 +136,7 @@ final class AsteroidFieldKnowledgeStoreTest {
     void snapshotsExposeKnownStateForOneTeam() {
         AsteroidFieldKnowledgeStore store = new AsteroidFieldKnowledgeStore();
         AsteroidFieldProfile profile = profile();
-        AsteroidFieldNode detected = store.detectNext(TEAM_A, CelestialObjectId.FROZEN_BELT, profile)
-            .orElseThrow();
+        AsteroidFieldNode detected = revealNext(store, TEAM_A, CelestialObjectId.FROZEN_BELT, profile).orElseThrow();
         store.getOrCreate(TEAM_B, CelestialObjectId.FROZEN_BELT, profile);
 
         List<AsteroidFieldKnowledgeSnapshot> snapshots = store.snapshots(TEAM_A);
@@ -151,6 +150,32 @@ final class AsteroidFieldKnowledgeStoreTest {
             .findFirst()
             .orElseThrow();
         assertEquals(DiscoveryState.DISCOVERED, entry.detectionState());
+    }
+
+    private static Optional<AsteroidFieldNode> revealNext(AsteroidFieldKnowledgeStore store, UUID teamId,
+        CelestialObjectId beltId, AsteroidFieldProfile profile) {
+        return revealNext(store, teamId, beltId, profile, node -> true);
+    }
+
+    private static Optional<AsteroidFieldNode> revealNext(AsteroidFieldKnowledgeStore store, UUID teamId,
+        CelestialObjectId beltId, AsteroidFieldProfile profile, Predicate<AsteroidFieldNode> scope) {
+        AsteroidFieldKnowledge knowledge = store.getOrCreate(teamId, beltId, profile);
+        Optional<CelestialDiscoveryWork> work = knowledge.nextDiscoveryWork(scope, AsteroidFieldScanOrder.byIndex());
+        work.ifPresent(discovery -> knowledge.revealDiscovery(discovery, scope));
+        return work.map(AsteroidFieldKnowledgeStoreTest::asteroidId)
+            .map(
+                id -> knowledge.nodes()
+                    .stream()
+                    .filter(
+                        node -> node.id()
+                            .equals(id))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("Discovery work targeted unknown asteroid: " + id)));
+    }
+
+    private static MinorCelestialBodyId asteroidId(CelestialDiscoveryWork work) {
+        if (work instanceof AsteroidFieldDiscoveryWork asteroidWork) return asteroidWork.asteroidId();
+        throw new IllegalArgumentException("Expected asteroid field discovery work");
     }
 
     private static AsteroidFieldProfile profile() {
