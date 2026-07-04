@@ -24,9 +24,11 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanContext;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanOrder;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanPass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanScope;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanRunner;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryWork;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.progress.ProgressJobRunner;
@@ -47,7 +49,7 @@ public final class AsteroidSatelliteScanService {
         0.0);
 
     private final Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver;
-    private final ProgressJobRunner<ScanKey, CelestialDiscoveryWork, ScanResult> progressRunner = new ProgressJobRunner<>();
+    private final CelestialDiscoveryScanRunner<ScanKey, AsteroidFieldScanContext> progressRunner = new CelestialDiscoveryScanRunner<>();
     // Completion is keyed by profile generation so a future belt reshuffle can
     // rescan, while an unchanged field stays permanently idle after a full pass.
     private final Set<CompletionKey> completions = new HashSet<>();
@@ -196,7 +198,9 @@ public final class AsteroidSatelliteScanService {
         }
 
         AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledgeService.knowledge(teamId, beltId, profile.get());
-        Predicate<AsteroidFieldNode> scope = scanScope(beltId, profile.get(), anchorId);
+        AsteroidFieldScanContext scanContext = new AsteroidFieldScanContext(
+            scanScope(beltId, profile.get(), anchorId),
+            AsteroidFieldScanOrder.innerToOuter());
         CompletionKey completionKey = new CompletionKey(
             teamId,
             beltId,
@@ -208,21 +212,16 @@ public final class AsteroidSatelliteScanService {
             return List.of();
         }
 
-        ProgressJobRunner.TickResult<ScanResult> result = progressRunner.tick(
-            key,
-            elapsedTicks,
-            () -> knowledge.nextDiscoveryWork(scope, AsteroidFieldScanOrder.innerToOuter()),
-            work -> {
-                AsteroidFieldDiscoveryWork asteroidWork = requireAsteroidWork(work);
-                knowledge.revealDiscovery(work, scope);
-                return new ScanResult(beltId, asteroidWork.asteroidId(), asteroidWork.step());
-            });
+        CelestialDiscoveryScanRunner.TickResult result = progressRunner.tick(key, elapsedTicks, knowledge, scanContext);
         if (result.idle()) {
             // A full pass that finds no more work disables active scanning for
             // this anchor until the field generation changes.
             completions.add(completionKey);
         }
-        return result.results();
+        return result.results()
+            .stream()
+            .map(AsteroidSatelliteScanService::toAsteroidScanResult)
+            .toList();
     }
 
     private static Predicate<AsteroidFieldNode> scanScope(CelestialObjectId beltId, AsteroidFieldProfile profile,
@@ -236,6 +235,16 @@ public final class AsteroidSatelliteScanService {
 
     public record ScanResult(@Nonnull CelestialObjectId beltId, @Nonnull MinorCelestialBodyId asteroidId,
         @Nonnull AsteroidFieldScanPass pass) {}
+
+    private static ScanResult toAsteroidScanResult(CelestialDiscoveryScanRunner.ScanResult result) {
+        CelestialObjectKey targetKey = result.targetKey();
+        if (!targetKey.isMinorBody()) throw new IllegalArgumentException("Expected asteroid discovery target");
+        if (!(result.step() instanceof AsteroidFieldScanPass pass)) {
+            throw new IllegalArgumentException("Expected asteroid field scan pass");
+        }
+        MinorCelestialBodyId asteroidId = targetKey.minorBodyId();
+        return new ScanResult(asteroidId.parentBodyId(), asteroidId, pass);
+    }
 
     private static AsteroidFieldDiscoveryWork requireAsteroidWork(CelestialDiscoveryWork work) {
         if (work instanceof AsteroidFieldDiscoveryWork asteroidWork) return asteroidWork;

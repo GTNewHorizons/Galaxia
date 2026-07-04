@@ -12,6 +12,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowle
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanContext;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanOrder;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryWork;
 
@@ -55,9 +56,11 @@ public final class AsteroidProspectingDataHandler implements SatelliteDataJobSer
 
         AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledgeService
             .knowledge(event.teamId(), event.bodyId(), profile.get());
-        Optional<CelestialDiscoveryWork> work = knowledge
-            .nextDiscoveryWork(node -> true, AsteroidFieldScanOrder.byIndex());
-        work.ifPresent(discovery -> knowledge.revealDiscovery(discovery, node -> true));
+        AsteroidFieldScanContext scanContext = new AsteroidFieldScanContext(
+            node -> true,
+            AsteroidFieldScanOrder.byIndex());
+        Optional<CelestialDiscoveryWork> work = knowledge.nextDiscoveryWork(scanContext);
+        work.ifPresent(discovery -> knowledge.revealDiscovery(discovery, scanContext));
         return work.map(AsteroidProspectingDataHandler::asteroidNode)
             .map(
                 asteroidId -> knowledge.nodes()

@@ -9,10 +9,11 @@ import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryKnowledge;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryWork;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
-public interface AsteroidFieldKnowledge {
+public interface AsteroidFieldKnowledge extends CelestialDiscoveryKnowledge<AsteroidFieldScanContext> {
 
     List<AsteroidFieldNode> nodes();
 
@@ -58,6 +59,18 @@ public interface AsteroidFieldKnowledge {
     Entry revealDiscovery(@Nonnull CelestialDiscoveryWork work, @Nonnull Predicate<AsteroidFieldNode> scope);
 
     AsteroidFieldKnowledgeSnapshot snapshot(@Nonnull CelestialObjectId beltId);
+
+    @Override
+    default Optional<CelestialDiscoveryWork> nextDiscoveryWork(@Nonnull AsteroidFieldScanContext context) {
+        if (context == null) throw new IllegalArgumentException("scan context is required");
+        return nextDiscoveryWork(context.scope(), context.order());
+    }
+
+    @Override
+    default void revealDiscovery(@Nonnull CelestialDiscoveryWork work, @Nonnull AsteroidFieldScanContext context) {
+        if (context == null) throw new IllegalArgumentException("scan context is required");
+        revealDiscovery(work, context.scope());
+    }
 
     record Entry(@Nonnull DiscoveryState detectionState, @Nonnull AsteroidOreKnowledgeState oreKnowledgeState) {}
 }
