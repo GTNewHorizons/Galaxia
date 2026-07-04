@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
+import com.gtnewhorizons.galaxia.registry.util.DeterministicHash;
+
 final class AsteroidGeneratedSlotAllocator {
 
     private AsteroidGeneratedSlotAllocator() {}
@@ -28,17 +30,16 @@ final class AsteroidGeneratedSlotAllocator {
         };
     }
 
-    static double generatedAngleOffsetDeg(AsteroidFieldProfile profile, int index, long baseSeed,
+    static double generatedAngleOffsetDeg(AsteroidFieldProfile profile, int index, AsteroidFieldDeterminism nodeSeed,
         AsteroidSizeClass sizeClass) {
         int ordinal = AsteroidSlotRanges.generatedOrdinal(index);
         int classOrdinal = generatedSizeClassOrdinal(profile, ordinal, sizeClass);
         int classCount = generatedSizeClassCount(profile, sizeClass);
-        if (classCount <= 0)
-            return AsteroidFieldDeterminism.unitDouble(AsteroidFieldDeterminism.mix(baseSeed, 1L)) * 360.0;
+        if (classCount <= 0) return nodeSeed.degrees(1L);
 
         double sectorWidth = 360.0 / classCount;
-        double phase = AsteroidFieldDeterminism.unitDouble(
-            AsteroidFieldDeterminism.mix(
+        double phase = DeterministicHash.unitDouble(
+            DeterministicHash.mix(
                 profile.seedSalt(),
                 profile.generationVersion(),
                 sizeClass.name()
@@ -46,9 +47,7 @@ final class AsteroidGeneratedSlotAllocator {
                 19L))
             * sectorWidth;
         double jitterScale = sizeClass == AsteroidSizeClass.LARGE ? 0.18 : 0.55;
-        double jitter = (AsteroidFieldDeterminism.unitDouble(AsteroidFieldDeterminism.mix(baseSeed, 1L)) - 0.5)
-            * sectorWidth
-            * jitterScale;
+        double jitter = (nodeSeed.unit(1L) - 0.5) * sectorWidth * jitterScale;
         return AsteroidFieldDeterminism.normalizeDegrees((classOrdinal + 0.5) * sectorWidth + phase + jitter);
     }
 

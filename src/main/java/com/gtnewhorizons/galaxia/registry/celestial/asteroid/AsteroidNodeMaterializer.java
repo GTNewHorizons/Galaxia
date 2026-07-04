@@ -7,7 +7,7 @@ final class AsteroidNodeMaterializer {
     private AsteroidNodeMaterializer() {}
 
     static AsteroidFieldNode resolveNode(CelestialObjectId beltId, AsteroidFieldProfile profile, int index) {
-        long baseSeed = AsteroidFieldDeterminism.nodeSeed(beltId, profile, index);
+        AsteroidFieldDeterminism nodeSeed = AsteroidFieldDeterminism.forNode(beltId, profile, index);
         MinorCelestialBodyId id = new MinorCelestialBodyId(beltId, index);
         AuthoredAsteroidDefinition definition = profile.authoredAsteroid(index)
             .orElse(null);
@@ -25,25 +25,19 @@ final class AsteroidNodeMaterializer {
                 : definition.initialDetectionState(),
             definition == null ? null : definition.initialOreKnowledgeState(),
             definition == null
-                ? AsteroidGeneratedSlotAllocator.generatedAngleOffsetDeg(profile, index, baseSeed, sizeClass)
-                : definition.angleOffsetDeg() != null ? definition.angleOffsetDeg()
-                    : AsteroidFieldDeterminism.unitDouble(AsteroidFieldDeterminism.mix(baseSeed, 1L)) * 360.0,
-            definition != null && definition.orbitalDepth01() != null ? definition.orbitalDepth01()
-                : AsteroidFieldDeterminism.unitDouble(AsteroidFieldDeterminism.mix(baseSeed, 2L)),
+                ? AsteroidGeneratedSlotAllocator.generatedAngleOffsetDeg(profile, index, nodeSeed, sizeClass)
+                : definition.angleOffsetDeg() != null ? definition.angleOffsetDeg() : nodeSeed.degrees(1L),
+            definition != null && definition.orbitalDepth01() != null ? definition.orbitalDepth01() : nodeSeed.unit(2L),
             definition != null && definition.oreProfileId() != null
                 ? selectOreProfile(profile, definition.oreProfileId())
-                : selectOreProfile(
-                    profile,
-                    AsteroidFieldDeterminism.unitDouble(AsteroidFieldDeterminism.mix(baseSeed, 3L))),
+                : selectOreProfile(profile, nodeSeed.unit(3L)),
             definition != null && definition.appearance() != null ? definition.appearance()
-                : new AsteroidAppearanceProfile(
-                    "generated_asteroid_tiles",
-                    AsteroidFieldDeterminism.mix(baseSeed, 4L)));
+                : new AsteroidAppearanceProfile("generated_asteroid_tiles", nodeSeed.seed(4L)));
     }
 
     static AsteroidFieldNode resolveGeneratedNodeAtPosition(CelestialObjectId beltId, AsteroidFieldProfile profile,
         int index, double angleOffsetDeg, double orbitalDepth01) {
-        long baseSeed = AsteroidFieldDeterminism.nodeSeed(beltId, profile, index);
+        AsteroidFieldDeterminism nodeSeed = AsteroidFieldDeterminism.forNode(beltId, profile, index);
         AsteroidSizeClass sizeClass = AsteroidGeneratedSlotAllocator.generatedSizeClass(profile, index);
         return new AsteroidFieldNode(
             new MinorCelestialBodyId(beltId, index),
@@ -56,13 +50,13 @@ final class AsteroidNodeMaterializer {
             null,
             angleOffsetDeg,
             orbitalDepth01,
-            selectOreProfile(profile, AsteroidFieldDeterminism.unitDouble(AsteroidFieldDeterminism.mix(baseSeed, 3L))),
-            new AsteroidAppearanceProfile("generated_asteroid_tiles", AsteroidFieldDeterminism.mix(baseSeed, 4L)));
+            selectOreProfile(profile, nodeSeed.unit(3L)),
+            new AsteroidAppearanceProfile("generated_asteroid_tiles", nodeSeed.seed(4L)));
     }
 
     static AsteroidFieldNode resolveUnregisteredSavedNode(CelestialObjectId beltId, AsteroidFieldProfile profile,
         int index) {
-        long baseSeed = AsteroidFieldDeterminism.nodeSeed(beltId, profile, index);
+        AsteroidFieldDeterminism nodeSeed = AsteroidFieldDeterminism.forNode(beltId, profile, index);
         // Save data may reference a node that no longer exists in the current
         // profile. Keep the body addressable so player assets are not orphaned.
         AsteroidSizeClass sizeClass = AsteroidSizeClass.SMALL;
@@ -74,10 +68,10 @@ final class AsteroidNodeMaterializer {
             savedNodeKind(index),
             sizeClass,
             AsteroidInitialKnowledgeRules.defaultInitialDetectionState(sizeClass),
-            AsteroidFieldDeterminism.unitDouble(AsteroidFieldDeterminism.mix(baseSeed, 1L)) * 360.0,
-            AsteroidFieldDeterminism.unitDouble(AsteroidFieldDeterminism.mix(baseSeed, 2L)),
-            selectOreProfile(profile, AsteroidFieldDeterminism.unitDouble(AsteroidFieldDeterminism.mix(baseSeed, 3L))),
-            new AsteroidAppearanceProfile("generated_asteroid_tiles", AsteroidFieldDeterminism.mix(baseSeed, 4L)));
+            nodeSeed.degrees(1L),
+            nodeSeed.unit(2L),
+            selectOreProfile(profile, nodeSeed.unit(3L)),
+            new AsteroidAppearanceProfile("generated_asteroid_tiles", nodeSeed.seed(4L)));
     }
 
     private static AsteroidNodeKind savedNodeKind(int index) {

@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
+import com.gtnewhorizons.galaxia.registry.util.DeterministicHash;
 
 final class AsteroidInitialKnowledgeRules {
 
@@ -26,8 +27,8 @@ final class AsteroidInitialKnowledgeRules {
     }
 
     private static AsteroidOreKnowledgeState rolledOreKnowledge(AsteroidFieldNode node, long salt) {
-        double roll = AsteroidFieldDeterminism.unitDouble(
-            AsteroidFieldDeterminism.mix(
+        double roll = DeterministicHash.unitDouble(
+            DeterministicHash.mix(
                 node.appearance()
                     .variantSeed(),
                 salt));

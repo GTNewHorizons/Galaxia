@@ -31,7 +31,7 @@ final class AsteroidPlacementGraph {
         if (reachableAnchors.isEmpty()) {
             throw new IllegalStateException("Asteroid field has hidden generated asteroids but no visible anchor");
         }
-        long baseSeed = AsteroidFieldDeterminism.nodeSeed(beltId, profile, index);
+        AsteroidFieldDeterminism nodeSeed = AsteroidFieldDeterminism.forNode(beltId, profile, index);
         AsteroidFieldNode naturalNode = AsteroidNodeMaterializer.resolveNode(beltId, profile, index);
         List<GeneratedCandidate> candidates = new ArrayList<>();
         double targetRadius = OrbitalMechanics.resolveAsteroidFieldRadius(profile, naturalNode);
@@ -79,21 +79,14 @@ final class AsteroidPlacementGraph {
             for (int attempt = 0; attempt < 32; attempt++) {
                 double scanRadius = profile.satelliteScanRadius();
                 double candidateDistance = scanRadius == 0.0 ? 0.0
-                    : scanRadius * (0.2 + AsteroidFieldDeterminism.unitDouble(
-                        AsteroidFieldDeterminism.mix(
-                            baseSeed,
-                            anchor.node()
-                                .index(),
-                            11L + attempt))
-                        * 0.75);
-                double offsetAngle = AsteroidFieldDeterminism.unitDouble(
-                    AsteroidFieldDeterminism.mix(
-                        baseSeed,
+                    : scanRadius * (0.2 + nodeSeed.unit(
                         anchor.node()
                             .index(),
-                        47L + attempt))
-                    * Math.PI
-                    * 2.0;
+                        11L + attempt) * 0.75);
+                double offsetAngle = nodeSeed.unit(
+                    anchor.node()
+                        .index(),
+                    47L + attempt) * Math.PI * 2.0;
                 double x = anchorX + Math.cos(offsetAngle) * candidateDistance;
                 double y = anchorY + Math.sin(offsetAngle) * candidateDistance;
                 addGeneratedCandidateAtPosition(
@@ -109,7 +102,7 @@ final class AsteroidPlacementGraph {
             }
         }
 
-        GeneratedCandidate selected = selectCandidate(baseSeed, candidates);
+        GeneratedCandidate selected = selectCandidate(nodeSeed, candidates);
         if (selected != null) return new ResolvedGeneratedNode(selected.node(), selected.depth());
 
         ReachableAnchor anchor = reachableAnchors.stream()
@@ -156,27 +149,25 @@ final class AsteroidPlacementGraph {
         }
     }
 
-    private static GeneratedCandidate selectCandidate(long baseSeed, List<GeneratedCandidate> candidates) {
+    private static GeneratedCandidate selectCandidate(AsteroidFieldDeterminism nodeSeed,
+        List<GeneratedCandidate> candidates) {
         if (candidates.isEmpty()) return null;
         return candidates.stream()
             .min(
                 Comparator
-                    .comparingDouble(candidate -> candidate.crowdingScore() + selectionJitter(baseSeed, candidate)))
+                    .comparingDouble(candidate -> candidate.crowdingScore() + selectionJitter(nodeSeed, candidate)))
             .orElse(null);
     }
 
-    private static double selectionJitter(long baseSeed, GeneratedCandidate candidate) {
-        return AsteroidFieldDeterminism.unitDouble(
-            AsteroidFieldDeterminism.mix(
-                baseSeed,
-                Double.doubleToLongBits(
-                    candidate.node()
-                        .angleOffsetDeg()),
-                Double.doubleToLongBits(
-                    candidate.node()
-                        .orbitalDepth01()),
-                97L))
-            * 0.05;
+    private static double selectionJitter(AsteroidFieldDeterminism nodeSeed, GeneratedCandidate candidate) {
+        return nodeSeed.unit(
+            Double.doubleToLongBits(
+                candidate.node()
+                    .angleOffsetDeg()),
+            Double.doubleToLongBits(
+                candidate.node()
+                    .orbitalDepth01()),
+            97L) * 0.05;
     }
 
     private static void addGeneratedCandidateAtPosition(List<GeneratedCandidate> candidates, CelestialObjectId beltId,
