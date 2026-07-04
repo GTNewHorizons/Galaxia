@@ -25,8 +25,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
@@ -72,11 +70,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleS
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
-import com.gtnewhorizons.galaxia.registry.satellite.AsteroidScanClientState;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
-import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkClientState;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -1422,13 +1418,7 @@ public final class AssetSyncPacket implements IMessage {
 
         public static void handleClientSync(AssetSyncPacket packet) {
             switch (packet.syncType) {
-                case CLEAR -> {
-                    CelestialAssetStore.CLIENT.clearInternal();
-                    CelestialKnowledgeClientState.clear();
-                    AsteroidFieldClientKnowledgeState.clear();
-                    AsteroidScanClientState.clear();
-                    SatelliteNetworkClientState.clear();
-                }
+                case CLEAR -> ClientStateLifecycle.clearAll();
                 case ASSET_REMOVED -> CelestialAssetStore.CLIENT.destroyAssetInternal(packet.assetId);
                 case FULL_SYNC -> handleFull(packet);
                 default -> {
