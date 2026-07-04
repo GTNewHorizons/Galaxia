@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDynamicCelestialObjectProvider;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
@@ -84,6 +85,28 @@ final class AsteroidDynamicCelestialObjectTest {
             .orElseThrow();
 
         assertEquals(key, asteroid.id());
+    }
+
+    @Test
+    void asteroidMinorBodiesAreExposedThroughDynamicCelestialObjectProvider() {
+        DynamicCelestialObjectProvider provider = new AsteroidDynamicCelestialObjectProvider(CelestialRegistry::get);
+        CelestialObjectKey key = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN));
+        CelestialObjectKey visibleKey = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 1));
+
+        CelestialObject asteroid = provider.resolve(key)
+            .orElseThrow();
+        List<CelestialObject> children = provider.children(
+            CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT),
+            CelestialDiscoveryView.empty(),
+            false);
+
+        assertEquals(key, asteroid.id());
+        assertTrue(
+            children.stream()
+                .map(CelestialObject::id)
+                .anyMatch(visibleKey::equals));
     }
 
     @Test
