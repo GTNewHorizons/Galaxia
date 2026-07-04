@@ -17,6 +17,7 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.CelestialKnowledgeSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.SatelliteNetworkSyncPacket;
@@ -138,6 +139,7 @@ public class CelestialEventHandler {
             UUID playerTeam = GTTeamsCompat.getTeam(player);
             SatelliteNetworkState satelliteNetwork = SatelliteNetworkService.rebuild(playerTeam, orbitalTime);
             Galaxia.GALAXIA_NETWORK.sendTo(new SatelliteNetworkSyncPacket(satelliteNetwork), player);
+            Galaxia.GALAXIA_NETWORK.sendTo(CelestialKnowledgeSyncPacket.forTeam(playerTeam), player);
         }
     }
 
