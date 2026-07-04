@@ -15,8 +15,10 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
@@ -131,11 +133,11 @@ public final class SatelliteNetworkService {
     }
 
     public static List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledgeSnapshots(UUID teamId) {
-        return CelestialKnowledgeService.asteroidFieldSnapshots(teamId);
+        return AsteroidFieldKnowledgeService.snapshots(teamId);
     }
 
     public static Map<UUID, List<AsteroidFieldKnowledgeSnapshot>> asteroidKnowledgeSnapshotsByTeam() {
-        return CelestialKnowledgeService.asteroidFieldSnapshotsByTeam();
+        return AsteroidFieldKnowledgeService.snapshotsByTeam();
     }
 
     public static List<AsteroidSatelliteScanSnapshot> asteroidScanSnapshots(UUID teamId) {
@@ -155,7 +157,7 @@ public final class SatelliteNetworkService {
     }
 
     public static void restoreAsteroidKnowledge(UUID teamId, List<AsteroidFieldKnowledgeSnapshot> snapshots) {
-        CelestialKnowledgeService.restoreAsteroidFields(
+        AsteroidFieldKnowledgeService.restore(
             teamId,
             snapshots,
             bodyId -> GalaxiaCelestialAPI.get(bodyId)
@@ -375,7 +377,7 @@ public final class SatelliteNetworkService {
         }
 
         AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(beltId, profile, minorId.index());
-        return OrbitalMechanics.resolveAsteroidFieldWorldState(profile, node, beltState);
+        return AsteroidFieldOrbitResolver.resolveWorldState(profile, node, beltState);
     }
 
     private static double orbitalOrder(CelestialObject body) {

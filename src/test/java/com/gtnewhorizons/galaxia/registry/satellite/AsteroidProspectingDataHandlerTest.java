@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
@@ -42,7 +43,7 @@ final class AsteroidProspectingDataHandlerTest {
         Optional<AsteroidFieldNode> detected = handler.handle(event);
 
         assertTrue(detected.isPresent());
-        AsteroidFieldKnowledge knowledge = CelestialKnowledgeService.asteroidFieldKnowledge(TEAM, BELT, profile);
+        AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledgeService.knowledge(TEAM, BELT, profile);
         assertEquals(
             DiscoveryState.DISCOVERED,
             knowledge.entryFor(
@@ -85,7 +86,7 @@ final class AsteroidProspectingDataHandlerTest {
 
         assertTrue(result.isEmpty());
         assertTrue(
-            CelestialKnowledgeService.asteroidFieldSnapshots(TEAM)
+            AsteroidFieldKnowledgeService.snapshots(TEAM)
                 .isEmpty());
     }
 

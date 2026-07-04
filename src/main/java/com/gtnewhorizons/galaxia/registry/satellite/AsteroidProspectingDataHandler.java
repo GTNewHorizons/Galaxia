@@ -9,11 +9,11 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldDiscoveryWork;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanOrder;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryWork;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
 
 public final class AsteroidProspectingDataHandler implements SatelliteDataJobService.ProductionListener {
 
@@ -53,8 +53,8 @@ public final class AsteroidProspectingDataHandler implements SatelliteDataJobSer
         }
         if (profile.isEmpty()) return Optional.empty();
 
-        AsteroidFieldKnowledge knowledge = CelestialKnowledgeService
-            .asteroidFieldKnowledge(event.teamId(), event.bodyId(), profile.get());
+        AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledgeService
+            .knowledge(event.teamId(), event.bodyId(), profile.get());
         Optional<CelestialDiscoveryWork> work = knowledge
             .nextDiscoveryWork(node -> true, AsteroidFieldScanOrder.byIndex());
         work.ifPresent(discovery -> knowledge.revealDiscovery(discovery, node -> true));

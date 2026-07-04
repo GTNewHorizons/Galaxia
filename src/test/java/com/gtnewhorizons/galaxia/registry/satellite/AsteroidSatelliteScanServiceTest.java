@@ -15,7 +15,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanOrder;
@@ -29,7 +31,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyI
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class AsteroidSatelliteScanServiceTest {
@@ -60,14 +61,14 @@ final class AsteroidSatelliteScanServiceTest {
                 .isEmpty());
         assertEquals(
             DiscoveryState.HIDDEN,
-            CelestialKnowledgeService.asteroidFieldKnowledge(TEAM, BELT, profile)
+            AsteroidFieldKnowledgeService.knowledge(TEAM, BELT, profile)
                 .entryFor(anchor.id())
                 .detectionState());
 
         assertEquals(
             List.of(new AsteroidSatelliteScanService.ScanResult(BELT, anchor.id(), AsteroidFieldScanPass.DETECTION)),
             service.tick(TEAM, List.of(satellite), 1));
-        AsteroidFieldKnowledge knowledge = CelestialKnowledgeService.asteroidFieldKnowledge(TEAM, BELT, profile);
+        AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledgeService.knowledge(TEAM, BELT, profile);
         assertEquals(
             DiscoveryState.DISCOVERED,
             knowledge.entryFor(anchor.id())
@@ -119,7 +120,7 @@ final class AsteroidSatelliteScanServiceTest {
                 service.tick(TEAM, List.of(satellite), AsteroidFieldScanPass.DETECTION.durationTicks()));
         }
 
-        AsteroidFieldKnowledge knowledge = CelestialKnowledgeService.asteroidFieldKnowledge(TEAM, BELT, profile);
+        AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledgeService.knowledge(TEAM, BELT, profile);
         assertEquals(
             List.of(
                 new AsteroidSatelliteScanService.ScanResult(
@@ -187,7 +188,7 @@ final class AsteroidSatelliteScanServiceTest {
             AsteroidFieldScanPass.DETECTION.durationTicks() + AsteroidFieldScanPass.SIGNATURE.durationTicks()
                 + AsteroidFieldScanPass.PROFILE.durationTicks());
 
-        AsteroidFieldKnowledge knowledge = CelestialKnowledgeService.asteroidFieldKnowledge(TEAM, BELT, profile);
+        AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledgeService.knowledge(TEAM, BELT, profile);
         assertTrue(!results.isEmpty());
         assertTrue(
             results.stream()
@@ -299,9 +300,9 @@ final class AsteroidSatelliteScanServiceTest {
     }
 
     private static double distance(AsteroidFieldProfile profile, AsteroidFieldNode first, AsteroidFieldNode second) {
-        double firstRadius = OrbitalMechanics.resolveAsteroidFieldRadius(profile, first);
+        double firstRadius = AsteroidFieldOrbitResolver.resolveRadius(profile, first);
         double firstAngle = Math.toRadians(first.angleOffsetDeg());
-        double secondRadius = OrbitalMechanics.resolveAsteroidFieldRadius(profile, second);
+        double secondRadius = AsteroidFieldOrbitResolver.resolveRadius(profile, second);
         double secondAngle = Math.toRadians(second.angleOffsetDeg());
         double dx = Math.cos(firstAngle) * firstRadius - Math.cos(secondAngle) * secondRadius;
         double dy = Math.sin(firstAngle) * firstRadius - Math.sin(secondAngle) * secondRadius;

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidAppearanceProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
@@ -27,8 +28,8 @@ final class OrbitalMechanicsAsteroidFieldTest {
         AsteroidFieldNode node = node(90.0, 0.5);
         OrbitalMechanics.OrbitalState beltState = new OrbitalMechanics.OrbitalState(0.0, 100.0, -5.0, 0.0);
 
-        OrbitalMechanics.OrbitalState asteroidState = OrbitalMechanics
-            .resolveAsteroidFieldWorldState(profile, node, beltState);
+        OrbitalMechanics.OrbitalState asteroidState = AsteroidFieldOrbitResolver
+            .resolveWorldState(profile, node, beltState);
 
         assertAll(
             () -> assertEquals(-15.0, asteroidState.x(), EPSILON),
@@ -42,10 +43,10 @@ final class OrbitalMechanicsAsteroidFieldTest {
         AsteroidFieldProfile profile = profile(4.0, 9.0);
         OrbitalMechanics.OrbitalState beltState = new OrbitalMechanics.OrbitalState(100.0, 0.0, 0.0, 2.0);
 
-        OrbitalMechanics.OrbitalState innerState = OrbitalMechanics
-            .resolveAsteroidFieldWorldState(profile, node(0.0, 0.0), beltState);
-        OrbitalMechanics.OrbitalState outerState = OrbitalMechanics
-            .resolveAsteroidFieldWorldState(profile, node(0.0, 1.0), beltState);
+        OrbitalMechanics.OrbitalState innerState = AsteroidFieldOrbitResolver
+            .resolveWorldState(profile, node(0.0, 0.0), beltState);
+        OrbitalMechanics.OrbitalState outerState = AsteroidFieldOrbitResolver
+            .resolveWorldState(profile, node(0.0, 1.0), beltState);
 
         assertAll(
             () -> assertEquals(4.0, innerState.x(), EPSILON),

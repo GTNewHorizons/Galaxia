@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
-import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 
 final class AsteroidFieldResolverTest {
 
@@ -253,9 +252,9 @@ final class AsteroidFieldResolverTest {
     }
 
     private static double distance(AsteroidFieldProfile profile, AsteroidFieldNode first, AsteroidFieldNode second) {
-        double firstRadius = OrbitalMechanics.resolveAsteroidFieldRadius(profile, first);
+        double firstRadius = AsteroidFieldOrbitResolver.resolveRadius(profile, first);
         double firstAngle = Math.toRadians(first.angleOffsetDeg());
-        double secondRadius = OrbitalMechanics.resolveAsteroidFieldRadius(profile, second);
+        double secondRadius = AsteroidFieldOrbitResolver.resolveRadius(profile, second);
         double secondAngle = Math.toRadians(second.angleOffsetDeg());
         double dx = Math.cos(firstAngle) * firstRadius - Math.cos(secondAngle) * secondRadius;
         double dy = Math.sin(firstAngle) * firstRadius - Math.sin(secondAngle) * secondRadius;

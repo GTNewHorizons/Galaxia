@@ -13,6 +13,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
@@ -56,6 +57,26 @@ final class CelestialKnowledgeServiceTest {
 
         assertEquals(
             DiscoveryState.HIDDEN,
+            CelestialKnowledgeService.discoveryState(TEAM, CelestialObjectKey.minorBody(hidden.id())));
+    }
+
+    @Test
+    void asteroidKnowledgeMutationLivesBehindAsteroidServiceWhileGenericLookupStaysShared() {
+        AsteroidFieldProfile profile = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
+            .map(CelestialObject::properties)
+            .map(properties -> properties.asteroidFieldProfile())
+            .orElseThrow();
+        AsteroidFieldNode hidden = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile)
+            .stream()
+            .filter(node -> node.sizeClass() == AsteroidSizeClass.MEDIUM)
+            .findFirst()
+            .orElseThrow();
+
+        AsteroidFieldKnowledgeService.knowledge(TEAM, CelestialObjectId.FROZEN_BELT, profile)
+            .detect(hidden.id());
+
+        assertEquals(
+            DiscoveryState.DISCOVERED,
             CelestialKnowledgeService.discoveryState(TEAM, CelestialObjectKey.minorBody(hidden.id())));
     }
 

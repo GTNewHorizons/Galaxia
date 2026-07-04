@@ -1,79 +1,38 @@
 package com.gtnewhorizons.galaxia.registry.celestial.knowledge;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Function;
 
 import javax.annotation.Nonnull;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeService;
 
 /**
  * Server-side owner for team knowledge about celestial objects.
  *
- * Asteroid fields currently provide the only mutable knowledge entries, but
- * callers go through this service so additional discoverable object types can
- * share the same lifecycle, sync, and persistence entry point.
+ * Object-specific providers own their storage and rules; callers use this
+ * service for shared discovery-state reads and lifecycle boundaries.
  */
 public final class CelestialKnowledgeService {
 
-    private static final AsteroidFieldKnowledgeStore ASTEROID_FIELDS = new AsteroidFieldKnowledgeStore();
-    private static final List<CelestialDiscoveryProvider> DISCOVERY_PROVIDERS = List.of(
-        new RegisteredCelestialDiscoveryProvider(),
-        new AsteroidFieldDiscoveryProvider(ASTEROID_FIELDS, CelestialKnowledgeService::profile));
+    private static final List<CelestialKnowledgeProvider> KNOWLEDGE_PROVIDERS = List
+        .of(new RegisteredCelestialDiscoveryProvider(), AsteroidFieldKnowledgeService.provider());
 
     private CelestialKnowledgeService() {}
 
     public static DiscoveryState discoveryState(@Nonnull UUID teamId, @Nonnull CelestialObjectKey key) {
         if (teamId == null) throw new IllegalArgumentException("team id is required");
         if (key == null) throw new IllegalArgumentException("celestial object key is required");
-        return DISCOVERY_PROVIDERS.stream()
+        return KNOWLEDGE_PROVIDERS.stream()
             .map(provider -> provider.discoveryState(teamId, key))
             .flatMap(Optional::stream)
             .findFirst()
             .orElseThrow(() -> new IllegalStateException("No discovery provider for celestial object: " + key));
     }
 
-    public static boolean isDiscovered(@Nonnull UUID teamId, @Nonnull MinorCelestialBodyId minorBodyId) {
-        return discoveryState(teamId, CelestialObjectKey.minorBody(minorBodyId)) == DiscoveryState.DISCOVERED;
-    }
-
-    public static AsteroidFieldKnowledge asteroidFieldKnowledge(@Nonnull UUID teamId, @Nonnull CelestialObjectId beltId,
-        @Nonnull AsteroidFieldProfile profile) {
-        return ASTEROID_FIELDS.getOrCreate(teamId, beltId, profile);
-    }
-
-    public static List<AsteroidFieldKnowledgeSnapshot> asteroidFieldSnapshots(@Nonnull UUID teamId) {
-        return ASTEROID_FIELDS.snapshots(teamId);
-    }
-
-    public static Map<UUID, List<AsteroidFieldKnowledgeSnapshot>> asteroidFieldSnapshotsByTeam() {
-        return ASTEROID_FIELDS.snapshotsByTeam();
-    }
-
-    public static void restoreAsteroidFields(@Nonnull UUID teamId,
-        @Nonnull List<AsteroidFieldKnowledgeSnapshot> snapshots,
-        @Nonnull Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver) {
-        ASTEROID_FIELDS.restore(teamId, snapshots, profileResolver);
-    }
-
     public static void clear() {
-        ASTEROID_FIELDS.clear();
-    }
-
-    private static Optional<AsteroidFieldProfile> profile(@Nonnull CelestialObjectId beltId) {
-        return CelestialRegistry.get(beltId)
-            .map(CelestialObject::properties)
-            .map(properties -> properties.asteroidFieldProfile());
+        KNOWLEDGE_PROVIDERS.forEach(CelestialKnowledgeProvider::clear);
     }
 }

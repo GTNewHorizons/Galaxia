@@ -13,6 +13,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
@@ -51,8 +52,7 @@ final class OrbitalMechanicsTest {
             .build();
         OrbitalMechanics.OrbitalState beltState = new OrbitalMechanics.OrbitalState(0.0, 100.0, -5.0, 0.0);
 
-        OrbitalMechanics.OrbitalState expected = OrbitalMechanics
-            .resolveAsteroidFieldWorldState(profile, node, beltState);
+        OrbitalMechanics.OrbitalState expected = AsteroidFieldOrbitResolver.resolveWorldState(profile, node, beltState);
         OrbitalMechanics.OrbitalState actual = OrbitalMechanics.resolveChildWorldState(belt, asteroid, beltState, 0.0);
 
         assertAll(
@@ -60,7 +60,7 @@ final class OrbitalMechanicsTest {
             () -> assertEquals(expected.y(), actual.y(), EPSILON),
             () -> assertEquals(expected.vx(), actual.vx(), EPSILON),
             () -> assertEquals(expected.vy(), actual.vy(), EPSILON));
-        assertTrue(OrbitalMechanics.usesAsteroidFieldPosition(belt, asteroid));
+        assertTrue(OrbitalMechanics.usesMinorBodyResolvedPosition(belt, asteroid));
     }
 
     @Test
@@ -93,6 +93,6 @@ final class OrbitalMechanicsTest {
             () -> assertEquals(expected.y(), actual.y(), EPSILON),
             () -> assertEquals(expected.vx(), actual.vx(), EPSILON),
             () -> assertEquals(expected.vy(), actual.vy(), EPSILON));
-        assertFalse(OrbitalMechanics.usesAsteroidFieldPosition(parent, asteroid));
+        assertFalse(OrbitalMechanics.usesMinorBodyResolvedPosition(parent, asteroid));
     }
 }

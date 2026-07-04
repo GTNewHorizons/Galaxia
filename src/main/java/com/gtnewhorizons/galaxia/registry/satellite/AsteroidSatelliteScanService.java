@@ -18,7 +18,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldDiscoveryWork;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanOrder;
@@ -26,7 +28,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanPa
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanScope;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryWork;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.progress.ProgressJobRunner;
 
@@ -194,8 +195,7 @@ public final class AsteroidSatelliteScanService {
             return List.of();
         }
 
-        AsteroidFieldKnowledge knowledge = CelestialKnowledgeService
-            .asteroidFieldKnowledge(teamId, beltId, profile.get());
+        AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledgeService.knowledge(teamId, beltId, profile.get());
         Predicate<AsteroidFieldNode> scope = scanScope(beltId, profile.get(), anchorId);
         CompletionKey completionKey = new CompletionKey(
             teamId,
@@ -228,8 +228,8 @@ public final class AsteroidSatelliteScanService {
     private static Predicate<AsteroidFieldNode> scanScope(CelestialObjectId beltId, AsteroidFieldProfile profile,
         MinorCelestialBodyId anchorId) {
         AsteroidFieldNode anchor = AsteroidFieldResolver.resolveNode(beltId, profile, anchorId.index());
-        OrbitalMechanics.OrbitalState center = OrbitalMechanics
-            .resolveAsteroidFieldWorldState(profile, anchor, LOCAL_BELT_REFERENCE);
+        OrbitalMechanics.OrbitalState center = AsteroidFieldOrbitResolver
+            .resolveWorldState(profile, anchor, LOCAL_BELT_REFERENCE);
         return AsteroidFieldScanScope
             .withinRadius(profile, LOCAL_BELT_REFERENCE, center, profile.satelliteScanRadius());
     }

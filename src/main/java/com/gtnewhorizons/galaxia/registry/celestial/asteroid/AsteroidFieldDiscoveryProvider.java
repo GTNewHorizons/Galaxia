@@ -1,31 +1,23 @@
-package com.gtnewhorizons.galaxia.registry.celestial.knowledge;
+package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Function;
 
 import javax.annotation.Nonnull;
 
+import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeProvider;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
-final class AsteroidFieldDiscoveryProvider implements CelestialDiscoveryProvider {
+final class AsteroidFieldDiscoveryProvider implements CelestialKnowledgeProvider {
 
     private final AsteroidFieldKnowledgeStore knowledgeStore;
-    private final Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver;
 
-    AsteroidFieldDiscoveryProvider(@Nonnull AsteroidFieldKnowledgeStore knowledgeStore,
-        @Nonnull Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver) {
+    AsteroidFieldDiscoveryProvider(@Nonnull AsteroidFieldKnowledgeStore knowledgeStore) {
         if (knowledgeStore == null) throw new IllegalArgumentException("knowledge store is required");
-        if (profileResolver == null) throw new IllegalArgumentException("profile resolver is required");
         this.knowledgeStore = knowledgeStore;
-        this.profileResolver = profileResolver;
     }
 
     @Override
@@ -36,7 +28,10 @@ final class AsteroidFieldDiscoveryProvider implements CelestialDiscoveryProvider
 
         MinorCelestialBodyId minorBodyId = key.minorBodyId();
         CelestialObjectId beltId = minorBodyId.parentBodyId();
-        AsteroidFieldProfile profile = profileResolver.apply(beltId)
+        AsteroidFieldProfile profile = GalaxiaCelestialAPI.get(beltId)
+            .map(
+                body -> body.properties()
+                    .asteroidFieldProfile())
             .orElse(null);
         if (profile == null || !profile.hasNodeIndex(minorBodyId.index())) {
             throw new IllegalStateException("Unknown asteroid: " + key);
@@ -52,5 +47,10 @@ final class AsteroidFieldDiscoveryProvider implements CelestialDiscoveryProvider
 
         AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(beltId, profile, minorBodyId.index());
         return Optional.of(AsteroidFieldResolver.initialDetectionState(node));
+    }
+
+    @Override
+    public void clear() {
+        knowledgeStore.clear();
     }
 }

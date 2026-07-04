@@ -10,7 +10,6 @@ import java.util.Set;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
-import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 
 final class AsteroidPlacementGraph {
 
@@ -34,7 +33,7 @@ final class AsteroidPlacementGraph {
         AsteroidFieldDeterminism nodeSeed = AsteroidFieldDeterminism.forNode(beltId, profile, index);
         AsteroidFieldNode naturalNode = AsteroidNodeMaterializer.resolveNode(beltId, profile, index);
         List<GeneratedCandidate> candidates = new ArrayList<>();
-        double targetRadius = OrbitalMechanics.resolveAsteroidFieldRadius(profile, naturalNode);
+        double targetRadius = AsteroidFieldOrbitResolver.resolveRadius(profile, naturalNode);
         double targetAngle = Math.toRadians(naturalNode.angleOffsetDeg());
         double targetX = Math.cos(targetAngle) * targetRadius;
         double targetY = Math.sin(targetAngle) * targetRadius;
@@ -51,7 +50,7 @@ final class AsteroidPlacementGraph {
                         placementScore(profile, naturalNode, naturalNode, reachableAnchors)));
             }
 
-            double anchorRadius = OrbitalMechanics.resolveAsteroidFieldRadius(profile, anchor.node());
+            double anchorRadius = AsteroidFieldOrbitResolver.resolveRadius(profile, anchor.node());
             double anchorAngle = Math.toRadians(
                 anchor.node()
                     .angleOffsetDeg());
@@ -218,9 +217,9 @@ final class AsteroidPlacementGraph {
     }
 
     private static double distance(AsteroidFieldProfile profile, AsteroidFieldNode first, AsteroidFieldNode second) {
-        double firstRadius = OrbitalMechanics.resolveAsteroidFieldRadius(profile, first);
+        double firstRadius = AsteroidFieldOrbitResolver.resolveRadius(profile, first);
         double firstAngle = Math.toRadians(first.angleOffsetDeg());
-        double secondRadius = OrbitalMechanics.resolveAsteroidFieldRadius(profile, second);
+        double secondRadius = AsteroidFieldOrbitResolver.resolveRadius(profile, second);
         double secondAngle = Math.toRadians(second.angleOffsetDeg());
         double dx = Math.cos(firstAngle) * firstRadius - Math.cos(secondAngle) * secondRadius;
         double dy = Math.sin(firstAngle) * firstRadius - Math.sin(secondAngle) * secondRadius;

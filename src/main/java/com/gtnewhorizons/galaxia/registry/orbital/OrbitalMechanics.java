@@ -1,12 +1,11 @@
 package com.gtnewhorizons.galaxia.registry.orbital;
 
+import java.util.List;
+
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitResolver;
 
 public final class OrbitalMechanics {
 
@@ -15,6 +14,8 @@ public final class OrbitalMechanics {
     private static final double MINIMUM_MEAN_MOTION = 1e-9;
     private static final double MINIMUM_RADIUS = 1e-8;
     private static final int KEPLER_ITERATIONS = 10;
+    private static final List<MinorBodyOrbitResolver> MINOR_BODY_ORBIT_RESOLVERS = List
+        .of(AsteroidFieldOrbitResolver.INSTANCE);
 
     private OrbitalMechanics() {}
 
@@ -48,8 +49,8 @@ public final class OrbitalMechanics {
             AbsolutePosition absolute = child.absolutePosition();
             return new OrbitalState(absolute.x(), absolute.y(), 0.0, 0.0);
         }
-        OrbitalState asteroidFieldState = resolveFieldAsteroidChildWorldState(parent, child, safeParentState);
-        if (asteroidFieldState != null) return asteroidFieldState;
+        OrbitalState minorBodyState = resolveMinorBodyWorldState(parent, child, safeParentState);
+        if (minorBodyState != null) return minorBodyState;
         OrbitalState localState = calculateOrbitalState(
             child.orbitalParams(),
             resolveAttractorMu(parent, child.orbitalParams()),
@@ -57,11 +58,11 @@ public final class OrbitalMechanics {
         return safeParentState.add(localState);
     }
 
-    public static boolean usesAsteroidFieldPosition(CelestialObject parent, CelestialObject child) {
-        return resolveFieldAsteroidChildWorldState(parent, child, new OrbitalState(0.0, 0.0, 0.0, 0.0)) != null;
+    public static boolean usesMinorBodyResolvedPosition(CelestialObject parent, CelestialObject child) {
+        return resolveMinorBodyWorldState(parent, child, new OrbitalState(0.0, 0.0, 0.0, 0.0)) != null;
     }
 
-    private static OrbitalState resolveFieldAsteroidChildWorldState(CelestialObject parent, CelestialObject child,
+    private static OrbitalState resolveMinorBodyWorldState(CelestialObject parent, CelestialObject child,
         OrbitalState parentState) {
         if (child == null || child.id() == null
             || !child.id()
@@ -74,41 +75,20 @@ public final class OrbitalMechanics {
             throw new IllegalStateException("Minor celestial body requires a registered parent body");
         }
 
-        MinorCelestialBodyId minorId = child.id()
-            .minorBodyId();
         CelestialObjectId parentId = parent.id()
             .registeredBodyId();
-        if (minorId.parentBodyId() != parentId) {
+        if (child.id()
+            .minorBodyId()
+            .parentBodyId() != parentId) {
             throw new IllegalStateException(
                 "Minor celestial body parent does not match traversal parent: " + child.id());
         }
-        AsteroidFieldProfile profile = parent.properties()
-            .asteroidFieldProfile();
-        if (profile == null) return null;
 
-        AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(parentId, profile, minorId.index());
-        return resolveAsteroidFieldWorldState(profile, node, parentState);
-    }
-
-    public static OrbitalState resolveAsteroidFieldWorldState(AsteroidFieldProfile profile, AsteroidFieldNode node,
-        OrbitalState beltState) {
-        double radius = resolveAsteroidFieldRadius(profile, node);
-        double phaseRad = Math.atan2(beltState.y(), beltState.x()) + Math.toRadians(node.angleOffsetDeg());
-        double angularVelocity = resolveAngularVelocity(beltState);
-        // Asteroids ride the belt as rigid offsets: the belt supplies angular
-        // velocity, while each node supplies its radius and angle within the band.
-        double x = Math.cos(phaseRad) * radius;
-        double y = Math.sin(phaseRad) * radius;
-        double speed = angularVelocity * radius;
-        double vx = -Math.sin(phaseRad) * speed;
-        double vy = Math.cos(phaseRad) * speed;
-
-        return new OrbitalState(x, y, vx, vy);
-    }
-
-    public static double resolveAsteroidFieldRadius(AsteroidFieldProfile profile, AsteroidFieldNode node) {
-        return profile.innerOrbitalRadius()
-            + (profile.outerOrbitalRadius() - profile.innerOrbitalRadius()) * node.orbitalDepth01();
+        for (MinorBodyOrbitResolver resolver : MINOR_BODY_ORBIT_RESOLVERS) {
+            OrbitalState resolved = resolver.resolveWorldState(parent, child, parentState);
+            if (resolved != null) return resolved;
+        }
+        return null;
     }
 
     public static OrbitalState calculateOrbitalState(OrbitalParams params, double attractorMu, double globalTime) {
@@ -245,12 +225,6 @@ public final class OrbitalMechanics {
             eccentricAnomaly -= value / derivative;
         }
         return eccentricAnomaly;
-    }
-
-    private static double resolveAngularVelocity(OrbitalState state) {
-        double radiusSquared = state.x() * state.x() + state.y() * state.y();
-        if (radiusSquared <= MINIMUM_RADIUS * MINIMUM_RADIUS) return 0.0;
-        return (state.x() * state.vy() - state.y() * state.vx()) / radiusSquared;
     }
 
     private static double clampEccentricity(double eccentricity) {

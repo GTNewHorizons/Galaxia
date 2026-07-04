@@ -24,8 +24,8 @@ public final class AsteroidFieldScanScope {
         return node -> {
             // Compare squared distance in the same local reference frame used by
             // asteroid placement, independent from solar-system translation.
-            OrbitalMechanics.OrbitalState asteroidState = OrbitalMechanics
-                .resolveAsteroidFieldWorldState(profile, node, beltState);
+            OrbitalMechanics.OrbitalState asteroidState = AsteroidFieldOrbitResolver
+                .resolveWorldState(profile, node, beltState);
             double dx = asteroidState.x() - centerState.x();
             double dy = asteroidState.y() - centerState.y();
             return dx * dx + dy * dy <= radiusSquared;

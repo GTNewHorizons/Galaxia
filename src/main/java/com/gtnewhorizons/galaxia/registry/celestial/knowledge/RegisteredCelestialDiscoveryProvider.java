@@ -8,7 +8,7 @@ import javax.annotation.Nonnull;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 
-final class RegisteredCelestialDiscoveryProvider implements CelestialDiscoveryProvider {
+final class RegisteredCelestialDiscoveryProvider implements CelestialKnowledgeProvider {
 
     @Override
     public Optional<DiscoveryState> discoveryState(@Nonnull UUID teamId, @Nonnull CelestialObjectKey key) {
