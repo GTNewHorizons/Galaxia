@@ -132,14 +132,7 @@ public final class SatelliteDataTransferPlanner {
             Route route = route(networkState, produced.bodyKey(), demand.bodyKey(), demand.key(), demand.deciKb());
             if (route != null) routes.add(route);
         }
-        routes.sort(
-            Comparator.comparingInt((Route route) -> keySortOrdinal(route.destinationBodyKey()))
-                .thenComparingInt(
-                    route -> route.destinationBodyKey()
-                        .minorBodyId() == null ? -1
-                            : route.destinationBodyKey()
-                                .minorBodyId()
-                                .index()));
+        routes.sort(Comparator.comparing(Route::destinationBodyKey));
         return routes;
     }
 
@@ -419,11 +412,4 @@ public final class SatelliteDataTransferPlanner {
         return new Route(to, demandKey, demandDeciKb, path.edges(), path.capacityKbps());
     }
 
-    private static int keySortOrdinal(CelestialObjectKey key) {
-        return key.isRegistered() ? key.registeredBodyId()
-            .ordinal()
-            : key.minorBodyId()
-                .parentBodyId()
-                .ordinal();
-    }
 }

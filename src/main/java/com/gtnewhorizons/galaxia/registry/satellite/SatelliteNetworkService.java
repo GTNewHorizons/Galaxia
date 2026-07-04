@@ -380,7 +380,8 @@ public final class SatelliteNetworkService {
 
     private static double orbitalOrder(CelestialObject body) {
         OrbitalParams params = body.orbitalParams();
-        return params == null ? keySortOrdinal(body.id()) : params.semiMajorAxis();
+        return params == null ? body.id()
+            .parentSortOrdinal() : params.semiMajorAxis();
     }
 
     private static List<SatelliteNetworkGraph.Node> activeNodes(List<SatelliteNetworkGraph.Node> nodes,
@@ -441,7 +442,7 @@ public final class SatelliteNetworkService {
                     .equals(entry.key()))
             .map(SatelliteDataTransferPlanner.Transfer::destinationBodyKey)
             .distinct()
-            .sorted(Comparator.comparingInt(SatelliteNetworkService::keySortOrdinal))
+            .sorted()
             .toList();
     }
 
@@ -456,14 +457,6 @@ public final class SatelliteNetworkService {
             if (asset instanceof Satellite && asset.celestialObjectId.isMinorBody()) keys.add(asset.celestialObjectId);
         }
         return keys;
-    }
-
-    private static int keySortOrdinal(CelestialObjectKey key) {
-        return key.isRegistered() ? key.registeredBodyId()
-            .ordinal()
-            : key.minorBodyId()
-                .parentBodyId()
-                .ordinal();
     }
 
     private static Map<SatelliteNetworkGraph.Edge, Long> activeUsage(UUID teamId) {

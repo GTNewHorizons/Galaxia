@@ -118,13 +118,7 @@ public final class SatelliteNetworkGraph {
             .filter(node -> node != null)
             .sorted(
                 Comparator.comparingDouble(Node::orbitalOrder)
-                    .thenComparingInt(node -> keySortOrdinal(node.bodyKey()))
-                    .thenComparingInt(
-                        node -> node.bodyKey()
-                            .minorBodyId() == null ? -1
-                                : node.bodyKey()
-                                    .minorBodyId()
-                                    .index()))
+                    .thenComparing(Node::bodyKey))
             .toList();
         int[] components = new int[validNodes.size()];
         for (int i = 0; i < components.length; i++) components[i] = i;
@@ -255,23 +249,6 @@ public final class SatelliteNetworkGraph {
     }
 
     private static int compareKeys(CelestialObjectKey left, CelestialObjectKey right) {
-        int ordinalCompare = Integer.compare(keySortOrdinal(left), keySortOrdinal(right));
-        if (ordinalCompare != 0) return ordinalCompare;
-        if (left.isRegistered() && right.isMinorBody()) return -1;
-        if (left.isMinorBody() && right.isRegistered()) return 1;
-        if (left.isRegistered()) return 0;
-        return Integer.compare(
-            left.minorBodyId()
-                .index(),
-            right.minorBodyId()
-                .index());
-    }
-
-    private static int keySortOrdinal(CelestialObjectKey key) {
-        return key.isRegistered() ? key.registeredBodyId()
-            .ordinal()
-            : key.minorBodyId()
-                .parentBodyId()
-                .ordinal();
+        return left.compareTo(right);
     }
 }
