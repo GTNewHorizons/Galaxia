@@ -513,31 +513,28 @@ public final class CelestialRegistry {
     }
 
     public static List<CelestialObject> getChildren(CelestialObjectKey parentId) {
-        return getChildren(parentId, List.of());
-    }
-
-    public static List<CelestialObject> getChildren(CelestialObjectKey parentId,
-        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge) {
-        return getChildren(parentId, asteroidKnowledge, false);
-    }
-
-    public static List<CelestialObject> getChildren(CelestialObjectKey parentId,
-        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge, boolean includeHiddenMinorBodies) {
         registerDefaults();
         if (parentId == null) return List.of();
-
-        List<CelestialObject> children = new ArrayList<>(
+        return Collections.unmodifiableList(
             hierarchy.childrenByParentId()
                 .getOrDefault(parentId, List.of()));
-        if (parentId.isRegistered()) {
-            children.addAll(
-                resolveKnownMinorBodies(parentId.registeredBodyId(), asteroidKnowledge, includeHiddenMinorBodies));
-        }
-        return Collections.unmodifiableList(children);
     }
 
-    private static List<CelestialObject> resolveInitiallyDetectedMinorBodies(CelestialObjectId parentId) {
-        return resolveKnownMinorBodies(parentId, List.of(), false);
+    public static List<CelestialObject> getAsteroidChildren(CelestialObjectKey parentId) {
+        return getAsteroidChildren(parentId, List.of());
+    }
+
+    public static List<CelestialObject> getAsteroidChildren(CelestialObjectKey parentId,
+        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge) {
+        return getAsteroidChildren(parentId, asteroidKnowledge, false);
+    }
+
+    public static List<CelestialObject> getAsteroidChildren(CelestialObjectKey parentId,
+        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge, boolean includeHiddenMinorBodies) {
+        registerDefaults();
+        if (parentId == null || !parentId.isRegistered()) return List.of();
+        return Collections.unmodifiableList(
+            resolveKnownMinorBodies(parentId.registeredBodyId(), asteroidKnowledge, includeHiddenMinorBodies));
     }
 
     private static List<CelestialObject> resolveKnownMinorBodies(CelestialObjectId parentId,

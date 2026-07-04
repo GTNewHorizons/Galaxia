@@ -77,29 +77,38 @@ public final class GalaxiaCelestialAPI {
         return parentId == null ? List.of() : getChildren(CelestialObjectKey.registered(parentId));
     }
 
-    public static List<CelestialObject> getChildren(CelestialObjectId parentId,
+    public static List<CelestialObject> getAsteroidChildren(CelestialObjectId parentId,
         List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge) {
-        return parentId == null ? List.of() : getChildren(CelestialObjectKey.registered(parentId), asteroidKnowledge);
+        return parentId == null ? List.of()
+            : getAsteroidChildren(CelestialObjectKey.registered(parentId), asteroidKnowledge);
     }
 
-    public static List<CelestialObject> getChildren(CelestialObjectId parentId,
+    public static List<CelestialObject> getAsteroidChildren(CelestialObjectId parentId,
         List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge, boolean includeHiddenMinorBodies) {
         return parentId == null ? List.of()
-            : getChildren(CelestialObjectKey.registered(parentId), asteroidKnowledge, includeHiddenMinorBodies);
+            : getAsteroidChildren(CelestialObjectKey.registered(parentId), asteroidKnowledge, includeHiddenMinorBodies);
     }
 
     public static List<CelestialObject> getChildren(CelestialObjectKey parentId) {
         return CelestialRegistry.getChildren(parentId);
     }
 
-    public static List<CelestialObject> getChildren(CelestialObjectKey parentId,
-        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge) {
-        return CelestialRegistry.getChildren(parentId, asteroidKnowledge);
+    public static List<CelestialObject> getAsteroidChildren(CelestialObjectId parentId) {
+        return parentId == null ? List.of() : getAsteroidChildren(CelestialObjectKey.registered(parentId));
     }
 
-    public static List<CelestialObject> getChildren(CelestialObjectKey parentId,
+    public static List<CelestialObject> getAsteroidChildren(CelestialObjectKey parentId) {
+        return CelestialRegistry.getAsteroidChildren(parentId);
+    }
+
+    public static List<CelestialObject> getAsteroidChildren(CelestialObjectKey parentId,
+        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge) {
+        return CelestialRegistry.getAsteroidChildren(parentId, asteroidKnowledge);
+    }
+
+    public static List<CelestialObject> getAsteroidChildren(CelestialObjectKey parentId,
         List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge, boolean includeHiddenMinorBodies) {
-        return CelestialRegistry.getChildren(parentId, asteroidKnowledge, includeHiddenMinorBodies);
+        return CelestialRegistry.getAsteroidChildren(parentId, asteroidKnowledge, includeHiddenMinorBodies);
     }
 
     public static Map<CelestialObjectKey, CelestialObject> getAllBodies() {

@@ -105,14 +105,24 @@ final class AsteroidDynamicCelestialObjectTest {
             asteroid.properties()
                 .asteroidSizeClass());
         assertTrue(
-            GalaxiaCelestialAPI.getChildren(CelestialObjectId.FROZEN_BELT)
+            GalaxiaCelestialAPI.getAsteroidChildren(CelestialObjectId.FROZEN_BELT)
                 .stream()
                 .map(CelestialObject::id)
                 .anyMatch(key::equals));
     }
 
     @Test
-    void asteroidBeltChildrenIncludeOnlyInitiallyDetectedMinorBodies() {
+    void asteroidBeltRegisteredChildrenDoNotIncludeMinorBodies() {
+        List<CelestialObject> children = GalaxiaCelestialAPI.getChildren(CelestialObjectId.FROZEN_BELT);
+
+        assertTrue(
+            children.stream()
+                .map(CelestialObject::id)
+                .noneMatch(CelestialObjectKey::isMinorBody));
+    }
+
+    @Test
+    void asteroidBeltAsteroidChildrenIncludeOnlyInitiallyDetectedMinorBodies() {
         CelestialObject frozenBelt = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
             .orElseThrow();
         AsteroidFieldProfile profile = frozenBelt.properties()
@@ -125,7 +135,7 @@ final class AsteroidDynamicCelestialObjectTest {
             .map(CelestialObjectKey::minorBody)
             .collect(Collectors.toSet());
 
-        List<CelestialObject> children = GalaxiaCelestialAPI.getChildren(CelestialObjectId.FROZEN_BELT);
+        List<CelestialObject> children = GalaxiaCelestialAPI.getAsteroidChildren(CelestialObjectId.FROZEN_BELT);
         Set<CelestialObjectKey> asteroidChildKeys = children.stream()
             .map(CelestialObject::id)
             .filter(CelestialObjectKey::isMinorBody)
@@ -167,7 +177,7 @@ final class AsteroidDynamicCelestialObjectTest {
                     AsteroidOreKnowledgeState.UNKNOWN)));
 
         List<CelestialObject> children = GalaxiaCelestialAPI
-            .getChildren(CelestialObjectId.FROZEN_BELT, List.of(snapshot));
+            .getAsteroidChildren(CelestialObjectId.FROZEN_BELT, List.of(snapshot));
 
         assertTrue(
             children.stream()
@@ -193,7 +203,7 @@ final class AsteroidDynamicCelestialObjectTest {
             List.of());
 
         Set<CelestialObjectKey> asteroidChildKeys = GalaxiaCelestialAPI
-            .getChildren(CelestialObjectId.FROZEN_BELT, List.of(partialSnapshot))
+            .getAsteroidChildren(CelestialObjectId.FROZEN_BELT, List.of(partialSnapshot))
             .stream()
             .map(CelestialObject::id)
             .filter(CelestialObjectKey::isMinorBody)
@@ -215,14 +225,15 @@ final class AsteroidDynamicCelestialObjectTest {
             .map(AsteroidFieldNode::id)
             .map(CelestialObjectKey::minorBody)
             .collect(Collectors.toSet());
-        Set<CelestialObjectKey> normalAsteroidKeys = GalaxiaCelestialAPI.getChildren(CelestialObjectId.FROZEN_BELT)
+        Set<CelestialObjectKey> normalAsteroidKeys = GalaxiaCelestialAPI
+            .getAsteroidChildren(CelestialObjectId.FROZEN_BELT)
             .stream()
             .map(CelestialObject::id)
             .filter(CelestialObjectKey::isMinorBody)
             .collect(Collectors.toSet());
 
         Set<CelestialObjectKey> debugAsteroidKeys = GalaxiaCelestialAPI
-            .getChildren(CelestialObjectId.FROZEN_BELT, List.of(), true)
+            .getAsteroidChildren(CelestialObjectId.FROZEN_BELT, List.of(), true)
             .stream()
             .map(CelestialObject::id)
             .filter(CelestialObjectKey::isMinorBody)
@@ -251,7 +262,8 @@ final class AsteroidDynamicCelestialObjectTest {
                     DiscoveryState.DISCOVERED,
                     AsteroidOreKnowledgeState.UNKNOWN)));
 
-        CelestialObject asteroid = GalaxiaCelestialAPI.getChildren(CelestialObjectId.FROZEN_BELT, List.of(snapshot))
+        CelestialObject asteroid = GalaxiaCelestialAPI
+            .getAsteroidChildren(CelestialObjectId.FROZEN_BELT, List.of(snapshot))
             .stream()
             .filter(
                 child -> child.id()
