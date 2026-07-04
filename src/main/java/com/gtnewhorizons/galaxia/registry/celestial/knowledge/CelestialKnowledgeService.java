@@ -1,13 +1,12 @@
 package com.gtnewhorizons.galaxia.registry.celestial.knowledge;
 
-import java.util.List;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.UUID;
 
 import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeService;
 
 /**
  * Server-side owner for team knowledge about celestial objects.
@@ -17,10 +16,21 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowle
  */
 public final class CelestialKnowledgeService {
 
-    private static final List<CelestialKnowledgeProvider> KNOWLEDGE_PROVIDERS = List
-        .of(new RegisteredCelestialDiscoveryProvider(), AsteroidFieldKnowledgeService.provider());
+    private static final CelestialKnowledgeProvider REGISTERED_BODIES = new RegisteredCelestialDiscoveryProvider();
+    private static final ArrayList<CelestialKnowledgeProvider> KNOWLEDGE_PROVIDERS = new ArrayList<>();
+
+    static {
+        resetProvidersForTesting();
+    }
 
     private CelestialKnowledgeService() {}
+
+    public static void registerProvider(@Nonnull CelestialKnowledgeProvider provider) {
+        if (provider == null) throw new IllegalArgumentException("knowledge provider is required");
+        if (!KNOWLEDGE_PROVIDERS.contains(provider)) {
+            KNOWLEDGE_PROVIDERS.add(provider);
+        }
+    }
 
     public static DiscoveryState discoveryState(@Nonnull UUID teamId, @Nonnull CelestialObjectKey key) {
         if (teamId == null) throw new IllegalArgumentException("team id is required");
@@ -34,5 +44,10 @@ public final class CelestialKnowledgeService {
 
     public static void clear() {
         KNOWLEDGE_PROVIDERS.forEach(CelestialKnowledgeProvider::clear);
+    }
+
+    static void resetProvidersForTesting() {
+        KNOWLEDGE_PROVIDERS.clear();
+        KNOWLEDGE_PROVIDERS.add(REGISTERED_BODIES);
     }
 }

@@ -1,11 +1,11 @@
 package com.gtnewhorizons.galaxia.registry.orbital;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitResolver;
 
 public final class OrbitalMechanics {
 
@@ -14,10 +14,16 @@ public final class OrbitalMechanics {
     private static final double MINIMUM_MEAN_MOTION = 1e-9;
     private static final double MINIMUM_RADIUS = 1e-8;
     private static final int KEPLER_ITERATIONS = 10;
-    private static final List<MinorBodyOrbitResolver> MINOR_BODY_ORBIT_RESOLVERS = List
-        .of(AsteroidFieldOrbitResolver.INSTANCE);
+    private static final ArrayList<MinorBodyOrbitResolver> MINOR_BODY_ORBIT_RESOLVERS = new ArrayList<>();
 
     private OrbitalMechanics() {}
+
+    public static void registerMinorBodyResolver(MinorBodyOrbitResolver resolver) {
+        if (resolver == null) throw new IllegalArgumentException("minor body orbit resolver is required");
+        if (!MINOR_BODY_ORBIT_RESOLVERS.contains(resolver)) {
+            MINOR_BODY_ORBIT_RESOLVERS.add(resolver);
+        }
+    }
 
     public record OrbitalState(double x, double y, double vx, double vy) {
 
@@ -60,6 +66,10 @@ public final class OrbitalMechanics {
 
     public static boolean usesMinorBodyResolvedPosition(CelestialObject parent, CelestialObject child) {
         return resolveMinorBodyWorldState(parent, child, new OrbitalState(0.0, 0.0, 0.0, 0.0)) != null;
+    }
+
+    static void resetMinorBodyResolversForTesting() {
+        MINOR_BODY_ORBIT_RESOLVERS.clear();
     }
 
     private static OrbitalState resolveMinorBodyWorldState(CelestialObject parent, CelestialObject child,

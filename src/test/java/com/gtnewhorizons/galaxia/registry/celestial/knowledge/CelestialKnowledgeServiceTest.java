@@ -13,6 +13,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialSystemAdapters;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
@@ -33,6 +34,8 @@ final class CelestialKnowledgeServiceTest {
 
     @BeforeEach
     void clearKnowledge() {
+        CelestialKnowledgeService.resetProvidersForTesting();
+        CelestialSystemAdapters.register();
         CelestialKnowledgeService.clear();
     }
 
@@ -82,6 +85,7 @@ final class CelestialKnowledgeServiceTest {
 
     @Test
     void genericLookupFailsLoudlyForUnresolvableKeys() {
+        CelestialKnowledgeService.resetProvidersForTesting();
         CelestialObjectKey missingAsteroid = CelestialObjectKey.minorBody(
             new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN + 999999));
 

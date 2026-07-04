@@ -7,11 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialSystemAdapters;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
@@ -23,6 +25,12 @@ import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
 final class OrbitalMechanicsTest {
 
     private static final double EPSILON = 1.0e-9;
+
+    @BeforeEach
+    void registerOrbitalAdapters() {
+        OrbitalMechanics.resetMinorBodyResolversForTesting();
+        CelestialSystemAdapters.register();
+    }
 
     @Test
     void asteroidFieldChildUsesBeltPhaseInsteadOfOrbitingAroundBeltPoint() {
