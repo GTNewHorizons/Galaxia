@@ -60,8 +60,8 @@ final class AsteroidDynamicCelestialObjectTest {
         CelestialObject small = asteroidBySizeClass(AsteroidSizeClass.SMALL);
 
         assertEquals(0.04, large.spriteSize(), 0.000001);
-        assertEquals(large.spriteSize() / 4.0, medium.spriteSize(), 0.000001);
-        assertEquals(large.spriteSize() / 16.0, small.spriteSize(), 0.000001);
+        assertEquals(large.spriteSize() / 2.0, medium.spriteSize(), 0.000001);
+        assertEquals(large.spriteSize() / 4.0, small.spriteSize(), 0.000001);
     }
 
     @Test
