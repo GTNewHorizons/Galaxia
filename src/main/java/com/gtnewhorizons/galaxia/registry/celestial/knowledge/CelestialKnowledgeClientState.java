@@ -1,93 +1,54 @@
 package com.gtnewhorizons.galaxia.registry.celestial.knowledge;
 
-import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
-import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanCompletionSnapshot;
-import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
 
 /**
  * Client-side read model for object knowledge synced from the server.
  *
- * Asteroid snapshots are the first producer, but the state is intentionally
- * anchored in the celestial knowledge package so future discoverable moons or
- * surfaces do not need their own static client stores.
+ * Typed client providers feed this generic read model. The starmap can then ask
+ * for discovery by key without knowing which domain system produced that state.
  */
 public final class CelestialKnowledgeClientState {
 
-    private static List<AsteroidFieldKnowledgeSnapshot> snapshots = List.of();
-    private static List<AsteroidSatelliteScanSnapshot> scanSnapshots = List.of();
-    private static List<AsteroidSatelliteScanCompletionSnapshot> scanCompletions = List.of();
+    private static final Map<Class<?>, Map<CelestialObjectKey, DiscoveryState>> DISCOVERY_BY_SOURCE = new LinkedHashMap<>();
 
     private CelestialKnowledgeClientState() {}
-
-    public static List<AsteroidFieldKnowledgeSnapshot> asteroidFieldSnapshots() {
-        return snapshots;
-    }
-
-    public static List<AsteroidSatelliteScanSnapshot> scanSnapshots() {
-        return scanSnapshots;
-    }
-
-    public static List<AsteroidSatelliteScanCompletionSnapshot> scanCompletions() {
-        return scanCompletions;
-    }
 
     public static CelestialDiscoveryView discoveryView() {
         return CelestialKnowledgeClientState::discoveryState;
     }
 
-    public static void updateAsteroidFields(List<AsteroidFieldKnowledgeSnapshot> newSnapshots) {
-        snapshots = List.copyOf(newSnapshots == null ? List.of() : newSnapshots);
-    }
-
-    public static void updateScans(List<AsteroidSatelliteScanSnapshot> newScanSnapshots,
-        List<AsteroidSatelliteScanCompletionSnapshot> newScanCompletions) {
-        scanSnapshots = List.copyOf(newScanSnapshots == null ? List.of() : newScanSnapshots);
-        scanCompletions = List.copyOf(newScanCompletions == null ? List.of() : newScanCompletions);
-    }
-
-    public static Optional<AsteroidOreKnowledgeState> asteroidOreKnowledge(CelestialObjectKey key) {
-        if (key == null || !key.isMinorBody()) return Optional.empty();
-        for (AsteroidFieldKnowledgeSnapshot snapshot : snapshots) {
-            if (snapshot.beltId() != key.minorBodyId()
-                .parentBodyId()) continue;
-            for (AsteroidFieldKnowledgeSnapshot.Entry entry : snapshot.entries()) {
-                if (entry.index() == key.minorBodyId()
-                    .index()) return Optional.of(entry.oreKnowledgeState());
-            }
+    public static void updateDiscoverySource(Class<?> source, Map<CelestialObjectKey, DiscoveryState> states) {
+        if (source == null) throw new IllegalArgumentException("source is required");
+        Map<CelestialObjectKey, DiscoveryState> copy = new LinkedHashMap<>();
+        if (states != null) {
+            states.forEach((key, state) -> {
+                if (key == null) throw new IllegalArgumentException("discovery key cannot be null");
+                if (state == null) throw new IllegalArgumentException("discovery state cannot be null");
+                copy.put(key, state);
+            });
         }
-        return Optional.empty();
+        if (copy.isEmpty()) {
+            DISCOVERY_BY_SOURCE.remove(source);
+        } else {
+            DISCOVERY_BY_SOURCE.put(source, Map.copyOf(copy));
+        }
     }
 
     public static Optional<DiscoveryState> discoveryState(CelestialObjectKey key) {
-        if (key == null || !key.isMinorBody()) return Optional.empty();
-        for (AsteroidFieldKnowledgeSnapshot snapshot : snapshots) {
-            if (snapshot.beltId() != key.minorBodyId()
-                .parentBodyId()) continue;
-            for (AsteroidFieldKnowledgeSnapshot.Entry entry : snapshot.entries()) {
-                if (entry.index() == key.minorBodyId()
-                    .index()) return Optional.of(entry.detectionState());
-            }
-        }
-        return Optional.empty();
-    }
-
-    public static Optional<AsteroidSatelliteScanSnapshot> scanSnapshot(CelestialObjectKey key) {
-        if (key == null || !key.isMinorBody()) return Optional.empty();
-        return scanSnapshots.stream()
-            .filter(
-                snapshot -> snapshot.asteroidId()
-                    .equals(key.minorBodyId()))
+        if (key == null) return Optional.empty();
+        return DISCOVERY_BY_SOURCE.values()
+            .stream()
+            .map(source -> source.get(key))
+            .filter(state -> state != null)
             .findFirst();
     }
 
     public static void clear() {
-        snapshots = List.of();
-        scanSnapshots = List.of();
-        scanCompletions = List.of();
+        DISCOVERY_BY_SOURCE.clear();
     }
 }

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanPass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
@@ -19,6 +20,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledge
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanCompletionSnapshot;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
+import com.gtnewhorizons.galaxia.registry.satellite.AsteroidScanClientState;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteBandwidthFormatter;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataKey;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
@@ -140,7 +142,7 @@ final class SatelliteNetworkSyncPacketTest {
         new SatelliteNetworkSyncPacket.Handler()
             .onMessage(new SatelliteNetworkSyncPacket(state, List.of(snapshot)), null);
 
-        assertEquals(List.of(snapshot), CelestialKnowledgeClientState.asteroidFieldSnapshots());
+        assertEquals(List.of(snapshot), AsteroidFieldClientKnowledgeState.snapshots());
         CelestialKnowledgeClientState.clear();
     }
 
@@ -166,8 +168,8 @@ final class SatelliteNetworkSyncPacketTest {
         new SatelliteNetworkSyncPacket.Handler()
             .onMessage(new SatelliteNetworkSyncPacket(state, List.of(), List.of(progress), List.of(completion)), null);
 
-        assertEquals(List.of(progress), CelestialKnowledgeClientState.scanSnapshots());
-        assertEquals(List.of(completion), CelestialKnowledgeClientState.scanCompletions());
+        assertEquals(List.of(progress), AsteroidScanClientState.scanSnapshots());
+        assertEquals(List.of(completion), AsteroidScanClientState.scanCompletions());
         CelestialKnowledgeClientState.clear();
     }
 
@@ -180,10 +182,10 @@ final class SatelliteNetworkSyncPacketTest {
                     1,
                     DiscoveryState.DISCOVERED,
                     AsteroidOreKnowledgeState.UNKNOWN)));
-        CelestialKnowledgeClientState.updateAsteroidFields(List.of(snapshot));
+        AsteroidFieldClientKnowledgeState.updateFields(List.of(snapshot));
 
         AssetSyncPacket.Handler.handleClientSync(AssetSyncPacket.clear());
 
-        assertEquals(List.of(), CelestialKnowledgeClientState.asteroidFieldSnapshots());
+        assertEquals(List.of(), AsteroidFieldClientKnowledgeState.snapshots());
     }
 }

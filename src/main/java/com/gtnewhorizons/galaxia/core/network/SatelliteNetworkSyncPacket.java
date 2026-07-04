@@ -8,14 +8,15 @@ import java.util.UUID;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanPass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanCompletionSnapshot;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
+import com.gtnewhorizons.galaxia.registry.satellite.AsteroidScanClientState;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataKey;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkClientState;
@@ -236,8 +237,8 @@ public final class SatelliteNetworkSyncPacket implements IMessage {
         @Override
         public IMessage onMessage(SatelliteNetworkSyncPacket message, MessageContext ctx) {
             SatelliteNetworkClientState.update(message.state);
-            CelestialKnowledgeClientState.updateAsteroidFields(message.asteroidKnowledge);
-            CelestialKnowledgeClientState.updateScans(message.asteroidScans, message.asteroidScanCompletions);
+            AsteroidFieldClientKnowledgeState.updateFields(message.asteroidKnowledge);
+            AsteroidScanClientState.updateScans(message.asteroidScans, message.asteroidScanCompletions);
             return null;
         }
     }
