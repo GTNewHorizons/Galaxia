@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.orbital;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;

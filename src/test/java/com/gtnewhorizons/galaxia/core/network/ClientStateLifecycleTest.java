@@ -34,8 +34,7 @@ final class ClientStateLifecycleTest {
 
     private static final UUID TEAM = new UUID(1L, 2L);
     private static final MinorCelestialBodyId ASTEROID_ID = new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 3);
-    private static final CelestialObjectKey ASTEROID_KEY = CelestialObjectKey
-        .minorBody(ASTEROID_ID);
+    private static final CelestialObjectKey ASTEROID_KEY = CelestialObjectKey.minorBody(ASTEROID_ID);
 
     @BeforeAll
     static void init() {
@@ -88,11 +87,21 @@ final class ClientStateLifecycleTest {
         assertTrue(
             CelestialAssetStore.CLIENT.allAssetsInternal()
                 .isEmpty());
-        assertTrue(CelestialKnowledgeClientState.discoveryState(ASTEROID_KEY).isEmpty());
-        assertTrue(AsteroidFieldClientKnowledgeState.snapshots().isEmpty());
-        assertTrue(AsteroidFieldClientKnowledgeState.oreKnowledge(ASTEROID_KEY).isEmpty());
-        assertTrue(AsteroidScanClientState.scanSnapshots().isEmpty());
-        assertTrue(AsteroidScanClientState.scanCompletions().isEmpty());
+        assertTrue(
+            CelestialKnowledgeClientState.discoveryState(ASTEROID_KEY)
+                .isEmpty());
+        assertTrue(
+            AsteroidFieldClientKnowledgeState.snapshots()
+                .isEmpty());
+        assertTrue(
+            AsteroidFieldClientKnowledgeState.oreKnowledge(ASTEROID_KEY)
+                .isEmpty());
+        assertTrue(
+            AsteroidScanClientState.scanSnapshots()
+                .isEmpty());
+        assertTrue(
+            AsteroidScanClientState.scanCompletions()
+                .isEmpty());
         assertEquals(
             0,
             SatelliteNetworkClientState.current()

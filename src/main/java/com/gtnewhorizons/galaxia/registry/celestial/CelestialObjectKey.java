@@ -4,8 +4,6 @@ import javax.annotation.Nonnull;
 
 import net.minecraft.nbt.NBTTagCompound;
 
-import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
-
 /**
  * Stable identity for anything that can own assets or appear as a starmap body.
  *

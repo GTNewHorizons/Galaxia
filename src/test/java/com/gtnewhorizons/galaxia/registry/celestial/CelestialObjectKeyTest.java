@@ -10,8 +10,6 @@ import net.minecraft.nbt.NBTTagCompound;
 
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
-
 final class CelestialObjectKeyTest {
 
     @Test

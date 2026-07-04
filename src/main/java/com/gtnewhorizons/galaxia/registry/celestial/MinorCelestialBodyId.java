@@ -2,8 +2,6 @@ package com.gtnewhorizons.galaxia.registry.celestial;
 
 import javax.annotation.Nonnull;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-
 public record MinorCelestialBodyId(@Nonnull CelestialObjectId parentBodyId, int index) {
 
     public MinorCelestialBodyId {
