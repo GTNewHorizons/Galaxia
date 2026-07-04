@@ -3,7 +3,7 @@ package com.gtnewhorizons.galaxia.registry.satellite;
 import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
 
 public record AsteroidSatelliteScanCompletionSnapshot(@Nonnull CelestialObjectId beltId,
     @Nonnull MinorCelestialBodyId anchorAsteroidId, int generationVersion) {

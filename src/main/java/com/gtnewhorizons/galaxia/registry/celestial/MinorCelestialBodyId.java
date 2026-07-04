@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
+package com.gtnewhorizons.galaxia.registry.celestial;
 
 import javax.annotation.Nonnull;
 

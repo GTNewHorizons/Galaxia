@@ -26,7 +26,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolv
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanOrder;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanPass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanScope;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryWork;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.progress.ProgressJobRunner;

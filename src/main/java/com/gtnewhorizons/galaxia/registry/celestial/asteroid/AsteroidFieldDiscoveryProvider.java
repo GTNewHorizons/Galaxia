@@ -8,6 +8,7 @@ import javax.annotation.Nonnull;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeProvider;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 

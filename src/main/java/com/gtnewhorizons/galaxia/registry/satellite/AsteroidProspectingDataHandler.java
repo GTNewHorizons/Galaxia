@@ -70,7 +70,7 @@ public final class AsteroidProspectingDataHandler implements SatelliteDataJobSer
                         () -> new IllegalStateException("Discovery work targeted unknown asteroid: " + asteroidId)));
     }
 
-    private static com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId asteroidNode(
+    private static com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId asteroidNode(
         CelestialDiscoveryWork work) {
         if (work instanceof AsteroidFieldDiscoveryWork asteroidWork) return asteroidWork.asteroidId();
         throw new IllegalArgumentException("Expected asteroid field discovery work");

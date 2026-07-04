@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
 
 final class AsteroidNodeMaterializer {
 
