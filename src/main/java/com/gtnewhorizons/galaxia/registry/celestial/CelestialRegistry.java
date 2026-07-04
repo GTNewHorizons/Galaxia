@@ -16,7 +16,6 @@ import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
@@ -24,6 +23,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.AsteroidCon
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.GeneratedAsteroids;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.LoreAsteroids;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.UniqueAsteroids;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryView;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.PlayableDimensionProfile;
@@ -520,24 +520,24 @@ public final class CelestialRegistry {
     }
 
     public static List<CelestialObject> getAsteroidChildren(CelestialObjectKey parentId) {
-        return getAsteroidChildren(parentId, List.of());
+        return getAsteroidChildren(parentId, CelestialDiscoveryView.empty());
     }
 
     public static List<CelestialObject> getAsteroidChildren(CelestialObjectKey parentId,
-        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge) {
-        return getAsteroidChildren(parentId, asteroidKnowledge, false);
+        CelestialDiscoveryView discoveryView) {
+        return getAsteroidChildren(parentId, discoveryView, false);
     }
 
     public static List<CelestialObject> getAsteroidChildren(CelestialObjectKey parentId,
-        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge, boolean includeHiddenMinorBodies) {
+        CelestialDiscoveryView discoveryView, boolean includeHiddenMinorBodies) {
         registerDefaults();
         if (parentId == null || !parentId.isRegistered()) return List.of();
         return Collections.unmodifiableList(
-            resolveKnownMinorBodies(parentId.registeredBodyId(), asteroidKnowledge, includeHiddenMinorBodies));
+            resolveKnownMinorBodies(parentId.registeredBodyId(), discoveryView, includeHiddenMinorBodies));
     }
 
     private static List<CelestialObject> resolveKnownMinorBodies(CelestialObjectId parentId,
-        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge, boolean includeHiddenMinorBodies) {
+        CelestialDiscoveryView discoveryView, boolean includeHiddenMinorBodies) {
         CelestialObject parent = REGISTRATIONS.get(CelestialObjectKey.registered(parentId));
         if (parent == null || parent.properties()
             .asteroidFieldProfile() == null) {
@@ -546,25 +546,19 @@ public final class CelestialRegistry {
 
         AsteroidFieldProfile profile = parent.properties()
             .asteroidFieldProfile();
-        Optional<AsteroidFieldKnowledgeSnapshot> snapshot = asteroidKnowledge == null ? Optional.empty()
-            : asteroidKnowledge.stream()
-                .filter(candidate -> candidate.beltId() == parentId)
-                .findFirst();
         return AsteroidFieldResolver.resolveAll(parentId, profile)
             .stream()
-            .filter(node -> includeHiddenMinorBodies || isVisibleMinorBody(node, snapshot.orElse(null)))
+            .filter(node -> includeHiddenMinorBodies || isVisibleMinorBody(node, discoveryView))
             .map(node -> toDynamicAsteroidObject(node, profile))
             .toList();
     }
 
-    private static boolean isVisibleMinorBody(AsteroidFieldNode node, AsteroidFieldKnowledgeSnapshot snapshot) {
-        if (snapshot == null) return AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.DISCOVERED;
-        return snapshot.entries()
-            .stream()
-            .filter(entry -> entry.index() == node.index())
-            .findFirst()
-            .map(entry -> entry.detectionState() == DiscoveryState.DISCOVERED)
-            .orElseGet(() -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.DISCOVERED);
+    private static boolean isVisibleMinorBody(AsteroidFieldNode node, CelestialDiscoveryView discoveryView) {
+        DiscoveryState initialState = AsteroidFieldResolver.initialDetectionState(node);
+        DiscoveryState state = discoveryView == null ? initialState
+            : discoveryView.discoveryState(CelestialObjectKey.minorBody(node.id()))
+                .orElse(initialState);
+        return state == DiscoveryState.DISCOVERED;
     }
 
     public static List<CelestialObject> getRoots() {

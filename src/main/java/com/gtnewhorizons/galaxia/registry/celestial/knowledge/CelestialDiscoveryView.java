@@ -9,4 +9,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 public interface CelestialDiscoveryView {
 
     Optional<DiscoveryState> discoveryState(@Nonnull CelestialObjectKey key);
+
+    static CelestialDiscoveryView empty() {
+        return key -> Optional.empty();
+    }
 }

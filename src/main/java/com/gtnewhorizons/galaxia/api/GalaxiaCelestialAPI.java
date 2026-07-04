@@ -12,7 +12,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryView;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 
@@ -78,15 +78,15 @@ public final class GalaxiaCelestialAPI {
     }
 
     public static List<CelestialObject> getAsteroidChildren(CelestialObjectId parentId,
-        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge) {
+        CelestialDiscoveryView discoveryView) {
         return parentId == null ? List.of()
-            : getAsteroidChildren(CelestialObjectKey.registered(parentId), asteroidKnowledge);
+            : getAsteroidChildren(CelestialObjectKey.registered(parentId), discoveryView);
     }
 
     public static List<CelestialObject> getAsteroidChildren(CelestialObjectId parentId,
-        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge, boolean includeHiddenMinorBodies) {
+        CelestialDiscoveryView discoveryView, boolean includeHiddenMinorBodies) {
         return parentId == null ? List.of()
-            : getAsteroidChildren(CelestialObjectKey.registered(parentId), asteroidKnowledge, includeHiddenMinorBodies);
+            : getAsteroidChildren(CelestialObjectKey.registered(parentId), discoveryView, includeHiddenMinorBodies);
     }
 
     public static List<CelestialObject> getChildren(CelestialObjectKey parentId) {
@@ -102,13 +102,13 @@ public final class GalaxiaCelestialAPI {
     }
 
     public static List<CelestialObject> getAsteroidChildren(CelestialObjectKey parentId,
-        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge) {
-        return CelestialRegistry.getAsteroidChildren(parentId, asteroidKnowledge);
+        CelestialDiscoveryView discoveryView) {
+        return CelestialRegistry.getAsteroidChildren(parentId, discoveryView);
     }
 
     public static List<CelestialObject> getAsteroidChildren(CelestialObjectKey parentId,
-        List<AsteroidFieldKnowledgeSnapshot> asteroidKnowledge, boolean includeHiddenMinorBodies) {
-        return CelestialRegistry.getAsteroidChildren(parentId, asteroidKnowledge, includeHiddenMinorBodies);
+        CelestialDiscoveryView discoveryView, boolean includeHiddenMinorBodies) {
+        return CelestialRegistry.getAsteroidChildren(parentId, discoveryView, includeHiddenMinorBodies);
     }
 
     public static Map<CelestialObjectKey, CelestialObject> getAllBodies() {
