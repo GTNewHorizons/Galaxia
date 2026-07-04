@@ -7,11 +7,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
@@ -19,6 +19,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledg
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AuthoredAsteroidDefinition;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 final class AsteroidProspectingDataHandlerTest {
@@ -26,20 +27,22 @@ final class AsteroidProspectingDataHandlerTest {
     private static final UUID TEAM = UUID.fromString("00000000-0000-0000-0000-000000000121");
     private static final CelestialObjectId BELT = CelestialObjectId.FROZEN_BELT;
 
+    @AfterEach
+    void clearKnowledge() {
+        CelestialKnowledgeService.clear();
+    }
+
     @Test
     void prospectingCompletionDetectsHiddenAsteroidsBeforeRevealingOreProfiles() {
-        AsteroidFieldKnowledgeStore store = new AsteroidFieldKnowledgeStore();
         AsteroidFieldProfile profile = profile();
         AsteroidProspectingDataHandler handler = new AsteroidProspectingDataHandler(
-            store,
             bodyId -> bodyId == BELT ? Optional.of(profile) : Optional.empty());
         SatelliteDataJobService.ProductionEvent event = prospectingEvent(BELT);
 
         Optional<AsteroidFieldNode> detected = handler.handle(event);
 
         assertTrue(detected.isPresent());
-        AsteroidFieldKnowledge knowledge = store.get(TEAM, BELT)
-            .orElseThrow();
+        AsteroidFieldKnowledge knowledge = CelestialKnowledgeService.asteroidFieldKnowledge(TEAM, BELT, profile);
         assertEquals(
             DiscoveryState.DISCOVERED,
             knowledge.entryFor(
@@ -76,14 +79,13 @@ final class AsteroidProspectingDataHandlerTest {
 
     @Test
     void nonAsteroidProspectingCompletionDoesNotCreateKnowledgeState() {
-        AsteroidFieldKnowledgeStore store = new AsteroidFieldKnowledgeStore();
-        AsteroidProspectingDataHandler handler = new AsteroidProspectingDataHandler(store, bodyId -> Optional.empty());
+        AsteroidProspectingDataHandler handler = new AsteroidProspectingDataHandler(bodyId -> Optional.empty());
 
         Optional<AsteroidFieldNode> result = handler.handle(prospectingEvent(CelestialObjectId.MARS));
 
         assertTrue(result.isEmpty());
         assertTrue(
-            store.get(TEAM, CelestialObjectId.MARS)
+            CelestialKnowledgeService.asteroidFieldSnapshots(TEAM)
                 .isEmpty());
     }
 

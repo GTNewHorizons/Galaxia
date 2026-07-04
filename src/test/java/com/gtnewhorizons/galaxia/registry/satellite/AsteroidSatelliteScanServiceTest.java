@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -14,7 +15,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
@@ -25,6 +25,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AuthoredAsteroidDefinition;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
@@ -40,12 +41,15 @@ final class AsteroidSatelliteScanServiceTest {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
     }
 
+    @AfterEach
+    void clearKnowledge() {
+        CelestialKnowledgeService.clear();
+    }
+
     @Test
     void prospectingSatelliteAnchoredOnAsteroidRunsDetectionSignatureAndProfilePasses() {
         AsteroidFieldProfile profile = profile();
-        AsteroidFieldKnowledgeStore knowledgeStore = new AsteroidFieldKnowledgeStore();
         AsteroidSatelliteScanService service = new AsteroidSatelliteScanService(
-            knowledgeStore,
             bodyId -> bodyId == BELT ? Optional.of(profile) : Optional.empty());
         AsteroidFieldNode anchor = hiddenAnchor(profile);
         CelestialAsset satellite = prospectingSatellite(anchor.id());
@@ -55,7 +59,7 @@ final class AsteroidSatelliteScanServiceTest {
                 .isEmpty());
         assertEquals(
             DiscoveryState.HIDDEN,
-            knowledgeStore.getOrCreate(TEAM, BELT, profile)
+            CelestialKnowledgeService.asteroidFieldKnowledge(TEAM, BELT, profile)
                 .entryFor(anchor.id())
                 .detectionState());
 
@@ -63,8 +67,7 @@ final class AsteroidSatelliteScanServiceTest {
             List.of(
                 new AsteroidSatelliteScanService.ScanResult(BELT, anchor.id(), AsteroidSatelliteScanPass.DETECTION)),
             service.tick(TEAM, List.of(satellite), 1));
-        AsteroidFieldKnowledge knowledge = knowledgeStore.get(TEAM, BELT)
-            .orElseThrow();
+        AsteroidFieldKnowledge knowledge = CelestialKnowledgeService.asteroidFieldKnowledge(TEAM, BELT, profile);
         assertEquals(
             DiscoveryState.DISCOVERED,
             knowledge.entryFor(anchor.id())
@@ -100,9 +103,7 @@ final class AsteroidSatelliteScanServiceTest {
     @Test
     void scanUsesInnerToOuterOrderAndFinishesSignaturePassBeforeProfilePass() {
         AsteroidFieldProfile profile = profile(3);
-        AsteroidFieldKnowledgeStore knowledgeStore = new AsteroidFieldKnowledgeStore();
         AsteroidSatelliteScanService service = new AsteroidSatelliteScanService(
-            knowledgeStore,
             bodyId -> bodyId == BELT ? Optional.of(profile) : Optional.empty());
         List<AsteroidFieldNode> innerToOuter = AsteroidFieldResolver.resolveAll(BELT, profile)
             .stream()
@@ -120,8 +121,7 @@ final class AsteroidSatelliteScanServiceTest {
                 service.tick(TEAM, List.of(satellite), AsteroidSatelliteScanPass.DETECTION.durationTicks()));
         }
 
-        AsteroidFieldKnowledge knowledge = knowledgeStore.get(TEAM, BELT)
-            .orElseThrow();
+        AsteroidFieldKnowledge knowledge = CelestialKnowledgeService.asteroidFieldKnowledge(TEAM, BELT, profile);
         assertEquals(
             List.of(
                 new AsteroidSatelliteScanService.ScanResult(
@@ -179,9 +179,7 @@ final class AsteroidSatelliteScanServiceTest {
             .findFirst()
             .orElseThrow()
             .id();
-        AsteroidFieldKnowledgeStore knowledgeStore = new AsteroidFieldKnowledgeStore();
         AsteroidSatelliteScanService service = new AsteroidSatelliteScanService(
-            knowledgeStore,
             bodyId -> bodyId == BELT ? Optional.of(profile) : Optional.empty());
         CelestialAsset satellite = prospectingSatellite(anchor.id());
 
@@ -191,8 +189,7 @@ final class AsteroidSatelliteScanServiceTest {
             AsteroidSatelliteScanPass.DETECTION.durationTicks() + AsteroidSatelliteScanPass.SIGNATURE.durationTicks()
                 + AsteroidSatelliteScanPass.PROFILE.durationTicks());
 
-        AsteroidFieldKnowledge knowledge = knowledgeStore.get(TEAM, BELT)
-            .orElseThrow();
+        AsteroidFieldKnowledge knowledge = CelestialKnowledgeService.asteroidFieldKnowledge(TEAM, BELT, profile);
         assertTrue(!results.isEmpty());
         assertTrue(
             results.stream()
@@ -208,9 +205,7 @@ final class AsteroidSatelliteScanServiceTest {
     @Test
     void restoredProgressContinuesPartiallyCompletedScan() {
         AsteroidFieldProfile profile = profile();
-        AsteroidFieldKnowledgeStore firstKnowledgeStore = new AsteroidFieldKnowledgeStore();
         AsteroidSatelliteScanService firstService = new AsteroidSatelliteScanService(
-            firstKnowledgeStore,
             bodyId -> bodyId == BELT ? Optional.of(profile) : Optional.empty());
         AsteroidFieldNode anchor = hiddenAnchor(profile);
         CelestialAsset satellite = prospectingSatellite(anchor.id());
@@ -219,9 +214,7 @@ final class AsteroidSatelliteScanServiceTest {
             firstService.tick(TEAM, List.of(satellite), 600)
                 .isEmpty());
 
-        AsteroidFieldKnowledgeStore restoredKnowledgeStore = new AsteroidFieldKnowledgeStore();
         AsteroidSatelliteScanService restoredService = new AsteroidSatelliteScanService(
-            restoredKnowledgeStore,
             bodyId -> bodyId == BELT ? Optional.of(profile) : Optional.empty());
         restoredService.restore(TEAM, firstService.snapshots(TEAM));
 
@@ -234,9 +227,7 @@ final class AsteroidSatelliteScanServiceTest {
     @Test
     void completedAnchorStopsFutureScanWorkAfterRestore() {
         AsteroidFieldProfile profile = profile();
-        AsteroidFieldKnowledgeStore firstKnowledgeStore = new AsteroidFieldKnowledgeStore();
         AsteroidSatelliteScanService firstService = new AsteroidSatelliteScanService(
-            firstKnowledgeStore,
             bodyId -> bodyId == BELT ? Optional.of(profile) : Optional.empty());
         AsteroidFieldNode anchor = hiddenAnchor(profile);
         CelestialAsset satellite = prospectingSatellite(anchor.id());
@@ -251,7 +242,6 @@ final class AsteroidSatelliteScanServiceTest {
             firstService.completionSnapshots(TEAM));
 
         AsteroidSatelliteScanService restoredService = new AsteroidSatelliteScanService(
-            new AsteroidFieldKnowledgeStore(),
             bodyId -> bodyId == BELT ? Optional.of(profile) : Optional.empty());
         restoredService.restoreCompletions(TEAM, firstService.completionSnapshots(TEAM));
 

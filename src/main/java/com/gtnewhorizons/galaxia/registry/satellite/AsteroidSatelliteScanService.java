@@ -15,12 +15,14 @@ import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeAccess;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanOrder;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanScope;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.progress.ProgressJobRunner;
 
@@ -39,16 +41,14 @@ public final class AsteroidSatelliteScanService {
         0.0,
         0.0);
 
-    private final AsteroidFieldKnowledgeAccess knowledgeAccess;
     private final Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver;
     private final ProgressJobRunner<ScanKey, ScanWork, ScanResult> progressRunner = new ProgressJobRunner<>();
     // Completion is keyed by profile generation so a future belt reshuffle can
     // rescan, while an unchanged field stays permanently idle after a full pass.
     private final Set<CompletionKey> completions = new HashSet<>();
 
-    public AsteroidSatelliteScanService(@Nonnull AsteroidFieldKnowledgeAccess knowledgeAccess,
+    public AsteroidSatelliteScanService(
         @Nonnull Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver) {
-        this.knowledgeAccess = knowledgeAccess;
         this.profileResolver = profileResolver;
     }
 
@@ -186,6 +186,8 @@ public final class AsteroidSatelliteScanService {
             return List.of();
         }
 
+        AsteroidFieldKnowledge knowledge = CelestialKnowledgeService
+            .asteroidFieldKnowledge(teamId, beltId, profile.get());
         Predicate<AsteroidFieldNode> scope = scanScope(beltId, profile.get(), anchorId);
         CompletionKey completionKey = new CompletionKey(
             teamId,
@@ -199,8 +201,8 @@ public final class AsteroidSatelliteScanService {
         }
 
         ProgressJobRunner.TickResult<ScanResult> result = progressRunner
-            .tick(key, elapsedTicks, () -> nextWork(teamId, beltId, profile.get(), scope), work -> {
-                completeWork(teamId, beltId, profile.get(), work, scope);
+            .tick(key, elapsedTicks, () -> nextWork(knowledge, scope), work -> {
+                completeWork(knowledge, work, scope);
                 return new ScanResult(beltId, work.asteroidId(), work.pass());
             });
         if (result.idle()) {
@@ -220,30 +222,31 @@ public final class AsteroidSatelliteScanService {
             .withinRadius(profile, LOCAL_BELT_REFERENCE, center, profile.satelliteScanRadius());
     }
 
-    private Optional<ScanWork> nextWork(UUID teamId, CelestialObjectId beltId, AsteroidFieldProfile profile,
-        Predicate<AsteroidFieldNode> scope) {
+    private static Optional<ScanWork> nextWork(AsteroidFieldKnowledge knowledge, Predicate<AsteroidFieldNode> scope) {
         // Priority matters for gameplay: the fast detection pass must complete
         // before slower prospecting begins, otherwise hidden bodies can starve
         // behind ore work on already known asteroids.
-        Optional<AsteroidFieldNode> detection = knowledgeAccess.nextDetectionCandidate(teamId, beltId, profile, scope);
+        Optional<AsteroidFieldNode> detection = knowledge
+            .nextDetectionCandidate(scope, AsteroidFieldScanOrder.innerToOuter());
         if (detection.isPresent())
             return detection.map(node -> ScanWork.from(AsteroidSatelliteScanPass.DETECTION, node));
 
-        Optional<AsteroidFieldNode> signature = knowledgeAccess.nextSignatureCandidate(teamId, beltId, profile, scope);
+        Optional<AsteroidFieldNode> signature = knowledge
+            .nextSignatureCandidate(scope, AsteroidFieldScanOrder.innerToOuter());
         if (signature.isPresent())
             return signature.map(node -> ScanWork.from(AsteroidSatelliteScanPass.SIGNATURE, node));
 
-        return knowledgeAccess.nextProfileCandidate(teamId, beltId, profile, scope)
+        return knowledge.nextProfileCandidate(scope, AsteroidFieldScanOrder.innerToOuter())
             .map(node -> ScanWork.from(AsteroidSatelliteScanPass.PROFILE, node));
     }
 
-    private void completeWork(UUID teamId, CelestialObjectId beltId, AsteroidFieldProfile profile, ScanWork work,
+    private static void completeWork(AsteroidFieldKnowledge knowledge, ScanWork work,
         Predicate<AsteroidFieldNode> scope) {
         if (work.pass() == AsteroidSatelliteScanPass.DETECTION) {
-            knowledgeAccess.detect(teamId, beltId, profile, work.asteroidId());
+            knowledge.detect(work.asteroidId());
             return;
         }
-        knowledgeAccess.prospect(teamId, beltId, profile, work.asteroidId(), scope);
+        knowledge.prospect(work.asteroidId(), scope);
     }
 
     public record ScanResult(@Nonnull CelestialObjectId beltId, @Nonnull MinorCelestialBodyId asteroidId,

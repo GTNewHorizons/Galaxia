@@ -17,7 +17,8 @@ final class AsteroidFieldKnowledgeTest {
 
     @Test
     void initialKnowledgeDetectsOnlyLargeAsteroids() {
-        AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledge.initialize(CelestialObjectId.FROZEN_BELT, profile());
+        AsteroidFieldKnowledge knowledge = MutableAsteroidFieldKnowledge
+            .initialize(CelestialObjectId.FROZEN_BELT, profile());
 
         AsteroidFieldNode large = node(knowledge, AsteroidSizeClass.LARGE);
         AsteroidFieldNode medium = node(knowledge, AsteroidSizeClass.MEDIUM);
@@ -47,7 +48,8 @@ final class AsteroidFieldKnowledgeTest {
 
     @Test
     void snapshotDoesNotExposeHiddenAsteroidIndexes() {
-        AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledge.initialize(CelestialObjectId.FROZEN_BELT, profile());
+        AsteroidFieldKnowledge knowledge = MutableAsteroidFieldKnowledge
+            .initialize(CelestialObjectId.FROZEN_BELT, profile());
         AsteroidFieldNode hidden = node(knowledge, AsteroidSizeClass.MEDIUM);
 
         AsteroidFieldKnowledgeSnapshot snapshot = knowledge.snapshot(CelestialObjectId.FROZEN_BELT);
@@ -64,7 +66,8 @@ final class AsteroidFieldKnowledgeTest {
 
     @Test
     void detectionWorkBlocksProspectingUntilEveryAsteroidIsDetected() {
-        AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledge.initialize(CelestialObjectId.FROZEN_BELT, profile());
+        AsteroidFieldKnowledge knowledge = MutableAsteroidFieldKnowledge
+            .initialize(CelestialObjectId.FROZEN_BELT, profile());
         AsteroidFieldNode medium = node(knowledge, AsteroidSizeClass.MEDIUM);
         AsteroidFieldNode small = node(knowledge, AsteroidSizeClass.SMALL);
 
@@ -103,7 +106,8 @@ final class AsteroidFieldKnowledgeTest {
 
     @Test
     void prospectingAdvancesOreKnowledgeFromSignatureToProfile() {
-        AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledge.initialize(CelestialObjectId.FROZEN_BELT, profile());
+        AsteroidFieldKnowledge knowledge = MutableAsteroidFieldKnowledge
+            .initialize(CelestialObjectId.FROZEN_BELT, profile());
         AsteroidFieldNode medium = node(knowledge, AsteroidSizeClass.MEDIUM);
         AsteroidFieldNode small = node(knowledge, AsteroidSizeClass.SMALL);
 
@@ -126,7 +130,8 @@ final class AsteroidFieldKnowledgeTest {
 
     @Test
     void scopedProspectingOnlyWaitsForDetectionWorkInsideTheSameScope() {
-        AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledge.initialize(CelestialObjectId.FROZEN_BELT, profile());
+        AsteroidFieldKnowledge knowledge = MutableAsteroidFieldKnowledge
+            .initialize(CelestialObjectId.FROZEN_BELT, profile());
         AsteroidFieldNode large = node(knowledge, AsteroidSizeClass.LARGE);
         AsteroidFieldNode medium = node(knowledge, AsteroidSizeClass.MEDIUM);
         Predicate<AsteroidFieldNode> largeOnly = node -> node.id()
@@ -195,7 +200,7 @@ final class AsteroidFieldKnowledgeTest {
             .authoredAsteroid(1, AsteroidNodeKind.LORE, "Karnyx", DiscoveryState.DISCOVERED)
             .build();
 
-        AsteroidFieldKnowledge restored = AsteroidFieldKnowledge.fromSnapshot(
+        AsteroidFieldKnowledge restored = MutableAsteroidFieldKnowledge.fromSnapshot(
             CelestialObjectId.FROZEN_BELT,
             newProfile,
             oldKnowledge.snapshot(CelestialObjectId.FROZEN_BELT));
@@ -232,7 +237,7 @@ final class AsteroidFieldKnowledgeTest {
             .oreProfile(new AsteroidOreProfile("volatile_ice", List.of("ice", "sulfur")))
             .build();
 
-        AsteroidFieldKnowledge restored = AsteroidFieldKnowledge.fromSnapshot(
+        AsteroidFieldKnowledge restored = MutableAsteroidFieldKnowledge.fromSnapshot(
             CelestialObjectId.FROZEN_BELT,
             newProfile,
             oldKnowledge.snapshot(CelestialObjectId.FROZEN_BELT));
@@ -282,7 +287,7 @@ final class AsteroidFieldKnowledgeTest {
             .build();
         MinorCelestialBodyId savedId = new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 1);
 
-        AsteroidFieldKnowledge restored = AsteroidFieldKnowledge.fromSnapshot(
+        AsteroidFieldKnowledge restored = MutableAsteroidFieldKnowledge.fromSnapshot(
             CelestialObjectId.FROZEN_BELT,
             newProfile,
             oldKnowledge.snapshot(CelestialObjectId.FROZEN_BELT));

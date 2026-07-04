@@ -7,27 +7,26 @@ import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeAccess;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledge;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
 
 public final class AsteroidProspectingDataHandler implements SatelliteDataJobService.ProductionListener {
 
-    private final AsteroidFieldKnowledgeAccess knowledgeAccess;
     private final Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver;
 
-    public AsteroidProspectingDataHandler(@Nonnull AsteroidFieldKnowledgeAccess knowledgeAccess) {
-        this(knowledgeAccess, AsteroidProspectingDataHandler::liveProfile);
+    public AsteroidProspectingDataHandler() {
+        this(AsteroidProspectingDataHandler::liveProfile);
     }
 
-    AsteroidProspectingDataHandler(@Nonnull AsteroidFieldKnowledgeAccess knowledgeAccess,
+    AsteroidProspectingDataHandler(
         @Nonnull Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver) {
-        this.knowledgeAccess = knowledgeAccess;
         this.profileResolver = profileResolver;
     }
 
-    public static AsteroidProspectingDataHandler live(@Nonnull AsteroidFieldKnowledgeAccess knowledgeAccess) {
-        return new AsteroidProspectingDataHandler(knowledgeAccess);
+    public static AsteroidProspectingDataHandler live() {
+        return new AsteroidProspectingDataHandler();
     }
 
     @Override
@@ -51,10 +50,16 @@ public final class AsteroidProspectingDataHandler implements SatelliteDataJobSer
         }
         if (profile.isEmpty()) return Optional.empty();
 
-        if (knowledgeAccess.hasDetectionWork(event.teamId(), event.bodyId(), profile.get())) {
-            return knowledgeAccess.detectNext(event.teamId(), event.bodyId(), profile.get());
+        AsteroidFieldKnowledge knowledge = CelestialKnowledgeService
+            .asteroidFieldKnowledge(event.teamId(), event.bodyId(), profile.get());
+        if (knowledge.hasDetectionWork()) {
+            Optional<AsteroidFieldNode> candidate = knowledge.nextDetectionCandidate();
+            candidate.ifPresent(node -> knowledge.detect(node.id()));
+            return candidate;
         }
-        return knowledgeAccess.prospectNext(event.teamId(), event.bodyId(), profile.get());
+        Optional<AsteroidFieldNode> candidate = knowledge.nextProspectingCandidate();
+        candidate.ifPresent(node -> knowledge.prospect(node.id()));
+        return candidate;
     }
 
     private static Optional<AsteroidFieldProfile> liveProfile(CelestialObjectId bodyId) {
