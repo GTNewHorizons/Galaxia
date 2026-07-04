@@ -39,10 +39,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
@@ -93,9 +90,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleS
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
-import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanCompletionSnapshot;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanPass;
-import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
@@ -190,84 +184,11 @@ public final class FacilityPersistenceManager {
     }
 
     private void loadAsteroidKnowledge(File file) {
-        if (!file.exists()) {
-            LOG.info("[PERSIST] LOAD: no asteroid knowledge file at {}, skipping", file);
-            return;
-        }
-        AsteroidKnowledgeRegistryJson registry;
-        try (FileReader reader = new FileReader(file)) {
-            registry = gson.fromJson(reader, AsteroidKnowledgeRegistryJson.class);
-        } catch (IOException | JsonParseException e) {
-            throw new IllegalStateException(
-                "[PERSIST] LOAD FAILED: asteroid knowledge read error " + file + ": " + e.getMessage(),
-                e);
-        }
-        if (registry == null || registry.teams == null) {
-            throw new IllegalStateException("[PERSIST] LOAD FAILED: asteroid knowledge file contained no team list");
-        }
-        for (AsteroidTeamKnowledgeJson teamJson : registry.teams) {
-            if (teamJson == null || teamJson.teamId == null
-                || teamJson.fields == null
-                || teamJson.scanProgress == null
-                || teamJson.scanCompletions == null) {
-                throw new IllegalStateException("[PERSIST] LOAD FAILED: malformed asteroid team knowledge entry");
-            }
-            UUID teamId = UUID.fromString(teamJson.teamId);
-            List<AsteroidFieldKnowledgeSnapshot> snapshots = new ArrayList<>();
-            for (AsteroidFieldKnowledgeJson fieldJson : teamJson.fields) {
-                snapshots.add(decodeAsteroidFieldKnowledge(fieldJson));
-            }
-            SatelliteNetworkService.restoreAsteroidKnowledge(teamId, snapshots);
-            List<AsteroidSatelliteScanSnapshot> scanSnapshots = new ArrayList<>();
-            for (AsteroidScanProgressJson scanJson : teamJson.scanProgress) {
-                scanSnapshots.add(decodeAsteroidScanProgress(scanJson));
-            }
-            SatelliteNetworkService.restoreAsteroidScans(teamId, scanSnapshots);
-            List<AsteroidSatelliteScanCompletionSnapshot> completionSnapshots = new ArrayList<>();
-            for (AsteroidScanCompletionJson completionJson : teamJson.scanCompletions) {
-                completionSnapshots.add(decodeAsteroidScanCompletion(completionJson));
-            }
-            SatelliteNetworkService.restoreAsteroidScanCompletions(teamId, completionSnapshots);
-        }
+        AsteroidKnowledgePersistenceAdapter.load(file, gson);
     }
 
     private void saveAsteroidKnowledge(File file) {
-        AsteroidKnowledgeRegistryJson registry = new AsteroidKnowledgeRegistryJson();
-        registry.teams = new ArrayList<>();
-        Map<UUID, List<AsteroidFieldKnowledgeSnapshot>> knowledgeByTeam = SatelliteNetworkService
-            .asteroidKnowledgeSnapshotsByTeam();
-        Map<UUID, List<AsteroidSatelliteScanSnapshot>> scansByTeam = SatelliteNetworkService
-            .asteroidScanSnapshotsByTeam();
-        Map<UUID, List<AsteroidSatelliteScanCompletionSnapshot>> completionsByTeam = SatelliteNetworkService
-            .asteroidScanCompletionSnapshotsByTeam();
-        java.util.LinkedHashSet<UUID> teamIds = new java.util.LinkedHashSet<>();
-        teamIds.addAll(knowledgeByTeam.keySet());
-        teamIds.addAll(scansByTeam.keySet());
-        teamIds.addAll(completionsByTeam.keySet());
-        for (UUID teamId : teamIds) {
-            AsteroidTeamKnowledgeJson teamJson = new AsteroidTeamKnowledgeJson();
-            teamJson.teamId = teamId.toString();
-            teamJson.fields = new ArrayList<>();
-            for (AsteroidFieldKnowledgeSnapshot snapshot : knowledgeByTeam.getOrDefault(teamId, List.of())) {
-                teamJson.fields.add(encodeAsteroidFieldKnowledge(snapshot));
-            }
-            teamJson.scanProgress = new ArrayList<>();
-            for (AsteroidSatelliteScanSnapshot snapshot : scansByTeam.getOrDefault(teamId, List.of())) {
-                teamJson.scanProgress.add(encodeAsteroidScanProgress(snapshot));
-            }
-            teamJson.scanCompletions = new ArrayList<>();
-            for (AsteroidSatelliteScanCompletionSnapshot snapshot : completionsByTeam.getOrDefault(teamId, List.of())) {
-                teamJson.scanCompletions.add(encodeAsteroidScanCompletion(snapshot));
-            }
-            registry.teams.add(teamJson);
-        }
-        try (FileWriter writer = new FileWriter(file)) {
-            gson.toJson(registry, writer);
-        } catch (IOException e) {
-            throw new IllegalStateException(
-                "[PERSIST] SAVE FAILED: asteroid knowledge write error " + file + ": " + e.getMessage(),
-                e);
-        }
+        AsteroidKnowledgePersistenceAdapter.save(file, gson);
     }
 
     private void loadAssets(File file) {
@@ -1222,155 +1143,9 @@ public final class FacilityPersistenceManager {
         return decoded;
     }
 
-    private static AsteroidFieldKnowledgeJson encodeAsteroidFieldKnowledge(AsteroidFieldKnowledgeSnapshot snapshot) {
-        AsteroidFieldKnowledgeJson json = new AsteroidFieldKnowledgeJson();
-        json.beltId = snapshot.beltId()
-            .name();
-        json.entries = new ArrayList<>();
-        for (AsteroidFieldKnowledgeSnapshot.Entry entry : snapshot.entries()) {
-            AsteroidKnowledgeEntryJson entryJson = new AsteroidKnowledgeEntryJson();
-            entryJson.index = entry.index();
-            entryJson.detectionState = entry.detectionState()
-                .name();
-            entryJson.oreKnowledgeState = entry.oreKnowledgeState()
-                .name();
-            json.entries.add(entryJson);
-        }
-        return json;
-    }
-
-    private static AsteroidFieldKnowledgeSnapshot decodeAsteroidFieldKnowledge(AsteroidFieldKnowledgeJson json) {
-        if (json == null || json.beltId == null || json.entries == null) {
-            throw new IllegalStateException("[PERSIST] LOAD FAILED: malformed asteroid field knowledge entry");
-        }
-        CelestialObjectId beltId = requireEnum(
-            CelestialObjectId.class,
-            json.beltId,
-            "[PERSIST] LOAD FAILED: unknown asteroid belt id " + json.beltId);
-        List<AsteroidFieldKnowledgeSnapshot.Entry> entries = new ArrayList<>();
-        for (AsteroidKnowledgeEntryJson entryJson : json.entries) {
-            if (entryJson == null) {
-                throw new IllegalStateException("[PERSIST] LOAD FAILED: null asteroid knowledge entry");
-            }
-            entries.add(
-                new AsteroidFieldKnowledgeSnapshot.Entry(
-                    entryJson.index,
-                    requireEnum(
-                        DiscoveryState.class,
-                        entryJson.detectionState,
-                        "[PERSIST] LOAD FAILED: unknown asteroid detection state " + entryJson.detectionState),
-                    requireEnum(
-                        AsteroidOreKnowledgeState.class,
-                        entryJson.oreKnowledgeState,
-                        "[PERSIST] LOAD FAILED: unknown asteroid ore knowledge state " + entryJson.oreKnowledgeState)));
-        }
-        return new AsteroidFieldKnowledgeSnapshot(beltId, entries);
-    }
-
-    private static AsteroidScanProgressJson encodeAsteroidScanProgress(AsteroidSatelliteScanSnapshot snapshot) {
-        AsteroidScanProgressJson json = new AsteroidScanProgressJson();
-        json.satelliteId = snapshot.satelliteId()
-            .toString();
-        json.beltId = snapshot.beltId()
-            .name();
-        json.asteroidIndex = snapshot.asteroidId()
-            .index();
-        json.pass = snapshot.pass()
-            .name();
-        json.elapsedTicks = snapshot.elapsedTicks();
-        return json;
-    }
-
-    private static AsteroidSatelliteScanSnapshot decodeAsteroidScanProgress(AsteroidScanProgressJson json) {
-        if (json == null || json.satelliteId == null || json.beltId == null || json.pass == null) {
-            throw new IllegalStateException("[PERSIST] LOAD FAILED: malformed asteroid scan progress entry");
-        }
-        CelestialObjectId beltId = requireEnum(
-            CelestialObjectId.class,
-            json.beltId,
-            "[PERSIST] LOAD FAILED: unknown asteroid scan belt id " + json.beltId);
-        return new AsteroidSatelliteScanSnapshot(
-            CelestialAsset.ID.from(json.satelliteId),
-            beltId,
-            new MinorCelestialBodyId(beltId, json.asteroidIndex),
-            requireEnum(
-                AsteroidFieldScanPass.class,
-                json.pass,
-                "[PERSIST] LOAD FAILED: unknown asteroid scan pass " + json.pass),
-            json.elapsedTicks);
-    }
-
-    private static AsteroidScanCompletionJson encodeAsteroidScanCompletion(
-        AsteroidSatelliteScanCompletionSnapshot snapshot) {
-        AsteroidScanCompletionJson json = new AsteroidScanCompletionJson();
-        json.beltId = snapshot.beltId()
-            .name();
-        json.anchorAsteroidIndex = snapshot.anchorAsteroidId()
-            .index();
-        json.generationVersion = snapshot.generationVersion();
-        return json;
-    }
-
-    private static AsteroidSatelliteScanCompletionSnapshot decodeAsteroidScanCompletion(
-        AsteroidScanCompletionJson json) {
-        if (json == null || json.beltId == null) {
-            throw new IllegalStateException("[PERSIST] LOAD FAILED: malformed asteroid scan completion entry");
-        }
-        CelestialObjectId beltId = requireEnum(
-            CelestialObjectId.class,
-            json.beltId,
-            "[PERSIST] LOAD FAILED: unknown asteroid scan completion belt id " + json.beltId);
-        return new AsteroidSatelliteScanCompletionSnapshot(
-            beltId,
-            new MinorCelestialBodyId(beltId, json.anchorAsteroidIndex),
-            json.generationVersion);
-    }
-
     static final class AssetRegistryJson {
 
         List<AssetJson> assets;
-    }
-
-    static final class AsteroidKnowledgeRegistryJson {
-
-        List<AsteroidTeamKnowledgeJson> teams;
-    }
-
-    static final class AsteroidTeamKnowledgeJson {
-
-        String teamId;
-        List<AsteroidFieldKnowledgeJson> fields;
-        List<AsteroidScanProgressJson> scanProgress;
-        List<AsteroidScanCompletionJson> scanCompletions;
-    }
-
-    static final class AsteroidFieldKnowledgeJson {
-
-        String beltId;
-        List<AsteroidKnowledgeEntryJson> entries;
-    }
-
-    static final class AsteroidKnowledgeEntryJson {
-
-        int index;
-        String detectionState;
-        String oreKnowledgeState;
-    }
-
-    static final class AsteroidScanProgressJson {
-
-        String satelliteId;
-        String beltId;
-        int asteroidIndex;
-        String pass;
-        int elapsedTicks;
-    }
-
-    static final class AsteroidScanCompletionJson {
-
-        String beltId;
-        int anchorAsteroidIndex;
-        int generationVersion;
     }
 
     static final class AssetJson {
