@@ -46,6 +46,7 @@ final class AsteroidSatelliteScanServiceTest {
     @AfterEach
     void clearKnowledge() {
         CelestialKnowledgeService.clear();
+        AsteroidFieldKnowledgeService.clear();
     }
 
     @Test
