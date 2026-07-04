@@ -1,6 +1,6 @@
-package com.gtnewhorizons.galaxia.registry.satellite;
+package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
-public enum AsteroidSatelliteScanPass {
+public enum AsteroidFieldScanPass {
 
     DETECTION(1200),
     SIGNATURE(2400),
@@ -8,7 +8,7 @@ public enum AsteroidSatelliteScanPass {
 
     private final int durationTicks;
 
-    AsteroidSatelliteScanPass(int durationTicks) {
+    AsteroidFieldScanPass(int durationTicks) {
         if (durationTicks <= 0) throw new IllegalArgumentException("durationTicks must be positive");
         this.durationTicks = durationTicks;
     }

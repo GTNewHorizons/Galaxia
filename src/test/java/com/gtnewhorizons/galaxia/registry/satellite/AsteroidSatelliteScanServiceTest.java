@@ -19,6 +19,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanOrder;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanPass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
@@ -64,8 +65,7 @@ final class AsteroidSatelliteScanServiceTest {
                 .detectionState());
 
         assertEquals(
-            List.of(
-                new AsteroidSatelliteScanService.ScanResult(BELT, anchor.id(), AsteroidSatelliteScanPass.DETECTION)),
+            List.of(new AsteroidSatelliteScanService.ScanResult(BELT, anchor.id(), AsteroidFieldScanPass.DETECTION)),
             service.tick(TEAM, List.of(satellite), 1));
         AsteroidFieldKnowledge knowledge = CelestialKnowledgeService.asteroidFieldKnowledge(TEAM, BELT, profile);
         assertEquals(
@@ -81,8 +81,7 @@ final class AsteroidSatelliteScanServiceTest {
             service.tick(TEAM, List.of(satellite), 2399)
                 .isEmpty());
         assertEquals(
-            List.of(
-                new AsteroidSatelliteScanService.ScanResult(BELT, anchor.id(), AsteroidSatelliteScanPass.SIGNATURE)),
+            List.of(new AsteroidSatelliteScanService.ScanResult(BELT, anchor.id(), AsteroidFieldScanPass.SIGNATURE)),
             service.tick(TEAM, List.of(satellite), 1));
         assertEquals(
             AsteroidOreKnowledgeState.SIGNATURE,
@@ -93,7 +92,7 @@ final class AsteroidSatelliteScanServiceTest {
             service.tick(TEAM, List.of(satellite), 4799)
                 .isEmpty());
         assertEquals(
-            List.of(new AsteroidSatelliteScanService.ScanResult(BELT, anchor.id(), AsteroidSatelliteScanPass.PROFILE)),
+            List.of(new AsteroidSatelliteScanService.ScanResult(BELT, anchor.id(), AsteroidFieldScanPass.PROFILE)),
             service.tick(TEAM, List.of(satellite), 1));
         assertTrue(
             knowledge.entryFor(anchor.id())
@@ -116,9 +115,8 @@ final class AsteroidSatelliteScanServiceTest {
 
         for (AsteroidFieldNode node : innerToOuter) {
             assertEquals(
-                List.of(
-                    new AsteroidSatelliteScanService.ScanResult(BELT, node.id(), AsteroidSatelliteScanPass.DETECTION)),
-                service.tick(TEAM, List.of(satellite), AsteroidSatelliteScanPass.DETECTION.durationTicks()));
+                List.of(new AsteroidSatelliteScanService.ScanResult(BELT, node.id(), AsteroidFieldScanPass.DETECTION)),
+                service.tick(TEAM, List.of(satellite), AsteroidFieldScanPass.DETECTION.durationTicks()));
         }
 
         AsteroidFieldKnowledge knowledge = CelestialKnowledgeService.asteroidFieldKnowledge(TEAM, BELT, profile);
@@ -128,16 +126,16 @@ final class AsteroidSatelliteScanServiceTest {
                     BELT,
                     innerToOuter.get(0)
                         .id(),
-                    AsteroidSatelliteScanPass.SIGNATURE)),
-            service.tick(TEAM, List.of(satellite), AsteroidSatelliteScanPass.SIGNATURE.durationTicks()));
+                    AsteroidFieldScanPass.SIGNATURE)),
+            service.tick(TEAM, List.of(satellite), AsteroidFieldScanPass.SIGNATURE.durationTicks()));
         assertEquals(
             List.of(
                 new AsteroidSatelliteScanService.ScanResult(
                     BELT,
                     innerToOuter.get(1)
                         .id(),
-                    AsteroidSatelliteScanPass.SIGNATURE)),
-            service.tick(TEAM, List.of(satellite), AsteroidSatelliteScanPass.SIGNATURE.durationTicks()));
+                    AsteroidFieldScanPass.SIGNATURE)),
+            service.tick(TEAM, List.of(satellite), AsteroidFieldScanPass.SIGNATURE.durationTicks()));
         assertEquals(
             AsteroidOreKnowledgeState.SIGNATURE,
             knowledge.entryFor(
@@ -151,16 +149,16 @@ final class AsteroidSatelliteScanServiceTest {
                     BELT,
                     innerToOuter.get(2)
                         .id(),
-                    AsteroidSatelliteScanPass.SIGNATURE)),
-            service.tick(TEAM, List.of(satellite), AsteroidSatelliteScanPass.SIGNATURE.durationTicks()));
+                    AsteroidFieldScanPass.SIGNATURE)),
+            service.tick(TEAM, List.of(satellite), AsteroidFieldScanPass.SIGNATURE.durationTicks()));
         assertEquals(
             List.of(
                 new AsteroidSatelliteScanService.ScanResult(
                     BELT,
                     innerToOuter.get(0)
                         .id(),
-                    AsteroidSatelliteScanPass.PROFILE)),
-            service.tick(TEAM, List.of(satellite), AsteroidSatelliteScanPass.PROFILE.durationTicks()));
+                    AsteroidFieldScanPass.PROFILE)),
+            service.tick(TEAM, List.of(satellite), AsteroidFieldScanPass.PROFILE.durationTicks()));
     }
 
     @Test
@@ -186,8 +184,8 @@ final class AsteroidSatelliteScanServiceTest {
         List<AsteroidSatelliteScanService.ScanResult> results = service.tick(
             TEAM,
             List.of(satellite),
-            AsteroidSatelliteScanPass.DETECTION.durationTicks() + AsteroidSatelliteScanPass.SIGNATURE.durationTicks()
-                + AsteroidSatelliteScanPass.PROFILE.durationTicks());
+            AsteroidFieldScanPass.DETECTION.durationTicks() + AsteroidFieldScanPass.SIGNATURE.durationTicks()
+                + AsteroidFieldScanPass.PROFILE.durationTicks());
 
         AsteroidFieldKnowledge knowledge = CelestialKnowledgeService.asteroidFieldKnowledge(TEAM, BELT, profile);
         assertTrue(!results.isEmpty());
@@ -219,8 +217,7 @@ final class AsteroidSatelliteScanServiceTest {
         restoredService.restore(TEAM, firstService.snapshots(TEAM));
 
         assertEquals(
-            List.of(
-                new AsteroidSatelliteScanService.ScanResult(BELT, anchor.id(), AsteroidSatelliteScanPass.DETECTION)),
+            List.of(new AsteroidSatelliteScanService.ScanResult(BELT, anchor.id(), AsteroidFieldScanPass.DETECTION)),
             restoredService.tick(TEAM, List.of(satellite), 600));
     }
 
@@ -235,8 +232,8 @@ final class AsteroidSatelliteScanServiceTest {
         firstService.tick(
             TEAM,
             List.of(satellite),
-            AsteroidSatelliteScanPass.DETECTION.durationTicks() + AsteroidSatelliteScanPass.SIGNATURE.durationTicks()
-                + AsteroidSatelliteScanPass.PROFILE.durationTicks());
+            AsteroidFieldScanPass.DETECTION.durationTicks() + AsteroidFieldScanPass.SIGNATURE.durationTicks()
+                + AsteroidFieldScanPass.PROFILE.durationTicks());
         assertEquals(
             List.of(new AsteroidSatelliteScanCompletionSnapshot(BELT, anchor.id(), profile.generationVersion())),
             firstService.completionSnapshots(TEAM));
@@ -246,7 +243,7 @@ final class AsteroidSatelliteScanServiceTest {
         restoredService.restoreCompletions(TEAM, firstService.completionSnapshots(TEAM));
 
         assertTrue(
-            restoredService.tick(TEAM, List.of(satellite), AsteroidSatelliteScanPass.DETECTION.durationTicks())
+            restoredService.tick(TEAM, List.of(satellite), AsteroidFieldScanPass.DETECTION.durationTicks())
                 .isEmpty());
         assertTrue(
             restoredService.snapshots(TEAM)

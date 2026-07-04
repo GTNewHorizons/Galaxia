@@ -20,7 +20,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanOrder;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanPass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanScope;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanWork;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
@@ -42,7 +44,7 @@ public final class AsteroidSatelliteScanService {
         0.0);
 
     private final Function<CelestialObjectId, Optional<AsteroidFieldProfile>> profileResolver;
-    private final ProgressJobRunner<ScanKey, ScanWork, ScanResult> progressRunner = new ProgressJobRunner<>();
+    private final ProgressJobRunner<ScanKey, AsteroidFieldScanWork, ScanResult> progressRunner = new ProgressJobRunner<>();
     // Completion is keyed by profile generation so a future belt reshuffle can
     // rescan, while an unchanged field stays permanently idle after a full pass.
     private final Set<CompletionKey> completions = new HashSet<>();
@@ -59,13 +61,14 @@ public final class AsteroidSatelliteScanService {
 
     public List<AsteroidSatelliteScanSnapshot> snapshots(@Nonnull UUID teamId) {
         List<AsteroidSatelliteScanSnapshot> snapshots = new ArrayList<>();
-        for (Map.Entry<ScanKey, ProgressJobRunner.Progress<ScanWork>> entry : progressRunner.progressByKey()
+        for (Map.Entry<ScanKey, ProgressJobRunner.Progress<AsteroidFieldScanWork>> entry : progressRunner
+            .progressByKey()
             .entrySet()) {
             if (!entry.getKey()
                 .teamId()
                 .equals(teamId)) continue;
-            ProgressJobRunner.Progress<ScanWork> progress = entry.getValue();
-            ScanWork work = progress.work();
+            ProgressJobRunner.Progress<AsteroidFieldScanWork> progress = entry.getValue();
+            AsteroidFieldScanWork work = progress.work();
             snapshots.add(
                 new AsteroidSatelliteScanSnapshot(
                     entry.getKey()
@@ -123,7 +126,10 @@ public final class AsteroidSatelliteScanService {
                 throw new IllegalStateException(
                     "Duplicate asteroid scan snapshot for satellite " + snapshot.satelliteId());
             }
-            progressRunner.restore(key, new ScanWork(snapshot.pass(), snapshot.asteroidId()), snapshot.elapsedTicks());
+            progressRunner.restore(
+                key,
+                new AsteroidFieldScanWork(snapshot.pass(), snapshot.asteroidId()),
+                snapshot.elapsedTicks());
         }
     }
 
@@ -200,9 +206,12 @@ public final class AsteroidSatelliteScanService {
             return List.of();
         }
 
-        ProgressJobRunner.TickResult<ScanResult> result = progressRunner
-            .tick(key, elapsedTicks, () -> nextWork(knowledge, scope), work -> {
-                completeWork(knowledge, work, scope);
+        ProgressJobRunner.TickResult<ScanResult> result = progressRunner.tick(
+            key,
+            elapsedTicks,
+            () -> knowledge.nextScanWork(scope, AsteroidFieldScanOrder.innerToOuter()),
+            work -> {
+                knowledge.completeScanWork(work, scope);
                 return new ScanResult(beltId, work.asteroidId(), work.pass());
             });
         if (result.idle()) {
@@ -222,35 +231,8 @@ public final class AsteroidSatelliteScanService {
             .withinRadius(profile, LOCAL_BELT_REFERENCE, center, profile.satelliteScanRadius());
     }
 
-    private static Optional<ScanWork> nextWork(AsteroidFieldKnowledge knowledge, Predicate<AsteroidFieldNode> scope) {
-        // Priority matters for gameplay: the fast detection pass must complete
-        // before slower prospecting begins, otherwise hidden bodies can starve
-        // behind ore work on already known asteroids.
-        Optional<AsteroidFieldNode> detection = knowledge
-            .nextDetectionCandidate(scope, AsteroidFieldScanOrder.innerToOuter());
-        if (detection.isPresent())
-            return detection.map(node -> ScanWork.from(AsteroidSatelliteScanPass.DETECTION, node));
-
-        Optional<AsteroidFieldNode> signature = knowledge
-            .nextSignatureCandidate(scope, AsteroidFieldScanOrder.innerToOuter());
-        if (signature.isPresent())
-            return signature.map(node -> ScanWork.from(AsteroidSatelliteScanPass.SIGNATURE, node));
-
-        return knowledge.nextProfileCandidate(scope, AsteroidFieldScanOrder.innerToOuter())
-            .map(node -> ScanWork.from(AsteroidSatelliteScanPass.PROFILE, node));
-    }
-
-    private static void completeWork(AsteroidFieldKnowledge knowledge, ScanWork work,
-        Predicate<AsteroidFieldNode> scope) {
-        if (work.pass() == AsteroidSatelliteScanPass.DETECTION) {
-            knowledge.detect(work.asteroidId());
-            return;
-        }
-        knowledge.prospect(work.asteroidId(), scope);
-    }
-
     public record ScanResult(@Nonnull CelestialObjectId beltId, @Nonnull MinorCelestialBodyId asteroidId,
-        @Nonnull AsteroidSatelliteScanPass pass) {}
+        @Nonnull AsteroidFieldScanPass pass) {}
 
     private record ScanKey(@Nonnull UUID teamId, @Nonnull CelestialAsset.ID satelliteId) {}
 
@@ -266,16 +248,4 @@ public final class AsteroidSatelliteScanService {
         }
     }
 
-    private record ScanWork(@Nonnull AsteroidSatelliteScanPass pass, @Nonnull MinorCelestialBodyId asteroidId)
-        implements ProgressJobRunner.Work {
-
-        private static ScanWork from(@Nonnull AsteroidSatelliteScanPass pass, @Nonnull AsteroidFieldNode node) {
-            return new ScanWork(pass, node.id());
-        }
-
-        @Override
-        public int durationTicks() {
-            return pass.durationTicks();
-        }
-    }
 }

@@ -25,6 +25,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanPass;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
@@ -341,7 +342,7 @@ final class SatelliteNetworkServiceTest {
             SatelliteKind.PROSPECTING);
         CelestialAssetStore.registerAsset(TEAM, satellite);
 
-        SatelliteNetworkService.tickDataJobs(AsteroidSatelliteScanPass.DETECTION.durationTicks());
+        SatelliteNetworkService.tickDataJobs(AsteroidFieldScanPass.DETECTION.durationTicks());
 
         assertTrue(
             AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile)

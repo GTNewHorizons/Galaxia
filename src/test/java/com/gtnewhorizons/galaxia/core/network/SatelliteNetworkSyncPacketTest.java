@@ -12,12 +12,12 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanPass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanCompletionSnapshot;
-import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanPass;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteBandwidthFormatter;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataKey;
@@ -89,7 +89,7 @@ final class SatelliteNetworkSyncPacketTest {
             new CelestialAsset.ID(new UUID(1L, 2L)),
             CelestialObjectId.FROZEN_BELT,
             new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 3),
-            AsteroidSatelliteScanPass.SIGNATURE,
+            AsteroidFieldScanPass.SIGNATURE,
             120);
         AsteroidSatelliteScanCompletionSnapshot completion = new AsteroidSatelliteScanCompletionSnapshot(
             CelestialObjectId.FROZEN_BELT,
@@ -156,7 +156,7 @@ final class SatelliteNetworkSyncPacketTest {
             new CelestialAsset.ID(new UUID(3L, 4L)),
             CelestialObjectId.FROZEN_BELT,
             new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 2),
-            AsteroidSatelliteScanPass.DETECTION,
+            AsteroidFieldScanPass.DETECTION,
             700);
         AsteroidSatelliteScanCompletionSnapshot completion = new AsteroidSatelliteScanCompletionSnapshot(
             CelestialObjectId.FROZEN_BELT,

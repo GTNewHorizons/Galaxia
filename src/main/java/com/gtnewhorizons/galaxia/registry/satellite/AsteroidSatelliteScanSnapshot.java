@@ -4,10 +4,11 @@ import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanPass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 
 public record AsteroidSatelliteScanSnapshot(@Nonnull CelestialAsset.ID satelliteId, @Nonnull CelestialObjectId beltId,
-    @Nonnull MinorCelestialBodyId asteroidId, @Nonnull AsteroidSatelliteScanPass pass, int elapsedTicks) {
+    @Nonnull MinorCelestialBodyId asteroidId, @Nonnull AsteroidFieldScanPass pass, int elapsedTicks) {
 
     public AsteroidSatelliteScanSnapshot {
         if (!asteroidId.parentBodyId()

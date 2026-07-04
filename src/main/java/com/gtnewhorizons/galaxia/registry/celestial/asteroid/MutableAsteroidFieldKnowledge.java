@@ -185,6 +185,21 @@ public final class MutableAsteroidFieldKnowledge implements AsteroidFieldKnowled
     }
 
     @Override
+    public Optional<AsteroidFieldScanWork> nextScanWork(@Nonnull Predicate<AsteroidFieldNode> scope,
+        @Nonnull Comparator<AsteroidFieldNode> order) {
+        Optional<AsteroidFieldNode> detection = nextDetectionCandidate(scope, order);
+        if (detection.isPresent())
+            return detection.map(node -> AsteroidFieldScanWork.from(AsteroidFieldScanPass.DETECTION, node));
+
+        Optional<AsteroidFieldNode> signature = nextSignatureCandidate(scope, order);
+        if (signature.isPresent())
+            return signature.map(node -> AsteroidFieldScanWork.from(AsteroidFieldScanPass.SIGNATURE, node));
+
+        return nextProfileCandidate(scope, order)
+            .map(node -> AsteroidFieldScanWork.from(AsteroidFieldScanPass.PROFILE, node));
+    }
+
+    @Override
     public Entry detect(@Nonnull MinorCelestialBodyId id) {
         AsteroidFieldNode node = requireNode(id);
         Entry current = entryFor(id);
@@ -217,6 +232,12 @@ public final class MutableAsteroidFieldKnowledge implements AsteroidFieldKnowled
         Entry updated = new Entry(DiscoveryState.DISCOVERED, nextOreKnowledgeState(current.oreKnowledgeState()));
         entriesById.put(id, updated);
         return updated;
+    }
+
+    @Override
+    public Entry completeScanWork(@Nonnull AsteroidFieldScanWork work, @Nonnull Predicate<AsteroidFieldNode> scope) {
+        if (work.pass() == AsteroidFieldScanPass.DETECTION) return detect(work.asteroidId());
+        return prospect(work.asteroidId(), scope);
     }
 
     private static AsteroidOreKnowledgeState nextOreKnowledgeState(AsteroidOreKnowledgeState current) {

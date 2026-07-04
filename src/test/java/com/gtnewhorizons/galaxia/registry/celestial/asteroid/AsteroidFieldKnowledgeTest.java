@@ -129,6 +129,50 @@ final class AsteroidFieldKnowledgeTest {
     }
 
     @Test
+    void scanWorkOwnsPassPriorityAndKnowledgeMutation() {
+        AsteroidFieldKnowledge knowledge = MutableAsteroidFieldKnowledge
+            .initialize(CelestialObjectId.FROZEN_BELT, profile());
+        AsteroidFieldNode small = node(knowledge, AsteroidSizeClass.SMALL);
+        Predicate<AsteroidFieldNode> smallOnly = node -> node.id()
+            .equals(small.id());
+
+        AsteroidFieldScanWork detection = knowledge.nextScanWork(smallOnly, AsteroidFieldScanOrder.byIndex())
+            .orElseThrow();
+
+        assertEquals(AsteroidFieldScanPass.DETECTION, detection.pass());
+        assertEquals(small.id(), detection.asteroidId());
+        knowledge.completeScanWork(detection, smallOnly);
+
+        AsteroidFieldScanWork signature = knowledge.nextScanWork(smallOnly, AsteroidFieldScanOrder.byIndex())
+            .orElseThrow();
+
+        assertEquals(AsteroidFieldScanPass.SIGNATURE, signature.pass());
+        assertEquals(
+            AsteroidOreKnowledgeState.UNKNOWN,
+            knowledge.entryFor(small.id())
+                .oreKnowledgeState());
+        knowledge.completeScanWork(signature, smallOnly);
+
+        AsteroidFieldScanWork profile = knowledge.nextScanWork(smallOnly, AsteroidFieldScanOrder.byIndex())
+            .orElseThrow();
+
+        assertEquals(AsteroidFieldScanPass.PROFILE, profile.pass());
+        assertEquals(
+            AsteroidOreKnowledgeState.SIGNATURE,
+            knowledge.entryFor(small.id())
+                .oreKnowledgeState());
+        knowledge.completeScanWork(profile, smallOnly);
+
+        assertEquals(
+            AsteroidOreKnowledgeState.PROFILE,
+            knowledge.entryFor(small.id())
+                .oreKnowledgeState());
+        assertFalse(
+            knowledge.nextScanWork(smallOnly, AsteroidFieldScanOrder.byIndex())
+                .isPresent());
+    }
+
+    @Test
     void scopedProspectingOnlyWaitsForDetectionWorkInsideTheSameScope() {
         AsteroidFieldKnowledge knowledge = MutableAsteroidFieldKnowledge
             .initialize(CelestialObjectId.FROZEN_BELT, profile());

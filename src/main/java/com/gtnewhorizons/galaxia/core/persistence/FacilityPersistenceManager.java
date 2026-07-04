@@ -94,7 +94,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanCompletionSnapshot;
-import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanPass;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanPass;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
@@ -1294,7 +1294,7 @@ public final class FacilityPersistenceManager {
             beltId,
             new MinorCelestialBodyId(beltId, json.asteroidIndex),
             requireEnum(
-                AsteroidSatelliteScanPass.class,
+                AsteroidFieldScanPass.class,
                 json.pass,
                 "[PERSIST] LOAD FAILED: unknown asteroid scan pass " + json.pass),
             json.elapsedTicks);

@@ -9,12 +9,12 @@ import java.util.UUID;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanPass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanCompletionSnapshot;
-import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanPass;
 import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataKey;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
@@ -212,7 +212,7 @@ public final class SatelliteNetworkSyncPacket implements IMessage {
             CelestialObjectId beltId = PacketUtil.readEnum(buf, CelestialObjectId.class);
             MinorCelestialBodyId asteroidId = PacketUtil.readCelestialObjectKey(buf)
                 .minorBodyId();
-            AsteroidSatelliteScanPass pass = PacketUtil.readEnum(buf, AsteroidSatelliteScanPass.class);
+            AsteroidFieldScanPass pass = PacketUtil.readEnum(buf, AsteroidFieldScanPass.class);
             int elapsedTicks = buf.readInt();
             scanSnapshots.add(new AsteroidSatelliteScanSnapshot(satelliteId, beltId, asteroidId, pass, elapsedTicks));
         }
