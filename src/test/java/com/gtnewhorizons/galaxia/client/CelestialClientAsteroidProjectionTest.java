@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
@@ -21,14 +22,15 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNodeCatalog;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanPass;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryStep;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
-import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
-import com.gtnewhorizons.galaxia.registry.satellite.AsteroidScanClientState;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class CelestialClientAsteroidProjectionTest {
@@ -59,8 +61,8 @@ final class CelestialClientAsteroidProjectionTest {
                             node -> new AsteroidFieldKnowledgeSnapshot.Entry(
                                 node.index(),
                                 node.index() == visibleIndex ? DiscoveryState.DISCOVERED : DiscoveryState.HIDDEN,
-                                node.index() == visibleIndex ? AsteroidOreKnowledgeState.SIGNATURE
-                                    : AsteroidOreKnowledgeState.UNKNOWN))
+                                node.index() == visibleIndex ? CelestialResourceKnowledgeState.SIGNATURE
+                                    : CelestialResourceKnowledgeState.UNKNOWN))
                         .toList(),
                     catalog.snapshots())));
 
@@ -129,19 +131,23 @@ final class CelestialClientAsteroidProjectionTest {
                             node -> new AsteroidFieldKnowledgeSnapshot.Entry(
                                 node.index(),
                                 node.index() == anchor.index() ? DiscoveryState.DISCOVERED : DiscoveryState.HIDDEN,
-                                AsteroidOreKnowledgeState.UNKNOWN))
+                                CelestialResourceKnowledgeState.UNKNOWN))
                         .toList(),
                     catalog.snapshots())));
-        AsteroidScanClientState.updateScans(
+        CelestialObjectKey anchorKey = CelestialObjectKey.minorBody(anchor.id());
+        CelestialObjectKey targetKey = CelestialObjectKey.minorBody(activeTarget.id());
+        CelestialDiscoveryClientState.update(
             List.of(
-                new AsteroidSatelliteScanSnapshot(
-                    CelestialObjectId.FROZEN_BELT,
-                    anchor.id(),
-                    activeTarget.id(),
-                    AsteroidFieldScanPass.DETECTION,
-                    200,
-                    1)),
-            List.of());
+                new CelestialDiscoveryScanSnapshot(
+                    new java.util.UUID(1L, 2L),
+                    anchorKey,
+                    0.5,
+                    1,
+                    SatelliteKind.PROSPECTING,
+                    CelestialDiscoveryScanSnapshot.Status.ACTIVE,
+                    targetKey,
+                    CelestialDiscoveryStep.DETECTION,
+                    200)));
 
         List<AsteroidStarmapProjection> projections = CelestialClient.getChildAsteroidProjections(frozenBelt);
         AsteroidStarmapProjection activeProjection = projection(projections, activeTarget.id());

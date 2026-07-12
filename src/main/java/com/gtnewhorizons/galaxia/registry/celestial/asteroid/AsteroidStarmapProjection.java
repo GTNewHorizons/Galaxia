@@ -9,21 +9,22 @@ import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 public record AsteroidStarmapProjection(@Nonnull CelestialObject body, @Nonnull MinorCelestialBodyId id,
     @Nonnull AsteroidNodeKind nodeKind, @Nonnull AsteroidSizeClass sizeClass, @Nonnull DiscoveryState detectionState,
-    @Nonnull AsteroidOreKnowledgeState oreKnowledgeState, @Nonnull Optional<String> visibleOreProfileId,
+    @Nonnull CelestialResourceKnowledgeState oreKnowledgeState, @Nonnull Optional<String> visibleOreProfileId,
     @Nonnull List<String> visibleGtOreVeinIds, @Nonnull AsteroidAppearanceProfile appearanceProfile,
     boolean debugHidden, boolean scanInProgress, boolean sensorRevealed) {
 
     public AsteroidStarmapProjection {
-        if (oreKnowledgeState == AsteroidOreKnowledgeState.UNKNOWN && visibleOreProfileId.isPresent()) {
+        if (oreKnowledgeState == CelestialResourceKnowledgeState.UNKNOWN && visibleOreProfileId.isPresent()) {
             throw new IllegalArgumentException("Unknown asteroid ore cannot expose an ore profile id");
         }
         if (visibleGtOreVeinIds == null) visibleGtOreVeinIds = List.of();
         else visibleGtOreVeinIds = Collections.unmodifiableList(new ArrayList<>(visibleGtOreVeinIds));
-        if (oreKnowledgeState != AsteroidOreKnowledgeState.PROFILE && !visibleGtOreVeinIds.isEmpty()) {
+        if (oreKnowledgeState != CelestialResourceKnowledgeState.PROFILE && !visibleGtOreVeinIds.isEmpty()) {
             throw new IllegalArgumentException("Asteroid ore veins require profile-level knowledge");
         }
         if (debugHidden && detectionState != DiscoveryState.HIDDEN) {
@@ -52,7 +53,7 @@ public record AsteroidStarmapProjection(@Nonnull CelestialObject body, @Nonnull 
     }
 
     public boolean canShowOreDetails() {
-        return oreKnowledgeState == AsteroidOreKnowledgeState.PROFILE;
+        return oreKnowledgeState == CelestialResourceKnowledgeState.PROFILE;
     }
 
     public boolean shouldCullAtNaturalRadius(float naturalRadius, float minimumRenderedDiameter) {

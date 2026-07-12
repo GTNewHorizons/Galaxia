@@ -8,11 +8,12 @@ import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 public record AsteroidFieldNodeSnapshot(int index, @Nonnull String displayName, @Nonnull AsteroidNodeKind kind,
     @Nonnull AsteroidSizeClass sizeClass, @Nonnull DiscoveryState initialDetectionState,
-    @Nonnull AsteroidOreKnowledgeState initialOreKnowledgeState, double angleOffsetDeg, double orbitalDepth01,
+    @Nonnull CelestialResourceKnowledgeState initialOreKnowledgeState, double angleOffsetDeg, double orbitalDepth01,
     @Nonnull OreProfileSnapshot oreProfile, @Nonnull AppearanceSnapshot appearance) {
 
     public AsteroidFieldNodeSnapshot {
@@ -67,9 +68,9 @@ public record AsteroidFieldNodeSnapshot(int index, @Nonnull String displayName, 
 
     private static AsteroidFieldNode validateNode(@Nonnull CelestialObjectId beltId, int index,
         @Nonnull String displayName, @Nonnull AsteroidNodeKind kind, @Nonnull AsteroidSizeClass sizeClass,
-        @Nonnull DiscoveryState initialDetectionState, @Nonnull AsteroidOreKnowledgeState initialOreKnowledgeState,
-        double angleOffsetDeg, double orbitalDepth01, @Nonnull OreProfileSnapshot oreProfile,
-        @Nonnull AppearanceSnapshot appearance) {
+        @Nonnull DiscoveryState initialDetectionState,
+        @Nonnull CelestialResourceKnowledgeState initialOreKnowledgeState, double angleOffsetDeg, double orbitalDepth01,
+        @Nonnull OreProfileSnapshot oreProfile, @Nonnull AppearanceSnapshot appearance) {
 
         return new AsteroidFieldNode(
             new MinorCelestialBodyId(beltId, index),

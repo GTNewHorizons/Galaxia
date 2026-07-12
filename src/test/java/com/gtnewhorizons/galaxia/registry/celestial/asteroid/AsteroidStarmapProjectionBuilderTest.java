@@ -15,18 +15,22 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 final class AsteroidStarmapProjectionBuilderTest {
 
     @Test
     void detectedProjectionsMaterializeBodiesAndKeepHiddenNodesOutByDefault() {
-        AsteroidFieldKnowledge knowledge = MutableAsteroidFieldKnowledge
-            .initialize(CelestialObjectId.FROZEN_BELT, profile());
+        AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledge.initialize(CelestialObjectId.FROZEN_BELT, profile());
         AsteroidFieldNode large = node(knowledge, AsteroidSizeClass.LARGE);
         AsteroidFieldNode medium = node(knowledge, AsteroidSizeClass.MEDIUM);
 
-        knowledge.detect(medium.id());
+        knowledge.revealDiscovery(
+            new AsteroidFieldDiscoveryWork(
+                com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey.minorBody(medium.id()),
+                com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryStep.DETECTION),
+            new AsteroidFieldScanContext(node -> true, AsteroidFieldScanOrder.byIndex()));
 
         List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder
             .forBelt(belt(profile()), Optional.of(knowledge.snapshot(CelestialObjectId.FROZEN_BELT)), false);
@@ -48,8 +52,7 @@ final class AsteroidStarmapProjectionBuilderTest {
 
     @Test
     void debugModeIncludesHiddenNodesAndMarksThemAsDebugHidden() {
-        AsteroidFieldKnowledge knowledge = MutableAsteroidFieldKnowledge
-            .initialize(CelestialObjectId.FROZEN_BELT, profile());
+        AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledge.initialize(CelestialObjectId.FROZEN_BELT, profile());
         AsteroidFieldNode hidden = node(knowledge, AsteroidSizeClass.SMALL);
 
         List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder
@@ -71,8 +74,7 @@ final class AsteroidStarmapProjectionBuilderTest {
 
     @Test
     void activeDiscoveryScanIncludesHiddenTargetAsScanningGhost() {
-        AsteroidFieldKnowledge knowledge = MutableAsteroidFieldKnowledge
-            .initialize(CelestialObjectId.FROZEN_BELT, profile());
+        AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledge.initialize(CelestialObjectId.FROZEN_BELT, profile());
         AsteroidFieldNode hidden = node(knowledge, AsteroidSizeClass.SMALL);
 
         List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder.forBelt(
@@ -97,8 +99,7 @@ final class AsteroidStarmapProjectionBuilderTest {
 
     @Test
     void sensorRevealIncludesHiddenTargetWithoutMarkingItAsActiveScan() {
-        AsteroidFieldKnowledge knowledge = MutableAsteroidFieldKnowledge
-            .initialize(CelestialObjectId.FROZEN_BELT, profile());
+        AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledge.initialize(CelestialObjectId.FROZEN_BELT, profile());
         AsteroidFieldNode hidden = node(knowledge, AsteroidSizeClass.SMALL);
 
         List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder.forBelt(
@@ -129,15 +130,15 @@ final class AsteroidStarmapProjectionBuilderTest {
                 new AsteroidFieldKnowledgeSnapshot.Entry(
                     AsteroidSlotRanges.GENERATED_SLOT_MIN,
                     DiscoveryState.DISCOVERED,
-                    AsteroidOreKnowledgeState.UNKNOWN),
+                    CelestialResourceKnowledgeState.UNKNOWN),
                 new AsteroidFieldKnowledgeSnapshot.Entry(
                     AsteroidSlotRanges.GENERATED_SLOT_MIN + 1,
                     DiscoveryState.DISCOVERED,
-                    AsteroidOreKnowledgeState.SIGNATURE),
+                    CelestialResourceKnowledgeState.SIGNATURE),
                 new AsteroidFieldKnowledgeSnapshot.Entry(
                     AsteroidSlotRanges.GENERATED_SLOT_MIN + 2,
                     DiscoveryState.DISCOVERED,
-                    AsteroidOreKnowledgeState.PROFILE)));
+                    CelestialResourceKnowledgeState.PROFILE)));
 
         List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder
             .forBelt(belt(profile()), Optional.of(snapshot), false);
@@ -179,8 +180,7 @@ final class AsteroidStarmapProjectionBuilderTest {
 
     @Test
     void presentationHelpersPreferLargeAsteroidsAndLabelAuthoredAsteroids() {
-        AsteroidFieldKnowledge knowledge = MutableAsteroidFieldKnowledge
-            .initialize(CelestialObjectId.FROZEN_BELT, profile());
+        AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledge.initialize(CelestialObjectId.FROZEN_BELT, profile());
         AsteroidStarmapProjection large = projection(knowledge, AsteroidSizeClass.LARGE);
         AsteroidStarmapProjection medium = projection(knowledge, AsteroidSizeClass.MEDIUM);
         AsteroidStarmapProjection small = projection(knowledge, AsteroidSizeClass.SMALL);

@@ -12,6 +12,7 @@ import javax.annotation.Nonnull;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 public final class AsteroidStarmapProjectionBuilder {
@@ -119,7 +120,7 @@ public final class AsteroidStarmapProjectionBuilder {
         Set<MinorCelestialBodyId> scanTargets, Set<MinorCelestialBodyId> sensorRevealTargets) {
 
         DiscoveryState detectionState = entry == null ? node.initialDetectionState() : entry.detectionState();
-        AsteroidOreKnowledgeState oreKnowledgeState = entry == null ? initialOreKnowledgeState(node)
+        CelestialResourceKnowledgeState oreKnowledgeState = entry == null ? initialOreKnowledgeState(node)
             : entry.oreKnowledgeState();
         boolean scanInProgress = detectionState == DiscoveryState.HIDDEN && scanTargets.contains(node.id());
         boolean sensorRevealed = detectionState == DiscoveryState.HIDDEN && !scanInProgress
@@ -127,12 +128,15 @@ public final class AsteroidStarmapProjectionBuilder {
         if (detectionState == DiscoveryState.HIDDEN && !includeHidden && !scanInProgress && !sensorRevealed)
             return Optional.empty();
 
-        Optional<String> visibleOreProfileId = oreKnowledgeState == AsteroidOreKnowledgeState.UNKNOWN ? Optional.empty()
+        Optional<String> visibleOreProfileId = oreKnowledgeState == CelestialResourceKnowledgeState.UNKNOWN
+            ? Optional.empty()
             : Optional.of(
                 node.oreProfile()
                     .id());
-        List<String> visibleGtOreVeinIds = oreKnowledgeState == AsteroidOreKnowledgeState.PROFILE ? node.oreProfile()
-            .gtOreVeinIds() : List.of();
+        List<String> visibleGtOreVeinIds = oreKnowledgeState == CelestialResourceKnowledgeState.PROFILE
+            ? node.oreProfile()
+                .gtOreVeinIds()
+            : List.of();
 
         return Optional.of(
             new AsteroidStarmapProjection(
@@ -150,9 +154,9 @@ public final class AsteroidStarmapProjectionBuilder {
                 sensorRevealed));
     }
 
-    private static AsteroidOreKnowledgeState initialOreKnowledgeState(AsteroidFieldNode node) {
+    private static CelestialResourceKnowledgeState initialOreKnowledgeState(AsteroidFieldNode node) {
         if (node.initialOreKnowledgeState() != null) return node.initialOreKnowledgeState();
-        return node.initialDetectionState() == DiscoveryState.DISCOVERED ? AsteroidOreKnowledgeState.SIGNATURE
-            : AsteroidOreKnowledgeState.UNKNOWN;
+        return node.initialDetectionState() == DiscoveryState.DISCOVERED ? CelestialResourceKnowledgeState.SIGNATURE
+            : CelestialResourceKnowledgeState.UNKNOWN;
     }
 }

@@ -22,7 +22,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
-import com.gtnewhorizons.galaxia.registry.satellite.AsteroidScanClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class OrbitalSceneBodyPresentationTest {
@@ -39,7 +39,7 @@ final class OrbitalSceneBodyPresentationTest {
 
     @AfterEach
     void clearClientState() {
-        AsteroidScanClientState.clear();
+        CelestialDiscoveryClientState.clear();
         CelestialClient.setShowHiddenAsteroidObjects(false);
     }
 

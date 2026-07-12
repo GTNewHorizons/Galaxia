@@ -19,9 +19,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
-import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
@@ -56,8 +56,8 @@ public class OrbitalScene {
         return body.displayName();
     }
 
-    private static int scanProgressPercent(AsteroidSatelliteScanSnapshot snapshot) {
-        int duration = snapshot.pass()
+    private static int scanProgressPercent(CelestialDiscoveryScanSnapshot snapshot) {
+        int duration = snapshot.step()
             .durationTicks();
         if (duration <= 0) return 0;
         return Math.max(0, Math.min(99, Math.round(snapshot.elapsedTicks() * 100.0f / duration)));

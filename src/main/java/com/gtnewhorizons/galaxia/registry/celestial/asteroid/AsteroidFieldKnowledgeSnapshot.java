@@ -50,7 +50,8 @@ public record AsteroidFieldKnowledgeSnapshot(@Nonnull CelestialObjectId beltId, 
 
         public Entry {
             if (index < 0) throw new IllegalArgumentException("index must be non-negative");
-            if (detectionState == DiscoveryState.HIDDEN && oreKnowledgeState != AsteroidOreKnowledgeState.UNKNOWN) {
+            if (detectionState == DiscoveryState.HIDDEN
+                && oreKnowledgeState != CelestialResourceKnowledgeState.UNKNOWN) {
                 throw new IllegalStateException("hidden asteroid snapshot entry cannot expose ore knowledge: " + index);
             }
         }

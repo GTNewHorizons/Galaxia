@@ -22,13 +22,14 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowle
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanPass;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryStep;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
-import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
-import com.gtnewhorizons.galaxia.registry.satellite.AsteroidScanClientState;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class OrbitalPinnedInfoContentBuilderTest {
@@ -60,7 +61,7 @@ final class OrbitalPinnedInfoContentBuilderTest {
                         new AsteroidFieldKnowledgeSnapshot.Entry(
                             node.index(),
                             DiscoveryState.DISCOVERED,
-                            AsteroidOreKnowledgeState.UNKNOWN)))));
+                            CelestialResourceKnowledgeState.UNKNOWN)))));
         CelestialObject asteroid = CelestialRegistry
             .get(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, node.index())))
             .orElseThrow();
@@ -88,16 +89,19 @@ final class OrbitalPinnedInfoContentBuilderTest {
         CelestialObject asteroid = CelestialRegistry
             .get(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, node.index())))
             .orElseThrow();
-        AsteroidScanClientState.updateScans(
+        CelestialObjectKey asteroidKey = asteroid.id();
+        CelestialDiscoveryClientState.update(
             List.of(
-                new AsteroidSatelliteScanSnapshot(
-                    CelestialObjectId.FROZEN_BELT,
-                    node.id(),
-                    node.id(),
-                    AsteroidFieldScanPass.DETECTION,
-                    AsteroidFieldScanPass.DETECTION.durationTicks() / 2,
-                    1)),
-            List.of());
+                new CelestialDiscoveryScanSnapshot(
+                    new java.util.UUID(1L, 2L),
+                    asteroidKey,
+                    0.5,
+                    1,
+                    SatelliteKind.PROSPECTING,
+                    CelestialDiscoveryScanSnapshot.Status.ACTIVE,
+                    asteroidKey,
+                    CelestialDiscoveryStep.DETECTION,
+                    CelestialDiscoveryStep.DETECTION.durationTicks() / 2)));
 
         OrbitalPinnedInfoContentBuilder builder = new OrbitalPinnedInfoContentBuilder();
         PinnedInfoRow scanRow = scanRow(builder.buildRows(asteroid));
@@ -132,7 +136,7 @@ final class OrbitalPinnedInfoContentBuilderTest {
             .orElseThrow();
         OrbitalPinnedInfoContentBuilder builder = new OrbitalPinnedInfoContentBuilder();
 
-        AsteroidFieldClientKnowledgeState.updateFields(snapshot(node, AsteroidOreKnowledgeState.UNKNOWN));
+        AsteroidFieldClientKnowledgeState.updateFields(snapshot(node, CelestialResourceKnowledgeState.UNKNOWN));
         PinnedInfoRow unknownRow = oreRow(builder.buildRows(asteroid));
         assertFalse(
             unknownRow.value()
@@ -143,14 +147,14 @@ final class OrbitalPinnedInfoContentBuilderTest {
             unknownRow.items()
                 .isEmpty());
 
-        AsteroidFieldClientKnowledgeState.updateFields(snapshot(node, AsteroidOreKnowledgeState.SIGNATURE));
+        AsteroidFieldClientKnowledgeState.updateFields(snapshot(node, CelestialResourceKnowledgeState.SIGNATURE));
         PinnedInfoRow signatureRow = oreRow(builder.buildRows(asteroid));
         assertNotEquals(unknownRow.value(), signatureRow.value());
         assertTrue(
             signatureRow.items()
                 .isEmpty());
 
-        AsteroidFieldClientKnowledgeState.updateFields(snapshot(node, AsteroidOreKnowledgeState.PROFILE));
+        AsteroidFieldClientKnowledgeState.updateFields(snapshot(node, CelestialResourceKnowledgeState.PROFILE));
         PinnedInfoRow profileRow = oreRow(builder.buildRows(asteroid));
         assertNotEquals(unknownRow.value(), profileRow.value());
         assertNotEquals(signatureRow.value(), profileRow.value());
@@ -168,7 +172,7 @@ final class OrbitalPinnedInfoContentBuilderTest {
                         new AsteroidFieldKnowledgeSnapshot.Entry(
                             8,
                             DiscoveryState.HIDDEN,
-                            AsteroidOreKnowledgeState.UNKNOWN)))));
+                            CelestialResourceKnowledgeState.UNKNOWN)))));
         CelestialObjectKey asteroidKey = CelestialObjectKey
             .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 8));
 
@@ -181,7 +185,7 @@ final class OrbitalPinnedInfoContentBuilderTest {
     }
 
     private static List<AsteroidFieldKnowledgeSnapshot> snapshot(AsteroidFieldNode node,
-        AsteroidOreKnowledgeState oreKnowledgeState) {
+        CelestialResourceKnowledgeState oreKnowledgeState) {
         return List.of(
             new AsteroidFieldKnowledgeSnapshot(
                 CelestialObjectId.FROZEN_BELT,

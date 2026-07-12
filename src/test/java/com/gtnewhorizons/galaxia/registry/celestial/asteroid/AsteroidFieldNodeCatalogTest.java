@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 final class AsteroidFieldNodeCatalogTest {
@@ -76,7 +77,7 @@ final class AsteroidFieldNodeCatalogTest {
                 AsteroidNodeKind.LORE,
                 AsteroidSizeClass.MEDIUM,
                 DiscoveryState.HIDDEN,
-                AsteroidOreKnowledgeState.PROFILE,
+                CelestialResourceKnowledgeState.PROFILE,
                 12.0,
                 0.5,
                 new AsteroidFieldNodeSnapshot.OreProfileSnapshot("metallic", List.of("galaxia:iron")),
@@ -105,7 +106,7 @@ final class AsteroidFieldNodeCatalogTest {
             AsteroidNodeKind.LORE,
             AsteroidSizeClass.LARGE,
             DiscoveryState.DISCOVERED,
-            AsteroidOreKnowledgeState.PROFILE,
+            CelestialResourceKnowledgeState.PROFILE,
             12.0,
             0.5,
             new AsteroidFieldNodeSnapshot.OreProfileSnapshot("metallic", List.of("galaxia:iron")),

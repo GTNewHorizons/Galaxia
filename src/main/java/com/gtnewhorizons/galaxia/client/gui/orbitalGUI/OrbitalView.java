@@ -44,12 +44,12 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
-import com.gtnewhorizons.galaxia.registry.satellite.AsteroidSatelliteScanSnapshot;
-import com.gtnewhorizons.galaxia.registry.satellite.AsteroidScanClientState;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteBandwidthFormatter;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataKey;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
@@ -3205,12 +3205,12 @@ public class OrbitalView {
 
         private java.util.Optional<String> satelliteScanningSummary(CelestialObject body) {
             if (satelliteCount(body, SatelliteKind.PROSPECTING) <= 0) return java.util.Optional.empty();
-            return AsteroidScanClientState.scanSnapshotByAnchor(body.id())
+            return CelestialDiscoveryClientState.scan(body.id(), SatelliteKind.PROSPECTING)
                 .map(scan -> "Scanning: " + scanProgressPercent(scan) + "%");
         }
 
-        private int scanProgressPercent(AsteroidSatelliteScanSnapshot scan) {
-            int durationTicks = scan.pass()
+        private int scanProgressPercent(CelestialDiscoveryScanSnapshot scan) {
+            int durationTicks = scan.step()
                 .durationTicks();
             if (durationTicks <= 0) return 100;
             return Math.min(99, Math.max(0, Math.round(scan.elapsedTicks() * 100.0f / durationTicks)));
