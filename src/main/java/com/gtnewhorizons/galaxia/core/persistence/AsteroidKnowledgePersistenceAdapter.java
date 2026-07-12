@@ -18,6 +18,7 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNodeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
@@ -109,11 +110,12 @@ final class AsteroidKnowledgePersistenceAdapter {
                 .name();
             json.entries.add(entryJson);
         }
+        json.nodeSnapshots = new ArrayList<>(snapshot.nodeSnapshots());
         return json;
     }
 
     private static AsteroidFieldKnowledgeSnapshot decodeFieldKnowledge(AsteroidFieldKnowledgeJson json) {
-        if (json == null || json.beltId == null || json.entries == null) {
+        if (json == null || json.beltId == null || json.entries == null || json.nodeSnapshots == null) {
             throw new IllegalStateException("[PERSIST] LOAD FAILED: malformed asteroid field knowledge entry");
         }
         CelestialObjectId beltId = requireEnum(
@@ -137,7 +139,7 @@ final class AsteroidKnowledgePersistenceAdapter {
                         entryJson.oreKnowledgeState,
                         "[PERSIST] LOAD FAILED: unknown asteroid ore knowledge state " + entryJson.oreKnowledgeState)));
         }
-        return new AsteroidFieldKnowledgeSnapshot(beltId, entries);
+        return new AsteroidFieldKnowledgeSnapshot(beltId, entries, json.nodeSnapshots);
     }
 
     private static <T extends Enum<T>> T requireEnum(Class<T> cls, String name, String message) {
@@ -163,6 +165,7 @@ final class AsteroidKnowledgePersistenceAdapter {
 
         String beltId;
         List<AsteroidKnowledgeEntryJson> entries;
+        List<AsteroidFieldNodeSnapshot> nodeSnapshots;
     }
 
     static final class AsteroidKnowledgeEntryJson {

@@ -138,7 +138,8 @@ final class AsteroidStarmapProjectionBuilderTest {
                 new AsteroidFieldKnowledgeSnapshot.Entry(
                     AsteroidSlotRanges.GENERATED_SLOT_MIN + 2,
                     DiscoveryState.DISCOVERED,
-                    CelestialResourceKnowledgeState.PROFILE)));
+                    CelestialResourceKnowledgeState.PROFILE)),
+            List.of());
 
         List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder
             .forBelt(belt(profile()), Optional.of(snapshot), false);
@@ -200,6 +201,7 @@ final class AsteroidStarmapProjectionBuilderTest {
     void rejectsKnowledgeSnapshotForDifferentBelt() {
         AsteroidFieldKnowledgeSnapshot wrongBelt = new AsteroidFieldKnowledgeSnapshot(
             CelestialObjectId.MOON,
+            List.of(),
             List.of());
 
         assertThrows(

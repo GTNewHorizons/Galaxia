@@ -84,7 +84,8 @@ final class StarmapAssetActionsTest {
                                 .minorBodyId()
                                 .index(),
                             detectionState,
-                            CelestialResourceKnowledgeState.UNKNOWN)))));
+                            CelestialResourceKnowledgeState.UNKNOWN)),
+                    List.of())));
     }
 
     private static CelestialObject hiddenAsteroid() {

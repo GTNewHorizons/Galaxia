@@ -61,7 +61,8 @@ final class OrbitalPinnedInfoContentBuilderTest {
                         new AsteroidFieldKnowledgeSnapshot.Entry(
                             node.index(),
                             DiscoveryState.DISCOVERED,
-                            CelestialResourceKnowledgeState.UNKNOWN)))));
+                            CelestialResourceKnowledgeState.UNKNOWN)),
+                    List.of())));
         CelestialObject asteroid = CelestialRegistry
             .get(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, node.index())))
             .orElseThrow();
@@ -172,7 +173,8 @@ final class OrbitalPinnedInfoContentBuilderTest {
                         new AsteroidFieldKnowledgeSnapshot.Entry(
                             8,
                             DiscoveryState.HIDDEN,
-                            CelestialResourceKnowledgeState.UNKNOWN)))));
+                            CelestialResourceKnowledgeState.UNKNOWN)),
+                    List.of())));
         CelestialObjectKey asteroidKey = CelestialObjectKey
             .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 8));
 
@@ -193,7 +195,8 @@ final class OrbitalPinnedInfoContentBuilderTest {
                     new AsteroidFieldKnowledgeSnapshot.Entry(
                         node.index(),
                         DiscoveryState.DISCOVERED,
-                        oreKnowledgeState))));
+                        oreKnowledgeState)),
+                List.of()));
     }
 
     private static PinnedInfoRow oreRow(List<PinnedInfoRow> rows) {

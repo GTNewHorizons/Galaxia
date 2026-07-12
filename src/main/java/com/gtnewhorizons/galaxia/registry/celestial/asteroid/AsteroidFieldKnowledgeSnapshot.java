@@ -15,10 +15,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 public record AsteroidFieldKnowledgeSnapshot(@Nonnull CelestialObjectId beltId, @Nonnull List<Entry> entries,
     @Nonnull List<AsteroidFieldNodeSnapshot> nodeSnapshots) {
 
-    public AsteroidFieldKnowledgeSnapshot(@Nonnull CelestialObjectId beltId, @Nonnull List<Entry> entries) {
-        this(beltId, entries, List.of());
-    }
-
     public AsteroidFieldKnowledgeSnapshot {
         List<Entry> copiedEntries = new ArrayList<>(entries == null ? List.of() : entries);
         Set<Integer> entryIndexes = new HashSet<>();
