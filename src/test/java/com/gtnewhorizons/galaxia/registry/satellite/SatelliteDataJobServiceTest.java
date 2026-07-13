@@ -3,7 +3,6 @@ package com.gtnewhorizons.galaxia.registry.satellite;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -52,62 +51,6 @@ final class SatelliteDataJobServiceTest {
                 TEAM,
                 CelestialObjectId.MARS,
                 SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, CelestialObjectId.MARS)));
-    }
-
-    @Test
-    void completedProductionPublishesDataJobEvent() {
-        SatelliteDataBufferStore store = new SatelliteDataBufferStore();
-        AutomatedFacility source = facility(CelestialObjectId.MARS);
-        AutomatedFacility destination = facility(CelestialObjectId.EGORA);
-        ModuleDebugDataGenerator producer = addDebugModule(source);
-        ModuleDebugDataGenerator consumer = addDebugModule(destination);
-        producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
-        consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
-        SatelliteDataEndpointRegistry endpoints = new SatelliteDataEndpointRegistry();
-        endpoints.refreshFacility(TEAM, source);
-        endpoints.refreshFacility(TEAM, destination);
-        List<SatelliteDataJobService.ProductionEvent> events = new ArrayList<>();
-
-        SatelliteDataJobService.tickEndpointsUsage(
-            TEAM,
-            endpoints.endpoints(TEAM),
-            store,
-            network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD),
-            events::add);
-
-        assertEquals(1, events.size());
-        SatelliteDataJobService.ProductionEvent event = events.get(0);
-        assertEquals(TEAM, event.teamId());
-        assertEquals(CelestialObjectKey.registered(CelestialObjectId.MARS), event.bodyKey());
-        assertEquals(SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, CelestialObjectId.MARS), event.key());
-        assertEquals(SatelliteBandwidthFormatter.kilobits(10L), event.deciKb());
-    }
-
-    @Test
-    void completedMinorBodyProductionPublishesKeyedDataJobEvent() {
-        SatelliteDataBufferStore store = new SatelliteDataBufferStore();
-        CelestialObjectKey asteroid = asteroidKey(7);
-        CelestialObjectKey belt = CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT);
-        AutomatedFacility source = facility(asteroid);
-        AutomatedFacility destination = facility(belt);
-        ModuleDebugDataGenerator producer = addDebugModule(source);
-        ModuleDebugDataGenerator consumer = addDebugModule(destination);
-        producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
-        consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
-        SatelliteDataEndpointRegistry endpoints = new SatelliteDataEndpointRegistry();
-        endpoints.refreshFacility(TEAM, source);
-        endpoints.refreshFacility(TEAM, destination);
-        List<SatelliteDataJobService.ProductionEvent> events = new ArrayList<>();
-
-        SatelliteDataJobService
-            .tickEndpointsUsage(TEAM, endpoints.endpoints(TEAM), store, network(asteroid, belt), events::add);
-
-        assertEquals(1, events.size());
-        SatelliteDataJobService.ProductionEvent event = events.get(0);
-        assertEquals(TEAM, event.teamId());
-        assertEquals(asteroid, event.bodyKey());
-        assertEquals(SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, asteroid), event.key());
-        assertEquals(SatelliteBandwidthFormatter.kilobits(10L), event.deciKb());
     }
 
     @Test

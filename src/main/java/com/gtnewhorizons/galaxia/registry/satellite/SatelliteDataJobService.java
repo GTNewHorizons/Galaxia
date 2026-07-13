@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import javax.annotation.Nonnull;
-
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -32,22 +30,6 @@ public final class SatelliteDataJobService {
             usedByEdge = Map.copyOf(usedByEdge == null ? Map.of() : usedByEdge);
             directedUsedByEdge = Map.copyOf(directedUsedByEdge == null ? Map.of() : directedUsedByEdge);
         }
-    }
-
-    public record ProductionEvent(@Nonnull UUID teamId, @Nonnull CelestialObjectKey bodyKey,
-        @Nonnull SatelliteDataKey key, long deciKb) {
-
-        public ProductionEvent {
-            if (deciKb <= 0L) throw new IllegalArgumentException("deciKb must be positive");
-        }
-    }
-
-    @FunctionalInterface
-    public interface ProductionListener {
-
-        ProductionListener NONE = event -> {};
-
-        void onProductionComplete(ProductionEvent event);
     }
 
     public static Map<SatelliteNetworkGraph.Edge, Long> tick(UUID teamId, List<AutomatedFacility> facilities,
@@ -79,15 +61,6 @@ public final class SatelliteDataJobService {
      */
     public static Usage tickEndpointsUsage(UUID teamId, List<SatelliteDataEndpointRegistry.Endpoint> endpoints,
         SatelliteDataBufferStore store, SatelliteNetworkState networkState) {
-        return tickEndpointsUsage(teamId, endpoints, store, networkState, ProductionListener.NONE);
-    }
-
-    public static Usage tickEndpointsUsage(UUID teamId, List<SatelliteDataEndpointRegistry.Endpoint> endpoints,
-        SatelliteDataBufferStore store, SatelliteNetworkState networkState,
-        @Nonnull ProductionListener productionListener) {
-        if (productionListener == null) {
-            throw new IllegalArgumentException("productionListener cannot be null");
-        }
         if (teamId == null || endpoints == null || store == null || networkState == null) {
             return new Usage(Map.of(), Map.of());
         }
@@ -120,7 +93,7 @@ public final class SatelliteDataJobService {
             if (!producer.module()
                 .jobComplete()) continue;
 
-            completeProduction(teamId, producer, consumers, store, productionListener);
+            completeProduction(teamId, producer, consumers, store);
         }
         Usage transferUsage = transferQueuedData(teamId, endpoints, store, networkState);
         mergeUsage(usedByEdge, transferUsage.usedByEdge());
@@ -169,8 +142,7 @@ public final class SatelliteDataJobService {
     }
 
     private static void completeProduction(UUID teamId, SatelliteDataEndpointRegistry.Endpoint producer,
-        List<SatelliteDataEndpointRegistry.Endpoint> consumers, SatelliteDataBufferStore store,
-        ProductionListener productionListener) {
+        List<SatelliteDataEndpointRegistry.Endpoint> consumers, SatelliteDataBufferStore store) {
         long amount = producer.module()
             .amountDeciKb();
         SatelliteDataKey producedKey = producedKey(producer);
@@ -183,7 +155,6 @@ public final class SatelliteDataJobService {
             if (consumer.bodyKey()
                 .equals(producer.bodyKey())) {
                 consumeAndMarkDirty(consumer, amount);
-                notifyProductionComplete(teamId, producer, producedKey, amount, productionListener);
                 producer.module()
                     .clearJob();
                 return;
@@ -203,7 +174,6 @@ public final class SatelliteDataJobService {
                     .demandKey(),
                 amount);
         }
-        notifyProductionComplete(teamId, producer, producedKey, amount, productionListener);
         producer.module()
             .clearJob();
     }
@@ -313,11 +283,6 @@ public final class SatelliteDataJobService {
     private static SatelliteDataKey producedKey(SatelliteDataEndpointRegistry.Endpoint producer) {
         return producer.module()
             .producedKey(producer.bodyKey());
-    }
-
-    private static void notifyProductionComplete(UUID teamId, SatelliteDataEndpointRegistry.Endpoint producer,
-        SatelliteDataKey producedKey, long amount, ProductionListener productionListener) {
-        productionListener.onProductionComplete(new ProductionEvent(teamId, producer.bodyKey(), producedKey, amount));
     }
 
     private static CelestialObjectId registeredBodyId(CelestialObjectKey bodyKey) {

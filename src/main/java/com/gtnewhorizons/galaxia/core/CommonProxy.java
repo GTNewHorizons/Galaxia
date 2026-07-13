@@ -33,6 +33,7 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
 import com.gtnewhorizons.galaxia.registry.celestial.GalaxiaAtmosphereFluids;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
@@ -60,17 +61,18 @@ public class CommonProxy {
     // etc, and register them with the
     // GameRegistry." (Remove if not needed)
     public void preInit(FMLPreInitializationEvent event) {
+        CelestialServerRuntime celestialRuntime = CelestialServerRuntime.create();
         GalaxiaAtmosphereFluids.init();
         CelestialDimensionMaterializer.registerPlayableDimensions();
 
         // FML bus registering
         FMLBusRegister(new DimensionEventHandler());
-        FMLBusRegister(new CelestialEventHandler());
+        FMLBusRegister(new CelestialEventHandler(celestialRuntime));
         FMLBusRegister(new ServerTickTaskQueue());
         FMLBusRegister(new TetherEventHandler());
 
         // Forge bus registering
-        ForgeBusRegister(new FacilityPersistenceManager());
+        ForgeBusRegister(new FacilityPersistenceManager(celestialRuntime));
         ForgeBusRegister(new TeamEventHandler());
         ForgeBusRegister(new GalaxiaPlayerProperties.PlayerEventHandler());
 

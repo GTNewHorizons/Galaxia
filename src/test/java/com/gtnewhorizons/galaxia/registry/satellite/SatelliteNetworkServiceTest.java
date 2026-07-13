@@ -15,11 +15,18 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -36,6 +43,8 @@ final class SatelliteNetworkServiceTest {
 
     @BeforeAll
     static void initModules() {
+        GalaxiaTestBootstrap.ensureCelestialRegistry();
+        CelestialServerRuntime.create();
         GalaxiaTestBootstrap.ensureFacilityModules();
     }
 
@@ -43,6 +52,8 @@ final class SatelliteNetworkServiceTest {
     void clearState() {
         CelestialAssetStore.clear();
         SatelliteNetworkService.clear();
+        AsteroidFieldKnowledgeStore.global()
+            .clear();
     }
 
     @Test
@@ -171,6 +182,41 @@ final class SatelliteNetworkServiceTest {
     }
 
     @Test
+    void serverRuntimeAdvancesProspectingDataJobsWithoutBypassingDiscovery() {
+        AsteroidFieldProfile profile = GalaxiaCelestialAPI.get(CelestialObjectId.FROZEN_BELT)
+            .orElseThrow()
+            .properties()
+            .asteroidFieldProfile();
+        long initiallyDetected = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile)
+            .stream()
+            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.DISCOVERED)
+            .count();
+        AutomatedFacility facility = facility(CelestialObjectId.FROZEN_BELT);
+        CelestialAssetStore.registerAsset(TEAM, facility);
+        ModuleDebugDataGenerator producer = addDebugModule(facility);
+        ModuleDebugDataGenerator consumer = addDebugModule(facility);
+        producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
+        consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
+        SatelliteNetworkService.refreshFacilityEndpoints(facility);
+
+        CelestialServerRuntime.create()
+            .tick();
+
+        long detectedAfterTick = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile)
+            .stream()
+            .filter(
+                node -> CelestialKnowledgeService.discoveryState(TEAM, CelestialObjectKey.minorBody(node.id()))
+                    == DiscoveryState.DISCOVERED)
+            .count();
+        assertEquals(initiallyDetected, detectedAfterTick);
+        assertEquals(100L, consumer.consumedDeciKb());
+        assertTrue(
+            AsteroidFieldKnowledgeStore.global()
+                .snapshots(TEAM)
+                .isEmpty());
+    }
+
+    @Test
     void registeredDebugDataEndpointsProduceTransferUsageOnServiceTick() {
         AutomatedFacility source = facility(CelestialObjectId.MARS);
         AutomatedFacility destination = facility(CelestialObjectId.EGORA);
@@ -289,7 +335,7 @@ final class SatelliteNetworkServiceTest {
         SatelliteNetworkService
             .rebuild(TEAM, nodes(), capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L), Map.of());
 
-        new FacilityPersistenceManager().loadFromSaveDirectory(tempDir.toFile());
+        new FacilityPersistenceManager(CelestialServerRuntime.create()).loadFromSaveDirectory(tempDir.toFile());
 
         assertEquals(
             0,
