@@ -3,6 +3,9 @@ package com.gtnewhorizons.galaxia.registry.celestial;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.nbt.NBTTagCompound;
 
 import org.junit.jupiter.api.Test;
@@ -30,7 +33,7 @@ final class CelestialObjectKeyTest {
         NBTTagCompound tag = key.toNbt();
 
         assertEquals("minor", tag.getString("kind"));
-        assertEquals("FROZEN_BELT", tag.getString("parentBeltId"));
+        assertEquals("FROZEN_BELT", tag.getString("parentBodyId"));
         assertEquals(4, tag.getInteger("index"));
         assertEquals(key, CelestialObjectKey.fromNbt(tag));
     }
@@ -41,5 +44,20 @@ final class CelestialObjectKeyTest {
         tag.setString("kind", "unknown");
 
         assertThrows(IllegalArgumentException.class, () -> CelestialObjectKey.fromNbt(tag));
+    }
+
+    @Test
+    void naturalOrderSortsRegisteredBodiesBeforeTheirMinorBodies() {
+        CelestialObjectKey mars = CelestialObjectKey.registered(CelestialObjectId.MARS);
+        CelestialObjectKey belt = CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT);
+        CelestialObjectKey thirdAsteroid = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 3));
+        CelestialObjectKey firstAsteroid = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 1));
+        List<CelestialObjectKey> keys = new ArrayList<>(List.of(thirdAsteroid, mars, firstAsteroid, belt));
+
+        keys.sort(null);
+
+        assertEquals(List.of(mars, belt, firstAsteroid, thirdAsteroid), keys);
     }
 }
