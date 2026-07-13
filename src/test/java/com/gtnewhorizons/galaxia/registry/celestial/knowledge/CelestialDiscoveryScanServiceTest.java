@@ -121,6 +121,21 @@ final class CelestialDiscoveryScanServiceTest {
     }
 
     @Test
+    void changedScopeReplacesCompletionForTheSameDiscoveryScan() {
+        CelestialKnowledgeService.resetProvidersForTesting();
+        CelestialKnowledgeService.registerDiscoveryDomain(new RevisionPlanetKnowledgeProvider());
+        service.tick(List.of(worker(SCOPE, 1, 1.0)), 100);
+        CelestialDiscoveryScanScope changedScope = new CelestialDiscoveryScanScope(PLANET, 0.5, 8L);
+
+        service.tick(List.of(worker(changedScope, 1, 1.0)), 100);
+
+        assertEquals(
+            List.of(
+                CelestialDiscoveryScanSnapshot.complete(TEAM, changedScope, CelestialDiscoveryCapability.PROSPECTING)),
+            service.snapshots(TEAM));
+    }
+
+    @Test
     void activeDiscoveryProgressSurvivesRestore() {
         service.tick(List.of(worker(SCOPE, 1, 1.0)), 600);
         List<CelestialDiscoveryScanSnapshot> snapshots = service.snapshots(TEAM);
@@ -156,6 +171,18 @@ final class CelestialDiscoveryScanServiceTest {
             .complete(TEAM, SCOPE, CelestialDiscoveryCapability.PROSPECTING);
 
         assertThrows(IllegalArgumentException.class, () -> service.restore(TEAM, List.of(completed, completed)));
+    }
+
+    @Test
+    void failedRestoreLeavesCurrentDiscoveryStateUnchanged() {
+        service.tick(List.of(worker(SCOPE, 1, 1.0)), 600);
+        List<CelestialDiscoveryScanSnapshot> currentState = service.snapshots(TEAM);
+        CelestialDiscoveryScanSnapshot completed = CelestialDiscoveryScanSnapshot
+            .complete(TEAM, SCOPE, CelestialDiscoveryCapability.PROSPECTING);
+
+        assertThrows(IllegalArgumentException.class, () -> service.restore(TEAM, List.of(completed, completed)));
+
+        assertEquals(currentState, service.snapshots(TEAM));
     }
 
     @Test

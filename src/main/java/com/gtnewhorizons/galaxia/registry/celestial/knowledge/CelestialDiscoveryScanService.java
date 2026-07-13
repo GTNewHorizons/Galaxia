@@ -20,7 +20,7 @@ public final class CelestialDiscoveryScanService {
 
     private final Map<ScanKey, Progress> progressByScan = new LinkedHashMap<>();
     private final Map<ScanKey, DomainBinding> domainByScan = new LinkedHashMap<>();
-    private final Set<CompletionKey> completedScopes = new HashSet<>();
+    private final Map<ScanKey, CelestialDiscoveryScanScope> completedScopes = new LinkedHashMap<>();
     private final Function<CelestialDiscoveryScanScope, CelestialDiscoveryDomain> domainResolver;
 
     public CelestialDiscoveryScanService() {
@@ -61,11 +61,18 @@ public final class CelestialDiscoveryScanService {
                         .step(),
                     progress.elapsedTicks()));
         });
-        completedScopes.stream()
+        completedScopes.entrySet()
+            .stream()
             .filter(
-                key -> key.teamId()
+                entry -> entry.getKey()
+                    .teamId()
                     .equals(teamId))
-            .map(key -> CelestialDiscoveryScanSnapshot.complete(teamId, key.scope(), key.capability()))
+            .map(
+                entry -> CelestialDiscoveryScanSnapshot.complete(
+                    teamId,
+                    entry.getValue(),
+                    entry.getKey()
+                        .capability()))
             .forEach(snapshots::add);
         return List.copyOf(snapshots);
     }
@@ -74,7 +81,8 @@ public final class CelestialDiscoveryScanService {
         Set<UUID> teamIds = new HashSet<>();
         progressByScan.keySet()
             .forEach(key -> teamIds.add(key.teamId()));
-        completedScopes.forEach(key -> teamIds.add(key.teamId()));
+        completedScopes.keySet()
+            .forEach(key -> teamIds.add(key.teamId()));
         Map<UUID, List<CelestialDiscoveryScanSnapshot>> snapshots = new LinkedHashMap<>();
         teamIds.forEach(teamId -> snapshots.put(teamId, snapshots(teamId)));
         return Map.copyOf(snapshots);
@@ -83,17 +91,8 @@ public final class CelestialDiscoveryScanService {
     public void restore(@Nonnull UUID teamId, @Nonnull List<CelestialDiscoveryScanSnapshot> snapshots) {
         if (teamId == null) throw new IllegalArgumentException("team id is required");
         if (snapshots == null) throw new IllegalArgumentException("scan snapshots are required");
-        progressByScan.keySet()
-            .removeIf(
-                key -> key.teamId()
-                    .equals(teamId));
-        domainByScan.keySet()
-            .removeIf(
-                key -> key.teamId()
-                    .equals(teamId));
-        completedScopes.removeIf(
-            key -> key.teamId()
-                .equals(teamId));
+        Map<ScanKey, Progress> restoredProgress = new LinkedHashMap<>();
+        Map<ScanKey, CelestialDiscoveryScanScope> restoredCompletions = new LinkedHashMap<>();
         Set<ScanKey> restored = new HashSet<>();
         for (CelestialDiscoveryScanSnapshot snapshot : snapshots) {
             if (snapshot == null || !snapshot.teamId()
@@ -103,9 +102,9 @@ public final class CelestialDiscoveryScanService {
             ScanKey key = new ScanKey(teamId, snapshot.anchorKey(), snapshot.capability());
             if (!restored.add(key)) throw new IllegalArgumentException("duplicate discovery scan key " + key);
             if (snapshot.status() == CelestialDiscoveryScanSnapshot.Status.COMPLETE) {
-                completedScopes.add(new CompletionKey(teamId, snapshot.scope(), snapshot.capability()));
+                restoredCompletions.put(key, snapshot.scope());
             } else {
-                progressByScan.put(
+                restoredProgress.put(
                     key,
                     new Progress(
                         snapshot.scope(),
@@ -113,6 +112,20 @@ public final class CelestialDiscoveryScanService {
                         snapshot.elapsedTicks()));
             }
         }
+        progressByScan.keySet()
+            .removeIf(
+                key -> key.teamId()
+                    .equals(teamId));
+        domainByScan.keySet()
+            .removeIf(
+                key -> key.teamId()
+                    .equals(teamId));
+        completedScopes.keySet()
+            .removeIf(
+                key -> key.teamId()
+                    .equals(teamId));
+        progressByScan.putAll(restoredProgress);
+        completedScopes.putAll(restoredCompletions);
     }
 
     public List<CelestialDiscoveryWork> tick(@Nonnull List<CelestialDiscoveryWorkerContribution> workerGroups,
@@ -136,19 +149,20 @@ public final class CelestialDiscoveryScanService {
                 workers.scope()
                     .anchorKey(),
                 workers.capability());
-            CompletionKey completionKey = new CompletionKey(workers.teamId(), workers.scope(), workers.capability());
-            if (completedScopes.contains(completionKey)) {
+            if (workers.scope()
+                .equals(completedScopes.get(key))) {
                 progressByScan.remove(key);
                 domainByScan.remove(key);
                 continue;
             }
-            advanceScan(key, completionKey, workers.scope(), effectiveTicks, completed, domainResolver);
+            completedScopes.remove(key);
+            advanceScan(key, workers.scope(), effectiveTicks, completed, domainResolver);
         }
         return List.copyOf(completed);
     }
 
-    private void advanceScan(ScanKey key, CompletionKey completionKey, CelestialDiscoveryScanScope scope,
-        long effectiveTicks, List<CelestialDiscoveryWork> completed,
+    private void advanceScan(ScanKey key, CelestialDiscoveryScanScope scope, long effectiveTicks,
+        List<CelestialDiscoveryWork> completed,
         Function<CelestialDiscoveryScanScope, CelestialDiscoveryDomain> domainResolver) {
         DomainBinding binding = domainByScan.get(key);
         if (binding == null || !binding.scope()
@@ -164,7 +178,7 @@ public final class CelestialDiscoveryScanService {
             if (work == null) {
                 progressByScan.remove(key);
                 domainByScan.remove(key);
-                completedScopes.add(completionKey);
+                completedScopes.put(key, scope);
                 return;
             }
             if (work.durationTicks() <= 0) throw new IllegalStateException("discovery work duration must be positive");
@@ -195,9 +209,6 @@ public final class CelestialDiscoveryScanService {
     }
 
     private record ScanKey(@Nonnull UUID teamId, @Nonnull CelestialObjectKey anchorKey,
-        @Nonnull CelestialDiscoveryCapability capability) {}
-
-    private record CompletionKey(@Nonnull UUID teamId, @Nonnull CelestialDiscoveryScanScope scope,
         @Nonnull CelestialDiscoveryCapability capability) {}
 
     private record Progress(@Nonnull CelestialDiscoveryScanScope scope, @Nonnull CelestialDiscoveryWork work,
