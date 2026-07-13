@@ -25,8 +25,7 @@ public record CelestialServerRuntime(CelestialDiscoveryRuntime discovery, Celest
         CelestialKnowledgeSyncRegistry.register(new CelestialDiscoverySyncAdapter(scans));
         CelestialDiscoveryRuntime discovery = new CelestialDiscoveryRuntime(
             () -> SatelliteDiscoveryWorkerSource.prospectingWorkers(CelestialKnowledgeService::discoveryScopeRevision),
-            scans,
-            CelestialKnowledgeService::discoveryDomain);
+            scans);
         return new CelestialServerRuntime(discovery, scans);
     }
 
