@@ -44,8 +44,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapPresentationPolicy;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
@@ -513,8 +514,6 @@ public class OrbitalView {
         private static final int CLICK_DRAG_THRESHOLD = 6;
         private static final float MAP_ICON_BASE_SCALE = 18f;
         private static final float MAP_ICON_ZOOM_SCALE = 0.8f;
-        private static final float ASTEROID_MAP_ICON_BASE_SCALE = 60f;
-        private static final float ASTEROID_MIN_RENDERED_DIAMETER = 2f;
         private static final float GALAXY_MAP_STAR_SPRITE_SIZE = 0.5f;
         private static final double SYSTEM_DEPARTURE_EXTENT_MULTIPLIER = 24.0;
 
@@ -1585,7 +1584,7 @@ public class OrbitalView {
             double relativeZoom) {
             if (body == null || body.objectClass() != CelestialObject.Class.ASTEROID || spriteSize <= 0.0001f)
                 return 0f;
-            return Math.max(0.0f, spriteSize * ASTEROID_MAP_ICON_BASE_SCALE * (float) relativeZoom);
+            return AsteroidStarmapPresentationPolicy.spriteRadius(body, spriteSize, relativeZoom);
         }
 
         static float mapSpriteRadiusForScale(CelestialObject body, double scale) {
@@ -2206,7 +2205,8 @@ public class OrbitalView {
             if (labelAlpha > 0.02f && !sameBody(body, root)
                 && !sameBody(body, focusedBody)
                 && renderBody
-                && (OrbitalScene.drawsDefaultBodyLabel(body) || CelestialClient.isAsteroidScanInProgress(body))) {
+                && (AsteroidStarmapScenePresentation.drawsDefaultBodyLabel(body)
+                    || CelestialClient.isAsteroidScanInProgress(body))) {
                 float actualLabelAlpha = getLabelRenderAlpha(body, labelAlpha);
                 if (actualLabelAlpha > 0.01f) {
                     drawLabel = true;
@@ -2994,7 +2994,7 @@ public class OrbitalView {
         static boolean shouldCullAsteroidAtNaturalRadius(CelestialObject body, float naturalRadius) {
             if (body == null || body.objectClass() != CelestialObject.Class.ASTEROID) return false;
             return CelestialClient.asteroidProjection(body)
-                .map(projection -> projection.shouldCullAtNaturalRadius(naturalRadius, ASTEROID_MIN_RENDERED_DIAMETER))
+                .map(projection -> AsteroidStarmapPresentationPolicy.shouldCull(body, projection, naturalRadius))
                 .orElse(false);
         }
 

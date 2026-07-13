@@ -80,11 +80,8 @@ public final class AsteroidFieldKnowledge {
             int index = snapshotEntry.index();
             AsteroidFieldNode node = nodesByIndex.get(index);
             if (node == null) {
-                // Old snapshots may not contain node payloads. Keep those entries
-                // resolvable instead of silently losing already discovered bodies.
-                node = AsteroidFieldResolver.resolveSavedNode(beltId, profile, index);
-                nodesByIndex.put(index, node);
-                nodes.add(node);
+                throw new IllegalStateException(
+                    "Asteroid snapshot entry has no saved node payload for " + beltId + ": " + index);
             }
             if (!seen.add(index)) {
                 throw new IllegalStateException(

@@ -51,26 +51,6 @@ final class AsteroidNodeMaterializer {
             new AsteroidAppearanceProfile("generated_asteroid_tiles", nodeSeed.seed(4L)));
     }
 
-    static AsteroidFieldNode resolveUnregisteredSavedNode(CelestialObjectId beltId, AsteroidFieldProfile profile,
-        int index) {
-        AsteroidFieldDeterminism nodeSeed = AsteroidFieldDeterminism.forNode(beltId, profile, index);
-        // Save data may reference a node that no longer exists in the current
-        // profile. Keep the body addressable so player assets are not orphaned.
-        AsteroidSizeClass sizeClass = AsteroidSizeClass.SMALL;
-        return new AsteroidFieldNode(
-            new MinorCelestialBodyId(beltId, index),
-            beltId,
-            index,
-            displayName(beltId, index),
-            savedNodeKind(index),
-            sizeClass,
-            AsteroidInitialKnowledgeRules.defaultInitialDetectionState(sizeClass),
-            null,
-            new MinorBodyOrbitSlot(nodeSeed.degrees(1L), nodeSeed.unit(2L)),
-            selectOreProfile(profile, nodeSeed.unit(3L)),
-            new AsteroidAppearanceProfile("generated_asteroid_tiles", nodeSeed.seed(4L)));
-    }
-
     private static MinorBodyOrbitSlot orbitSlot(AsteroidFieldProfile profile, int index,
         AsteroidFieldDeterminism nodeSeed, AuthoredAsteroidDefinition definition, AsteroidSizeClass sizeClass) {
         double angleOffsetDeg = definition == null

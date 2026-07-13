@@ -2,8 +2,6 @@ package com.gtnewhorizons.galaxia.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -15,7 +13,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
@@ -25,14 +22,13 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfil
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryStep;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
-import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
-import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDiscoveryWorkerSource;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class CelestialClientAsteroidProjectionTest {
@@ -69,9 +65,6 @@ final class CelestialClientAsteroidProjectionTest {
                     catalog.snapshots())));
 
         List<AsteroidStarmapProjection> visibleOnly = CelestialClient.getChildAsteroidProjections(frozenBelt);
-        List<AsteroidStarmapProjection> cachedVisibleOnly = CelestialClient.getChildAsteroidProjections(frozenBelt);
-
-        assertSame(visibleOnly, cachedVisibleOnly);
         assertEquals(
             List.of(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, visibleIndex)),
             visibleOnly.stream()
@@ -85,7 +78,6 @@ final class CelestialClientAsteroidProjectionTest {
 
         List<AsteroidStarmapProjection> withHidden = CelestialClient.getChildAsteroidProjections(frozenBelt);
 
-        assertNotSame(visibleOnly, withHidden);
         assertTrue(
             withHidden.stream()
                 .anyMatch(
@@ -96,7 +88,7 @@ final class CelestialClientAsteroidProjectionTest {
     }
 
     @Test
-    void activeProspectingSatelliteRevealsHiddenAsteroidsInsideExtendedSensorRadius() {
+    void activeProspectingSatelliteRevealsHiddenAsteroidsOnlyInsideScanRadius() {
         CelestialClient.clear();
         CelestialObject frozenBelt = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
             .orElseThrow();
@@ -151,12 +143,13 @@ final class CelestialClientAsteroidProjectionTest {
 
         List<AsteroidStarmapProjection> projections = CelestialClient.getChildAsteroidProjections(frozenBelt);
         AsteroidStarmapProjection activeProjection = projection(projections, activeTarget.id());
-        AsteroidStarmapProjection sensorProjection = projection(projections, sensorTarget.id());
+        assertTrue(
+            projections.stream()
+                .noneMatch(
+                    projection -> projection.id()
+                        .equals(sensorTarget.id())));
 
         assertTrue(activeProjection.scanInProgress());
-        assertFalse(sensorProjection.scanInProgress());
-        assertTrue(sensorProjection.sensorRevealed());
-        assertFalse(sensorProjection.debugHidden());
         CelestialClient.clear();
     }
 

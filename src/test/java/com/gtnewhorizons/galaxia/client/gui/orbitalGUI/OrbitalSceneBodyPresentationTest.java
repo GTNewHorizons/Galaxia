@@ -47,8 +47,8 @@ final class OrbitalSceneBodyPresentationTest {
     void asteroidBeltContainerHasNoSpriteOrInteractionTarget() {
         CelestialObject belt = asteroidBelt();
 
-        assertFalse(OrbitalScene.drawsBodySprite(belt));
-        assertFalse(OrbitalScene.registersBodyInteraction(belt));
+        assertFalse(AsteroidStarmapScenePresentation.drawsBodySprite(belt));
+        assertFalse(AsteroidStarmapScenePresentation.registersBodyInteraction(belt));
     }
 
     @Test
@@ -60,10 +60,10 @@ final class OrbitalSceneBodyPresentationTest {
             .objectClass(CelestialObject.Class.PLANET)
             .build();
 
-        assertFalse(OrbitalScene.drawsOrbitLine(belt));
-        assertTrue(OrbitalScene.drawsAsteroidBeltBand(belt));
-        assertTrue(OrbitalScene.drawsOrbitLine(planet));
-        assertFalse(OrbitalScene.drawsAsteroidBeltBand(planet));
+        assertFalse(AsteroidStarmapScenePresentation.drawsOrbitLine(belt));
+        assertTrue(AsteroidStarmapScenePresentation.drawsBeltBand(belt));
+        assertTrue(AsteroidStarmapScenePresentation.drawsOrbitLine(planet));
+        assertFalse(AsteroidStarmapScenePresentation.drawsBeltBand(planet));
     }
 
     @Test
@@ -74,15 +74,21 @@ final class OrbitalSceneBodyPresentationTest {
             .objectClass(CelestialObject.Class.ASTEROID)
             .build();
 
-        assertTrue(OrbitalScene.drawsBodySprite(asteroid));
-        assertTrue(OrbitalScene.registersBodyInteraction(asteroid));
+        assertTrue(AsteroidStarmapScenePresentation.drawsBodySprite(asteroid));
+        assertTrue(AsteroidStarmapScenePresentation.registersBodyInteraction(asteroid));
     }
 
     @Test
     void defaultAsteroidLabelsAreLimitedToAuthoredAsteroids() {
-        assertFalse(OrbitalScene.drawsDefaultBodyLabel(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.LARGE)));
-        assertFalse(OrbitalScene.drawsDefaultBodyLabel(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.MEDIUM)));
-        assertFalse(OrbitalScene.drawsDefaultBodyLabel(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.SMALL)));
+        assertFalse(
+            AsteroidStarmapScenePresentation
+                .drawsDefaultBodyLabel(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.LARGE)));
+        assertFalse(
+            AsteroidStarmapScenePresentation
+                .drawsDefaultBodyLabel(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.MEDIUM)));
+        assertFalse(
+            AsteroidStarmapScenePresentation
+                .drawsDefaultBodyLabel(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.SMALL)));
     }
 
     @Test

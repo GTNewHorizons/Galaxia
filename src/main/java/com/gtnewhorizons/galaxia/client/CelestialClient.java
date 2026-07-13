@@ -3,11 +3,9 @@ package com.gtnewhorizons.galaxia.client;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -28,19 +26,12 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidClientProjectionService;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNodeCatalog;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitResolver;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjectionBuilder;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
@@ -57,7 +48,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGe
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
-import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -113,26 +103,12 @@ public final class CelestialClient {
     private static int deliveryRevision = 0;
     private static int signalRevision = 0;
     private static HammerTrajectoryLoadSample hammerTrajectoryLoadSample = new HammerTrajectoryLoadSample(0.0, 0.0);
-    // Client-only debug toggle. Server knowledge still controls which asteroids
-    // are actually known; this only asks the renderer to include hidden nodes.
-    private static boolean showHiddenAsteroidObjects = false;
-    private static final Map<CelestialObjectKey, CachedAsteroidProjections> asteroidProjectionCache = new LinkedHashMap<>();
+    private static final AsteroidClientProjectionService asteroidProjections = new AsteroidClientProjectionService();
 
     private static final Map<CelestialObjectKey, Map<String, Long>> systemSignals = new LinkedHashMap<>();
     private static final Map<CelestialObjectKey, Map<String, Long>> planetSignals = new LinkedHashMap<>();
 
     private CelestialClient() {}
-
-    private record CachedAsteroidProjections(List<AsteroidFieldKnowledgeSnapshot> snapshots,
-        List<CelestialDiscoveryScanSnapshot> scanSnapshots, boolean includeHidden,
-        List<AsteroidStarmapProjection> projections, Map<CelestialObjectKey, AsteroidStarmapProjection> byBodyId) {
-
-        boolean matches(List<AsteroidFieldKnowledgeSnapshot> currentSnapshots,
-            List<CelestialDiscoveryScanSnapshot> currentScanSnapshots, boolean currentIncludeHidden) {
-            return snapshots == currentSnapshots && scanSnapshots == currentScanSnapshots
-                && includeHidden == currentIncludeHidden;
-        }
-    }
 
     public static boolean registerAsset(CelestialObjectId celestialObjectId, CelestialAsset asset) {
         return registerAsset(CelestialObjectKey.registered(celestialObjectId), asset);
@@ -154,8 +130,7 @@ public final class CelestialClient {
         deliveries.clear();
         deliveryRevision = 0;
         signalRevision = 0;
-        showHiddenAsteroidObjects = false;
-        asteroidProjectionCache.clear();
+        asteroidProjections.clear();
         hammerTrajectoryLoadSample = new HammerTrajectoryLoadSample(0.0, 0.0);
     }
 
@@ -545,36 +520,29 @@ public final class CelestialClient {
     }
 
     public static List<AsteroidStarmapProjection> getChildAsteroidProjections(CelestialObject parent) {
-        if (parent == null || parent.properties()
-            .asteroidFieldProfile() == null) return List.of();
-        return asteroidProjectionSet(parent).projections();
+        return asteroidProjections.projectionsFor(
+            parent,
+            AsteroidFieldClientKnowledgeState.snapshots(),
+            CelestialDiscoveryClientState.snapshots());
     }
 
     public static Optional<AsteroidStarmapProjection> asteroidProjection(CelestialObject body) {
-        if (body == null || !body.id()
-            .isMinorBody()) return Optional.empty();
-        return GalaxiaCelestialAPI.get(
-            body.id()
-                .minorBodyId()
-                .parentBodyId())
-            .flatMap(
-                belt -> Optional.ofNullable(
-                    asteroidProjectionSet(belt).byBodyId()
-                        .get(body.id())));
+        return asteroidProjections.projectionFor(
+            body,
+            AsteroidFieldClientKnowledgeState.snapshots(),
+            CelestialDiscoveryClientState.snapshots());
     }
 
     public static boolean showHiddenAsteroidObjects() {
-        return showHiddenAsteroidObjects;
+        return asteroidProjections.includeHidden();
     }
 
     public static void toggleShowHiddenAsteroidObjects() {
-        showHiddenAsteroidObjects = !showHiddenAsteroidObjects;
-        asteroidProjectionCache.clear();
+        asteroidProjections.toggleIncludeHidden();
     }
 
     public static void setShowHiddenAsteroidObjects(boolean value) {
-        showHiddenAsteroidObjects = value;
-        asteroidProjectionCache.clear();
+        asteroidProjections.setIncludeHidden(value);
     }
 
     public static boolean isDebugHiddenAsteroid(CelestialObject body) {
@@ -600,129 +568,10 @@ public final class CelestialClient {
     // ── Helpers ──
 
     private static List<CelestialObject> clientAsteroidChildren(CelestialObjectKey parentId) {
-        if (parentId == null || !parentId.isRegistered()) return List.of();
-        return GalaxiaCelestialAPI.get(parentId.registeredBodyId())
-            .filter(
-                body -> body.properties()
-                    .asteroidFieldProfile() != null)
-            .map(
-                body -> asteroidProjectionSet(body).projections()
-                    .stream()
-                    .map(AsteroidStarmapProjection::body)
-                    .toList())
-            .orElse(List.of());
-    }
-
-    private static CachedAsteroidProjections asteroidProjectionSet(CelestialObject belt) {
-        List<AsteroidFieldKnowledgeSnapshot> snapshots = AsteroidFieldClientKnowledgeState.snapshots();
-        List<CelestialDiscoveryScanSnapshot> scanSnapshots = CelestialDiscoveryClientState.snapshots();
-        CachedAsteroidProjections cached = asteroidProjectionCache.get(belt.id());
-        if (cached != null && cached.matches(snapshots, scanSnapshots, showHiddenAsteroidObjects)) return cached;
-
-        Set<MinorCelestialBodyId> scanTargets = scanTargetsForBelt(belt.id(), scanSnapshots);
-        Set<MinorCelestialBodyId> sensorRevealTargets = sensorRevealTargetsForBelt(belt, snapshots, scanSnapshots);
-        List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder
-            .forBelt(belt, snapshots, showHiddenAsteroidObjects, scanTargets, sensorRevealTargets);
-        Map<CelestialObjectKey, AsteroidStarmapProjection> byBodyId = projections.stream()
-            .collect(
-                java.util.stream.Collectors.toUnmodifiableMap(
-                    projection -> projection.body()
-                        .id(),
-                    Function.identity()));
-        CachedAsteroidProjections rebuilt = new CachedAsteroidProjections(
-            snapshots,
-            scanSnapshots,
-            showHiddenAsteroidObjects,
-            projections,
-            byBodyId);
-        asteroidProjectionCache.put(belt.id(), rebuilt);
-        return rebuilt;
-    }
-
-    private static Set<MinorCelestialBodyId> scanTargetsForBelt(CelestialObjectKey beltId,
-        List<CelestialDiscoveryScanSnapshot> scanSnapshots) {
-
-        if (beltId == null || !beltId.isRegistered()) return Set.of();
-        CelestialObjectId registeredBeltId = beltId.registeredBodyId();
-        Set<MinorCelestialBodyId> targets = new LinkedHashSet<>();
-        for (CelestialDiscoveryScanSnapshot snapshot : scanSnapshots) {
-            if (snapshot.targetKey() != null && snapshot.targetKey()
-                .isMinorBody()
-                && snapshot.targetKey()
-                    .minorBodyId()
-                    .parentBodyId() == registeredBeltId) {
-                targets.add(
-                    snapshot.targetKey()
-                        .minorBodyId());
-            }
-        }
-        return Set.copyOf(targets);
-    }
-
-    private static Set<MinorCelestialBodyId> sensorRevealTargetsForBelt(CelestialObject belt,
-        List<AsteroidFieldKnowledgeSnapshot> knowledgeSnapshots, List<CelestialDiscoveryScanSnapshot> scanSnapshots) {
-
-        if (belt == null || !belt.id()
-            .isRegistered()) return Set.of();
-        AsteroidFieldProfile profile = belt.properties()
-            .asteroidFieldProfile();
-        if (profile == null) return Set.of();
-
-        CelestialObjectId beltId = belt.id()
-            .registeredBodyId();
-        Optional<AsteroidFieldKnowledgeSnapshot> snapshot = knowledgeSnapshots == null ? Optional.empty()
-            : knowledgeSnapshots.stream()
-                .filter(candidate -> candidate.beltId() == beltId)
-                .findFirst();
-        AsteroidFieldNodeCatalog catalog = snapshot
-            .map(value -> AsteroidFieldNodeCatalog.fromSnapshots(beltId, profile, value.nodeSnapshots()))
-            .orElseGet(
-                () -> AsteroidFieldNodeCatalog.restored(beltId)
-                    .orElseGet(() -> AsteroidFieldNodeCatalog.fromGenerated(beltId, profile)));
-        Map<Integer, AsteroidFieldKnowledgeSnapshot.Entry> entriesByIndex = new LinkedHashMap<>();
-        snapshot.ifPresent(
-            value -> value.entries()
-                .forEach(entry -> entriesByIndex.put(entry.index(), entry)));
-
-        Set<MinorCelestialBodyId> targets = new LinkedHashSet<>();
-        for (CelestialDiscoveryScanSnapshot scan : scanSnapshots) {
-            if (!scan.anchorKey()
-                .isMinorBody()
-                || scan.anchorKey()
-                    .minorBodyId()
-                    .parentBodyId() != beltId)
-                continue;
-            Optional<AsteroidFieldNode> anchorNode = catalog.resolve(
-                scan.anchorKey()
-                    .minorBodyId());
-            if (anchorNode.isEmpty()) continue;
-            double revealRadius = scan.radius() * 2.0;
-            for (AsteroidFieldNode candidate : catalog.nodes()) {
-                if (!isHiddenAsteroidNode(candidate, entriesByIndex)) continue;
-                if (distance(profile, anchorNode.get(), candidate) <= revealRadius) {
-                    targets.add(candidate.id());
-                }
-            }
-        }
-        return Set.copyOf(targets);
-    }
-
-    private static boolean isHiddenAsteroidNode(AsteroidFieldNode node,
-        Map<Integer, AsteroidFieldKnowledgeSnapshot.Entry> entriesByIndex) {
-
-        AsteroidFieldKnowledgeSnapshot.Entry entry = entriesByIndex.get(node.index());
-        DiscoveryState detectionState = entry == null ? node.initialDetectionState() : entry.detectionState();
-        return detectionState == DiscoveryState.HIDDEN;
-    }
-
-    private static double distance(AsteroidFieldProfile profile, AsteroidFieldNode first, AsteroidFieldNode second) {
-        double firstRadius = AsteroidFieldOrbitResolver.resolveRadius(profile, first);
-        double firstAngle = Math.toRadians(first.angleOffsetDeg());
-        double secondRadius = AsteroidFieldOrbitResolver.resolveRadius(profile, second);
-        double secondAngle = Math.toRadians(second.angleOffsetDeg());
-        double dx = Math.cos(firstAngle) * firstRadius - Math.cos(secondAngle) * secondRadius;
-        double dy = Math.sin(firstAngle) * firstRadius - Math.sin(secondAngle) * secondRadius;
-        return Math.sqrt(dx * dx + dy * dy);
+        return asteroidProjections.childrenOf(
+            parentId,
+            AsteroidFieldClientKnowledgeState.snapshots(),
+            CelestialDiscoveryClientState.snapshots());
     }
 
     private static void collectTransferTargets(CelestialObject current, List<TransferTarget> targets) {
