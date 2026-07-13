@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.satellite;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -12,6 +13,8 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -49,6 +52,62 @@ final class SatelliteDataJobServiceTest {
                 TEAM,
                 CelestialObjectId.MARS,
                 SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, CelestialObjectId.MARS)));
+    }
+
+    @Test
+    void completedProductionPublishesDataJobEvent() {
+        SatelliteDataBufferStore store = new SatelliteDataBufferStore();
+        AutomatedFacility source = facility(CelestialObjectId.MARS);
+        AutomatedFacility destination = facility(CelestialObjectId.EGORA);
+        ModuleDebugDataGenerator producer = addDebugModule(source);
+        ModuleDebugDataGenerator consumer = addDebugModule(destination);
+        producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
+        consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
+        SatelliteDataEndpointRegistry endpoints = new SatelliteDataEndpointRegistry();
+        endpoints.refreshFacility(TEAM, source);
+        endpoints.refreshFacility(TEAM, destination);
+        List<SatelliteDataJobService.ProductionEvent> events = new ArrayList<>();
+
+        SatelliteDataJobService.tickEndpointsUsage(
+            TEAM,
+            endpoints.endpoints(TEAM),
+            store,
+            network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD),
+            events::add);
+
+        assertEquals(1, events.size());
+        SatelliteDataJobService.ProductionEvent event = events.get(0);
+        assertEquals(TEAM, event.teamId());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.MARS), event.bodyKey());
+        assertEquals(SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, CelestialObjectId.MARS), event.key());
+        assertEquals(SatelliteBandwidthFormatter.kilobits(10L), event.deciKb());
+    }
+
+    @Test
+    void completedMinorBodyProductionPublishesKeyedDataJobEvent() {
+        SatelliteDataBufferStore store = new SatelliteDataBufferStore();
+        CelestialObjectKey asteroid = asteroidKey(7);
+        CelestialObjectKey belt = CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT);
+        AutomatedFacility source = facility(asteroid);
+        AutomatedFacility destination = facility(belt);
+        ModuleDebugDataGenerator producer = addDebugModule(source);
+        ModuleDebugDataGenerator consumer = addDebugModule(destination);
+        producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
+        consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
+        SatelliteDataEndpointRegistry endpoints = new SatelliteDataEndpointRegistry();
+        endpoints.refreshFacility(TEAM, source);
+        endpoints.refreshFacility(TEAM, destination);
+        List<SatelliteDataJobService.ProductionEvent> events = new ArrayList<>();
+
+        SatelliteDataJobService
+            .tickEndpointsUsage(TEAM, endpoints.endpoints(TEAM), store, network(asteroid, belt), events::add);
+
+        assertEquals(1, events.size());
+        SatelliteDataJobService.ProductionEvent event = events.get(0);
+        assertEquals(TEAM, event.teamId());
+        assertEquals(asteroid, event.bodyKey());
+        assertEquals(SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, asteroid), event.key());
+        assertEquals(SatelliteBandwidthFormatter.kilobits(10L), event.deciKb());
     }
 
     @Test
@@ -259,9 +318,13 @@ final class SatelliteDataJobServiceTest {
     }
 
     private static AutomatedFacility facility(CelestialObjectId bodyId) {
+        return facility(CelestialObjectKey.registered(bodyId));
+    }
+
+    private static AutomatedFacility facility(CelestialObjectKey bodyKey) {
         return new AutomatedFacility(
             CelestialAsset.ID.create(),
-            bodyId,
+            bodyKey,
             CelestialAsset.Kind.AUTOMATED_OUTPOST,
             Buildable.Status.OPERATIONAL);
     }
@@ -290,11 +353,31 @@ final class SatelliteDataJobServiceTest {
             0,
             List.of(node(first, 0.0D), node(second, 10.0D), node(third, 20.0D)),
             List.of(new SatelliteNetworkGraph.Edge(first, second), new SatelliteNetworkGraph.Edge(first, third)),
-            Map.of(first, 10L, second, 10L, third, 10L),
+            Map.of(key(first), 10L, key(second), 10L, key(third), 10L),
             Map.of());
     }
 
     private static SatelliteNetworkGraph.Node node(CelestialObjectId id, double x) {
         return new SatelliteNetworkGraph.Node(id, null, id.ordinal(), x, 0.0D, 1.0D);
+    }
+
+    private static SatelliteNetworkState network(CelestialObjectKey source, CelestialObjectKey destination) {
+        return SatelliteNetworkCalculator.fromGraph(
+            TEAM,
+            0,
+            List.of(
+                new SatelliteNetworkGraph.Node(source, destination, 1.0D, 0.0D, 0.0D, 1.0D),
+                new SatelliteNetworkGraph.Node(destination, null, 2.0D, 10.0D, 0.0D, 1.0D)),
+            List.of(new SatelliteNetworkGraph.Edge(source, destination)),
+            Map.of(source, 10L, destination, 10L),
+            Map.of());
+    }
+
+    private static CelestialObjectKey asteroidKey(int index) {
+        return CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, index));
+    }
+
+    private static CelestialObjectKey key(CelestialObjectId id) {
+        return CelestialObjectKey.registered(id);
     }
 }
