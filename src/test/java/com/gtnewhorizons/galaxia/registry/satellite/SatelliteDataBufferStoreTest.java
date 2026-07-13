@@ -12,6 +12,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 
 final class SatelliteDataBufferStoreTest {
 
@@ -41,6 +43,29 @@ final class SatelliteDataBufferStoreTest {
 
         List<SatelliteDataKey> matches = SatelliteDataKey
             .matchingDemandKeys(marsProspecting, List.of(anyProspecting, egoraProspecting));
+
+        assertIterableEquals(List.of(anyProspecting), matches);
+    }
+
+    @Test
+    void minorBodyOriginDemandMatchesOnlyTheSameMinorBody() {
+        CelestialObjectKey asteroid = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 42));
+        CelestialObjectKey otherAsteroid = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 43));
+        SatelliteDataKey asteroidProspecting = SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, asteroid);
+        SatelliteDataKey otherAsteroidProspecting = SatelliteDataKey
+            .origin(SatelliteDataType.PROSPECTING, otherAsteroid);
+        SatelliteDataKey anyProspecting = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
+
+        assertTrue(anyProspecting.matchesProduced(asteroidProspecting));
+        assertTrue(
+            SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, asteroid)
+                .matchesProduced(asteroidProspecting));
+        assertFalse(otherAsteroidProspecting.matchesProduced(asteroidProspecting));
+
+        List<SatelliteDataKey> matches = SatelliteDataKey
+            .matchingDemandKeys(asteroidProspecting, List.of(anyProspecting, otherAsteroidProspecting));
 
         assertIterableEquals(List.of(anyProspecting), matches);
     }
