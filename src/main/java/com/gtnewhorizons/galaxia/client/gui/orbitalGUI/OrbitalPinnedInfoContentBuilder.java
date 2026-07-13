@@ -29,6 +29,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
@@ -37,7 +38,7 @@ public final class OrbitalPinnedInfoContentBuilder {
 
     List<PinnedInfoRow> buildRows(CelestialObject body) {
         if (CelestialClient.isAsteroidScanInProgress(body)) {
-            return CelestialDiscoveryClientState.scanTarget(body.id(), SatelliteKind.PROSPECTING)
+            return CelestialDiscoveryClientState.scanTarget(body.id(), CelestialDiscoveryCapability.PROSPECTING)
                 .map(scan -> List.of(row("name", "???"), row("scan", formatScanProgress(scan))))
                 .orElseGet(() -> List.of(row("name", "???")));
         }
@@ -103,7 +104,7 @@ public final class OrbitalPinnedInfoContentBuilder {
                     .append(',');
             }
         }
-        CelestialDiscoveryClientState.scanTarget(body.id(), SatelliteKind.PROSPECTING)
+        CelestialDiscoveryClientState.scanTarget(body.id(), CelestialDiscoveryCapability.PROSPECTING)
             .ifPresent(
                 scan -> signature.append("|asteroidScan:")
                     .append(scan.step())
@@ -154,7 +155,7 @@ public final class OrbitalPinnedInfoContentBuilder {
             .isMinorBody()) return java.util.Optional.empty();
         // Active scan progress is keyed by the minor-body id so switching focus
         // between generated asteroids shows the satellite's current target.
-        return CelestialDiscoveryClientState.scanTarget(body.id(), SatelliteKind.PROSPECTING)
+        return CelestialDiscoveryClientState.scanTarget(body.id(), CelestialDiscoveryCapability.PROSPECTING)
             .map(scan -> row("scan", formatScanProgress(scan)));
     }
 

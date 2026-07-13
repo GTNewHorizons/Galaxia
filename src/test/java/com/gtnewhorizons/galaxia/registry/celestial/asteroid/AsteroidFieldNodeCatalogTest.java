@@ -9,7 +9,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
@@ -94,7 +94,7 @@ final class AsteroidFieldNodeCatalogTest {
             .generationVersion(1)
             .sizeCounts(generatedNodes, 0, 0)
             .radialBand(1000.0, 2000.0)
-            .satelliteScanRadius(1000.0)
+            .placementConnectionRadius(1000.0)
             .oreProfile(new AsteroidOreProfile("metallic", List.of("galaxia:iron")))
             .build();
     }

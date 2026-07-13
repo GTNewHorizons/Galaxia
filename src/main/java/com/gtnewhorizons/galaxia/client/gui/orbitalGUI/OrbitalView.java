@@ -45,6 +45,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
@@ -3205,7 +3206,7 @@ public class OrbitalView {
 
         private java.util.Optional<String> satelliteScanningSummary(CelestialObject body) {
             if (satelliteCount(body, SatelliteKind.PROSPECTING) <= 0) return java.util.Optional.empty();
-            return CelestialDiscoveryClientState.scan(body.id(), SatelliteKind.PROSPECTING)
+            return CelestialDiscoveryClientState.scan(body.id(), CelestialDiscoveryCapability.PROSPECTING)
                 .map(scan -> "Scanning: " + scanProgressPercent(scan) + "%");
         }
 

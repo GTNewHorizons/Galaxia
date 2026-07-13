@@ -28,7 +28,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
@@ -38,6 +38,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfil
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjectionBuilder;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -593,7 +594,7 @@ public final class CelestialClient {
 
     public static Optional<CelestialDiscoveryScanSnapshot> asteroidScanSnapshotByTarget(CelestialObject body) {
         if (body == null) return Optional.empty();
-        return CelestialDiscoveryClientState.scanTarget(body.id(), SatelliteKind.PROSPECTING);
+        return CelestialDiscoveryClientState.scanTarget(body.id(), CelestialDiscoveryCapability.PROSPECTING);
     }
 
     // ── Helpers ──
@@ -683,7 +684,6 @@ public final class CelestialClient {
             value -> value.entries()
                 .forEach(entry -> entriesByIndex.put(entry.index(), entry)));
 
-        double revealRadius = profile.satelliteScanRadius() * 2.0;
         Set<MinorCelestialBodyId> targets = new LinkedHashSet<>();
         for (CelestialDiscoveryScanSnapshot scan : scanSnapshots) {
             if (!scan.anchorKey()
@@ -696,6 +696,7 @@ public final class CelestialClient {
                 scan.anchorKey()
                     .minorBodyId());
             if (anchorNode.isEmpty()) continue;
+            double revealRadius = scan.radius() * 2.0;
             for (AsteroidFieldNode candidate : catalog.nodes()) {
                 if (!isHiddenAsteroidNode(candidate, entriesByIndex)) continue;
                 if (distance(profile, anchorNode.get(), candidate) <= revealRadius) {

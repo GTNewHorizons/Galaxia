@@ -15,7 +15,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
-import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
@@ -26,11 +26,13 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryStep;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDiscoveryWorkerSource;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class CelestialClientAsteroidProjectionTest {
@@ -107,19 +109,17 @@ final class CelestialClientAsteroidProjectionTest {
             .filter(node -> node.sizeClass() == AsteroidSizeClass.LARGE)
             .findFirst()
             .orElseThrow();
-        AsteroidFieldNode activeTarget = catalog.nodes()
+        List<AsteroidFieldNode> nearestTargets = catalog.nodes()
             .stream()
             .filter(node -> node.index() != anchor.index())
-            .filter(node -> distance(profile, anchor, node) <= profile.satelliteScanRadius())
-            .findFirst()
-            .orElseThrow();
-        AsteroidFieldNode sensorTarget = catalog.nodes()
-            .stream()
-            .filter(node -> node.index() != anchor.index() && node.index() != activeTarget.index())
-            .filter(node -> distance(profile, anchor, node) > profile.satelliteScanRadius())
-            .filter(node -> distance(profile, anchor, node) <= profile.satelliteScanRadius() * 2.0)
-            .findFirst()
-            .orElseThrow();
+            .sorted(java.util.Comparator.comparingDouble(node -> distance(profile, anchor, node)))
+            .limit(2)
+            .toList();
+        AsteroidFieldNode activeTarget = nearestTargets.get(0);
+        AsteroidFieldNode sensorTarget = nearestTargets.get(1);
+        double activeDistance = distance(profile, anchor, activeTarget);
+        double sensorDistance = distance(profile, anchor, sensorTarget);
+        double scanRadius = (Math.max(activeDistance, sensorDistance / 2.0) + sensorDistance) / 2.0;
 
         AsteroidFieldClientKnowledgeState.updateFields(
             List.of(
@@ -141,9 +141,9 @@ final class CelestialClientAsteroidProjectionTest {
                 new CelestialDiscoveryScanSnapshot(
                     new java.util.UUID(1L, 2L),
                     anchorKey,
-                    0.5,
+                    scanRadius,
                     1,
-                    SatelliteKind.PROSPECTING,
+                    CelestialDiscoveryCapability.PROSPECTING,
                     CelestialDiscoveryScanSnapshot.Status.ACTIVE,
                     targetKey,
                     CelestialDiscoveryStep.DETECTION,

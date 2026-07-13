@@ -17,7 +17,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialSystemAdapters;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldDiscoveryWork;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
@@ -32,25 +32,25 @@ import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 final class AssetCreateRequestPacketTest {
 
     private static final UUID TEAM = UUID.randomUUID();
+    private static final CelestialServerRuntime RUNTIME = CelestialServerRuntime.create();
 
     @BeforeAll
     static void bootstrapRegistry() {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
-        CelestialSystemAdapters.register();
     }
 
     @BeforeEach
     void cleanStores() {
         CelestialAssetStore.SERVER.clearInternal();
         CelestialAssetStore.CLIENT.clearInternal();
-        CelestialKnowledgeService.clear();
+        RUNTIME.reset();
     }
 
     @AfterEach
     void cleanStoresAfter() {
         CelestialAssetStore.SERVER.clearInternal();
         CelestialAssetStore.CLIENT.clearInternal();
-        CelestialKnowledgeService.clear();
+        RUNTIME.reset();
     }
 
     @Test

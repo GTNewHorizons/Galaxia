@@ -26,7 +26,7 @@ public final class CelestialDiscoveryClientState {
     }
 
     public static Optional<CelestialDiscoveryScanSnapshot> scanTarget(CelestialObjectKey targetKey,
-        SatelliteKind capability) {
+        CelestialDiscoveryCapability capability) {
         if (targetKey == null || capability == null) return Optional.empty();
         return snapshots.stream()
             .filter(snapshot -> targetKey.equals(snapshot.targetKey()) && snapshot.capability() == capability)

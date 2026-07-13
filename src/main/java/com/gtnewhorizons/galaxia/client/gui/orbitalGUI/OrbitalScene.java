@@ -20,6 +20,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
@@ -766,12 +768,11 @@ public class OrbitalScene {
                 if (state.body()
                     .objectClass() != CelestialObject.Class.ASTEROID || !state.renderBody()) continue;
                 if (prospectingSatelliteCount(state.body()) <= 0) continue;
-                AsteroidFieldProfile profile = state.parent() == null ? null
-                    : state.parent()
-                        .properties()
-                        .asteroidFieldProfile();
-                if (profile == null) continue;
-                float screenRadius = (float) (profile.satelliteScanRadius() * callbacks.getScale());
+                double radius = CelestialDiscoveryClientState
+                    .scan(state.body().id(), CelestialDiscoveryCapability.PROSPECTING)
+                    .map(CelestialDiscoveryScanSnapshot::radius)
+                    .orElse(0.0);
+                float screenRadius = (float) (radius * callbacks.getScale());
                 if (screenRadius < 1.0f) continue;
                 drawCircleOutline(
                     state.screenX(),
