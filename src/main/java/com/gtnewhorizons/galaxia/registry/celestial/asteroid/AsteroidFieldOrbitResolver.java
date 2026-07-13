@@ -5,7 +5,6 @@ import javax.annotation.Nullable;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.MinorBodyOrbitSlot;
-import com.gtnewhorizons.galaxia.registry.celestial.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.orbital.MinorBodyOrbitResolver;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 
