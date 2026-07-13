@@ -36,6 +36,7 @@ public final class CelestialRegistry {
 
     private static final Map<CelestialObjectKey, CelestialObject> REGISTRATIONS = new LinkedHashMap<>();
     private static final Map<DimensionEnum, CelestialObjectKey> IDS_BY_DIMENSION = new EnumMap<>(DimensionEnum.class);
+    private static final List<DynamicCelestialObjectProvider> DYNAMIC_OBJECT_PROVIDERS = new ArrayList<>();
 
     private static boolean bootstrapped;
     private static boolean frozen;
@@ -405,6 +406,14 @@ public final class CelestialRegistry {
         }
     }
 
+    public static void registerDynamicProvider(@Nonnull DynamicCelestialObjectProvider provider) {
+        assertMutable();
+        if (provider == null) throw new IllegalArgumentException("dynamic object provider is required");
+        if (!DYNAMIC_OBJECT_PROVIDERS.contains(provider)) {
+            DYNAMIC_OBJECT_PROVIDERS.add(provider);
+        }
+    }
+
     public static void freezeAndBake() {
         registerDefaults();
         if (frozen) return;
@@ -426,7 +435,13 @@ public final class CelestialRegistry {
 
     public static Optional<CelestialObject> get(CelestialObjectKey key) {
         registerDefaults();
-        return Optional.ofNullable(REGISTRATIONS.get(key));
+        CelestialObject registered = REGISTRATIONS.get(key);
+        if (registered != null) return Optional.of(registered);
+        if (key == null || !key.isMinorBody()) return Optional.empty();
+        return DYNAMIC_OBJECT_PROVIDERS.stream()
+            .map(provider -> provider.resolve(key))
+            .flatMap(Optional::stream)
+            .findFirst();
     }
 
     public static List<CelestialObject> getAll() {

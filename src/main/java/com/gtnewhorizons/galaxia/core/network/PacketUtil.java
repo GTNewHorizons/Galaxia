@@ -40,6 +40,24 @@ public final class PacketUtil {
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
+    static int readBoundedCount(ByteBuf buf, String description, int maximum) {
+        int count = buf.readInt();
+        validateBoundedCount(count, description, maximum);
+        return count;
+    }
+
+    static void writeBoundedCount(ByteBuf buf, int count, String description, int maximum) {
+        validateBoundedCount(count, description, maximum);
+        buf.writeInt(count);
+    }
+
+    static void validateBoundedCount(int count, String description, int maximum) {
+        if (count < 0 || count > maximum) {
+            throw new IllegalStateException(
+                "[PacketUtil] Invalid " + description + " count " + count + "; expected 0.." + maximum);
+        }
+    }
+
     // ── ID helpers ──────────────────────────────────────────────────
 
     static <T extends WithUUID> void writeId(ByteBuf buf, T with) {
@@ -137,7 +155,7 @@ public final class PacketUtil {
         writeEnum(
             buf,
             key.minorBodyId()
-                .parentBeltId());
+                .parentBodyId());
         buf.writeInt(
             key.minorBodyId()
                 .index());
@@ -150,9 +168,9 @@ public final class PacketUtil {
         }
         // Minor body packets always carry their registered belt plus stable slot
         // index; they never depend on a transient client-side object instance.
-        CelestialObjectId parentBeltId = readEnum(buf, CelestialObjectId.class);
+        CelestialObjectId parentBodyId = readEnum(buf, CelestialObjectId.class);
         int index = buf.readInt();
-        return CelestialObjectKey.minorBody(new MinorCelestialBodyId(parentBeltId, index));
+        return CelestialObjectKey.minorBody(new MinorCelestialBodyId(parentBodyId, index));
     }
 
     // ── ItemStack helpers ──────────────────────────────────────────────
