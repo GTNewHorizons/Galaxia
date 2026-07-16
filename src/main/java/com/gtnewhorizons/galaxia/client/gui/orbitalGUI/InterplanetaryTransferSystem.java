@@ -21,6 +21,7 @@ import com.cleanroommc.modularui.widgets.SliderWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
+import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
@@ -382,7 +383,7 @@ public final class InterplanetaryTransferSystem {
         if (objectClass == CelestialObject.Class.PLANET || objectClass == CelestialObject.Class.GAS_GIANT) {
             out.add(current);
         }
-        for (CelestialObject child : GalaxiaCelestialAPI.getChildren(current)) {
+        for (CelestialObject child : CelestialClient.getChildren(current)) {
             collectStressPlanets(child, out);
         }
     }

@@ -1,11 +1,16 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
+import java.util.List;
 import java.util.Optional;
 
 import javax.annotation.Nonnull;
 
-/** Resolves runtime celestial bodies that are not part of the authored registry. */
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryView;
+
 public interface DynamicCelestialObjectProvider {
 
     Optional<CelestialObject> resolve(@Nonnull CelestialObjectKey key);
+
+    List<CelestialObject> dynamicChildren(@Nonnull CelestialObjectKey parentKey,
+        @Nonnull CelestialDiscoveryView discoveryView, boolean includeHidden);
 }

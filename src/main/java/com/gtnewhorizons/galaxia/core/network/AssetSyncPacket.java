@@ -73,7 +73,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
-import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkClientState;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -1419,10 +1418,7 @@ public final class AssetSyncPacket implements IMessage {
 
         public static void handleClientSync(AssetSyncPacket packet) {
             switch (packet.syncType) {
-                case CLEAR -> {
-                    CelestialAssetStore.CLIENT.clearInternal();
-                    SatelliteNetworkClientState.clear();
-                }
+                case CLEAR -> ClientStateLifecycle.clearAll();
                 case ASSET_REMOVED -> CelestialAssetStore.CLIENT.destroyAssetInternal(packet.assetId);
                 case FULL_SYNC -> handleFull(packet);
                 default -> {

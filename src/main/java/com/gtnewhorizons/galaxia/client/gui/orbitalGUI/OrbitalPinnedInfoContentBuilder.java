@@ -10,6 +10,7 @@ import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.StatCollector;
 
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
@@ -22,27 +23,36 @@ import com.cleanroommc.modularui.utils.GlStateManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.TextWidget;
+import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 
 public final class OrbitalPinnedInfoContentBuilder {
 
     List<PinnedInfoRow> buildRows(CelestialObject body) {
+        if (CelestialClient.isAsteroidScanInProgress(body)) {
+            return CelestialDiscoveryClientState.scanTarget(body.id(), CelestialDiscoveryCapability.PROSPECTING)
+                .map(scan -> List.of(row("name", "???"), row("scan", formatScanProgress(scan))))
+                .orElseGet(() -> List.of(row("name", "???")));
+        }
+        if (CelestialClient.isSensorRevealedAsteroid(body)) {
+            return List.of(row("name", "???"));
+        }
         List<PinnedInfoRow> rows = new ArrayList<>();
-        // TODO: Localize
-        rows.add(new PinnedInfoRow("Name", body.displayName()));
-        rows.add(new PinnedInfoRow("Type", formatObjectClass(body.objectClass())));
-        rows.add(new PinnedInfoRow("Landable", isLandable(body) ? "Yes" : "No"));
-        rows.add(new PinnedInfoRow("Dangers", buildDangerSummary(body)));
+        rows.add(row("name", body.displayName()));
+        rows.add(row("type", formatObjectClass(body.objectClass())));
+        rows.add(row("landable", isLandable(body) ? tr("value.yes") : tr("value.no")));
+        rows.add(row("dangers", buildDangerSummary(body)));
         if (body.objectClass() != CelestialObject.Class.STAR && body.objectClass() != CelestialObject.Class.GALAXY) {
-            rows.add(new PinnedInfoRow("Surface", formatSurfaceType(body)));
-            List<ItemStack> gtOres = body.properties()
-                .getResolvedGtVeinOreStacks();
-            if (gtOres.isEmpty()) {
-                rows.add(new PinnedInfoRow("Ores", "Undefined"));
-            } else {
-                rows.add(new PinnedInfoRow("Ores", "", gtOres));
-            }
+            rows.add(row("surface", formatSurfaceType(body)));
+            rows.add(buildOreRow(body));
+            buildScanRow(body).ifPresent(rows::add);
         }
         return rows;
     }
@@ -79,40 +89,123 @@ public final class OrbitalPinnedInfoContentBuilder {
             .get("surface");
         signature.append('|')
             .append(surfaceType == null ? "" : surfaceType);
-        List<String> gtOreVeinIds = body.properties()
-            .gtOreVeinIds();
-        signature.append('|')
-            .append(gtOreVeinIds.size());
-        for (String veinId : gtOreVeinIds) {
+        if (!canShowOreDetails(body)) {
+            signature.append("|asteroidOre:")
+                .append(asteroidOreKnowledge(body));
+        } else {
+            List<String> gtOreVeinIds = body.properties()
+                .gtOreVeinIds();
             signature.append('|')
-                .append(veinId)
-                .append(',');
+                .append(gtOreVeinIds.size());
+            for (String veinId : gtOreVeinIds) {
+                signature.append('|')
+                    .append(veinId)
+                    .append(',');
+            }
         }
+        CelestialDiscoveryClientState.scanTarget(body.id(), CelestialDiscoveryCapability.PROSPECTING)
+            .ifPresent(
+                scan -> signature.append("|asteroidScan:")
+                    .append(scan.step())
+                    .append(':')
+                    .append(scan.elapsedTicks())
+                    .append(':')
+                    .append(scan.capability()));
+    }
+
+    private boolean canShowOreDetails(CelestialObject body) {
+        if (!body.id()
+            .isMinorBody()) return true;
+        return CelestialClient.asteroidProjection(body)
+            .map(AsteroidStarmapProjection::canShowOreDetails)
+            .orElse(false);
+    }
+
+    private PinnedInfoRow buildOreRow(CelestialObject body) {
+        if (body.id()
+            .isMinorBody()) {
+            AsteroidStarmapProjection projection = CelestialClient.asteroidProjection(body)
+                .orElse(null);
+            CelestialResourceKnowledgeState oreKnowledge = projection == null ? CelestialResourceKnowledgeState.UNKNOWN
+                : projection.oreKnowledgeState();
+            // Asteroids can have real ore data before the player knows it. The
+            // sidebar gates presentation on knowledge state, not on the profile.
+            if (oreKnowledge == CelestialResourceKnowledgeState.UNKNOWN) return row("ores", tr("ore.unknown"));
+            if (oreKnowledge == CelestialResourceKnowledgeState.SIGNATURE) {
+                return row(
+                    "ores",
+                    StatCollector.translateToLocalFormatted(
+                        key("ore.signature"),
+                        projection.visibleOreProfileId()
+                            .orElse("")));
+            }
+        }
+
+        if (!canShowOreDetails(body)) return row("ores", tr("ore.unknown"));
+
+        List<ItemStack> gtOres = body.properties()
+            .getResolvedGtVeinOreStacks();
+        if (gtOres.isEmpty()) return row("ores", tr("ore.undefined"));
+        return new PinnedInfoRow(label("ores"), "", gtOres);
+    }
+
+    private java.util.Optional<PinnedInfoRow> buildScanRow(CelestialObject body) {
+        if (!body.id()
+            .isMinorBody()) return java.util.Optional.empty();
+        // Active scan progress is keyed by the minor-body id so switching focus
+        // between generated asteroids shows the satellite's current target.
+        return CelestialDiscoveryClientState.scanTarget(body.id(), CelestialDiscoveryCapability.PROSPECTING)
+            .map(scan -> row("scan", formatScanProgress(scan)));
+    }
+
+    private String formatScanProgress(CelestialDiscoveryScanSnapshot scan) {
+        int percent = scan.step()
+            .durationTicks() == 0
+                ? 100
+                : Math.min(
+                    100,
+                    Math.max(
+                        0,
+                        (int) Math.round(
+                            scan.elapsedTicks() * 100.0
+                                / scan.step()
+                                    .durationTicks())));
+        return StatCollector.translateToLocalFormatted(
+            key("scan.progress"),
+            tr(
+                "scan.pass." + scan.step()
+                    .name()
+                    .toLowerCase()),
+            percent);
+    }
+
+    private CelestialResourceKnowledgeState asteroidOreKnowledge(CelestialObject body) {
+        return AsteroidFieldClientKnowledgeState.oreKnowledge(body.id())
+            .orElse(CelestialResourceKnowledgeState.UNKNOWN);
     }
 
     private String buildDangerSummary(CelestialObject body) {
         List<String> dangers = new ArrayList<>();
         if (body.properties()
-            .radiation() >= 0.25) dangers.add("Radiation");
+            .radiation() >= 0.25) dangers.add(tr("danger.radiation"));
         if (body.properties()
-            .temperature() > 360) dangers.add("Heat");
+            .temperature() > 360) dangers.add(tr("danger.heat"));
         if (body.properties()
             .temperature() > 0
             && body.properties()
                 .temperature() < 120)
-            dangers.add("Cold");
+            dangers.add(tr("danger.cold"));
         if (!body.properties()
             .visitable() && body.properties()
                 .canCreateOutpost())
-            dangers.add("Remote");
-        return dangers.isEmpty() ? "None" : String.join(", ", dangers);
+            dangers.add(tr("danger.remote"));
+        return dangers.isEmpty() ? tr("danger.none") : String.join(", ", dangers);
     }
 
     private String formatObjectClass(CelestialObject.Class objectClass) {
-        String raw = objectClass.name()
-            .toLowerCase()
-            .replace('_', ' ');
-        return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
+        return tr(
+            "type." + objectClass.name()
+                .toLowerCase());
     }
 
     private boolean isLandable(CelestialObject body) {
@@ -123,8 +216,24 @@ public final class OrbitalPinnedInfoContentBuilder {
         String surfaceType = body.properties()
             .metadata()
             .get("surface");
-        if (surfaceType == null || surfaceType.isEmpty()) return "Undefined";
+        if (surfaceType == null || surfaceType.isEmpty()) return tr("surface.undefined");
         return formatInfoToken(surfaceType);
+    }
+
+    private static PinnedInfoRow row(String labelKeySuffix, String value) {
+        return new PinnedInfoRow(label(labelKeySuffix), value);
+    }
+
+    private static String label(String suffix) {
+        return tr("label." + suffix);
+    }
+
+    private static String tr(String suffix) {
+        return StatCollector.translateToLocal(key(suffix));
+    }
+
+    private static String key(String suffix) {
+        return "galaxia.gui.orbital.pinned_info." + suffix;
     }
 
     private String formatInfoToken(String value) {
@@ -359,7 +468,7 @@ public final class OrbitalPinnedInfoContentBuilder {
 
         private int itemGridColumns(PinnedInfoRow row, int contentWidth) {
             int columns = Math.max(1, contentWidth / (ICON_SIZE + ICON_GAP));
-            if ("Ores".equals(row.label())) return Math.min(GT_ORE_STACKS_PER_VEIN, columns);
+            if (label("ores").equals(row.label())) return Math.min(GT_ORE_STACKS_PER_VEIN, columns);
             return columns;
         }
 

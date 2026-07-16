@@ -13,7 +13,6 @@ import net.minecraft.util.ResourceLocation;
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.utils.GlStateManager;
-import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -113,6 +112,11 @@ public class OrbitalScene {
 
         boolean drawLabel() {
             return drawLabel;
+        }
+
+        void hideBodyAndLabel() {
+            this.renderBody = false;
+            this.drawLabel = false;
         }
 
         float labelY() {
@@ -427,26 +431,57 @@ public class OrbitalScene {
             ResolvedBodyDrawState state = frame
                 .addResolvedBody(body, parent, worldX, worldY, 0f, 0f, 0f, 0f, false, false, 0f, 0);
             callbacks.fillResolvedBodyDrawState(state, body, parent, worldX, worldY, labelAlpha);
+            if (state.renderBody() && isDeclutteredByExistingBody(frame, state)) {
+                state.hideBodyAndLabel();
+            }
             if (state.body()
                 .objectClass() != CelestialObject.Class.GALAXY && state.bodyAlpha() > 0.01f
-                && state.renderBody()) {
+                && state.renderBody()
+                && AsteroidStarmapScenePresentation.registersBodyInteraction(state.body())) {
                 registerHitboxes(frame, state);
                 registerMarkers(frame, state);
             }
             if (state.drawLabel()) {
                 frame.addLabel(
-                    state.body()
-                        .displayName(),
+                    AsteroidStarmapScenePresentation.bodyLabel(state.body()),
                     state.screenX(),
                     state.labelY(),
                     state.labelColor());
             }
             if (!callbacks.shouldTraverseChildren(body)) return;
-            for (CelestialObject child : GalaxiaCelestialAPI.getChildren(body)) {
+            for (CelestialObject child : childrenInPresentationOrder(body)) {
                 OrbitalMechanics.OrbitalState childWorldState = OrbitalView.OrbitalWorldStateCache
                     .resolveChildWorldState(body, child, worldX, worldY, globalTime);
                 collectRecursive(frame, child, body, childWorldState.x(), childWorldState.y(), globalTime, labelAlpha);
             }
+        }
+
+        private List<CelestialObject> childrenInPresentationOrder(CelestialObject body) {
+            List<CelestialObject> children = CelestialClient.getChildren(body);
+            if (children.size() < 2) return children;
+            boolean hasAsteroid = false;
+            for (CelestialObject child : children) {
+                if (child.objectClass() == CelestialObject.Class.ASTEROID) {
+                    hasAsteroid = true;
+                    break;
+                }
+            }
+            if (!hasAsteroid) return children;
+            List<CelestialObject> sorted = new ArrayList<>(children);
+            sorted.sort(
+                (left, right) -> Integer.compare(
+                    AsteroidStarmapScenePresentation.presentationPriority(right),
+                    AsteroidStarmapScenePresentation.presentationPriority(left)));
+            return sorted;
+        }
+
+        private boolean isDeclutteredByExistingBody(OrbitalSceneFrame frame, ResolvedBodyDrawState state) {
+            return shouldDeclutterBody(
+                state.body(),
+                state.screenX(),
+                state.screenY(),
+                callbacks.getInteractionRadius(state.renderedRadius()),
+                frame.screenBodies);
         }
 
         private void registerHitboxes(OrbitalSceneFrame frame, ResolvedBodyDrawState state) {
@@ -496,6 +531,24 @@ public class OrbitalScene {
         }
     }
 
+    static boolean shouldDeclutterBody(CelestialObject body, float screenX, float screenY, float interactionRadius,
+        List<ScreenBodyBounds> screenBodies) {
+        if (body.objectClass() != CelestialObject.Class.ASTEROID) return false;
+        for (ScreenBodyBounds bounds : screenBodies) {
+            if (bounds.body()
+                .objectClass() == CelestialObject.Class.ASTEROID
+                && AsteroidStarmapScenePresentation.presentationPriority(body)
+                    > AsteroidStarmapScenePresentation.presentationPriority(bounds.body())) {
+                continue;
+            }
+            float minimumDistance = Math.max(6f, Math.min(interactionRadius, bounds.interactionRadius()));
+            double dx = screenX - bounds.centerX();
+            double dy = screenY - bounds.centerY();
+            if (dx * dx + dy * dy < minimumDistance * minimumDistance) return true;
+        }
+        return false;
+    }
+
     public static final class OrbitalSceneRenderer {
 
         interface Callbacks {
@@ -529,7 +582,8 @@ public class OrbitalScene {
             for (ResolvedBodyDrawState state : frame.resolvedBodies) {
                 if (state.body()
                     .objectClass() == CelestialObject.Class.GALAXY || state.bodyAlpha() <= 0.01f
-                    || !state.renderBody()) continue;
+                    || !state.renderBody()
+                    || !AsteroidStarmapScenePresentation.drawsBodySprite(state.body())) continue;
                 ResourceLocation texture = callbacks.getRenderTexture(state.body());
                 if (texture != null && callbacks.getDisplaySpriteSize(state.body()) > 0.0001f) {
                     drawSprite(texture, state.screenX(), state.screenY(), state.renderedRadius(), state.bodyAlpha());
@@ -568,9 +622,24 @@ public class OrbitalScene {
             if (ellipseAlpha <= 0.01f) return;
             for (ResolvedBodyDrawState state : frame.resolvedBodies) {
                 if (state.parent() == null || !state.renderBody()
-                    || OrbitalView.OrbitalWorldStateCache.usesAbsolutePosition(state.parent(), state.body())) continue;
+                    || OrbitalView.OrbitalWorldStateCache.usesAbsolutePosition(state.parent(), state.body())
+                    || OrbitalMechanics.usesMinorBodyResolvedPosition(state.parent(), state.body())) continue;
                 ResolvedBodyDrawState parentState = frame.resolvedBodiesByBody.get(state.parent());
                 if (parentState == null) continue;
+                if (AsteroidStarmapScenePresentation.drawsBeltBand(state.body())) {
+                    AsteroidStarmapScenePresentation.drawBeltBand(
+                        state.body()
+                            .properties()
+                            .asteroidFieldProfile(),
+                        parentState.worldX(),
+                        parentState.worldY(),
+                        ellipseAlpha * state.bodyAlpha(),
+                        callbacks.getScale(),
+                        callbacks::worldToScreenX,
+                        callbacks::worldToScreenY);
+                    continue;
+                }
+                if (!AsteroidStarmapScenePresentation.drawsOrbitLine(state.body())) continue;
                 drawEllipse(
                     state.body()
                         .orbitalParams(),
@@ -613,12 +682,13 @@ public class OrbitalScene {
             Minecraft mc = Minecraft.getMinecraft();
             Gui.drawRect(8, widgetHeight - 36, 182, widgetHeight - 8, EnumColors.MAP_COLOR_DEBUG_PANEL_BG.getColor());
             mc.fontRenderer.drawStringWithShadow(
-                "Debug: body hitzones",
+                "Debug: hitzones + scan range",
                 14,
                 widgetHeight - 30,
                 EnumColors.MAP_COLOR_DEBUG_TITLE.getColor());
             mc.fontRenderer
                 .drawStringWithShadow("Toggle: B", 14, widgetHeight - 18, EnumColors.MAP_COLOR_DEBUG_INFO.getColor());
+            AsteroidStarmapScenePresentation.drawProspectingScanRanges(frame, callbacks.getScale());
             for (ScreenBodyBounds bounds : frame.screenBodies) {
                 drawSquareOutline(
                     bounds.centerX(),
@@ -674,9 +744,16 @@ public class OrbitalScene {
         private ScreenBodyBounds findScreenBodyBounds(OrbitalSceneFrame frame, CelestialObject body) {
             for (int i = frame.screenBodies.size() - 1; i >= 0; i--) {
                 ScreenBodyBounds bounds = frame.screenBodies.get(i);
-                if (bounds.body() == body) return bounds;
+                if (sameBody(bounds.body(), body)) return bounds;
             }
             return null;
+        }
+
+        private static boolean sameBody(CelestialObject left, CelestialObject right) {
+            if (left == right) return true;
+            if (left == null || right == null || left.id() == null || right.id() == null) return false;
+            return left.id()
+                .equals(right.id());
         }
 
         private void drawSprite(ResourceLocation tex, float x, float y, float radius, float alpha) {
@@ -748,6 +825,23 @@ public class OrbitalScene {
             GL11.glVertex2f(x + halfSize, y - halfSize);
             GL11.glVertex2f(x + halfSize, y + halfSize);
             GL11.glVertex2f(x - halfSize, y + halfSize);
+            GL11.glEnd();
+            GL11.glLineWidth(1f);
+            GlStateManager.color(1f, 1f, 1f, 1f);
+        }
+
+        private void drawCircleOutline(float x, float y, float radius, int color, float alpha, float lineWidth) {
+            GlStateManager.disableTexture2D();
+            float red = ((color >> 16) & 0xFF) / 255f;
+            float green = ((color >> 8) & 0xFF) / 255f;
+            float blue = (color & 0xFF) / 255f;
+            GlStateManager.color(red, green, blue, alpha);
+            GL11.glLineWidth(lineWidth);
+            GL11.glBegin(GL11.GL_LINE_LOOP);
+            for (int i = 0; i < 64; i++) {
+                double angle = i * Math.PI * 2.0 / 64.0;
+                GL11.glVertex2f(x + (float) Math.cos(angle) * radius, y + (float) Math.sin(angle) * radius);
+            }
             GL11.glEnd();
             GL11.glLineWidth(1f);
             GlStateManager.color(1f, 1f, 1f, 1f);

@@ -4,10 +4,8 @@ import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTechLoaded;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -45,6 +43,11 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapPresentationPolicy;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
@@ -262,6 +265,11 @@ public class OrbitalView {
             targetCameraY = y;
         }
 
+        void syncCameraToTarget() {
+            cameraX = targetCameraX;
+            cameraY = targetCameraY;
+        }
+
         void syncToTargets() {
             cameraX = targetCameraX;
             cameraY = targetCameraY;
@@ -276,7 +284,7 @@ public class OrbitalView {
 
     public static final class OrbitalWorldStateCache {
 
-        private final Map<CelestialObject, BodyWorldState> states = new IdentityHashMap<>();
+        private final Map<CelestialObjectKey, BodyWorldState> states = new HashMap<>();
         private double cachedTime = Double.NaN;
         private int rebuildVersion = 0;
 
@@ -291,20 +299,24 @@ public class OrbitalView {
         }
 
         double[] getWorldPosition(CelestialObject body) {
-            BodyWorldState state = states.get(body);
+            BodyWorldState state = getState(body);
             if (state == null) return null;
             return new double[] { state.worldX, state.worldY };
         }
 
         double[] getWorldVelocity(CelestialObject body) {
-            BodyWorldState state = states.get(body);
+            BodyWorldState state = getState(body);
             if (state == null) return null;
             return new double[] { state.worldVx, state.worldVy };
         }
 
         CelestialObject getParent(CelestialObject body) {
-            BodyWorldState state = states.get(body);
+            BodyWorldState state = getState(body);
             return state == null ? null : state.parent;
+        }
+
+        private BodyWorldState getState(CelestialObject body) {
+            return body == null || body.id() == null ? null : states.get(body.id());
         }
 
         private void rebuild(CelestialObject root, double globalTime) {
@@ -317,17 +329,22 @@ public class OrbitalView {
 
         private void populate(CelestialObject body, CelestialObject parent, OrbitalMechanics.OrbitalState worldState,
             double globalTime) {
-            BodyWorldState cachedState = states.get(body);
-            if (cachedState == null) {
-                cachedState = new BodyWorldState();
-                states.put(body, cachedState);
-            }
-            cachedState.set(parent, worldState.x(), worldState.y(), worldState.vx(), worldState.vy(), rebuildVersion);
-            for (CelestialObject child : GalaxiaCelestialAPI.getChildren(body)) {
+            recordState(body, parent, worldState);
+            for (CelestialObject child : CelestialClient.getChildren(body)) {
                 OrbitalMechanics.OrbitalState childWorldState = OrbitalMechanics
                     .resolveChildWorldState(body, child, worldState, globalTime);
                 populate(child, body, childWorldState, globalTime);
             }
+        }
+
+        void recordState(CelestialObject body, CelestialObject parent, OrbitalMechanics.OrbitalState worldState) {
+            if (body.id() == null) return;
+            BodyWorldState cachedState = states.get(body.id());
+            if (cachedState == null) {
+                cachedState = new BodyWorldState();
+                states.put(body.id(), cachedState);
+            }
+            cachedState.set(parent, worldState.x(), worldState.y(), worldState.vx(), worldState.vy(), rebuildVersion);
         }
 
         static boolean usesAbsolutePosition(CelestialObject parent, CelestialObject child) {
@@ -438,11 +455,9 @@ public class OrbitalView {
         private boolean satelliteNetworkHidden = false;
         private final OrbitalScene.OrbitalSceneFrameBuilder sceneFrameBuilder;
         private final List<SatelliteNetworkGraph.Edge> visibleSatelliteNetworkEdges = new ArrayList<>();
-        private final Set<CelestialObjectId> visibleSatelliteNetworkNodeIds = new HashSet<>();
-        private final Map<CelestialObjectId, SatelliteNetworkEndpoint> satelliteNetworkEndpoints = new EnumMap<>(
-            CelestialObjectId.class);
-        private final Map<CelestialObjectId, OrbitalScene.ResolvedBodyDrawState> satelliteNetworkWorldStates = new EnumMap<>(
-            CelestialObjectId.class);
+        private final Set<CelestialObjectKey> visibleSatelliteNetworkNodeIds = new HashSet<>();
+        private final Map<CelestialObjectKey, SatelliteNetworkEndpoint> satelliteNetworkEndpoints = new HashMap<>();
+        private final Map<CelestialObjectKey, OrbitalScene.ResolvedBodyDrawState> satelliteNetworkWorldStates = new HashMap<>();
         private final Map<SatelliteSignalKey, SatelliteSignalState> satelliteSignalStates = new HashMap<>();
         private final float[] satelliteThreadEndpointScratch = new float[4];
         private int lastRenderedLogisticsTaskRevision = Integer.MIN_VALUE;
@@ -1109,6 +1124,26 @@ public class OrbitalView {
             transfersHidden = !transfersHidden;
         }
 
+        public boolean areHiddenObjectsShown() {
+            if (!isCreativeBuildModeEnabled()) {
+                // Hidden asteroid reveal is a debug-only visualization. Drop the
+                // flag immediately when permissions/mode no longer allow it.
+                CelestialClient.setShowHiddenAsteroidObjects(false);
+                return false;
+            }
+            return CelestialClient.showHiddenAsteroidObjects();
+        }
+
+        public void toggleHiddenObjectsShown() {
+            if (!isCreativeBuildModeEnabled()) {
+                // Keep the client flag authoritative to avoid stale hidden nodes
+                // remaining visible after leaving debug mode.
+                CelestialClient.setShowHiddenAsteroidObjects(false);
+                return;
+            }
+            CelestialClient.toggleShowHiddenAsteroidObjects();
+        }
+
         public void toggleClickMode() {
             setClickMode(
                 getClickMode() == OrbitalMapClickMode.HIERARCHY ? OrbitalMapClickMode.FOLLOW
@@ -1176,7 +1211,10 @@ public class OrbitalView {
             }
             creativeBuildMode = !creativeBuildMode;
             creativeBuildModePersisted = creativeBuildMode;
-            if (!creativeBuildMode) transferSimulatorState.close();
+            if (!creativeBuildMode) {
+                transferSimulatorState.close();
+                CelestialClient.setShowHiddenAsteroidObjects(false);
+            }
             showActionStatus("Creative build mode " + (creativeBuildMode ? "enabled" : "disabled"));
         }
 
@@ -1526,12 +1564,38 @@ public class OrbitalView {
         }
 
         private float getSpriteRadius(CelestialObject body) {
-            float spriteSize = getDisplaySpriteSize(body);
-            if (spriteSize > 0.0001f) {
-                float radius = spriteSize * (MAP_ICON_BASE_SCALE + (float) getScale() * MAP_ICON_ZOOM_SCALE);
-                return Math.max(2.0f, radius);
+            if (body != null && body.objectClass() == CelestialObject.Class.ASTEROID) {
+                // Asteroids use relative zoom so their apparent size tracks the
+                // current focused system instead of being clamped like planet icons.
+                return mapAsteroidSpriteRadiusForRelativeZoom(
+                    body,
+                    getDisplaySpriteSize(body),
+                    getDisplayZoomMultiplier());
             }
-            return 2f;
+            return mapSpriteRadiusForScale(body, getDisplaySpriteSize(body), getScale());
+        }
+
+        static float mapAsteroidSpriteRadiusForRelativeZoom(CelestialObject body, double relativeZoom) {
+            float spriteSize = body == null ? 0f : (float) body.spriteSize();
+            return mapAsteroidSpriteRadiusForRelativeZoom(body, spriteSize, relativeZoom);
+        }
+
+        private static float mapAsteroidSpriteRadiusForRelativeZoom(CelestialObject body, float spriteSize,
+            double relativeZoom) {
+            if (body == null || body.objectClass() != CelestialObject.Class.ASTEROID || spriteSize <= 0.0001f)
+                return 0f;
+            return AsteroidStarmapPresentationPolicy.spriteRadius(body, spriteSize, relativeZoom);
+        }
+
+        static float mapSpriteRadiusForScale(CelestialObject body, double scale) {
+            float spriteSize = body == null ? 0f : (float) body.spriteSize();
+            return mapSpriteRadiusForScale(body, spriteSize, scale);
+        }
+
+        private static float mapSpriteRadiusForScale(CelestialObject body, float spriteSize, double scale) {
+            if (spriteSize <= 0.0001f) return 2f;
+            float radius = spriteSize * (MAP_ICON_BASE_SCALE + (float) scale * MAP_ICON_ZOOM_SCALE);
+            return Math.max(2.0f, radius);
         }
 
         private float getDisplaySpriteSize(CelestialObject body) {
@@ -1685,7 +1749,7 @@ public class OrbitalView {
         private double calculateOverviewExtent(CelestialObject body) {
             if (body.objectClass() == CelestialObject.Class.GALAXY) {
                 double maxDistance = 0.0;
-                for (CelestialObject child : GalaxiaCelestialAPI.getChildren(body)) {
+                for (CelestialObject child : CelestialClient.getChildren(body)) {
                     double[] pos = getAbsoluteWorldPos(child);
                     if (pos == null) continue;
                     maxDistance = Math.max(maxDistance, Math.hypot(pos[0], pos[1]));
@@ -1693,7 +1757,7 @@ public class OrbitalView {
                 return maxDistance;
             }
             double maxSize = 0.0;
-            for (CelestialObject child : GalaxiaCelestialAPI.getChildren(body)) maxSize = Math.max(
+            for (CelestialObject child : CelestialClient.getChildren(body)) maxSize = Math.max(
                 maxSize,
                 child.orbitalParams()
                     .apogee());
@@ -1709,7 +1773,7 @@ public class OrbitalView {
             CelestialObject parent = findParent(root, body);
             if (parent == null) return 0.0;
             double maxApogee = 0.0;
-            for (CelestialObject sibling : GalaxiaCelestialAPI.getChildren(parent)) maxApogee = Math.max(
+            for (CelestialObject sibling : CelestialClient.getChildren(parent)) maxApogee = Math.max(
                 maxApogee,
                 sibling.orbitalParams()
                     .apogee());
@@ -1753,10 +1817,7 @@ public class OrbitalView {
         }
 
         private double getNearestOtherStarDistance(CelestialObject anchorStar) {
-            return nearestOtherStarDistance(
-                anchorStar,
-                GalaxiaCelestialAPI.getChildren(root),
-                this::getAbsoluteWorldPos);
+            return nearestOtherStarDistance(anchorStar, CelestialClient.getChildren(root), this::getAbsoluteWorldPos);
         }
 
         static double nearestOtherStarDistance(CelestialObject anchorStar, Collection<CelestialObject> galaxyBodies,
@@ -1891,7 +1952,7 @@ public class OrbitalView {
         private void fillIsometricScreenPos(CelestialObject body, float[] out) {
             float cx = getArea().width / 2f;
             float cy = getArea().height / 2f + ISO_Y_OFFSET;
-            if (focusedBody == null || focusedBody == root) {
+            if (focusedBody == null || sameBody(focusedBody, root)) {
                 out[0] = cx;
                 out[1] = cy;
                 return;
@@ -1902,18 +1963,18 @@ public class OrbitalView {
                 out[1] = cy;
                 return;
             }
-            if (body == parent) {
+            if (sameBody(body, parent)) {
                 out[0] = cx - ISO_OFFSET;
                 out[1] = cy;
                 return;
             }
-            if (body == focusedBody) {
+            if (sameBody(body, focusedBody)) {
                 out[0] = cx;
                 out[1] = cy;
                 return;
             }
-            List<CelestialObject> children = GalaxiaCelestialAPI.getChildren(focusedBody);
-            int index = children.indexOf(body);
+            List<CelestialObject> children = CelestialClient.getChildren(focusedBody);
+            int index = indexOfBodyByKey(children, body);
             if (index >= 0) {
                 out[0] = cx + ISO_OFFSET + index * ISO_SPACING;
                 out[1] = cy;
@@ -1924,16 +1985,23 @@ public class OrbitalView {
         }
 
         private boolean isImportantInIsoMode(CelestialObject body) {
-            if (focusedBody == null || focusedBody == root) return true;
+            if (focusedBody == null || sameBody(focusedBody, root)) return true;
             CelestialObject parent = findParent(root, focusedBody);
             if (parent == null) return false;
-            return body == parent || body == focusedBody
-                || GalaxiaCelestialAPI.getChildren(focusedBody)
-                    .contains(body);
+            return sameBody(body, parent) || sameBody(body, focusedBody)
+                || containsBodyByKey(CelestialClient.getChildren(focusedBody), body);
         }
 
         private boolean shouldTraverseChildren(CelestialObject body) {
-            return viewRoot != root || body == root;
+            return shouldTraverseChildrenInLayer(root, viewRoot, body);
+        }
+
+        static boolean shouldTraverseChildrenInLayer(CelestialObject root, CelestialObject viewRoot,
+            CelestialObject body) {
+            if (!sameBody(viewRoot, root)) return true;
+            // In the system overview we normally stop at first-level bodies, but
+            // asteroid belts must expose their dynamic asteroid children directly.
+            return sameBody(body, root) || body != null && body.objectClass() == CelestialObject.Class.ASTEROID_BELT;
         }
 
         private boolean isVisibleInCurrentLayer(CelestialObject body) {
@@ -1945,10 +2013,27 @@ public class OrbitalView {
         }
 
         private boolean isDescendantOrSelf(CelestialObject ancestor, CelestialObject target) {
-            if (ancestor == target) return true;
-            for (CelestialObject child : GalaxiaCelestialAPI.getChildren(ancestor))
+            if (sameBody(ancestor, target)) return true;
+            for (CelestialObject child : CelestialClient.getChildren(ancestor))
                 if (isDescendantOrSelf(child, target)) return true;
             return false;
+        }
+
+        static boolean sameBody(CelestialObject left, CelestialObject right) {
+            if (left == right) return true;
+            if (left == null || right == null || left.id() == null || right.id() == null) return false;
+            return left.id()
+                .equals(right.id());
+        }
+
+        static boolean containsBodyByKey(List<CelestialObject> bodies, CelestialObject target) {
+            return indexOfBodyByKey(bodies, target) >= 0;
+        }
+
+        private static int indexOfBodyByKey(List<CelestialObject> bodies, CelestialObject target) {
+            if (bodies == null || target == null) return -1;
+            for (int i = 0; i < bodies.size(); i++) if (sameBody(bodies.get(i), target)) return i;
+            return -1;
         }
 
         @Override
@@ -1991,6 +2076,7 @@ public class OrbitalView {
                 if (pos != null) {
                     viewState.targetCameraX = pos[0];
                     viewState.targetCameraY = pos[1];
+                    viewState.syncCameraToTarget();
                 }
             }
             Gui.drawRect(0, 0, getArea().width, getArea().height, EnumColors.MapBackground.getColor());
@@ -2090,7 +2176,7 @@ public class OrbitalView {
             hoveredBody = dragging ? null : findBodyAtLocal(localMouseX, localMouseY);
             if (hoveredBody != null && hoveredBody.objectClass() == CelestialObject.Class.GALAXY) hoveredBody = null;
             if (hoveredBody != null && isVisibleInCurrentLayer(hoveredBody)) {
-                if (hoveredBody != focusedBody) sceneRenderer.drawHoverHighlight(hoveredBody, sceneFrame);
+                if (!sameBody(hoveredBody, focusedBody)) sceneRenderer.drawHoverHighlight(hoveredBody, sceneFrame);
             }
             if (focusedBody != null && focusedBody.objectClass() != CelestialObject.Class.GALAXY
                 && isVisibleInCurrentLayer(focusedBody)) sceneRenderer.drawSelectionHighlight(focusedBody, sceneFrame);
@@ -2109,12 +2195,18 @@ public class OrbitalView {
             float screenY = snapToPixel(
                 (float) lerp(worldToScreenY(worldY), isoScratchPos[1], viewState.isometricProgress));
             float bodyAlpha = getBodyRenderAlpha(body);
+            if (CelestialClient.isDebugHiddenAsteroid(body) || CelestialClient.isAsteroidScanInProgress(body)
+                || CelestialClient.isSensorRevealedAsteroid(body)) bodyAlpha *= 0.35f;
             float renderedRadius = getRenderedBodyRadius(body);
             boolean renderBody = shouldRenderBodyAtCurrentZoom(body);
             boolean drawLabel = false;
             float labelY = 0f;
             int labelColor = 0;
-            if (labelAlpha > 0.02f && body != root && body != focusedBody && renderBody) {
+            if (labelAlpha > 0.02f && !sameBody(body, root)
+                && !sameBody(body, focusedBody)
+                && renderBody
+                && (AsteroidStarmapScenePresentation.drawsDefaultBodyLabel(body)
+                    || CelestialClient.isAsteroidScanInProgress(body))) {
                 float actualLabelAlpha = getLabelRenderAlpha(body, labelAlpha);
                 if (actualLabelAlpha > 0.01f) {
                     drawLabel = true;
@@ -2411,7 +2503,7 @@ public class OrbitalView {
                 .stream()
                 .map(SatelliteNetworkState.Link::asEdge)
                 .toList();
-            Set<CelestialObjectId> snapshotBodyIds = networkState.bodies()
+            Set<CelestialObjectKey> snapshotBodyIds = networkState.bodies()
                 .keySet();
             updateVisibleSatelliteNetworkEdges(snapshotEdges, snapshotBodyIds);
             if (visibleSatelliteNetworkEdges.isEmpty()) return;
@@ -2420,14 +2512,16 @@ public class OrbitalView {
             satelliteNetworkWorldStates.clear();
             for (OrbitalScene.ResolvedBodyDrawState state : frame.resolvedBodies) {
                 CelestialObject body = state.body();
+                CelestialObjectKey satelliteNetworkBodyKey = satelliteNetworkBodyKey(body);
                 if (body == null || body.objectClass() == CelestialObject.Class.GALAXY
                     || body.objectClass() == CelestialObject.Class.STAR
                     || !isSatelliteNetworkRenderable(state)
-                    || !snapshotBodyIds.contains(body.id())) {
+                    || satelliteNetworkBodyKey == null
+                    || !snapshotBodyIds.contains(satelliteNetworkBodyKey)) {
                     continue;
                 }
-                satelliteNetworkWorldStates.put(body.requireRegisteredId(), state);
-                satelliteNetworkEndpoints.put(body.requireRegisteredId(), satelliteNetworkEndpoint(state));
+                satelliteNetworkWorldStates.put(satelliteNetworkBodyKey, state);
+                satelliteNetworkEndpoints.put(satelliteNetworkBodyKey, satelliteNetworkEndpoint(state));
             }
 
             GlStateManager.disableTexture2D();
@@ -2449,7 +2543,7 @@ public class OrbitalView {
         }
 
         private void updateVisibleSatelliteNetworkEdges(List<SatelliteNetworkGraph.Edge> candidateEdges,
-            Set<CelestialObjectId> candidateNodeIds) {
+            Set<CelestialObjectKey> candidateNodeIds) {
             if (candidateEdges.isEmpty()) {
                 visibleSatelliteNetworkEdges.clear();
                 visibleSatelliteNetworkNodeIds.clear();
@@ -2461,7 +2555,7 @@ public class OrbitalView {
         }
 
         private void replaceVisibleSatelliteNetworkEdges(List<SatelliteNetworkGraph.Edge> edges,
-            Collection<CelestialObjectId> nodeIds) {
+            Collection<CelestialObjectKey> nodeIds) {
             visibleSatelliteNetworkEdges.clear();
             visibleSatelliteNetworkEdges.addAll(edges);
             visibleSatelliteNetworkNodeIds.clear();
@@ -2492,8 +2586,9 @@ public class OrbitalView {
             return null;
         }
 
-        private int satelliteNetworkBodyColor(SatelliteNetworkState networkState, CelestialObjectId bodyId) {
-            return SatelliteNetworkLinkColor.forLoad(networkState.usedKbps(bodyId), networkState.capacityKbps(bodyId));
+        private int satelliteNetworkBodyColor(SatelliteNetworkState networkState, CelestialObjectKey bodyKey) {
+            return SatelliteNetworkLinkColor
+                .forLoad(networkState.usedKbps(bodyKey), networkState.capacityKbps(bodyKey));
         }
 
         private void drawSatelliteThread(SatelliteNetworkState networkState, SatelliteNetworkGraph.Edge edge,
@@ -2570,7 +2665,7 @@ public class OrbitalView {
         }
 
         private long satelliteNetworkLinkUsage(SatelliteNetworkState networkState, SatelliteNetworkGraph.Edge edge,
-            CelestialObjectId source, CelestialObjectId destination) {
+            CelestialObjectKey source, CelestialObjectKey destination) {
             for (SatelliteNetworkState.Link link : networkState.links()) {
                 if (link.asEdge()
                     .equals(edge)) return link.usedKbps(source, destination);
@@ -2767,9 +2862,9 @@ public class OrbitalView {
         private static int satelliteSignalSeed(SatelliteNetworkGraph.Edge edge, int direction, int packetIndex,
             boolean keepAlive) {
             int seed = edge.from()
-                .ordinal() * 73471
+                .hashCode() * 73471
                 ^ edge.to()
-                    .ordinal() * 19349663
+                    .hashCode() * 19349663
                 ^ direction * 0x7f4a7c15
                 ^ packetIndex * 0x9e3779b9
                 ^ (keepAlive ? 0x45d9f3b : 0);
@@ -2870,10 +2965,15 @@ public class OrbitalView {
         }
 
         private boolean shouldRenderBodyAtCurrentZoom(CelestialObject body) {
-            if (viewState.isometricProgress > 0.01 || body == viewRoot || body == focusedBody) return true;
+            if (viewState.isometricProgress > 0.01 || sameBody(body, viewRoot) || sameBody(body, focusedBody))
+                return true;
+            if (shouldCullAsteroidAtCurrentZoom(body)) return false;
             if (!shouldUseOverlapDeclutter(body)) return true;
             CelestialObject parent = findParent(root, body);
             if (parent == null || parent.objectClass() == CelestialObject.Class.GALAXY) return true;
+            // Absolute-position children, including generated asteroid markers,
+            // have already been placed in world space and should not be culled by
+            // parent orbit separation heuristics.
             if (OrbitalWorldStateCache.usesAbsolutePosition(parent, body)) return true;
             float separation = (float) (body.orbitalParams()
                 .perigee() * getScale());
@@ -2882,7 +2982,24 @@ public class OrbitalView {
         }
 
         private boolean shouldUseOverlapDeclutter(CelestialObject body) {
-            return body != root;
+            return !sameBody(body, root);
+        }
+
+        private boolean shouldCullAsteroidAtCurrentZoom(CelestialObject body) {
+            if (body == null || body.objectClass() != CelestialObject.Class.ASTEROID) return false;
+            float naturalRadius = getNaturalSpriteRadius(body);
+            return shouldCullAsteroidAtNaturalRadius(body, naturalRadius);
+        }
+
+        static boolean shouldCullAsteroidAtNaturalRadius(CelestialObject body, float naturalRadius) {
+            if (body == null || body.objectClass() != CelestialObject.Class.ASTEROID) return false;
+            return CelestialClient.asteroidProjection(body)
+                .map(projection -> AsteroidStarmapPresentationPolicy.shouldCull(body, projection, naturalRadius))
+                .orElse(false);
+        }
+
+        private float getNaturalSpriteRadius(CelestialObject body) {
+            return getSpriteRadius(body);
         }
 
         private void showActionStatus(String message) {
@@ -2937,8 +3054,9 @@ public class OrbitalView {
             if (body == null) return;
             List<String> lines = new ArrayList<>();
             lines.add(satelliteCountSummary(body, SatelliteKind.COMMUNICATION));
-            lines.add(satelliteCountSummary(body, SatelliteKind.PROSPECTING));
             lines.add(satelliteBandwidthSummary(body));
+            lines.add(satelliteCountSummary(body, SatelliteKind.PROSPECTING));
+            satelliteScanningSummary(body).ifPresent(lines::add);
             lines.addAll(satellitePendingDataSummaries(body));
             drawTooltip(lines, localMouseX + 10, localMouseY + 10);
         }
@@ -3074,22 +3192,38 @@ public class OrbitalView {
         private String satelliteBandwidthSummary(CelestialObject body) {
             UUID teamId = currentTeamId();
             SatelliteNetworkState networkState = SatelliteNetworkClientState.current();
+            CelestialObjectKey satelliteNetworkBodyKey = satelliteNetworkBodyKey(body);
             long usedKbps = 0L;
             long capacityKbps = 0L;
-            if (teamId != null && body != null && teamId.equals(networkState.teamId())) {
-                usedKbps = networkState.usedKbps(body.requireRegisteredId());
-                capacityKbps = networkState.capacityKbps(body.requireRegisteredId());
+            if (teamId != null && satelliteNetworkBodyKey != null && teamId.equals(networkState.teamId())) {
+                usedKbps = networkState.usedKbps(satelliteNetworkBodyKey);
+                capacityKbps = networkState.capacityKbps(satelliteNetworkBodyKey);
             }
             return "Bandwidth: " + SatelliteBandwidthFormatter.formatKbps(usedKbps)
                 + " / "
                 + SatelliteBandwidthFormatter.formatKbps(capacityKbps);
         }
 
+        private java.util.Optional<String> satelliteScanningSummary(CelestialObject body) {
+            if (satelliteCount(body, SatelliteKind.PROSPECTING) <= 0) return java.util.Optional.empty();
+            return CelestialDiscoveryClientState.scan(body.id(), CelestialDiscoveryCapability.PROSPECTING)
+                .map(scan -> "Scanning: " + scanProgressPercent(scan) + "%");
+        }
+
+        private int scanProgressPercent(CelestialDiscoveryScanSnapshot scan) {
+            int durationTicks = scan.step()
+                .durationTicks();
+            if (durationTicks <= 0) return 100;
+            return Math.min(99, Math.max(0, Math.round(scan.elapsedTicks() * 100.0f / durationTicks)));
+        }
+
         private List<String> satellitePendingDataSummaries(CelestialObject body) {
             UUID teamId = currentTeamId();
             SatelliteNetworkState networkState = SatelliteNetworkClientState.current();
-            if (teamId == null || body == null || !teamId.equals(networkState.teamId())) return List.of();
-            return networkState.pendingData(body.requireRegisteredId())
+            CelestialObjectKey satelliteNetworkBodyKey = satelliteNetworkBodyKey(body);
+            if (teamId == null || satelliteNetworkBodyKey == null || !teamId.equals(networkState.teamId()))
+                return List.of();
+            return networkState.pendingData(satelliteNetworkBodyKey)
                 .stream()
                 .map(
                     entry -> SatelliteBandwidthFormatter.formatDataDeciKb(entry.deciKb()) + " "
@@ -3099,20 +3233,33 @@ public class OrbitalView {
         }
 
         private String pendingDataDestinationLabel(SatelliteNetworkState.PendingData entry) {
-            if (entry.destinationBodyIds()
+            if (entry.destinationBodyKeys()
                 .isEmpty()) return " waiting";
-            return " to " + entry.destinationBodyIds()
+            return " to " + entry.destinationBodyKeys()
                 .stream()
                 .map(this::bodyDisplayName)
                 .collect(Collectors.joining(", "));
         }
 
+        private String bodyDisplayName(CelestialObjectKey bodyKey) {
+            return GalaxiaCelestialAPI.findBodyById(bodyKey)
+                .map(CelestialObject::displayName)
+                .orElseGet(
+                    () -> bodyKey.isRegistered() ? bodyKey.registeredBodyId()
+                        .name()
+                        .toLowerCase(Locale.ROOT)
+                        .replace('_', ' ')
+                        : bodyKey.minorBodyId()
+                            .parentBodyId()
+                            .name()
+                            .toLowerCase(Locale.ROOT)
+                            .replace('_', ' ') + " asteroid "
+                            + bodyKey.minorBodyId()
+                                .index());
+        }
+
         private String bodyDisplayName(CelestialObjectId bodyId) {
-            CelestialObject body = GalaxiaCelestialAPI.getAllBodies()
-                .get(bodyId);
-            return body == null ? bodyId.name()
-                .toLowerCase(Locale.ROOT)
-                .replace('_', ' ') : body.displayName();
+            return bodyDisplayName(CelestialObjectKey.registered(bodyId));
         }
 
         private String pendingDataLabel(SatelliteDataKey key) {
@@ -3121,12 +3268,11 @@ public class OrbitalView {
                 .toLowerCase(Locale.ROOT)
                 .replace('_', ' ');
             if (!key.hasOrigin()) return type + " data";
-            return key.origin()
-                .name()
-                .toLowerCase(Locale.ROOT)
-                .replace('_', ' ') + " "
-                + type
-                + " data";
+            return bodyDisplayName(key.origin()) + " " + type + " data";
+        }
+
+        static CelestialObjectKey satelliteNetworkBodyKey(CelestialObject body) {
+            return body == null ? null : body.id();
         }
 
         private float getInteractionRadius(CelestialObject body) {

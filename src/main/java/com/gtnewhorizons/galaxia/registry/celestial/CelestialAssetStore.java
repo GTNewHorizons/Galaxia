@@ -278,7 +278,6 @@ public final class CelestialAssetStore {
         teamById.clear();
         bodyIndex.clear();
         byBody.clear();
-        if (this == SERVER) SatelliteNetworkService.clear();
     }
 
     public boolean isOwnedByInternal(UUID teamId, CelestialAsset.ID id) {

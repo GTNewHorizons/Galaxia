@@ -22,7 +22,6 @@ import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
-import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.TeamPermissionScreen;
@@ -67,8 +66,9 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     private static final int LAYER_BUTTON_HEIGHT = 18;
     private static final int LAYER_BUTTON_GAP = 8;
     private static final int CREATIVE_BUTTON_TOP = 42;
-    private static final int TRANSFER_SIMULATOR_BUTTON_TOP = 68;
-    private static final int SUPPLY_DEBUG_BUTTON_TOP = 94;
+    private static final int HIDDEN_OBJECTS_BUTTON_TOP = 68;
+    private static final int TRANSFER_SIMULATOR_BUTTON_TOP = 94;
+    private static final int SUPPLY_DEBUG_BUTTON_TOP = 120;
     private static final int SEARCH_LABEL_TOP = 42;
     private static final int SEARCH_FIELD_TOP = 54;
     private static final int LIST_TOP = 82;
@@ -76,7 +76,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     private static final int ARROW_ZONE = 42;
 
     // Supply Debug panel constants
-    private static final int DEBUG_PANEL_TOP = 120;
+    private static final int DEBUG_PANEL_TOP = 146;
     private static final int DEBUG_PANEL_PADDING = 10;
     private static final int DEBUG_FIELD_HEIGHT = 14;
     private static final int DEBUG_BUTTON_HEIGHT = 14;
@@ -169,6 +169,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             return false;
         if (handleLayerButtonClick(localX, localYAbsolute)) return true;
         if (handleCreativeButtonClick(localX, localYAbsolute)) return true;
+        if (handleHiddenObjectsButtonClick(localX, localYAbsolute)) return true;
         if (handleTransferSimulatorButtonClick(localX, localYAbsolute)) return true;
         if (handleSupplyDebugButtonClick(localX, localYAbsolute)) return true;
         if (supplyDebugPanelOpen && handleSupplyDebugPanelClick(localX, localYAbsolute)) return true;
@@ -196,7 +197,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         if (!visibleEntriesDirty) return;
         cachedVisibleEntries.clear();
         if (activeLayer != root) {
-            for (CelestialObject child : GalaxiaCelestialAPI.getChildren(activeLayer))
+            for (CelestialObject child : CelestialClient.getChildren(activeLayer))
                 collect(child, 0, cachedVisibleEntries);
         }
         visibleEntriesDirty = false;
@@ -204,17 +205,22 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     }
 
     private void collect(CelestialObject body, int depth, List<VisibleEntry> list) {
-        boolean matches = searchQuery.isEmpty() || body.displayName()
+        boolean matches = searchQuery.isEmpty() || (isMajorBodySearchResult(body) && body.displayName()
             .toLowerCase()
-            .contains(searchQuery);
+            .contains(searchQuery));
 
-        List<CelestialObject> childs = GalaxiaCelestialAPI.getChildren(body);
+        List<CelestialObject> childs = CelestialClient.getChildren(body);
         if (matches || searchQuery.isEmpty()) {
             list.add(new VisibleEntry(body, depth, !childs.isEmpty()));
         }
         if (expanded.contains(body) || !searchQuery.isEmpty()) {
             for (CelestialObject child : childs) collect(child, depth + 1, list);
         }
+    }
+
+    static boolean isMajorBodySearchResult(CelestialObject body) {
+        return body != null && body.id()
+            .isRegistered();
     }
 
     private double getMaxScroll() {
@@ -271,8 +277,13 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         return map.isCreativeBuildModeEnabled();
     }
 
+    private boolean shouldShowHiddenObjectsButton() {
+        return map.isCreativeBuildModeEnabled();
+    }
+
     private int getSearchOffset() {
         int offset = shouldShowCreativeButton() ? 28 : 0;
+        if (shouldShowHiddenObjectsButton()) offset += 26;
         if (shouldShowTransferSimulatorButton()) offset += 26;
         if (shouldShowSupplyDebugButton()) offset += 26;
         if (supplyDebugPanelOpen) offset += 128; // Add panel height + padding to clear it
@@ -327,6 +338,24 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             return true;
         }
         return false;
+    }
+
+    private boolean handleHiddenObjectsButtonClick(int localX, int localY) {
+        if (!shouldShowHiddenObjectsButton()) return false;
+        int width = Math.max(120, Minecraft.getMinecraft().fontRenderer.getStringWidth(hiddenObjectsLabel()) + 18);
+        if (localY >= HIDDEN_OBJECTS_BUTTON_TOP && localY <= HIDDEN_OBJECTS_BUTTON_TOP + LAYER_BUTTON_HEIGHT
+            && localX >= 18
+            && localX <= 18 + width) {
+            map.toggleHiddenObjectsShown();
+            rowLayoutsDirty = true;
+            visibleEntriesDirty = true;
+            return true;
+        }
+        return false;
+    }
+
+    private String hiddenObjectsLabel() {
+        return map.areHiddenObjectsShown() ? "Hide Hidden" : "Show Hidden";
     }
 
     private boolean handleTransferSimulatorButtonClick(int localX, int localY) {
@@ -704,6 +733,12 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             getCreativeButtonWidth(),
             StatCollector.translateToLocal("galaxia.gui.orbital.debug"),
             map.isCreativeBuildModeEnabled());
+        if (shouldShowHiddenObjectsButton()) drawLayerButton(
+            18,
+            HIDDEN_OBJECTS_BUTTON_TOP,
+            Math.max(120, Minecraft.getMinecraft().fontRenderer.getStringWidth(hiddenObjectsLabel()) + 18),
+            hiddenObjectsLabel(),
+            map.areHiddenObjectsShown());
         if (shouldShowTransferSimulatorButton()) drawLayerButton(
             18,
             TRANSFER_SIMULATOR_BUTTON_TOP,

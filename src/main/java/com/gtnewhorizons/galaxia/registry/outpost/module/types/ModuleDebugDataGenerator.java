@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module.types;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
@@ -89,8 +90,12 @@ public final class ModuleDebugDataGenerator extends TieredModuleComponent {
     }
 
     public SatelliteDataKey producedKey(CelestialObjectId sourceBodyId) {
+        return producedKey(CelestialObjectKey.registered(sourceBodyId));
+    }
+
+    public SatelliteDataKey producedKey(CelestialObjectKey sourceBodyKey) {
         if (config.dataType() == SatelliteDataType.PROSPECTING) {
-            return SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, sourceBodyId);
+            return SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, sourceBodyKey);
         }
         return SatelliteDataKey.any(config.dataType());
     }

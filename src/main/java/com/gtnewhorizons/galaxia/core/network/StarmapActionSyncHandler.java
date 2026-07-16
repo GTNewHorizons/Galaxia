@@ -240,7 +240,13 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
                 }
                 AssetCreateRequestPacket packet = new AssetCreateRequestPacket();
                 packet.fromBytes(buf);
-                AssetSyncPacket sync = packet.apply(teamId);
+                AssetSyncPacket sync;
+                try {
+                    sync = packet.apply(teamId);
+                } catch (IllegalArgumentException ex) {
+                    syncFailure(ex.getMessage());
+                    return;
+                }
                 if (sync == null) {
                     syncFailure("Asset creation failed");
                 } else {
@@ -294,8 +300,17 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
                 } else if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.DESTROY_ASSET)) {
                     return;
                 }
-                for (AssetSyncPacket packet : applySatelliteMutation(debugTeamId, bodyId, kind, operation, amount)) {
-                    Galaxia.GALAXIA_NETWORK.sendTo(packet, playerMp);
+                try {
+                    for (AssetSyncPacket packet : applySatelliteMutation(
+                        debugTeamId,
+                        bodyId,
+                        kind,
+                        operation,
+                        amount)) {
+                        Galaxia.GALAXIA_NETWORK.sendTo(packet, playerMp);
+                    }
+                } catch (IllegalArgumentException ex) {
+                    syncFailure(ex.getMessage());
                 }
             }
         }

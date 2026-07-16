@@ -11,6 +11,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 
 final class SatelliteDataTransferPlannerTest {
 
@@ -99,7 +101,7 @@ final class SatelliteDataTransferPlannerTest {
         assertEquals(
             10L,
             plan.usedByBody()
-                .get(CelestialObjectId.OVERWORLD));
+                .get(key(CelestialObjectId.OVERWORLD)));
     }
 
     @Test
@@ -125,6 +127,52 @@ final class SatelliteDataTransferPlannerTest {
         assertEquals(0L, store.pendingDemandDeciKb(TEAM, CelestialObjectId.EGORA, research));
     }
 
+    @Test
+    void minorBodyDataCanRouteThroughSatelliteNetwork() {
+        SatelliteDataBufferStore store = new SatelliteDataBufferStore();
+        SatelliteDataKey research = SatelliteDataKey.any(SatelliteDataType.RESEARCH);
+        CelestialObjectKey asteroid = asteroidKey(3);
+        CelestialObjectKey belt = CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT);
+        store.finishProduction(TEAM, asteroid, research, kb(100L));
+        store.requestData(TEAM, belt, research, kb(100L));
+
+        SatelliteDataTransferPlanner.Plan plan = SatelliteDataTransferPlanner.plan(
+            TEAM,
+            SatelliteNetworkCalculator.fromGraph(
+                TEAM,
+                5,
+                List.of(
+                    new SatelliteNetworkGraph.Node(asteroid, belt, 1.1D, 0.0D, 0.0D, 1.0D),
+                    new SatelliteNetworkGraph.Node(belt, null, 1.0D, 10.0D, 0.0D, 4.0D)),
+                List.of(new SatelliteNetworkGraph.Edge(asteroid, belt)),
+                Map.of(asteroid, 10L, belt, 10L),
+                Map.of()),
+            store);
+
+        assertEquals(
+            1,
+            plan.transfers()
+                .size());
+        assertEquals(
+            asteroid,
+            plan.transfers()
+                .get(0)
+                .sourceBodyKey());
+        assertEquals(
+            belt,
+            plan.transfers()
+                .get(0)
+                .destinationBodyKey());
+        assertEquals(
+            10L,
+            plan.usedByBody()
+                .get(asteroid));
+        assertEquals(
+            10L,
+            plan.usedByBody()
+                .get(belt));
+    }
+
     private static SatelliteNetworkState network() {
         return networkWithMarsCapacity(10L);
     }
@@ -142,11 +190,11 @@ final class SatelliteDataTransferPlannerTest {
                 new SatelliteNetworkGraph.Edge(CelestialObjectId.MARS, CelestialObjectId.FROZEN_BELT),
                 new SatelliteNetworkGraph.Edge(CelestialObjectId.EGORA, CelestialObjectId.FROZEN_BELT)),
             Map.of(
-                CelestialObjectId.MARS,
+                key(CelestialObjectId.MARS),
                 marsCapacityKbps,
-                CelestialObjectId.EGORA,
+                key(CelestialObjectId.EGORA),
                 10L,
-                CelestialObjectId.FROZEN_BELT,
+                key(CelestialObjectId.FROZEN_BELT),
                 10L),
             Map.of());
     }
@@ -162,7 +210,13 @@ final class SatelliteDataTransferPlannerTest {
             List.of(
                 new SatelliteNetworkGraph.Edge(CelestialObjectId.MARS, CelestialObjectId.OVERWORLD),
                 new SatelliteNetworkGraph.Edge(CelestialObjectId.FROZEN_BELT, CelestialObjectId.OVERWORLD)),
-            Map.of(CelestialObjectId.MARS, 10L, CelestialObjectId.FROZEN_BELT, 10L, CelestialObjectId.OVERWORLD, 10L),
+            Map.of(
+                key(CelestialObjectId.MARS),
+                10L,
+                key(CelestialObjectId.FROZEN_BELT),
+                10L,
+                key(CelestialObjectId.OVERWORLD),
+                10L),
             Map.of());
     }
 
@@ -177,7 +231,13 @@ final class SatelliteDataTransferPlannerTest {
             List.of(
                 new SatelliteNetworkGraph.Edge(CelestialObjectId.MARS, CelestialObjectId.EGORA),
                 new SatelliteNetworkGraph.Edge(CelestialObjectId.MARS, CelestialObjectId.FROZEN_BELT)),
-            Map.of(CelestialObjectId.MARS, 20L, CelestialObjectId.EGORA, 10L, CelestialObjectId.FROZEN_BELT, 10L),
+            Map.of(
+                key(CelestialObjectId.MARS),
+                20L,
+                key(CelestialObjectId.EGORA),
+                10L,
+                key(CelestialObjectId.FROZEN_BELT),
+                10L),
             Map.of());
     }
 
@@ -187,12 +247,20 @@ final class SatelliteDataTransferPlannerTest {
             4,
             List.of(node(CelestialObjectId.MARS, 0.0D, 0.0D), node(CelestialObjectId.EGORA, 10.0D, 0.0D)),
             List.of(new SatelliteNetworkGraph.Edge(CelestialObjectId.MARS, CelestialObjectId.EGORA)),
-            Map.of(CelestialObjectId.MARS, 40L, CelestialObjectId.EGORA, 40L),
+            Map.of(key(CelestialObjectId.MARS), 40L, key(CelestialObjectId.EGORA), 40L),
             Map.of());
     }
 
     private static SatelliteNetworkGraph.Node node(CelestialObjectId id, double x, double y) {
         return new SatelliteNetworkGraph.Node(id, x, y, 1.0D);
+    }
+
+    private static CelestialObjectKey asteroidKey(int index) {
+        return CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, index));
+    }
+
+    private static CelestialObjectKey key(CelestialObjectId id) {
+        return CelestialObjectKey.registered(id);
     }
 
     private static void apply(SatelliteDataBufferStore store, SatelliteDataTransferPlanner.Plan plan) {

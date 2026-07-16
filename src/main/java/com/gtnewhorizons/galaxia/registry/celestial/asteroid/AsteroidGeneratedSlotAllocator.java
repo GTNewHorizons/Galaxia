@@ -4,6 +4,8 @@ import com.gtnewhorizons.galaxia.registry.util.DeterministicHash;
 
 final class AsteroidGeneratedSlotAllocator {
 
+    private static final double GOLDEN_ANGLE_DEG = 137.50776405003785;
+
     private AsteroidGeneratedSlotAllocator() {}
 
     static AsteroidSizeClass generatedSizeClass(AsteroidFieldProfile profile, int index) {
@@ -36,6 +38,7 @@ final class AsteroidGeneratedSlotAllocator {
         int classOrdinal = generatedSizeClassOrdinal(profile, ordinal, sizeClass);
         int classCount = generatedSizeClassCount(profile, sizeClass);
         if (classCount <= 0) return nodeSeed.degrees(1L);
+        if (sizeClass == AsteroidSizeClass.LARGE) return generatedLargeAngleOffsetDeg(profile, nodeSeed, classOrdinal);
 
         double sectorWidth = 360.0 / classCount;
         double phase = DeterministicHash.unitDouble(
@@ -46,9 +49,21 @@ final class AsteroidGeneratedSlotAllocator {
                     .hashCode(),
                 19L))
             * sectorWidth;
-        double jitterScale = sizeClass == AsteroidSizeClass.LARGE ? 0.18 : 0.55;
+        double jitterScale = switch (sizeClass) {
+            case LARGE -> 0.35;
+            case MEDIUM -> 0.85;
+            case SMALL -> 0.95;
+        };
         double jitter = (nodeSeed.unit(1L) - 0.5) * sectorWidth * jitterScale;
         return AsteroidFieldDeterminism.normalizeDegrees((classOrdinal + 0.5) * sectorWidth + phase + jitter);
+    }
+
+    private static double generatedLargeAngleOffsetDeg(AsteroidFieldProfile profile, AsteroidFieldDeterminism nodeSeed,
+        int classOrdinal) {
+        double phase = DeterministicHash
+            .unitDouble(DeterministicHash.mix(profile.seedSalt(), profile.generationVersion(), 31L)) * 360.0;
+        double jitter = (nodeSeed.unit(17L) - 0.5) * GOLDEN_ANGLE_DEG * 0.18;
+        return AsteroidFieldDeterminism.normalizeDegrees(phase + classOrdinal * GOLDEN_ANGLE_DEG + jitter);
     }
 
     private static int nextInterleavedSizeClass(int[] counts, int[] emitted, int[] score, int total) {
