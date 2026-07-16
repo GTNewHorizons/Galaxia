@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.core.network;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,7 +8,6 @@ import javax.annotation.Nonnull;
 
 public final class CelestialKnowledgeSyncRegistry {
 
-    private static final List<CelestialKnowledgeSyncAdapter> ADAPTERS = new ArrayList<>();
     private static final Map<CelestialKnowledgeSyncType, CelestialKnowledgeSyncAdapter> ADAPTERS_BY_TYPE = new LinkedHashMap<>();
 
     private CelestialKnowledgeSyncRegistry() {}
@@ -19,17 +17,14 @@ public final class CelestialKnowledgeSyncRegistry {
         CelestialKnowledgeSyncType type = adapter.type();
         CelestialKnowledgeSyncAdapter existing = ADAPTERS_BY_TYPE.get(type);
         if (existing == adapter) return;
-        if (existing != null && existing.getClass() == adapter.getClass()) {
-            ADAPTERS.remove(existing);
-        } else if (existing != null) {
+        if (existing != null && existing.getClass() != adapter.getClass()) {
             throw new IllegalStateException("Duplicate celestial knowledge sync type: " + type.id());
         }
-        ADAPTERS.add(adapter);
         ADAPTERS_BY_TYPE.put(type, adapter);
     }
 
     static List<CelestialKnowledgeSyncAdapter> adapters() {
-        return List.copyOf(ADAPTERS);
+        return List.copyOf(ADAPTERS_BY_TYPE.values());
     }
 
     static CelestialKnowledgeSyncAdapter require(CelestialKnowledgeSyncType type) {
@@ -39,7 +34,6 @@ public final class CelestialKnowledgeSyncRegistry {
     }
 
     static void resetForTesting() {
-        ADAPTERS.clear();
         ADAPTERS_BY_TYPE.clear();
     }
 }

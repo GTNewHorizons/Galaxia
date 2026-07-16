@@ -16,10 +16,12 @@ import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDynamicCelestialObjectProvider;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.AsteroidContentBuilder;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.GeneratedAsteroids;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.LoreAsteroids;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryView;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.PlayableDimensionProfile;
 import com.gtnewhorizons.galaxia.registry.dimension.SpaceStation;
@@ -301,24 +303,6 @@ public final class CelestialRegistry {
                 .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.3));
 
         register(
-            CelestialObjectId.AMBERGRIS_FRAGMENT,
-            builder -> builder.parent(CelestialObjectId.FROZEN_BELT)
-                .objectClass(CelestialObject.Class.ASTEROID)
-                .circularOrbit(0.18 * EARTH_RADIUS_TO_AU, 0.00091, seededPhase("ambergris_fragment"))
-                .texture(EnumTextures.ICON_AMBERGRIS.get())
-                .spriteSize(0.05)
-                .properties(
-                    b -> b.orbitalGravity(6.0e4, 140.0)
-                        .visitable(false)
-                        .canCreateStation(false)
-                        .canCreateOutpost(true)
-                        .temperature(41)
-                        .radiation(0.52)
-                        .oreProfile("undefined")
-                        .metadata("surface", "undefined")
-                        .metadata("sizeClass", "minor")));
-
-        register(
             CelestialObjectId.OVERWORLD,
             builder -> builder.parent(CelestialObjectId.VAEL)
                 .objectClass(CelestialObject.Class.PLANET)
@@ -379,6 +363,8 @@ public final class CelestialRegistry {
                         .tier(EnumTiers.TIER_1)
                         .worldGeneration(SpaceStation::configureWorldProvider)
                         .build()));
+
+        registerDynamicProvider(new AsteroidDynamicCelestialObjectProvider(CelestialRegistry::registeredObject));
     }
 
     private static void configureOverworldProvider(WorldProviderBuilder builder) {
@@ -452,6 +438,10 @@ public final class CelestialRegistry {
         registerDefaults();
         CelestialObject registered = REGISTRATIONS.get(key);
         if (registered != null) return Optional.of(registered);
+        return resolveDynamicMinorBody(key);
+    }
+
+    private static Optional<CelestialObject> resolveDynamicMinorBody(CelestialObjectKey key) {
         if (key == null || !key.isMinorBody()) return Optional.empty();
         return DYNAMIC_OBJECT_PROVIDERS.stream()
             .map(provider -> provider.resolve(key))
@@ -475,6 +465,39 @@ public final class CelestialRegistry {
             .stream()
             .filter(body -> body.playableDimensionProfile() != null)
             .toList();
+    }
+
+    public static List<CelestialObject> getChildren(CelestialObjectKey parentId) {
+        registerDefaults();
+        if (parentId == null) return List.of();
+        return Collections.unmodifiableList(
+            hierarchy.childrenByParentId()
+                .getOrDefault(parentId, List.of()));
+    }
+
+    public static List<CelestialObject> dynamicChildren(CelestialObjectKey parentId) {
+        return dynamicChildren(parentId, CelestialDiscoveryView.empty());
+    }
+
+    public static List<CelestialObject> dynamicChildren(CelestialObjectKey parentId,
+        CelestialDiscoveryView discoveryView) {
+        return dynamicChildren(parentId, discoveryView, false);
+    }
+
+    public static List<CelestialObject> dynamicChildren(CelestialObjectKey parentId,
+        CelestialDiscoveryView discoveryView, boolean includeHidden) {
+        registerDefaults();
+        if (parentId == null) return List.of();
+        return Collections.unmodifiableList(
+            DYNAMIC_OBJECT_PROVIDERS.stream()
+                .flatMap(
+                    provider -> provider.dynamicChildren(parentId, discoveryView, includeHidden)
+                        .stream())
+                .toList());
+    }
+
+    private static Optional<CelestialObject> registeredObject(CelestialObjectKey key) {
+        return Optional.ofNullable(REGISTRATIONS.get(key));
     }
 
     public static List<CelestialObject> getRoots() {
@@ -502,9 +525,10 @@ public final class CelestialRegistry {
 
     public static Optional<CelestialObject> findById(CelestialObjectKey id) {
         registerDefaults();
-        return Optional.ofNullable(
-            hierarchy.bodiesById()
-                .get(id));
+        CelestialObject registered = hierarchy.bodiesById()
+            .get(id);
+        if (registered != null) return Optional.of(registered);
+        return resolveDynamicMinorBody(id);
     }
 
     private static void validateRegistration(CelestialObject registration, CelestialObjectKey existingId) {

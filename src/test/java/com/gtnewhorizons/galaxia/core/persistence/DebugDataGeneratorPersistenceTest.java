@@ -15,6 +15,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -46,7 +47,7 @@ final class DebugDataGeneratorPersistenceTest {
 
     @Test
     void debugDataGeneratorStateSurvivesFacilityRoundTrip() {
-        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        FacilityPersistenceManager manager = new FacilityPersistenceManager(CelestialServerRuntime.create());
         AutomatedFacility station = facility();
         ModuleDebugDataGenerator generator = addGenerator(station);
         generator.configure(
@@ -90,7 +91,7 @@ final class DebugDataGeneratorPersistenceTest {
 
     @Test
     void staleDisabledDebugDataGeneratorLoadsActive() {
-        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        FacilityPersistenceManager manager = new FacilityPersistenceManager(CelestialServerRuntime.create());
         AutomatedFacility station = facility();
         ModuleDebugDataGenerator generator = addGenerator(station);
         generator.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.RESEARCH, 25L, 40));
@@ -111,7 +112,7 @@ final class DebugDataGeneratorPersistenceTest {
 
     @Test
     void loadedDebugDataGeneratorsRegisterAsSatelliteEndpoints(@TempDir File tempDir) {
-        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        FacilityPersistenceManager manager = new FacilityPersistenceManager(CelestialServerRuntime.create());
         CelestialAsset.ID producerId = CelestialAsset.ID.create();
         CelestialAsset.ID consumerId = CelestialAsset.ID.create();
         AutomatedFacility producerFacility = facility(producerId, CelestialObjectId.MARS);
@@ -124,7 +125,7 @@ final class DebugDataGeneratorPersistenceTest {
         CelestialAssetStore.registerAsset(TEAM, consumerFacility);
         manager.saveToSaveDirectory(tempDir);
 
-        FacilityPersistenceManager reloaded = new FacilityPersistenceManager();
+        FacilityPersistenceManager reloaded = new FacilityPersistenceManager(CelestialServerRuntime.create());
         reloaded.loadFromSaveDirectory(tempDir);
         SatelliteNetworkService.tickDataJobs();
 

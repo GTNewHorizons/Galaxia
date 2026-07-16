@@ -2,11 +2,13 @@ package com.gtnewhorizons.galaxia.registry.celestial;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryView;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class DynamicCelestialObjectProviderTest {
@@ -26,6 +28,12 @@ final class DynamicCelestialObjectProviderTest {
             @Override
             public Optional<CelestialObject> resolve(CelestialObjectKey candidate) {
                 return key.equals(candidate) ? Optional.of(body) : Optional.empty();
+            }
+
+            @Override
+            public List<CelestialObject> dynamicChildren(CelestialObjectKey parentKey,
+                CelestialDiscoveryView discoveryView, boolean includeHidden) {
+                return List.of();
             }
         };
 

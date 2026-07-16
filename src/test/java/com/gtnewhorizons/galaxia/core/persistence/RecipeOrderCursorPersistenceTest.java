@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -38,7 +39,7 @@ final class RecipeOrderCursorPersistenceTest {
 
     @Test
     void orderCursorAndRemainingSurviveRoundTrip() throws Exception {
-        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        FacilityPersistenceManager manager = new FacilityPersistenceManager(CelestialServerRuntime.create());
         AutomatedFacility station = new AutomatedFacility(
             ASSET_ID,
             CelestialObjectId.MARS,
