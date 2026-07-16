@@ -497,7 +497,7 @@ public final class FacilityPersistenceManager {
         }
         MinorCelestialBodyId minorId = key.minorBodyId();
         json.kind = "minor";
-        json.parentBeltId = minorId.parentBeltId()
+        json.parentBeltId = minorId.parentBodyId()
             .name();
         json.index = minorId.index();
         return json;
