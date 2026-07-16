@@ -34,7 +34,8 @@ final class CelestialKnowledgeClientStateTest {
                         new AsteroidFieldKnowledgeSnapshot.Entry(
                             2000,
                             DiscoveryState.DISCOVERED,
-                            CelestialResourceKnowledgeState.SIGNATURE)))));
+                            CelestialResourceKnowledgeState.SIGNATURE)),
+                    List.of())));
 
         CelestialDiscoveryView view = CelestialKnowledgeClientState.discoveryView();
 

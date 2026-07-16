@@ -119,6 +119,7 @@ public final class AsteroidFieldKnowledgeStore {
             if (restored.containsKey(snapshot.beltId())) {
                 throw new IllegalStateException("Duplicate asteroid snapshot for belt " + snapshot.beltId());
             }
+            AsteroidFieldNodeCatalog.restore(snapshot.beltId(), profile, snapshot.nodeSnapshots());
             restored.put(snapshot.beltId(), AsteroidFieldKnowledge.fromSnapshot(snapshot.beltId(), profile, snapshot));
         }
         if (restored.isEmpty()) {
@@ -130,5 +131,6 @@ public final class AsteroidFieldKnowledgeStore {
 
     public void clear() {
         knowledgeByTeam.clear();
+        AsteroidFieldNodeCatalog.clearRestored();
     }
 }

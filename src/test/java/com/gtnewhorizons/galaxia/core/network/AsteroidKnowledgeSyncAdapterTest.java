@@ -13,6 +13,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNodeCatalog;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
@@ -42,15 +43,22 @@ final class AsteroidKnowledgeSyncAdapterTest {
 
     @Test
     void asteroidKnowledgeRoundTripsThroughDedicatedSyncSection() {
+        AsteroidFieldProfile profile = profile();
+        AsteroidFieldNodeCatalog catalog = AsteroidFieldNodeCatalog
+            .fromGenerated(CelestialObjectId.FROZEN_BELT, profile);
+        int savedIndex = catalog.nodes()
+            .get(0)
+            .index();
         AsteroidFieldKnowledgeSnapshot expected = new AsteroidFieldKnowledgeSnapshot(
             CelestialObjectId.FROZEN_BELT,
             List.of(
                 new AsteroidFieldKnowledgeSnapshot.Entry(
-                    2,
+                    savedIndex,
                     DiscoveryState.DISCOVERED,
-                    CelestialResourceKnowledgeState.PROFILE)));
+                    CelestialResourceKnowledgeState.PROFILE)),
+            catalog.snapshots());
         AsteroidFieldKnowledgeStore.global()
-            .restore(TEAM, List.of(expected), id -> java.util.Optional.of(profile()));
+            .restore(TEAM, List.of(expected), id -> java.util.Optional.of(profile));
         AsteroidKnowledgeSyncAdapter adapter = new AsteroidKnowledgeSyncAdapter();
         ByteBuf buf = Unpooled.buffer();
         adapter.write(buf, TEAM);

@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -64,6 +65,22 @@ final class AsteroidFieldKnowledgeTest {
             snapshot.entries()
                 .stream()
                 .anyMatch(entry -> entry.index() == hidden.index()));
+    }
+
+    @Test
+    void restoreRejectsKnowledgeEntryWithoutSavedNodePayload() {
+        AsteroidFieldKnowledgeSnapshot incomplete = new AsteroidFieldKnowledgeSnapshot(
+            CelestialObjectId.FROZEN_BELT,
+            List.of(
+                new AsteroidFieldKnowledgeSnapshot.Entry(
+                    AsteroidSlotRanges.GENERATED_SLOT_MIN + 100,
+                    DiscoveryState.DISCOVERED,
+                    CelestialResourceKnowledgeState.UNKNOWN)),
+            List.of());
+
+        assertThrows(
+            IllegalStateException.class,
+            () -> AsteroidFieldKnowledge.fromSnapshot(CelestialObjectId.FROZEN_BELT, profile(), incomplete));
     }
 
     @Test

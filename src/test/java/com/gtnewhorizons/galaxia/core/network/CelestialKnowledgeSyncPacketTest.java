@@ -20,6 +20,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNodeCatalog;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
@@ -175,14 +176,24 @@ final class CelestialKnowledgeSyncPacketTest {
 
     @Test
     void roundTripAppliesRegisteredKnowledgeSectionsOnClient() {
+        var profile = GalaxiaCelestialAPI.get(CelestialObjectId.FROZEN_BELT)
+            .orElseThrow()
+            .properties()
+            .asteroidFieldProfile();
+        AsteroidFieldNodeCatalog catalog = AsteroidFieldNodeCatalog
+            .fromGenerated(CelestialObjectId.FROZEN_BELT, profile);
+        MinorCelestialBodyId asteroidId = catalog.nodes()
+            .get(0)
+            .id();
         AsteroidFieldKnowledgeSnapshot knowledge = new AsteroidFieldKnowledgeSnapshot(
             CelestialObjectId.FROZEN_BELT,
             List.of(
                 new AsteroidFieldKnowledgeSnapshot.Entry(
-                    ASTEROID_ID.index(),
+                    asteroidId.index(),
                     DiscoveryState.DISCOVERED,
-                    CelestialResourceKnowledgeState.PROFILE)));
-        CelestialObjectKey asteroidKey = CelestialObjectKey.minorBody(ASTEROID_ID);
+                    CelestialResourceKnowledgeState.PROFILE)),
+            catalog.snapshots());
+        CelestialObjectKey asteroidKey = CelestialObjectKey.minorBody(asteroidId);
         CelestialDiscoveryScanSnapshot scan = new CelestialDiscoveryScanSnapshot(
             TEAM,
             asteroidKey,

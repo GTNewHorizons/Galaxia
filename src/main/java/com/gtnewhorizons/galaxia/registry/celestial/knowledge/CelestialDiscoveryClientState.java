@@ -25,6 +25,14 @@ public final class CelestialDiscoveryClientState {
             .findFirst();
     }
 
+    public static Optional<CelestialDiscoveryScanSnapshot> scanTarget(CelestialObjectKey targetKey,
+        CelestialDiscoveryCapability capability) {
+        if (targetKey == null || capability == null) return Optional.empty();
+        return snapshots.stream()
+            .filter(snapshot -> targetKey.equals(snapshot.targetKey()) && snapshot.capability() == capability)
+            .findFirst();
+    }
+
     public static void update(List<CelestialDiscoveryScanSnapshot> newSnapshots) {
         snapshots = List.copyOf(newSnapshots == null ? List.of() : newSnapshots);
     }

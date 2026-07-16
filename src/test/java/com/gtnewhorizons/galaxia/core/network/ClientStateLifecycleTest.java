@@ -63,7 +63,8 @@ final class ClientStateLifecycleTest {
                         new AsteroidFieldKnowledgeSnapshot.Entry(
                             3,
                             DiscoveryState.DISCOVERED,
-                            CelestialResourceKnowledgeState.PROFILE)))));
+                            CelestialResourceKnowledgeState.PROFILE)),
+                    List.of())));
         CelestialDiscoveryClientState.update(
             List.of(
                 CelestialDiscoveryScanSnapshot.complete(

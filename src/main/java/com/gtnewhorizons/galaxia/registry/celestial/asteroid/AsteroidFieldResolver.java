@@ -83,17 +83,6 @@ public final class AsteroidFieldResolver {
             .orElseThrow();
     }
 
-    public static AsteroidFieldNode resolveSavedNode(@Nonnull CelestialObjectId beltId,
-        @Nonnull AsteroidFieldProfile profile, int index) {
-        if (profile.hasNodeIndex(index)) {
-            return resolveNode(beltId, profile, index);
-        }
-        if (AsteroidSlotRanges.isGeneratedSlot(index)) {
-            return AsteroidNodeMaterializer.resolveNode(beltId, profile, index);
-        }
-        return AsteroidNodeMaterializer.resolveUnregisteredSavedNode(beltId, profile, index);
-    }
-
     public static DiscoveryState initialDetectionState(@Nonnull AsteroidFieldNode node) {
         return AsteroidInitialKnowledgeRules.initialDetectionState(node);
     }

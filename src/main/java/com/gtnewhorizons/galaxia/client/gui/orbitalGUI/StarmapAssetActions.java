@@ -35,6 +35,8 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
@@ -235,6 +237,13 @@ public final class StarmapAssetActions {
             boolean openActionsFirst) {
             if (body == null) return;
             if (openActionsFirst) openAssetActions(state, body);
+            if (!canCreateAssetOnBody(body, kind)) {
+                callbacks.showActionStatus(
+                    StatCollector.translateToLocalFormatted(
+                        "galaxia.gui.orbital.asset.create.unsupported_body",
+                        assetSupport.formatAssetKind(kind)));
+                return;
+            }
             CelestialAsset.Location location = getDefaultAssetLocation(kind);
             String displayName = buildDefaultAssetDisplayName(body, kind);
             if (kind == CelestialAsset.Kind.STATION) {
@@ -257,6 +266,25 @@ public final class StarmapAssetActions {
                 kind,
                 location,
                 CelestialAsset.defaultRequirements(kind));
+        }
+
+        private boolean canCreateAssetOnBody(CelestialObject body, CelestialAsset.Kind kind) {
+            if (requiresDiscoveredMinorBody(kind) && body.id()
+                .isMinorBody()
+                && CelestialKnowledgeClientState.discoveryState(body.id())
+                    .orElse(DiscoveryState.HIDDEN) != DiscoveryState.DISCOVERED)
+                return false;
+            return switch (kind) {
+                case AUTOMATED_STATION -> body.properties()
+                    .canCreateStation();
+                case AUTOMATED_OUTPOST -> body.properties()
+                    .canCreateOutpost();
+                default -> true;
+            };
+        }
+
+        private boolean requiresDiscoveredMinorBody(CelestialAsset.Kind kind) {
+            return kind == CelestialAsset.Kind.AUTOMATED_OUTPOST || kind == CelestialAsset.Kind.SATELLITE;
         }
 
         void confirmPendingAssetCreation(OrbitalAssetUiState state) {

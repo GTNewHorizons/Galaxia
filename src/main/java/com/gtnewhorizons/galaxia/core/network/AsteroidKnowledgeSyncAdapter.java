@@ -8,6 +8,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNodeSnapshot;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
@@ -53,6 +56,7 @@ public final class AsteroidKnowledgeSyncAdapter implements CelestialKnowledgeSyn
                 PacketUtil.writeEnum(buf, entry.detectionState());
                 PacketUtil.writeEnum(buf, entry.oreKnowledgeState());
             }
+            writeNodeSnapshots(buf, snapshot.nodeSnapshots());
         }
     }
 
@@ -70,7 +74,71 @@ public final class AsteroidKnowledgeSyncAdapter implements CelestialKnowledgeSyn
                         PacketUtil.readEnum(buf, DiscoveryState.class),
                         PacketUtil.readEnum(buf, CelestialResourceKnowledgeState.class)));
             }
-            snapshots.add(new AsteroidFieldKnowledgeSnapshot(beltId, entries));
+            snapshots.add(new AsteroidFieldKnowledgeSnapshot(beltId, entries, readNodeSnapshots(buf)));
+        }
+        return List.copyOf(snapshots);
+    }
+
+    private static void writeNodeSnapshots(ByteBuf buf, List<AsteroidFieldNodeSnapshot> snapshots) {
+        buf.writeInt(snapshots.size());
+        for (AsteroidFieldNodeSnapshot snapshot : snapshots) {
+            buf.writeInt(snapshot.index());
+            PacketUtil.writeString(buf, snapshot.displayName());
+            PacketUtil.writeEnum(buf, snapshot.kind());
+            PacketUtil.writeEnum(buf, snapshot.sizeClass());
+            PacketUtil.writeEnum(buf, snapshot.initialDetectionState());
+            PacketUtil.writeEnum(buf, snapshot.initialOreKnowledgeState());
+            buf.writeDouble(snapshot.angleOffsetDeg());
+            buf.writeDouble(snapshot.orbitalDepth01());
+            PacketUtil.writeString(
+                buf,
+                snapshot.oreProfile()
+                    .id());
+            buf.writeInt(
+                snapshot.oreProfile()
+                    .gtOreVeinIds()
+                    .size());
+            for (String veinId : snapshot.oreProfile()
+                .gtOreVeinIds()) PacketUtil.writeString(buf, veinId);
+            PacketUtil.writeString(
+                buf,
+                snapshot.appearance()
+                    .iconRecipeId());
+            buf.writeLong(
+                snapshot.appearance()
+                    .variantSeed());
+        }
+    }
+
+    private static List<AsteroidFieldNodeSnapshot> readNodeSnapshots(ByteBuf buf) {
+        int count = buf.readInt();
+        List<AsteroidFieldNodeSnapshot> snapshots = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            int index = buf.readInt();
+            String displayName = PacketUtil.readString(buf);
+            AsteroidNodeKind kind = PacketUtil.readEnum(buf, AsteroidNodeKind.class);
+            AsteroidSizeClass sizeClass = PacketUtil.readEnum(buf, AsteroidSizeClass.class);
+            DiscoveryState detection = PacketUtil.readEnum(buf, DiscoveryState.class);
+            CelestialResourceKnowledgeState oreKnowledge = PacketUtil
+                .readEnum(buf, CelestialResourceKnowledgeState.class);
+            double angle = buf.readDouble();
+            double depth = buf.readDouble();
+            String profileId = PacketUtil.readString(buf);
+            int veinCount = buf.readInt();
+            List<String> veins = new ArrayList<>(veinCount);
+            for (int vein = 0; vein < veinCount; vein++) veins.add(PacketUtil.readString(buf));
+            snapshots.add(
+                new AsteroidFieldNodeSnapshot(
+                    index,
+                    displayName,
+                    kind,
+                    sizeClass,
+                    detection,
+                    oreKnowledge,
+                    angle,
+                    depth,
+                    new AsteroidFieldNodeSnapshot.OreProfileSnapshot(profileId, veins),
+                    new AsteroidFieldNodeSnapshot.AppearanceSnapshot(PacketUtil.readString(buf), buf.readLong())));
         }
         return List.copyOf(snapshots);
     }
