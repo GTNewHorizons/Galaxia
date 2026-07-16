@@ -24,6 +24,7 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
@@ -72,7 +73,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
-import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkClientState;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -115,9 +115,9 @@ public final class AssetSyncPacket implements IMessage {
     private int syncRevision;
 
     private UUID teamId;
-    private CelestialObjectId celestialBodyId;
-    private CelestialObjectId systemId;
-    private CelestialObjectId planetaryAnchorBodyId;
+    private CelestialObjectKey celestialBodyId;
+    private CelestialObjectKey systemId;
+    private CelestialObjectKey planetaryAnchorBodyId;
     private Buildable.Status assetStatus;
     private CelestialAsset.Kind assetKind;
     private String displayName;
@@ -514,7 +514,7 @@ public final class AssetSyncPacket implements IMessage {
 
                 switch (assetKind) {
                     case STATION -> {
-                        PacketUtil.writeEnum(buf, celestialBodyId);
+                        PacketUtil.writeCelestialObjectKey(buf, celestialBodyId);
                         if (assetStatus == Buildable.Status.OPERATIONAL) {
                             buf.writeInt(stationControllerPos.x());
                             buf.writeInt(stationControllerPos.y());
@@ -529,9 +529,9 @@ public final class AssetSyncPacket implements IMessage {
                     case AUTOMATED_OUTPOST, AUTOMATED_STATION -> {
                         buf.writeLong(teamId.getMostSignificantBits());
                         buf.writeLong(teamId.getLeastSignificantBits());
-                        PacketUtil.writeEnum(buf, celestialBodyId);
-                        PacketUtil.writeEnum(buf, systemId);
-                        PacketUtil.writeEnum(buf, planetaryAnchorBodyId);
+                        PacketUtil.writeCelestialObjectKey(buf, celestialBodyId);
+                        PacketUtil.writeCelestialObjectKey(buf, systemId);
+                        PacketUtil.writeCelestialObjectKey(buf, planetaryAnchorBodyId);
                         buf.writeLong(energyStored);
                         buf.writeLong(stationFeatureSalt);
                         writeUpkeepCredits(buf, upkeepCredits);
@@ -545,7 +545,7 @@ public final class AssetSyncPacket implements IMessage {
                     case SATELLITE -> {
                         buf.writeLong(teamId.getMostSignificantBits());
                         buf.writeLong(teamId.getLeastSignificantBits());
-                        PacketUtil.writeEnum(buf, celestialBodyId);
+                        PacketUtil.writeCelestialObjectKey(buf, celestialBodyId);
                         PacketUtil.writeEnum(buf, satelliteKind);
                     }
                 }
@@ -570,7 +570,7 @@ public final class AssetSyncPacket implements IMessage {
 
                 switch (assetKind) {
                     case STATION -> {
-                        celestialBodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
+                        celestialBodyId = PacketUtil.readCelestialObjectKey(buf);
                         if (assetStatus == Buildable.Status.OPERATIONAL) {
                             stationControllerPos = new BlockPos(buf.readInt(), buf.readInt(), buf.readInt());
                         }
@@ -586,9 +586,9 @@ public final class AssetSyncPacket implements IMessage {
                     }
                     case AUTOMATED_OUTPOST, AUTOMATED_STATION -> {
                         teamId = new UUID(buf.readLong(), buf.readLong());
-                        celestialBodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
-                        systemId = PacketUtil.readEnum(buf, CelestialObjectId.class);
-                        planetaryAnchorBodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
+                        celestialBodyId = PacketUtil.readCelestialObjectKey(buf);
+                        systemId = PacketUtil.readCelestialObjectKey(buf);
+                        planetaryAnchorBodyId = PacketUtil.readCelestialObjectKey(buf);
                         energyStored = buf.readLong();
                         stationFeatureSalt = buf.readLong();
                         upkeepCredits = readUpkeepCredits(buf);
@@ -606,7 +606,7 @@ public final class AssetSyncPacket implements IMessage {
                     }
                     case SATELLITE -> {
                         teamId = new UUID(buf.readLong(), buf.readLong());
-                        celestialBodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
+                        celestialBodyId = PacketUtil.readCelestialObjectKey(buf);
                         satelliteKind = PacketUtil.readEnum(buf, SatelliteKind.class);
                     }
                 }
@@ -1418,10 +1418,7 @@ public final class AssetSyncPacket implements IMessage {
 
         public static void handleClientSync(AssetSyncPacket packet) {
             switch (packet.syncType) {
-                case CLEAR -> {
-                    CelestialAssetStore.CLIENT.clearInternal();
-                    SatelliteNetworkClientState.clear();
-                }
+                case CLEAR -> ClientStateLifecycle.clearAll();
                 case ASSET_REMOVED -> CelestialAssetStore.CLIENT.destroyAssetInternal(packet.assetId);
                 case FULL_SYNC -> handleFull(packet);
                 default -> {

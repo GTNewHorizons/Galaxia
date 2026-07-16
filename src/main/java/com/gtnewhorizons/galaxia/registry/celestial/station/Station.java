@@ -15,6 +15,7 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
@@ -27,8 +28,12 @@ public class Station extends CelestialAsset {
 
     private BlockPos controller;
 
-    public Station(ID assetId, CelestialObjectId celestialObjectId, Status status) {
+    public Station(ID assetId, CelestialObjectKey celestialObjectId, Status status) {
         super(assetId, celestialObjectId, Kind.STATION, status, null);
+    }
+
+    public Station(ID assetId, CelestialObjectId celestialObjectId, Status status) {
+        this(assetId, CelestialObjectKey.registered(celestialObjectId), status);
     }
 
     public BlockPos getController() {
@@ -136,7 +141,8 @@ public class Station extends CelestialAsset {
         MinecraftServer server = MinecraftServer.getServer();
         if (server == null) return null;
 
-        int dimId = celestialObjectId.dimension()
+        int dimId = celestialObjectId.requireRegisteredBodyId()
+            .dimension()
             .getId();
         WorldServer world = server.worldServerForDimension(dimId);
         if (world == null) return null;

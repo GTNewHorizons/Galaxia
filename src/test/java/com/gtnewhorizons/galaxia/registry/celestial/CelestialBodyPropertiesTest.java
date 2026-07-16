@@ -11,6 +11,9 @@ import net.minecraftforge.fluids.Fluid;
 
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
+
 final class CelestialBodyPropertiesTest {
 
     @Test
@@ -99,6 +102,27 @@ final class CelestialBodyPropertiesTest {
     }
 
     @Test
+    void asteroidFieldProfileSurvivesBuilderRoundTrip() {
+        AsteroidFieldProfile profile = AsteroidFieldProfile.builder()
+            .sizeCounts(1, 1, 1)
+            .radialBand(10.0, 20.0)
+            .placementConnectionRadius(1000.0)
+            .oreProfile(new AsteroidOreProfile("metallic", List.of("galaxia:iron")))
+            .build();
+
+        CelestialBodyProperties properties = CelestialBodyProperties.builder()
+            .asteroidFieldProfile(profile)
+            .build();
+
+        assertEquals(profile, properties.asteroidFieldProfile());
+        assertEquals(
+            profile,
+            properties.toBuilder()
+                .build()
+                .asteroidFieldProfile());
+    }
+
+    @Test
     void atmosphereAuthoringRejectsInvalidInputs() {
         Fluid nitrogen = new Fluid("nitrogen");
 
@@ -116,7 +140,7 @@ final class CelestialBodyPropertiesTest {
                 .surfacePressurePa(Double.POSITIVE_INFINITY));
 
         assertThrows(
-            NullPointerException.class,
+            IllegalArgumentException.class,
             () -> CelestialBodyProperties.builder()
                 .addAtmosphereIngredient(null, 1.0));
         assertThrows(
@@ -153,7 +177,7 @@ final class CelestialBodyPropertiesTest {
     @Test
     void directRecordConstructionRejectsInvalidAtmosphereIngredients() {
         assertThrows(
-            NullPointerException.class,
+            IllegalArgumentException.class,
             () -> new CelestialBodyProperties(
                 false,
                 false,
@@ -172,6 +196,9 @@ final class CelestialBodyPropertiesTest {
                 1.0,
                 1.0,
                 Collections.singletonList(null),
+                null,
+                null,
+                null,
                 null,
                 Map.of()));
         assertThrows(
@@ -194,6 +221,9 @@ final class CelestialBodyPropertiesTest {
                 0.0,
                 1.0,
                 List.of(new CelestialBodyProperties.AtmosphereIngredient(new Fluid("nitrogen"), 1.0)),
+                null,
+                null,
+                null,
                 null,
                 Map.of()));
     }

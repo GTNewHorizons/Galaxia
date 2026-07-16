@@ -32,7 +32,7 @@ public final class PlanetaryFeatureGenerator {
         PlanetaryFeatureProfile profile = body.featureProfile();
         if (profile == null || !profile.canGenerateFeatures()) return NO_FEATURES;
         long base = mix(
-            stationFeatureSalt ^ body.id()
+            stationFeatureSalt ^ body.requireRegisteredId()
                 .ordinal());
         EnumMap<PlanetaryFeatureLayer, PlanetaryFeatureKey> selected = new EnumMap<>(PlanetaryFeatureLayer.class);
         EnumMap<PlanetaryFeatureLayer, Double> selectedScores = new EnumMap<>(PlanetaryFeatureLayer.class);
