@@ -16,6 +16,10 @@ import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.AsteroidContentBuilder;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.GeneratedAsteroids;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.LoreAsteroids;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.PlayableDimensionProfile;
 import com.gtnewhorizons.galaxia.registry.dimension.SpaceStation;
@@ -280,6 +284,7 @@ public final class CelestialRegistry {
                         .temperature(67)
                         .radiation(0.28)
                         .oreProfile("undefined")
+                        .asteroidFieldProfile(frozenBeltAsteroidFieldProfile())
                         .metadata("surface", "undefined")
                         .metadata("minorBodies", "enabled"))
                 .playableDimensionProfile(
@@ -379,6 +384,16 @@ public final class CelestialRegistry {
     private static void configureOverworldProvider(WorldProviderBuilder builder) {
         builder.sky(true)
             .name(DimensionEnum.OVERWORLD);
+    }
+
+    private static AsteroidFieldProfile frozenBeltAsteroidFieldProfile() {
+        AsteroidContentBuilder builder = new AsteroidContentBuilder();
+        GeneratedAsteroids.register(builder);
+        LoreAsteroids.register(builder);
+        AsteroidFieldProfile profile = builder.buildProfiles()
+            .get(CelestialObjectId.FROZEN_BELT);
+        if (profile == null) throw new IllegalStateException("Frozen Belt asteroid field content was not registered");
+        return profile;
     }
 
     public static void register(CelestialObjectId id, @Nonnull Consumer<CelestialObject.Builder> registrationBuilder) {
