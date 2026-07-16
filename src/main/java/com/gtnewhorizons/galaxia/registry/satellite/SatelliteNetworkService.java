@@ -129,34 +129,21 @@ public final class SatelliteNetworkService {
      * rebuild packages it into the synced network snapshot.
      */
     public static void tickDataJobs() {
-        tickDataJobs(1, SatelliteDataJobService.ProductionListener.NONE);
+        tickDataJobs(1);
     }
 
     static void tickDataJobs(int elapsedTicks) {
-        tickDataJobs(elapsedTicks, SatelliteDataJobService.ProductionListener.NONE);
-    }
-
-    public static void tickDataJobs(SatelliteDataJobService.ProductionListener productionListener) {
-        tickDataJobs(1, productionListener);
-    }
-
-    static void tickDataJobs(int elapsedTicks, SatelliteDataJobService.ProductionListener productionListener) {
         if (elapsedTicks < 0) throw new IllegalArgumentException("elapsedTicks must be non-negative");
-        if (productionListener == null) throw new IllegalArgumentException("productionListener cannot be null");
         for (int tick = 0; tick < elapsedTicks; tick++) {
-            tickDataJobsSingleTick(productionListener);
+            tickDataJobsSingleTick();
         }
     }
 
-    private static void tickDataJobsSingleTick(SatelliteDataJobService.ProductionListener productionListener) {
+    private static void tickDataJobsSingleTick() {
         tickActiveUsage();
         for (UUID teamId : DATA_ENDPOINTS.teamIds()) {
-            SatelliteDataJobService.Usage usage = SatelliteDataJobService.tickEndpointsUsage(
-                teamId,
-                DATA_ENDPOINTS.endpoints(teamId),
-                DATA_BUFFERS,
-                current(teamId),
-                productionListener);
+            SatelliteDataJobService.Usage usage = SatelliteDataJobService
+                .tickEndpointsUsage(teamId, DATA_ENDPOINTS.endpoints(teamId), DATA_BUFFERS, current(teamId));
             recordActiveUsage(teamId, usage);
         }
     }
