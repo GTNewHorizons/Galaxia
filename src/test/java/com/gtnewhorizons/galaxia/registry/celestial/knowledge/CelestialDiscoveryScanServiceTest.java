@@ -61,8 +61,7 @@ final class CelestialDiscoveryScanServiceTest {
         new CelestialDiscoveryRuntime(
             () -> com.gtnewhorizons.galaxia.registry.satellite.SatelliteDiscoveryWorkerSource
                 .prospectingWorkers(CelestialKnowledgeService::discoveryScopeRevision),
-            service,
-            CelestialKnowledgeService::discoveryDomain).tick(CelestialDiscoveryStep.DETECTION.durationTicks());
+            service).tick(CelestialDiscoveryStep.DETECTION.durationTicks());
 
         assertEquals(DiscoveryState.DISCOVERED, provider.state);
     }
@@ -205,8 +204,7 @@ final class CelestialDiscoveryScanServiceTest {
             () -> new CelestialDiscoveryRuntime(
                 () -> com.gtnewhorizons.galaxia.registry.satellite.SatelliteDiscoveryWorkerSource
                     .prospectingWorkers(CelestialKnowledgeService::discoveryScopeRevision),
-                service,
-                CelestialKnowledgeService::discoveryDomain).tick(1));
+                service).tick(1));
         assertEquals(0, first.revisionSelections);
         assertEquals(0, second.revisionSelections);
         assertEquals(0, first.workSelections);
