@@ -83,23 +83,15 @@ final class AsteroidFieldDiscoveryPolicy implements CelestialDiscoveryDomain {
         if (detection.isPresent()) return detection.map(node -> work(node, CelestialDiscoveryStep.DETECTION));
 
         // Detection must finish across the whole scope before prospecting starts so
-        // the UI can reveal existence before ore tiers.
+        // the UI can reveal existence before ore details.
         if (hasDetectionWork(teamId, nodes, inScope)) return Optional.empty();
-
-        Optional<AsteroidFieldNode> signature = firstScoped(
-            nodes,
-            inScope,
-            order,
-            node -> discoveryState(teamId, node) == DiscoveryState.DISCOVERED
-                && resourceKnowledge(teamId, node) == CelestialResourceKnowledgeState.UNKNOWN);
-        if (signature.isPresent()) return signature.map(node -> work(node, CelestialDiscoveryStep.SIGNATURE));
 
         return firstScoped(
             nodes,
             inScope,
             order,
             node -> discoveryState(teamId, node) == DiscoveryState.DISCOVERED
-                && resourceKnowledge(teamId, node) == CelestialResourceKnowledgeState.SIGNATURE)
+                && resourceKnowledge(teamId, node) == CelestialResourceKnowledgeState.UNKNOWN)
                     .map(node -> work(node, CelestialDiscoveryStep.PROFILE));
     }
 

@@ -101,8 +101,8 @@ public final class AsteroidFieldResolver {
     }
 
     public static CelestialResourceKnowledgeState oreKnowledgeAfterDetection(@Nonnull AsteroidFieldNode node) {
-        if (node.sizeClass() == AsteroidSizeClass.SMALL) return CelestialResourceKnowledgeState.UNKNOWN;
-        return rolledOreKnowledge(node, 6L);
+        // Detection only reveals the body. Ore details require a PROFILE scan.
+        return CelestialResourceKnowledgeState.UNKNOWN;
     }
 
     static DiscoveryState defaultInitialDetectionState(AsteroidSizeClass sizeClass) {
@@ -116,7 +116,6 @@ public final class AsteroidFieldResolver {
                     .variantSeed(),
                 salt));
         if (roll < 0.20) return CelestialResourceKnowledgeState.PROFILE;
-        if (roll < 0.55) return CelestialResourceKnowledgeState.SIGNATURE;
         return CelestialResourceKnowledgeState.UNKNOWN;
     }
 }

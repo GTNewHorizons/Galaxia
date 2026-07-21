@@ -35,14 +35,14 @@ final class CelestialKnowledgeClientStateTest {
         CelestialKnowledgeClientState.apply(
             Map.of(
                 asteroidKey,
-                CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.SIGNATURE)));
+                CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.UNKNOWN)));
 
         CelestialDiscoveryView view = CelestialKnowledgeClientState.discoveryView();
 
         assertEquals(Optional.of(DiscoveryState.DISCOVERED), view.discoveryState(asteroidKey));
         assertTrue(view.isVisible(asteroidKey, DiscoveryState.HIDDEN));
         assertEquals(
-            Optional.of(CelestialResourceKnowledgeState.SIGNATURE),
+            Optional.of(CelestialResourceKnowledgeState.UNKNOWN),
             CelestialKnowledgeClientState.resourceKnowledge(asteroidKey));
         assertEquals(Optional.empty(), view.discoveryState(CelestialObjectKey.registered(CelestialObjectId.MARS)));
     }

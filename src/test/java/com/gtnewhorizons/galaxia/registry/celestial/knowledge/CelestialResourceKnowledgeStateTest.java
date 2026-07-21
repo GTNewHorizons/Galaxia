@@ -7,9 +7,8 @@ import org.junit.jupiter.api.Test;
 final class CelestialResourceKnowledgeStateTest {
 
     @Test
-    void advancesFromUnknownToSignatureToProfile() {
-        assertEquals(CelestialResourceKnowledgeState.SIGNATURE, CelestialResourceKnowledgeState.UNKNOWN.advance());
-        assertEquals(CelestialResourceKnowledgeState.PROFILE, CelestialResourceKnowledgeState.SIGNATURE.advance());
+    void advancesFromUnknownDirectlyToProfile() {
+        assertEquals(CelestialResourceKnowledgeState.PROFILE, CelestialResourceKnowledgeState.UNKNOWN.advance());
         assertEquals(CelestialResourceKnowledgeState.PROFILE, CelestialResourceKnowledgeState.PROFILE.advance());
     }
 }

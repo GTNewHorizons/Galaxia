@@ -10,7 +10,6 @@ import javax.annotation.Nonnull;
 public enum CelestialDiscoveryStep {
 
     DETECTION(1200),
-    SIGNATURE(2400),
     PROFILE(4800);
 
     private final int durationTicks;
