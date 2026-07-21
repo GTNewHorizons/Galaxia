@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.nio.file.Path;
-import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
@@ -15,9 +14,12 @@ import org.junit.jupiter.api.io.TempDir;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
@@ -98,32 +100,26 @@ final class FacilitySatellitePersistenceTest {
     }
 
     @Test
-    void asteroidKnowledgeRoundTripsThroughStarmapPersistence(@TempDir Path tempDir) {
+    void celestialKnowledgeRoundTripsThroughStarmapPersistence(@TempDir Path tempDir) {
         FacilityPersistenceManager manager = new FacilityPersistenceManager(CelestialServerRuntime.create());
         manager.loadFromSaveDirectory(tempDir.toFile());
-        AsteroidFieldKnowledgeStore.global()
-            .getOrCreate(
-                TEAM,
-                CelestialObjectId.FROZEN_BELT,
-                com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI.get(CelestialObjectId.FROZEN_BELT)
-                    .orElseThrow()
-                    .properties()
-                    .asteroidFieldProfile());
-        List<AsteroidFieldKnowledgeSnapshot> saved = AsteroidFieldKnowledgeStore.global()
-            .snapshots(TEAM);
+        CelestialObjectKey mars = CelestialObjectKey.registered(CelestialObjectId.MARS);
+        CelestialKnowledgeService.putFacts(
+            TEAM,
+            mars,
+            CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.PROFILE));
+        var saved = CelestialKnowledgeService.snapshot(TEAM);
         assertFalse(saved.isEmpty());
 
         manager.saveToSaveDirectory(tempDir.toFile());
         CelestialAssetStore.SERVER.clearInternal();
         SatelliteNetworkService.clear();
+        CelestialKnowledgeService.clearFacts();
 
         FacilityPersistenceManager reloaded = new FacilityPersistenceManager(CelestialServerRuntime.create());
         reloaded.loadFromSaveDirectory(tempDir.toFile());
 
-        assertEquals(
-            saved,
-            AsteroidFieldKnowledgeStore.global()
-                .snapshots(TEAM));
+        assertEquals(saved, CelestialKnowledgeService.snapshot(TEAM));
     }
 
     @Test

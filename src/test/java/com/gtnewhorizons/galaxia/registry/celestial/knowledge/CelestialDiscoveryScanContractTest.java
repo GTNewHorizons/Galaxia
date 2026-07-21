@@ -26,16 +26,16 @@ final class CelestialDiscoveryScanContractTest {
     }
 
     @BeforeEach
-    void resetProviders() {
-        CelestialKnowledgeService.resetProvidersForTesting();
+    void reset() {
+        CelestialKnowledgeService.clearFacts();
+        CelestialKnowledgeService.resetDiscoveryDomainsForTesting();
     }
 
     @Test
-    void registeredBodyProviderOwnsGenericDiscoveryScope() {
-        PlanetKnowledgeProvider knowledge = new PlanetKnowledgeProvider();
-        PlanetDiscoveryDomain domain = new PlanetDiscoveryDomain(knowledge);
-        CelestialKnowledgeService.registerProvider(knowledge);
+    void planetDomainWritesFactsThroughSharedService() {
+        PlanetDiscoveryDomain domain = new PlanetDiscoveryDomain();
         CelestialKnowledgeService.registerDiscoveryDomain(domain);
+        CelestialKnowledgeService.putFacts(TEAM, PLANET, CelestialKnowledgeFacts.hidden());
         CelestialDiscoveryScanScope scope = new CelestialDiscoveryScanScope(PLANET, 0.25, 7L);
 
         assertEquals(DiscoveryState.HIDDEN, CelestialKnowledgeService.discoveryState(TEAM, PLANET));
@@ -51,25 +51,9 @@ final class CelestialDiscoveryScanContractTest {
         assertEquals(DiscoveryState.DISCOVERED, CelestialKnowledgeService.discoveryState(TEAM, PLANET));
     }
 
-    private static final class PlanetKnowledgeProvider implements CelestialKnowledgeProvider {
-
-        private DiscoveryState state = DiscoveryState.HIDDEN;
-
-        @Override
-        public Optional<DiscoveryState> discoveryState(UUID teamId, CelestialObjectKey key) {
-            return PLANET.equals(key) ? Optional.of(state) : Optional.empty();
-        }
-
-    }
-
     private static final class PlanetDiscoveryDomain implements CelestialDiscoveryDomain {
 
-        private final PlanetKnowledgeProvider knowledge;
         private CelestialDiscoveryScanScope receivedScope;
-
-        private PlanetDiscoveryDomain(PlanetKnowledgeProvider knowledge) {
-            this.knowledge = knowledge;
-        }
 
         @Override
         public boolean ownsDiscoveryAnchor(CelestialObjectKey anchorKey) {
@@ -89,18 +73,15 @@ final class CelestialDiscoveryScanContractTest {
         @Override
         public Optional<CelestialDiscoveryWork> nextDiscoveryWork(UUID teamId, CelestialDiscoveryScanScope scope) {
             receivedScope = scope;
-            return knowledge.state == DiscoveryState.HIDDEN
-                ? Optional.of(new PlanetDiscoveryWork(PLANET, CelestialDiscoveryStep.DETECTION))
+            return CelestialKnowledgeService.discoveryState(teamId, PLANET) == DiscoveryState.HIDDEN
+                ? Optional.of(new CelestialDiscoveryWork(PLANET, CelestialDiscoveryStep.DETECTION))
                 : Optional.empty();
         }
 
         @Override
         public void completeDiscoveryWork(UUID teamId, CelestialDiscoveryScanScope scope, CelestialDiscoveryWork work) {
             receivedScope = scope;
-            knowledge.state = DiscoveryState.DISCOVERED;
+            CelestialKnowledgeService.putFacts(teamId, PLANET, CelestialKnowledgeFacts.discoveredUnknown());
         }
     }
-
-    private record PlanetDiscoveryWork(CelestialObjectKey targetKey, CelestialDiscoveryStep step)
-        implements CelestialDiscoveryWork {}
 }

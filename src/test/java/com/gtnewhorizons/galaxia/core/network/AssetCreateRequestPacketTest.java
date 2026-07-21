@@ -18,12 +18,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldDiscoveryWork;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanContext;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanOrder;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryStep;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
@@ -135,18 +132,7 @@ final class AssetCreateRequestPacketTest {
     @Test
     void asteroidCreateRequestAllowsTeamDetectedHiddenAsteroidOutposts() {
         CelestialObjectKey hiddenAsteroidId = hiddenAsteroidId();
-        CelestialObject belt = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
-            .orElseThrow();
-        var knowledge = AsteroidFieldKnowledgeStore.global()
-            .getOrCreate(
-                TEAM,
-                CelestialObjectId.FROZEN_BELT,
-                belt.properties()
-                    .asteroidFieldProfile());
-        var context = new AsteroidFieldScanContext(node -> true, AsteroidFieldScanOrder.byIndex());
-        knowledge.revealDiscovery(
-            new AsteroidFieldDiscoveryWork(hiddenAsteroidId, CelestialDiscoveryStep.DETECTION),
-            context);
+        CelestialKnowledgeService.putFacts(TEAM, hiddenAsteroidId, CelestialKnowledgeFacts.discoveredUnknown());
 
         AssetSyncPacket outpostSync = AssetCreateRequestPacket
             .createFacility(hiddenAsteroidId, "Detected Outpost", CelestialAsset.Kind.AUTOMATED_OUTPOST, true)

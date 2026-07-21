@@ -13,19 +13,20 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientCatalogState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNodeCatalog;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryStep;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
@@ -37,12 +38,12 @@ import io.netty.buffer.Unpooled;
 final class CelestialKnowledgeSyncPacketTest {
 
     private static final UUID TEAM = new UUID(7L, 8L);
-    private static final MinorCelestialBodyId ASTEROID_ID = new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 2);
     private static CelestialServerRuntime runtime;
 
     @BeforeAll
     static void init() {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
+        CelestialKnowledgeSyncRegistry.resetForTesting();
         runtime = CelestialServerRuntime.create();
     }
 
@@ -50,20 +51,24 @@ final class CelestialKnowledgeSyncPacketTest {
     void clearState() {
         runtime.scans()
             .clear();
-        AsteroidFieldKnowledgeStore.global()
-            .clear();
+        CelestialKnowledgeService.clearFacts();
+        AsteroidFieldNodeCatalog.clearRestored();
         SatelliteNetworkService.clear();
-        AsteroidFieldClientKnowledgeState.clear();
+        CelestialKnowledgeClientState.clear();
+        AsteroidFieldClientCatalogState.clear();
         CelestialDiscoveryClientState.clear();
     }
 
     @Test
-    void roundTripSyncsRegisteredPlanetDiscoveryWithoutAsteroidKnowledge() {
-        runtime.scans()
-            .clear();
-        AsteroidFieldKnowledgeStore.global()
-            .clear();
+    void roundTripSyncsRegisteredAndMinorFactsPlusDiscovery() {
         CelestialObjectKey mars = CelestialObjectKey.registered(CelestialObjectId.MARS);
+        CelestialObjectKey asteroid = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN));
+        CelestialKnowledgeService.putFacts(
+            TEAM,
+            mars,
+            CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.PROFILE));
+        CelestialKnowledgeService.putFacts(TEAM, asteroid, CelestialKnowledgeFacts.discoveredUnknown());
         CelestialDiscoveryScanSnapshot scan = new CelestialDiscoveryScanSnapshot(
             TEAM,
             mars,
@@ -82,12 +87,23 @@ final class CelestialKnowledgeSyncPacketTest {
         packet.toBytes(buf);
         CelestialKnowledgeSyncPacket read = new CelestialKnowledgeSyncPacket();
         read.fromBytes(buf);
+        CelestialKnowledgeClientState.clear();
         CelestialDiscoveryClientState.clear();
+        AsteroidFieldClientCatalogState.clear();
 
         new CelestialKnowledgeSyncPacket.Handler().onMessage(read, null);
 
+        assertEquals(DiscoveryState.DISCOVERED, CelestialKnowledgeClientState.effectiveDiscoveryState(mars));
+        assertEquals(
+            CelestialResourceKnowledgeState.PROFILE,
+            CelestialKnowledgeClientState.resourceKnowledge(mars)
+                .orElseThrow());
+        assertEquals(
+            DiscoveryState.DISCOVERED,
+            CelestialKnowledgeClientState.discoveryView()
+                .discoveryState(asteroid)
+                .orElse(null));
         assertEquals(List.of(scan), CelestialDiscoveryClientState.snapshots());
-        assertEquals(List.of(), AsteroidFieldClientKnowledgeState.snapshots());
     }
 
     @ParameterizedTest
@@ -132,8 +148,8 @@ final class CelestialKnowledgeSyncPacketTest {
 
     @ParameterizedTest
     @ValueSource(ints = { -1, 1025 })
-    void rejectsMalformedAsteroidFieldSnapshotCounts(int count) {
-        ByteBuf buf = singleSection("galaxia:asteroid_fields");
+    void rejectsMalformedCatalogBeltCounts(int count) {
+        ByteBuf buf = singleSection("galaxia:asteroid_catalog");
         buf.writeInt(count);
 
         assertThrows(IllegalStateException.class, () -> new CelestialKnowledgeSyncPacket().fromBytes(buf));
@@ -141,12 +157,17 @@ final class CelestialKnowledgeSyncPacketTest {
 
     @ParameterizedTest
     @ValueSource(ints = { -1, 65537 })
-    void rejectsMalformedAsteroidEntryCounts(int count) {
-        ByteBuf buf = singleSection("galaxia:asteroid_fields");
-        buf.writeInt(1);
-        PacketUtil.writeEnum(buf, CelestialObjectId.FROZEN_BELT);
+    void rejectsMalformedKnowledgeEntryCounts(int count) {
+        ByteBuf buf = singleSection("galaxia:celestial_knowledge");
         buf.writeInt(count);
 
+        assertThrows(IllegalStateException.class, () -> new CelestialKnowledgeSyncPacket().fromBytes(buf));
+    }
+
+    @Test
+    void unknownSectionIdFailsLoudly() {
+        ByteBuf buf = singleSection("galaxia:asteroid_fields");
+        buf.writeInt(0);
         assertThrows(IllegalStateException.class, () -> new CelestialKnowledgeSyncPacket().fromBytes(buf));
     }
 
@@ -172,72 +193,6 @@ final class CelestialKnowledgeSyncPacketTest {
 
         assertEquals(List.of(expected), CelestialDiscoveryClientState.snapshots());
         runtime = current;
-    }
-
-    @Test
-    void roundTripAppliesRegisteredKnowledgeSectionsOnClient() {
-        var profile = GalaxiaCelestialAPI.get(CelestialObjectId.FROZEN_BELT)
-            .orElseThrow()
-            .properties()
-            .asteroidFieldProfile();
-        AsteroidFieldNodeCatalog catalog = AsteroidFieldNodeCatalog
-            .fromGenerated(CelestialObjectId.FROZEN_BELT, profile);
-        MinorCelestialBodyId asteroidId = catalog.nodes()
-            .get(0)
-            .id();
-        AsteroidFieldKnowledgeSnapshot knowledge = new AsteroidFieldKnowledgeSnapshot(
-            CelestialObjectId.FROZEN_BELT,
-            List.of(
-                new AsteroidFieldKnowledgeSnapshot.Entry(
-                    asteroidId.index(),
-                    DiscoveryState.DISCOVERED,
-                    CelestialResourceKnowledgeState.PROFILE)),
-            catalog.snapshots());
-        CelestialObjectKey asteroidKey = CelestialObjectKey.minorBody(asteroidId);
-        CelestialDiscoveryScanSnapshot scan = new CelestialDiscoveryScanSnapshot(
-            TEAM,
-            asteroidKey,
-            0.5,
-            5,
-            CelestialDiscoveryCapability.PROSPECTING,
-            CelestialDiscoveryScanSnapshot.Status.ACTIVE,
-            asteroidKey,
-            CelestialDiscoveryStep.PROFILE,
-            1200);
-        CelestialDiscoveryScanSnapshot completion = CelestialDiscoveryScanSnapshot.complete(
-            TEAM,
-            new com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanScope(
-                CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 3)),
-                0.5,
-                5),
-            CelestialDiscoveryCapability.PROSPECTING);
-        AsteroidFieldKnowledgeStore.global()
-            .restore(
-                TEAM,
-                List.of(knowledge),
-                bodyId -> bodyId == CelestialObjectId.FROZEN_BELT ? java.util.Optional.of(
-                    GalaxiaCelestialAPI.get(bodyId)
-                        .orElseThrow()
-                        .properties()
-                        .asteroidFieldProfile())
-                    : java.util.Optional.empty());
-        runtime.scans()
-            .restore(TEAM, List.of(scan, completion));
-        List<AsteroidFieldKnowledgeSnapshot> expectedKnowledge = AsteroidFieldKnowledgeStore.global()
-            .snapshots(TEAM);
-
-        CelestialKnowledgeSyncPacket packet = CelestialKnowledgeSyncPacket.forTeam(TEAM);
-        ByteBuf buf = Unpooled.buffer();
-        packet.toBytes(buf);
-        CelestialKnowledgeSyncPacket read = new CelestialKnowledgeSyncPacket();
-        read.fromBytes(buf);
-        AsteroidFieldClientKnowledgeState.clear();
-        CelestialDiscoveryClientState.clear();
-
-        new CelestialKnowledgeSyncPacket.Handler().onMessage(read, null);
-
-        assertEquals(expectedKnowledge, AsteroidFieldClientKnowledgeState.snapshots());
-        assertEquals(List.of(scan, completion), CelestialDiscoveryClientState.snapshots());
     }
 
     private static CelestialDiscoveryScanSnapshot activePlanetScan(CelestialObjectId id, long elapsedTicks) {
@@ -279,5 +234,4 @@ final class CelestialKnowledgeSyncPacketTest {
         PacketUtil.writeString(buf, type);
         return buf;
     }
-
 }

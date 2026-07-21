@@ -22,7 +22,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
@@ -52,8 +51,7 @@ final class SatelliteNetworkServiceTest {
     void clearState() {
         CelestialAssetStore.clear();
         SatelliteNetworkService.clear();
-        AsteroidFieldKnowledgeStore.global()
-            .clear();
+        CelestialKnowledgeService.clearFacts();
     }
 
     @Test
@@ -211,8 +209,7 @@ final class SatelliteNetworkServiceTest {
         assertEquals(initiallyDetected, detectedAfterTick);
         assertEquals(100L, consumer.consumedDeciKb());
         assertTrue(
-            AsteroidFieldKnowledgeStore.global()
-                .snapshots(TEAM)
+            CelestialKnowledgeService.snapshot(TEAM)
                 .isEmpty());
     }
 
