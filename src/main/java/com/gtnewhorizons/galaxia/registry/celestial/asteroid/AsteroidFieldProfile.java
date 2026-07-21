@@ -13,8 +13,20 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 public record AsteroidFieldProfile(long seedSalt, int generationVersion, int totalNodes, int largeCount,
     int mediumCount, int smallCount, double innerOrbitalRadius, double outerOrbitalRadius,
-    double placementConnectionRadius, @Nonnull AsteroidOreProfilePool oreProfilePool,
+    double placementConnectionRadius, @Nonnull List<OreProfileEntry> oreProfileEntries,
     @Nonnull List<AuthoredAsteroidDefinition> authoredAsteroids) {
+
+    public record OreProfileEntry(@Nonnull AsteroidOreProfile profile, double weight) {
+
+        public OreProfileEntry {
+            if (profile == null) {
+                throw new IllegalArgumentException("ore profile cannot be null");
+            }
+            if (!Double.isFinite(weight) || weight <= 0.0) {
+                throw new IllegalArgumentException("ore profile weight must be finite and positive");
+            }
+        }
+    }
 
     public AsteroidFieldProfile {
         generationVersion = requirePositive("generationVersion", generationVersion);
@@ -34,8 +46,10 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
             throw new IllegalArgumentException("outerOrbitalRadius must be greater than innerOrbitalRadius");
         }
         placementConnectionRadius = requireNonNegativeFinite("placementConnectionRadius", placementConnectionRadius);
-        if (oreProfilePool == null)
-            throw new IllegalStateException("Asteroid field profile requires an ore profile pool");
+        if (oreProfileEntries == null || oreProfileEntries.isEmpty()) {
+            throw new IllegalStateException("Asteroid field profile requires at least one ore profile");
+        }
+        oreProfileEntries = Collections.unmodifiableList(new ArrayList<>(oreProfileEntries));
         if (authoredAsteroids == null) {
             authoredAsteroids = List.of();
         }
@@ -68,7 +82,35 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
     }
 
     public List<AsteroidOreProfile> oreProfiles() {
-        return oreProfilePool.profiles();
+        return oreProfileEntries.stream()
+            .map(OreProfileEntry::profile)
+            .toList();
+    }
+
+    public AsteroidOreProfile selectOreProfile(double roll) {
+        if (!Double.isFinite(roll)) throw new IllegalArgumentException("ore profile roll must be finite");
+        double clampedRoll = Math.max(0.0, Math.min(Math.nextDown(1.0), roll));
+        double totalWeight = 0.0;
+        for (OreProfileEntry entry : oreProfileEntries) {
+            totalWeight += entry.weight();
+        }
+        double cursor = clampedRoll * totalWeight;
+        for (OreProfileEntry entry : oreProfileEntries) {
+            cursor -= entry.weight();
+            if (cursor < 0.0) return entry.profile();
+        }
+        return oreProfileEntries.get(oreProfileEntries.size() - 1)
+            .profile();
+    }
+
+    public AsteroidOreProfile requireOreProfile(String id) {
+        return oreProfileEntries.stream()
+            .map(OreProfileEntry::profile)
+            .filter(
+                profile -> profile.id()
+                    .equals(id))
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("Unknown asteroid ore profile: " + id));
     }
 
     public boolean hasNodeIndex(int index) {
@@ -116,7 +158,7 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
         private double innerOrbitalRadius;
         private double outerOrbitalRadius;
         private double placementConnectionRadius = Double.NaN;
-        private final AsteroidOreProfilePool.Builder oreProfilePoolBuilder = AsteroidOreProfilePool.builder();
+        private final List<OreProfileEntry> oreProfileEntries = new ArrayList<>();
         private final List<AuthoredAsteroidDefinition> authoredAsteroids = new ArrayList<>();
 
         public Builder seedSalt(long value) {
@@ -155,7 +197,7 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
         }
 
         public Builder oreProfile(@Nonnull AsteroidOreProfile value, double weight) {
-            this.oreProfilePoolBuilder.profile(value, weight);
+            this.oreProfileEntries.add(new OreProfileEntry(value, weight));
             return this;
         }
 
@@ -182,7 +224,7 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
                 innerOrbitalRadius,
                 outerOrbitalRadius,
                 placementConnectionRadius,
-                oreProfilePoolBuilder.build(),
+                oreProfileEntries,
                 authoredAsteroids);
         }
     }
