@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot.CelestialDiscoveryCapability;
 
 public final class CelestialDiscoveryClientState {
 

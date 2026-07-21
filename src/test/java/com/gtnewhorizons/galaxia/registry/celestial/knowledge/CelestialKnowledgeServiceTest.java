@@ -20,6 +20,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolv
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.CelestialResourceKnowledgeState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class CelestialKnowledgeServiceTest {

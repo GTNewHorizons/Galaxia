@@ -32,7 +32,7 @@ final class ModuleSettingsCopyPickerModelTest {
         assertEquals(
             test.target()
                 .anchor(),
-            ModuleSettingsCopyPickerModel.normalizeTarget(
+            StationTargetPicker.normalizeTarget(
                 test.facility(),
                 test.target()
                     .anchor()));

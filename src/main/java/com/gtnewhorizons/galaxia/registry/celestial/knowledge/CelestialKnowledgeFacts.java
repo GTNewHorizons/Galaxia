@@ -11,6 +11,25 @@ import javax.annotation.Nonnull;
 public record CelestialKnowledgeFacts(@Nonnull DiscoveryState discoveryState,
     @Nonnull CelestialResourceKnowledgeState resourceKnowledgeState) {
 
+    /**
+     * Player-facing visibility state for any celestial object whose existence can
+     * be learned after world start.
+     */
+    public enum DiscoveryState {
+        HIDDEN,
+        DISCOVERED
+    }
+
+    public enum CelestialResourceKnowledgeState {
+
+        UNKNOWN,
+        PROFILE;
+
+        public CelestialResourceKnowledgeState advance() {
+            return PROFILE;
+        }
+    }
+
     public CelestialKnowledgeFacts {
         if (discoveryState == null) throw new IllegalArgumentException("discovery state is required");
         if (resourceKnowledgeState == null) throw new IllegalArgumentException("resource knowledge state is required");

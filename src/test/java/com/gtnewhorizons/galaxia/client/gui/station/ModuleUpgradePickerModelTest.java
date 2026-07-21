@@ -109,7 +109,7 @@ final class ModuleUpgradePickerModelTest {
         assertEquals(
             test.target()
                 .anchor(),
-            ModuleUpgradePickerModel.normalizeTarget(
+            StationTargetPicker.normalizeTarget(
                 test.facility(),
                 test.target()
                     .anchor()));

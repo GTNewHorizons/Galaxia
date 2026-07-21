@@ -1,5 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.celestial.knowledge;
 
+import java.util.Locale;
+import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.UUID;
 
 import javax.annotation.Nonnull;
@@ -14,6 +17,103 @@ public record CelestialDiscoveryScanSnapshot(@Nonnull UUID teamId, @Nonnull Cele
     public enum Status {
         ACTIVE,
         COMPLETE
+    }
+
+    public enum CelestialDiscoveryCapability {
+        PROSPECTING
+    }
+
+    /**
+     * Stable discovery tier/type for progressive scanning or research work.
+     */
+    public enum CelestialDiscoveryStep {
+
+        DETECTION(1200),
+        PROFILE(4800);
+
+        private final int durationTicks;
+
+        CelestialDiscoveryStep(int durationTicks) {
+            if (durationTicks <= 0) throw new IllegalArgumentException("durationTicks must be positive");
+            this.durationTicks = durationTicks;
+        }
+
+        @Nonnull
+        public String id() {
+            return name().toLowerCase(Locale.ROOT);
+        }
+
+        public int durationTicks() {
+            return durationTicks;
+        }
+    }
+
+    /**
+     * Stable boundary of one discovery scan around an anchored celestial object.
+     */
+    public record CelestialDiscoveryScanScope(@Nonnull CelestialObjectKey anchorKey, double radius, long revision) {
+
+        public CelestialDiscoveryScanScope {
+            if (anchorKey == null) throw new IllegalArgumentException("anchor key is required");
+            if (!Double.isFinite(radius) || radius < 0.0) {
+                throw new IllegalArgumentException("scan radius must be finite and non-negative");
+            }
+        }
+    }
+
+    /**
+     * One discoverable fact a scan can uncover about a celestial object.
+     * <p>
+     * TLDR: data-shaped work item ({@code Key + step}) so scan progress persists
+     * and rebinds after load without feature-specific work types.
+     */
+    public record CelestialDiscoveryWork(@Nonnull CelestialObjectKey targetKey, @Nonnull CelestialDiscoveryStep step) {
+
+        public CelestialDiscoveryWork {
+            if (targetKey == null) throw new IllegalArgumentException("target key is required");
+            if (step == null) throw new IllegalArgumentException("discovery step is required");
+        }
+
+        public int durationTicks() {
+            return step.durationTicks();
+        }
+    }
+
+    public record CelestialDiscoveryWorkerContribution(@Nonnull UUID teamId, @Nonnull CelestialDiscoveryScanScope scope,
+        @Nonnull CelestialDiscoveryCapability capability, int workerCount, double effectPerWorker) {
+
+        public CelestialDiscoveryWorkerContribution {
+            if (workerCount < 0) throw new IllegalArgumentException("worker count must be non-negative");
+            if (!Double.isFinite(effectPerWorker) || effectPerWorker < 0.0) {
+                throw new IllegalArgumentException("worker effect must be finite and non-negative");
+            }
+        }
+
+        long effectiveTicks(int elapsedTicks) {
+            double ticks = (double) elapsedTicks * workerCount * effectPerWorker;
+            if (!Double.isFinite(ticks) || ticks > Long.MAX_VALUE) {
+                throw new IllegalArgumentException("effective discovery ticks overflow");
+            }
+            return Math.round(ticks);
+        }
+    }
+
+    /**
+     * Domain rules for one family of celestial discovery work.
+     */
+    public interface CelestialDiscoveryDomain {
+
+        boolean ownsDiscoveryAnchor(@Nonnull CelestialObjectKey anchorKey);
+
+        boolean ownsDiscoveryScope(@Nonnull CelestialDiscoveryScanScope scope);
+
+        OptionalLong discoveryScopeRevision(@Nonnull CelestialObjectKey anchorKey);
+
+        Optional<CelestialDiscoveryWork> nextDiscoveryWork(@Nonnull UUID teamId,
+            @Nonnull CelestialDiscoveryScanScope scope);
+
+        void completeDiscoveryWork(@Nonnull UUID teamId, @Nonnull CelestialDiscoveryScanScope scope,
+            @Nonnull CelestialDiscoveryWork work);
     }
 
     public CelestialDiscoveryScanSnapshot {

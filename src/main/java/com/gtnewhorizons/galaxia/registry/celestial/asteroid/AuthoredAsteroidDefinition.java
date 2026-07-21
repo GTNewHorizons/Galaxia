@@ -3,8 +3,8 @@ package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.CelestialResourceKnowledgeState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
 
 public record AuthoredAsteroidDefinition(int index, @Nonnull AsteroidNodeKind kind, @Nullable String contentId,
     @Nonnull String displayName, @Nonnull AsteroidSizeClass sizeClass, @Nonnull DiscoveryState initialDetectionState,

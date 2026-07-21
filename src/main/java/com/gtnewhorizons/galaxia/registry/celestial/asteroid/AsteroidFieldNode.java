@@ -5,8 +5,8 @@ import javax.annotation.Nullable;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.MinorBodyOrbitSlot;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.CelestialResourceKnowledgeState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
 
 public record AsteroidFieldNode(@Nonnull MinorCelestialBodyId id, @Nonnull CelestialObjectId beltId, int index,
     @Nonnull String displayName, @Nonnull AsteroidNodeKind kind, @Nonnull AsteroidSizeClass sizeClass,
