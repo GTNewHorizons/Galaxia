@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module.types;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -19,7 +18,7 @@ public final class ModuleDebugDataGenerator extends TieredModuleComponent {
     }
 
     public record Config(Mode mode, boolean enabled, SatelliteDataType dataType, long amountKb, int durationTicks,
-        CelestialObjectId originBodyId) {
+        CelestialObjectKey originBodyId) {
 
         public Config {
             mode = mode == null ? Mode.PRODUCE : mode;
@@ -34,7 +33,7 @@ public final class ModuleDebugDataGenerator extends TieredModuleComponent {
         }
 
         public static Config consume(SatelliteDataType dataType, long amountKb, int durationTicks,
-            CelestialObjectId originBodyId) {
+            CelestialObjectKey originBodyId) {
             return new Config(Mode.CONSUME, true, dataType, amountKb, durationTicks, originBodyId);
         }
     }
@@ -42,7 +41,7 @@ public final class ModuleDebugDataGenerator extends TieredModuleComponent {
     private Config config = Config.produce(SatelliteDataType.PROSPECTING, 10L, 20);
     private int jobProgressTicks;
     private long consumedDeciKb;
-    private CelestialObjectId detectedCounterpartBodyId;
+    private CelestialObjectKey detectedCounterpartBodyId;
 
     public Config config() {
         return config;
@@ -54,7 +53,7 @@ public final class ModuleDebugDataGenerator extends TieredModuleComponent {
     }
 
     public void restore(Config config, int jobProgressTicks, long consumedDeciKb,
-        CelestialObjectId detectedCounterpartBodyId) {
+        CelestialObjectKey detectedCounterpartBodyId) {
         this.config = config == null ? Config.produce(SatelliteDataType.PROSPECTING, 10L, 20) : config;
         this.jobProgressTicks = Math.max(0, jobProgressTicks);
         this.consumedDeciKb = Math.max(0L, consumedDeciKb);
@@ -69,11 +68,11 @@ public final class ModuleDebugDataGenerator extends TieredModuleComponent {
         return consumedDeciKb;
     }
 
-    public CelestialObjectId detectedCounterpartBodyId() {
+    public CelestialObjectKey detectedCounterpartBodyId() {
         return detectedCounterpartBodyId;
     }
 
-    public void updateDetectedCounterpart(CelestialObjectId bodyId) {
+    public void updateDetectedCounterpart(CelestialObjectKey bodyId) {
         this.detectedCounterpartBodyId = bodyId;
     }
 
@@ -87,10 +86,6 @@ public final class ModuleDebugDataGenerator extends TieredModuleComponent {
 
     public boolean enabled() {
         return config.enabled();
-    }
-
-    public SatelliteDataKey producedKey(CelestialObjectId sourceBodyId) {
-        return producedKey(CelestialObjectKey.registered(sourceBodyId));
     }
 
     public SatelliteDataKey producedKey(CelestialObjectKey sourceBodyKey) {

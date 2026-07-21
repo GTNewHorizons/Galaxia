@@ -35,11 +35,6 @@ public final class GalaxiaCelestialAPI {
         return CelestialRegistry.get(key);
     }
 
-    public static Optional<CelestialObject> get(String id) {
-        CelestialObjectId enumId = CelestialObjectId.fromString(id);
-        return enumId != null ? CelestialRegistry.get(enumId) : Optional.empty();
-    }
-
     public static List<CelestialObject> getAll() {
         return CelestialRegistry.getAll();
     }
@@ -56,12 +51,13 @@ public final class GalaxiaCelestialAPI {
         return CelestialRegistry.findByDimension(dimension);
     }
 
-    public static CelestialHierarchy getHierarchy() {
-        return CelestialRegistry.hierarchy;
+    public static Optional<CelestialObject> findByDimension(int dimensionId) {
+        DimensionEnum dimension = DimensionEnum.fromId(dimensionId);
+        return dimension == null ? Optional.empty() : findByDimension(dimension);
     }
 
-    public static Optional<CelestialObject> findBodyById(CelestialObjectId id) {
-        return id == null ? Optional.empty() : findBodyById(CelestialObjectKey.registered(id));
+    public static CelestialHierarchy getHierarchy() {
+        return CelestialRegistry.hierarchy;
     }
 
     public static Optional<CelestialObject> findBodyById(CelestialObjectKey id) {
@@ -70,10 +66,6 @@ public final class GalaxiaCelestialAPI {
 
     public static List<CelestialObject> getChildren(CelestialObject parent) {
         return parent == null ? List.of() : getChildren(parent.id());
-    }
-
-    public static List<CelestialObject> getChildren(CelestialObjectId parentId) {
-        return parentId == null ? List.of() : getChildren(CelestialObjectKey.registered(parentId));
     }
 
     public static List<CelestialObject> getChildren(CelestialObjectKey parentId) {
@@ -152,10 +144,6 @@ public final class GalaxiaCelestialAPI {
         return Optional.empty();
     }
 
-    public static CelestialObject findBodyById(CelestialObject root, CelestialObjectId needle) {
-        return needle == null ? null : findBodyById(root, CelestialObjectKey.registered(needle));
-    }
-
     public static CelestialObject findBodyById(CelestialObject root, CelestialObjectKey needle) {
         if (root == null || needle == null) return null;
         CelestialObject found = findBodyByIdRec(root, needle);
@@ -179,16 +167,8 @@ public final class GalaxiaCelestialAPI {
         return null;
     }
 
-    public static CelestialObject findStar(CelestialObjectId targetId) {
-        return targetId == null ? null : findStar(CelestialObjectKey.registered(targetId));
-    }
-
     public static CelestialObject findStar(CelestialObjectKey targetId) {
         return findStar(getPrimaryRoot(), targetId);
-    }
-
-    public static CelestialObject findStar(CelestialObject root, CelestialObjectId targetId) {
-        return targetId == null ? null : findStar(root, CelestialObjectKey.registered(targetId));
     }
 
     public static CelestialObject findStar(CelestialObject root, CelestialObjectKey targetId) {
@@ -215,16 +195,8 @@ public final class GalaxiaCelestialAPI {
         return null;
     }
 
-    public static CelestialObject findPlanetaryAnchor(CelestialObjectId targetId) {
-        return targetId == null ? null : findPlanetaryAnchor(CelestialObjectKey.registered(targetId));
-    }
-
     public static CelestialObject findPlanetaryAnchor(CelestialObjectKey targetId) {
         return findPlanetaryAnchor(getPrimaryRoot(), targetId);
-    }
-
-    public static CelestialObject findPlanetaryAnchor(CelestialObject root, CelestialObjectId targetId) {
-        return targetId == null ? null : findPlanetaryAnchor(root, CelestialObjectKey.registered(targetId));
     }
 
     public static CelestialObject findPlanetaryAnchor(CelestialObject root, CelestialObjectKey targetId) {
@@ -260,15 +232,6 @@ public final class GalaxiaCelestialAPI {
      * (i.e. same planet/gas-giant or both on the same planet's moon system).
      * Used to gate HAMMER planetary transfer handling.
      */
-    public static boolean sharesPlanetaryAnchor(CelestialObject root, CelestialObjectId bodyIdA,
-        CelestialObjectId bodyIdB) {
-        return bodyIdA != null && bodyIdB != null
-            && sharesPlanetaryAnchor(
-                root,
-                CelestialObjectKey.registered(bodyIdA),
-                CelestialObjectKey.registered(bodyIdB));
-    }
-
     public static boolean sharesPlanetaryAnchor(CelestialObject root, CelestialObjectKey bodyIdA,
         CelestialObjectKey bodyIdB) {
         if (root == null || bodyIdA == null || bodyIdB == null) return false;
@@ -292,10 +255,4 @@ public final class GalaxiaCelestialAPI {
         return totalWorldTime * OrbitalTransferPlanner.OSU_PER_TICK;
     }
 
-    public static CelestialObjectId getObjectFromDimension(int dimension) {
-        DimensionEnum galaxiaDim = DimensionEnum.fromId(dimension);
-        if (galaxiaDim == null) return CelestialObjectId.INVALID;
-
-        return CelestialObjectId.fromDimension(galaxiaDim);
-    }
 }

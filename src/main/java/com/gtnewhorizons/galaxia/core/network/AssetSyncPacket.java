@@ -23,7 +23,6 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
@@ -1223,14 +1222,14 @@ public final class AssetSyncPacket implements IMessage {
         PacketUtil.writeEnum(buf, config.dataType());
         buf.writeLong(config.amountKb());
         buf.writeInt(config.durationTicks());
-        CelestialObjectId originBodyId = config.originBodyId();
+        CelestialObjectKey originBodyId = config.originBodyId();
         buf.writeBoolean(originBodyId != null);
-        if (originBodyId != null) PacketUtil.writeEnum(buf, originBodyId);
+        if (originBodyId != null) PacketUtil.writeCelestialObjectKey(buf, originBodyId);
         buf.writeInt(debugGenerator.jobProgressTicks());
         buf.writeLong(debugGenerator.consumedDeciKb());
-        CelestialObjectId detectedCounterpartBodyId = debugGenerator.detectedCounterpartBodyId();
+        CelestialObjectKey detectedCounterpartBodyId = debugGenerator.detectedCounterpartBodyId();
         buf.writeBoolean(detectedCounterpartBodyId != null);
-        if (detectedCounterpartBodyId != null) PacketUtil.writeEnum(buf, detectedCounterpartBodyId);
+        if (detectedCounterpartBodyId != null) PacketUtil.writeCelestialObjectKey(buf, detectedCounterpartBodyId);
     }
 
     private static void readDebugDataGenerator(ByteBuf buf, ModuleInstance module) {
@@ -1240,11 +1239,10 @@ public final class AssetSyncPacket implements IMessage {
         SatelliteDataType dataType = PacketUtil.readEnum(buf, SatelliteDataType.class);
         long amountKb = buf.readLong();
         int durationTicks = buf.readInt();
-        CelestialObjectId originBodyId = buf.readBoolean() ? PacketUtil.readEnum(buf, CelestialObjectId.class) : null;
+        CelestialObjectKey originBodyId = buf.readBoolean() ? PacketUtil.readCelestialObjectKey(buf) : null;
         int jobProgressTicks = buf.readInt();
         long consumedDeciKb = buf.readLong();
-        CelestialObjectId detectedCounterpartBodyId = buf.readBoolean()
-            ? PacketUtil.readEnum(buf, CelestialObjectId.class)
+        CelestialObjectKey detectedCounterpartBodyId = buf.readBoolean() ? PacketUtil.readCelestialObjectKey(buf)
             : null;
         debugGenerator.restore(
             new ModuleDebugDataGenerator.Config(mode, enabled, dataType, amountKb, durationTicks, originBodyId),

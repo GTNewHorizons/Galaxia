@@ -48,6 +48,9 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
@@ -2178,6 +2181,82 @@ final class FacilityPersistenceManagerTest {
             module.anchorOrNull()
                 .dy(),
             "Anchor dy should match tile coordinate");
+    }
+
+    @Test
+    void activeLogisticsTasksRoundTripRegisteredAndMinorBodyKeys(@TempDir Path tempDir) throws Exception {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager(CelestialServerRuntime.create());
+        UUID teamId = UUID.randomUUID();
+        CelestialObjectKey fromKey = CelestialObjectKey.registered(CelestialObjectId.MARS);
+        CelestialObjectKey toKey = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN));
+        CelestialAsset from = CelestialAsset
+            .create(fromKey, CelestialAsset.Kind.AUTOMATED_OUTPOST, Buildable.Status.OPERATIONAL);
+        CelestialAsset to = CelestialAsset
+            .create(toKey, CelestialAsset.Kind.AUTOMATED_OUTPOST, Buildable.Status.OPERATIONAL);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+
+        CelestialAssetStore.clear();
+        LogisticStore.clearDeliveries();
+        CelestialAssetStore.registerAsset(teamId, from);
+        CelestialAssetStore.registerAsset(teamId, to);
+        LogisticsDelivery.ID deliveryId = LogisticsDelivery.ID.create();
+        LogisticStore.addDelivery(
+            LogisticsDelivery.createWithTrajectory(
+                deliveryId,
+                from.assetId,
+                to.assetId,
+                resource,
+                7L,
+                42,
+                LogisticSignal.Scope.SYSTEM,
+                fromKey,
+                toKey,
+                12.5,
+                3.25));
+
+        manager.saveToSaveDirectory(tempDir.toFile());
+
+        JsonObject taskJson = PERSISTENCE_GSON.fromJson(
+            Files.readString(
+                tempDir.resolve("galaxiadata")
+                    .resolve("_tasks.json")),
+            com.google.gson.JsonArray.class)
+            .get(0)
+            .getAsJsonObject();
+        assertEquals(
+            "registered",
+            taskJson.getAsJsonObject("fromBodyId")
+                .get("kind")
+                .getAsString());
+        assertEquals(
+            "minor",
+            taskJson.getAsJsonObject("toBodyId")
+                .get("kind")
+                .getAsString());
+
+        CelestialAssetStore.clear();
+        LogisticStore.clearDeliveries();
+        CelestialAssetStore.registerAsset(teamId, from);
+        CelestialAssetStore.registerAsset(teamId, to);
+        manager.loadFromSaveDirectory(tempDir.toFile());
+
+        assertEquals(
+            1,
+            LogisticStore.activeDeliveries()
+                .size());
+        LogisticsDelivery loaded = LogisticStore.activeDeliveries()
+            .get(0);
+        assertEquals(deliveryId, loaded.deliveryId);
+        assertEquals(from.assetId, loaded.data.fromAssetId());
+        assertEquals(to.assetId, loaded.data.toAssetId());
+        assertEquals(fromKey, loaded.data.fromBodyId());
+        assertEquals(toKey, loaded.data.toBodyId());
+        assertEquals(7L, loaded.data.amount());
+        assertEquals(42, loaded.getRemainingTicks());
+        assertEquals(12.5, loaded.data.departureOrbitalTime());
+        assertEquals(3.25, loaded.data.tofOrbitalSeconds());
+        LogisticStore.clearDeliveries();
     }
 
     private static void assertLayoutEquals(StationLayout expected, StationLayout actual) {

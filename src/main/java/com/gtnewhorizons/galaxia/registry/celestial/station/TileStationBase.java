@@ -22,7 +22,6 @@ import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
 
 import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
@@ -127,8 +126,8 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
     }
 
     public boolean isValidDimension(World world) {
-        CelestialObjectId objectId = GalaxiaCelestialAPI.getObjectFromDimension(world.provider.dimensionId);
-        return objectId != CelestialObjectId.INVALID;
+        return GalaxiaCelestialAPI.findByDimension(world.provider.dimensionId)
+            .isPresent();
     }
 
     @Override

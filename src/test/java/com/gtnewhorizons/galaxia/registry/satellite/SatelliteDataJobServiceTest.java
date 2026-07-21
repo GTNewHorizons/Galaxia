@@ -64,7 +64,8 @@ final class SatelliteDataJobServiceTest {
         ModuleDebugDataGenerator anyConsumer = addDebugModule(anyDestination);
         producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
         specificConsumer.configure(
-            ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, CelestialObjectId.MARS));
+            ModuleDebugDataGenerator.Config
+                .consume(SatelliteDataType.PROSPECTING, 10L, 1, CelestialObjectKey.registered(CelestialObjectId.MARS)));
         anyConsumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
 
         SatelliteDataJobService.tick(
@@ -141,8 +142,8 @@ final class SatelliteDataJobServiceTest {
             store,
             network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD));
 
-        assertEquals(CelestialObjectId.EGORA, producer.detectedCounterpartBodyId());
-        assertEquals(CelestialObjectId.MARS, consumer.detectedCounterpartBodyId());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.EGORA), producer.detectedCounterpartBodyId());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.MARS), consumer.detectedCounterpartBodyId());
     }
 
     @Test
@@ -188,7 +189,7 @@ final class SatelliteDataJobServiceTest {
             endpoints.endpoints(TEAM),
             store,
             network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD));
-        assertEquals(CelestialObjectId.EGORA, producer.detectedCounterpartBodyId());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.EGORA), producer.detectedCounterpartBodyId());
 
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
         endpoints.refreshFacility(TEAM, destination);
@@ -257,7 +258,7 @@ final class SatelliteDataJobServiceTest {
 
         assertEquals(
             SatelliteDataKey.any(SatelliteDataType.COMMUNICATION),
-            producer.producedKey(CelestialObjectId.MARS));
+            producer.producedKey(CelestialObjectKey.registered(CelestialObjectId.MARS)));
     }
 
     private static AutomatedFacility facility(CelestialObjectId bodyId) {

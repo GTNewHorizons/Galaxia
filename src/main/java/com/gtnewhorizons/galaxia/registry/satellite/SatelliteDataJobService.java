@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 
@@ -121,13 +120,9 @@ public final class SatelliteDataJobService {
             updateDetectedCounterpart(
                 producer,
                 consumers.get(0)
-                    .bodyKey()
-                    .isRegistered()
-                        ? consumers.get(0)
-                            .bodyId()
-                        : null);
+                    .bodyKey());
             for (SatelliteDataEndpointRegistry.Endpoint consumer : consumers) {
-                updateDetectedCounterpart(consumer, registeredBodyId(producer.bodyKey()));
+                updateDetectedCounterpart(consumer, producer.bodyKey());
             }
         }
     }
@@ -271,11 +266,13 @@ public final class SatelliteDataJobService {
     }
 
     private static void updateDetectedCounterpart(SatelliteDataEndpointRegistry.Endpoint endpoint,
-        CelestialObjectId bodyId) {
-        if (endpoint.module()
-            .detectedCounterpartBodyId() == bodyId) return;
+        CelestialObjectKey bodyKey) {
+        if (java.util.Objects.equals(
+            endpoint.module()
+                .detectedCounterpartBodyId(),
+            bodyKey)) return;
         endpoint.module()
-            .updateDetectedCounterpart(bodyId);
+            .updateDetectedCounterpart(bodyKey);
         endpoint.facility()
             .markModuleDirty(endpoint.instance().id);
     }
@@ -283,10 +280,6 @@ public final class SatelliteDataJobService {
     private static SatelliteDataKey producedKey(SatelliteDataEndpointRegistry.Endpoint producer) {
         return producer.module()
             .producedKey(producer.bodyKey());
-    }
-
-    private static CelestialObjectId registeredBodyId(CelestialObjectKey bodyKey) {
-        return bodyKey.isRegistered() ? bodyKey.registeredBodyId() : null;
     }
 
     private static void consumeAndMarkDirty(SatelliteDataEndpointRegistry.Endpoint consumer, long deciKb) {
