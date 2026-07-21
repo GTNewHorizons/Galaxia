@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
@@ -543,7 +544,9 @@ final class StationPacketRoundTripTest {
         ModuleDebugDataGenerator clientConsumer = (ModuleDebugDataGenerator) clientDestination.modules()
             .get(0)
             .component();
-        assertEquals(CelestialObjectId.EGORA, clientProducer.detectedCounterpartBodyId());
+        assertEquals(
+            CelestialObjectKey.registered(CelestialObjectId.EGORA),
+            clientProducer.detectedCounterpartBodyId());
         assertEquals(
             SatelliteDataType.COMMUNICATION,
             clientConsumer.config()

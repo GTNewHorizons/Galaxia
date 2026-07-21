@@ -117,7 +117,8 @@ final class AsteroidDynamicCelestialObjectTest {
 
     @Test
     void asteroidBeltRegisteredChildrenDoNotIncludeMinorBodies() {
-        List<CelestialObject> children = GalaxiaCelestialAPI.getChildren(CelestialObjectId.FROZEN_BELT);
+        List<CelestialObject> children = GalaxiaCelestialAPI
+            .getChildren(CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT));
 
         assertTrue(
             children.stream()

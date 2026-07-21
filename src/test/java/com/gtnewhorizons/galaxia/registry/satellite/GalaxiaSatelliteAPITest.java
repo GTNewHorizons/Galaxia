@@ -81,7 +81,6 @@ final class GalaxiaSatelliteAPITest {
         SatelliteNetworkService.rebuild(TEAM, nodes(), capacity(), SatelliteNetworkService.dataBuffers());
 
         assertTrue(GalaxiaSatelliteAPI.canStartProcess(TEAM, mars, prospecting));
-        assertTrue(GalaxiaSatelliteAPI.canStartProcess(TEAM, CelestialObjectId.MARS, prospecting));
     }
 
     @Test

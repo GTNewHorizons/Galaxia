@@ -168,8 +168,8 @@ final class SatelliteNetworkServiceTest {
 
         SatelliteNetworkService.tickDataJobs();
 
-        assertEquals(CelestialObjectId.EGORA, producer.detectedCounterpartBodyId());
-        assertEquals(CelestialObjectId.MARS, consumer.detectedCounterpartBodyId());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.EGORA), producer.detectedCounterpartBodyId());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.MARS), consumer.detectedCounterpartBodyId());
 
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
         SatelliteNetworkService.refreshFacilityEndpoints(destination);
@@ -232,8 +232,8 @@ final class SatelliteNetworkServiceTest {
         SatelliteNetworkService.tickDataJobs();
         SatelliteNetworkState state = SatelliteNetworkService.rebuild(TEAM, 0.0D);
 
-        assertEquals(CelestialObjectId.EGORA, producer.detectedCounterpartBodyId());
-        assertEquals(CelestialObjectId.MARS, consumer.detectedCounterpartBodyId());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.EGORA), producer.detectedCounterpartBodyId());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.MARS), consumer.detectedCounterpartBodyId());
         assertEquals(5L, consumer.consumedDeciKb());
         assertEquals(10L, state.usedKbps(CelestialObjectId.MARS));
         assertEquals(10L, state.usedKbps(CelestialObjectId.EGORA));
@@ -302,8 +302,8 @@ final class SatelliteNetworkServiceTest {
 
         SatelliteNetworkService.tickDataJobs();
 
-        assertEquals(CelestialObjectId.EGORA, producer.detectedCounterpartBodyId());
-        assertEquals(CelestialObjectId.MARS, consumer.detectedCounterpartBodyId());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.EGORA), producer.detectedCounterpartBodyId());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.MARS), consumer.detectedCounterpartBodyId());
     }
 
     @Test
@@ -323,8 +323,8 @@ final class SatelliteNetworkServiceTest {
         SatelliteNetworkService.refreshAssetEndpoints(null, destination);
         SatelliteNetworkService.tickDataJobs();
 
-        assertEquals(CelestialObjectId.EGORA, producer.detectedCounterpartBodyId());
-        assertEquals(CelestialObjectId.MARS, consumer.detectedCounterpartBodyId());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.EGORA), producer.detectedCounterpartBodyId());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.MARS), consumer.detectedCounterpartBodyId());
     }
 
     @Test
