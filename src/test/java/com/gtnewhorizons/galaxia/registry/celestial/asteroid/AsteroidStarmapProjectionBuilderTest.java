@@ -20,19 +20,26 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 final class AsteroidStarmapProjectionBuilderTest {
 
     @Test
-    void detectedProjectionsMaterializeBodiesAndKeepHiddenNodesOutByDefault() {
+    void decorateUsesCanonicalBodiesWithoutReenumeratingMembership() {
         AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledge.initialize(CelestialObjectId.FROZEN_BELT, profile());
         AsteroidFieldNode large = node(knowledge, AsteroidSizeClass.LARGE);
         AsteroidFieldNode medium = node(knowledge, AsteroidSizeClass.MEDIUM);
 
         knowledge.revealDiscovery(
             new AsteroidFieldDiscoveryWork(
-                com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey.minorBody(medium.id()),
+                CelestialObjectKey.minorBody(medium.id()),
                 com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryStep.DETECTION),
             new AsteroidFieldScanContext(node -> true, AsteroidFieldScanOrder.byIndex()));
 
-        List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder
-            .forBelt(belt(profile()), Optional.of(knowledge.snapshot(CelestialObjectId.FROZEN_BELT)), false);
+        CelestialObject belt = belt(profile());
+        List<CelestialObject> canonical = List.of(materialize(large), materialize(medium));
+        List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder.decorate(
+            belt,
+            canonical,
+            Optional.of(knowledge.snapshot(CelestialObjectId.FROZEN_BELT)),
+            false,
+            Set.of(),
+            Set.of());
 
         assertEquals(List.of(large.id(), medium.id()), projectionIds(projections));
         AsteroidStarmapProjection mediumProjection = projections.get(1);
@@ -50,20 +57,19 @@ final class AsteroidStarmapProjectionBuilderTest {
     }
 
     @Test
-    void debugModeIncludesHiddenNodesAndMarksThemAsDebugHidden() {
+    void debugModeMarksHiddenCanonicalBodiesAsDebugHidden() {
         AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledge.initialize(CelestialObjectId.FROZEN_BELT, profile());
         AsteroidFieldNode hidden = node(knowledge, AsteroidSizeClass.SMALL);
 
-        List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder
-            .forBelt(belt(profile()), Optional.of(knowledge.snapshot(CelestialObjectId.FROZEN_BELT)), true);
+        List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder.decorate(
+            belt(profile()),
+            List.of(materialize(hidden)),
+            Optional.of(knowledge.snapshot(CelestialObjectId.FROZEN_BELT)),
+            true,
+            Set.of(),
+            Set.of());
 
-        AsteroidStarmapProjection hiddenProjection = projections.stream()
-            .filter(
-                projection -> projection.id()
-                    .equals(hidden.id()))
-            .findFirst()
-            .orElseThrow();
-
+        AsteroidStarmapProjection hiddenProjection = projections.get(0);
         assertEquals(DiscoveryState.HIDDEN, hiddenProjection.detectionState());
         assertTrue(hiddenProjection.debugHidden());
         assertFalse(hiddenProjection.canShowOreDetails());
@@ -72,22 +78,19 @@ final class AsteroidStarmapProjectionBuilderTest {
     }
 
     @Test
-    void activeDiscoveryScanIncludesHiddenTargetAsScanningGhost() {
+    void activeDiscoveryScanMarksHiddenCanonicalBodyAsScanningGhost() {
         AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledge.initialize(CelestialObjectId.FROZEN_BELT, profile());
         AsteroidFieldNode hidden = node(knowledge, AsteroidSizeClass.SMALL);
 
-        List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder.forBelt(
+        List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder.decorate(
             belt(profile()),
+            List.of(materialize(hidden)),
             Optional.of(knowledge.snapshot(CelestialObjectId.FROZEN_BELT)),
             false,
-            Set.of(hidden.id()));
+            Set.of(hidden.id()),
+            Set.of());
 
-        AsteroidStarmapProjection hiddenProjection = projections.stream()
-            .filter(
-                projection -> projection.id()
-                    .equals(hidden.id()))
-            .findFirst()
-            .orElseThrow();
+        AsteroidStarmapProjection hiddenProjection = projections.get(0);
         assertEquals(DiscoveryState.HIDDEN, hiddenProjection.detectionState());
         assertTrue(hiddenProjection.scanInProgress());
         assertFalse(hiddenProjection.debugHidden());
@@ -97,23 +100,19 @@ final class AsteroidStarmapProjectionBuilderTest {
     }
 
     @Test
-    void sensorRevealIncludesHiddenTargetWithoutMarkingItAsActiveScan() {
+    void sensorRevealMarksHiddenCanonicalBodyWithoutActiveScan() {
         AsteroidFieldKnowledge knowledge = AsteroidFieldKnowledge.initialize(CelestialObjectId.FROZEN_BELT, profile());
         AsteroidFieldNode hidden = node(knowledge, AsteroidSizeClass.SMALL);
 
-        List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder.forBelt(
+        List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder.decorate(
             belt(profile()),
+            List.of(materialize(hidden)),
             Optional.of(knowledge.snapshot(CelestialObjectId.FROZEN_BELT)),
             false,
             Set.of(),
             Set.of(hidden.id()));
 
-        AsteroidStarmapProjection hiddenProjection = projections.stream()
-            .filter(
-                projection -> projection.id()
-                    .equals(hidden.id()))
-            .findFirst()
-            .orElseThrow();
+        AsteroidStarmapProjection hiddenProjection = projections.get(0);
         assertEquals(DiscoveryState.HIDDEN, hiddenProjection.detectionState());
         assertTrue(hiddenProjection.sensorRevealed());
         assertFalse(hiddenProjection.scanInProgress());
@@ -140,8 +139,19 @@ final class AsteroidStarmapProjectionBuilderTest {
                     CelestialResourceKnowledgeState.PROFILE)),
             List.of());
 
+        AsteroidFieldProfile fieldProfile = profile();
+        AsteroidFieldNodeCatalog catalog = AsteroidFieldNodeCatalog
+            .fromGenerated(CelestialObjectId.FROZEN_BELT, fieldProfile);
+        List<CelestialObject> canonical = catalog.nodes()
+            .stream()
+            .filter(
+                node -> node.index() >= AsteroidSlotRanges.GENERATED_SLOT_MIN
+                    && node.index() <= AsteroidSlotRanges.GENERATED_SLOT_MIN + 2)
+            .map(node -> AsteroidCelestialMaterializer.materialize(node, fieldProfile))
+            .toList();
+
         List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder
-            .forBelt(belt(profile()), Optional.of(snapshot), false);
+            .decorate(belt(fieldProfile), canonical, Optional.of(snapshot), false, Set.of(), Set.of());
 
         assertEquals(
             Optional.empty(),
@@ -205,19 +215,21 @@ final class AsteroidStarmapProjectionBuilderTest {
 
         assertThrows(
             IllegalArgumentException.class,
-            () -> AsteroidStarmapProjectionBuilder.forBelt(belt(profile()), Optional.of(wrongBelt), false));
+            () -> AsteroidStarmapProjectionBuilder
+                .decorate(belt(profile()), List.of(), Optional.of(wrongBelt), false, Set.of(), Set.of()));
     }
 
     private static AsteroidStarmapProjection projection(AsteroidFieldKnowledge knowledge, AsteroidSizeClass sizeClass) {
-        MinorCelestialBodyId id = node(knowledge, sizeClass).id();
+        AsteroidFieldNode idNode = node(knowledge, sizeClass);
         return AsteroidStarmapProjectionBuilder
-            .forBelt(belt(profile()), Optional.of(knowledge.snapshot(CelestialObjectId.FROZEN_BELT)), true)
-            .stream()
-            .filter(
-                candidate -> candidate.id()
-                    .equals(id))
-            .findFirst()
-            .orElseThrow();
+            .decorate(
+                belt(profile()),
+                List.of(materialize(idNode)),
+                Optional.of(knowledge.snapshot(CelestialObjectId.FROZEN_BELT)),
+                true,
+                Set.of(),
+                Set.of())
+            .get(0);
     }
 
     private static AsteroidStarmapProjection projectionWithKind(AsteroidStarmapProjection source,
@@ -249,6 +261,10 @@ final class AsteroidStarmapProjectionBuilderTest {
             .filter(node -> node.sizeClass() == sizeClass)
             .findFirst()
             .orElseThrow();
+    }
+
+    private static CelestialObject materialize(AsteroidFieldNode node) {
+        return AsteroidCelestialMaterializer.materialize(node, profile());
     }
 
     private static CelestialObject belt(AsteroidFieldProfile profile) {

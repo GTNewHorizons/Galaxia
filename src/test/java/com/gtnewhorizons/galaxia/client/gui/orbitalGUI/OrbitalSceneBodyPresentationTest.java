@@ -20,7 +20,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfil
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
@@ -168,12 +167,14 @@ final class OrbitalSceneBodyPresentationTest {
         CelestialClient.setShowHiddenAsteroidObjects(true);
         CelestialObject belt = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
             .orElseThrow();
-        return CelestialClient.getChildAsteroidProjections(belt)
+        return CelestialClient.getChildren(belt)
             .stream()
-            .filter(projection -> projection.nodeKind() == kind)
-            .filter(projection -> projection.sizeClass() == sizeClass)
+            .filter(
+                body -> CelestialClient.asteroidProjection(body)
+                    .filter(projection -> projection.nodeKind() == kind)
+                    .filter(projection -> projection.sizeClass() == sizeClass)
+                    .isPresent())
             .findFirst()
-            .map(AsteroidStarmapProjection::body)
             .orElseThrow();
     }
 
