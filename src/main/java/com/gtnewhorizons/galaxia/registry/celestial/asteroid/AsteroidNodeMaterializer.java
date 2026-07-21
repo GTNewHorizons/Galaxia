@@ -22,7 +22,7 @@ final class AsteroidNodeMaterializer {
             definition == null ? displayName(beltId, index) : definition.displayName(),
             definition == null ? AsteroidNodeKind.GENERATED : definition.kind(),
             sizeClass,
-            definition == null ? AsteroidInitialKnowledgeRules.defaultInitialDetectionState(sizeClass)
+            definition == null ? AsteroidFieldResolver.defaultInitialDetectionState(sizeClass)
                 : definition.initialDetectionState(),
             definition == null ? null : definition.initialOreKnowledgeState(),
             orbitSlot(profile, index, nodeSeed, definition, sizeClass),
@@ -44,7 +44,7 @@ final class AsteroidNodeMaterializer {
             displayName(beltId, index),
             AsteroidNodeKind.GENERATED,
             sizeClass,
-            AsteroidInitialKnowledgeRules.defaultInitialDetectionState(sizeClass),
+            AsteroidFieldResolver.defaultInitialDetectionState(sizeClass),
             null,
             new MinorBodyOrbitSlot(angleOffsetDeg, orbitalDepth01),
             selectOreProfile(profile, nodeSeed.unit(3L)),
@@ -68,13 +68,11 @@ final class AsteroidNodeMaterializer {
     }
 
     private static AsteroidOreProfile selectOreProfile(AsteroidFieldProfile profile, double roll) {
-        return profile.oreProfilePool()
-            .select(roll);
+        return profile.selectOreProfile(roll);
     }
 
     private static AsteroidOreProfile selectOreProfile(AsteroidFieldProfile profile, String oreProfileId) {
-        return profile.oreProfilePool()
-            .requireProfile(oreProfileId);
+        return profile.requireOreProfile(oreProfileId);
     }
 
     private static String displayName(CelestialObjectId beltId, int index) {

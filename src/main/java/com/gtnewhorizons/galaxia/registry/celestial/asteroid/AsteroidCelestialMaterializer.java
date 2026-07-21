@@ -50,7 +50,7 @@ public final class AsteroidCelestialMaterializer {
         if (profile == null) return Optional.empty();
 
         return restoredOrGeneratedCatalog(minorId.parentBodyId(), profile).resolve(minorId)
-            .map(AsteroidInitialKnowledgeRules::initialFacts);
+            .map(AsteroidFieldResolver::initialFacts);
     }
 
     private static Optional<CelestialObject> resolveMinorBody(MinorCelestialBodyId minorId, CelestialObject belt) {

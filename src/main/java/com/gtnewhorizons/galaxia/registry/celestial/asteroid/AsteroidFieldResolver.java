@@ -9,8 +9,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
+import com.gtnewhorizons.galaxia.registry.util.DeterministicHash;
 
 /**
  * Deterministically materializes asteroid definitions from a field profile.
@@ -84,15 +86,37 @@ public final class AsteroidFieldResolver {
             .orElseThrow();
     }
 
+    public static CelestialKnowledgeFacts initialFacts(@Nonnull AsteroidFieldNode node) {
+        return CelestialKnowledgeFacts.of(initialDetectionState(node), initialOreKnowledge(node));
+    }
+
     public static DiscoveryState initialDetectionState(@Nonnull AsteroidFieldNode node) {
-        return AsteroidInitialKnowledgeRules.initialDetectionState(node);
+        return node.initialDetectionState();
     }
 
     public static CelestialResourceKnowledgeState initialOreKnowledge(@Nonnull AsteroidFieldNode node) {
-        return AsteroidInitialKnowledgeRules.initialOreKnowledge(node);
+        if (node.initialOreKnowledgeState() != null) return node.initialOreKnowledgeState();
+        if (node.sizeClass() != AsteroidSizeClass.LARGE) return CelestialResourceKnowledgeState.UNKNOWN;
+        return rolledOreKnowledge(node, 5L);
     }
 
     public static CelestialResourceKnowledgeState oreKnowledgeAfterDetection(@Nonnull AsteroidFieldNode node) {
-        return AsteroidInitialKnowledgeRules.oreKnowledgeAfterDetection(node);
+        if (node.sizeClass() == AsteroidSizeClass.SMALL) return CelestialResourceKnowledgeState.UNKNOWN;
+        return rolledOreKnowledge(node, 6L);
+    }
+
+    static DiscoveryState defaultInitialDetectionState(AsteroidSizeClass sizeClass) {
+        return sizeClass == AsteroidSizeClass.LARGE ? DiscoveryState.DISCOVERED : DiscoveryState.HIDDEN;
+    }
+
+    private static CelestialResourceKnowledgeState rolledOreKnowledge(AsteroidFieldNode node, long salt) {
+        double roll = DeterministicHash.unitDouble(
+            DeterministicHash.mix(
+                node.appearance()
+                    .variantSeed(),
+                salt));
+        if (roll < 0.20) return CelestialResourceKnowledgeState.PROFILE;
+        if (roll < 0.55) return CelestialResourceKnowledgeState.SIGNATURE;
+        return CelestialResourceKnowledgeState.UNKNOWN;
     }
 }
