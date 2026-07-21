@@ -18,7 +18,6 @@ import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidCelestialMaterializer;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.AsteroidContentBuilder;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.GeneratedAsteroids;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.LoreAsteroids;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryView;
@@ -371,13 +370,10 @@ public final class CelestialRegistry {
     }
 
     private static AsteroidFieldProfile frozenBeltAsteroidFieldProfile() {
-        AsteroidContentBuilder builder = new AsteroidContentBuilder();
+        AsteroidFieldProfile.Builder builder = AsteroidFieldProfile.builder();
         GeneratedAsteroids.register(builder);
         LoreAsteroids.register(builder);
-        AsteroidFieldProfile profile = builder.buildProfiles()
-            .get(CelestialObjectId.FROZEN_BELT);
-        if (profile == null) throw new IllegalStateException("Frozen Belt asteroid field content was not registered");
-        return profile;
+        return builder.build();
     }
 
     public static void register(CelestialObjectId id, @Nonnull Consumer<CelestialObject.Builder> registrationBuilder) {
