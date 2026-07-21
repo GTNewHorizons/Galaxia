@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.util.StatCollector;
 
@@ -16,8 +17,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
@@ -28,6 +27,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscovery
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryStep;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
@@ -53,16 +53,10 @@ final class OrbitalPinnedInfoContentBuilderTest {
                     .isEmpty())
             .findFirst()
             .orElseThrow();
-        AsteroidFieldClientKnowledgeState.updateFields(
-            List.of(
-                new AsteroidFieldKnowledgeSnapshot(
-                    CelestialObjectId.FROZEN_BELT,
-                    List.of(
-                        new AsteroidFieldKnowledgeSnapshot.Entry(
-                            node.index(),
-                            DiscoveryState.DISCOVERED,
-                            CelestialResourceKnowledgeState.UNKNOWN)),
-                    List.of())));
+        CelestialKnowledgeClientState.apply(
+            Map.of(
+                CelestialObjectKey.minorBody(node.id()),
+                CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.UNKNOWN)));
         CelestialObject asteroid = CelestialRegistry
             .get(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, node.index())))
             .orElseThrow();
@@ -137,7 +131,10 @@ final class OrbitalPinnedInfoContentBuilderTest {
             .orElseThrow();
         OrbitalPinnedInfoContentBuilder builder = new OrbitalPinnedInfoContentBuilder();
 
-        AsteroidFieldClientKnowledgeState.updateFields(snapshot(node, CelestialResourceKnowledgeState.UNKNOWN));
+        CelestialKnowledgeClientState.apply(
+            Map.of(
+                asteroid.id(),
+                CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.UNKNOWN)));
         PinnedInfoRow unknownRow = oreRow(builder.buildRows(asteroid));
         assertFalse(
             unknownRow.value()
@@ -148,14 +145,20 @@ final class OrbitalPinnedInfoContentBuilderTest {
             unknownRow.items()
                 .isEmpty());
 
-        AsteroidFieldClientKnowledgeState.updateFields(snapshot(node, CelestialResourceKnowledgeState.SIGNATURE));
+        CelestialKnowledgeClientState.apply(
+            Map.of(
+                asteroid.id(),
+                CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.SIGNATURE)));
         PinnedInfoRow signatureRow = oreRow(builder.buildRows(asteroid));
         assertNotEquals(unknownRow.value(), signatureRow.value());
         assertTrue(
             signatureRow.items()
                 .isEmpty());
 
-        AsteroidFieldClientKnowledgeState.updateFields(snapshot(node, CelestialResourceKnowledgeState.PROFILE));
+        CelestialKnowledgeClientState.apply(
+            Map.of(
+                asteroid.id(),
+                CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.PROFILE)));
         PinnedInfoRow profileRow = oreRow(builder.buildRows(asteroid));
         assertNotEquals(unknownRow.value(), profileRow.value());
         assertNotEquals(signatureRow.value(), profileRow.value());
@@ -165,38 +168,20 @@ final class OrbitalPinnedInfoContentBuilderTest {
 
     @Test
     void clientStateExposesDiscoveryStateByKey() {
-        AsteroidFieldClientKnowledgeState.updateFields(
-            List.of(
-                new AsteroidFieldKnowledgeSnapshot(
-                    CelestialObjectId.FROZEN_BELT,
-                    List.of(
-                        new AsteroidFieldKnowledgeSnapshot.Entry(
-                            8,
-                            DiscoveryState.HIDDEN,
-                            CelestialResourceKnowledgeState.UNKNOWN)),
-                    List.of())));
         CelestialObjectKey asteroidKey = CelestialObjectKey
-            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 8));
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 3));
+        CelestialKnowledgeClientState.apply(
+            Map.of(
+                asteroidKey,
+                CelestialKnowledgeFacts.of(DiscoveryState.HIDDEN, CelestialResourceKnowledgeState.UNKNOWN)));
 
         assertEquals(
             DiscoveryState.HIDDEN,
-            CelestialKnowledgeClientState.discoveryState(asteroidKey)
+            CelestialKnowledgeClientState.discoveryView()
+                .discoveryState(asteroidKey)
                 .orElseThrow());
 
         CelestialKnowledgeClientState.clear();
-    }
-
-    private static List<AsteroidFieldKnowledgeSnapshot> snapshot(AsteroidFieldNode node,
-        CelestialResourceKnowledgeState oreKnowledgeState) {
-        return List.of(
-            new AsteroidFieldKnowledgeSnapshot(
-                CelestialObjectId.FROZEN_BELT,
-                List.of(
-                    new AsteroidFieldKnowledgeSnapshot.Entry(
-                        node.index(),
-                        DiscoveryState.DISCOVERED,
-                        oreKnowledgeState)),
-                List.of()));
     }
 
     private static PinnedInfoRow oreRow(List<PinnedInfoRow> rows) {

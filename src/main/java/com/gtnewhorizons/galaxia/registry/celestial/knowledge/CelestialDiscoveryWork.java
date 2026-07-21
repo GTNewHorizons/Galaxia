@@ -5,21 +5,19 @@ import javax.annotation.Nonnull;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 /**
- * Describes one fact a team can uncover about a celestial object.
- *
- * Work items are intentionally data-shaped instead of callbacks so active scan
- * progress can be persisted and rebound to the current knowledge store after
- * loading.
+ * One discoverable fact a scan can uncover about a celestial object.
+ * <p>
+ * TLDR: data-shaped work item ({@code Key + step}) so scan progress persists
+ * and rebinds after load without feature-specific work types.
  */
-public interface CelestialDiscoveryWork {
+public record CelestialDiscoveryWork(@Nonnull CelestialObjectKey targetKey, @Nonnull CelestialDiscoveryStep step) {
 
-    @Nonnull
-    CelestialObjectKey targetKey();
+    public CelestialDiscoveryWork {
+        if (targetKey == null) throw new IllegalArgumentException("target key is required");
+        if (step == null) throw new IllegalArgumentException("discovery step is required");
+    }
 
-    @Nonnull
-    CelestialDiscoveryStep step();
-
-    default int durationTicks() {
-        return step().durationTicks();
+    public int durationTicks() {
+        return step.durationTicks();
     }
 }

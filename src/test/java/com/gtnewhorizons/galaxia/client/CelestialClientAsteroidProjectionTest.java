@@ -4,8 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -17,8 +19,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientCatalogState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNodeCatalog;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitResolver;
@@ -32,6 +33,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscovery
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryStep;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
@@ -46,6 +48,8 @@ final class CelestialClientAsteroidProjectionTest {
     @Test
     void syncedKnowledgeChangesCanonicalChildKeysAndProjectionsStaySubset() {
         CelestialClient.clear();
+        CelestialKnowledgeClientState.clear();
+        AsteroidFieldClientCatalogState.clear();
         int visibleIndex = AsteroidSlotRanges.GENERATED_SLOT_MIN;
         int hiddenIndex = AsteroidSlotRanges.GENERATED_SLOT_MIN + 1;
         CelestialObject frozenBelt = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
@@ -55,20 +59,16 @@ final class CelestialClientAsteroidProjectionTest {
             CelestialObjectId.FROZEN_BELT,
             frozenBelt.properties()
                 .asteroidFieldProfile());
-        AsteroidFieldClientKnowledgeState.updateFields(
-            List.of(
-                new AsteroidFieldKnowledgeSnapshot(
-                    CelestialObjectId.FROZEN_BELT,
-                    catalog.nodes()
-                        .stream()
-                        .map(
-                            node -> new AsteroidFieldKnowledgeSnapshot.Entry(
-                                node.index(),
-                                node.index() == visibleIndex ? DiscoveryState.DISCOVERED : DiscoveryState.HIDDEN,
-                                node.index() == visibleIndex ? CelestialResourceKnowledgeState.SIGNATURE
-                                    : CelestialResourceKnowledgeState.UNKNOWN))
-                        .toList(),
-                    catalog.snapshots())));
+        Map<CelestialObjectKey, CelestialKnowledgeFacts> facts = new LinkedHashMap<>();
+        for (AsteroidFieldNode node : catalog.nodes()) {
+            DiscoveryState state = node.index() == visibleIndex ? DiscoveryState.DISCOVERED : DiscoveryState.HIDDEN;
+            CelestialResourceKnowledgeState ore = node.index() == visibleIndex
+                ? CelestialResourceKnowledgeState.SIGNATURE
+                : CelestialResourceKnowledgeState.UNKNOWN;
+            facts.put(CelestialObjectKey.minorBody(node.id()), CelestialKnowledgeFacts.of(state, ore));
+        }
+        CelestialKnowledgeClientState.apply(facts);
+        AsteroidFieldClientCatalogState.update(Map.of(CelestialObjectId.FROZEN_BELT, catalog.snapshots()));
 
         CelestialObjectKey visibleKey = CelestialObjectKey
             .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, visibleIndex));
@@ -92,11 +92,15 @@ final class CelestialClientAsteroidProjectionTest {
         assertTrue(hiddenProjection.debugHidden());
         assertEquals(DiscoveryState.HIDDEN, hiddenProjection.detectionState());
         CelestialClient.clear();
+        CelestialKnowledgeClientState.clear();
+        AsteroidFieldClientCatalogState.clear();
     }
 
     @Test
     void activeScanAndSensorRevealUseCanonicalChildrenWithoutFalsifyingDiscoveryState() {
         CelestialClient.clear();
+        CelestialKnowledgeClientState.clear();
+        AsteroidFieldClientCatalogState.clear();
         CelestialObject frozenBelt = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
             .orElseThrow();
         CelestialObjectKey beltKey = frozenBelt.id();
@@ -121,26 +125,22 @@ final class CelestialClientAsteroidProjectionTest {
         double sensorDistance = distance(profile, anchor, sensorTarget);
         double outsideDistance = distance(profile, anchor, outsideTarget);
         double scanRadius = (activeDistance + sensorDistance) / 2.0;
-        assertTrue(sensorDistance <= scanRadius || outsideDistance > scanRadius);
         if (sensorDistance > scanRadius) {
             scanRadius = (sensorDistance + outsideDistance) / 2.0;
         }
         assertTrue(sensorDistance <= scanRadius);
         assertTrue(outsideDistance > scanRadius);
 
-        AsteroidFieldClientKnowledgeState.updateFields(
-            List.of(
-                new AsteroidFieldKnowledgeSnapshot(
-                    CelestialObjectId.FROZEN_BELT,
-                    catalog.nodes()
-                        .stream()
-                        .map(
-                            node -> new AsteroidFieldKnowledgeSnapshot.Entry(
-                                node.index(),
-                                node.index() == anchor.index() ? DiscoveryState.DISCOVERED : DiscoveryState.HIDDEN,
-                                CelestialResourceKnowledgeState.UNKNOWN))
-                        .toList(),
-                    catalog.snapshots())));
+        Map<CelestialObjectKey, CelestialKnowledgeFacts> facts = new LinkedHashMap<>();
+        for (AsteroidFieldNode node : catalog.nodes()) {
+            DiscoveryState state = node.index() == anchor.index() ? DiscoveryState.DISCOVERED : DiscoveryState.HIDDEN;
+            facts.put(
+                CelestialObjectKey.minorBody(node.id()),
+                CelestialKnowledgeFacts.of(state, CelestialResourceKnowledgeState.UNKNOWN));
+        }
+        CelestialKnowledgeClientState.apply(facts);
+        AsteroidFieldClientCatalogState.update(Map.of(CelestialObjectId.FROZEN_BELT, catalog.snapshots()));
+
         CelestialObjectKey anchorKey = CelestialObjectKey.minorBody(anchor.id());
         CelestialObjectKey targetKey = CelestialObjectKey.minorBody(activeTarget.id());
         CelestialObjectKey sensorKey = CelestialObjectKey.minorBody(sensorTarget.id());
@@ -184,6 +184,9 @@ final class CelestialClientAsteroidProjectionTest {
             CelestialKnowledgeClientState.discoveryView()
                 .discoveryState(sensorKey));
         CelestialClient.clear();
+        CelestialKnowledgeClientState.clear();
+        AsteroidFieldClientCatalogState.clear();
+        CelestialDiscoveryClientState.clear();
     }
 
     private static Set<CelestialObjectKey> minorChildKeys(List<CelestialObject> children) {

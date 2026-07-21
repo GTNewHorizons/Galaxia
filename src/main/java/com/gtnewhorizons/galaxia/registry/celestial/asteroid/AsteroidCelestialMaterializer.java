@@ -11,6 +11,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryView;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 public final class AsteroidCelestialMaterializer {
@@ -25,6 +26,31 @@ public final class AsteroidCelestialMaterializer {
         MinorCelestialBodyId minorId = key.minorBodyId();
         return beltLookup.apply(minorId.parentBodyId())
             .flatMap(belt -> resolveMinorBody(minorId, belt));
+    }
+
+    /**
+     * Definition-default facts for a minor body, resolved from its asteroid content
+     * node. Returns empty when the key is not a resolvable minor body so callers can
+     * fail loudly at the registry boundary.
+     */
+    public static Optional<CelestialKnowledgeFacts> initialKnowledge(@Nonnull CelestialObjectKey key,
+        @Nonnull Function<CelestialObjectId, Optional<CelestialObject>> beltLookup) {
+
+        if (!key.isMinorBody()) return Optional.empty();
+
+        MinorCelestialBodyId minorId = key.minorBodyId();
+        return beltLookup.apply(minorId.parentBodyId())
+            .flatMap(belt -> resolveNodeFacts(minorId, belt));
+    }
+
+    private static Optional<CelestialKnowledgeFacts> resolveNodeFacts(MinorCelestialBodyId minorId,
+        CelestialObject belt) {
+        AsteroidFieldProfile profile = belt.properties()
+            .asteroidFieldProfile();
+        if (profile == null) return Optional.empty();
+
+        return restoredOrGeneratedCatalog(minorId.parentBodyId(), profile).resolve(minorId)
+            .map(AsteroidInitialKnowledgeRules::initialFacts);
     }
 
     private static Optional<CelestialObject> resolveMinorBody(MinorCelestialBodyId minorId, CelestialObject belt) {

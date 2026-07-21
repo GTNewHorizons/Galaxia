@@ -28,7 +28,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidClientProjectionService;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
@@ -521,7 +520,6 @@ public final class CelestialClient {
             parentId,
             asteroidProjections.discoveryView(
                 parentId,
-                AsteroidFieldClientKnowledgeState.snapshots(),
                 CelestialDiscoveryClientState.snapshots(),
                 CelestialKnowledgeClientState.discoveryView()),
             asteroidProjections.includeHidden());
@@ -530,11 +528,7 @@ public final class CelestialClient {
     public static Optional<AsteroidStarmapProjection> asteroidProjection(CelestialObject body) {
         if (body == null || body.parentId() == null) return Optional.empty();
         List<CelestialObject> siblings = getChildren(body.parentId());
-        return asteroidProjections.projectionFor(
-            body,
-            siblings,
-            AsteroidFieldClientKnowledgeState.snapshots(),
-            CelestialDiscoveryClientState.snapshots());
+        return asteroidProjections.projectionFor(body, siblings, CelestialDiscoveryClientState.snapshots());
     }
 
     public static boolean showHiddenAsteroidObjects() {

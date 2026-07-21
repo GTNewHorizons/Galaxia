@@ -1,9 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
-import com.gtnewhorizons.galaxia.core.network.AsteroidKnowledgeSyncAdapter;
+import com.gtnewhorizons.galaxia.core.network.AsteroidFieldCatalogSyncAdapter;
 import com.gtnewhorizons.galaxia.core.network.CelestialDiscoverySyncAdapter;
+import com.gtnewhorizons.galaxia.core.network.CelestialKnowledgeStateSyncAdapter;
 import com.gtnewhorizons.galaxia.core.network.CelestialKnowledgeSyncRegistry;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNodeCatalog;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryRuntime;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanService;
@@ -16,12 +17,13 @@ import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
 public record CelestialServerRuntime(CelestialDiscoveryRuntime discovery, CelestialDiscoveryScanService scans) {
 
     public static CelestialServerRuntime create() {
-        CelestialKnowledgeService.registerProvider(AsteroidFieldKnowledgeStore.provider());
-        CelestialKnowledgeService.registerDiscoveryDomain(AsteroidFieldKnowledgeStore.discoveryDomain());
+        CelestialKnowledgeService.clearDiscoveryDomains();
+        CelestialKnowledgeService.registerDiscoveryDomain(new AsteroidFieldDiscoveryPolicy());
         OrbitalMechanics.registerMinorBodyResolver(AsteroidFieldOrbitResolver.INSTANCE);
         CelestialDiscoveryScanService scans = new CelestialDiscoveryScanService(
             CelestialKnowledgeService::discoveryDomain);
-        CelestialKnowledgeSyncRegistry.register(new AsteroidKnowledgeSyncAdapter());
+        CelestialKnowledgeSyncRegistry.register(new CelestialKnowledgeStateSyncAdapter());
+        CelestialKnowledgeSyncRegistry.register(new AsteroidFieldCatalogSyncAdapter(scans));
         CelestialKnowledgeSyncRegistry.register(new CelestialDiscoverySyncAdapter(scans));
         CelestialDiscoveryRuntime discovery = new CelestialDiscoveryRuntime(
             () -> SatelliteDiscoveryWorkerSource.prospectingWorkers(CelestialKnowledgeService::discoveryScopeRevision),
@@ -37,8 +39,9 @@ public record CelestialServerRuntime(CelestialDiscoveryRuntime discovery, Celest
     public void reset() {
         CelestialAssetStore.SERVER.clearInternal();
         SatelliteNetworkService.clear();
-        AsteroidFieldKnowledgeStore.global()
-            .clear();
+        CelestialKnowledgeService.clearFacts();
+        CelestialKnowledgeService.clearDiscoveryDomains();
+        AsteroidFieldNodeCatalog.clearRestored();
         discovery.clear();
     }
 }

@@ -1,9 +1,11 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -12,7 +14,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nonnull;
 
+import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
 public final class AsteroidFieldNodeCatalog {
 
@@ -82,6 +87,57 @@ public final class AsteroidFieldNodeCatalog {
 
     public static void clearRestored() {
         RESTORED.clear();
+    }
+
+    public static Set<CelestialObjectId> restoredBeltIds() {
+        return Set.copyOf(RESTORED.keySet());
+    }
+
+    /**
+     * Node content snapshots for the belts referenced by {@code minorKeys}.
+     * <p>
+     * TLDR: for every belt that owns a requested minor key, returns that belt's
+     * requested node payloads plus its initial-discovered nodes, resolved from the
+     * restored-or-generated catalog. Shared by world persistence and team-filtered
+     * catalog sync so both build the same content union from a set of minor keys.
+     */
+    public static Map<CelestialObjectId, List<AsteroidFieldNodeSnapshot>> catalogSnapshotsForMinors(
+        @Nonnull Collection<CelestialObjectKey> minorKeys) {
+        Map<CelestialObjectId, Set<Integer>> requestedByBelt = new LinkedHashMap<>();
+        for (CelestialObjectKey key : minorKeys) {
+            if (key == null || !key.isMinorBody()) continue;
+            MinorCelestialBodyId minorId = key.minorBodyId();
+            requestedByBelt.computeIfAbsent(minorId.parentBodyId(), belt -> new LinkedHashSet<>())
+                .add(minorId.index());
+        }
+
+        Map<CelestialObjectId, List<AsteroidFieldNodeSnapshot>> result = new LinkedHashMap<>();
+        for (Map.Entry<CelestialObjectId, Set<Integer>> entry : requestedByBelt.entrySet()) {
+            CelestialObjectId beltId = entry.getKey();
+            AsteroidFieldProfile profile = profile(beltId).orElse(null);
+            if (profile == null) continue;
+            AsteroidFieldNodeCatalog catalog = restored(beltId).orElseGet(() -> fromGenerated(beltId, profile));
+            Map<Integer, AsteroidFieldNodeSnapshot> byIndex = new LinkedHashMap<>();
+            for (int index : entry.getValue()) {
+                catalog.resolve(new MinorCelestialBodyId(beltId, index))
+                    .map(AsteroidFieldNodeSnapshot::fromNode)
+                    .ifPresent(snapshot -> byIndex.put(index, snapshot));
+            }
+            for (AsteroidFieldNode node : catalog.nodes()) {
+                if (node.initialDetectionState() == DiscoveryState.DISCOVERED) {
+                    byIndex.putIfAbsent(node.index(), AsteroidFieldNodeSnapshot.fromNode(node));
+                }
+            }
+            result.put(beltId, List.copyOf(byIndex.values()));
+        }
+        return result;
+    }
+
+    private static Optional<AsteroidFieldProfile> profile(CelestialObjectId beltId) {
+        return GalaxiaCelestialAPI.get(beltId)
+            .map(
+                body -> body.properties()
+                    .asteroidFieldProfile());
     }
 
     public CelestialObjectId beltId() {

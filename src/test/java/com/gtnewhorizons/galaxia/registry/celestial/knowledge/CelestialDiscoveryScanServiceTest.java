@@ -94,7 +94,8 @@ final class CelestialDiscoveryScanServiceTest {
         CelestialKnowledgeService.resetProvidersForTesting();
         CelestialKnowledgeService.registerDiscoveryDomain(sequenced);
 
-        List<CelestialDiscoveryWork> completed = service.tick(List.of(worker(SCOPE, 1, 1.0)), 1000);
+        int duration = CelestialDiscoveryStep.DETECTION.durationTicks();
+        List<CelestialDiscoveryWork> completed = service.tick(List.of(worker(SCOPE, 1, 1.0)), duration * 2);
 
         assertEquals(2, completed.size());
         assertEquals(2, sequenced.completedFacts);
@@ -107,14 +108,15 @@ final class CelestialDiscoveryScanServiceTest {
         CelestialKnowledgeService.registerDiscoveryDomain(revisionProvider);
         CelestialDiscoveryWorkerContribution currentRevision = worker(SCOPE, 1, 1.0);
 
-        service.tick(List.of(currentRevision), 100);
+        int duration = CelestialDiscoveryStep.DETECTION.durationTicks();
+        service.tick(List.of(currentRevision), duration);
         revisionProvider.workAvailable = true;
-        service.tick(List.of(currentRevision), 100);
+        service.tick(List.of(currentRevision), duration);
 
         assertEquals(DiscoveryState.HIDDEN, revisionProvider.state);
 
         CelestialDiscoveryScanScope changedScope = new CelestialDiscoveryScanScope(PLANET, SCOPE.radius(), 8L);
-        service.tick(List.of(worker(changedScope, 1, 1.0)), 100);
+        service.tick(List.of(worker(changedScope, 1, 1.0)), duration);
 
         assertEquals(DiscoveryState.DISCOVERED, revisionProvider.state);
     }
@@ -152,14 +154,15 @@ final class CelestialDiscoveryScanServiceTest {
         CelestialKnowledgeService.resetProvidersForTesting();
         CelestialKnowledgeService.registerDiscoveryDomain(revisionProvider);
         CelestialDiscoveryWorkerContribution workers = worker(SCOPE, 1, 1.0);
-        service.tick(List.of(workers), 100);
-        service.tick(List.of(workers), 100);
+        int duration = CelestialDiscoveryStep.DETECTION.durationTicks();
+        service.tick(List.of(workers), duration);
+        service.tick(List.of(workers), duration);
         List<CelestialDiscoveryScanSnapshot> completedScope = service.snapshots(TEAM);
 
         service = new CelestialDiscoveryScanService();
         service.restore(TEAM, completedScope);
         revisionProvider.workAvailable = true;
-        service.tick(List.of(workers), 100);
+        service.tick(List.of(workers), duration);
 
         assertEquals(DiscoveryState.HIDDEN, revisionProvider.state);
     }
@@ -245,26 +248,15 @@ final class CelestialDiscoveryScanServiceTest {
 
         @Override
         public Optional<CelestialDiscoveryWork> nextDiscoveryWork(UUID teamId, CelestialDiscoveryScanScope scope) {
-            return state == DiscoveryState.HIDDEN ? Optional.of(new PlanetDiscoveryWork(PLANET)) : Optional.empty();
+            return state == DiscoveryState.HIDDEN
+                ? Optional.of(new CelestialDiscoveryWork(PLANET, CelestialDiscoveryStep.DETECTION))
+                : Optional.empty();
         }
 
         @Override
         public void completeDiscoveryWork(UUID teamId, CelestialDiscoveryScanScope scope, CelestialDiscoveryWork work) {
             completionCount++;
             state = DiscoveryState.DISCOVERED;
-        }
-    }
-
-    private record PlanetDiscoveryWork(CelestialObjectKey targetKey) implements CelestialDiscoveryWork {
-
-        @Override
-        public CelestialDiscoveryStep step() {
-            return CelestialDiscoveryStep.DETECTION;
-        }
-
-        @Override
-        public int durationTicks() {
-            return 1200;
         }
     }
 
@@ -289,25 +281,12 @@ final class CelestialDiscoveryScanServiceTest {
 
         @Override
         public Optional<CelestialDiscoveryWork> nextDiscoveryWork(UUID teamId, CelestialDiscoveryScanScope scope) {
-            return Optional.of(new SequencedWork(PLANET, completedFacts));
+            return Optional.of(new CelestialDiscoveryWork(PLANET, CelestialDiscoveryStep.DETECTION));
         }
 
         @Override
         public void completeDiscoveryWork(UUID teamId, CelestialDiscoveryScanScope scope, CelestialDiscoveryWork work) {
             completedFacts++;
-        }
-    }
-
-    private record SequencedWork(CelestialObjectKey targetKey, int sequence) implements CelestialDiscoveryWork {
-
-        @Override
-        public CelestialDiscoveryStep step() {
-            return CelestialDiscoveryStep.DETECTION;
-        }
-
-        @Override
-        public int durationTicks() {
-            return 400;
         }
     }
 
@@ -333,7 +312,8 @@ final class CelestialDiscoveryScanServiceTest {
 
         @Override
         public Optional<CelestialDiscoveryWork> nextDiscoveryWork(UUID teamId, CelestialDiscoveryScanScope scope) {
-            return workAvailable ? Optional.of(new RevisionWork(PLANET)) : Optional.empty();
+            return workAvailable ? Optional.of(new CelestialDiscoveryWork(PLANET, CelestialDiscoveryStep.DETECTION))
+                : Optional.empty();
         }
 
         @Override
@@ -380,16 +360,4 @@ final class CelestialDiscoveryScanServiceTest {
             CelestialDiscoveryWork work) {}
     }
 
-    private record RevisionWork(CelestialObjectKey targetKey) implements CelestialDiscoveryWork {
-
-        @Override
-        public CelestialDiscoveryStep step() {
-            return CelestialDiscoveryStep.DETECTION;
-        }
-
-        @Override
-        public int durationTicks() {
-            return 100;
-        }
-    }
 }

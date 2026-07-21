@@ -26,11 +26,11 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 
 public final class OrbitalPinnedInfoContentBuilder {
@@ -180,7 +180,7 @@ public final class OrbitalPinnedInfoContentBuilder {
     }
 
     private CelestialResourceKnowledgeState asteroidOreKnowledge(CelestialObject body) {
-        return AsteroidFieldClientKnowledgeState.oreKnowledge(body.id())
+        return CelestialKnowledgeClientState.resourceKnowledge(body.id())
             .orElse(CelestialResourceKnowledgeState.UNKNOWN);
     }
 
