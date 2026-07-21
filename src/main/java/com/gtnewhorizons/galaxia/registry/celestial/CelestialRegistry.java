@@ -22,6 +22,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.AsteroidCon
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.GeneratedAsteroids;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.LoreAsteroids;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryView;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.PlayableDimensionProfile;
 import com.gtnewhorizons.galaxia.registry.dimension.SpaceStation;
@@ -494,6 +495,31 @@ public final class CelestialRegistry {
         combined.addAll(registered);
         combined.addAll(minors);
         return Collections.unmodifiableList(combined);
+    }
+
+    /**
+     * Definition-default team knowledge for any celestial key.
+     * <p>
+     * TLDR: registered bodies are born {@code DISCOVERED}/{@code UNKNOWN} and sit
+     * outside the scan queue; minor bodies delegate to their asteroid content node
+     * for initial detection and ore knowledge. Unresolvable keys fail loudly so
+     * {@link com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService}
+     * cannot invent knowledge for bodies the registry cannot materialize.
+     */
+    public static CelestialKnowledgeFacts initialKnowledge(CelestialObjectKey key) {
+        if (key == null) throw new IllegalArgumentException("celestial object key is required");
+        registerDefaults();
+        if (key.isRegistered()) {
+            if (!REGISTRATIONS.containsKey(key)) {
+                throw new IllegalStateException("Unknown celestial object: " + key);
+            }
+            return CelestialKnowledgeFacts.discoveredUnknown();
+        }
+        return AsteroidCelestialMaterializer
+            .initialKnowledge(
+                key,
+                beltId -> Optional.ofNullable(REGISTRATIONS.get(CelestialObjectKey.registered(beltId))))
+            .orElseThrow(() -> new IllegalStateException("Unknown celestial object: " + key));
     }
 
     public static List<CelestialObject> getRoots() {

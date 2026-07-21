@@ -269,10 +269,8 @@ public final class StarmapAssetActions {
         }
 
         private boolean canCreateAssetOnBody(CelestialObject body, CelestialAsset.Kind kind) {
-            if (requiresDiscoveredMinorBody(kind) && body.id()
-                .isMinorBody()
-                && CelestialKnowledgeClientState.discoveryState(body.id())
-                    .orElse(DiscoveryState.HIDDEN) != DiscoveryState.DISCOVERED)
+            if (requiresDiscoveredTarget(kind)
+                && CelestialKnowledgeClientState.effectiveDiscoveryState(body.id()) != DiscoveryState.DISCOVERED)
                 return false;
             return switch (kind) {
                 case AUTOMATED_STATION -> body.properties()
@@ -283,7 +281,7 @@ public final class StarmapAssetActions {
             };
         }
 
-        private boolean requiresDiscoveredMinorBody(CelestialAsset.Kind kind) {
+        private boolean requiresDiscoveredTarget(CelestialAsset.Kind kind) {
             return kind == CelestialAsset.Kind.AUTOMATED_OUTPOST || kind == CelestialAsset.Kind.SATELLITE;
         }
 

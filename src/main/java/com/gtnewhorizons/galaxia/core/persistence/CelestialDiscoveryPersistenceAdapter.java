@@ -17,9 +17,8 @@ import org.apache.logging.log4j.Logger;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.core.persistence.CelestialObjectKeyJsonCodec.CelestialObjectKeyJson;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanService;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
@@ -97,7 +96,7 @@ final class CelestialDiscoveryPersistenceAdapter {
 
     private static DiscoveryScanJson encodeScan(CelestialDiscoveryScanSnapshot snapshot) {
         DiscoveryScanJson json = new DiscoveryScanJson();
-        json.anchor = encodeKey(snapshot.anchorKey());
+        json.anchor = CelestialObjectKeyJsonCodec.encode(snapshot.anchorKey());
         json.radius = snapshot.radius();
         json.revision = snapshot.scopeRevision();
         json.capability = snapshot.capability()
@@ -105,7 +104,7 @@ final class CelestialDiscoveryPersistenceAdapter {
         json.status = snapshot.status()
             .name();
         if (snapshot.status() == CelestialDiscoveryScanSnapshot.Status.ACTIVE) {
-            json.target = encodeKey(snapshot.targetKey());
+            json.target = CelestialObjectKeyJsonCodec.encode(snapshot.targetKey());
             json.step = snapshot.step()
                 .name();
             json.elapsedTicks = snapshot.elapsedTicks();
@@ -117,63 +116,27 @@ final class CelestialDiscoveryPersistenceAdapter {
         if (json == null || json.anchor == null || json.capability == null || json.status == null) {
             throw new IllegalStateException("[PERSIST] LOAD FAILED: malformed celestial discovery scan entry");
         }
-        CelestialDiscoveryScanSnapshot.Status status = requireEnum(
+        CelestialDiscoveryScanSnapshot.Status status = CelestialObjectKeyJsonCodec.requireEnum(
             CelestialDiscoveryScanSnapshot.Status.class,
             json.status,
             "[PERSIST] LOAD FAILED: unknown celestial discovery scan status " + json.status);
         return new CelestialDiscoveryScanSnapshot(
             teamId,
-            decodeKey(json.anchor),
+            CelestialObjectKeyJsonCodec.decode(json.anchor),
             json.radius,
             json.revision,
-            requireEnum(
+            CelestialObjectKeyJsonCodec.requireEnum(
                 CelestialDiscoveryCapability.class,
                 json.capability,
                 "[PERSIST] LOAD FAILED: unknown discovery capability " + json.capability),
             status,
-            status == CelestialDiscoveryScanSnapshot.Status.ACTIVE ? decodeKey(json.target) : null,
-            status == CelestialDiscoveryScanSnapshot.Status.ACTIVE
-                ? requireEnum(
-                    CelestialDiscoveryStep.class,
-                    json.step,
-                    "[PERSIST] LOAD FAILED: unknown discovery step " + json.step)
+            status == CelestialDiscoveryScanSnapshot.Status.ACTIVE ? CelestialObjectKeyJsonCodec.decode(json.target)
                 : null,
+            status == CelestialDiscoveryScanSnapshot.Status.ACTIVE ? CelestialObjectKeyJsonCodec.requireEnum(
+                CelestialDiscoveryStep.class,
+                json.step,
+                "[PERSIST] LOAD FAILED: unknown discovery step " + json.step) : null,
             json.elapsedTicks);
-    }
-
-    private static CelestialObjectKeyJson encodeKey(CelestialObjectKey key) {
-        CelestialObjectKeyJson json = new CelestialObjectKeyJson();
-        json.kind = key.isRegistered() ? "registered" : "minor";
-        json.bodyId = key.isRegistered() ? key.registeredBodyId()
-            .name()
-            : key.minorBodyId()
-                .parentBodyId()
-                .name();
-        if (key.isMinorBody()) json.index = key.minorBodyId()
-            .index();
-        return json;
-    }
-
-    private static CelestialObjectKey decodeKey(CelestialObjectKeyJson json) {
-        if (json == null || json.kind == null || json.bodyId == null) {
-            throw new IllegalStateException("[PERSIST] LOAD FAILED: malformed celestial object key");
-        }
-        CelestialObjectId bodyId = requireEnum(
-            CelestialObjectId.class,
-            json.bodyId,
-            "[PERSIST] LOAD FAILED: unknown celestial object id " + json.bodyId);
-        if ("registered".equals(json.kind)) return CelestialObjectKey.registered(bodyId);
-        if ("minor".equals(json.kind))
-            return CelestialObjectKey.minorBody(new MinorCelestialBodyId(bodyId, json.index));
-        throw new IllegalStateException("[PERSIST] LOAD FAILED: unknown celestial object key kind " + json.kind);
-    }
-
-    private static <T extends Enum<T>> T requireEnum(Class<T> cls, String name, String message) {
-        try {
-            return Enum.valueOf(cls, name);
-        } catch (IllegalArgumentException | NullPointerException ex) {
-            throw new IllegalStateException(message, ex);
-        }
     }
 
     private record PersistedScanKey(UUID teamId, CelestialObjectKey anchorKey,
@@ -200,12 +163,5 @@ final class CelestialDiscoveryPersistenceAdapter {
         CelestialObjectKeyJson target;
         String step;
         long elapsedTicks;
-    }
-
-    static final class CelestialObjectKeyJson {
-
-        String kind;
-        String bodyId;
-        int index;
     }
 }

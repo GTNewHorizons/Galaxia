@@ -16,8 +16,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
  * Deterministically materializes asteroid definitions from a field profile.
  *
  * The resolver is intentionally pure: the same belt id, profile, and generation
- * version always produce the same nodes. Player-specific discovery state lives
- * in {@link AsteroidFieldKnowledge}, not in these resolved definitions.
+ * version always produce the same nodes. Player-specific discovery state lives in
+ * {@link com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService},
+ * not in these resolved definitions.
  */
 public final class AsteroidFieldResolver {
 

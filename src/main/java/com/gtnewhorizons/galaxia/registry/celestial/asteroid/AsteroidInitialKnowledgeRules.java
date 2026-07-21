@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.util.DeterministicHash;
@@ -7,6 +8,10 @@ import com.gtnewhorizons.galaxia.registry.util.DeterministicHash;
 final class AsteroidInitialKnowledgeRules {
 
     private AsteroidInitialKnowledgeRules() {}
+
+    static CelestialKnowledgeFacts initialFacts(AsteroidFieldNode node) {
+        return CelestialKnowledgeFacts.of(initialDetectionState(node), initialOreKnowledge(node));
+    }
 
     static DiscoveryState initialDetectionState(AsteroidFieldNode node) {
         return node.initialDetectionState();

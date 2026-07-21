@@ -108,7 +108,7 @@ public final class CelestialDiscoveryScanService {
                     key,
                     new Progress(
                         snapshot.scope(),
-                        new RestoredWork(snapshot.targetKey(), snapshot.step()),
+                        new CelestialDiscoveryWork(snapshot.targetKey(), snapshot.step()),
                         snapshot.elapsedTicks()));
             }
         }
@@ -216,7 +216,4 @@ public final class CelestialDiscoveryScanService {
 
     private record DomainBinding(@Nonnull CelestialDiscoveryScanScope scope,
         @Nonnull CelestialDiscoveryDomain domain) {}
-
-    private record RestoredWork(@Nonnull CelestialObjectKey targetKey, @Nonnull CelestialDiscoveryStep step)
-        implements CelestialDiscoveryWork {}
 }

@@ -105,14 +105,16 @@ public final class FacilityPersistenceManager {
     private static final String DATA_DIR = "galaxiadata";
     private static final String ASSETS_FILE = "_assets.json";
     private static final String TASKS_FILE = "_tasks.json";
-    private static final String ASTEROIDS_FILE = "_asteroids.json";
+    private static final String CATALOG_FILE = "_asteroid_catalog.json";
+    private static final String KNOWLEDGE_FILE = "_celestial_knowledge.json";
     private static final String DISCOVERY_FILE = "_discovery.json";
 
     private final Gson gson;
     private static final Gson PURE_GSON = new GsonBuilder().create();
     private File worldSaveDir;
     private final CelestialServerRuntime celestialRuntime;
-    private final AsteroidKnowledgePersistenceAdapter asteroidKnowledge;
+    private final AsteroidFieldCatalogPersistenceAdapter asteroidCatalog;
+    private final CelestialKnowledgePersistenceAdapter celestialKnowledge;
     private final CelestialDiscoveryPersistenceAdapter celestialDiscovery;
 
     private static final String INVENTORY_KEY_ITEM_PREFIX = "I";
@@ -120,7 +122,8 @@ public final class FacilityPersistenceManager {
 
     public FacilityPersistenceManager(CelestialServerRuntime celestialRuntime) {
         this.celestialRuntime = celestialRuntime;
-        this.asteroidKnowledge = new AsteroidKnowledgePersistenceAdapter();
+        this.asteroidCatalog = new AsteroidFieldCatalogPersistenceAdapter(celestialRuntime.scans());
+        this.celestialKnowledge = new CelestialKnowledgePersistenceAdapter();
         this.celestialDiscovery = new CelestialDiscoveryPersistenceAdapter(celestialRuntime.scans());
         gson = new GsonBuilder().setPrettyPrinting()
             .serializeNulls()
@@ -176,7 +179,10 @@ public final class FacilityPersistenceManager {
         LOG.info("[PERSIST] LOAD START: reading from {}", galaxiaRoot);
         loadAssets(new File(galaxiaRoot, ASSETS_FILE));
         loadTasks(new File(galaxiaRoot, TASKS_FILE));
-        loadAsteroidKnowledge(new File(galaxiaRoot, ASTEROIDS_FILE));
+        // Content catalog restores before minor-key facts so those keys resolve;
+        // shared facts restore before scan progress that references them.
+        asteroidCatalog.load(new File(galaxiaRoot, CATALOG_FILE), gson);
+        celestialKnowledge.load(new File(galaxiaRoot, KNOWLEDGE_FILE), gson);
         celestialDiscovery.load(new File(galaxiaRoot, DISCOVERY_FILE), gson);
     }
 
@@ -186,16 +192,9 @@ public final class FacilityPersistenceManager {
         LOG.info("[PERSIST] SAVE START: writing to {}", galaxiaRoot);
         saveAssets(new File(galaxiaRoot, ASSETS_FILE));
         saveTasks(new File(galaxiaRoot, TASKS_FILE));
-        saveAsteroidKnowledge(new File(galaxiaRoot, ASTEROIDS_FILE));
+        asteroidCatalog.save(new File(galaxiaRoot, CATALOG_FILE), gson);
+        celestialKnowledge.save(new File(galaxiaRoot, KNOWLEDGE_FILE), gson);
         celestialDiscovery.save(new File(galaxiaRoot, DISCOVERY_FILE), gson);
-    }
-
-    private void loadAsteroidKnowledge(File file) {
-        asteroidKnowledge.load(file, gson);
-    }
-
-    private void saveAsteroidKnowledge(File file) {
-        asteroidKnowledge.save(file, gson);
     }
 
     private void loadAssets(File file) {
