@@ -58,10 +58,10 @@ final class CelestialDiscoveryScanServiceTest {
                 Buildable.Status.OPERATIONAL,
                 SatelliteKind.PROSPECTING));
 
-        new CelestialDiscoveryRuntime(
-            () -> com.gtnewhorizons.galaxia.registry.satellite.SatelliteDiscoveryWorkerSource
+        service.tick(
+            com.gtnewhorizons.galaxia.registry.satellite.SatelliteDiscoveryWorkerSource
                 .prospectingWorkers(CelestialKnowledgeService::discoveryScopeRevision),
-            service).tick(CelestialDiscoveryStep.DETECTION.durationTicks());
+            CelestialDiscoveryStep.DETECTION.durationTicks());
 
         assertEquals(DiscoveryState.DISCOVERED, provider.state);
     }
@@ -204,10 +204,10 @@ final class CelestialDiscoveryScanServiceTest {
 
         assertThrows(
             IllegalStateException.class,
-            () -> new CelestialDiscoveryRuntime(
-                () -> com.gtnewhorizons.galaxia.registry.satellite.SatelliteDiscoveryWorkerSource
+            () -> service.tick(
+                com.gtnewhorizons.galaxia.registry.satellite.SatelliteDiscoveryWorkerSource
                     .prospectingWorkers(CelestialKnowledgeService::discoveryScopeRevision),
-                service).tick(1));
+                1));
         assertEquals(0, first.revisionSelections);
         assertEquals(0, second.revisionSelections);
         assertEquals(0, first.workSelections);
