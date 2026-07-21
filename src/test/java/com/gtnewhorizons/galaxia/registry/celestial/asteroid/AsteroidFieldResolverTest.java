@@ -118,19 +118,11 @@ final class AsteroidFieldResolverTest {
         assertEquals(DiscoveryState.HIDDEN, AsteroidFieldResolver.initialDetectionState(medium));
         assertEquals(DiscoveryState.HIDDEN, AsteroidFieldResolver.initialDetectionState(small));
         assertTrue(
-            List.of(
-                CelestialResourceKnowledgeState.UNKNOWN,
-                CelestialResourceKnowledgeState.SIGNATURE,
-                CelestialResourceKnowledgeState.PROFILE)
+            List.of(CelestialResourceKnowledgeState.UNKNOWN, CelestialResourceKnowledgeState.PROFILE)
                 .contains(AsteroidFieldResolver.initialOreKnowledge(large)));
         assertEquals(CelestialResourceKnowledgeState.UNKNOWN, AsteroidFieldResolver.initialOreKnowledge(medium));
         assertEquals(CelestialResourceKnowledgeState.UNKNOWN, AsteroidFieldResolver.initialOreKnowledge(small));
-        assertTrue(
-            List.of(
-                CelestialResourceKnowledgeState.UNKNOWN,
-                CelestialResourceKnowledgeState.SIGNATURE,
-                CelestialResourceKnowledgeState.PROFILE)
-                .contains(AsteroidFieldResolver.oreKnowledgeAfterDetection(medium)));
+        assertEquals(CelestialResourceKnowledgeState.UNKNOWN, AsteroidFieldResolver.oreKnowledgeAfterDetection(medium));
         assertEquals(CelestialResourceKnowledgeState.UNKNOWN, AsteroidFieldResolver.oreKnowledgeAfterDetection(small));
     }
 

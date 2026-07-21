@@ -89,6 +89,26 @@ final class AsteroidFieldProfileTest {
     }
 
     @Test
+    void weightedOreProfilesSelectByRoll() {
+        AsteroidOreProfile metallic = new AsteroidOreProfile("metallic", List.of("ore.mix.iron"));
+        AsteroidOreProfile volatileIce = new AsteroidOreProfile("volatile_ice", List.of("ore.mix.lapis"));
+        AsteroidFieldProfile profile = AsteroidFieldProfile.builder()
+            .sizeCounts(1, 0, 0)
+            .radialBand(1.0, 2.0)
+            .placementConnectionRadius(1000.0)
+            .oreProfile(metallic, 3.0)
+            .oreProfile(volatileIce, 1.0)
+            .build();
+
+        assertEquals(List.of(metallic, volatileIce), profile.oreProfiles());
+        assertEquals(metallic, profile.selectOreProfile(0.0));
+        assertEquals(metallic, profile.selectOreProfile(0.74));
+        assertEquals(volatileIce, profile.selectOreProfile(0.75));
+        assertEquals(volatileIce, profile.selectOreProfile(0.99));
+        assertEquals(volatileIce, profile.requireOreProfile("volatile_ice"));
+    }
+
+    @Test
     void profileRejectsInvalidAuthoring() {
         AsteroidOreProfile metallic = new AsteroidOreProfile("metallic", List.of("galaxia:iron"));
 

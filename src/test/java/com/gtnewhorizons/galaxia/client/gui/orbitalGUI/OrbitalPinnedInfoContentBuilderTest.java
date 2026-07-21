@@ -148,20 +148,9 @@ final class OrbitalPinnedInfoContentBuilderTest {
         CelestialKnowledgeClientState.apply(
             Map.of(
                 asteroid.id(),
-                CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.SIGNATURE)));
-        PinnedInfoRow signatureRow = oreRow(builder.buildRows(asteroid));
-        assertNotEquals(unknownRow.value(), signatureRow.value());
-        assertTrue(
-            signatureRow.items()
-                .isEmpty());
-
-        CelestialKnowledgeClientState.apply(
-            Map.of(
-                asteroid.id(),
                 CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.PROFILE)));
         PinnedInfoRow profileRow = oreRow(builder.buildRows(asteroid));
         assertNotEquals(unknownRow.value(), profileRow.value());
-        assertNotEquals(signatureRow.value(), profileRow.value());
 
         CelestialKnowledgeClientState.clear();
     }

@@ -20,6 +20,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfil
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidOreProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
@@ -46,8 +47,7 @@ final class OrbitalSceneBodyPresentationTest {
     void asteroidBeltContainerHasNoSpriteOrInteractionTarget() {
         CelestialObject belt = asteroidBelt();
 
-        assertFalse(AsteroidStarmapScenePresentation.drawsBodySprite(belt));
-        assertFalse(AsteroidStarmapScenePresentation.registersBodyInteraction(belt));
+        assertTrue(AsteroidStarmapScenePresentation.isBeltContainer(belt));
     }
 
     @Test
@@ -59,10 +59,8 @@ final class OrbitalSceneBodyPresentationTest {
             .objectClass(CelestialObject.Class.PLANET)
             .build();
 
-        assertFalse(AsteroidStarmapScenePresentation.drawsOrbitLine(belt));
-        assertTrue(AsteroidStarmapScenePresentation.drawsBeltBand(belt));
-        assertTrue(AsteroidStarmapScenePresentation.drawsOrbitLine(planet));
-        assertFalse(AsteroidStarmapScenePresentation.drawsBeltBand(planet));
+        assertTrue(AsteroidStarmapScenePresentation.isBeltContainer(belt));
+        assertFalse(AsteroidStarmapScenePresentation.isBeltContainer(planet));
     }
 
     @Test
@@ -73,21 +71,23 @@ final class OrbitalSceneBodyPresentationTest {
             .objectClass(CelestialObject.Class.ASTEROID)
             .build();
 
-        assertTrue(AsteroidStarmapScenePresentation.drawsBodySprite(asteroid));
-        assertTrue(AsteroidStarmapScenePresentation.registersBodyInteraction(asteroid));
+        assertFalse(AsteroidStarmapScenePresentation.isBeltContainer(asteroid));
     }
 
     @Test
     void defaultAsteroidLabelsAreLimitedToAuthoredAsteroids() {
         assertFalse(
-            AsteroidStarmapScenePresentation
-                .drawsDefaultBodyLabel(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.LARGE)));
+            CelestialClient.asteroidProjection(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.LARGE))
+                .map(AsteroidStarmapProjection::drawDefaultLabel)
+                .orElseThrow());
         assertFalse(
-            AsteroidStarmapScenePresentation
-                .drawsDefaultBodyLabel(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.MEDIUM)));
+            CelestialClient.asteroidProjection(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.MEDIUM))
+                .map(AsteroidStarmapProjection::drawDefaultLabel)
+                .orElseThrow());
         assertFalse(
-            AsteroidStarmapScenePresentation
-                .drawsDefaultBodyLabel(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.SMALL)));
+            CelestialClient.asteroidProjection(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.SMALL))
+                .map(AsteroidStarmapProjection::drawDefaultLabel)
+                .orElseThrow());
     }
 
     @Test

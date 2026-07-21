@@ -91,8 +91,6 @@ public final class AsteroidStarmapProjectionBuilder {
     }
 
     private static CelestialResourceKnowledgeState initialOreKnowledgeState(AsteroidFieldNode node) {
-        if (node.initialOreKnowledgeState() != null) return node.initialOreKnowledgeState();
-        return node.initialDetectionState() == DiscoveryState.DISCOVERED ? CelestialResourceKnowledgeState.SIGNATURE
-            : CelestialResourceKnowledgeState.UNKNOWN;
+        return AsteroidFieldResolver.initialOreKnowledge(node);
     }
 }

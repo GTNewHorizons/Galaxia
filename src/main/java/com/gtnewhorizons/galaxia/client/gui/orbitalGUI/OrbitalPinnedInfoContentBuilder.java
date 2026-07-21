@@ -131,14 +131,6 @@ public final class OrbitalPinnedInfoContentBuilder {
             // Asteroids can have real ore data before the player knows it. The
             // sidebar gates presentation on knowledge state, not on the profile.
             if (oreKnowledge == CelestialResourceKnowledgeState.UNKNOWN) return row("ores", tr("ore.unknown"));
-            if (oreKnowledge == CelestialResourceKnowledgeState.SIGNATURE) {
-                return row(
-                    "ores",
-                    StatCollector.translateToLocalFormatted(
-                        key("ore.signature"),
-                        projection.visibleOreProfileId()
-                            .orElse("")));
-            }
         }
 
         if (!canShowOreDetails(body)) return row("ores", tr("ore.unknown"));

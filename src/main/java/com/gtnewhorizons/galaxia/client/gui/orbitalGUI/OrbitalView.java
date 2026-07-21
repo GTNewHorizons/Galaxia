@@ -44,7 +44,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapPresentationPolicy;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
@@ -1584,7 +1584,7 @@ public class OrbitalView {
             double relativeZoom) {
             if (body == null || body.objectClass() != CelestialObject.Class.ASTEROID || spriteSize <= 0.0001f)
                 return 0f;
-            return AsteroidStarmapPresentationPolicy.spriteRadius(body, spriteSize, relativeZoom);
+            return AsteroidStarmapProjection.spriteRadius(body, spriteSize, relativeZoom);
         }
 
         static float mapSpriteRadiusForScale(CelestialObject body, double scale) {
@@ -2205,8 +2205,9 @@ public class OrbitalView {
             if (labelAlpha > 0.02f && !sameBody(body, root)
                 && !sameBody(body, focusedBody)
                 && renderBody
-                && (AsteroidStarmapScenePresentation.drawsDefaultBodyLabel(body)
-                    || CelestialClient.isAsteroidScanInProgress(body))) {
+                && (CelestialClient.asteroidProjection(body)
+                    .map(AsteroidStarmapProjection::drawDefaultLabel)
+                    .orElse(false) || CelestialClient.isAsteroidScanInProgress(body))) {
                 float actualLabelAlpha = getLabelRenderAlpha(body, labelAlpha);
                 if (actualLabelAlpha > 0.01f) {
                     drawLabel = true;
@@ -2994,7 +2995,7 @@ public class OrbitalView {
         static boolean shouldCullAsteroidAtNaturalRadius(CelestialObject body, float naturalRadius) {
             if (body == null || body.objectClass() != CelestialObject.Class.ASTEROID) return false;
             return CelestialClient.asteroidProjection(body)
-                .map(projection -> AsteroidStarmapPresentationPolicy.shouldCull(body, projection, naturalRadius))
+                .map(projection -> AsteroidStarmapProjection.shouldCull(body, projection, naturalRadius))
                 .orElse(false);
         }
 

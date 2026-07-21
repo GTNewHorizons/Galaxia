@@ -123,7 +123,7 @@ final class AsteroidPlacementGraph {
         Set<MinorCelestialBodyId> visited = new HashSet<>();
         Queue<AsteroidFieldNode> queue = new ArrayDeque<>();
         for (AsteroidFieldNode node : nodes) {
-            if (AsteroidInitialKnowledgeRules.initialDetectionState(node) == DiscoveryState.DISCOVERED) {
+            if (AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.DISCOVERED) {
                 visited.add(node.id());
                 queue.add(node);
             }
@@ -141,7 +141,7 @@ final class AsteroidPlacementGraph {
         }
 
         for (AsteroidFieldNode node : nodes) {
-            if (AsteroidInitialKnowledgeRules.initialDetectionState(node) == DiscoveryState.HIDDEN
+            if (AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.HIDDEN
                 && !visited.contains(node.id())) {
                 throw new IllegalStateException("unreachable hidden asteroid in scan graph: " + node.id());
             }

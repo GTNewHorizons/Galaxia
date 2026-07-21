@@ -317,7 +317,7 @@ final class FacilityPersistenceManagerTest {
             CelestialDiscoveryCapability.PROSPECTING,
             CelestialDiscoveryScanSnapshot.Status.ACTIVE,
             progressKey,
-            CelestialDiscoveryStep.SIGNATURE,
+            CelestialDiscoveryStep.PROFILE,
             600);
         CelestialDiscoveryScanSnapshot completion = CelestialDiscoveryScanSnapshot.complete(
             teamId,

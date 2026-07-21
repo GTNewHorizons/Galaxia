@@ -129,15 +129,11 @@ final class AsteroidStarmapProjectionBuilderTest {
             CelestialObjectKey.minorBody(
                 nodes.get(1)
                     .id()),
-            CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.SIGNATURE));
-        facts.put(
-            CelestialObjectKey.minorBody(
-                nodes.get(2)
-                    .id()),
             CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.PROFILE));
         CelestialKnowledgeClientState.apply(facts);
 
-        List<CelestialObject> canonical = nodes.stream()
+        List<CelestialObject> canonical = nodes.subList(0, 2)
+            .stream()
             .map(node -> AsteroidCelestialMaterializer.materialize(node, fieldProfile))
             .toList();
         List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder
@@ -159,22 +155,11 @@ final class AsteroidStarmapProjectionBuilderTest {
             projections.get(1)
                 .visibleOreProfileId());
         assertEquals(
-            List.of(),
-            projections.get(1)
-                .visibleGtOreVeinIds());
-        assertFalse(
-            projections.get(1)
-                .canShowOreDetails());
-        assertEquals(
-            Optional.of("volatile_ice"),
-            projections.get(2)
-                .visibleOreProfileId());
-        assertEquals(
             List.of("ice", "sulfur"),
-            projections.get(2)
+            projections.get(1)
                 .visibleGtOreVeinIds());
         assertTrue(
-            projections.get(2)
+            projections.get(1)
                 .canShowOreDetails());
     }
 

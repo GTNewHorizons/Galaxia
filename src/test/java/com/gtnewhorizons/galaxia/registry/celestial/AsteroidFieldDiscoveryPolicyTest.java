@@ -18,7 +18,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanScope;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryStep;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryWork;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
@@ -60,7 +59,7 @@ final class AsteroidFieldDiscoveryPolicyTest {
         assertEquals(CelestialDiscoveryStep.DETECTION, first.step());
         policy.completeDiscoveryWork(TEAM, scope, first);
 
-        // Keep completing detection until none remain in scope; then SIGNATURE starts.
+        // Keep completing detection until none remain in scope; then PROFILE starts.
         CelestialDiscoveryWork next;
         while ((next = policy.nextDiscoveryWork(TEAM, scope)
             .orElse(null)) != null && next.step() == CelestialDiscoveryStep.DETECTION) {
@@ -68,7 +67,7 @@ final class AsteroidFieldDiscoveryPolicyTest {
         }
         CelestialDiscoveryWork prospecting = policy.nextDiscoveryWork(TEAM, scope)
             .orElseThrow();
-        assertEquals(CelestialDiscoveryStep.SIGNATURE, prospecting.step());
+        assertEquals(CelestialDiscoveryStep.PROFILE, prospecting.step());
     }
 
     @Test
@@ -85,20 +84,13 @@ final class AsteroidFieldDiscoveryPolicyTest {
     }
 
     @Test
-    void prospectingAdvancesResourceThroughSignatureThenProfile() {
+    void prospectingAdvancesResourceFromUnknownDirectlyToProfile() {
         AsteroidFieldNode hidden = firstHidden(AsteroidSizeClass.SMALL);
         CelestialObjectKey key = CelestialObjectKey.minorBody(hidden.id());
         CelestialDiscoveryScanScope scope = nodeOnlyScope(hidden);
 
-        // Detect the single in-scope node, then prospect twice.
         policy.completeDiscoveryWork(TEAM, scope, new CelestialDiscoveryWork(key, CelestialDiscoveryStep.DETECTION));
-        CelestialKnowledgeService.putFacts(
-            TEAM,
-            key,
-            CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.UNKNOWN));
-
-        policy.completeDiscoveryWork(TEAM, scope, new CelestialDiscoveryWork(key, CelestialDiscoveryStep.SIGNATURE));
-        assertEquals(CelestialResourceKnowledgeState.SIGNATURE, CelestialKnowledgeService.resourceKnowledge(TEAM, key));
+        assertEquals(CelestialResourceKnowledgeState.UNKNOWN, CelestialKnowledgeService.resourceKnowledge(TEAM, key));
 
         policy.completeDiscoveryWork(TEAM, scope, new CelestialDiscoveryWork(key, CelestialDiscoveryStep.PROFILE));
         assertEquals(CelestialResourceKnowledgeState.PROFILE, CelestialKnowledgeService.resourceKnowledge(TEAM, key));
@@ -110,7 +102,7 @@ final class AsteroidFieldDiscoveryPolicyTest {
         CelestialDiscoveryScanScope scope = nodeOnlyScope(hidden);
         CelestialDiscoveryWork work = new CelestialDiscoveryWork(
             CelestialObjectKey.minorBody(hidden.id()),
-            CelestialDiscoveryStep.SIGNATURE);
+            CelestialDiscoveryStep.PROFILE);
 
         assertThrows(IllegalStateException.class, () -> policy.completeDiscoveryWork(TEAM, scope, work));
     }

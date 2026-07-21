@@ -96,7 +96,7 @@ final class CelestialKnowledgeServiceTest {
     void hiddenFactsRejectNonUnknownResourceKnowledge() {
         assertThrows(
             IllegalArgumentException.class,
-            () -> CelestialKnowledgeFacts.of(DiscoveryState.HIDDEN, CelestialResourceKnowledgeState.SIGNATURE));
+            () -> CelestialKnowledgeFacts.of(DiscoveryState.HIDDEN, CelestialResourceKnowledgeState.PROFILE));
     }
 
     @Test

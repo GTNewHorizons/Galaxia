@@ -62,9 +62,7 @@ final class CelestialClientAsteroidProjectionTest {
         Map<CelestialObjectKey, CelestialKnowledgeFacts> facts = new LinkedHashMap<>();
         for (AsteroidFieldNode node : catalog.nodes()) {
             DiscoveryState state = node.index() == visibleIndex ? DiscoveryState.DISCOVERED : DiscoveryState.HIDDEN;
-            CelestialResourceKnowledgeState ore = node.index() == visibleIndex
-                ? CelestialResourceKnowledgeState.SIGNATURE
-                : CelestialResourceKnowledgeState.UNKNOWN;
+            CelestialResourceKnowledgeState ore = CelestialResourceKnowledgeState.UNKNOWN;
             facts.put(CelestialObjectKey.minorBody(node.id()), CelestialKnowledgeFacts.of(state, ore));
         }
         CelestialKnowledgeClientState.apply(facts);

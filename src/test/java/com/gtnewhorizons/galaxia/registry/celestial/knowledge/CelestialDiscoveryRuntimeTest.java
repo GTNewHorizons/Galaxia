@@ -69,7 +69,7 @@ final class CelestialDiscoveryRuntimeTest {
     void explicitRuntimeClearClearsDiscoveryProgress() {
         addRuntimeProgress();
 
-        runtime.discovery()
+        runtime.scans()
             .clear();
 
         assertTrue(
@@ -138,7 +138,7 @@ final class CelestialDiscoveryRuntimeTest {
         second.scans()
             .restore(otherTeam, List.of(activeSnapshot(otherTeam, 75L)));
 
-        first.discovery()
+        first.scans()
             .clear();
 
         assertTrue(
