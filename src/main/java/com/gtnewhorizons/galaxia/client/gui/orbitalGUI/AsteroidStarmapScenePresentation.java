@@ -5,11 +5,9 @@ import java.util.function.DoubleUnaryOperator;
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.utils.GlStateManager;
-import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
@@ -21,45 +19,8 @@ final class AsteroidStarmapScenePresentation {
 
     private AsteroidStarmapScenePresentation() {}
 
-    static boolean drawsBodySprite(CelestialObject body) {
-        return !isBeltContainer(body);
-    }
-
-    static boolean registersBodyInteraction(CelestialObject body) {
-        return !isBeltContainer(body);
-    }
-
-    static boolean drawsDefaultBodyLabel(CelestialObject body) {
-        if (body == null) return false;
-        if (!isAsteroid(body)) return true;
-        return CelestialClient.asteroidProjection(body)
-            .map(AsteroidStarmapProjection::drawDefaultLabel)
-            .orElse(false);
-    }
-
-    static String bodyLabel(CelestialObject body) {
-        if (CelestialClient.isAsteroidScanInProgress(body)) {
-            return CelestialClient.asteroidScanSnapshotByTarget(body)
-                .map(snapshot -> "??? " + scanProgressPercent(snapshot) + "%")
-                .orElse("???");
-        }
-        return body.displayName();
-    }
-
-    static boolean drawsOrbitLine(CelestialObject body) {
-        return !isBeltContainer(body);
-    }
-
-    static boolean drawsBeltBand(CelestialObject body) {
-        return isBeltContainer(body) && body.properties()
-            .asteroidFieldProfile() != null;
-    }
-
-    static int presentationPriority(CelestialObject body) {
-        if (!isAsteroid(body)) return 1000;
-        return CelestialClient.asteroidProjection(body)
-            .map(AsteroidStarmapProjection::presentationPriority)
-            .orElse(0);
+    static boolean isBeltContainer(CelestialObject body) {
+        return body != null && body.objectClass() == CelestialObject.Class.ASTEROID_BELT;
     }
 
     static void drawProspectingScanRanges(OrbitalScene.OrbitalSceneFrame frame, double scale) {
@@ -116,17 +77,6 @@ final class AsteroidStarmapScenePresentation {
         GL11.glEnd();
         GlStateManager.color(1f, 1f, 1f, 1f);
         GlStateManager.enableTexture2D();
-    }
-
-    private static int scanProgressPercent(CelestialDiscoveryScanSnapshot snapshot) {
-        int duration = snapshot.step()
-            .durationTicks();
-        if (duration <= 0) return 0;
-        return Math.max(0, Math.min(99, Math.round(snapshot.elapsedTicks() * 100.0f / duration)));
-    }
-
-    private static boolean isBeltContainer(CelestialObject body) {
-        return body != null && body.objectClass() == CelestialObject.Class.ASTEROID_BELT;
     }
 
     private static boolean isAsteroid(CelestialObject body) {

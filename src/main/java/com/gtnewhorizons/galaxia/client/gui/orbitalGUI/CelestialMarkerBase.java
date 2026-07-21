@@ -1,78 +1,16 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
 import net.minecraft.util.ResourceLocation;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 
-public class CelestialMarkerBase {
+public final class CelestialMarkerBase {
 
-    public record CelestialMarker(String id, ResourceLocation texture, float alpha) {}
-
-    /// This is just duplication of what we have in the store
-    @Deprecated
-    public static final class CelestialMarkerContext {
-
-        private CelestialObject body;
-        private List<CelestialAsset> assetState;
-
-        public CelestialObject body() {
-            return body;
-        }
-
-        public List<CelestialAsset> assetState() {
-            return assetState;
-        }
-
-        public CelestialMarkerContext set(CelestialObject body, List<CelestialAsset> assetState) {
-            this.body = body;
-            this.assetState = assetState;
-            return this;
-        }
-    }
-
-    public interface CelestialMarkerProvider {
-
-        List<CelestialMarker> getMarkers(CelestialMarkerContext context);
-    }
-
-    public static final class AssetMarkerProvider implements CelestialMarkerProvider {
-
-        @Override
-        public List<CelestialMarker> getMarkers(CelestialMarkerContext context) {
-            if (context == null || context.assetState() == null
-                || context.assetState()
-                    .isEmpty()) {
-                return List.of();
-            }
-            List<CelestialMarker> markers = new ArrayList<>();
-            for (CelestialAsset asset : context.assetState()) {
-                if (asset.kind == CelestialAsset.Kind.SATELLITE) continue;
-                ResourceLocation texture = CelestialAssetIcons.get(asset.kind);
-                if (texture == null) continue;
-                float alpha = assetMarkerAlpha(asset);
-                if (alpha <= 0.0f) continue;
-                markers.add(
-                    new CelestialMarker(
-                        "asset:" + asset.kind.name()
-                            .toLowerCase(),
-                        texture,
-                        alpha));
-            }
-            return markers;
-        }
-    }
+    private CelestialMarkerBase() {}
 
     static float assetMarkerAlpha(CelestialAsset asset) {
         if (asset == null) return 0.0f;
-        // TODO: Put these values in the colors maybe
         return switch (asset.status()) {
             case OPERATIONAL -> 1.0f;
             case CONSTRUCTION_SITE -> 0.85f;
@@ -94,43 +32,6 @@ public class CelestialMarkerBase {
                 case AUTOMATED_OUTPOST -> EnumTextures.ICON_OUTPOST_AUTOMATED.get();
                 case SATELLITE -> EnumTextures.ICON_SATELLITE.get();
             };
-        }
-    }
-
-    public static final class CelestialMarkerRegistry {
-
-        private static final List<CelestialMarkerProvider> PROVIDERS = new ArrayList<>();
-        private static boolean bootstrapped;
-
-        private CelestialMarkerRegistry() {}
-
-        public static synchronized void registerDefaults() {
-            if (bootstrapped) return;
-            bootstrapped = true;
-            register(new AssetMarkerProvider());
-        }
-
-        public static synchronized void register(CelestialMarkerProvider provider) {
-            if (provider != null) PROVIDERS.add(provider);
-        }
-
-        public static synchronized List<CelestialMarker> getMarkers(CelestialMarkerContext context) {
-            registerDefaults();
-            Map<String, CelestialMarker> markersById = new LinkedHashMap<>();
-            for (CelestialMarkerProvider provider : PROVIDERS) {
-                for (CelestialMarker marker : provider.getMarkers(context)) {
-                    if (marker == null || marker.texture() == null) continue;
-                    String markerId = marker.id() != null && !marker.id()
-                        .isEmpty() ? marker.id()
-                            : marker.texture()
-                                .toString();
-                    CelestialMarker existing = markersById.get(markerId);
-                    if (existing == null || marker.alpha() > existing.alpha()) {
-                        markersById.put(markerId, marker);
-                    }
-                }
-            }
-            return Collections.unmodifiableList(new ArrayList<>(markersById.values()));
         }
     }
 }
