@@ -24,7 +24,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidClientProjectionService;
@@ -70,18 +69,8 @@ public final class CelestialClient {
         return CelestialAssetStore.CLIENT.findAssetInternal(assetId);
     }
 
-    public static List<CelestialAsset> getState(CelestialObjectId celestialObjectId) {
-        return getState(CelestialObjectKey.registered(celestialObjectId));
-    }
-
     public static List<CelestialAsset> getState(CelestialObjectKey celestialObjectId) {
-        List<CelestialAsset> result = new ArrayList<>();
-        for (CelestialAsset asset : CelestialAssetStore.CLIENT.allAssetsInternal()) {
-            if (asset.celestialObjectId.equals(celestialObjectId)) {
-                result.add(asset);
-            }
-        }
-        return result;
+        return CelestialAssetStore.CLIENT.getStateInternal(GTTeamsCompat.getTeam(), celestialObjectId);
     }
 
     public static List<CelestialAsset> allAssets() {
@@ -110,10 +99,6 @@ public final class CelestialClient {
     private static final Map<CelestialObjectKey, Map<String, Long>> planetSignals = new LinkedHashMap<>();
 
     private CelestialClient() {}
-
-    public static boolean registerAsset(CelestialObjectId celestialObjectId, CelestialAsset asset) {
-        return registerAsset(CelestialObjectKey.registered(celestialObjectId), asset);
-    }
 
     public static boolean registerAsset(CelestialObjectKey celestialObjectId, CelestialAsset asset) {
         return StarmapActionSyncHandler.sendRegisterAsset(celestialObjectId, asset);
@@ -496,10 +481,6 @@ public final class CelestialClient {
 
     public static HammerTrajectoryLoadSample hammerTrajectoryLoadSample() {
         return hammerTrajectoryLoadSample;
-    }
-
-    public static List<CelestialAsset> listAssetsInSystem(CelestialObjectId systemId) {
-        return listAssetsInSystem(CelestialObjectKey.registered(systemId));
     }
 
     public static List<CelestialAsset> listAssetsInSystem(CelestialObjectKey systemId) {

@@ -28,7 +28,8 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.StationGraphSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializer;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehavior;
@@ -256,8 +257,13 @@ public class TileStation extends TileStationBase<TileStation> {
             }
         }
 
-        CelestialObjectId objectId = GalaxiaCelestialAPI.getObjectFromDimension(this.worldObj.provider.dimensionId);
-        Station station = (Station) CelestialAsset.create(objectId, CelestialAsset.Kind.STATION, true);
+        CelestialObjectKey bodyKey = GalaxiaCelestialAPI.findByDimension(this.worldObj.provider.dimensionId)
+            .map(CelestialObject::id)
+            .orElse(null);
+        if (bodyKey == null) {
+            return;
+        }
+        Station station = (Station) CelestialAsset.create(bodyKey, CelestialAsset.Kind.STATION, true);
         station.setController(this.here);
         backingStation = station.assetId;
         CelestialAssetStore.registerAsset(owner, station);
@@ -266,10 +272,12 @@ public class TileStation extends TileStationBase<TileStation> {
     private boolean overlapsForeignStation() {
         if (owner == null) return false;
 
-        CelestialObjectId bodyId = GalaxiaCelestialAPI.getObjectFromDimension(worldObj.provider.dimensionId);
-        if (bodyId == CelestialObjectId.INVALID) return false;
+        CelestialObjectKey bodyKey = GalaxiaCelestialAPI.findByDimension(worldObj.provider.dimensionId)
+            .map(CelestialObject::id)
+            .orElse(null);
+        if (bodyKey == null) return false;
 
-        for (CelestialAsset.ID otherId : CelestialAssetStore.getAssetsOnBody(bodyId)) {
+        for (CelestialAsset.ID otherId : CelestialAssetStore.getAssetsOnBody(bodyKey)) {
             CelestialAsset other = CelestialAssetStore.findAsset(otherId);
             if (!(other instanceof Station otherStation)) continue;
             if (otherStation.getController() != null && otherStation.getController()

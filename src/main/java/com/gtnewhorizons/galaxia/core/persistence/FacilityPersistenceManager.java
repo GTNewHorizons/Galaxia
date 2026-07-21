@@ -310,8 +310,8 @@ public final class FacilityPersistenceManager {
                             tj.amount,
                             tj.remainingTicks,
                             LogisticSignal.Scope.valueOf(tj.transportKind),
-                            CelestialObjectId.valueOf(tj.fromBodyId),
-                            CelestialObjectId.valueOf(tj.toBodyId),
+                            tj.fromBodyId == null ? null : decodeStructuredCelestialObjectKey(tj.fromBodyId),
+                            tj.toBodyId == null ? null : decodeStructuredCelestialObjectKey(tj.toBodyId),
                             tj.departureOrbitalTime,
                             tj.tofOrbitalSeconds));
                 }
@@ -333,8 +333,8 @@ public final class FacilityPersistenceManager {
             tj.amount = delivery.data.amount();
             tj.remainingTicks = delivery.getRemainingTicks();
             tj.transportKind = String.valueOf(delivery.data.scope());
-            tj.fromBodyId = String.valueOf(delivery.data.fromBodyId());
-            tj.toBodyId = String.valueOf(delivery.data.toBodyId());
+            tj.fromBodyId = encodeCelestialObjectKey(delivery.data.fromBodyId());
+            tj.toBodyId = encodeCelestialObjectKey(delivery.data.toBodyId());
             tj.departureOrbitalTime = delivery.data.departureOrbitalTime();
             tj.tofOrbitalSeconds = delivery.data.tofOrbitalSeconds();
             list.add(tj);
@@ -625,12 +625,18 @@ public final class FacilityPersistenceManager {
                         .name());
                 moduleData.addProperty("amountKb", config.amountKb());
                 moduleData.addProperty("durationTicks", config.durationTicks());
-                CelestialObjectId originBodyId = config.originBodyId();
+                CelestialObjectKey originBodyId = config.originBodyId();
                 moduleData.add(
                     "originBodyId",
-                    originBodyId == null ? JsonNull.INSTANCE : PURE_GSON.toJsonTree(originBodyId.name()));
+                    originBodyId == null ? JsonNull.INSTANCE
+                        : PURE_GSON.toJsonTree(encodeCelestialObjectKey(originBodyId)));
                 moduleData.addProperty("jobProgressTicks", debugGenerator.jobProgressTicks());
                 moduleData.addProperty("consumedDeciKb", debugGenerator.consumedDeciKb());
+                CelestialObjectKey detectedCounterpartBodyId = debugGenerator.detectedCounterpartBodyId();
+                moduleData.add(
+                    "detectedCounterpartBodyId",
+                    detectedCounterpartBodyId == null ? JsonNull.INSTANCE
+                        : PURE_GSON.toJsonTree(encodeCelestialObjectKey(detectedCounterpartBodyId)));
             } else if (m.component() instanceof IRecipeModule recipeModule) {
                 RecipeConfig rc = recipeModule.getRecipeConfig();
                 if (rc != null) {
@@ -831,12 +837,17 @@ public final class FacilityPersistenceManager {
                         SatelliteDataType dataType = Objects.requireNonNull(
                             PURE_GSON.fromJson(generatorData.get("dataType"), SatelliteDataType.class),
                             "[PERSIST] Debug data generator missing dataType");
-                        CelestialObjectId originBodyId = null;
+                        CelestialObjectKey originBodyId = null;
                         JsonElement originElement = generatorData.get("originBodyId");
                         if (originElement != null && !originElement.isJsonNull()) {
-                            originBodyId = Objects.requireNonNull(
-                                safeValueOf(CelestialObjectId.class, originElement.getAsString()),
-                                "[PERSIST] Debug data generator has invalid originBodyId");
+                            originBodyId = decodeStructuredCelestialObjectKey(
+                                PURE_GSON.fromJson(originElement, CelestialObjectKeyJson.class));
+                        }
+                        CelestialObjectKey detectedCounterpartBodyId = null;
+                        JsonElement detectedElement = generatorData.get("detectedCounterpartBodyId");
+                        if (detectedElement != null && !detectedElement.isJsonNull()) {
+                            detectedCounterpartBodyId = decodeStructuredCelestialObjectKey(
+                                PURE_GSON.fromJson(detectedElement, CelestialObjectKeyJson.class));
                         }
                         debugGenerator.restore(
                             new ModuleDebugDataGenerator.Config(
@@ -848,7 +859,7 @@ public final class FacilityPersistenceManager {
                                 originBodyId),
                             requireInt(generatorData, "jobProgressTicks", moduleId),
                             requireLong(generatorData, "consumedDeciKb", moduleId),
-                            null);
+                            detectedCounterpartBodyId);
                     }
                     case POWER, GEOTHERMAL_GENERATOR -> {}
                     case STORAGE, TANK, BATTERY, MAINTENANCE_BAY -> {}
@@ -1296,8 +1307,8 @@ public final class FacilityPersistenceManager {
         long amount;
         int remainingTicks;
         String transportKind;
-        String fromBodyId;
-        String toBodyId;
+        CelestialObjectKeyJson fromBodyId;
+        CelestialObjectKeyJson toBodyId;
         double departureOrbitalTime;
         double tofOrbitalSeconds;
     }

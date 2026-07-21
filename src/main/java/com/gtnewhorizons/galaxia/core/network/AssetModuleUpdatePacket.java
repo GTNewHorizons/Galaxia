@@ -25,7 +25,7 @@ import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -347,8 +347,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
             SatelliteDataType dataType = PacketUtil.readEnum(payloadBuf, SatelliteDataType.class);
             long amountKb = payloadBuf.readLong();
             int durationTicks = payloadBuf.readInt();
-            CelestialObjectId originBodyId = payloadBuf.readBoolean()
-                ? PacketUtil.readEnum(payloadBuf, CelestialObjectId.class)
+            CelestialObjectKey originBodyId = payloadBuf.readBoolean() ? PacketUtil.readCelestialObjectKey(payloadBuf)
                 : null;
             if (payloadBuf.isReadable()) {
                 throw new IllegalArgumentException("malformed debug data generator payload");
@@ -443,9 +442,9 @@ public final class AssetModuleUpdatePacket implements IMessage {
         PacketUtil.writeEnum(payloadBuf, config.dataType());
         payloadBuf.writeLong(config.amountKb());
         payloadBuf.writeInt(config.durationTicks());
-        CelestialObjectId originBodyId = config.originBodyId();
+        CelestialObjectKey originBodyId = config.originBodyId();
         payloadBuf.writeBoolean(originBodyId != null);
-        if (originBodyId != null) PacketUtil.writeEnum(payloadBuf, originBodyId);
+        if (originBodyId != null) PacketUtil.writeCelestialObjectKey(payloadBuf, originBodyId);
         pkt.rawPayload = new byte[payloadBuf.writerIndex()];
         payloadBuf.readBytes(pkt.rawPayload);
         return pkt;
