@@ -12,7 +12,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryView;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 
@@ -79,20 +78,6 @@ public final class GalaxiaCelestialAPI {
 
     public static List<CelestialObject> getChildren(CelestialObjectKey parentId) {
         return CelestialRegistry.getChildren(parentId);
-    }
-
-    public static List<CelestialObject> dynamicChildren(CelestialObjectKey parentId) {
-        return CelestialRegistry.dynamicChildren(parentId);
-    }
-
-    public static List<CelestialObject> dynamicChildren(CelestialObjectKey parentId,
-        CelestialDiscoveryView discoveryView) {
-        return CelestialRegistry.dynamicChildren(parentId, discoveryView);
-    }
-
-    public static List<CelestialObject> dynamicChildren(CelestialObjectKey parentId,
-        CelestialDiscoveryView discoveryView, boolean includeHidden) {
-        return CelestialRegistry.dynamicChildren(parentId, discoveryView, includeHidden);
     }
 
     public static Map<CelestialObjectKey, CelestialObject> getAllBodies() {

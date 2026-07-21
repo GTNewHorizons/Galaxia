@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -14,28 +15,19 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 
+/**
+ * Decorates canonical asteroid bodies already returned by Registry children.
+ * Does not enumerate the field catalog or decide child-list membership.
+ */
 public final class AsteroidStarmapProjectionBuilder {
 
     private AsteroidStarmapProjectionBuilder() {}
 
-    public static List<AsteroidStarmapProjection> forBelt(@Nonnull CelestialObject belt,
-        @Nonnull Optional<AsteroidFieldKnowledgeSnapshot> knowledgeSnapshot, boolean includeHidden) {
-
-        return forBelt(belt, knowledgeSnapshot, includeHidden, Set.of());
-    }
-
-    public static List<AsteroidStarmapProjection> forBelt(@Nonnull CelestialObject belt,
-        @Nonnull Optional<AsteroidFieldKnowledgeSnapshot> knowledgeSnapshot, boolean includeHidden,
-        @Nonnull Set<MinorCelestialBodyId> scanTargets) {
-
-        return forBelt(belt, knowledgeSnapshot, includeHidden, scanTargets, Set.of());
-    }
-
-    public static List<AsteroidStarmapProjection> forBelt(@Nonnull CelestialObject belt,
+    public static List<AsteroidStarmapProjection> decorate(@Nonnull CelestialObject belt,
+        @Nonnull List<CelestialObject> canonicalBodies,
         @Nonnull Optional<AsteroidFieldKnowledgeSnapshot> knowledgeSnapshot, boolean includeHidden,
         @Nonnull Set<MinorCelestialBodyId> scanTargets, @Nonnull Set<MinorCelestialBodyId> sensorRevealTargets) {
 
-        Optional<AsteroidFieldKnowledgeSnapshot> snapshot = knowledgeSnapshot;
         if (!belt.id()
             .isRegistered()) {
             throw new IllegalArgumentException("Asteroid starmap projection requires a registered belt body");
@@ -47,7 +39,7 @@ public final class AsteroidStarmapProjectionBuilder {
         if (profile == null) {
             throw new IllegalArgumentException("Asteroid starmap projection requires an asteroid field profile");
         }
-        snapshot.ifPresent(value -> {
+        knowledgeSnapshot.ifPresent(value -> {
             if (value.beltId() != beltId) {
                 throw new IllegalArgumentException(
                     "Asteroid knowledge snapshot belt does not match projection belt: " + value.beltId()
@@ -56,46 +48,42 @@ public final class AsteroidStarmapProjectionBuilder {
             }
         });
 
-        AsteroidFieldNodeCatalog catalog = snapshot
+        AsteroidFieldNodeCatalog catalog = knowledgeSnapshot
             .map(value -> AsteroidFieldNodeCatalog.fromSnapshots(beltId, profile, value.nodeSnapshots()))
             .orElseGet(
                 () -> AsteroidFieldNodeCatalog.restored(beltId)
                     .orElseGet(() -> AsteroidFieldNodeCatalog.fromGenerated(beltId, profile)));
-        Map<Integer, AsteroidFieldKnowledgeSnapshot.Entry> entriesByIndex = snapshot
+        Map<Integer, AsteroidFieldKnowledgeSnapshot.Entry> entriesByIndex = knowledgeSnapshot
             .map(AsteroidStarmapProjectionBuilder::entriesByIndex)
             .orElseGet(Map::of);
 
-        return catalog.nodes()
-            .stream()
-            .map(
-                node -> toProjection(
-                    node,
-                    profile,
-                    entriesByIndex.get(node.index()),
+        List<AsteroidStarmapProjection> projections = new ArrayList<>();
+        for (CelestialObject body : canonicalBodies) {
+            if (body == null || !body.id()
+                .isMinorBody()) continue;
+            MinorCelestialBodyId minorId = body.id()
+                .minorBodyId();
+            if (minorId.parentBodyId() != beltId) continue;
+            Optional<AsteroidFieldNode> node = catalog.resolve(minorId);
+            if (node.isEmpty()) continue;
+            projections.add(
+                toProjection(
+                    body,
+                    node.get(),
+                    entriesByIndex.get(
+                        node.get()
+                            .index()),
                     includeHidden,
                     scanTargets,
-                    sensorRevealTargets))
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .toList();
+                    sensorRevealTargets));
+        }
+        return List.copyOf(projections);
     }
 
-    public static List<AsteroidStarmapProjection> forBelt(@Nonnull CelestialObject belt,
-        List<AsteroidFieldKnowledgeSnapshot> knowledgeSnapshots, boolean includeHidden) {
-
-        return forBelt(belt, knowledgeSnapshots, includeHidden, Set.of());
-    }
-
-    public static List<AsteroidStarmapProjection> forBelt(@Nonnull CelestialObject belt,
-        List<AsteroidFieldKnowledgeSnapshot> knowledgeSnapshots, boolean includeHidden,
-        @Nonnull Set<MinorCelestialBodyId> scanTargets) {
-
-        return forBelt(belt, knowledgeSnapshots, includeHidden, scanTargets, Set.of());
-    }
-
-    public static List<AsteroidStarmapProjection> forBelt(@Nonnull CelestialObject belt,
-        List<AsteroidFieldKnowledgeSnapshot> knowledgeSnapshots, boolean includeHidden,
-        @Nonnull Set<MinorCelestialBodyId> scanTargets, @Nonnull Set<MinorCelestialBodyId> sensorRevealTargets) {
+    public static List<AsteroidStarmapProjection> decorate(@Nonnull CelestialObject belt,
+        @Nonnull List<CelestialObject> canonicalBodies, List<AsteroidFieldKnowledgeSnapshot> knowledgeSnapshots,
+        boolean includeHidden, @Nonnull Set<MinorCelestialBodyId> scanTargets,
+        @Nonnull Set<MinorCelestialBodyId> sensorRevealTargets) {
 
         CelestialObjectId beltId = belt.id()
             .registeredBodyId();
@@ -103,7 +91,7 @@ public final class AsteroidStarmapProjectionBuilder {
             : knowledgeSnapshots.stream()
                 .filter(candidate -> candidate.beltId() == beltId)
                 .findFirst();
-        return forBelt(belt, snapshot, includeHidden, scanTargets, sensorRevealTargets);
+        return decorate(belt, canonicalBodies, snapshot, includeHidden, scanTargets, sensorRevealTargets);
     }
 
     private static Map<Integer, AsteroidFieldKnowledgeSnapshot.Entry> entriesByIndex(
@@ -114,9 +102,9 @@ public final class AsteroidStarmapProjectionBuilder {
             .collect(Collectors.toUnmodifiableMap(AsteroidFieldKnowledgeSnapshot.Entry::index, Function.identity()));
     }
 
-    private static Optional<AsteroidStarmapProjection> toProjection(AsteroidFieldNode node,
-        AsteroidFieldProfile profile, AsteroidFieldKnowledgeSnapshot.Entry entry, boolean includeHidden,
-        Set<MinorCelestialBodyId> scanTargets, Set<MinorCelestialBodyId> sensorRevealTargets) {
+    private static AsteroidStarmapProjection toProjection(CelestialObject body, AsteroidFieldNode node,
+        AsteroidFieldKnowledgeSnapshot.Entry entry, boolean includeHidden, Set<MinorCelestialBodyId> scanTargets,
+        Set<MinorCelestialBodyId> sensorRevealTargets) {
 
         DiscoveryState detectionState = entry == null ? node.initialDetectionState() : entry.detectionState();
         CelestialResourceKnowledgeState oreKnowledgeState = entry == null ? initialOreKnowledgeState(node)
@@ -124,8 +112,6 @@ public final class AsteroidStarmapProjectionBuilder {
         boolean scanInProgress = detectionState == DiscoveryState.HIDDEN && scanTargets.contains(node.id());
         boolean sensorRevealed = detectionState == DiscoveryState.HIDDEN && !scanInProgress
             && sensorRevealTargets.contains(node.id());
-        if (detectionState == DiscoveryState.HIDDEN && !includeHidden && !scanInProgress && !sensorRevealed)
-            return Optional.empty();
 
         Optional<String> visibleOreProfileId = oreKnowledgeState == CelestialResourceKnowledgeState.UNKNOWN
             ? Optional.empty()
@@ -137,20 +123,19 @@ public final class AsteroidStarmapProjectionBuilder {
                 .gtOreVeinIds()
             : List.of();
 
-        return Optional.of(
-            new AsteroidStarmapProjection(
-                AsteroidCelestialMaterializer.materialize(node, profile),
-                node.id(),
-                node.kind(),
-                node.sizeClass(),
-                detectionState,
-                oreKnowledgeState,
-                visibleOreProfileId,
-                visibleGtOreVeinIds,
-                node.appearance(),
-                detectionState == DiscoveryState.HIDDEN && includeHidden && !scanInProgress && !sensorRevealed,
-                scanInProgress,
-                sensorRevealed));
+        return new AsteroidStarmapProjection(
+            body,
+            node.id(),
+            node.kind(),
+            node.sizeClass(),
+            detectionState,
+            oreKnowledgeState,
+            visibleOreProfileId,
+            visibleGtOreVeinIds,
+            node.appearance(),
+            detectionState == DiscoveryState.HIDDEN && includeHidden && !scanInProgress && !sensorRevealed,
+            scanInProgress,
+            sensorRevealed);
     }
 
     private static CelestialResourceKnowledgeState initialOreKnowledgeState(AsteroidFieldNode node) {

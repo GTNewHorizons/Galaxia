@@ -115,9 +115,7 @@ public final class AsteroidCelestialMaterializer {
 
     private static boolean isVisible(AsteroidFieldNode node, CelestialDiscoveryView discoveryView) {
         DiscoveryState initialState = AsteroidFieldResolver.initialDetectionState(node);
-        DiscoveryState state = discoveryView == null ? initialState
-            : discoveryView.discoveryState(CelestialObjectKey.minorBody(node.id()))
-                .orElse(initialState);
-        return state == DiscoveryState.DISCOVERED;
+        CelestialDiscoveryView view = discoveryView == null ? CelestialDiscoveryView.empty() : discoveryView;
+        return view.isVisible(CelestialObjectKey.minorBody(node.id()), initialState);
     }
 }

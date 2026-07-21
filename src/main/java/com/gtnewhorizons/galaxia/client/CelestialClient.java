@@ -26,12 +26,14 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidClientProjectionService;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
@@ -505,30 +507,32 @@ public final class CelestialClient {
         return CelestialAssetStore.CLIENT.listAssetsInSystemInternal(systemId, GTTeamsCompat.getTeam());
     }
 
+    /**
+     * Thin client adapter over {@link CelestialRegistry#children}: supplies the synced
+     * discovery view plus temporary scan/sensor visibility and the debug include-hidden flag.
+     * Does not rebuild or materialize a second child list.
+     */
     public static List<CelestialObject> getChildren(CelestialObject parent) {
         return parent == null ? List.of() : getChildren(parent.id());
     }
 
     public static List<CelestialObject> getChildren(CelestialObjectKey parentId) {
-        List<CelestialObject> registeredChildren = GalaxiaCelestialAPI.getChildren(parentId);
-        List<CelestialObject> asteroidChildren = clientAsteroidChildren(parentId);
-        if (asteroidChildren.isEmpty()) return registeredChildren;
-        List<CelestialObject> children = new ArrayList<>(registeredChildren.size() + asteroidChildren.size());
-        children.addAll(registeredChildren);
-        children.addAll(asteroidChildren);
-        return List.copyOf(children);
-    }
-
-    public static List<AsteroidStarmapProjection> getChildAsteroidProjections(CelestialObject parent) {
-        return asteroidProjections.projectionsFor(
-            parent,
-            AsteroidFieldClientKnowledgeState.snapshots(),
-            CelestialDiscoveryClientState.snapshots());
+        return CelestialRegistry.children(
+            parentId,
+            asteroidProjections.discoveryView(
+                parentId,
+                AsteroidFieldClientKnowledgeState.snapshots(),
+                CelestialDiscoveryClientState.snapshots(),
+                CelestialKnowledgeClientState.discoveryView()),
+            asteroidProjections.includeHidden());
     }
 
     public static Optional<AsteroidStarmapProjection> asteroidProjection(CelestialObject body) {
+        if (body == null || body.parentId() == null) return Optional.empty();
+        List<CelestialObject> siblings = getChildren(body.parentId());
         return asteroidProjections.projectionFor(
             body,
+            siblings,
             AsteroidFieldClientKnowledgeState.snapshots(),
             CelestialDiscoveryClientState.snapshots());
     }
@@ -566,13 +570,6 @@ public final class CelestialClient {
     }
 
     // ── Helpers ──
-
-    private static List<CelestialObject> clientAsteroidChildren(CelestialObjectKey parentId) {
-        return asteroidProjections.childrenOf(
-            parentId,
-            AsteroidFieldClientKnowledgeState.snapshots(),
-            CelestialDiscoveryClientState.snapshots());
-    }
 
     private static void collectTransferTargets(CelestialObject current, List<TransferTarget> targets) {
         List<CelestialAsset> state = getState(current.id());

@@ -16,7 +16,7 @@ import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidDynamicCelestialObjectProvider;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidCelestialMaterializer;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.AsteroidContentBuilder;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.GeneratedAsteroids;
@@ -42,7 +42,6 @@ public final class CelestialRegistry {
 
     private static final Map<CelestialObjectKey, CelestialObject> REGISTRATIONS = new LinkedHashMap<>();
     private static final Map<DimensionEnum, CelestialObjectKey> IDS_BY_DIMENSION = new EnumMap<>(DimensionEnum.class);
-    private static final List<DynamicCelestialObjectProvider> DYNAMIC_OBJECT_PROVIDERS = new ArrayList<>();
 
     private static boolean bootstrapped;
     private static boolean frozen;
@@ -363,8 +362,6 @@ public final class CelestialRegistry {
                         .tier(EnumTiers.TIER_1)
                         .worldGeneration(SpaceStation::configureWorldProvider)
                         .build()));
-
-        registerDynamicProvider(new AsteroidDynamicCelestialObjectProvider(CelestialRegistry::registeredObject));
     }
 
     private static void configureOverworldProvider(WorldProviderBuilder builder) {
@@ -407,14 +404,6 @@ public final class CelestialRegistry {
         }
     }
 
-    public static void registerDynamicProvider(@Nonnull DynamicCelestialObjectProvider provider) {
-        assertMutable();
-        if (provider == null) throw new IllegalArgumentException("dynamic object provider is required");
-        if (!DYNAMIC_OBJECT_PROVIDERS.contains(provider)) {
-            DYNAMIC_OBJECT_PROVIDERS.add(provider);
-        }
-    }
-
     public static void freezeAndBake() {
         registerDefaults();
         if (frozen) return;
@@ -443,10 +432,9 @@ public final class CelestialRegistry {
 
     private static Optional<CelestialObject> resolveDynamicMinorBody(CelestialObjectKey key) {
         if (key == null || !key.isMinorBody()) return Optional.empty();
-        return DYNAMIC_OBJECT_PROVIDERS.stream()
-            .map(provider -> provider.resolve(key))
-            .flatMap(Optional::stream)
-            .findFirst();
+        return AsteroidCelestialMaterializer.resolveMinorBody(
+            key,
+            beltId -> Optional.ofNullable(REGISTRATIONS.get(CelestialObjectKey.registered(beltId))));
     }
 
     public static List<CelestialObject> getAll() {
@@ -467,6 +455,12 @@ public final class CelestialRegistry {
             .toList();
     }
 
+    /**
+     * Returns registered hierarchy children only (planets, moons, the belt body itself, …).
+     * <p>
+     * Does <b>not</b> include generated asteroid-field minors. Those come from
+     * {@code children(parent, discoveryView, includeHidden)} (or the client equivalent).
+     */
     public static List<CelestialObject> getChildren(CelestialObjectKey parentId) {
         registerDefaults();
         if (parentId == null) return List.of();
@@ -475,29 +469,31 @@ public final class CelestialRegistry {
                 .getOrDefault(parentId, List.of()));
     }
 
-    public static List<CelestialObject> dynamicChildren(CelestialObjectKey parentId) {
-        return dynamicChildren(parentId, CelestialDiscoveryView.empty());
-    }
-
-    public static List<CelestialObject> dynamicChildren(CelestialObjectKey parentId,
-        CelestialDiscoveryView discoveryView) {
-        return dynamicChildren(parentId, discoveryView, false);
-    }
-
-    public static List<CelestialObject> dynamicChildren(CelestialObjectKey parentId,
-        CelestialDiscoveryView discoveryView, boolean includeHidden) {
+    /**
+     * Sole view-aware owner of a complete child list for a parent.
+     * Composes registered hierarchy children first, then materialized minor bodies
+     * visible under {@code discoveryView} (or all minors when {@code includeHidden}).
+     * <p>
+     * Clients must pass a synced discovery view and must not rebuild a second child
+     * list from asteroid projection code.
+     *
+     * @apiNote Blind hierarchy walks stay on {@link #getChildren(CelestialObjectKey)}.
+     */
+    public static List<CelestialObject> children(CelestialObjectKey parentKey, CelestialDiscoveryView discoveryView,
+        boolean includeHidden) {
         registerDefaults();
-        if (parentId == null) return List.of();
-        return Collections.unmodifiableList(
-            DYNAMIC_OBJECT_PROVIDERS.stream()
-                .flatMap(
-                    provider -> provider.dynamicChildren(parentId, discoveryView, includeHidden)
-                        .stream())
-                .toList());
-    }
-
-    private static Optional<CelestialObject> registeredObject(CelestialObjectKey key) {
-        return Optional.ofNullable(REGISTRATIONS.get(key));
+        if (parentKey == null) return List.of();
+        List<CelestialObject> registered = getChildren(parentKey);
+        List<CelestialObject> minors = AsteroidCelestialMaterializer.knownChildren(
+            parentKey,
+            discoveryView == null ? CelestialDiscoveryView.empty() : discoveryView,
+            includeHidden,
+            beltId -> Optional.ofNullable(REGISTRATIONS.get(CelestialObjectKey.registered(beltId))));
+        if (minors.isEmpty()) return registered;
+        List<CelestialObject> combined = new ArrayList<>(registered.size() + minors.size());
+        combined.addAll(registered);
+        combined.addAll(minors);
+        return Collections.unmodifiableList(combined);
     }
 
     public static List<CelestialObject> getRoots() {
