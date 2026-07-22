@@ -236,7 +236,7 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
             "Copy miner settings",
             "Copy",
             coord -> ModuleSettingsCopyPickerModel.isCompatibleTarget(facility, source, coord),
-            coord -> ModuleSettingsCopyPickerModel.normalizeTarget(facility, coord),
+            coord -> StationTargetPicker.normalizeTarget(facility, coord),
             targets -> CelestialClient.copyModuleSettings(assetId, sourceModuleIndex, targets));
     }
 

@@ -7,8 +7,8 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.CelestialResourceKnowledgeState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
 
 public record AsteroidFieldNodeSnapshot(int index, @Nonnull String displayName, @Nonnull AsteroidNodeKind kind,
     @Nonnull AsteroidSizeClass sizeClass, @Nonnull DiscoveryState initialDetectionState,

@@ -12,14 +12,6 @@ final class ModuleSettingsCopyPickerModel {
 
     private ModuleSettingsCopyPickerModel() {}
 
-    static StationTileCoord normalizeTarget(AutomatedFacility facility, StationTileCoord coord) {
-        if (facility == null || coord == null) return coord;
-        StationLayout layout = facility.stationLayout();
-        if (layout == null) return coord;
-        ModuleInstance module = layout.moduleAt(coord);
-        return module == null ? coord : module.anchor();
-    }
-
     static boolean isCompatibleTarget(AutomatedFacility facility, ModuleInstance source, StationTileCoord coord) {
         if (facility == null || source == null || coord == null) return false;
         if (!FacilityModuleRegistry.get(source.kind())

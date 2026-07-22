@@ -315,7 +315,7 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
             "Upgrade modules",
             "Upgrade",
             coord -> ModuleUpgradePickerModel.isCompatibleTarget(facility, source, targetTier, targetVariant, coord),
-            coord -> ModuleUpgradePickerModel.normalizeTarget(facility, coord),
+            coord -> StationTargetPicker.normalizeTarget(facility, coord),
             targets -> {
                 List<StationTileCoord> confirmedTargets = ModuleUpgradePickerModel
                     .confirmedTargets(facility, source, targetTier, targetVariant, targets);

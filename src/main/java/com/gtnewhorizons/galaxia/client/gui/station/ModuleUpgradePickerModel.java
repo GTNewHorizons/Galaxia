@@ -20,14 +20,6 @@ final class ModuleUpgradePickerModel {
 
     private ModuleUpgradePickerModel() {}
 
-    static StationTileCoord normalizeTarget(AutomatedFacility facility, StationTileCoord coord) {
-        if (facility == null || coord == null) return coord;
-        StationLayout layout = facility.stationLayout();
-        if (layout == null) return coord;
-        ModuleInstance module = layout.moduleAt(coord);
-        return module == null ? coord : module.anchor();
-    }
-
     static boolean isCompatibleTarget(AutomatedFacility facility, ModuleInstance source, ModuleTier targetTier,
         @Nullable HammerVariant targetHammerVariant, StationTileCoord coord) {
         if (facility == null || source == null || targetTier == null || coord == null) return false;
