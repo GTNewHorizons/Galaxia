@@ -98,18 +98,6 @@ public final class StationLayout {
         tiles.forEach(action);
     }
 
-    public boolean deconstruct(StationTileCoord anyTile) {
-        PlacedTile tile = tiles.get(anyTile);
-        if (tile == null || tile.module() == null) return false;
-        ModuleInstance module = tile.module();
-        for (StationTileCoord coord : module.shape()
-            .tiles(module.anchor())) {
-            tiles.remove(coord);
-        }
-        version++;
-        return true;
-    }
-
     public void place(ModuleInstance module) {
         StationTileState state = StationTileState.fromModuleStatus(module.status());
         StationTileCoord[] footprint = module.shape()
