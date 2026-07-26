@@ -123,15 +123,6 @@ public final class CelestialClient {
         hammerTrajectoryLoadSample = new HammerTrajectoryLoadSample(0.0, 0.0);
     }
 
-    public static void createModule(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled) {
-        createModules(assetId, kind, creativeBuildModeEnabled, null);
-    }
-
-    public static void createModule(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled,
-        @Nullable StationTileCoord tileCoord) {
-        createModules(assetId, kind, creativeBuildModeEnabled, tileCoord == null ? null : List.of(tileCoord));
-    }
-
     public static void createModules(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled,
         List<StationTileCoord> tileCoords) {
         createModules(
