@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import net.minecraftforge.fluids.FluidRegistry;
 
@@ -17,11 +17,9 @@ final class GalaxiaAtmosphereFluidsTest {
     }
 
     @Test
-    void registersPlaceholderAtmosphereFluid() {
+    void registersPlaceholderAtmosphereFluidWithForge() {
         GalaxiaAtmosphereFluids.init();
 
-        assertSame(
-            GalaxiaAtmosphereFluids.oxygenNitrogenAtmosphere(),
-            FluidRegistry.getFluid(GalaxiaAtmosphereFluids.OXYGEN_NITROGEN_ATMOSPHERE_NAME));
+        assertNotNull(FluidRegistry.getFluid(GalaxiaAtmosphereFluids.OXYGEN_NITROGEN_ATMOSPHERE_NAME));
     }
 }

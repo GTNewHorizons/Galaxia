@@ -81,12 +81,6 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
             .findFirst();
     }
 
-    public List<AsteroidOreProfile> oreProfiles() {
-        return oreProfileEntries.stream()
-            .map(OreProfileEntry::profile)
-            .toList();
-    }
-
     public AsteroidOreProfile selectOreProfile(double roll) {
         if (!Double.isFinite(roll)) throw new IllegalArgumentException("ore profile roll must be finite");
         double clampedRoll = Math.max(0.0, Math.min(Math.nextDown(1.0), roll));

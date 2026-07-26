@@ -85,7 +85,7 @@ final class AsteroidFieldProfileTest {
         assertEquals(10.0, profile.innerOrbitalRadius());
         assertEquals(20.0, profile.outerOrbitalRadius());
         assertEquals(1000.0, profile.placementConnectionRadius());
-        assertEquals(List.of(metallic), profile.oreProfiles());
+        assertEquals(metallic, profile.selectOreProfile(0.0));
     }
 
     @Test
@@ -100,7 +100,6 @@ final class AsteroidFieldProfileTest {
             .oreProfile(volatileIce, 1.0)
             .build();
 
-        assertEquals(List.of(metallic, volatileIce), profile.oreProfiles());
         assertEquals(metallic, profile.selectOreProfile(0.0));
         assertEquals(metallic, profile.selectOreProfile(0.74));
         assertEquals(volatileIce, profile.selectOreProfile(0.75));
