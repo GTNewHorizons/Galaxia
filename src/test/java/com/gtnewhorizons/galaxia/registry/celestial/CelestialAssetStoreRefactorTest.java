@@ -357,7 +357,7 @@ final class CelestialAssetStoreRefactorTest {
         return new CelestialAssetStore();
     }
 
-    private static CelestialAsset createAsset(CelestialObjectKey bodyId) {
-        return CelestialAsset.create(bodyId, CelestialAsset.Kind.AUTOMATED_OUTPOST, Buildable.Status.OPERATIONAL);
+    private static CelestialAsset createAsset(CelestialObjectKey bodyKey) {
+        return CelestialAsset.create(bodyKey, CelestialAsset.Kind.AUTOMATED_OUTPOST, Buildable.Status.OPERATIONAL);
     }
 }

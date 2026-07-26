@@ -56,12 +56,12 @@ public final class CelestialAssetStore {
         return SERVER.getTeamIdInternal(assetId);
     }
 
-    public static List<CelestialAsset> getState(UUID teamId, CelestialObjectKey celestialObjectId) {
-        return SERVER.getStateInternal(teamId, celestialObjectId);
+    public static List<CelestialAsset> getState(UUID teamId, CelestialObjectKey celestialObjectKey) {
+        return SERVER.getStateInternal(teamId, celestialObjectKey);
     }
 
-    public static Set<CelestialAsset> getTeamAssets(UUID teamId, CelestialObjectKey objectId) {
-        return getTeamAssets(teamId).getOrDefault(objectId, Set.of());
+    public static Set<CelestialAsset> getTeamAssets(UUID teamId, CelestialObjectKey objectKey) {
+        return getTeamAssets(teamId).getOrDefault(objectKey, Set.of());
     }
 
     public static Map<CelestialObjectKey, Set<CelestialAsset>> getTeamAssets(UUID teamId) {
@@ -116,8 +116,8 @@ public final class CelestialAssetStore {
         return SERVER.isOwnedByInternal(teamId, id);
     }
 
-    public static Set<CelestialAsset.ID> getAssetsOnBody(CelestialObjectKey objectId) {
-        return SERVER.getAssetsOnBodyInternal(objectId);
+    public static Set<CelestialAsset.ID> getAssetsOnBody(CelestialObjectKey objectKey) {
+        return SERVER.getAssetsOnBodyInternal(objectKey);
     }
 
     public static void removeTeam(UUID teamId) {
@@ -128,8 +128,8 @@ public final class CelestialAssetStore {
         SERVER.transferTeamAssetsInternal(fromTeamId, toTeamId);
     }
 
-    public static List<CelestialAsset> listAssetsInSystem(CelestialObjectKey systemId, UUID teamId) {
-        return SERVER.listAssetsInSystemInternal(systemId, teamId);
+    public static List<CelestialAsset> listAssetsInSystem(CelestialObjectKey systemKey, UUID teamId) {
+        return SERVER.listAssetsInSystemInternal(systemKey, teamId);
     }
     // ── Instance methods ──
 
@@ -148,9 +148,9 @@ public final class CelestialAssetStore {
         return teamById.get(assetId);
     }
 
-    public List<CelestialAsset> getStateInternal(UUID teamId, CelestialObjectKey celestialObjectId) {
+    public List<CelestialAsset> getStateInternal(UUID teamId, CelestialObjectKey celestialObjectKey) {
         Set<CelestialAsset.ID> ids = bodyIndex.getOrDefault(teamId, Map.of())
-            .getOrDefault(celestialObjectId, Set.of());
+            .getOrDefault(celestialObjectKey, Set.of());
         return resolveIds(ids);
     }
 
@@ -279,8 +279,8 @@ public final class CelestialAssetStore {
         }
     }
 
-    public Set<CelestialAsset.ID> getAssetsOnBodyInternal(CelestialObjectKey objectId) {
-        return byBody.getOrDefault(objectId, Set.of());
+    public Set<CelestialAsset.ID> getAssetsOnBodyInternal(CelestialObjectKey objectKey) {
+        return byBody.getOrDefault(objectKey, Set.of());
     }
 
     public void transferTeamAssetsInternal(UUID fromTeamId, UUID toTeamId) {
@@ -305,91 +305,95 @@ public final class CelestialAssetStore {
         if (this == SERVER) SatelliteNetworkService.rebuildDataEndpointsFromAssets();
     }
 
-    public int satelliteCount(UUID teamId, CelestialObjectKey bodyId, SatelliteKind kind) {
-        validateSatelliteKey(teamId, bodyId, kind);
+    public int satelliteCount(UUID teamId, CelestialObjectKey bodyKey, SatelliteKind kind) {
+        validateSatelliteKey(teamId, bodyKey, kind);
         int count = 0;
-        for (CelestialAsset asset : getStateInternal(teamId, bodyId)) {
+        for (CelestialAsset asset : getStateInternal(teamId, bodyKey)) {
             if (asset instanceof Satellite satellite && satellite.satelliteKind() == kind) count++;
         }
         return count;
     }
 
-    public long satelliteBandwidth(UUID teamId, CelestialObjectKey bodyId) {
-        return (long) (satelliteCount(teamId, bodyId, SatelliteKind.COMMUNICATION)
+    public long satelliteBandwidth(UUID teamId, CelestialObjectKey bodyKey) {
+        return (long) (satelliteCount(teamId, bodyKey, SatelliteKind.COMMUNICATION)
             * SatelliteKind.COMMUNICATION.effectPerSatellite());
     }
 
-    public double satelliteMiningSpeedBonus(UUID teamId, CelestialObjectKey bodyId) {
-        return satelliteCount(teamId, bodyId, SatelliteKind.PROSPECTING)
+    public double satelliteMiningSpeedBonus(UUID teamId, CelestialObjectKey bodyKey) {
+        return satelliteCount(teamId, bodyKey, SatelliteKind.PROSPECTING)
             * SatelliteKind.PROSPECTING.effectPerSatellite();
     }
 
-    public List<CelestialAsset.ID> addSatellites(UUID teamId, CelestialObjectKey bodyId, SatelliteKind kind,
+    public List<CelestialAsset.ID> addSatellites(UUID teamId, CelestialObjectKey bodyKey, SatelliteKind kind,
         int amount) {
-        validateSatelliteKey(teamId, bodyId, kind);
+        validateSatelliteKey(teamId, bodyKey, kind);
         if (amount < 0) throw new IllegalArgumentException("Satellite amount must be non-negative: " + amount);
-        int current = satelliteCount(teamId, bodyId, kind);
+        int current = satelliteCount(teamId, bodyKey, kind);
         if (Integer.MAX_VALUE - current < amount) {
             throw new IllegalArgumentException(
-                "Satellite count overflow for team " + teamId + ", body " + bodyId + ", kind " + kind);
+                "Satellite count overflow for team " + teamId + ", body " + bodyKey + ", kind " + kind);
         }
-        return setSatelliteCount(teamId, bodyId, kind, current + amount);
+        return setSatelliteCount(teamId, bodyKey, kind, current + amount);
     }
 
-    public List<CelestialAsset.ID> setSatelliteCount(UUID teamId, CelestialObjectKey bodyId, SatelliteKind kind,
+    public List<CelestialAsset.ID> setSatelliteCount(UUID teamId, CelestialObjectKey bodyKey, SatelliteKind kind,
         int count) {
-        validateSatelliteKey(teamId, bodyId, kind);
+        validateSatelliteKey(teamId, bodyKey, kind);
         if (count < 0) throw new IllegalArgumentException("Satellite count must be non-negative: " + count);
         if (count == 0) {
-            return deleteSatellites(teamId, bodyId, kind);
+            return deleteSatellites(teamId, bodyKey, kind);
         }
-        int current = satelliteCount(teamId, bodyId, kind);
+        int current = satelliteCount(teamId, bodyKey, kind);
         List<CelestialAsset.ID> changed = new ArrayList<>();
         for (int i = current; i < count; i++) {
-            Satellite satellite = new Satellite(CelestialAsset.ID.create(), bodyId, Buildable.Status.OPERATIONAL, kind);
+            Satellite satellite = new Satellite(
+                CelestialAsset.ID.create(),
+                bodyKey,
+                Buildable.Status.OPERATIONAL,
+                kind);
             registerAssetInternal(teamId, satellite);
             changed.add(satellite.assetId);
         }
         for (int i = current; i > count; i--) {
-            CelestialAsset.ID assetId = firstSatelliteId(teamId, bodyId, kind);
+            CelestialAsset.ID assetId = firstSatelliteId(teamId, bodyKey, kind);
             if (destroyAssetInternal(assetId)) changed.add(assetId);
         }
         return changed;
     }
 
-    public List<CelestialAsset.ID> deleteSatellites(UUID teamId, CelestialObjectKey bodyId, SatelliteKind kind) {
-        validateSatelliteKey(teamId, bodyId, kind);
+    public List<CelestialAsset.ID> deleteSatellites(UUID teamId, CelestialObjectKey bodyKey, SatelliteKind kind) {
+        validateSatelliteKey(teamId, bodyKey, kind);
         List<CelestialAsset.ID> removed = new ArrayList<>();
-        while (satelliteCount(teamId, bodyId, kind) > 0) {
-            CelestialAsset.ID assetId = firstSatelliteId(teamId, bodyId, kind);
+        while (satelliteCount(teamId, bodyKey, kind) > 0) {
+            CelestialAsset.ID assetId = firstSatelliteId(teamId, bodyKey, kind);
             if (destroyAssetInternal(assetId)) removed.add(assetId);
         }
         return removed;
     }
 
-    public List<CelestialAsset.ID> deleteSatelliteAmount(UUID teamId, CelestialObjectKey bodyId, SatelliteKind kind,
+    public List<CelestialAsset.ID> deleteSatelliteAmount(UUID teamId, CelestialObjectKey bodyKey, SatelliteKind kind,
         int amount) {
-        validateSatelliteKey(teamId, bodyId, kind);
+        validateSatelliteKey(teamId, bodyKey, kind);
         if (amount < 0) throw new IllegalArgumentException("Satellite amount must be non-negative: " + amount);
         List<CelestialAsset.ID> removed = new ArrayList<>();
-        for (int i = 0; i < amount && satelliteCount(teamId, bodyId, kind) > 0; i++) {
-            CelestialAsset.ID assetId = firstSatelliteId(teamId, bodyId, kind);
+        for (int i = 0; i < amount && satelliteCount(teamId, bodyKey, kind) > 0; i++) {
+            CelestialAsset.ID assetId = firstSatelliteId(teamId, bodyKey, kind);
             if (destroyAssetInternal(assetId)) removed.add(assetId);
         }
         return removed;
     }
 
-    private CelestialAsset.ID firstSatelliteId(UUID teamId, CelestialObjectKey bodyId, SatelliteKind kind) {
-        for (CelestialAsset asset : getStateInternal(teamId, bodyId)) {
+    private CelestialAsset.ID firstSatelliteId(UUID teamId, CelestialObjectKey bodyKey, SatelliteKind kind) {
+        for (CelestialAsset asset : getStateInternal(teamId, bodyKey)) {
             if (asset instanceof Satellite satellite && satellite.satelliteKind() == kind) return asset.assetId;
         }
         throw new IllegalStateException(
-            "No satellite asset for team " + teamId + ", body " + bodyId + ", kind " + kind);
+            "No satellite asset for team " + teamId + ", body " + bodyKey + ", kind " + kind);
     }
 
-    private static void validateSatelliteKey(UUID teamId, CelestialObjectKey bodyId, SatelliteKind kind) {
+    private static void validateSatelliteKey(UUID teamId, CelestialObjectKey bodyKey, SatelliteKind kind) {
         if (teamId == null) throw new IllegalArgumentException("Satellite team id is required");
-        if (bodyId == null) throw new IllegalArgumentException("Satellite body id is required");
+        if (bodyKey == null) throw new IllegalArgumentException("Satellite body id is required");
         if (kind == null) throw new IllegalArgumentException("Satellite kind is required");
     }
 
@@ -419,14 +423,14 @@ public final class CelestialAssetStore {
     }
 
     /**
-     * Returns every team-owned asset whose host body sits in the system rooted at {@code systemId}.
+     * Returns every team-owned asset whose host body sits in the system rooted at {@code systemKey}.
      * Aggregates by walking descendants of the system root (a star) in the celestial hierarchy.
      * Order: stable DFS by hierarchy. Caller owns the returned list.
      */
-    public List<CelestialAsset> listAssetsInSystemInternal(CelestialObjectKey systemId, UUID teamId) {
+    public List<CelestialAsset> listAssetsInSystemInternal(CelestialObjectKey systemKey, UUID teamId) {
         List<CelestialAsset> assets = new ArrayList<>();
-        if (systemId == null || teamId == null) return assets;
-        CelestialObject systemRoot = CelestialRegistry.get(systemId)
+        if (systemKey == null || teamId == null) return assets;
+        CelestialObject systemRoot = CelestialRegistry.get(systemKey)
             .orElse(null);
         if (systemRoot == null) return assets;
         collectAssetsInSubtree(systemRoot, teamId, assets);

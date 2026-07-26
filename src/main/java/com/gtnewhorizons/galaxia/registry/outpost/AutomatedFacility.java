@@ -86,8 +86,8 @@ public final class AutomatedFacility extends CelestialAsset {
     public static final long BASE_ITEM_CAPACITY = 1000L;
     public static final int UPKEEP_INTERVAL_TICKS = 20 * 60;
 
-    public AutomatedFacility(CelestialAsset.ID assetId, CelestialObjectKey celestialBodyId, Kind kind, Status status) {
-        super(assetId, celestialBodyId, kind, status, null);
+    public AutomatedFacility(CelestialAsset.ID assetId, CelestialObjectKey celestialBodyKey, Kind kind, Status status) {
+        super(assetId, celestialBodyKey, kind, status, null);
         if (kind != Kind.AUTOMATED_OUTPOST && kind != Kind.AUTOMATED_STATION) {
             throw new IllegalArgumentException(
                 "AutomatedFacility kind must be AUTOMATED_OUTPOST or AUTOMATED_STATION, got: " + kind);
@@ -97,7 +97,7 @@ public final class AutomatedFacility extends CelestialAsset {
         this.layoutCache = new LayoutCacheBundle(layout);
         this.settingsGroupState = new FacilitySettingsGroupState();
         this.upkeepLedger = new UpkeepLedger();
-        this.stationFeatureSalt = createStationFeatureSalt(assetId, celestialBodyId);
+        this.stationFeatureSalt = createStationFeatureSalt(assetId, celestialBodyKey);
         this.energyStored = 0;
         this.ticks = 0;
     }

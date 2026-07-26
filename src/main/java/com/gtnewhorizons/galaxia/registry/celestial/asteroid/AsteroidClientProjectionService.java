@@ -165,10 +165,10 @@ public final class AsteroidClientProjectionService {
             .orElse(Set.of());
     }
 
-    private static Set<MinorCelestialBodyId> scanTargets(CelestialObjectKey beltId,
+    private static Set<MinorCelestialBodyId> scanTargets(CelestialObjectKey beltKey,
         List<CelestialDiscoveryScanSnapshot> scanSnapshots) {
-        if (!beltId.isRegistered()) return Set.of();
-        CelestialObjectId registeredBeltId = beltId.registeredBodyId();
+        if (!beltKey.isRegistered()) return Set.of();
+        CelestialObjectId registeredBeltId = beltKey.registeredBodyId();
         Set<MinorCelestialBodyId> targets = new LinkedHashSet<>();
         for (CelestialDiscoveryScanSnapshot snapshot : scanSnapshots) {
             if (snapshot.capability() != CelestialDiscoveryCapability.PROSPECTING) continue;

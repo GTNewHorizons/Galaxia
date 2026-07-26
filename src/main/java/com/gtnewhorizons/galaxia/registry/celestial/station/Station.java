@@ -28,8 +28,8 @@ public class Station extends CelestialAsset {
 
     private BlockPos controller;
 
-    public Station(ID assetId, CelestialObjectKey celestialObjectId, Status status) {
-        super(assetId, celestialObjectId, Kind.STATION, status, null);
+    public Station(ID assetId, CelestialObjectKey celestialObjectKey, Status status) {
+        super(assetId, celestialObjectKey, Kind.STATION, status, null);
     }
 
     public Station(ID assetId, CelestialObjectId celestialObjectId, Status status) {

@@ -108,13 +108,13 @@ public final class AsteroidCelestialMaterializer {
             .build();
     }
 
-    public static List<CelestialObject> knownChildren(@Nonnull CelestialObjectKey parentId,
+    public static List<CelestialObject> knownChildren(@Nonnull CelestialObjectKey parentKey,
         @Nonnull CelestialDiscoveryView discoveryView, boolean includeHidden,
         @Nonnull Function<CelestialObjectId, Optional<CelestialObject>> beltLookup) {
 
-        if (parentId == null || !parentId.isRegistered()) return List.of();
-        return beltLookup.apply(parentId.registeredBodyId())
-            .map(parent -> knownChildren(parentId.registeredBodyId(), parent, discoveryView, includeHidden))
+        if (parentKey == null || !parentKey.isRegistered()) return List.of();
+        return beltLookup.apply(parentKey.registeredBodyId())
+            .map(parent -> knownChildren(parentKey.registeredBodyId(), parent, discoveryView, includeHidden))
             .orElseGet(List::of);
     }
 
