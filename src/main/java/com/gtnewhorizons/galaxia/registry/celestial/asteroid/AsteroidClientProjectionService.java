@@ -213,8 +213,8 @@ public final class AsteroidClientProjectionService {
                     .minorBodyId());
             if (anchor.isEmpty()) continue;
             for (AsteroidFieldNode candidate : catalog.nodes()) {
-                if (isHidden(candidate) && AsteroidFieldOrbitResolver
-                    .separation(profile, anchor.get(), candidate) <= scan.radius()) {
+                if (isHidden(candidate)
+                    && AsteroidFieldOrbitResolver.separation(profile, anchor.get(), candidate) <= scan.radius()) {
                     targets.add(candidate.id());
                 }
             }

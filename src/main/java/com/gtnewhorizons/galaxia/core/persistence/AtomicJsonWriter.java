@@ -30,17 +30,17 @@ final class AtomicJsonWriter {
                 e);
         }
         try {
-            Files.move(
-                tmp.toPath(),
-                file.toPath(),
-                StandardCopyOption.REPLACE_EXISTING,
-                StandardCopyOption.ATOMIC_MOVE);
+            Files
+                .move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (AtomicMoveNotSupportedException e) {
             try {
                 Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException fallback) {
                 throw new IllegalStateException(
-                    "[PERSIST] SAVE FAILED: " + failureContext + " replace error " + file + ": "
+                    "[PERSIST] SAVE FAILED: " + failureContext
+                        + " replace error "
+                        + file
+                        + ": "
                         + fallback.getMessage(),
                     fallback);
             }
