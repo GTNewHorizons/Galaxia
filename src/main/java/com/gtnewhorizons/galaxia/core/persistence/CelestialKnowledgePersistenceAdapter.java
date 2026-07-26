@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.core.persistence;
 
 import java.io.File;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -113,13 +112,7 @@ final class CelestialKnowledgePersistenceAdapter {
             }
             registry.teams.add(team);
         }
-        try (FileWriter writer = new FileWriter(file)) {
-            gson.toJson(registry, writer);
-        } catch (IOException e) {
-            throw new IllegalStateException(
-                "[PERSIST] SAVE FAILED: celestial knowledge write error " + file + ": " + e.getMessage(),
-                e);
-        }
+        AtomicJsonWriter.write(file, gson, registry, "celestial knowledge");
     }
 
     static final class KnowledgeRegistryJson {
