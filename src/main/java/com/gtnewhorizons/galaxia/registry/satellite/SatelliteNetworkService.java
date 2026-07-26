@@ -263,8 +263,8 @@ public final class SatelliteNetworkService {
     private static SatelliteNetworkGraph.Node nodeFor(CelestialObject root, CelestialObject body, double orbitalTime) {
         OrbitalMechanics.OrbitalState state = resolveNodeWorldState(root, body, orbitalTime);
         return new SatelliteNetworkGraph.Node(
-            body.id(),
-            body.parentId(),
+            body.key(),
+            body.parentKey(),
             orbitalOrder(body),
             state.x(),
             state.y(),
@@ -275,14 +275,14 @@ public final class SatelliteNetworkService {
         double orbitalTime) {
         OrbitalMechanics.OrbitalState state = OrbitalMechanics.resolveWorldState(root, body, orbitalTime);
         if (state == null) {
-            throw new IllegalStateException("Cannot resolve orbital state for satellite network body: " + body.id());
+            throw new IllegalStateException("Cannot resolve orbital state for satellite network body: " + body.key());
         }
         return state;
     }
 
     private static double orbitalOrder(CelestialObject body) {
         OrbitalParams params = body.orbitalParams();
-        return params == null ? body.id()
+        return params == null ? body.key()
             .parentSortOrdinal() : params.semiMajorAxis();
     }
 

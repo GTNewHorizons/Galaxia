@@ -39,7 +39,7 @@ final class AsteroidStarmapScenePresentation {
             if (!isAsteroid(state.body()) || !state.renderBody()) continue;
             double radius = CelestialDiscoveryClientState.scan(
                 state.body()
-                    .id(),
+                    .key(),
                 CelestialDiscoveryCapability.PROSPECTING)
                 .filter(snapshot -> snapshot.status() == CelestialDiscoveryScanSnapshot.Status.ACTIVE)
                 .map(CelestialDiscoveryScanSnapshot::radius)

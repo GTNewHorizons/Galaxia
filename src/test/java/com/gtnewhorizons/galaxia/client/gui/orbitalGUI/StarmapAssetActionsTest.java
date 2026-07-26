@@ -89,7 +89,7 @@ final class StarmapAssetActionsTest {
 
     private static void setDiscovery(CelestialObject body, DiscoveryState detectionState) {
         CelestialKnowledgeClientState.apply(
-            Map.of(body.id(), CelestialKnowledgeFacts.of(detectionState, CelestialResourceKnowledgeState.UNKNOWN)));
+            Map.of(body.key(), CelestialKnowledgeFacts.of(detectionState, CelestialResourceKnowledgeState.UNKNOWN)));
     }
 
     private static CelestialObject hiddenAsteroid() {

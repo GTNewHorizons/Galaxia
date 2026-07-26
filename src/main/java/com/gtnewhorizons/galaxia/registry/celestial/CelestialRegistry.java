@@ -389,7 +389,7 @@ public final class CelestialRegistry {
 
     public static void register(CelestialObjectId id, @Nonnull Consumer<CelestialObject.Builder> registrationBuilder) {
         CelestialObject.Builder builder = CelestialObject.builder()
-            .id(id);
+            .key(id);
 
         registrationBuilder.accept(builder);
         register(builder.build());
@@ -406,9 +406,9 @@ public final class CelestialRegistry {
     public static void register(@Nonnull CelestialObject registration) {
         assertMutable();
         validateRegistration(registration);
-        REGISTRATIONS.put(registration.id(), registration);
+        REGISTRATIONS.put(registration.key(), registration);
         if (registration.dimensionEnum() != null) {
-            IDS_BY_DIMENSION.put(registration.dimensionEnum(), registration.id());
+            IDS_BY_DIMENSION.put(registration.dimensionEnum(), registration.key());
         }
     }
 
@@ -549,15 +549,15 @@ public final class CelestialRegistry {
     }
 
     private static void validateRegistration(CelestialObject registration) {
-        if (REGISTRATIONS.containsKey(registration.id())) {
-            throw new IllegalArgumentException("Duplicate celestial object id: " + registration.id());
+        if (REGISTRATIONS.containsKey(registration.key())) {
+            throw new IllegalArgumentException("Duplicate celestial object id: " + registration.key());
         }
-        if (registration.parentId() != null && registration.parentId()
-            .equals(registration.id())) {
-            throw new IllegalArgumentException("Celestial object cannot orbit itself: " + registration.id());
+        if (registration.parentKey() != null && registration.parentKey()
+            .equals(registration.key())) {
+            throw new IllegalArgumentException("Celestial object cannot orbit itself: " + registration.key());
         }
-        if (registration.parentId() != null && !REGISTRATIONS.containsKey(registration.parentId())) {
-            throw new IllegalArgumentException("Unknown parent celestial object id: " + registration.parentId());
+        if (registration.parentKey() != null && !REGISTRATIONS.containsKey(registration.parentKey())) {
+            throw new IllegalArgumentException("Unknown parent celestial object id: " + registration.parentKey());
         }
         if (registration.dimensionEnum() != null) {
             // A dimension can only have one owning celestial key. This keeps

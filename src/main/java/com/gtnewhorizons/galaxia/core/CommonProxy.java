@@ -151,7 +151,7 @@ public class CommonProxy {
             if (gtOres.isEmpty()) {
                 Galaxia.LOG.error(
                     "[GT_ORE_AUDIT] {} declares GT ore veins {} but resolved no GT ore stacks",
-                    body.id(),
+                    body.key(),
                     properties.gtOreVeinIds());
                 continue;
             }
@@ -159,7 +159,7 @@ public class CommonProxy {
             stackCount += gtOres.size();
             Galaxia.LOG.info(
                 "[GT_ORE_AUDIT] {} resolved {} GT ore stacks from {}",
-                body.id(),
+                body.key(),
                 gtOres.size(),
                 properties.gtOreVeinIds());
         }

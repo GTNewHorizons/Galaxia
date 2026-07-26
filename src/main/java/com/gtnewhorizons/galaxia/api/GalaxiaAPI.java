@@ -366,7 +366,7 @@ public final class GalaxiaAPI {
 
         Set<CelestialAsset.ID> assets = CelestialAssetStore.getAssetsOnBody(
             body.get()
-                .id());
+                .key());
         for (var assetId : assets) {
             CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
             if (!(asset instanceof Station station)) continue;

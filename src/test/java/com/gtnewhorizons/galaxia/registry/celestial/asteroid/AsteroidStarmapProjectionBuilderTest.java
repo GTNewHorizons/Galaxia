@@ -46,7 +46,7 @@ final class AsteroidStarmapProjectionBuilderTest {
         assertEquals(
             CelestialObjectKey.minorBody(medium.id()),
             mediumProjection.body()
-                .id());
+                .key());
         assertEquals(
             CelestialObject.Class.ASTEROID,
             mediumProjection.body()
@@ -189,7 +189,7 @@ final class AsteroidStarmapProjectionBuilderTest {
             AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, fieldProfile),
             AsteroidSizeClass.MEDIUM);
         CelestialObject foreign = CelestialObject.builder()
-            .id(
+            .key(
                 CelestialObjectKey
                     .minorBody(new MinorCelestialBodyId(CelestialObjectId.MOON, AsteroidSlotRanges.GENERATED_SLOT_MIN)))
             .name("Foreign")
@@ -261,7 +261,7 @@ final class AsteroidStarmapProjectionBuilderTest {
 
     private static CelestialObject belt(AsteroidFieldProfile profile) {
         return CelestialObject.builder()
-            .id(CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT))
+            .key(CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT))
             .name("Frozen Belt")
             .objectClass(CelestialObject.Class.ASTEROID_BELT)
             .circularOrbit(4.5, 0.00012, 0.0)

@@ -37,11 +37,11 @@ final class CelestialRegistryChildrenTest {
 
         assertTrue(
             children.stream()
-                .map(CelestialObject::id)
+                .map(CelestialObject::key)
                 .anyMatch(CelestialObjectKey.registered(CelestialObjectId.MOON)::equals));
         assertTrue(
             children.stream()
-                .map(CelestialObject::id)
+                .map(CelestialObject::key)
                 .noneMatch(CelestialObjectKey::isMinorBody));
     }
 
@@ -122,7 +122,7 @@ final class CelestialRegistryChildrenTest {
             true);
 
         List<CelestialObjectKey> keys = children.stream()
-            .map(CelestialObject::id)
+            .map(CelestialObject::key)
             .toList();
         assertEquals(keys.size(), new HashSet<>(keys).size());
         assertThrows(UnsupportedOperationException.class, () -> children.add(children.get(0)));
@@ -136,8 +136,8 @@ final class CelestialRegistryChildrenTest {
         CelestialObject asteroid = CelestialRegistry.get(key)
             .orElseThrow();
 
-        assertEquals(key, asteroid.id());
-        assertEquals(CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT), asteroid.parentId());
+        assertEquals(key, asteroid.key());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT), asteroid.parentKey());
         assertEquals(CelestialObject.Class.ASTEROID, asteroid.objectClass());
     }
 
@@ -178,7 +178,7 @@ final class CelestialRegistryChildrenTest {
 
     private static Set<CelestialObjectKey> childKeys(List<CelestialObject> children) {
         return children.stream()
-            .map(CelestialObject::id)
+            .map(CelestialObject::key)
             .collect(Collectors.toCollection(HashSet::new));
     }
 

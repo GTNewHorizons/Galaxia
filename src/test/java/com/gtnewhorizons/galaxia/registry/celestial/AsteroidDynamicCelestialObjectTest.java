@@ -40,8 +40,8 @@ final class AsteroidDynamicCelestialObjectTest {
         CelestialObject asteroid = CelestialRegistry.get(key)
             .orElseThrow();
 
-        assertEquals(key, asteroid.id());
-        assertEquals(CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT), asteroid.parentId());
+        assertEquals(key, asteroid.key());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT), asteroid.parentKey());
         assertEquals(CelestialObject.Class.ASTEROID, asteroid.objectClass());
         assertEquals("FROZEN_BELT 1", asteroid.name());
         assertTrue(
@@ -84,7 +84,7 @@ final class AsteroidDynamicCelestialObjectTest {
         CelestialObject asteroid = CelestialRegistry.get(key)
             .orElseThrow();
 
-        assertEquals(key, asteroid.id());
+        assertEquals(key, asteroid.key());
     }
 
     @Test
@@ -111,7 +111,7 @@ final class AsteroidDynamicCelestialObjectTest {
                     CelestialDiscoveryView.empty(),
                     false)
                 .stream()
-                .map(CelestialObject::id)
+                .map(CelestialObject::key)
                 .anyMatch(key::equals));
     }
 
@@ -122,7 +122,7 @@ final class AsteroidDynamicCelestialObjectTest {
 
         assertTrue(
             children.stream()
-                .map(CelestialObject::id)
+                .map(CelestialObject::key)
                 .noneMatch(CelestialObjectKey::isMinorBody));
     }
 
@@ -145,7 +145,7 @@ final class AsteroidDynamicCelestialObjectTest {
             CelestialDiscoveryView.empty(),
             false);
         Set<CelestialObjectKey> asteroidChildKeys = children.stream()
-            .map(CelestialObject::id)
+            .map(CelestialObject::key)
             .filter(CelestialObjectKey::isMinorBody)
             .collect(Collectors.toSet());
 
@@ -155,7 +155,7 @@ final class AsteroidDynamicCelestialObjectTest {
         assertFalse(
             children.stream()
                 .anyMatch(
-                    child -> child.objectClass() == CelestialObject.Class.ASTEROID && child.id()
+                    child -> child.objectClass() == CelestialObject.Class.ASTEROID && child.key()
                         .isRegistered()));
         assertTrue(
             children.stream()
@@ -182,7 +182,7 @@ final class AsteroidDynamicCelestialObjectTest {
 
         assertTrue(
             children.stream()
-                .map(CelestialObject::id)
+                .map(CelestialObject::key)
                 .anyMatch(CelestialObjectKey.minorBody(hiddenNode.id())::equals));
     }
 
@@ -206,7 +206,7 @@ final class AsteroidDynamicCelestialObjectTest {
                 CelestialDiscoveryView.empty(),
                 false)
             .stream()
-            .map(CelestialObject::id)
+            .map(CelestialObject::key)
             .filter(CelestialObjectKey::isMinorBody)
             .collect(Collectors.toSet());
 
@@ -232,7 +232,7 @@ final class AsteroidDynamicCelestialObjectTest {
                 CelestialDiscoveryView.empty(),
                 false)
             .stream()
-            .map(CelestialObject::id)
+            .map(CelestialObject::key)
             .filter(CelestialObjectKey::isMinorBody)
             .collect(Collectors.toSet());
 
@@ -242,7 +242,7 @@ final class AsteroidDynamicCelestialObjectTest {
                 CelestialDiscoveryView.empty(),
                 true)
             .stream()
-            .map(CelestialObject::id)
+            .map(CelestialObject::key)
             .filter(CelestialObjectKey::isMinorBody)
             .collect(Collectors.toSet());
 
@@ -266,7 +266,7 @@ final class AsteroidDynamicCelestialObjectTest {
             .children(CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT), discoveryView(smallNode), false)
             .stream()
             .filter(
-                child -> child.id()
+                child -> child.key()
                     .equals(CelestialObjectKey.minorBody(smallNode.id())))
             .findFirst()
             .orElseThrow();

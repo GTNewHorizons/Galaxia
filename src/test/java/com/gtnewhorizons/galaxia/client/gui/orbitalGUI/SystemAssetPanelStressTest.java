@@ -198,7 +198,7 @@ final class SystemAssetPanelStressTest {
 
     private static CelestialObject star(CelestialObjectId id, String name) {
         return CelestialObject.builder()
-            .id(id)
+            .key(id)
             .name(name)
             .objectClass(CelestialObject.Class.STAR)
             .build();

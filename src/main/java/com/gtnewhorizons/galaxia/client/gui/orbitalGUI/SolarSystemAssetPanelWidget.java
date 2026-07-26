@@ -113,7 +113,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
             viewRootSupplier,
             openSupplier,
             onAssetSelect,
-            viewRoot -> CelestialClient.listAssetsInSystem(viewRoot.id()));
+            viewRoot -> CelestialClient.listAssetsInSystem(viewRoot.key()));
     }
 
     SolarSystemAssetPanelWidget(CelestialObject galaxyRoot, Supplier<CelestialObject> viewRootSupplier,

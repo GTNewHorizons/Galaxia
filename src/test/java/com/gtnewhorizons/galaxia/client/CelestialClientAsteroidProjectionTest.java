@@ -52,7 +52,7 @@ final class CelestialClientAsteroidProjectionTest {
         int hiddenIndex = AsteroidSlotRanges.GENERATED_SLOT_MIN + 1;
         CelestialObject frozenBelt = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
             .orElseThrow();
-        CelestialObjectKey beltKey = frozenBelt.id();
+        CelestialObjectKey beltKey = frozenBelt.key();
         List<AsteroidFieldNode> nodes = AsteroidFieldResolver.resolveAll(
             CelestialObjectId.FROZEN_BELT,
             frozenBelt.properties()
@@ -96,7 +96,7 @@ final class CelestialClientAsteroidProjectionTest {
         CelestialKnowledgeClientState.clear();
         CelestialObject frozenBelt = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
             .orElseThrow();
-        CelestialObjectKey beltKey = frozenBelt.id();
+        CelestialObjectKey beltKey = frozenBelt.key();
         AsteroidFieldProfile profile = frozenBelt.properties()
             .asteroidFieldProfile();
         List<AsteroidFieldNode> nodes = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile);
@@ -179,7 +179,7 @@ final class CelestialClientAsteroidProjectionTest {
 
     private static Set<CelestialObjectKey> minorChildKeys(List<CelestialObject> children) {
         return children.stream()
-            .map(CelestialObject::id)
+            .map(CelestialObject::key)
             .filter(CelestialObjectKey::isMinorBody)
             .collect(Collectors.toCollection(LinkedHashSet::new));
     }
@@ -191,7 +191,7 @@ final class CelestialClientAsteroidProjectionTest {
                 .ifPresent(
                     projection -> keys.add(
                         projection.body()
-                            .id()));
+                            .key()));
         }
         return keys;
     }

@@ -493,7 +493,7 @@ public final class CelestialClient {
      * Does not rebuild or materialize a second child list.
      */
     public static List<CelestialObject> getChildren(CelestialObject parent) {
-        return parent == null ? List.of() : getChildren(parent.id());
+        return parent == null ? List.of() : getChildren(parent.key());
     }
 
     public static List<CelestialObject> getChildren(CelestialObjectKey parentId) {
@@ -507,11 +507,11 @@ public final class CelestialClient {
     }
 
     public static Optional<AsteroidStarmapProjection> asteroidProjection(CelestialObject body) {
-        if (body == null || body.parentId() == null) return Optional.empty();
+        if (body == null || body.parentKey() == null) return Optional.empty();
         // Resolving siblings rebuilds the belt catalog; skip it for bodies that can never have a projection.
-        if (!body.id()
+        if (!body.key()
             .isMinorBody()) return Optional.empty();
-        List<CelestialObject> siblings = getChildren(body.parentId());
+        List<CelestialObject> siblings = getChildren(body.parentKey());
         return asteroidProjections.projectionFor(body, siblings, CelestialDiscoveryClientState.snapshots());
     }
 
@@ -544,13 +544,13 @@ public final class CelestialClient {
 
     public static Optional<CelestialDiscoveryScanSnapshot> asteroidScanSnapshotByTarget(CelestialObject body) {
         if (body == null) return Optional.empty();
-        return CelestialDiscoveryClientState.scanTarget(body.id(), CelestialDiscoveryCapability.PROSPECTING);
+        return CelestialDiscoveryClientState.scanTarget(body.key(), CelestialDiscoveryCapability.PROSPECTING);
     }
 
     // ── Helpers ──
 
     private static void collectTransferTargets(CelestialObject current, List<TransferTarget> targets) {
-        List<CelestialAsset> state = getState(current.id());
+        List<CelestialAsset> state = getState(current.key());
         for (CelestialAsset asset : state) {
             if (asset.isManageable()) {
                 targets.add(new TransferTarget(asset.assetId, asset.displayName(), current));

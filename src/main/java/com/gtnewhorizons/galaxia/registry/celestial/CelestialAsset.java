@@ -144,8 +144,8 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         this.assetId = assetId;
         this.status = status;
         this.celestialObjectId = celestialObjectId;
-        this.systemId = resolveStar(celestialObjectId).id();
-        this.planetaryAnchorBodyId = resolvePlanetaryAnchor(celestialObjectId).id();
+        this.systemId = resolveStar(celestialObjectId).key();
+        this.planetaryAnchorBodyId = resolvePlanetaryAnchor(celestialObjectId).key();
         this.displayName = displayName(celestialObjectId) + ":" + kind.getDisplayName();
         this.kind = kind;
         this.location = Location.ofKind(kind);

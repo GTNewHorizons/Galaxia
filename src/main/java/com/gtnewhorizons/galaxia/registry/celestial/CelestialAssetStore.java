@@ -485,8 +485,8 @@ public final class CelestialAssetStore {
     }
 
     private void collectAssetsInSubtree(CelestialObject body, UUID teamId, List<CelestialAsset> out) {
-        out.addAll(getState(teamId, body.id()));
-        for (CelestialObject child : CelestialRegistry.getChildren(body.id())) {
+        out.addAll(getState(teamId, body.key()));
+        for (CelestialObject child : CelestialRegistry.getChildren(body.key())) {
             collectAssetsInSubtree(child, teamId, out);
         }
     }

@@ -258,7 +258,7 @@ public class TileStation extends TileStationBase<TileStation> {
         }
 
         CelestialObjectKey bodyKey = GalaxiaCelestialAPI.findByDimension(this.worldObj.provider.dimensionId)
-            .map(CelestialObject::id)
+            .map(CelestialObject::key)
             .orElse(null);
         if (bodyKey == null) {
             return;
@@ -273,7 +273,7 @@ public class TileStation extends TileStationBase<TileStation> {
         if (owner == null) return false;
 
         CelestialObjectKey bodyKey = GalaxiaCelestialAPI.findByDimension(worldObj.provider.dimensionId)
-            .map(CelestialObject::id)
+            .map(CelestialObject::key)
             .orElse(null);
         if (bodyKey == null) return false;
 

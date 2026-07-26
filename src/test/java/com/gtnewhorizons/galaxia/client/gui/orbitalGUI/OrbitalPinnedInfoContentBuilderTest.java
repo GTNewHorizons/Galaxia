@@ -84,7 +84,7 @@ final class OrbitalPinnedInfoContentBuilderTest {
         CelestialObject asteroid = CelestialRegistry
             .get(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, node.index())))
             .orElseThrow();
-        CelestialObjectKey asteroidKey = asteroid.id();
+        CelestialObjectKey asteroidKey = asteroid.key();
         CelestialDiscoveryClientState.update(
             List.of(
                 new CelestialDiscoveryScanSnapshot(
@@ -133,7 +133,7 @@ final class OrbitalPinnedInfoContentBuilderTest {
 
         CelestialKnowledgeClientState.apply(
             Map.of(
-                asteroid.id(),
+                asteroid.key(),
                 CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.UNKNOWN)));
         PinnedInfoRow unknownRow = oreRow(builder.buildRows(asteroid));
         assertFalse(
@@ -147,7 +147,7 @@ final class OrbitalPinnedInfoContentBuilderTest {
 
         CelestialKnowledgeClientState.apply(
             Map.of(
-                asteroid.id(),
+                asteroid.key(),
                 CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.PROFILE)));
         PinnedInfoRow profileRow = oreRow(builder.buildRows(asteroid));
         assertNotEquals(unknownRow.value(), profileRow.value());

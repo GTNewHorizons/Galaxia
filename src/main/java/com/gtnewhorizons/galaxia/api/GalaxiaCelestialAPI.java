@@ -65,7 +65,7 @@ public final class GalaxiaCelestialAPI {
     }
 
     public static List<CelestialObject> getChildren(CelestialObject parent) {
-        return parent == null ? List.of() : getChildren(parent.id());
+        return parent == null ? List.of() : getChildren(parent.key());
     }
 
     public static List<CelestialObject> getChildren(CelestialObjectKey parentId) {
@@ -150,13 +150,13 @@ public final class GalaxiaCelestialAPI {
         if (found != null) return found;
 
         CelestialObject dynamic = get(needle).orElse(null);
-        if (dynamic == null || dynamic.parentId() == null) return null;
-        return findBodyByIdRec(root, dynamic.parentId()) != null ? dynamic : null;
+        if (dynamic == null || dynamic.parentKey() == null) return null;
+        return findBodyByIdRec(root, dynamic.parentKey()) != null ? dynamic : null;
     }
 
     private static CelestialObject findBodyByIdRec(CelestialObject current, CelestialObjectKey needle) {
         for (CelestialObject child : getChildren(current)) {
-            if (child.id()
+            if (child.key()
                 .equals(needle)) {
                 return child;
             }
@@ -175,8 +175,8 @@ public final class GalaxiaCelestialAPI {
         if (root == null || targetId == null) return null;
         CelestialObject target = get(targetId).orElse(null);
         CelestialObject star = findStar(root, target);
-        if (star != null || target == null || target.parentId() == null) return star;
-        return findStar(root, target.parentId());
+        if (star != null || target == null || target.parentKey() == null) return star;
+        return findStar(root, target.parentKey());
     }
 
     public static CelestialObject findStar(CelestialObject root, CelestialObject target) {
@@ -203,7 +203,7 @@ public final class GalaxiaCelestialAPI {
         if (root == null || targetId == null) return null;
         CelestialObject target = get(targetId).orElse(null);
         CelestialObject anchor = findPlanetaryAnchor(root, target);
-        if (anchor != null || target == null || target.parentId() == null) return anchor;
+        if (anchor != null || target == null || target.parentKey() == null) return anchor;
         return target;
     }
 

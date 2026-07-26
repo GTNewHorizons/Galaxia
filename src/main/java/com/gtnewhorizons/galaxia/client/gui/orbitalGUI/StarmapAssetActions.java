@@ -251,9 +251,9 @@ public final class StarmapAssetActions {
                 return;
             }
             if (callbacks.isCreativeBuildModeEnabled()) {
-                CelestialAsset asset = CelestialAsset.create(body.id(), kind, true);
+                CelestialAsset asset = CelestialAsset.create(body.key(), kind, true);
                 asset.setDisplayName(displayName);
-                if (CelestialClient.registerAsset(body.id(), asset)) {
+                if (CelestialClient.registerAsset(body.key(), asset)) {
                     callbacks.showActionStatus(assetSupport.formatAssetKind(kind) + " creation requested");
                 } else {
                     callbacks.showActionStatus(assetSupport.formatAssetKind(kind) + " creation failed");
@@ -261,7 +261,7 @@ public final class StarmapAssetActions {
                 return;
             }
             state.pendingAssetCreation = new PendingAssetCreation(
-                body.id(),
+                body.key(),
                 displayName,
                 kind,
                 location,
@@ -270,7 +270,7 @@ public final class StarmapAssetActions {
 
         private boolean canCreateAssetOnBody(CelestialObject body, CelestialAsset.Kind kind) {
             if (requiresDiscoveredTarget(kind)
-                && CelestialKnowledgeClientState.effectiveDiscoveryState(body.id()) != DiscoveryState.DISCOVERED)
+                && CelestialKnowledgeClientState.effectiveDiscoveryState(body.key()) != DiscoveryState.DISCOVERED)
                 return false;
             return switch (kind) {
                 case AUTOMATED_STATION -> body.properties()
@@ -796,7 +796,7 @@ public final class StarmapAssetActions {
         private int computeAssetListSignature(CelestialObject body) {
             if (body == null) return 0;
 
-            List<CelestialAsset> assets = new ArrayList<>(CelestialClient.getState(body.id()));
+            List<CelestialAsset> assets = new ArrayList<>(CelestialClient.getState(body.key()));
             assets.sort(Comparator.comparing(asset -> asset.assetId.toString()));
 
             int result = 1;
@@ -931,7 +931,7 @@ public final class StarmapAssetActions {
                 return;
             CelestialObject body = state.assetActionsBody;
             if (body == null) return;
-            List<CelestialAsset> assetState = CelestialClient.getState(body.id());
+            List<CelestialAsset> assetState = CelestialClient.getState(body.key());
             int contentScrollSize = Math.max(mainContentHeight, computeContentHeight(assetState));
             mainScrollData.setScrollSize(contentScrollSize);
             mainScrollContent.removeAll();

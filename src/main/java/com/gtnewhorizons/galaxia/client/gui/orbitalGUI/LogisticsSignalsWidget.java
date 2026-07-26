@@ -315,11 +315,11 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
             case GALACTIC:
                 return true;
             case SYSTEM:
-                return viewRoot.id()
+                return viewRoot.key()
                     .equals(outpost.systemId);
             case PLANETARY: {
                 CelestialObject viewAnchor = GalaxiaCelestialAPI.findPlanetaryAnchor(galaxyRoot, viewRoot);
-                CelestialObjectKey viewAnchorId = viewAnchor != null ? viewAnchor.id() : viewRoot.id();
+                CelestialObjectKey viewAnchorId = viewAnchor != null ? viewAnchor.key() : viewRoot.key();
                 return outpost.planetaryAnchorBodyId != null && outpost.planetaryAnchorBodyId.equals(viewAnchorId);
             }
             default:
@@ -354,11 +354,11 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         Map<String, Long> signalData;
         switch (scope) {
             case SYSTEM:
-                signalData = CelestialClient.clientSignalsForSystem(viewRoot.id());
+                signalData = CelestialClient.clientSignalsForSystem(viewRoot.key());
                 break;
             case PLANETARY: {
                 CelestialObject anchor = GalaxiaCelestialAPI.findPlanetaryAnchor(galaxyRoot, viewRoot);
-                CelestialObjectKey anchorId = anchor != null ? anchor.id() : viewRoot.id();
+                CelestialObjectKey anchorId = anchor != null ? anchor.key() : viewRoot.key();
                 signalData = CelestialClient.clientSignalsForPlanet(anchorId);
                 break;
             }

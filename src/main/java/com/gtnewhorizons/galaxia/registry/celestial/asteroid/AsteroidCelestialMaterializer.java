@@ -77,7 +77,7 @@ public final class AsteroidCelestialMaterializer {
         };
 
         return CelestialObject.builder()
-            .id(CelestialObjectKey.minorBody(node.id()))
+            .key(CelestialObjectKey.minorBody(node.id()))
             .name(node.displayName())
             .parent(CelestialObjectKey.registered(node.beltId()))
             .objectClass(CelestialObject.Class.ASTEROID)

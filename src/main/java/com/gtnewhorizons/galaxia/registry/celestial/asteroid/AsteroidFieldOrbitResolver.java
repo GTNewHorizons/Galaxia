@@ -23,9 +23,9 @@ public final class AsteroidFieldOrbitResolver implements MinorBodyOrbitResolver 
             .asteroidFieldProfile();
         if (profile == null) return null;
 
-        MinorCelestialBodyId minorId = child.id()
+        MinorCelestialBodyId minorId = child.key()
             .minorBodyId();
-        CelestialObjectId parentId = parent.id()
+        CelestialObjectId parentId = parent.key()
             .registeredBodyId();
         AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(parentId, profile, minorId.index());
         return resolveWorldState(profile, node, parentState);

@@ -147,7 +147,7 @@ public final class AssetCreateRequestPacket implements IMessage {
             throw new IllegalArgumentException("Cannot create automated outpost on " + celestialObjectId);
         }
         if (requiresDiscoveredTarget()
-            && CelestialKnowledgeService.discoveryState(teamId, body.id()) != DiscoveryState.DISCOVERED) {
+            && CelestialKnowledgeService.discoveryState(teamId, body.key()) != DiscoveryState.DISCOVERED) {
             throw new IllegalArgumentException("Cannot create asset on undiscovered body " + celestialObjectId);
         }
     }

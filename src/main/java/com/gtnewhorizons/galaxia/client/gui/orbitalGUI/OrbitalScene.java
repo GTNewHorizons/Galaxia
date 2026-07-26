@@ -495,7 +495,7 @@ public class OrbitalScene {
         private void registerMarkers(OrbitalSceneFrame frame, ResolvedBodyDrawState state) {
             List<CelestialAsset> assetState = CelestialClient.getState(
                 state.body()
-                    .id());
+                    .key());
             List<AssetMarker> markers = assetMarkers(assetState);
             int iconSize = Math.max(10, Math.min(15, Math.round(state.renderedRadius() * 0.95f)));
             int gap = 3;
@@ -783,9 +783,9 @@ public class OrbitalScene {
 
         private static boolean sameBody(CelestialObject left, CelestialObject right) {
             if (left == right) return true;
-            if (left == null || right == null || left.id() == null || right.id() == null) return false;
-            return left.id()
-                .equals(right.id());
+            if (left == null || right == null || left.key() == null || right.key() == null) return false;
+            return left.key()
+                .equals(right.key());
         }
 
         private void drawSprite(ResourceLocation tex, float x, float y, float radius, float alpha) {

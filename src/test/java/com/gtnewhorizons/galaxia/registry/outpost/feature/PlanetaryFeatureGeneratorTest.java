@@ -18,7 +18,7 @@ final class PlanetaryFeatureGeneratorTest {
     @Test
     void emptyProfileGeneratesNoFeatures() {
         CelestialObject body = CelestialObject.builder()
-            .id(CelestialObjectId.EGORA)
+            .key(CelestialObjectId.EGORA)
             .featureProfile(PlanetaryFeatureProfile.NONE)
             .build();
 
@@ -31,7 +31,7 @@ final class PlanetaryFeatureGeneratorTest {
     @Test
     void singleWeightedFeatureIsDeterministic() {
         CelestialObject body = CelestialObject.builder()
-            .id(CelestialObjectId.EGORA)
+            .key(CelestialObjectId.EGORA)
             .featureProfile(
                 p -> p.featureTileChance(1.0)
                     .weight(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0))
@@ -53,7 +53,7 @@ final class PlanetaryFeatureGeneratorTest {
     @Test
     void intCoordinateGenerationMatchesStationTileCoordinateGeneration() {
         CelestialObject body = CelestialObject.builder()
-            .id(CelestialObjectId.EGORA)
+            .key(CelestialObjectId.EGORA)
             .featureProfile(
                 p -> p.featureTileChance(1.0)
                     .weight(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0))
@@ -68,7 +68,7 @@ final class PlanetaryFeatureGeneratorTest {
     @Test
     void differentStationSaltsCanProduceDifferentFeatureLayouts() {
         CelestialObject body = CelestialObject.builder()
-            .id(CelestialObjectId.EGORA)
+            .key(CelestialObjectId.EGORA)
             .featureProfile(
                 p -> p.featureTileChance(0.5)
                     .weight(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0))
@@ -90,7 +90,7 @@ final class PlanetaryFeatureGeneratorTest {
     @Test
     void terrainAndResourceFeaturesCanCoexistOnOneTile() {
         CelestialObject body = CelestialObject.builder()
-            .id(CelestialObjectId.EGORA)
+            .key(CelestialObjectId.EGORA)
             .featureProfile(
                 p -> p.featureTileChance(1.0)
                     .weight(PlanetaryFeatureRegistry.STABLE_BEDROCK, 1.0)
@@ -129,7 +129,7 @@ final class PlanetaryFeatureGeneratorTest {
     @Test
     void isolatedMagmaPoolsRejectNearbySecondPool() {
         CelestialObject body = CelestialObject.builder()
-            .id(CelestialObjectId.EGORA)
+            .key(CelestialObjectId.EGORA)
             .featureProfile(
                 p -> p.featureTileChance(1.0)
                     .weight(PlanetaryFeatureRegistry.MAGMA_POOL, 1.0))

@@ -90,7 +90,7 @@ final class OrbitalTransferClientStateTest {
             if (star == null) continue;
             for (CelestialObject destination : GalaxiaCelestialAPI.getAllBodies()
                 .values()) {
-                if (source.id() == destination.id()) continue;
+                if (source.key() == destination.key()) continue;
                 if (GalaxiaCelestialAPI.findStar(root, destination) != star) continue;
                 double hohmannTof = star.getHohmannTof(source, destination, root, departureTime);
 
@@ -308,7 +308,7 @@ final class OrbitalTransferClientStateTest {
 
     private static CelestialObject star(CelestialObjectId id, String name) {
         return CelestialObject.builder()
-            .id(id)
+            .key(id)
             .name(name)
             .objectClass(CelestialObject.Class.STAR)
             .build();
@@ -316,7 +316,7 @@ final class OrbitalTransferClientStateTest {
 
     private static CelestialObject planet(CelestialObjectId id, String name) {
         return CelestialObject.builder()
-            .id(id)
+            .key(id)
             .name(name)
             .objectClass(CelestialObject.Class.PLANET)
             .build();

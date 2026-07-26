@@ -54,7 +54,7 @@ final class OrbitalSceneBodyPresentationTest {
     void asteroidBeltDrawsBandInsteadOfOrbitLine() {
         CelestialObject belt = asteroidBelt();
         CelestialObject planet = CelestialObject.builder()
-            .id(CelestialObjectId.MARS)
+            .key(CelestialObjectId.MARS)
             .name("Mars")
             .objectClass(CelestialObject.Class.PLANET)
             .build();
@@ -66,7 +66,7 @@ final class OrbitalSceneBodyPresentationTest {
     @Test
     void asteroidFieldMembersStillRenderAndAcceptInteraction() {
         CelestialObject asteroid = CelestialObject.builder()
-            .id(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0)))
+            .key(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0)))
             .name("Frozen Belt 1")
             .objectClass(CelestialObject.Class.ASTEROID)
             .build();
@@ -165,7 +165,7 @@ final class OrbitalSceneBodyPresentationTest {
         assertEquals(
             CelestialObjectKey.registered(CelestialObjectId.MARS),
             OrbitalView.OrbitalMapWidget.satelliteNetworkBodyKey(planet));
-        assertEquals(asteroid.id(), OrbitalView.OrbitalMapWidget.satelliteNetworkBodyKey(asteroid));
+        assertEquals(asteroid.key(), OrbitalView.OrbitalMapWidget.satelliteNetworkBodyKey(asteroid));
     }
 
     @Test
@@ -196,7 +196,7 @@ final class OrbitalSceneBodyPresentationTest {
 
     private static CelestialObject asteroid(AsteroidNodeKind kind, AsteroidSizeClass sizeClass, double spriteSize) {
         return CelestialObject.builder()
-            .id(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 42)))
+            .key(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 42)))
             .name(kind.name())
             .objectClass(CelestialObject.Class.ASTEROID)
             .spriteSize(spriteSize)
@@ -210,7 +210,7 @@ final class OrbitalSceneBodyPresentationTest {
 
     private static CelestialObject asteroidBelt() {
         return CelestialObject.builder()
-            .id(CelestialObjectId.FROZEN_BELT)
+            .key(CelestialObjectId.FROZEN_BELT)
             .name("Frozen Belt")
             .objectClass(CelestialObject.Class.ASTEROID_BELT)
             .properties(

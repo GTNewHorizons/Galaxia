@@ -44,7 +44,7 @@ final class OrbitalWorldStateCacheTest {
             () -> assertNotNull(equivalentPosition),
             () -> assertArrayEquals(renderedPosition, equivalentPosition, EPSILON),
             () -> assertNotNull(equivalentParent),
-            () -> assertEquals(belt.id(), equivalentParent.id()));
+            () -> assertEquals(belt.key(), equivalentParent.key()));
     }
 
     @Test
@@ -61,7 +61,7 @@ final class OrbitalWorldStateCacheTest {
 
     private static CelestialObject body(CelestialObjectId id, String name, CelestialObject.Class objectClass) {
         return CelestialObject.builder()
-            .id(id)
+            .key(id)
             .name(name)
             .objectClass(objectClass)
             .build();
@@ -69,7 +69,7 @@ final class OrbitalWorldStateCacheTest {
 
     private static CelestialObject asteroid(String name) {
         return CelestialObject.builder()
-            .id(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0)))
+            .key(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0)))
             .name(name)
             .parent(CelestialObjectId.FROZEN_BELT)
             .objectClass(CelestialObject.Class.ASTEROID)

@@ -43,7 +43,7 @@ final class GalaxiaCelestialAPIKeyTest {
         CelestialObject mars = GalaxiaCelestialAPI.findByDimension(DimensionEnum.MARS.getId())
             .orElseThrow();
 
-        assertEquals(CelestialObjectKey.registered(CelestialObjectId.MARS), mars.id());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.MARS), mars.key());
     }
 
     @Test

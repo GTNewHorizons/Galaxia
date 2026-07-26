@@ -45,9 +45,9 @@ public final class OrbitalMechanics {
     public static OrbitalState resolveWorldState(CelestialObject root, CelestialObject target, double globalTime) {
         if (root == null || target == null) return null;
         OrbitalState traversedState = resolveWorldState(root, target, new OrbitalState(0.0, 0.0, 0.0, 0.0), globalTime);
-        if (traversedState != null || target.parentId() == null) return traversedState;
+        if (traversedState != null || target.parentKey() == null) return traversedState;
 
-        CelestialObject parent = GalaxiaCelestialAPI.findBodyById(root, target.parentId());
+        CelestialObject parent = GalaxiaCelestialAPI.findBodyById(root, target.parentKey());
         if (parent == null || parent == target) return null;
         OrbitalState parentState = resolveWorldState(root, parent, globalTime);
         return parentState == null ? null : resolveChildWorldState(parent, target, parentState, globalTime);
@@ -79,24 +79,24 @@ public final class OrbitalMechanics {
 
     private static OrbitalState resolveMinorBodyWorldState(CelestialObject parent, CelestialObject child,
         OrbitalState parentState) {
-        if (child == null || child.id() == null
-            || !child.id()
+        if (child == null || child.key() == null
+            || !child.key()
                 .isMinorBody()) {
             return null;
         }
-        if (parent == null || parent.id() == null
-            || !parent.id()
+        if (parent == null || parent.key() == null
+            || !parent.key()
                 .isRegistered()) {
             throw new IllegalStateException("Minor celestial body requires a registered parent body");
         }
 
-        CelestialObjectId parentId = parent.id()
+        CelestialObjectId parentId = parent.key()
             .registeredBodyId();
-        if (child.id()
+        if (child.key()
             .minorBodyId()
             .parentBodyId() != parentId) {
             throw new IllegalStateException(
-                "Minor celestial body parent does not match traversal parent: " + child.id());
+                "Minor celestial body parent does not match traversal parent: " + child.key());
         }
 
         for (MinorBodyOrbitResolver resolver : MINOR_BODY_ORBIT_RESOLVERS) {

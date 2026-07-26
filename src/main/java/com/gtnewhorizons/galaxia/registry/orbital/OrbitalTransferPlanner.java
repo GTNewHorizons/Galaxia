@@ -121,7 +121,7 @@ public final class OrbitalTransferPlanner {
     }
 
     private static CelestialObject findBodyByIdRec(CelestialObject current, String id) {
-        if (id.equals(current.id())) return current;
+        if (id.equals(current.key())) return current;
         for (CelestialObject child : GalaxiaCelestialAPI.getChildren(current)) {
             CelestialObject found = findBodyByIdRec(child, id);
             if (found != null) return found;
@@ -226,7 +226,7 @@ public final class OrbitalTransferPlanner {
             if (dstState == null || attractorAtArr == null) continue;
 
             TransferRoute route = solveFixedRoute(
-                attractor.id(),
+                attractor.key(),
                 mu,
                 minPeriapsis,
                 attractorAtDep.x(),
@@ -278,7 +278,7 @@ public final class OrbitalTransferPlanner {
         if (srcStateDep == null || attractorAtDep == null || dstState == null || attractorAtArr == null) return null;
 
         return solveFixedRoute(
-            attractor.id(),
+            attractor.key(),
             mu,
             Math.max(0.05, attractor.spriteSize() * 0.5),
             attractorAtDep.x(),

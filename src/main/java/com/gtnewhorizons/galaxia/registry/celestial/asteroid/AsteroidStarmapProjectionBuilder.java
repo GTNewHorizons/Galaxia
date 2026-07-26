@@ -27,11 +27,11 @@ public final class AsteroidStarmapProjectionBuilder {
         @Nonnull List<CelestialObject> canonicalBodies, boolean includeHidden,
         @Nonnull Set<MinorCelestialBodyId> scanTargets, @Nonnull Set<MinorCelestialBodyId> sensorRevealTargets) {
 
-        if (!belt.id()
+        if (!belt.key()
             .isRegistered()) {
             throw new IllegalArgumentException("Asteroid starmap projection requires a registered belt body");
         }
-        CelestialObjectId beltId = belt.id()
+        CelestialObjectId beltId = belt.key()
             .registeredBodyId();
         AsteroidFieldProfile profile = belt.properties()
             .asteroidFieldProfile();
@@ -41,9 +41,9 @@ public final class AsteroidStarmapProjectionBuilder {
 
         List<AsteroidStarmapProjection> projections = new ArrayList<>();
         for (CelestialObject body : canonicalBodies) {
-            if (body == null || !body.id()
+            if (body == null || !body.key()
                 .isMinorBody()) continue;
-            MinorCelestialBodyId minorId = body.id()
+            MinorCelestialBodyId minorId = body.key()
                 .minorBodyId();
             if (minorId.parentBodyId() != beltId) continue;
             Optional<AsteroidFieldNode> node = AsteroidFieldResolver.findNode(beltId, profile, minorId.index());
