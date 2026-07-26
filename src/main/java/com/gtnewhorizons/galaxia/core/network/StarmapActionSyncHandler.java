@@ -319,8 +319,10 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
                 if (amount <= 0) throw new IllegalArgumentException("Satellite ADD amount must be positive: " + amount);
                 List<AssetSyncPacket> packets = new ArrayList<>(amount);
                 for (int i = 0; i < amount; i++) {
+                    // The ADD/SET branch above already rejected anyone who is not a creative operator, so these
+                    // satellites skip construction the same way SET's do.
                     AssetSyncPacket packet = AssetCreateRequestPacket.createSatellite(bodyKey, kind, true)
-                        .apply(teamId);
+                        .apply(teamId, true);
                     if (packet != null) packets.add(packet);
                 }
                 yield packets;
