@@ -138,6 +138,7 @@ public final class FacilityPersistenceManager {
         this.worldSaveDir = worldSaveDir;
         celestialRuntime.reset();
         LogisticStore.clearDeliveries();
+        LogisticStore.clearSignals();
         HammerTrajectoryLoadTracker.reset();
         loadAll();
     }
@@ -162,6 +163,7 @@ public final class FacilityPersistenceManager {
         if (worldSaveDir != null) saveAll();
         celestialRuntime.reset();
         LogisticStore.clearDeliveries();
+        LogisticStore.clearSignals();
         HammerTrajectoryLoadTracker.reset();
         worldSaveDir = null;
     }
