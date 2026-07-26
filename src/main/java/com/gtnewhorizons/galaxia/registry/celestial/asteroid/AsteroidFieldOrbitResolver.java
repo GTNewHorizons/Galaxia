@@ -53,6 +53,17 @@ public final class AsteroidFieldOrbitResolver implements MinorBodyOrbitResolver 
             .radiusBetween(profile.innerOrbitalRadius(), profile.outerOrbitalRadius());
     }
 
+    /** In-band separation between two nodes, ignoring the belt phase they share. */
+    public static double separation(AsteroidFieldProfile profile, AsteroidFieldNode first, AsteroidFieldNode second) {
+        double firstRadius = resolveRadius(profile, first);
+        double firstAngle = Math.toRadians(first.angleOffsetDeg());
+        double secondRadius = resolveRadius(profile, second);
+        double secondAngle = Math.toRadians(second.angleOffsetDeg());
+        double dx = Math.cos(firstAngle) * firstRadius - Math.cos(secondAngle) * secondRadius;
+        double dy = Math.sin(firstAngle) * firstRadius - Math.sin(secondAngle) * secondRadius;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
     private static double resolveAngularVelocity(OrbitalMechanics.OrbitalState state) {
         double radiusSquared = state.x() * state.x() + state.y() * state.y();
         if (radiusSquared <= MINIMUM_RADIUS * MINIMUM_RADIUS) return 0.0;

@@ -42,7 +42,8 @@ final class AsteroidPlacementGraph {
         // range of an anchor we keep it; otherwise we project candidate positions
         // from every reachable anchor toward or around that natural target.
         for (ReachableAnchor anchor : reachableAnchors) {
-            if (distance(profile, anchor.node(), naturalNode) <= profile.placementConnectionRadius()) {
+            if (AsteroidFieldOrbitResolver
+                .separation(profile, anchor.node(), naturalNode) <= profile.placementConnectionRadius()) {
                 candidates.add(
                     new GeneratedCandidate(
                         naturalNode,
@@ -133,7 +134,8 @@ final class AsteroidPlacementGraph {
             AsteroidFieldNode current = queue.remove();
             for (AsteroidFieldNode candidate : nodes) {
                 if (!visited.contains(candidate.id())
-                    && distance(profile, current, candidate) <= profile.placementConnectionRadius()) {
+                    && AsteroidFieldOrbitResolver
+                        .separation(profile, current, candidate) <= profile.placementConnectionRadius()) {
                     visited.add(candidate.id());
                     queue.add(candidate);
                 }
@@ -187,7 +189,7 @@ final class AsteroidPlacementGraph {
 
     private static double placementScore(AsteroidFieldProfile profile, AsteroidFieldNode candidate,
         AsteroidFieldNode targetNode, List<ReachableAnchor> reachableAnchors) {
-        double targetDistance = distance(profile, candidate, targetNode);
+        double targetDistance = AsteroidFieldOrbitResolver.separation(profile, candidate, targetNode);
         double normalizedTargetDistance = profile.placementConnectionRadius() <= 0.0 ? targetDistance
             : targetDistance / profile.placementConnectionRadius();
         // Lower is better. The first term keeps the candidate near its natural
@@ -201,7 +203,7 @@ final class AsteroidPlacementGraph {
         double score = 0.0;
         int candidateSector = angularSector(candidate);
         for (ReachableAnchor anchor : reachableAnchors) {
-            double distance = distance(profile, candidate, anchor.node());
+            double distance = AsteroidFieldOrbitResolver.separation(profile, candidate, anchor.node());
             if (distance <= profile.placementConnectionRadius()) {
                 double proximity = profile.placementConnectionRadius() == 0.0 ? 1.0
                     : 1.0 - distance / profile.placementConnectionRadius();
@@ -216,13 +218,4 @@ final class AsteroidPlacementGraph {
         return (int) Math.floor(node.angleOffsetDeg() / 45.0);
     }
 
-    private static double distance(AsteroidFieldProfile profile, AsteroidFieldNode first, AsteroidFieldNode second) {
-        double firstRadius = AsteroidFieldOrbitResolver.resolveRadius(profile, first);
-        double firstAngle = Math.toRadians(first.angleOffsetDeg());
-        double secondRadius = AsteroidFieldOrbitResolver.resolveRadius(profile, second);
-        double secondAngle = Math.toRadians(second.angleOffsetDeg());
-        double dx = Math.cos(firstAngle) * firstRadius - Math.cos(secondAngle) * secondRadius;
-        double dy = Math.sin(firstAngle) * firstRadius - Math.sin(secondAngle) * secondRadius;
-        return Math.sqrt(dx * dx + dy * dy);
-    }
 }

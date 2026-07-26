@@ -27,8 +27,8 @@ final class AsteroidNodeMaterializer {
             definition == null ? null : definition.initialOreKnowledgeState(),
             orbitSlot(profile, index, nodeSeed, definition, sizeClass),
             definition != null && definition.oreProfileId() != null
-                ? selectOreProfile(profile, definition.oreProfileId())
-                : selectOreProfile(profile, nodeSeed.unit(3L)),
+                ? profile.requireOreProfile(definition.oreProfileId())
+                : profile.selectOreProfile(nodeSeed.unit(3L)),
             definition != null && definition.appearance() != null ? definition.appearance()
                 : new AsteroidAppearanceProfile("generated_asteroid_tiles", nodeSeed.seed(4L)));
     }
@@ -47,7 +47,7 @@ final class AsteroidNodeMaterializer {
             AsteroidFieldResolver.defaultInitialDetectionState(sizeClass),
             null,
             new MinorBodyOrbitSlot(angleOffsetDeg, orbitalDepth01),
-            selectOreProfile(profile, nodeSeed.unit(3L)),
+            profile.selectOreProfile(nodeSeed.unit(3L)),
             new AsteroidAppearanceProfile("generated_asteroid_tiles", nodeSeed.seed(4L)));
     }
 
@@ -59,20 +59,6 @@ final class AsteroidNodeMaterializer {
         double orbitalDepth01 = definition != null && definition.orbitalDepth01() != null ? definition.orbitalDepth01()
             : nodeSeed.unit(2L);
         return new MinorBodyOrbitSlot(angleOffsetDeg, orbitalDepth01);
-    }
-
-    private static AsteroidNodeKind savedNodeKind(int index) {
-        if (AsteroidSlotRanges.isLoreSlot(index)) return AsteroidNodeKind.LORE;
-        if (AsteroidSlotRanges.isUniqueSlot(index)) return AsteroidNodeKind.UNIQUE;
-        return AsteroidNodeKind.GENERATED;
-    }
-
-    private static AsteroidOreProfile selectOreProfile(AsteroidFieldProfile profile, double roll) {
-        return profile.selectOreProfile(roll);
-    }
-
-    private static AsteroidOreProfile selectOreProfile(AsteroidFieldProfile profile, String oreProfileId) {
-        return profile.requireOreProfile(oreProfileId);
     }
 
     private static String displayName(CelestialObjectId beltId, int index) {

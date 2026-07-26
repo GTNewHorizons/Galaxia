@@ -161,10 +161,6 @@ public final class AsteroidFieldNodeCatalog {
         return Optional.ofNullable(nodesByIndex.get(id.index()));
     }
 
-    public boolean containsIndex(int index) {
-        return nodesByIndex.containsKey(index);
-    }
-
     public List<AsteroidFieldNodeSnapshot> snapshots() {
         return nodes.stream()
             .map(AsteroidFieldNodeSnapshot::fromNode)

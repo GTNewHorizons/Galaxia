@@ -213,7 +213,8 @@ public final class AsteroidClientProjectionService {
                     .minorBodyId());
             if (anchor.isEmpty()) continue;
             for (AsteroidFieldNode candidate : catalog.nodes()) {
-                if (isHidden(candidate) && distance(profile, anchor.get(), candidate) <= scan.radius()) {
+                if (isHidden(candidate) && AsteroidFieldOrbitResolver
+                    .separation(profile, anchor.get(), candidate) <= scan.radius()) {
                     targets.add(candidate.id());
                 }
             }
@@ -226,13 +227,4 @@ public final class AsteroidClientProjectionService {
             == DiscoveryState.HIDDEN;
     }
 
-    private static double distance(AsteroidFieldProfile profile, AsteroidFieldNode first, AsteroidFieldNode second) {
-        double firstRadius = AsteroidFieldOrbitResolver.resolveRadius(profile, first);
-        double firstAngle = Math.toRadians(first.angleOffsetDeg());
-        double secondRadius = AsteroidFieldOrbitResolver.resolveRadius(profile, second);
-        double secondAngle = Math.toRadians(second.angleOffsetDeg());
-        double dx = Math.cos(firstAngle) * firstRadius - Math.cos(secondAngle) * secondRadius;
-        double dy = Math.sin(firstAngle) * firstRadius - Math.sin(secondAngle) * secondRadius;
-        return Math.sqrt(dx * dx + dy * dy);
-    }
 }
