@@ -21,7 +21,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledge
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
 
-final class AsteroidStarmapProjectionBuilderTest {
+final class AsteroidClientProjectionDecorationTest {
 
     @AfterEach
     void clearClientState() {
@@ -38,7 +38,7 @@ final class AsteroidStarmapProjectionBuilderTest {
         CelestialKnowledgeClientState
             .apply(Map.of(CelestialObjectKey.minorBody(medium.id()), CelestialKnowledgeFacts.discoveredUnknown()));
 
-        List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder
+        List<AsteroidStarmapProjection> projections = AsteroidClientProjectionService
             .decorate(belt(fieldProfile), List.of(materialize(large), materialize(medium)), false, Set.of(), Set.of());
 
         assertEquals(List.of(large.id(), medium.id()), projectionIds(projections));
@@ -63,7 +63,7 @@ final class AsteroidStarmapProjectionBuilderTest {
         List<AsteroidFieldNode> catalog = seedCatalog(fieldProfile);
         AsteroidFieldNode hidden = forceHidden(catalog, AsteroidSizeClass.SMALL);
 
-        List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder
+        List<AsteroidStarmapProjection> projections = AsteroidClientProjectionService
             .decorate(belt(fieldProfile), List.of(materialize(hidden)), true, Set.of(), Set.of());
 
         AsteroidStarmapProjection hiddenProjection = projections.get(0);
@@ -80,7 +80,7 @@ final class AsteroidStarmapProjectionBuilderTest {
         List<AsteroidFieldNode> catalog = seedCatalog(fieldProfile);
         AsteroidFieldNode hidden = forceHidden(catalog, AsteroidSizeClass.SMALL);
 
-        List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder
+        List<AsteroidStarmapProjection> projections = AsteroidClientProjectionService
             .decorate(belt(fieldProfile), List.of(materialize(hidden)), false, Set.of(hidden.id()), Set.of());
 
         AsteroidStarmapProjection hiddenProjection = projections.get(0);
@@ -98,7 +98,7 @@ final class AsteroidStarmapProjectionBuilderTest {
         List<AsteroidFieldNode> catalog = seedCatalog(fieldProfile);
         AsteroidFieldNode hidden = forceHidden(catalog, AsteroidSizeClass.SMALL);
 
-        List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder
+        List<AsteroidStarmapProjection> projections = AsteroidClientProjectionService
             .decorate(belt(fieldProfile), List.of(materialize(hidden)), false, Set.of(), Set.of(hidden.id()));
 
         AsteroidStarmapProjection hiddenProjection = projections.get(0);
@@ -135,7 +135,7 @@ final class AsteroidStarmapProjectionBuilderTest {
             .stream()
             .map(node -> AsteroidCelestialMaterializer.materialize(node, fieldProfile))
             .toList();
-        List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder
+        List<AsteroidStarmapProjection> projections = AsteroidClientProjectionService
             .decorate(belt(fieldProfile), canonical, false, Set.of(), Set.of());
 
         assertEquals(
@@ -198,7 +198,7 @@ final class AsteroidStarmapProjectionBuilderTest {
             .spriteSize(0.01)
             .build();
 
-        List<AsteroidStarmapProjection> projections = AsteroidStarmapProjectionBuilder
+        List<AsteroidStarmapProjection> projections = AsteroidClientProjectionService
             .decorate(belt(fieldProfile), List.of(foreign, materialize(medium)), true, Set.of(), Set.of());
 
         assertEquals(List.of(medium.id()), projectionIds(projections));
@@ -207,7 +207,7 @@ final class AsteroidStarmapProjectionBuilderTest {
     private static AsteroidStarmapProjection projection(AsteroidSizeClass sizeClass) {
         List<AsteroidFieldNode> catalog = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile());
         AsteroidFieldNode idNode = node(catalog, sizeClass);
-        return AsteroidStarmapProjectionBuilder
+        return AsteroidClientProjectionService
             .decorate(belt(profile()), List.of(materialize(idNode)), true, Set.of(), Set.of())
             .get(0);
     }
