@@ -5,40 +5,70 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 
 /**
- * Shared JSON {@code kind/bodyId/index} codec for {@link CelestialObjectKey}.
+ * The on-disk shape of a {@link CelestialObjectKey}, shared by every persistence adapter.
  * <p>
- * TLDR: one Key encoding used by both scan-discovery and team-knowledge
- * persistence so the two adapters do not reinvent a second on-disk Key layout.
+ * Registered and minor bodies keep separate id fields so a generated minor body never has to be packed into one string
+ * that later code would have to parse heuristically.
  */
 final class CelestialObjectKeyJsonCodec {
 
     private CelestialObjectKeyJsonCodec() {}
 
     static CelestialObjectKeyJson encode(CelestialObjectKey key) {
+        if (key == null) return null;
         CelestialObjectKeyJson json = new CelestialObjectKeyJson();
-        json.kind = key.isRegistered() ? "registered" : "minor";
-        json.bodyId = key.isRegistered() ? key.registeredBodyId()
-            .name()
-            : key.minorBodyId()
-                .parentBodyId()
+        if (key.isRegistered()) {
+            json.kind = "registered";
+            json.registeredBodyId = key.registeredBodyId()
                 .name();
-        if (key.isMinorBody()) json.index = key.minorBodyId()
-            .index();
+            return json;
+        }
+        MinorCelestialBodyId minorId = key.minorBodyId();
+        json.kind = "minor";
+        json.parentBodyId = minorId.parentBodyId()
+            .name();
+        json.index = minorId.index();
         return json;
     }
 
     static CelestialObjectKey decode(CelestialObjectKeyJson json) {
-        if (json == null || json.kind == null || json.bodyId == null) {
-            throw new IllegalStateException("[PERSIST] LOAD FAILED: malformed celestial object key");
+        if (json == null) throw invalidKey("celestialObjectKey", null, "key is required");
+        if (json.kind == null || json.kind.isBlank()) {
+            throw invalidKey("celestialObjectKey.kind", String.valueOf(json.kind), "kind is required");
         }
-        CelestialObjectId bodyId = requireEnum(
-            CelestialObjectId.class,
-            json.bodyId,
-            "[PERSIST] LOAD FAILED: unknown celestial object id " + json.bodyId);
-        if ("registered".equals(json.kind)) return CelestialObjectKey.registered(bodyId);
-        if ("minor".equals(json.kind))
-            return CelestialObjectKey.minorBody(new MinorCelestialBodyId(bodyId, json.index));
-        throw new IllegalStateException("[PERSIST] LOAD FAILED: unknown celestial object key kind " + json.kind);
+        if ("registered".equals(json.kind)) {
+            CelestialObjectId registeredId = CelestialObjectId.fromString(json.registeredBodyId);
+            if (registeredId == null) {
+                throw invalidKey(
+                    "celestialObjectKey.registeredBodyId",
+                    String.valueOf(json.registeredBodyId),
+                    "invalid registeredBodyId");
+            }
+            return CelestialObjectKey.registered(registeredId);
+        }
+        if ("minor".equals(json.kind)) {
+            CelestialObjectId parentBodyId = CelestialObjectId.fromString(json.parentBodyId);
+            if (parentBodyId == null) {
+                throw invalidKey(
+                    "celestialObjectKey.parentBodyId",
+                    String.valueOf(json.parentBodyId),
+                    "invalid parentBodyId");
+            }
+            if (json.index == null) {
+                throw invalidKey("celestialObjectKey.index", "null", "index is required");
+            }
+            try {
+                return CelestialObjectKey.minorBody(new MinorCelestialBodyId(parentBodyId, json.index));
+            } catch (IllegalArgumentException ex) {
+                throw invalidKey("celestialObjectKey.index", String.valueOf(json.index), ex.getMessage());
+            }
+        }
+        throw invalidKey("celestialObjectKey.kind", json.kind, "unknown key kind");
+    }
+
+    static IllegalArgumentException invalidKey(String fieldName, String value, String reason) {
+        return new IllegalArgumentException(
+            "[PERSIST] Invalid persisted celestial key field " + fieldName + "='" + value + "': " + reason);
     }
 
     static <T extends Enum<T>> T requireEnum(Class<T> cls, String name, String message) {
@@ -52,7 +82,8 @@ final class CelestialObjectKeyJsonCodec {
     static final class CelestialObjectKeyJson {
 
         String kind;
-        String bodyId;
-        int index;
+        String registeredBodyId;
+        String parentBodyId;
+        Integer index;
     }
 }

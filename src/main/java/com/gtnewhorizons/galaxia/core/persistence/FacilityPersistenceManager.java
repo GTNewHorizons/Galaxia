@@ -35,12 +35,11 @@ import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.core.network.PacketUtil;
+import com.gtnewhorizons.galaxia.core.persistence.CelestialObjectKeyJsonCodec.CelestialObjectKeyJson;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
@@ -305,8 +304,8 @@ public final class FacilityPersistenceManager {
                             tj.amount,
                             tj.remainingTicks,
                             LogisticSignal.Scope.valueOf(tj.transportKind),
-                            tj.fromBodyId == null ? null : decodeStructuredCelestialObjectKey(tj.fromBodyId),
-                            tj.toBodyId == null ? null : decodeStructuredCelestialObjectKey(tj.toBodyId),
+                            tj.fromBodyId == null ? null : CelestialObjectKeyJsonCodec.decode(tj.fromBodyId),
+                            tj.toBodyId == null ? null : CelestialObjectKeyJsonCodec.decode(tj.toBodyId),
                             tj.departureOrbitalTime,
                             tj.tofOrbitalSeconds));
                 }
@@ -497,66 +496,11 @@ public final class FacilityPersistenceManager {
     }
 
     private static CelestialObjectKeyJson encodeCelestialObjectKey(CelestialObjectKey key) {
-        if (key == null) return null;
-        CelestialObjectKeyJson json = new CelestialObjectKeyJson();
-        // New saves persist structured keys so generated minor bodies do not have
-        // to be packed into a string that future code must parse heuristically.
-        if (key.isRegistered()) {
-            json.kind = "registered";
-            json.registeredBodyId = key.registeredBodyId()
-                .name();
-            return json;
-        }
-        MinorCelestialBodyId minorId = key.minorBodyId();
-        json.kind = "minor";
-        json.parentBodyId = minorId.parentBodyId()
-            .name();
-        json.index = minorId.index();
-        return json;
+        return CelestialObjectKeyJsonCodec.encode(key);
     }
 
     private static CelestialObjectKey decodeCelestialObjectKey(AssetJson json) {
-        if (json.celestialObjectKey != null) return decodeStructuredCelestialObjectKey(json.celestialObjectKey);
-        throw invalidCelestialKey("celestialObjectKey", null, "structured celestial object key is required");
-    }
-
-    private static CelestialObjectKey decodeStructuredCelestialObjectKey(CelestialObjectKeyJson json) {
-        if (json.kind == null || json.kind.isBlank()) {
-            throw invalidCelestialKey("celestialObjectKey.kind", String.valueOf(json.kind), "kind is required");
-        }
-        if ("registered".equals(json.kind)) {
-            CelestialObjectId registeredId = CelestialObjectId.fromString(json.registeredBodyId);
-            if (registeredId == null) {
-                throw invalidCelestialKey(
-                    "celestialObjectKey.registeredBodyId",
-                    String.valueOf(json.registeredBodyId),
-                    "invalid registeredBodyId");
-            }
-            return CelestialObjectKey.registered(registeredId);
-        }
-        if ("minor".equals(json.kind)) {
-            CelestialObjectId parentBodyId = CelestialObjectId.fromString(json.parentBodyId);
-            if (parentBodyId == null) {
-                throw invalidCelestialKey(
-                    "celestialObjectKey.parentBodyId",
-                    String.valueOf(json.parentBodyId),
-                    "invalid parentBodyId");
-            }
-            if (json.index == null) {
-                throw invalidCelestialKey("celestialObjectKey.index", "null", "index is required");
-            }
-            try {
-                return CelestialObjectKey.minorBody(new MinorCelestialBodyId(parentBodyId, json.index));
-            } catch (IllegalArgumentException ex) {
-                throw invalidCelestialKey("celestialObjectKey.index", String.valueOf(json.index), ex.getMessage());
-            }
-        }
-        throw invalidCelestialKey("celestialObjectKey.kind", json.kind, "unknown key kind");
-    }
-
-    private static IllegalArgumentException invalidCelestialKey(String fieldName, String value, String reason) {
-        return new IllegalArgumentException(
-            "[PERSIST] Invalid persisted celestial key field " + fieldName + "='" + value + "': " + reason);
+        return CelestialObjectKeyJsonCodec.decode(json.celestialObjectKey);
     }
 
     FacilityStateJson encodeFacilityState(AutomatedFacility state) {
@@ -835,14 +779,14 @@ public final class FacilityPersistenceManager {
                         CelestialObjectKey originBodyKey = null;
                         JsonElement originElement = generatorData.get("originBodyKey");
                         if (originElement != null && !originElement.isJsonNull()) {
-                            originBodyKey = decodeStructuredCelestialObjectKey(
-                                PURE_GSON.fromJson(originElement, CelestialObjectKeyJson.class));
+                            originBodyKey = CelestialObjectKeyJsonCodec
+                                .decode(PURE_GSON.fromJson(originElement, CelestialObjectKeyJson.class));
                         }
                         CelestialObjectKey detectedCounterpartBodyKey = null;
                         JsonElement detectedElement = generatorData.get("detectedCounterpartBodyKey");
                         if (detectedElement != null && !detectedElement.isJsonNull()) {
-                            detectedCounterpartBodyKey = decodeStructuredCelestialObjectKey(
-                                PURE_GSON.fromJson(detectedElement, CelestialObjectKeyJson.class));
+                            detectedCounterpartBodyKey = CelestialObjectKeyJsonCodec
+                                .decode(PURE_GSON.fromJson(detectedElement, CelestialObjectKeyJson.class));
                         }
                         debugGenerator.restore(
                             new ModuleDebugDataGenerator.Config(
@@ -1182,14 +1126,6 @@ public final class FacilityPersistenceManager {
         Map<String, BoundsJson> fluidsBounds;
         Map<String, LogisticsConfigJson> logisticsConfig;
         Map<Boolean, List<String>> filters;
-    }
-
-    static final class CelestialObjectKeyJson {
-
-        String kind;
-        String registeredBodyId;
-        String parentBodyId;
-        Integer index;
     }
 
     static final class BoundsJson {

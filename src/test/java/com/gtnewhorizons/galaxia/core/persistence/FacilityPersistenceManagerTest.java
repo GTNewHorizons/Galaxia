@@ -888,7 +888,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.AssetJson json = new FacilityPersistenceManager.AssetJson();
         json.teamId = teamId.toString();
         json.assetId = CelestialAsset.ID.create();
-        json.celestialObjectKey = new FacilityPersistenceManager.CelestialObjectKeyJson();
+        json.celestialObjectKey = new CelestialObjectKeyJsonCodec.CelestialObjectKeyJson();
         json.celestialObjectKey.kind = "registered";
         json.celestialObjectKey.registeredBodyId = body.name();
         json.displayName = body + ":" + kind;
