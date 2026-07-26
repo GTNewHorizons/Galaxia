@@ -23,6 +23,12 @@ public final class AsteroidFieldNodeCatalog {
 
     private static final Map<CelestialObjectId, AsteroidFieldNodeCatalog> RESTORED = new ConcurrentHashMap<>();
 
+    // Generated catalogs are a pure function of belt id and profile, and are rebuilt per node on
+    // discovery ticks and starmap frames. Cache them like AsteroidFieldResolver caches its nodes.
+    private static final Map<GeneratedKey, AsteroidFieldNodeCatalog> GENERATED = new ConcurrentHashMap<>();
+
+    private record GeneratedKey(CelestialObjectId beltId, AsteroidFieldProfile profile) {}
+
     private final CelestialObjectId beltId;
     private final List<AsteroidFieldNode> nodes;
     private final Map<Integer, AsteroidFieldNode> nodesByIndex;
@@ -45,7 +51,9 @@ public final class AsteroidFieldNodeCatalog {
 
     public static AsteroidFieldNodeCatalog fromGenerated(@Nonnull CelestialObjectId beltId,
         @Nonnull AsteroidFieldProfile profile) {
-        return fromSnapshots(beltId, profile, List.of());
+        return GENERATED.computeIfAbsent(
+            new GeneratedKey(beltId, profile),
+            key -> fromSnapshots(key.beltId(), key.profile(), List.of()));
     }
 
     public static AsteroidFieldNodeCatalog fromSnapshots(@Nonnull CelestialObjectId beltId,
