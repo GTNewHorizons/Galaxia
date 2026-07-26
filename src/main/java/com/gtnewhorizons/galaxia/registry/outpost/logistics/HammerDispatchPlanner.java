@@ -436,8 +436,8 @@ public final class HammerDispatchPlanner {
 
     private static OrbitalTransferPlanner.TransferRoute routeBetween(CelestialObject root, CelestialAsset supplier,
         CelestialAsset requester, double orbitalTime, ModuleHammer hammer, UUID routeProfileTeamId) {
-        CelestialObject srcBody = GalaxiaCelestialAPI.findBodyById(root, supplier.celestialObjectKey);
-        CelestialObject dstBody = GalaxiaCelestialAPI.findBodyById(root, requester.celestialObjectKey);
+        CelestialObject srcBody = GalaxiaCelestialAPI.findBodyByKey(root, supplier.celestialObjectKey);
+        CelestialObject dstBody = GalaxiaCelestialAPI.findBodyByKey(root, requester.celestialObjectKey);
         CelestialObject attractor = srcBody != null ? GalaxiaCelestialAPI.findStar(root, srcBody) : null;
         if (srcBody == null || dstBody == null || attractor == null) return null;
 

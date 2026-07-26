@@ -2333,8 +2333,8 @@ public class OrbitalView {
 
         private InterplanetaryTransferJob buildRenderedLogisticsTransfer(LogisticsDelivery delivery) {
             if (delivery == null || delivery.data.resourceId() == null) return null;
-            CelestialObject sourceBody = GalaxiaCelestialAPI.findBodyById(root, delivery.data.fromBodyKey());
-            CelestialObject destinationBody = GalaxiaCelestialAPI.findBodyById(root, delivery.data.toBodyKey());
+            CelestialObject sourceBody = GalaxiaCelestialAPI.findBodyByKey(root, delivery.data.fromBodyKey());
+            CelestialObject destinationBody = GalaxiaCelestialAPI.findBodyByKey(root, delivery.data.toBodyKey());
             if (sourceBody == null || destinationBody == null) return null;
 
             String itemName = delivery.data.resourceId()
@@ -3241,7 +3241,7 @@ public class OrbitalView {
         }
 
         private String bodyDisplayName(CelestialObjectKey bodyKey) {
-            return GalaxiaCelestialAPI.findBodyById(bodyKey)
+            return GalaxiaCelestialAPI.findBodyByKey(bodyKey)
                 .map(CelestialObject::displayName)
                 .orElseGet(
                     () -> bodyKey.isRegistered() ? bodyKey.registeredBodyId()

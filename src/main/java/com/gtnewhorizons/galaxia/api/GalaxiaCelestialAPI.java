@@ -60,8 +60,8 @@ public final class GalaxiaCelestialAPI {
         return CelestialRegistry.hierarchy();
     }
 
-    public static Optional<CelestialObject> findBodyById(CelestialObjectKey id) {
-        return CelestialRegistry.get(id);
+    public static Optional<CelestialObject> findBodyByKey(CelestialObjectKey key) {
+        return CelestialRegistry.get(key);
     }
 
     public static List<CelestialObject> getChildren(CelestialObject parent) {
@@ -144,7 +144,7 @@ public final class GalaxiaCelestialAPI {
         return Optional.empty();
     }
 
-    public static CelestialObject findBodyById(CelestialObject root, CelestialObjectKey needle) {
+    public static CelestialObject findBodyByKey(CelestialObject root, CelestialObjectKey needle) {
         if (root == null || needle == null) return null;
         CelestialObject found = findBodyByIdRec(root, needle);
         if (found != null) return found;
@@ -235,8 +235,8 @@ public final class GalaxiaCelestialAPI {
     public static boolean sharesPlanetaryAnchor(CelestialObject root, CelestialObjectKey bodyIdA,
         CelestialObjectKey bodyIdB) {
         if (root == null || bodyIdA == null || bodyIdB == null) return false;
-        CelestialObject a = GalaxiaCelestialAPI.findBodyById(root, bodyIdA);
-        CelestialObject b = GalaxiaCelestialAPI.findBodyById(root, bodyIdB);
+        CelestialObject a = GalaxiaCelestialAPI.findBodyByKey(root, bodyIdA);
+        CelestialObject b = GalaxiaCelestialAPI.findBodyByKey(root, bodyIdB);
         if (a == null || b == null) return false;
         CelestialObject anchorA = GalaxiaCelestialAPI.findPlanetaryAnchor(root, a);
         CelestialObject anchorB = GalaxiaCelestialAPI.findPlanetaryAnchor(root, b);

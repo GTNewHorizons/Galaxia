@@ -362,7 +362,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     }
 
     private ButtonWidget<?> buildRowWidget(SystemAssetRowView row) {
-        CelestialObject hostBody = GalaxiaCelestialAPI.findBodyById(galaxyRoot, row.hostBodyKey);
+        CelestialObject hostBody = GalaxiaCelestialAPI.findBodyByKey(galaxyRoot, row.hostBodyKey);
         String displayName = trimToPixels(row.displayName, NAME_W);
         ResourceLocation bodyIcon = AssetPanelIcons.iconForBody(hostBody);
 
@@ -417,7 +417,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     }
 
     private ParentWidget<?> buildSatelliteRowWidget(SatelliteRow row) {
-        CelestialObject hostBody = GalaxiaCelestialAPI.findBodyById(galaxyRoot, row.bodyKey());
+        CelestialObject hostBody = GalaxiaCelestialAPI.findBodyByKey(galaxyRoot, row.bodyKey());
         String bodyName = hostBody != null ? hostBody.displayName()
             : row.bodyKey()
                 .toString();

@@ -115,7 +115,7 @@ public final class OrbitalTransferPlanner {
      * Finds a body in the hierarchy by id, starting from {@code root}.
      * Returns {@code null} if not found.
      */
-    public static CelestialObject findBodyById(CelestialObject root, String id) {
+    public static CelestialObject findBodyByKey(CelestialObject root, String id) {
         if (root == null || id == null) return null;
         return findBodyByIdRec(root, id);
     }

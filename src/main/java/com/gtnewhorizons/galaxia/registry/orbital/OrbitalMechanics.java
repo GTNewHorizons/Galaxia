@@ -47,7 +47,7 @@ public final class OrbitalMechanics {
         OrbitalState traversedState = resolveWorldState(root, target, new OrbitalState(0.0, 0.0, 0.0, 0.0), globalTime);
         if (traversedState != null || target.parentKey() == null) return traversedState;
 
-        CelestialObject parent = GalaxiaCelestialAPI.findBodyById(root, target.parentKey());
+        CelestialObject parent = GalaxiaCelestialAPI.findBodyByKey(root, target.parentKey());
         if (parent == null || parent == target) return null;
         OrbitalState parentState = resolveWorldState(root, parent, globalTime);
         return parentState == null ? null : resolveChildWorldState(parent, target, parentState, globalTime);

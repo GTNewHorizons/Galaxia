@@ -333,13 +333,13 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
             case GALACTIC:
                 return true;
             case SYSTEM: {
-                CelestialObject body = GalaxiaCelestialAPI.findBodyById(galaxyRoot, bodyKey);
+                CelestialObject body = GalaxiaCelestialAPI.findBodyByKey(galaxyRoot, bodyKey);
                 if (body == null) return false;
                 CelestialObject star = GalaxiaCelestialAPI.findStar(galaxyRoot, body);
                 return star != null && star == viewRoot;
             }
             case PLANETARY: {
-                CelestialObject body = GalaxiaCelestialAPI.findBodyById(galaxyRoot, bodyKey);
+                CelestialObject body = GalaxiaCelestialAPI.findBodyByKey(galaxyRoot, bodyKey);
                 if (body == null) return false;
                 CelestialObject anchor = GalaxiaCelestialAPI.findPlanetaryAnchor(galaxyRoot, body);
                 CelestialObject viewAnchor = GalaxiaCelestialAPI.findPlanetaryAnchor(galaxyRoot, viewRoot);

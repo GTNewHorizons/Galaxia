@@ -30,7 +30,7 @@ final class GalaxiaCelestialAPIKeyTest {
         CelestialObject asteroid = GalaxiaCelestialAPI.get(key)
             .orElseThrow();
 
-        assertEquals(asteroid, GalaxiaCelestialAPI.findBodyById(root, key));
+        assertEquals(asteroid, GalaxiaCelestialAPI.findBodyByKey(root, key));
         assertEquals(
             CelestialObjectId.VAEL,
             GalaxiaCelestialAPI.findStar(key)
