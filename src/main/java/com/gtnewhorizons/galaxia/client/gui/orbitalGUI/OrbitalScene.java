@@ -28,11 +28,7 @@ public class OrbitalScene {
 
     private static final double[] ZERO_VIEW_ORIGIN = { 0.0, 0.0 };
 
-    static int visibleSatelliteMarkerCount(List<CelestialAsset> assetState) {
-        return visibleSatelliteMarkerAlphas(assetState).size();
-    }
-
-    private static EnumMap<SatelliteKind, Float> visibleSatelliteMarkerAlphas(List<CelestialAsset> assetState) {
+    static EnumMap<SatelliteKind, Float> visibleSatelliteMarkerAlphas(List<CelestialAsset> assetState) {
         EnumMap<SatelliteKind, Float> alphas = new EnumMap<>(SatelliteKind.class);
         if (assetState == null) return alphas;
         for (CelestialAsset asset : assetState) {

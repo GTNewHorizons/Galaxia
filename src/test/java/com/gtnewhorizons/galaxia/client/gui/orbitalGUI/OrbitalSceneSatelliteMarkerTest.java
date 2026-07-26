@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -28,7 +29,10 @@ final class OrbitalSceneSatelliteMarkerTest {
             satellite(SatelliteKind.COMMUNICATION),
             satellite(SatelliteKind.PROSPECTING));
 
-        assertEquals(2, OrbitalScene.visibleSatelliteMarkerCount(assets));
+        assertEquals(
+            Set.of(SatelliteKind.COMMUNICATION, SatelliteKind.PROSPECTING),
+            OrbitalScene.visibleSatelliteMarkerAlphas(assets)
+                .keySet());
     }
 
     @Test
@@ -40,7 +44,10 @@ final class OrbitalSceneSatelliteMarkerTest {
                 Buildable.Status.OPERATIONAL),
             satellite(SatelliteKind.COMMUNICATION));
 
-        assertEquals(1, OrbitalScene.visibleSatelliteMarkerCount(assets));
+        assertEquals(
+            Set.of(SatelliteKind.COMMUNICATION),
+            OrbitalScene.visibleSatelliteMarkerAlphas(assets)
+                .keySet());
     }
 
     private static CelestialAsset satellite(SatelliteKind kind) {
