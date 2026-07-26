@@ -451,6 +451,7 @@ public class OrbitalView {
                 return isGT5AutomationAvailable();
             }
         };
+        private final OrbitalBodyZoom bodyZoom;
         private final StarmapAssetActions.OrbitalAssetSupport assetSupport = new StarmapAssetActions.OrbitalAssetSupport();
         private final InterplanetaryTransferSystem.OrbitalTransferSupport transferSupport = new InterplanetaryTransferSystem.OrbitalTransferSupport();
         private final StarmapAssetActions.OrbitalAssetActionController assetActionController;
@@ -494,12 +495,28 @@ public class OrbitalView {
         private static final float MAP_ICON_BASE_SCALE = 18f;
         private static final float MAP_ICON_ZOOM_SCALE = 0.8f;
         private static final float GALAXY_MAP_STAR_SPRITE_SIZE = 0.5f;
-        private static final double SYSTEM_DEPARTURE_EXTENT_MULTIPLIER = 24.0;
 
         public OrbitalMapWidget(CelestialObject root) {
             this.root = root;
             this.viewRoot = root;
             this.initialLayer = root;
+            this.bodyZoom = new OrbitalBodyZoom(root, new OrbitalBodyZoom.World() {
+
+                @Override
+                public List<CelestialObject> childrenOf(CelestialObject body) {
+                    return CelestialClient.getChildren(body);
+                }
+
+                @Override
+                public double[] absolutePosition(CelestialObject body) {
+                    return getAbsoluteWorldPos(body);
+                }
+
+                @Override
+                public CelestialObject parentOf(CelestialObject body) {
+                    return findParent(root, body);
+                }
+            }, viewContext);
             this.assetActionController = new StarmapAssetActions.OrbitalAssetActionController(
                 assetSupport,
                 new StarmapAssetActions.OrbitalAssetActionController.Callbacks() {
@@ -1044,8 +1061,8 @@ public class OrbitalView {
             else if (this.viewRoot.objectClass() == CelestialObject.Class.STAR && targetLayer == root)
                 anchorBody = this.viewRoot;
             if (anchorBody != null) {
-                double transitionTargetZoom = targetLayer == root ? getSystemDepartureZoom(anchorBody)
-                    : getGalaxyCutZoom(anchorBody);
+                double transitionTargetZoom = targetLayer == root ? bodyZoom.systemDepartureZoom(anchorBody)
+                    : bodyZoom.galaxyCutZoom(anchorBody);
                 transitionState = transitionState
                     .beginPending(targetLayer, anchorBody, viewState.zoomLevel, transitionTargetZoom);
                 pendingFocusBody = null;
@@ -1333,7 +1350,7 @@ public class OrbitalView {
         private double getDisplayZoomMultiplier() {
             CelestialObject referenceBody = viewRoot != null ? viewRoot : root;
             if (referenceBody == null) return 1.0;
-            double referenceScale = OrbitalZoom.scaleForZoomLevel(getOverviewZoomForBody(referenceBody));
+            double referenceScale = OrbitalZoom.scaleForZoomLevel(bodyZoom.overviewZoomFor(referenceBody));
             if (referenceScale <= 1e-9) return 1.0;
             return getScale() / referenceScale;
         }
@@ -1538,7 +1555,7 @@ public class OrbitalView {
             }
             boolean goIso = OrbitalZoom.useIsometricOverview(body);
             viewState.targetIsometricProgress = goIso ? 1.0 : 0.0;
-            viewState.targetZoomLevel = getOverviewZoomForBody(body);
+            viewState.targetZoomLevel = bodyZoom.overviewZoomFor(body);
         }
 
         private void resetForLayer(CelestialObject layerRoot) {
@@ -1558,77 +1575,6 @@ public class OrbitalView {
                 && Math.abs(viewState.zoomLevel - viewState.targetZoomLevel) < LAYER_SWITCH_CONVERGE_THRESHOLD;
         }
 
-        private double calculateOverviewExtent(CelestialObject body) {
-            if (body.objectClass() == CelestialObject.Class.GALAXY) {
-                double maxDistance = 0.0;
-                for (CelestialObject child : CelestialClient.getChildren(body)) {
-                    double[] pos = getAbsoluteWorldPos(child);
-                    if (pos == null) continue;
-                    maxDistance = Math.max(maxDistance, Math.hypot(pos[0], pos[1]));
-                }
-                return maxDistance;
-            }
-            double maxSize = 0.0;
-            for (CelestialObject child : CelestialClient.getChildren(body)) maxSize = Math.max(
-                maxSize,
-                child.orbitalParams()
-                    .apogee());
-            return maxSize;
-        }
-
-        private double calculateFocusedOrbitExtent(CelestialObject body) {
-            CelestialObject parent = findParent(root, body);
-            if (parent == null) return 0.0;
-            double maxApogee = 0.0;
-            for (CelestialObject sibling : CelestialClient.getChildren(parent)) maxApogee = Math.max(
-                maxApogee,
-                sibling.orbitalParams()
-                    .apogee());
-            return maxApogee;
-        }
-
-        private double computeOverviewZoom(CelestialObject body, boolean goIso) {
-            double extent = goIso ? calculateFocusedOrbitExtent(body) : calculateOverviewExtent(body);
-            return OrbitalZoom.overviewZoomForExtent(extent, goIso);
-        }
-
-        private double getOverviewZoomForBody(CelestialObject body) {
-            return computeOverviewZoom(body, OrbitalZoom.useIsometricOverview(body));
-        }
-
-        private double viewportHalfDiagonal() {
-            return OrbitalZoom.viewportHalfDiagonal(getArea().width, getArea().height);
-        }
-
-        private double viewportMinDimension() {
-            return OrbitalZoom.viewportMinDimension(getArea().width, getArea().height);
-        }
-
-        private double getSystemDepartureZoom(CelestialObject star) {
-            double farthestOrbit = calculateOverviewExtent(star);
-            return OrbitalZoom.zoomForWorldDistance(
-                farthestOrbit * SYSTEM_DEPARTURE_EXTENT_MULTIPLIER,
-                OrbitalZoom.OVERVIEW_SCREEN_RADIUS);
-        }
-
-        private double getNearestOtherStarDistance(CelestialObject anchorStar) {
-            return OrbitalZoom
-                .nearestOtherStarDistance(anchorStar, CelestialClient.getChildren(root), this::getAbsoluteWorldPos);
-        }
-
-        private double getGalaxyOverviewZoom(CelestialObject anchorStar) {
-            double nearestDistance = getNearestOtherStarDistance(anchorStar);
-            if (nearestDistance == Double.MAX_VALUE || nearestDistance <= 1e-9) return getOverviewZoomForBody(root);
-            return OrbitalZoom.zoomForWorldDistance(nearestDistance, viewportMinDimension() * 0.2);
-        }
-
-        private double getGalaxyCutZoom(CelestialObject anchorStar) {
-            double nearestDistance = getNearestOtherStarDistance(anchorStar);
-            if (nearestDistance == Double.MAX_VALUE || nearestDistance <= 1e-9)
-                return getGalaxyOverviewZoom(anchorStar);
-            return OrbitalZoom.zoomForWorldDistance(nearestDistance, viewportHalfDiagonal() * 1.5);
-        }
-
         private boolean isLayerSwitchActive() {
             return transitionState.isActive();
         }
@@ -1645,7 +1591,7 @@ public class OrbitalView {
                     targetLayer,
                     anchorBody,
                     viewState.zoomLevel,
-                    getSystemDepartureZoom(anchorBody),
+                    bodyZoom.systemDepartureZoom(anchorBody),
                     currentAnchorSpriteSize,
                     GALAXY_MAP_STAR_SPRITE_SIZE);
             } else {
@@ -1654,7 +1600,7 @@ public class OrbitalView {
                     targetLayer,
                     anchorBody,
                     viewState.zoomLevel,
-                    getGalaxyCutZoom(anchorBody),
+                    bodyZoom.galaxyCutZoom(anchorBody),
                     currentAnchorSpriteSize,
                     (float) anchorBody.spriteSize());
             }
@@ -1673,8 +1619,8 @@ public class OrbitalView {
                 focusedTransfer = null;
                 isFollowing = true;
                 if (anchorPos != null) viewState.setCamera(anchorPos[0], anchorPos[1]);
-                viewState.zoomLevel = getGalaxyCutZoom(transitionState.activeAnchor());
-                viewState.targetZoomLevel = getGalaxyOverviewZoom(transitionState.activeAnchor());
+                viewState.zoomLevel = bodyZoom.galaxyCutZoom(transitionState.activeAnchor());
+                viewState.targetZoomLevel = bodyZoom.galaxyOverviewZoom(transitionState.activeAnchor());
                 viewState.isometricProgress = 0.0;
                 viewState.targetIsometricProgress = 0.0;
                 pendingFocusBody = null;
@@ -1695,8 +1641,8 @@ public class OrbitalView {
                 focusedTransfer = null;
                 isFollowing = true;
                 if (anchorPos != null) viewState.setCamera(anchorPos[0], anchorPos[1]);
-                viewState.zoomLevel = getSystemDepartureZoom(transitionState.activeAnchor());
-                viewState.targetZoomLevel = getOverviewZoomForBody(transitionState.activeTarget());
+                viewState.zoomLevel = bodyZoom.systemDepartureZoom(transitionState.activeAnchor());
+                viewState.targetZoomLevel = bodyZoom.overviewZoomFor(transitionState.activeTarget());
                 viewState.isometricProgress = 0.0;
                 viewState.targetIsometricProgress = 0.0;
                 pendingFocusBody = null;
