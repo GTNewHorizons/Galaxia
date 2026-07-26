@@ -777,8 +777,8 @@ public final class InterplanetaryTransferSystem {
             GlStateManager.enableBlend();
             GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 
-            int color = withAlpha(PREVIEW_PATH_COLOR, alpha);
-            applyColor(color);
+            int color = StarmapColor.withAlpha(PREVIEW_PATH_COLOR, alpha);
+            StarmapColor.apply(color);
             GL11.glLineWidth(1.8f);
             GL11.glBegin(GL11.GL_LINE_STRIP);
             for (int i = 0; i < state.previewPointCount(); i++) {
@@ -823,8 +823,8 @@ public final class InterplanetaryTransferSystem {
 
         private void drawTransferPath(InterplanetaryTransferJob transfer, float alpha) {
             if (transfer.trajectoryPointCount() <= 0) return;
-            int color = withAlpha(PATH_COLOR, alpha);
-            applyColor(color);
+            int color = StarmapColor.withAlpha(PATH_COLOR, alpha);
+            StarmapColor.apply(color);
             GL11.glLineWidth(1.8f);
             GL11.glBegin(GL11.GL_LINE_STRIP);
             for (int i = 0; i < transfer.trajectoryPointCount(); i++) {
@@ -843,18 +843,6 @@ public final class InterplanetaryTransferSystem {
             TransferPackageIcons.drawCentered(transfer.packageKind(), sx, sy, PACKAGE_SPRITE_SIZE, alpha);
         }
 
-        private void applyColor(int color) {
-            float r = ((color >> 16) & 0xFF) / 255f;
-            float g = ((color >> 8) & 0xFF) / 255f;
-            float b = (color & 0xFF) / 255f;
-            float a = ((color >> 24) & 0xFF) / 255f;
-            GlStateManager.color(r, g, b, a);
-        }
-
-        private int withAlpha(int color, float alpha) {
-            int a = Math.max(0, Math.min(255, (int) (((color >> 24) & 0xFF) * alpha)));
-            return (color & 0x00FFFFFF) | (a << 24);
-        }
     }
 
     // -----------------------------------------------------------------------

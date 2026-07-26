@@ -955,7 +955,7 @@ public class OrbitalScene {
         private void drawSelectionOverlay(float centerX, float centerY, float boxSize, float alpha) {
             GlStateManager.enableBlend();
             GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            int color = withAlpha(EnumColors.MAP_COLOR_SELECTION_HIGHLIGHT.getColor(), alpha);
+            int color = StarmapColor.withAlpha(EnumColors.MAP_COLOR_SELECTION_HIGHLIGHT.getColor(), alpha);
             int thickness = 2;
             int left = Math.round(centerX - boxSize);
             int right = Math.round(centerX + boxSize);
@@ -980,11 +980,6 @@ public class OrbitalScene {
             int verticalBottom = topAligned ? y + length : y;
             Gui.drawRect(horizontalStart, horizontalTop, horizontalEnd, horizontalBottom, color);
             Gui.drawRect(verticalLeft, verticalTop, verticalRight, verticalBottom, color);
-        }
-
-        private int withAlpha(int color, float alpha) {
-            int a = Math.max(0, Math.min(255, (int) (((color >> 24) & 0xFF) * alpha)));
-            return (color & 0x00FFFFFF) | (a << 24);
         }
 
         private int getFallbackBodyColor(CelestialObject.Class objectClass) {

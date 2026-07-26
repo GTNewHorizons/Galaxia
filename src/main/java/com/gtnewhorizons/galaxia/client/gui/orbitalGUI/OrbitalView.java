@@ -5,11 +5,9 @@ import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTech5UnofficialNewH
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -56,7 +54,6 @@ import com.gtnewhorizons.galaxia.registry.satellite.SatelliteBandwidthFormatter;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataKey;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkClientState;
-import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkGraph;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkState;
 
 public class OrbitalView {
@@ -167,33 +164,6 @@ public class OrbitalView {
             return new OrbitalLayerTransitionState(null, null, 0, 0, Phase.NONE, null, null, 0, 0, 0f, 0f);
         }
     }
-
-    private record SatelliteNetworkEndpoint(float centerX, float centerY, float renderedRadius) {}
-
-    private record SatelliteSignalKey(SatelliteNetworkGraph.Edge edge, int direction, boolean keepAlive) {}
-
-    private static final class SatelliteSignalState {
-
-        private double cooldownSeconds;
-        private boolean returning;
-        private int packetSequence;
-        private final List<SatelliteSignalPacket> packets = new ArrayList<>();
-    }
-
-    private static final class SatelliteSignalPacket {
-
-        private double distanceWorldUnits;
-        private final int seed;
-        private final SatelliteSignalStyle style;
-
-        private SatelliteSignalPacket(double distanceWorldUnits, int seed, SatelliteSignalStyle style) {
-            this.distanceWorldUnits = distanceWorldUnits;
-            this.seed = seed;
-            this.style = style;
-        }
-    }
-
-    private record SatelliteSignalStyle(float headLength, float headWidth, int headColor, int tailColor) {}
 
     public static final class OrbitalContextMenuState {
 
@@ -452,13 +422,8 @@ public class OrbitalView {
         private boolean assetsPanelOpen = false;
         private boolean transfersHidden = false;
         private boolean satelliteNetworkHidden = false;
+        private final SatelliteNetworkOverlay satelliteNetworkOverlay = new SatelliteNetworkOverlay();
         private final OrbitalScene.OrbitalSceneFrameBuilder sceneFrameBuilder;
-        private final List<SatelliteNetworkGraph.Edge> visibleSatelliteNetworkEdges = new ArrayList<>();
-        private final Set<CelestialObjectKey> visibleSatelliteNetworkNodeIds = new HashSet<>();
-        private final Map<CelestialObjectKey, SatelliteNetworkEndpoint> satelliteNetworkEndpoints = new HashMap<>();
-        private final Map<CelestialObjectKey, OrbitalScene.ResolvedBodyDrawState> satelliteNetworkWorldStates = new HashMap<>();
-        private final Map<SatelliteSignalKey, SatelliteSignalState> satelliteSignalStates = new HashMap<>();
-        private final float[] satelliteThreadEndpointScratch = new float[4];
         private int lastRenderedLogisticsTaskRevision = Integer.MIN_VALUE;
         private int orbitalClockRevision = Integer.MIN_VALUE;
         private int lastRenderedLogisticsClockRevision = Integer.MIN_VALUE;
@@ -467,37 +432,9 @@ public class OrbitalView {
         private final OrbitalPlanetTrackingController planetTrackingController = new OrbitalPlanetTrackingController();
         private boolean guiActionsRegistered = false;
         private OrbitalLayerTransitionState transitionState = new OrbitalLayerTransitionState();
-        private long lastSatelliteSignalFrameMs = System.currentTimeMillis();
         private static final double ZOOM_BASE = 1.18;
         private static final double BASE_SCALE = 82.0;
         private static final double SERVER_OSU_PER_SECOND = OrbitalTransferPlanner.OSU_PER_SECOND;
-        private static final double SATELLITE_SIGNAL_WORLD_UNITS_PER_SECOND = 4_700.0D;
-        private static final double SATELLITE_SIGNAL_MIN_SEGMENT_PIXELS = 16.0D;
-        private static final double SATELLITE_SIGNAL_SEGMENT_PIXELS_RANGE = 8.0D;
-        private static final double SATELLITE_SIGNAL_BASE_SECONDS_PER_PACKET = 6.0D;
-        private static final double SATELLITE_SIGNAL_KBPS_PER_RATE_STEP = 50.0D;
-        private static final double SATELLITE_SIGNAL_PURPLE_TAIL_PIXELS = 14.0D;
-        private static final int SATELLITE_SIGNAL_PURPLE_TAIL_STEPS = 5;
-        private static final SatelliteSignalStyle SATELLITE_SIGNAL_KB_STYLE = new SatelliteSignalStyle(
-            3.0f,
-            3.0f,
-            0xFF80D7FF,
-            0xCC76BFFF);
-        private static final SatelliteSignalStyle SATELLITE_SIGNAL_MB_STYLE = new SatelliteSignalStyle(
-            4.0f,
-            4.0f,
-            0xFF9BAAFF,
-            0xCC8E98F2);
-        private static final SatelliteSignalStyle SATELLITE_SIGNAL_GB_STYLE = new SatelliteSignalStyle(
-            5.0f,
-            5.0f,
-            0xFFB986FF,
-            0xCCA578EA);
-        private static final SatelliteSignalStyle SATELLITE_SIGNAL_TB_STYLE = new SatelliteSignalStyle(
-            6.0f,
-            6.0f,
-            0xFFD579FF,
-            0xCCB86BDD);
         private static final double LERP_SPEED = 0.045;
         private static final double PENDING_LAYER_CENTER_LERP_SPEED = 0.08;
         private static final double LAYER_SWITCH_LERP_SPEED = 0.036;
@@ -2105,7 +2042,7 @@ public class OrbitalView {
             sceneRenderer.drawSpheresOfInfluence(sceneFrame);
             sceneRenderer.drawBodies(sceneFrame, viewRoot);
             if (!satelliteNetworkHidden) {
-                drawSatelliteCommunicationNetwork(
+                satelliteNetworkOverlay.draw(
                     sceneFrame,
                     viewRoot.objectClass() == CelestialObject.Class.STAR
                         ? (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 2.5)
@@ -2196,7 +2133,7 @@ public class OrbitalView {
                 if (actualLabelAlpha > 0.01f) {
                     drawLabel = true;
                     labelY = screenY + getLabelYOffset(renderedRadius);
-                    labelColor = withAlpha(EnumColors.MapCelestialLabelText.getColor(), actualLabelAlpha);
+                    labelColor = StarmapColor.withAlpha(EnumColors.MapCelestialLabelText.getColor(), actualLabelAlpha);
                 }
             }
             out.set(
@@ -2473,423 +2410,6 @@ public class OrbitalView {
             for (int i = 0; i < lines.length; i++) {
                 Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(lines[i], 12, 36 + i * 11, 0xFFD9E0FF);
             }
-        }
-
-        private void drawSatelliteCommunicationNetwork(OrbitalScene.OrbitalSceneFrame frame, float alpha) {
-            UUID teamId = currentTeamId();
-            if (teamId == null || alpha <= 0.01f) return;
-            SatelliteNetworkState networkState = SatelliteNetworkClientState.current();
-            if (!teamId.equals(networkState.teamId())) {
-                updateVisibleSatelliteNetworkEdges(List.of(), Set.of());
-                return;
-            }
-
-            List<SatelliteNetworkGraph.Edge> snapshotEdges = networkState.links()
-                .stream()
-                .map(SatelliteNetworkState.Link::asEdge)
-                .toList();
-            Set<CelestialObjectKey> snapshotBodyIds = networkState.bodies()
-                .keySet();
-            updateVisibleSatelliteNetworkEdges(snapshotEdges, snapshotBodyIds);
-            if (visibleSatelliteNetworkEdges.isEmpty()) return;
-
-            satelliteNetworkEndpoints.clear();
-            satelliteNetworkWorldStates.clear();
-            for (OrbitalScene.ResolvedBodyDrawState state : frame.resolvedBodies) {
-                CelestialObject body = state.body();
-                CelestialObjectKey satelliteNetworkBodyKey = satelliteNetworkBodyKey(body);
-                if (body == null || body.objectClass() == CelestialObject.Class.GALAXY
-                    || body.objectClass() == CelestialObject.Class.STAR
-                    || !isSatelliteNetworkRenderable(state)
-                    || satelliteNetworkBodyKey == null
-                    || !snapshotBodyIds.contains(satelliteNetworkBodyKey)) {
-                    continue;
-                }
-                satelliteNetworkWorldStates.put(satelliteNetworkBodyKey, state);
-                satelliteNetworkEndpoints.put(satelliteNetworkBodyKey, satelliteNetworkEndpoint(state));
-            }
-
-            GlStateManager.disableTexture2D();
-            GlStateManager.enableBlend();
-            GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            drawSatelliteNetworkThreads(networkState, alpha);
-            drawSatelliteNetworkSignals(networkState, alpha);
-            GL11.glLineWidth(1f);
-            GlStateManager.color(1f, 1f, 1f, 1f);
-            GlStateManager.enableTexture2D();
-        }
-
-        private boolean isSatelliteNetworkRenderable(OrbitalScene.ResolvedBodyDrawState state) {
-            return state.renderBody() && state.bodyAlpha() > 0.01f;
-        }
-
-        private SatelliteNetworkEndpoint satelliteNetworkEndpoint(OrbitalScene.ResolvedBodyDrawState state) {
-            return new SatelliteNetworkEndpoint(state.screenX(), state.screenY(), state.renderedRadius());
-        }
-
-        private void updateVisibleSatelliteNetworkEdges(List<SatelliteNetworkGraph.Edge> candidateEdges,
-            Set<CelestialObjectKey> candidateNodeIds) {
-            if (candidateEdges.isEmpty()) {
-                visibleSatelliteNetworkEdges.clear();
-                visibleSatelliteNetworkNodeIds.clear();
-                return;
-            }
-            if (!visibleSatelliteNetworkNodeIds.equals(candidateNodeIds)
-                || !visibleSatelliteNetworkEdges.equals(candidateEdges))
-                replaceVisibleSatelliteNetworkEdges(candidateEdges, candidateNodeIds);
-        }
-
-        private void replaceVisibleSatelliteNetworkEdges(List<SatelliteNetworkGraph.Edge> edges,
-            Collection<CelestialObjectKey> nodeIds) {
-            visibleSatelliteNetworkEdges.clear();
-            visibleSatelliteNetworkEdges.addAll(edges);
-            visibleSatelliteNetworkNodeIds.clear();
-            visibleSatelliteNetworkNodeIds.addAll(nodeIds);
-        }
-
-        private void drawSatelliteNetworkThreads(SatelliteNetworkState networkState, float alpha) {
-            drawSatelliteThreadPass(networkState, alpha, 5.0f, 0.10f);
-            drawSatelliteThreadPass(networkState, alpha, 2.0f, 0.26f);
-        }
-
-        private void drawSatelliteThreadPass(SatelliteNetworkState networkState, float alpha, float width,
-            float opacity) {
-            GL11.glLineWidth(width);
-            GL11.glBegin(GL11.GL_LINES);
-            for (SatelliteNetworkGraph.Edge edge : visibleSatelliteNetworkEdges) {
-                drawSatelliteThread(networkState, edge, alpha * opacity);
-            }
-            GL11.glEnd();
-        }
-
-        private SatelliteNetworkState.Link satelliteNetworkLink(SatelliteNetworkState networkState,
-            SatelliteNetworkGraph.Edge edge) {
-            for (SatelliteNetworkState.Link link : networkState.links()) {
-                if (link.asEdge()
-                    .equals(edge)) return link;
-            }
-            return null;
-        }
-
-        private int satelliteNetworkBodyColor(SatelliteNetworkState networkState, CelestialObjectKey bodyKey) {
-            return SatelliteNetworkLinkColor
-                .forLoad(networkState.usedKbps(bodyKey), networkState.capacityKbps(bodyKey));
-        }
-
-        private void drawSatelliteThread(SatelliteNetworkState networkState, SatelliteNetworkGraph.Edge edge,
-            float alpha) {
-            SatelliteNetworkEndpoint from = satelliteNetworkEndpoints.get(edge.from());
-            SatelliteNetworkEndpoint to = satelliteNetworkEndpoints.get(edge.to());
-            if (from == null || to == null) return;
-            float[] endpoints = satelliteThreadEndpoints(from, to);
-            SatelliteNetworkState.Link link = satelliteNetworkLink(networkState, edge);
-            int fromColor = satelliteNetworkBodyColor(networkState, edge.from());
-            int toColor = satelliteNetworkBodyColor(networkState, edge.to());
-            int linkColor = link == null ? SatelliteNetworkLinkColor.GREEN
-                : SatelliteNetworkLinkColor.forLoad(link.usedKbps(), link.capacityKbps());
-
-            drawSatelliteThreadSegment(endpoints, 0.0D, 0.20D, fromColor, fromColor, alpha);
-            drawSatelliteThreadSegment(endpoints, 0.20D, 0.30D, fromColor, linkColor, alpha);
-            drawSatelliteThreadSegment(endpoints, 0.30D, 0.70D, linkColor, linkColor, alpha);
-            drawSatelliteThreadSegment(endpoints, 0.70D, 0.80D, linkColor, toColor, alpha);
-            drawSatelliteThreadSegment(endpoints, 0.80D, 1.0D, toColor, toColor, alpha);
-        }
-
-        private void drawSatelliteThreadSegment(float[] endpoints, double startProgress, double endProgress,
-            int startColor, int endColor, float alpha) {
-            applyColor(withAlpha(startColor, alpha));
-            GL11.glVertex2f(
-                (float) lerp(endpoints[0], endpoints[2], startProgress),
-                (float) lerp(endpoints[1], endpoints[3], startProgress));
-            applyColor(withAlpha(endColor, alpha));
-            GL11.glVertex2f(
-                (float) lerp(endpoints[0], endpoints[2], endProgress),
-                (float) lerp(endpoints[1], endpoints[3], endProgress));
-        }
-
-        private void drawSatelliteNetworkSignals(SatelliteNetworkState networkState, float alpha) {
-            double elapsedSeconds = satelliteSignalFrameSeconds();
-            Set<SatelliteSignalKey> activeSignals = new HashSet<>();
-            for (SatelliteNetworkGraph.Edge edge : visibleSatelliteNetworkEdges) {
-                SatelliteNetworkEndpoint from = satelliteNetworkEndpoints.get(edge.from());
-                SatelliteNetworkEndpoint to = satelliteNetworkEndpoints.get(edge.to());
-                OrbitalScene.ResolvedBodyDrawState fromState = satelliteNetworkWorldStates.get(edge.from());
-                OrbitalScene.ResolvedBodyDrawState toState = satelliteNetworkWorldStates.get(edge.to());
-                if (from == null || to == null || fromState == null || toState == null) continue;
-                double worldLength = satelliteSignalWorldLength(fromState, toState);
-                long forwardUsage = satelliteNetworkLinkUsage(networkState, edge, edge.from(), edge.to());
-                long reverseUsage = satelliteNetworkLinkUsage(networkState, edge, edge.to(), edge.from());
-                boolean keepAliveLink = forwardUsage <= 0L && reverseUsage <= 0L;
-                if (keepAliveLink) {
-                    drawKeepAliveSignal(edge, from, to, worldLength, alpha, elapsedSeconds, activeSignals);
-                    continue;
-                }
-                drawDataSignalPackets(
-                    edge,
-                    0,
-                    from,
-                    to,
-                    worldLength,
-                    forwardUsage,
-                    alpha,
-                    elapsedSeconds,
-                    activeSignals);
-                drawDataSignalPackets(
-                    edge,
-                    1,
-                    to,
-                    from,
-                    worldLength,
-                    reverseUsage,
-                    alpha,
-                    elapsedSeconds,
-                    activeSignals);
-            }
-            satelliteSignalStates.keySet()
-                .removeIf(key -> !activeSignals.contains(key));
-        }
-
-        private long satelliteNetworkLinkUsage(SatelliteNetworkState networkState, SatelliteNetworkGraph.Edge edge,
-            CelestialObjectKey source, CelestialObjectKey destination) {
-            for (SatelliteNetworkState.Link link : networkState.links()) {
-                if (link.asEdge()
-                    .equals(edge)) return link.usedKbps(source, destination);
-            }
-            return 0L;
-        }
-
-        private static SatelliteSignalStyle satelliteSignalStyle(long directionalUsageKbps) {
-            if (directionalUsageKbps >= 1_000_000_000L) return SATELLITE_SIGNAL_TB_STYLE;
-            if (directionalUsageKbps >= 1_000_000L) return SATELLITE_SIGNAL_GB_STYLE;
-            if (directionalUsageKbps >= 1_000L) return SATELLITE_SIGNAL_MB_STYLE;
-            return SATELLITE_SIGNAL_KB_STYLE;
-        }
-
-        private void drawDataSignalPackets(SatelliteNetworkGraph.Edge edge, int direction,
-            SatelliteNetworkEndpoint from, SatelliteNetworkEndpoint to, double linkLengthWorldUnits,
-            long directionalUsage, float alpha, double elapsedSeconds, Set<SatelliteSignalKey> activeSignals) {
-            if (directionalUsage <= 0L || linkLengthWorldUnits <= 0.001D) return;
-            SatelliteSignalStyle style = satelliteSignalStyle(directionalUsage);
-            SatelliteSignalState state = satelliteSignalState(
-                new SatelliteSignalKey(edge, direction, false),
-                activeSignals);
-            state.cooldownSeconds -= elapsedSeconds;
-            if (state.cooldownSeconds <= 0.0D) {
-                state.packets.add(
-                    new SatelliteSignalPacket(
-                        0.0D,
-                        satelliteSignalSeed(edge, direction, state.packetSequence++, false),
-                        style));
-                state.cooldownSeconds = signalCooldownSeconds(directionalUsage);
-            }
-
-            for (int packetIndex = state.packets.size() - 1; packetIndex >= 0; packetIndex--) {
-                SatelliteSignalPacket packet = state.packets.get(packetIndex);
-                /*
-                 * Store real packet distance instead of deriving packet positions from one stream phase. Satellite
-                 * links move and change length every frame, so shared phase/spacing makes the whole stream jump when
-                 * traffic or link length changes. Independent packets keep progress monotonic and expire at the target.
-                 */
-                packet.distanceWorldUnits += elapsedSeconds * SATELLITE_SIGNAL_WORLD_UNITS_PER_SECOND;
-                if (packet.distanceWorldUnits >= linkLengthWorldUnits) {
-                    state.packets.remove(packetIndex);
-                    continue;
-                }
-                drawSignalPacket(
-                    from,
-                    to,
-                    linkLengthWorldUnits,
-                    packet.distanceWorldUnits / linkLengthWorldUnits,
-                    packet.seed,
-                    alpha,
-                    packet.style);
-            }
-        }
-
-        private void drawKeepAliveSignal(SatelliteNetworkGraph.Edge edge, SatelliteNetworkEndpoint from,
-            SatelliteNetworkEndpoint to, double linkLengthWorldUnits, float alpha, double elapsedSeconds,
-            Set<SatelliteSignalKey> activeSignals) {
-            if (linkLengthWorldUnits <= 0.001D) return;
-            int seed = satelliteSignalSeed(edge, 0, 0, true);
-            SatelliteSignalState state = satelliteSignalState(new SatelliteSignalKey(edge, 0, true), activeSignals);
-            if (state.packets.isEmpty()) {
-                state.packets.add(
-                    new SatelliteSignalPacket(
-                        signalUnit(seed, 8) * linkLengthWorldUnits,
-                        seed,
-                        SATELLITE_SIGNAL_KB_STYLE));
-            }
-            SatelliteSignalPacket packet = state.packets.get(0);
-            packet.distanceWorldUnits += elapsedSeconds * SATELLITE_SIGNAL_WORLD_UNITS_PER_SECOND;
-            while (packet.distanceWorldUnits >= linkLengthWorldUnits) {
-                packet.distanceWorldUnits -= linkLengthWorldUnits;
-                state.returning = !state.returning;
-            }
-            double headProgress = packet.distanceWorldUnits / linkLengthWorldUnits;
-            if (state.returning) {
-                drawSignalPacket(to, from, linkLengthWorldUnits, headProgress, seed, alpha, SATELLITE_SIGNAL_KB_STYLE);
-                return;
-            }
-            drawSignalPacket(from, to, linkLengthWorldUnits, headProgress, seed, alpha, SATELLITE_SIGNAL_KB_STYLE);
-        }
-
-        private SatelliteSignalState satelliteSignalState(SatelliteSignalKey key,
-            Set<SatelliteSignalKey> activeSignals) {
-            activeSignals.add(key);
-            return satelliteSignalStates.computeIfAbsent(key, ignored -> new SatelliteSignalState());
-        }
-
-        private double signalCooldownSeconds(long directionalUsage) {
-            return SATELLITE_SIGNAL_BASE_SECONDS_PER_PACKET
-                / (1.0D + Math.log1p(directionalUsage / SATELLITE_SIGNAL_KBPS_PER_RATE_STEP));
-        }
-
-        private void drawSignalPacket(SatelliteNetworkEndpoint from, SatelliteNetworkEndpoint to,
-            double linkLengthWorldUnits, double headProgress, int seed, float alpha, SatelliteSignalStyle style) {
-            float[] endpoints = satelliteThreadEndpoints(from, to);
-            double dx = endpoints[2] - endpoints[0];
-            double dy = endpoints[3] - endpoints[1];
-            double length = Math.sqrt(dx * dx + dy * dy);
-            if (length <= 0.001D || linkLengthWorldUnits <= 0.001D) return;
-            double segmentLengthPixels = signalSegmentLength(seed, 16);
-            double tailStartProgress = Math.max(0.0D, headProgress - segmentLengthPixels / length);
-            double ex = lerp(endpoints[0], endpoints[2], headProgress);
-            double ey = lerp(endpoints[1], endpoints[3], headProgress);
-            drawPurpleSignalTail(endpoints, length, tailStartProgress, headProgress, alpha, true, style);
-            drawSignalHead(endpoints, length, ex, ey, alpha, style);
-        }
-
-        private void drawPurpleSignalTail(float[] endpoints, double length, double startProgress, double endProgress,
-            float alpha, boolean reserveHeadGap, SatelliteSignalStyle style) {
-            float headLength = style.headLength();
-            double headGap = reserveHeadGap ? (headLength * 0.6D) / length : 0.0D;
-            double tailEndProgress = Math.max(startProgress, endProgress - headGap);
-            double tailProgress = Math
-                .min(SATELLITE_SIGNAL_PURPLE_TAIL_PIXELS, (tailEndProgress - startProgress) * length) / length;
-            if (tailProgress <= 0.0D) return;
-            float widthScale = style.headWidth() / SATELLITE_SIGNAL_KB_STYLE.headWidth();
-            for (int i = 0; i < SATELLITE_SIGNAL_PURPLE_TAIL_STEPS; i++) {
-                double stepEnd = tailEndProgress - tailProgress * i / SATELLITE_SIGNAL_PURPLE_TAIL_STEPS;
-                double stepStart = tailEndProgress - tailProgress * (i + 1) / SATELLITE_SIGNAL_PURPLE_TAIL_STEPS;
-                stepStart = Math.max(startProgress, stepStart);
-                if (stepEnd <= stepStart) continue;
-                double sx = lerp(endpoints[0], endpoints[2], stepStart);
-                double sy = lerp(endpoints[1], endpoints[3], stepStart);
-                double ex = lerp(endpoints[0], endpoints[2], stepEnd);
-                double ey = lerp(endpoints[1], endpoints[3], stepEnd);
-                drawSignalSegmentQuad(
-                    sx,
-                    sy,
-                    ex,
-                    ey,
-                    (3.2f - 0.4f * i) * widthScale,
-                    style.tailColor(),
-                    alpha,
-                    0.72f - 0.13f * i);
-            }
-        }
-
-        private void drawSignalSegmentQuad(double sx, double sy, double ex, double ey, float width, int color,
-            float alpha, float opacity) {
-            double dx = ex - sx;
-            double dy = ey - sy;
-            double length = Math.sqrt(dx * dx + dy * dy);
-            if (length <= 0.001D) return;
-            double px = -dy / length * width / 2.0D;
-            double py = dx / length * width / 2.0D;
-            applyColor(withAlpha(color, alpha * opacity));
-            GL11.glBegin(GL11.GL_QUADS);
-            GL11.glVertex2f((float) (sx + px), (float) (sy + py));
-            GL11.glVertex2f((float) (ex + px), (float) (ey + py));
-            GL11.glVertex2f((float) (ex - px), (float) (ey - py));
-            GL11.glVertex2f((float) (sx - px), (float) (sy - py));
-            GL11.glEnd();
-        }
-
-        private void drawSignalHead(float[] endpoints, double length, double x, double y, float alpha,
-            SatelliteSignalStyle style) {
-            double ux = (endpoints[2] - endpoints[0]) / length;
-            double uy = (endpoints[3] - endpoints[1]) / length;
-            drawSignalHeadQuad(x, y, ux, uy, style.headLength(), style.headWidth(), style.headColor(), alpha, 1.0f);
-        }
-
-        private void drawSignalHeadQuad(double x, double y, double ux, double uy, float length, float width, int color,
-            float alpha, float opacity) {
-            double halfLength = length / 2.0D;
-            double halfWidth = width / 2.0D;
-            double px = -uy * halfWidth;
-            double py = ux * halfWidth;
-            double hx = ux * halfLength;
-            double hy = uy * halfLength;
-            applyColor(withAlpha(color, alpha * opacity));
-            GL11.glBegin(GL11.GL_QUADS);
-            GL11.glVertex2f((float) (x - hx + px), (float) (y - hy + py));
-            GL11.glVertex2f((float) (x + hx + px), (float) (y + hy + py));
-            GL11.glVertex2f((float) (x + hx - px), (float) (y + hy - py));
-            GL11.glVertex2f((float) (x - hx - px), (float) (y - hy - py));
-            GL11.glEnd();
-        }
-
-        private double satelliteSignalFrameSeconds() {
-            long now = System.currentTimeMillis();
-            double elapsedSeconds = Math.max(0.0D, (now - lastSatelliteSignalFrameMs) / 1000.0D);
-            lastSatelliteSignalFrameMs = now;
-            return Math.min(elapsedSeconds, 0.25D);
-        }
-
-        private static double satelliteSignalWorldLength(OrbitalScene.ResolvedBodyDrawState from,
-            OrbitalScene.ResolvedBodyDrawState to) {
-            double dx = to.worldX() - from.worldX();
-            double dy = to.worldY() - from.worldY();
-            return Math.sqrt(dx * dx + dy * dy);
-        }
-
-        private static int satelliteSignalSeed(SatelliteNetworkGraph.Edge edge, int direction, int packetIndex,
-            boolean keepAlive) {
-            int seed = edge.from()
-                .hashCode() * 73471
-                ^ edge.to()
-                    .hashCode() * 19349663
-                ^ direction * 0x7f4a7c15
-                ^ packetIndex * 0x9e3779b9
-                ^ (keepAlive ? 0x45d9f3b : 0);
-            return mixSatelliteSignalSeed(seed);
-        }
-
-        private static int mixSatelliteSignalSeed(int seed) {
-            seed ^= seed >>> 16;
-            seed *= 0x7feb352d;
-            seed ^= seed >>> 15;
-            return seed;
-        }
-
-        private static double signalUnit(int seed, int shift) {
-            return ((seed >>> shift) & 0xFF) / 255.0D;
-        }
-
-        private static double signalSegmentLength(int seed, int shift) {
-            return SATELLITE_SIGNAL_MIN_SEGMENT_PIXELS
-                + signalUnit(seed, shift) * SATELLITE_SIGNAL_SEGMENT_PIXELS_RANGE;
-        }
-
-        private float[] satelliteThreadEndpoints(SatelliteNetworkEndpoint from, SatelliteNetworkEndpoint to) {
-            float dx = to.centerX() - from.centerX();
-            float dy = to.centerY() - from.centerY();
-            float len = (float) Math.sqrt(dx * dx + dy * dy);
-            if (len <= 0.001f) {
-                satelliteThreadEndpointScratch[0] = from.centerX();
-                satelliteThreadEndpointScratch[1] = from.centerY();
-                satelliteThreadEndpointScratch[2] = to.centerX();
-                satelliteThreadEndpointScratch[3] = to.centerY();
-                return satelliteThreadEndpointScratch;
-            }
-            float nx = dx / len;
-            float ny = dy / len;
-            satelliteThreadEndpointScratch[0] = from.centerX() + nx * Math.max(0f, from.renderedRadius() + 2f);
-            satelliteThreadEndpointScratch[1] = from.centerY() + ny * Math.max(0f, from.renderedRadius() + 2f);
-            satelliteThreadEndpointScratch[2] = to.centerX() - nx * Math.max(0f, to.renderedRadius() + 2f);
-            satelliteThreadEndpointScratch[3] = to.centerY() - ny * Math.max(0f, to.renderedRadius() + 2f);
-            return satelliteThreadEndpointScratch;
         }
 
         private void drawViewStatusLabel(CelestialObject viewRoot, int widgetWidth) {
@@ -3173,7 +2693,7 @@ public class OrbitalView {
         private String satelliteBandwidthSummary(CelestialObject body) {
             UUID teamId = currentTeamId();
             SatelliteNetworkState networkState = SatelliteNetworkClientState.current();
-            CelestialObjectKey satelliteNetworkBodyKey = satelliteNetworkBodyKey(body);
+            CelestialObjectKey satelliteNetworkBodyKey = body == null ? null : body.key();
             long usedKbps = 0L;
             long capacityKbps = 0L;
             if (teamId != null && satelliteNetworkBodyKey != null && teamId.equals(networkState.teamId())) {
@@ -3201,7 +2721,7 @@ public class OrbitalView {
         private List<String> satellitePendingDataSummaries(CelestialObject body) {
             UUID teamId = currentTeamId();
             SatelliteNetworkState networkState = SatelliteNetworkClientState.current();
-            CelestialObjectKey satelliteNetworkBodyKey = satelliteNetworkBodyKey(body);
+            CelestialObjectKey satelliteNetworkBodyKey = body == null ? null : body.key();
             if (teamId == null || satelliteNetworkBodyKey == null || !teamId.equals(networkState.teamId()))
                 return List.of();
             return networkState.pendingData(satelliteNetworkBodyKey)
@@ -3252,10 +2772,6 @@ public class OrbitalView {
             return bodyDisplayName(key.origin()) + " " + type + " data";
         }
 
-        static CelestialObjectKey satelliteNetworkBodyKey(CelestialObject body) {
-            return body == null ? null : body.key();
-        }
-
         private float getInteractionRadius(float renderedRadius) {
             return Math.max(5f, renderedRadius);
         }
@@ -3266,19 +2782,6 @@ public class OrbitalView {
 
         private float getLabelYOffset(float renderedRadius) {
             return renderedRadius + 6f;
-        }
-
-        private static int withAlpha(int color, float alpha) {
-            int a = Math.max(0, Math.min(255, (int) (((color >> 24) & 0xFF) * alpha)));
-            return (color & 0x00FFFFFF) | (a << 24);
-        }
-
-        private static void applyColor(int color) {
-            float r = ((color >> 16) & 0xFF) / 255f;
-            float g = ((color >> 8) & 0xFF) / 255f;
-            float b = (color & 0xFF) / 255f;
-            float a = ((color >> 24) & 0xFF) / 255f;
-            GlStateManager.color(r, g, b, a);
         }
 
         private CelestialObject getPinnedInfoBody() {
