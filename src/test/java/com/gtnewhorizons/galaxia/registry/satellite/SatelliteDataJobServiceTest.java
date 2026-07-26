@@ -49,7 +49,7 @@ final class SatelliteDataJobServiceTest {
             0L,
             store.pendingDeciKb(
                 TEAM,
-                CelestialObjectId.MARS,
+                CelestialObjectKey.registered(CelestialObjectId.MARS),
                 SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, CelestialObjectId.MARS)));
     }
 
@@ -88,8 +88,8 @@ final class SatelliteDataJobServiceTest {
         producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
         SatelliteNetworkGraph.Edge edge = new SatelliteNetworkGraph.Edge(
-            CelestialObjectId.MARS,
-            CelestialObjectId.EGORA);
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            CelestialObjectKey.registered(CelestialObjectId.EGORA));
 
         Map<SatelliteNetworkGraph.Edge, Long> usedByEdge = SatelliteDataJobService.tick(
             TEAM,
@@ -107,12 +107,28 @@ final class SatelliteDataJobServiceTest {
         SatelliteDataKey research = SatelliteDataKey.any(SatelliteDataType.RESEARCH);
         SatelliteDataKey communication = SatelliteDataKey.any(SatelliteDataType.COMMUNICATION);
         SatelliteNetworkGraph.Edge sharedEdge = new SatelliteNetworkGraph.Edge(
-            CelestialObjectId.MARS,
-            CelestialObjectId.EGORA);
-        store.finishProduction(TEAM, CelestialObjectId.MARS, research, SatelliteBandwidthFormatter.kilobits(100L));
-        store.finishProduction(TEAM, CelestialObjectId.MARS, communication, SatelliteBandwidthFormatter.kilobits(100L));
-        store.requestData(TEAM, CelestialObjectId.EGORA, research, SatelliteBandwidthFormatter.kilobits(100L));
-        store.requestData(TEAM, CelestialObjectId.EGORA, communication, SatelliteBandwidthFormatter.kilobits(100L));
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            CelestialObjectKey.registered(CelestialObjectId.EGORA));
+        store.finishProduction(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            research,
+            SatelliteBandwidthFormatter.kilobits(100L));
+        store.finishProduction(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            communication,
+            SatelliteBandwidthFormatter.kilobits(100L));
+        store.requestData(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.EGORA),
+            research,
+            SatelliteBandwidthFormatter.kilobits(100L));
+        store.requestData(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.EGORA),
+            communication,
+            SatelliteBandwidthFormatter.kilobits(100L));
 
         SatelliteDataJobService.Usage usage = SatelliteDataJobService.tickEndpointsUsage(
             TEAM,
@@ -156,8 +172,16 @@ final class SatelliteDataJobServiceTest {
         SatelliteDataKey key = SatelliteDataKey.any(SatelliteDataType.RESEARCH);
         producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.RESEARCH, 10L, 100));
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.RESEARCH, 400L, 1, null));
-        store.finishProduction(TEAM, CelestialObjectId.MARS, key, SatelliteBandwidthFormatter.kilobits(400L));
-        store.requestData(TEAM, CelestialObjectId.EGORA, key, SatelliteBandwidthFormatter.kilobits(400L));
+        store.finishProduction(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            key,
+            SatelliteBandwidthFormatter.kilobits(400L));
+        store.requestData(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.EGORA),
+            key,
+            SatelliteBandwidthFormatter.kilobits(400L));
 
         SatelliteDataJobService.tick(
             TEAM,
@@ -167,7 +191,7 @@ final class SatelliteDataJobServiceTest {
 
         assertEquals(
             SatelliteBandwidthFormatter.kilobits(400L) - 5L,
-            store.pendingDeciKb(TEAM, CelestialObjectId.MARS, key));
+            store.pendingDeciKb(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), key));
         assertEquals(5L, consumer.consumedDeciKb());
     }
 
@@ -215,7 +239,7 @@ final class SatelliteDataJobServiceTest {
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
         store.finishProduction(
             TEAM,
-            CelestialObjectId.MARS,
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
             SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, CelestialObjectId.MARS),
             SatelliteBandwidthFormatter.kilobits(11L));
 
@@ -247,7 +271,7 @@ final class SatelliteDataJobServiceTest {
             0L,
             store.pendingDeciKb(
                 TEAM,
-                CelestialObjectId.MARS,
+                CelestialObjectKey.registered(CelestialObjectId.MARS),
                 SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, CelestialObjectId.MARS)));
     }
 
@@ -296,13 +320,19 @@ final class SatelliteDataJobServiceTest {
             TEAM,
             0,
             List.of(node(first, 0.0D), node(second, 10.0D), node(third, 20.0D)),
-            List.of(new SatelliteNetworkGraph.Edge(first, second), new SatelliteNetworkGraph.Edge(first, third)),
+            List.of(
+                new SatelliteNetworkGraph.Edge(
+                    CelestialObjectKey.registered(first),
+                    CelestialObjectKey.registered(second)),
+                new SatelliteNetworkGraph.Edge(
+                    CelestialObjectKey.registered(first),
+                    CelestialObjectKey.registered(third))),
             Map.of(key(first), 10L, key(second), 10L, key(third), 10L),
             Map.of());
     }
 
     private static SatelliteNetworkGraph.Node node(CelestialObjectId id, double x) {
-        return new SatelliteNetworkGraph.Node(id, null, id.ordinal(), x, 0.0D, 1.0D);
+        return new SatelliteNetworkGraph.Node(CelestialObjectKey.registered(id), null, id.ordinal(), x, 0.0D, 1.0D);
     }
 
     private static SatelliteNetworkState network(CelestialObjectKey source, CelestialObjectKey destination) {

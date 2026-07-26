@@ -25,21 +25,29 @@ final class SatelliteNetworkGraphTest {
 
         List<SatelliteNetworkGraph.Edge> edges = SatelliteNetworkGraph.build(nodes, 2);
 
-        assertTrue(edges.contains(new SatelliteNetworkGraph.Edge(CelestialObjectId.MARS, CelestialObjectId.MOON)));
+        assertTrue(
+            edges.contains(
+                new SatelliteNetworkGraph.Edge(
+                    CelestialObjectKey.registered(CelestialObjectId.MARS),
+                    CelestialObjectKey.registered(CelestialObjectId.MOON))));
     }
 
     @Test
     void networkPrefersPerBodyEdgeCapWhenConnectivityAllows() {
         List<SatelliteNetworkGraph.Node> nodes = List.of(
-            new SatelliteNetworkGraph.Node(CelestialObjectId.MARS, 0.0D, 0.0D, 5.0D),
-            new SatelliteNetworkGraph.Node(CelestialObjectId.MOON, 20.0D, 0.0D, 5.0D),
-            new SatelliteNetworkGraph.Node(CelestialObjectId.OVERWORLD, 0.0D, 20.0D, 5.0D));
+            new SatelliteNetworkGraph.Node(CelestialObjectKey.registered(CelestialObjectId.MARS), 0.0D, 0.0D, 5.0D),
+            new SatelliteNetworkGraph.Node(CelestialObjectKey.registered(CelestialObjectId.MOON), 20.0D, 0.0D, 5.0D),
+            new SatelliteNetworkGraph.Node(
+                CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
+                0.0D,
+                20.0D,
+                5.0D));
 
         List<SatelliteNetworkGraph.Edge> edges = SatelliteNetworkGraph.build(nodes, 2);
 
         assertTrue(
             edges.stream()
-                .filter(edge -> edge.touches(CelestialObjectId.MARS))
+                .filter(edge -> edge.touches(CelestialObjectKey.registered(CelestialObjectId.MARS)))
                 .count() <= 2);
     }
 
@@ -68,11 +76,21 @@ final class SatelliteNetworkGraphTest {
 
         List<SatelliteNetworkGraph.Edge> edges = SatelliteNetworkGraph.build(nodes, 3);
 
-        assertTrue(edges.contains(new SatelliteNetworkGraph.Edge(CelestialObjectId.MARS, CelestialObjectId.EGORA)));
         assertTrue(
-            edges.contains(new SatelliteNetworkGraph.Edge(CelestialObjectId.EGORA, CelestialObjectId.FROZEN_BELT)));
+            edges.contains(
+                new SatelliteNetworkGraph.Edge(
+                    CelestialObjectKey.registered(CelestialObjectId.MARS),
+                    CelestialObjectKey.registered(CelestialObjectId.EGORA))));
+        assertTrue(
+            edges.contains(
+                new SatelliteNetworkGraph.Edge(
+                    CelestialObjectKey.registered(CelestialObjectId.EGORA),
+                    CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT))));
         assertFalse(
-            edges.contains(new SatelliteNetworkGraph.Edge(CelestialObjectId.OVERWORLD, CelestialObjectId.EGORA)));
+            edges.contains(
+                new SatelliteNetworkGraph.Edge(
+                    CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
+                    CelestialObjectKey.registered(CelestialObjectId.EGORA))));
     }
 
     @Test
@@ -85,8 +103,16 @@ final class SatelliteNetworkGraphTest {
 
         List<SatelliteNetworkGraph.Edge> edges = SatelliteNetworkGraph.build(nodes, 3);
 
-        assertTrue(edges.contains(new SatelliteNetworkGraph.Edge(CelestialObjectId.OVERWORLD, CelestialObjectId.MOON)));
-        assertFalse(edges.contains(new SatelliteNetworkGraph.Edge(CelestialObjectId.MOON, CelestialObjectId.EGORA)));
+        assertTrue(
+            edges.contains(
+                new SatelliteNetworkGraph.Edge(
+                    CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
+                    CelestialObjectKey.registered(CelestialObjectId.MOON))));
+        assertFalse(
+            edges.contains(
+                new SatelliteNetworkGraph.Edge(
+                    CelestialObjectKey.registered(CelestialObjectId.MOON),
+                    CelestialObjectKey.registered(CelestialObjectId.EGORA))));
     }
 
     @Test
@@ -105,7 +131,13 @@ final class SatelliteNetworkGraphTest {
 
     private static SatelliteNetworkGraph.Node node(CelestialObjectId bodyId, CelestialObjectId parentId,
         double orbitalOrder, double x, double y) {
-        return new SatelliteNetworkGraph.Node(bodyId, parentId, orbitalOrder, x, y, 5.0D);
+        return new SatelliteNetworkGraph.Node(
+            CelestialObjectKey.registered(bodyId),
+            parentId == null ? null : CelestialObjectKey.registered(parentId),
+            orbitalOrder,
+            x,
+            y,
+            5.0D);
     }
 
     private static CelestialObjectKey asteroidKey(int index) {
@@ -122,8 +154,7 @@ final class SatelliteNetworkGraphTest {
             visited);
         assertEquals(
             nodes.stream()
-                .map(SatelliteNetworkGraph.Node::bodyId)
-                .map(CelestialObjectKey::registered)
+                .map(SatelliteNetworkGraph.Node::bodyKey)
                 .collect(java.util.stream.Collectors.toSet()),
             visited);
     }

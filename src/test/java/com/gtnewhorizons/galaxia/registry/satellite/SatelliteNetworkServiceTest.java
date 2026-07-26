@@ -64,8 +64,8 @@ final class SatelliteNetworkServiceTest {
         assertSame(state, SatelliteNetworkService.current(TEAM));
         assertSame(state, unchanged);
         assertEquals(1, state.revision());
-        assertEquals(10L, state.capacityKbps(CelestialObjectId.MARS));
-        assertEquals(0L, state.capacityKbps(CelestialObjectId.EGORA));
+        assertEquals(10L, state.capacityKbps(CelestialObjectKey.registered(CelestialObjectId.MARS)));
+        assertEquals(0L, state.capacityKbps(CelestialObjectKey.registered(CelestialObjectId.EGORA)));
         assertEquals(
             2,
             state.bodies()
@@ -85,41 +85,49 @@ final class SatelliteNetworkServiceTest {
             .rebuild(TEAM, nodes(), capacity(CelestialObjectId.MARS, 20L, CelestialObjectId.OVERWORLD, 10L), Map.of());
 
         assertEquals(first.revision() + 1, changed.revision());
-        assertEquals(20L, changed.capacityKbps(CelestialObjectId.MARS));
+        assertEquals(20L, changed.capacityKbps(CelestialObjectKey.registered(CelestialObjectId.MARS)));
     }
 
     @Test
     void rebuildUsesDataPlannerLoadForSnapshotUsage() {
         SatelliteDataBufferStore store = new SatelliteDataBufferStore();
         SatelliteDataKey prospecting = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
-        store.finishProduction(TEAM, CelestialObjectId.MARS, prospecting, SatelliteBandwidthFormatter.kilobits(100L));
-        store.requestData(TEAM, CelestialObjectId.OVERWORLD, prospecting, SatelliteBandwidthFormatter.kilobits(100L));
+        store.finishProduction(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            prospecting,
+            SatelliteBandwidthFormatter.kilobits(100L));
+        store.requestData(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
+            prospecting,
+            SatelliteBandwidthFormatter.kilobits(100L));
 
         SatelliteNetworkState state = SatelliteNetworkService
             .rebuild(TEAM, nodes(), capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L), store);
 
-        assertEquals(10L, state.usedKbps(CelestialObjectId.MARS));
-        assertEquals(10L, state.usedKbps(CelestialObjectId.OVERWORLD));
+        assertEquals(10L, state.usedKbps(CelestialObjectKey.registered(CelestialObjectId.MARS)));
+        assertEquals(10L, state.usedKbps(CelestialObjectKey.registered(CelestialObjectId.OVERWORLD)));
         assertEquals(
             10L,
             state.links()
                 .get(0)
                 .usedKbps());
         assertEquals(
-            List.of(CelestialObjectId.OVERWORLD),
-            state.pendingData(CelestialObjectId.MARS)
+            List.of(CelestialObjectKey.registered(CelestialObjectId.OVERWORLD)),
+            state.pendingData(CelestialObjectKey.registered(CelestialObjectId.MARS))
                 .get(0)
-                .destinationBodyIds());
+                .destinationBodyKeys());
     }
 
     @Test
     void transitBodyCountsForwardedBandwidthOnce() {
         SatelliteNetworkGraph.Edge incoming = new SatelliteNetworkGraph.Edge(
-            CelestialObjectId.MARS,
-            CelestialObjectId.EGORA);
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            CelestialObjectKey.registered(CelestialObjectId.EGORA));
         SatelliteNetworkGraph.Edge outgoing = new SatelliteNetworkGraph.Edge(
-            CelestialObjectId.EGORA,
-            CelestialObjectId.OVERWORLD);
+            CelestialObjectKey.registered(CelestialObjectId.EGORA),
+            CelestialObjectKey.registered(CelestialObjectId.OVERWORLD));
 
         SatelliteNetworkState state = SatelliteNetworkCalculator.fromGraph(
             TEAM,
@@ -129,9 +137,9 @@ final class SatelliteNetworkServiceTest {
             capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.EGORA, 10L, CelestialObjectId.OVERWORLD, 10L),
             Map.of(incoming, 10L, outgoing, 10L));
 
-        assertEquals(10L, state.usedKbps(CelestialObjectId.MARS));
-        assertEquals(10L, state.usedKbps(CelestialObjectId.EGORA));
-        assertEquals(10L, state.usedKbps(CelestialObjectId.OVERWORLD));
+        assertEquals(10L, state.usedKbps(CelestialObjectKey.registered(CelestialObjectId.MARS)));
+        assertEquals(10L, state.usedKbps(CelestialObjectKey.registered(CelestialObjectId.EGORA)));
+        assertEquals(10L, state.usedKbps(CelestialObjectKey.registered(CelestialObjectId.OVERWORLD)));
     }
 
     @Test
@@ -141,14 +149,18 @@ final class SatelliteNetworkServiceTest {
             .rebuild(TEAM, nodes(), capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L), store);
 
         SatelliteDataKey prospecting = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
-        store.finishProduction(TEAM, CelestialObjectId.MARS, prospecting, SatelliteBandwidthFormatter.kilobits(25L));
+        store.finishProduction(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            prospecting,
+            SatelliteBandwidthFormatter.kilobits(25L));
         SatelliteNetworkState changed = SatelliteNetworkService
             .rebuild(TEAM, nodes(), capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L), store);
 
         assertEquals(first.revision() + 1, changed.revision());
         assertEquals(
             SatelliteBandwidthFormatter.kilobits(25L),
-            changed.pendingData(CelestialObjectId.MARS)
+            changed.pendingData(CelestialObjectKey.registered(CelestialObjectId.MARS))
                 .get(0)
                 .deciKb());
     }
@@ -235,8 +247,8 @@ final class SatelliteNetworkServiceTest {
         assertEquals(CelestialObjectKey.registered(CelestialObjectId.EGORA), producer.detectedCounterpartBodyKey());
         assertEquals(CelestialObjectKey.registered(CelestialObjectId.MARS), consumer.detectedCounterpartBodyKey());
         assertEquals(5L, consumer.consumedDeciKb());
-        assertEquals(10L, state.usedKbps(CelestialObjectId.MARS));
-        assertEquals(10L, state.usedKbps(CelestialObjectId.EGORA));
+        assertEquals(10L, state.usedKbps(CelestialObjectKey.registered(CelestialObjectId.MARS)));
+        assertEquals(10L, state.usedKbps(CelestialObjectKey.registered(CelestialObjectId.EGORA)));
     }
 
     @Test
@@ -276,8 +288,8 @@ final class SatelliteNetworkServiceTest {
             capacity(CelestialObjectId.MARS, 1000L, CelestialObjectId.OVERWORLD, 1000L),
             new SatelliteDataBufferStore());
 
-        assertEquals(0L, changed.usedKbps(CelestialObjectId.MARS));
-        assertEquals(0L, changed.usedKbps(CelestialObjectId.OVERWORLD));
+        assertEquals(0L, changed.usedKbps(CelestialObjectKey.registered(CelestialObjectId.MARS)));
+        assertEquals(0L, changed.usedKbps(CelestialObjectKey.registered(CelestialObjectId.OVERWORLD)));
         assertTrue(
             changed.links()
                 .stream()
@@ -348,7 +360,7 @@ final class SatelliteNetworkServiceTest {
     }
 
     private static SatelliteNetworkGraph.Node node(CelestialObjectId id, double x) {
-        return new SatelliteNetworkGraph.Node(id, null, id.ordinal(), x, 0.0D, 1.0D);
+        return new SatelliteNetworkGraph.Node(CelestialObjectKey.registered(id), null, id.ordinal(), x, 0.0D, 1.0D);
     }
 
     private static Map<CelestialObjectKey, Long> capacity(Object... entries) {

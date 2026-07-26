@@ -90,7 +90,11 @@ final class GalaxiaSatelliteAPITest {
         SatelliteDataKey prospecting = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
         SatelliteDataBufferStore store = new SatelliteDataBufferStore();
         store.finishProduction(TEAM, asteroid, prospecting, SatelliteBandwidthFormatter.kilobits(15L));
-        store.requestData(TEAM, CelestialObjectId.OVERWORLD, prospecting, SatelliteBandwidthFormatter.kilobits(15L));
+        store.requestData(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
+            prospecting,
+            SatelliteBandwidthFormatter.kilobits(15L));
         SatelliteNetworkService.rebuild(
             TEAM,
             List.of(
@@ -117,7 +121,7 @@ final class GalaxiaSatelliteAPITest {
     }
 
     private static SatelliteNetworkGraph.Node node(CelestialObjectId id, double x) {
-        return new SatelliteNetworkGraph.Node(id, null, id.ordinal(), x, 0.0D, 1.0D);
+        return new SatelliteNetworkGraph.Node(CelestialObjectKey.registered(id), null, id.ordinal(), x, 0.0D, 1.0D);
     }
 
     private static Map<CelestialObjectKey, Long> capacity() {

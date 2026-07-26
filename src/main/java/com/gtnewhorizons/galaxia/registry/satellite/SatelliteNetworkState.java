@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 /*
@@ -32,26 +31,14 @@ public record SatelliteNetworkState(UUID teamId, int revision, Map<CelestialObje
         return bodies.get(bodyKey);
     }
 
-    public Body body(CelestialObjectId bodyId) {
-        return body(CelestialObjectKey.registered(bodyId));
-    }
-
     public long capacityKbps(CelestialObjectKey bodyKey) {
         Body body = bodies.get(bodyKey);
         return body == null ? 0L : body.capacityKbps();
     }
 
-    public long capacityKbps(CelestialObjectId bodyId) {
-        return capacityKbps(CelestialObjectKey.registered(bodyId));
-    }
-
     public long usedKbps(CelestialObjectKey bodyKey) {
         Body body = bodies.get(bodyKey);
         return body == null ? 0L : body.usedKbps();
-    }
-
-    public long usedKbps(CelestialObjectId bodyId) {
-        return usedKbps(CelestialObjectKey.registered(bodyId));
     }
 
     public List<PendingData> pendingData(CelestialObjectKey bodyKey) {
@@ -60,10 +47,6 @@ public record SatelliteNetworkState(UUID teamId, int revision, Map<CelestialObje
                 entry -> entry.bodyKey()
                     .equals(bodyKey))
             .toList();
-    }
-
-    public List<PendingData> pendingData(CelestialObjectId bodyId) {
-        return pendingData(CelestialObjectKey.registered(bodyId));
     }
 
     public SatelliteNetworkState withPendingData(List<PendingData> pendingData) {
@@ -84,13 +67,6 @@ public record SatelliteNetworkState(UUID teamId, int revision, Map<CelestialObje
             usedKbps = Math.max(0L, usedKbps);
         }
 
-        public Body(CelestialObjectId bodyId, long capacityKbps, long usedKbps) {
-            this(CelestialObjectKey.registered(bodyId), capacityKbps, usedKbps);
-        }
-
-        public CelestialObjectId bodyId() {
-            return bodyKey.requireRegisteredBodyId();
-        }
     }
 
     /*
@@ -121,34 +97,12 @@ public record SatelliteNetworkState(UUID teamId, int revision, Map<CelestialObje
             return new SatelliteNetworkGraph.Edge(from, to);
         }
 
-        public Link(CelestialObjectId from, CelestialObjectId to, long capacityKbps, long usedKbps,
-            long forwardUsedKbps, long reverseUsedKbps) {
-            this(
-                CelestialObjectKey.registered(from),
-                CelestialObjectKey.registered(to),
-                capacityKbps,
-                usedKbps,
-                forwardUsedKbps,
-                reverseUsedKbps);
-        }
-
         public long usedKbps(CelestialObjectKey source, CelestialObjectKey destination) {
             if (from.equals(source) && to.equals(destination)) return forwardUsedKbps;
             if (to.equals(source) && from.equals(destination)) return reverseUsedKbps;
             return 0L;
         }
 
-        public long usedKbps(CelestialObjectId source, CelestialObjectId destination) {
-            return usedKbps(CelestialObjectKey.registered(source), CelestialObjectKey.registered(destination));
-        }
-
-        public CelestialObjectId fromId() {
-            return from.requireRegisteredBodyId();
-        }
-
-        public CelestialObjectId toId() {
-            return to.requireRegisteredBodyId();
-        }
     }
 
     public record PendingData(CelestialObjectKey bodyKey, List<CelestialObjectKey> destinationBodyKeys,
@@ -162,26 +116,5 @@ public record SatelliteNetworkState(UUID teamId, int revision, Map<CelestialObje
             deciKb = Math.max(0L, deciKb);
         }
 
-        public PendingData(CelestialObjectId bodyId, List<CelestialObjectId> destinationBodyIds, SatelliteDataKey key,
-            long deciKb) {
-            this(
-                CelestialObjectKey.registered(bodyId),
-                destinationBodyIds == null ? List.of()
-                    : destinationBodyIds.stream()
-                        .map(CelestialObjectKey::registered)
-                        .toList(),
-                key,
-                deciKb);
-        }
-
-        public CelestialObjectId bodyId() {
-            return bodyKey.requireRegisteredBodyId();
-        }
-
-        public List<CelestialObjectId> destinationBodyIds() {
-            return destinationBodyKeys.stream()
-                .map(CelestialObjectKey::requireRegisteredBodyId)
-                .toList();
-        }
     }
 }

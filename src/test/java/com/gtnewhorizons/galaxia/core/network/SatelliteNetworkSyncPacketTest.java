@@ -29,15 +29,21 @@ final class SatelliteNetworkSyncPacketTest {
             12,
             Map.of(
                 key(CelestialObjectId.MARS),
-                new SatelliteNetworkState.Body(CelestialObjectId.MARS, 20L, 4L),
+                new SatelliteNetworkState.Body(CelestialObjectKey.registered(CelestialObjectId.MARS), 20L, 4L),
                 key(CelestialObjectId.OVERWORLD),
-                new SatelliteNetworkState.Body(CelestialObjectId.OVERWORLD, 10L, 4L)),
+                new SatelliteNetworkState.Body(CelestialObjectKey.registered(CelestialObjectId.OVERWORLD), 10L, 4L)),
             List.of(
-                new SatelliteNetworkState.Link(CelestialObjectId.MARS, CelestialObjectId.OVERWORLD, 10L, 4L, 3L, 1L)),
+                new SatelliteNetworkState.Link(
+                    CelestialObjectKey.registered(CelestialObjectId.MARS),
+                    CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
+                    10L,
+                    4L,
+                    3L,
+                    1L)),
             List.of(
                 new SatelliteNetworkState.PendingData(
-                    CelestialObjectId.MARS,
-                    List.of(CelestialObjectId.OVERWORLD),
+                    CelestialObjectKey.registered(CelestialObjectId.MARS),
+                    List.of(CelestialObjectKey.registered(CelestialObjectId.OVERWORLD)),
                     SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, CelestialObjectId.EGORA),
                     SatelliteBandwidthFormatter.kilobits(12L))));
 
@@ -56,7 +62,9 @@ final class SatelliteNetworkSyncPacketTest {
         SatelliteNetworkState state = new SatelliteNetworkState(
             new UUID(7L, 8L),
             14,
-            Map.of(key(CelestialObjectId.MARS), new SatelliteNetworkState.Body(CelestialObjectId.MARS, 10L, 0L)),
+            Map.of(
+                key(CelestialObjectId.MARS),
+                new SatelliteNetworkState.Body(CelestialObjectKey.registered(CelestialObjectId.MARS), 10L, 0L)),
             List.of());
 
         new SatelliteNetworkSyncPacket.Handler().onMessage(new SatelliteNetworkSyncPacket(state), null);

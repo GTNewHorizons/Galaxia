@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 /**
@@ -30,21 +29,9 @@ public final class SatelliteNetworkGraph {
             radius = Math.max(0.0D, radius);
         }
 
-        public Node(CelestialObjectId bodyId, double x, double y, double radius) {
-            this(bodyId, null, x, x, y, radius);
-        }
-
-        public Node(CelestialObjectId bodyId, CelestialObjectId parentId, double orbitalOrder, double x, double y,
-            double radius) {
-            this(registeredKey(bodyId), parentId == null ? null : registeredKey(parentId), orbitalOrder, x, y, radius);
-        }
-
-        public CelestialObjectId bodyId() {
-            return bodyKey.requireRegisteredBodyId();
-        }
-
-        public CelestialObjectId parentId() {
-            return parentKey == null ? null : parentKey.requireRegisteredBodyId();
+        /** A node with no parent and no orbital ordering, for flat graphs. */
+        public Node(CelestialObjectKey bodyKey, double x, double y, double radius) {
+            this(bodyKey, null, 0.0D, x, y, radius);
         }
     }
 
@@ -64,25 +51,10 @@ public final class SatelliteNetworkGraph {
             }
         }
 
-        public Edge(CelestialObjectId from, CelestialObjectId to) {
-            this(registeredKey(from), registeredKey(to));
-        }
-
         public boolean touches(CelestialObjectKey bodyKey) {
             return from.equals(bodyKey) || to.equals(bodyKey);
         }
 
-        public boolean touches(CelestialObjectId bodyId) {
-            return touches(registeredKey(bodyId));
-        }
-
-        public CelestialObjectId fromId() {
-            return from.requireRegisteredBodyId();
-        }
-
-        public CelestialObjectId toId() {
-            return to.requireRegisteredBodyId();
-        }
     }
 
     public record DirectedEdge(CelestialObjectKey from, CelestialObjectKey to) {
@@ -94,10 +66,6 @@ public final class SatelliteNetworkGraph {
             if (from.equals(to)) {
                 throw new IllegalArgumentException("directed edge endpoints must be different");
             }
-        }
-
-        public DirectedEdge(CelestialObjectId from, CelestialObjectId to) {
-            this(registeredKey(from), registeredKey(to));
         }
 
         public Edge asEdge() {
@@ -239,13 +207,6 @@ public final class SatelliteNetworkGraph {
         if (edges.contains(edge)) return false;
         edges.add(edge);
         return true;
-    }
-
-    private static CelestialObjectKey registeredKey(CelestialObjectId id) {
-        if (id == null || id == CelestialObjectId.INVALID) {
-            throw new IllegalArgumentException("bodyId must be a valid celestial object id");
-        }
-        return CelestialObjectKey.registered(id);
     }
 
     private static int compareKeys(CelestialObjectKey left, CelestialObjectKey right) {

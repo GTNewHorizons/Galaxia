@@ -68,7 +68,7 @@ final class ClientStateLifecycleTest {
                 5,
                 Map.of(
                     CelestialObjectKey.registered(CelestialObjectId.MARS),
-                    new SatelliteNetworkState.Body(CelestialObjectId.MARS, 10L, 0L)),
+                    new SatelliteNetworkState.Body(CelestialObjectKey.registered(CelestialObjectId.MARS), 10L, 0L)),
                 List.of()));
 
         ClientStateLifecycle.clearAll();

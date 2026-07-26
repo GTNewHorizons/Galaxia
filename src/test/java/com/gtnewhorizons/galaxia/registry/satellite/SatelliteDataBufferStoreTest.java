@@ -79,19 +79,23 @@ final class SatelliteDataBufferStoreTest {
 
         store.finishProduction(
             TEAM,
-            CelestialObjectId.MARS,
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
             egoraProspecting,
             SatelliteBandwidthFormatter.kilobits(15L));
 
         assertEquals(
             SatelliteBandwidthFormatter.kilobits(15L),
-            store.pendingDeciKb(TEAM, CelestialObjectId.MARS, egoraProspecting));
-        assertFalse(store.canStart(TEAM, CelestialObjectId.MARS, egoraProspecting, 10L));
-        assertTrue(store.canStart(TEAM, CelestialObjectId.MARS, anyProspecting, 10L));
+            store.pendingDeciKb(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), egoraProspecting));
+        assertFalse(store.canStart(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), egoraProspecting, 10L));
+        assertTrue(store.canStart(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), anyProspecting, 10L));
 
-        store.drain(TEAM, CelestialObjectId.MARS, egoraProspecting, SatelliteBandwidthFormatter.kilobits(6L));
+        store.drain(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            egoraProspecting,
+            SatelliteBandwidthFormatter.kilobits(6L));
 
-        assertTrue(store.canStart(TEAM, CelestialObjectId.MARS, egoraProspecting, 10L));
+        assertTrue(store.canStart(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), egoraProspecting, 10L));
     }
 
     @Test
@@ -99,9 +103,13 @@ final class SatelliteDataBufferStoreTest {
         SatelliteDataBufferStore store = new SatelliteDataBufferStore();
         SatelliteDataKey key = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
 
-        store.finishProduction(TEAM, CelestialObjectId.MARS, key, SatelliteBandwidthFormatter.kilobits(15L));
+        store.finishProduction(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            key,
+            SatelliteBandwidthFormatter.kilobits(15L));
 
-        assertFalse(store.canStart(TEAM, CelestialObjectId.MARS, key, 10L));
-        assertTrue(store.canStart(TEAM, CelestialObjectId.MARS, key, 20L));
+        assertFalse(store.canStart(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), key, 10L));
+        assertTrue(store.canStart(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), key, 20L));
     }
 }
