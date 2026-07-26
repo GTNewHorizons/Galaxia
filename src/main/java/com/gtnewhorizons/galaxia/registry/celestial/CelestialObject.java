@@ -92,6 +92,15 @@ public record CelestialObject(CelestialObjectKey id, String name, String nameKey
         return name();
     }
 
+    public boolean isAsteroid() {
+        return objectClass() == Class.ASTEROID;
+    }
+
+    /** The belt container itself, not one of the asteroids inside it. */
+    public boolean isAsteroidBelt() {
+        return objectClass() == Class.ASTEROID_BELT;
+    }
+
     public boolean isLandable() {
         return switch (this.objectClass()) {
             case PLANET, MOON, ASTEROID -> this.properties()

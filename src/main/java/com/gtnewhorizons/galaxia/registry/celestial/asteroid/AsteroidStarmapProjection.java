@@ -42,13 +42,13 @@ public record AsteroidStarmapProjection(@Nonnull CelestialObject body, @Nonnull 
     }
 
     public static float spriteRadius(@Nullable CelestialObject body, float spriteSize, double relativeZoom) {
-        if (body == null || body.objectClass() != CelestialObject.Class.ASTEROID || spriteSize <= 0.0001f) return 0f;
+        if (body == null || !body.isAsteroid() || spriteSize <= 0.0001f) return 0f;
         return Math.max(0.0f, spriteSize * MAP_ICON_BASE_SCALE * (float) relativeZoom);
     }
 
     public static boolean shouldCull(@Nullable CelestialObject body, @Nullable AsteroidStarmapProjection projection,
         float naturalRadius) {
-        if (body == null || body.objectClass() != CelestialObject.Class.ASTEROID || projection == null) return false;
+        if (body == null || !body.isAsteroid() || projection == null) return false;
         return projection.shouldCull(naturalRadius);
     }
 

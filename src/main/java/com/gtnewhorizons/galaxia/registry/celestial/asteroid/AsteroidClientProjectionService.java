@@ -12,10 +12,10 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
@@ -80,7 +80,7 @@ public final class AsteroidClientProjectionService {
                 candidate -> candidate.id()
                     .equals(body.id()));
         if (!sibling) return Optional.empty();
-        return GalaxiaCelestialAPI.get(parentId.registeredBodyId())
+        return CelestialRegistry.get(parentId.registeredBodyId())
             .filter(
                 belt -> belt.properties()
                     .asteroidFieldProfile() != null)
@@ -153,7 +153,7 @@ public final class AsteroidClientProjectionService {
     private Set<CelestialObjectKey> temporaryVisibleKeys(CelestialObjectKey parentId,
         List<CelestialDiscoveryScanSnapshot> scanSnapshots) {
         if (parentId == null || !parentId.isRegistered()) return Set.of();
-        return GalaxiaCelestialAPI.get(parentId.registeredBodyId())
+        return CelestialRegistry.get(parentId.registeredBodyId())
             .filter(
                 belt -> belt.properties()
                     .asteroidFieldProfile() != null)

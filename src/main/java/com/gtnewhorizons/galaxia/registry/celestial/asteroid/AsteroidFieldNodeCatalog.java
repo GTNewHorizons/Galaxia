@@ -14,9 +14,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nonnull;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
 
 public final class AsteroidFieldNodeCatalog {
@@ -142,7 +142,7 @@ public final class AsteroidFieldNodeCatalog {
     }
 
     private static Optional<AsteroidFieldProfile> profile(CelestialObjectId beltId) {
-        return GalaxiaCelestialAPI.get(beltId)
+        return CelestialRegistry.get(beltId)
             .map(
                 body -> body.properties()
                     .asteroidFieldProfile());

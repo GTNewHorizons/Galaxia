@@ -9,7 +9,6 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nonnull;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidCelestialMaterializer;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitResolver;
@@ -210,7 +209,7 @@ final class AsteroidFieldDiscoveryPolicy implements CelestialDiscoveryDomain {
     }
 
     private static Optional<AsteroidFieldProfile> profile(CelestialObjectId beltId) {
-        return GalaxiaCelestialAPI.get(beltId)
+        return CelestialRegistry.get(beltId)
             .map(
                 body -> body.properties()
                     .asteroidFieldProfile());

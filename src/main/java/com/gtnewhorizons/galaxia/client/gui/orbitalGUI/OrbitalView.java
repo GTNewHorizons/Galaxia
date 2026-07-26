@@ -1564,7 +1564,7 @@ public class OrbitalView {
         }
 
         private float getSpriteRadius(CelestialObject body) {
-            if (body != null && body.objectClass() == CelestialObject.Class.ASTEROID) {
+            if (body != null && body.isAsteroid()) {
                 // Asteroids use relative zoom so their apparent size tracks the
                 // current focused system instead of being clamped like planet icons.
                 return mapAsteroidSpriteRadiusForRelativeZoom(
@@ -1582,8 +1582,7 @@ public class OrbitalView {
 
         private static float mapAsteroidSpriteRadiusForRelativeZoom(CelestialObject body, float spriteSize,
             double relativeZoom) {
-            if (body == null || body.objectClass() != CelestialObject.Class.ASTEROID || spriteSize <= 0.0001f)
-                return 0f;
+            if (body == null || !body.isAsteroid() || spriteSize <= 0.0001f) return 0f;
             return AsteroidStarmapProjection.spriteRadius(body, spriteSize, relativeZoom);
         }
 
@@ -2001,7 +2000,7 @@ public class OrbitalView {
             if (!sameBody(viewRoot, root)) return true;
             // In the system overview we normally stop at first-level bodies, but
             // asteroid belts must expose their dynamic asteroid children directly.
-            return sameBody(body, root) || body != null && body.objectClass() == CelestialObject.Class.ASTEROID_BELT;
+            return sameBody(body, root) || body != null && body.isAsteroidBelt();
         }
 
         private boolean isVisibleInCurrentLayer(CelestialObject body) {
@@ -2986,13 +2985,13 @@ public class OrbitalView {
         }
 
         private boolean shouldCullAsteroidAtCurrentZoom(CelestialObject body) {
-            if (body == null || body.objectClass() != CelestialObject.Class.ASTEROID) return false;
+            if (body == null || !body.isAsteroid()) return false;
             float naturalRadius = getNaturalSpriteRadius(body);
             return shouldCullAsteroidAtNaturalRadius(body, naturalRadius);
         }
 
         static boolean shouldCullAsteroidAtNaturalRadius(CelestialObject body, float naturalRadius) {
-            if (body == null || body.objectClass() != CelestialObject.Class.ASTEROID) return false;
+            if (body == null || !body.isAsteroid()) return false;
             return CelestialClient.asteroidProjection(body)
                 .map(projection -> AsteroidStarmapProjection.shouldCull(body, projection, naturalRadius))
                 .orElse(false);

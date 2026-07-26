@@ -458,7 +458,7 @@ public class OrbitalScene {
             if (children.size() < 2) return children;
             boolean hasAsteroid = false;
             for (CelestialObject child : children) {
-                if (child.objectClass() == CelestialObject.Class.ASTEROID) {
+                if (child.isAsteroid()) {
                     hasAsteroid = true;
                     break;
                 }
@@ -558,7 +558,7 @@ public class OrbitalScene {
     }
 
     private static int asteroidPresentationPriority(CelestialObject body) {
-        if (body == null || body.objectClass() != CelestialObject.Class.ASTEROID) return 1000;
+        if (body == null || !body.isAsteroid()) return 1000;
         return CelestialClient.asteroidProjection(body)
             .map(AsteroidStarmapProjection::presentationPriority)
             .orElse(0);
@@ -566,11 +566,10 @@ public class OrbitalScene {
 
     static boolean shouldDeclutterBody(CelestialObject body, float screenX, float screenY, float interactionRadius,
         List<ScreenBodyBounds> screenBodies) {
-        if (body.objectClass() != CelestialObject.Class.ASTEROID) return false;
+        if (!body.isAsteroid()) return false;
         for (ScreenBodyBounds bounds : screenBodies) {
             if (bounds.body()
-                .objectClass() == CelestialObject.Class.ASTEROID
-                && asteroidPresentationPriority(body) > asteroidPresentationPriority(bounds.body())) {
+                .isAsteroid() && asteroidPresentationPriority(body) > asteroidPresentationPriority(bounds.body())) {
                 continue;
             }
             float minimumDistance = Math.max(6f, Math.min(interactionRadius, bounds.interactionRadius()));

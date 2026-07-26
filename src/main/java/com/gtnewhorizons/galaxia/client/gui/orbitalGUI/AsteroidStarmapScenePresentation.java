@@ -22,7 +22,7 @@ final class AsteroidStarmapScenePresentation {
     private AsteroidStarmapScenePresentation() {}
 
     static boolean isBeltContainer(CelestialObject body) {
-        return body != null && body.objectClass() == CelestialObject.Class.ASTEROID_BELT;
+        return body != null && body.isAsteroidBelt();
     }
 
     /** Only asteroids gate their label on discovery; every other body labels by default. */
@@ -91,7 +91,7 @@ final class AsteroidStarmapScenePresentation {
     }
 
     private static boolean isAsteroid(CelestialObject body) {
-        return body != null && body.objectClass() == CelestialObject.Class.ASTEROID;
+        return body != null && body.isAsteroid();
     }
 
     private static void drawCircleOutline(float x, float y, float radius, int color, float alpha, float lineWidth) {

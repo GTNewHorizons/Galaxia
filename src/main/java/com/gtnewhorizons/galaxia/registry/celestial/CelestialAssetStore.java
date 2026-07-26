@@ -10,7 +10,6 @@ import java.util.UUID;
 
 import net.minecraft.item.ItemStack;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
@@ -487,7 +486,7 @@ public final class CelestialAssetStore {
 
     private void collectAssetsInSubtree(CelestialObject body, UUID teamId, List<CelestialAsset> out) {
         out.addAll(getState(teamId, body.id()));
-        for (CelestialObject child : GalaxiaCelestialAPI.getChildren(body)) {
+        for (CelestialObject child : CelestialRegistry.getChildren(body.id())) {
             collectAssetsInSubtree(child, teamId, out);
         }
     }
