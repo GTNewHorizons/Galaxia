@@ -98,6 +98,8 @@ public final class CelestialClient {
     private static final Map<CelestialObjectKey, Map<String, Long>> systemSignals = new LinkedHashMap<>();
     private static final Map<CelestialObjectKey, Map<String, Long>> planetSignals = new LinkedHashMap<>();
 
+    private static final Map<CelestialObjectKey, CachedChildren> childrenCache = new LinkedHashMap<>();
+
     private CelestialClient() {}
 
     public static boolean registerAsset(CelestialObjectKey celestialObjectKey, CelestialAsset asset) {
@@ -117,6 +119,7 @@ public final class CelestialClient {
         deliveryRevision = 0;
         signalRevision = 0;
         asteroidProjections.clear();
+        childrenCache.clear();
         hammerTrajectoryLoadSample = new HammerTrajectoryLoadSample(0.0, 0.0);
     }
 
@@ -497,13 +500,41 @@ public final class CelestialClient {
     }
 
     public static List<CelestialObject> getChildren(CelestialObjectKey parentKey) {
-        return CelestialRegistry.children(
+        // Starmap rendering asks for the same children several times per body per frame, and each miss
+        // materializes every child. The result only changes when synced knowledge, synced scans or the
+        // debug include-hidden flag change, so key the cache on those.
+        boolean includeHidden = asteroidProjections.includeHidden();
+        CachedChildren cached = childrenCache.get(parentKey);
+        if (cached != null && cached.matches(
+            CelestialKnowledgeClientState.revision(),
+            CelestialDiscoveryClientState.revision(),
+            includeHidden)) {
+            return cached.children();
+        }
+        List<CelestialObject> children = CelestialRegistry.children(
             parentKey,
             asteroidProjections.discoveryView(
                 parentKey,
                 CelestialDiscoveryClientState.snapshots(),
                 CelestialKnowledgeClientState.discoveryView()),
-            asteroidProjections.includeHidden());
+            includeHidden);
+        childrenCache.put(
+            parentKey,
+            new CachedChildren(
+                CelestialKnowledgeClientState.revision(),
+                CelestialDiscoveryClientState.revision(),
+                includeHidden,
+                children));
+        return children;
+    }
+
+    private record CachedChildren(int knowledgeRevision, int discoveryRevision, boolean includeHidden,
+        List<CelestialObject> children) {
+
+        boolean matches(int currentKnowledge, int currentDiscovery, boolean currentIncludeHidden) {
+            return knowledgeRevision == currentKnowledge && discoveryRevision == currentDiscovery
+                && includeHidden == currentIncludeHidden;
+        }
     }
 
     public static Optional<AsteroidStarmapProjection> asteroidProjection(CelestialObject body) {

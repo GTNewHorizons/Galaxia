@@ -23,8 +23,14 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledge
 public final class CelestialKnowledgeClientState {
 
     private static Map<CelestialObjectKey, CelestialKnowledgeFacts> facts = Map.of();
+    private static int revision;
 
     private CelestialKnowledgeClientState() {}
+
+    /** Bumped whenever the synced facts change, so readers can cache derived views. */
+    public static int revision() {
+        return revision;
+    }
 
     public interface CelestialDiscoveryView {
 
@@ -48,6 +54,7 @@ public final class CelestialKnowledgeClientState {
     }
 
     public static void apply(Map<CelestialObjectKey, CelestialKnowledgeFacts> newFacts) {
+        revision++;
         if (newFacts == null || newFacts.isEmpty()) {
             facts = Map.of();
             return;
@@ -62,6 +69,7 @@ public final class CelestialKnowledgeClientState {
     }
 
     public static void clear() {
+        revision++;
         facts = Map.of();
     }
 
