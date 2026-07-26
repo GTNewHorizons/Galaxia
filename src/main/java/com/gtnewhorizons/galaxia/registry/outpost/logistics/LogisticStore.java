@@ -132,7 +132,7 @@ public final class LogisticStore {
         for (ItemStackWrapper r : currentSignals.keySet()) {
             if (!allResources.contains(r)) allResources.add(r);
         }
-        CelestialObjectKey bodyId = asset.celestialObjectKey;
+        CelestialObjectKey bodyKey = asset.celestialObjectKey;
         CelestialObjectKey systemKey = asset.systemKey;
         CelestialObjectKey planetaryAnchorBodyKey = asset.planetaryAnchorBodyKey;
 
@@ -176,7 +176,7 @@ public final class LogisticStore {
                     resource,
                     newAmount,
                     newScope,
-                    bodyId,
+                    bodyKey,
                     planetaryAnchorBodyKey);
 
                 if (!Objects.equals(oldSignal, newSignal)) {

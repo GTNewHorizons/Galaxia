@@ -2249,8 +2249,8 @@ final class FacilityPersistenceManagerTest {
         assertEquals(deliveryId, loaded.deliveryId);
         assertEquals(from.assetId, loaded.data.fromAssetId());
         assertEquals(to.assetId, loaded.data.toAssetId());
-        assertEquals(fromKey, loaded.data.fromBodyId());
-        assertEquals(toKey, loaded.data.toBodyId());
+        assertEquals(fromKey, loaded.data.fromBodyKey());
+        assertEquals(toKey, loaded.data.toBodyKey());
         assertEquals(7L, loaded.data.amount());
         assertEquals(42, loaded.getRemainingTicks());
         assertEquals(12.5, loaded.data.departureOrbitalTime());

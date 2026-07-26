@@ -328,8 +328,8 @@ public final class FacilityPersistenceManager {
             tj.amount = delivery.data.amount();
             tj.remainingTicks = delivery.getRemainingTicks();
             tj.transportKind = String.valueOf(delivery.data.scope());
-            tj.fromBodyId = encodeCelestialObjectKey(delivery.data.fromBodyId());
-            tj.toBodyId = encodeCelestialObjectKey(delivery.data.toBodyId());
+            tj.fromBodyId = encodeCelestialObjectKey(delivery.data.fromBodyKey());
+            tj.toBodyId = encodeCelestialObjectKey(delivery.data.toBodyKey());
             tj.departureOrbitalTime = delivery.data.departureOrbitalTime();
             tj.tofOrbitalSeconds = delivery.data.tofOrbitalSeconds();
             list.add(tj);
@@ -424,14 +424,14 @@ public final class FacilityPersistenceManager {
             || json.status == null) {
             return null;
         }
-        CelestialObjectKey objectId = decodeCelestialObjectKey(json);
-        if (objectId == null) return null;
+        CelestialObjectKey objectKey = decodeCelestialObjectKey(json);
+        if (objectKey == null) return null;
         CelestialAsset.Kind kind = safeValueOf(CelestialAsset.Kind.class, json.kind);
         Buildable.Status status = safeValueOf(Buildable.Status.class, json.status);
         if (kind == null || status == null) return null;
         SatelliteKind satelliteKind = safeValueOf(SatelliteKind.class, json.satelliteKind);
         if (kind == CelestialAsset.Kind.SATELLITE && satelliteKind == null) return null;
-        CelestialAsset asset = CelestialAsset.create(json.assetId, objectId, kind, status, satelliteKind);
+        CelestialAsset asset = CelestialAsset.create(json.assetId, objectKey, kind, status, satelliteKind);
         asset.setConstructionInventory(decodeRequirements(json.constructionInventory));
         asset.setDisplayName(json.displayName);
         if (asset instanceof Station station && json.controllerX != null
@@ -620,18 +620,18 @@ public final class FacilityPersistenceManager {
                         .name());
                 moduleData.addProperty("amountKb", config.amountKb());
                 moduleData.addProperty("durationTicks", config.durationTicks());
-                CelestialObjectKey originBodyId = config.originBodyId();
+                CelestialObjectKey originBodyKey = config.originBodyKey();
                 moduleData.add(
-                    "originBodyId",
-                    originBodyId == null ? JsonNull.INSTANCE
-                        : PURE_GSON.toJsonTree(encodeCelestialObjectKey(originBodyId)));
+                    "originBodyKey",
+                    originBodyKey == null ? JsonNull.INSTANCE
+                        : PURE_GSON.toJsonTree(encodeCelestialObjectKey(originBodyKey)));
                 moduleData.addProperty("jobProgressTicks", debugGenerator.jobProgressTicks());
                 moduleData.addProperty("consumedDeciKb", debugGenerator.consumedDeciKb());
-                CelestialObjectKey detectedCounterpartBodyId = debugGenerator.detectedCounterpartBodyId();
+                CelestialObjectKey detectedCounterpartBodyKey = debugGenerator.detectedCounterpartBodyKey();
                 moduleData.add(
-                    "detectedCounterpartBodyId",
-                    detectedCounterpartBodyId == null ? JsonNull.INSTANCE
-                        : PURE_GSON.toJsonTree(encodeCelestialObjectKey(detectedCounterpartBodyId)));
+                    "detectedCounterpartBodyKey",
+                    detectedCounterpartBodyKey == null ? JsonNull.INSTANCE
+                        : PURE_GSON.toJsonTree(encodeCelestialObjectKey(detectedCounterpartBodyKey)));
             } else if (m.component() instanceof IRecipeModule recipeModule) {
                 RecipeConfig rc = recipeModule.getRecipeConfig();
                 if (rc != null) {
@@ -832,16 +832,16 @@ public final class FacilityPersistenceManager {
                         SatelliteDataType dataType = Objects.requireNonNull(
                             PURE_GSON.fromJson(generatorData.get("dataType"), SatelliteDataType.class),
                             "[PERSIST] Debug data generator missing dataType");
-                        CelestialObjectKey originBodyId = null;
-                        JsonElement originElement = generatorData.get("originBodyId");
+                        CelestialObjectKey originBodyKey = null;
+                        JsonElement originElement = generatorData.get("originBodyKey");
                         if (originElement != null && !originElement.isJsonNull()) {
-                            originBodyId = decodeStructuredCelestialObjectKey(
+                            originBodyKey = decodeStructuredCelestialObjectKey(
                                 PURE_GSON.fromJson(originElement, CelestialObjectKeyJson.class));
                         }
-                        CelestialObjectKey detectedCounterpartBodyId = null;
-                        JsonElement detectedElement = generatorData.get("detectedCounterpartBodyId");
+                        CelestialObjectKey detectedCounterpartBodyKey = null;
+                        JsonElement detectedElement = generatorData.get("detectedCounterpartBodyKey");
                         if (detectedElement != null && !detectedElement.isJsonNull()) {
-                            detectedCounterpartBodyId = decodeStructuredCelestialObjectKey(
+                            detectedCounterpartBodyKey = decodeStructuredCelestialObjectKey(
                                 PURE_GSON.fromJson(detectedElement, CelestialObjectKeyJson.class));
                         }
                         debugGenerator.restore(
@@ -851,10 +851,10 @@ public final class FacilityPersistenceManager {
                                 dataType,
                                 requireLong(generatorData, "amountKb", moduleId),
                                 requireInt(generatorData, "durationTicks", moduleId),
-                                originBodyId),
+                                originBodyKey),
                             requireInt(generatorData, "jobProgressTicks", moduleId),
                             requireLong(generatorData, "consumedDeciKb", moduleId),
-                            detectedCounterpartBodyId);
+                            detectedCounterpartBodyKey);
                     }
                     case POWER, GEOTHERMAL_GENERATOR -> {}
                     case STORAGE, TANK, BATTERY, MAINTENANCE_BAY -> {}

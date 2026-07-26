@@ -68,8 +68,8 @@ public final class GalaxiaCelestialAPI {
         return parent == null ? List.of() : getChildren(parent.key());
     }
 
-    public static List<CelestialObject> getChildren(CelestialObjectKey parentId) {
-        return CelestialRegistry.getChildren(parentId);
+    public static List<CelestialObject> getChildren(CelestialObjectKey parentKey) {
+        return CelestialRegistry.getChildren(parentKey);
     }
 
     public static Map<CelestialObjectKey, CelestialObject> getAllBodies() {
@@ -167,13 +167,13 @@ public final class GalaxiaCelestialAPI {
         return null;
     }
 
-    public static CelestialObject findStar(CelestialObjectKey targetId) {
-        return findStar(getPrimaryRoot(), targetId);
+    public static CelestialObject findStar(CelestialObjectKey targetKey) {
+        return findStar(getPrimaryRoot(), targetKey);
     }
 
-    public static CelestialObject findStar(CelestialObject root, CelestialObjectKey targetId) {
-        if (root == null || targetId == null) return null;
-        CelestialObject target = get(targetId).orElse(null);
+    public static CelestialObject findStar(CelestialObject root, CelestialObjectKey targetKey) {
+        if (root == null || targetKey == null) return null;
+        CelestialObject target = get(targetKey).orElse(null);
         CelestialObject star = findStar(root, target);
         if (star != null || target == null || target.parentKey() == null) return star;
         return findStar(root, target.parentKey());
@@ -195,13 +195,13 @@ public final class GalaxiaCelestialAPI {
         return null;
     }
 
-    public static CelestialObject findPlanetaryAnchor(CelestialObjectKey targetId) {
-        return findPlanetaryAnchor(getPrimaryRoot(), targetId);
+    public static CelestialObject findPlanetaryAnchor(CelestialObjectKey targetKey) {
+        return findPlanetaryAnchor(getPrimaryRoot(), targetKey);
     }
 
-    public static CelestialObject findPlanetaryAnchor(CelestialObject root, CelestialObjectKey targetId) {
-        if (root == null || targetId == null) return null;
-        CelestialObject target = get(targetId).orElse(null);
+    public static CelestialObject findPlanetaryAnchor(CelestialObject root, CelestialObjectKey targetKey) {
+        if (root == null || targetKey == null) return null;
+        CelestialObject target = get(targetKey).orElse(null);
         CelestialObject anchor = findPlanetaryAnchor(root, target);
         if (anchor != null || target == null || target.parentKey() == null) return anchor;
         return target;

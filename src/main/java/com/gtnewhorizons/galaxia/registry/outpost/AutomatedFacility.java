@@ -106,13 +106,13 @@ public final class AutomatedFacility extends CelestialAsset {
         this(assetId, CelestialObjectKey.registered(celestialBodyId), kind, status);
     }
 
-    private static long createStationFeatureSalt(CelestialAsset.ID assetId, CelestialObjectKey bodyId) {
+    private static long createStationFeatureSalt(CelestialAsset.ID assetId, CelestialObjectKey bodyKey) {
         long value = assetId == null || assetId.id() == null ? 0L
             : assetId.id()
                 .getMostSignificantBits()
                 ^ assetId.id()
                     .getLeastSignificantBits();
-        value ^= bodyId == null ? 0L : (stationFeatureBodySalt(bodyId) << 32);
+        value ^= bodyKey == null ? 0L : (stationFeatureBodySalt(bodyKey) << 32);
         value ^= 0xD1B54A32D192ED03L;
         value ^= value >>> 33;
         value *= 0xff51afd7ed558ccdL;
@@ -120,12 +120,12 @@ public final class AutomatedFacility extends CelestialAsset {
         return value;
     }
 
-    private static long stationFeatureBodySalt(CelestialObjectKey bodyId) {
-        if (bodyId.isRegistered()) return bodyId.registeredBodyId()
+    private static long stationFeatureBodySalt(CelestialObjectKey bodyKey) {
+        if (bodyKey.isRegistered()) return bodyKey.registeredBodyId()
             .ordinal();
-        return (((long) bodyId.minorBodyId()
+        return (((long) bodyKey.minorBodyId()
             .parentBodyId()
-            .ordinal()) << 32) ^ bodyId.minorBodyId()
+            .ordinal()) << 32) ^ bodyKey.minorBodyId()
                 .index();
     }
 

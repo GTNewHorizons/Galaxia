@@ -71,7 +71,7 @@ final class SystemAssetPanelStressTest {
             SolarSystemAssetPanelWidget.satelliteRows(assets)
                 .stream()
                 .map(
-                    row -> row.bodyId()
+                    row -> row.bodyKey()
                         .requireRegisteredBodyId() + ":"
                         + row.kind()
                         + ":"

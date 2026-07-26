@@ -469,12 +469,12 @@ public final class CelestialRegistry {
      * Does <b>not</b> include generated asteroid-field minors. Those come from
      * {@code children(parent, discoveryView, includeHidden)} (or the client equivalent).
      */
-    public static List<CelestialObject> getChildren(CelestialObjectKey parentId) {
+    public static List<CelestialObject> getChildren(CelestialObjectKey parentKey) {
         registerDefaults();
-        if (parentId == null) return List.of();
+        if (parentKey == null) return List.of();
         return Collections.unmodifiableList(
             hierarchy().childrenByParentId()
-                .getOrDefault(parentId, List.of()));
+                .getOrDefault(parentKey, List.of()));
     }
 
     /**
@@ -541,11 +541,11 @@ public final class CelestialRegistry {
 
     public static Optional<CelestialObject> findByDimension(DimensionEnum dimension) {
         registerDefaults();
-        CelestialObjectKey objectId = IDS_BY_DIMENSION.get(dimension);
-        if (objectId == null) return Optional.empty();
+        CelestialObjectKey objectKey = IDS_BY_DIMENSION.get(dimension);
+        if (objectKey == null) return Optional.empty();
         return Optional.ofNullable(
             hierarchy().bodiesById()
-                .get(objectId));
+                .get(objectKey));
     }
 
     private static void validateRegistration(CelestialObject registration) {

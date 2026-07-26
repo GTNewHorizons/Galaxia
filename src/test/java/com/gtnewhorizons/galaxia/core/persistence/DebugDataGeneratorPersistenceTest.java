@@ -89,7 +89,7 @@ final class DebugDataGeneratorPersistenceTest {
         assertEquals(
             CelestialObjectKey.registered(CelestialObjectId.EGORA),
             loaded.config()
-                .originBodyId());
+                .originBodyKey());
         assertEquals(2, loaded.jobProgressTicks());
         assertEquals(15L, loaded.consumedDeciKb());
     }
@@ -152,8 +152,10 @@ final class DebugDataGeneratorPersistenceTest {
                 .component());
         assertEquals(
             CelestialObjectKey.registered(CelestialObjectId.EGORA),
-            loadedProducer.detectedCounterpartBodyId());
-        assertEquals(CelestialObjectKey.registered(CelestialObjectId.MARS), loadedConsumer.detectedCounterpartBodyId());
+            loadedProducer.detectedCounterpartBodyKey());
+        assertEquals(
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            loadedConsumer.detectedCounterpartBodyKey());
     }
 
     private static AutomatedFacility facility() {

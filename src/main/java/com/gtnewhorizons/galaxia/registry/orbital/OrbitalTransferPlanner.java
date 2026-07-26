@@ -55,7 +55,7 @@ public final class OrbitalTransferPlanner {
      * @param totalDv            total delta-V (departure + capture), orbital velocity units
      * @param departureDv        departure delta-V only
      * @param captureDv          capture delta-V only
-     * @param attractorBodyId    central body used by Lambert
+     * @param attractorBodyKey   central body used by Lambert
      * @param anchorX            central body world X at departure
      * @param anchorY            central body world Y at departure
      * @param r1x                departure relative X from attractor
@@ -66,7 +66,7 @@ public final class OrbitalTransferPlanner {
      */
 
     public record TransferRoute(double tofOsu, double totalDv, double departureDv, double captureDv,
-        CelestialObjectKey attractorBodyId, double anchorX, double anchorY, double r1x, double r1y,
+        CelestialObjectKey attractorBodyKey, double anchorX, double anchorY, double r1x, double r1y,
         double departureVelocityX, double departureVelocityY, boolean prograde) {
 
         public TransferRoute(double tofOsu, double totalDv, double departureDv) {
@@ -96,7 +96,7 @@ public final class OrbitalTransferPlanner {
         }
 
         public boolean hasTrajectoryGeometry() {
-            return attractorBodyId != null && Double.isFinite(anchorX)
+            return attractorBodyKey != null && Double.isFinite(anchorX)
                 && Double.isFinite(anchorY)
                 && Double.isFinite(r1x)
                 && Double.isFinite(r1y)
@@ -294,7 +294,7 @@ public final class OrbitalTransferPlanner {
             tof);
     }
 
-    static TransferRoute solveFixedRoute(CelestialObjectKey attractorBodyId, double mu, double minPeriapsis,
+    static TransferRoute solveFixedRoute(CelestialObjectKey attractorBodyKey, double mu, double minPeriapsis,
         double anchorX, double anchorY, double r1x, double r1y, double vsrcX, double vsrcY, double r2x, double r2y,
         double vdstX, double vdstY, double tof) {
         if (mu <= 0.0 || tof <= 0.0 || isDegenerateTransferGeometry(r1x, r1y, r2x, r2y)) return null;
@@ -321,7 +321,7 @@ public final class OrbitalTransferPlanner {
             best.totalDv(),
             best.depDv(),
             Math.max(0.0, best.totalDv() - best.depDv()),
-            attractorBodyId,
+            attractorBodyKey,
             anchorX,
             anchorY,
             r1x,

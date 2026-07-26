@@ -269,7 +269,7 @@ public final class SatelliteDataJobService {
         CelestialObjectKey bodyKey) {
         if (java.util.Objects.equals(
             endpoint.module()
-                .detectedCounterpartBodyId(),
+                .detectedCounterpartBodyKey(),
             bodyKey)) return;
         endpoint.module()
             .updateDetectedCounterpart(bodyKey);

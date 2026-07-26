@@ -18,7 +18,7 @@ public final class ModuleDebugDataGenerator extends TieredModuleComponent {
     }
 
     public record Config(Mode mode, boolean enabled, SatelliteDataType dataType, long amountKb, int durationTicks,
-        CelestialObjectKey originBodyId) {
+        CelestialObjectKey originBodyKey) {
 
         public Config {
             mode = mode == null ? Mode.PRODUCE : mode;
@@ -33,15 +33,15 @@ public final class ModuleDebugDataGenerator extends TieredModuleComponent {
         }
 
         public static Config consume(SatelliteDataType dataType, long amountKb, int durationTicks,
-            CelestialObjectKey originBodyId) {
-            return new Config(Mode.CONSUME, true, dataType, amountKb, durationTicks, originBodyId);
+            CelestialObjectKey originBodyKey) {
+            return new Config(Mode.CONSUME, true, dataType, amountKb, durationTicks, originBodyKey);
         }
     }
 
     private Config config = Config.produce(SatelliteDataType.PROSPECTING, 10L, 20);
     private int jobProgressTicks;
     private long consumedDeciKb;
-    private CelestialObjectKey detectedCounterpartBodyId;
+    private CelestialObjectKey detectedCounterpartBodyKey;
 
     public Config config() {
         return config;
@@ -53,11 +53,11 @@ public final class ModuleDebugDataGenerator extends TieredModuleComponent {
     }
 
     public void restore(Config config, int jobProgressTicks, long consumedDeciKb,
-        CelestialObjectKey detectedCounterpartBodyId) {
+        CelestialObjectKey detectedCounterpartBodyKey) {
         this.config = config == null ? Config.produce(SatelliteDataType.PROSPECTING, 10L, 20) : config;
         this.jobProgressTicks = Math.max(0, jobProgressTicks);
         this.consumedDeciKb = Math.max(0L, consumedDeciKb);
-        this.detectedCounterpartBodyId = detectedCounterpartBodyId;
+        this.detectedCounterpartBodyKey = detectedCounterpartBodyKey;
     }
 
     public int jobProgressTicks() {
@@ -68,12 +68,12 @@ public final class ModuleDebugDataGenerator extends TieredModuleComponent {
         return consumedDeciKb;
     }
 
-    public CelestialObjectKey detectedCounterpartBodyId() {
-        return detectedCounterpartBodyId;
+    public CelestialObjectKey detectedCounterpartBodyKey() {
+        return detectedCounterpartBodyKey;
     }
 
-    public void updateDetectedCounterpart(CelestialObjectKey bodyId) {
-        this.detectedCounterpartBodyId = bodyId;
+    public void updateDetectedCounterpart(CelestialObjectKey bodyKey) {
+        this.detectedCounterpartBodyKey = bodyKey;
     }
 
     public boolean isProducer() {
@@ -96,8 +96,8 @@ public final class ModuleDebugDataGenerator extends TieredModuleComponent {
     }
 
     public SatelliteDataKey demandKey() {
-        if (config.originBodyId() != null) {
-            return SatelliteDataKey.origin(config.dataType(), config.originBodyId());
+        if (config.originBodyKey() != null) {
+            return SatelliteDataKey.origin(config.dataType(), config.originBodyKey());
         }
         return SatelliteDataKey.any(config.dataType());
     }

@@ -64,92 +64,92 @@ final class AssetCreateRequestPacketTest {
 
     @Test
     void asteroidCreateRequestAllowsOutpostsAndRejectsAutomatedStations() {
-        CelestialObjectKey asteroidId = detectedAsteroidId();
+        CelestialObjectKey asteroidKey = detectedAsteroidKey();
 
         AssetSyncPacket outpostSync = AssetCreateRequestPacket
-            .createFacility(asteroidId, "Asteroid Outpost", CelestialAsset.Kind.AUTOMATED_OUTPOST, true)
+            .createFacility(asteroidKey, "Asteroid Outpost", CelestialAsset.Kind.AUTOMATED_OUTPOST, true)
             .apply(TEAM);
 
         assertNotNull(outpostSync);
         assertEquals(
             1,
-            CelestialAssetStore.getAssetsOnBody(asteroidId)
+            CelestialAssetStore.getAssetsOnBody(asteroidKey)
                 .size());
         assertThrows(
             IllegalArgumentException.class,
             () -> AssetCreateRequestPacket
-                .createFacility(asteroidId, "Asteroid Station", CelestialAsset.Kind.AUTOMATED_STATION, true)
+                .createFacility(asteroidKey, "Asteroid Station", CelestialAsset.Kind.AUTOMATED_STATION, true)
                 .apply(TEAM));
         assertEquals(
             1,
-            CelestialAssetStore.getAssetsOnBody(asteroidId)
+            CelestialAssetStore.getAssetsOnBody(asteroidKey)
                 .size());
     }
 
     @Test
     void asteroidCreateRequestRejectsHiddenAsteroidOutposts() {
-        CelestialObjectKey hiddenAsteroidId = hiddenAsteroidId();
+        CelestialObjectKey hiddenAsteroidKey = hiddenAsteroidKey();
 
         assertThrows(
             IllegalArgumentException.class,
             () -> AssetCreateRequestPacket
-                .createFacility(hiddenAsteroidId, "Hidden Outpost", CelestialAsset.Kind.AUTOMATED_OUTPOST, true)
+                .createFacility(hiddenAsteroidKey, "Hidden Outpost", CelestialAsset.Kind.AUTOMATED_OUTPOST, true)
                 .apply(TEAM));
         assertEquals(
             0,
-            CelestialAssetStore.getAssetsOnBody(hiddenAsteroidId)
+            CelestialAssetStore.getAssetsOnBody(hiddenAsteroidKey)
                 .size());
     }
 
     @Test
     void asteroidCreateRequestRejectsHiddenAsteroidSatellites() {
-        CelestialObjectKey hiddenAsteroidId = hiddenAsteroidId();
+        CelestialObjectKey hiddenAsteroidKey = hiddenAsteroidKey();
 
         assertThrows(
             IllegalArgumentException.class,
-            () -> AssetCreateRequestPacket.createSatellite(hiddenAsteroidId, SatelliteKind.PROSPECTING, true)
+            () -> AssetCreateRequestPacket.createSatellite(hiddenAsteroidKey, SatelliteKind.PROSPECTING, true)
                 .apply(TEAM));
         assertEquals(
             0,
-            CelestialAssetStore.getAssetsOnBody(hiddenAsteroidId)
+            CelestialAssetStore.getAssetsOnBody(hiddenAsteroidKey)
                 .size());
     }
 
     @Test
     void asteroidCreateRequestAllowsCommunicationSatellites() {
-        CelestialObjectKey asteroidId = detectedAsteroidId();
+        CelestialObjectKey asteroidKey = detectedAsteroidKey();
 
-        AssetSyncPacket sync = AssetCreateRequestPacket.createSatellite(asteroidId, SatelliteKind.COMMUNICATION, true)
+        AssetSyncPacket sync = AssetCreateRequestPacket.createSatellite(asteroidKey, SatelliteKind.COMMUNICATION, true)
             .apply(TEAM);
 
         assertNotNull(sync);
         assertEquals(
             1,
-            CelestialAssetStore.getAssetsOnBody(asteroidId)
+            CelestialAssetStore.getAssetsOnBody(asteroidKey)
                 .size());
     }
 
     @Test
     void asteroidCreateRequestAllowsTeamDetectedHiddenAsteroidOutposts() {
-        CelestialObjectKey hiddenAsteroidId = hiddenAsteroidId();
-        CelestialKnowledgeService.putFacts(TEAM, hiddenAsteroidId, CelestialKnowledgeFacts.discoveredUnknown());
+        CelestialObjectKey hiddenAsteroidKey = hiddenAsteroidKey();
+        CelestialKnowledgeService.putFacts(TEAM, hiddenAsteroidKey, CelestialKnowledgeFacts.discoveredUnknown());
 
         AssetSyncPacket outpostSync = AssetCreateRequestPacket
-            .createFacility(hiddenAsteroidId, "Detected Outpost", CelestialAsset.Kind.AUTOMATED_OUTPOST, true)
+            .createFacility(hiddenAsteroidKey, "Detected Outpost", CelestialAsset.Kind.AUTOMATED_OUTPOST, true)
             .apply(TEAM);
 
         assertNotNull(outpostSync);
         assertEquals(
             1,
-            CelestialAssetStore.getAssetsOnBody(hiddenAsteroidId)
+            CelestialAssetStore.getAssetsOnBody(hiddenAsteroidKey)
                 .size());
     }
 
-    private static CelestialObjectKey hiddenAsteroidId() {
+    private static CelestialObjectKey hiddenAsteroidKey() {
         return asteroidIdWithDetectionState(DiscoveryState.HIDDEN);
     }
 
-    private static CelestialObjectKey detectedAsteroidId() {
+    private static CelestialObjectKey detectedAsteroidKey() {
         return asteroidIdWithDetectionState(DiscoveryState.DISCOVERED);
     }
 

@@ -347,12 +347,12 @@ public final class AssetModuleUpdatePacket implements IMessage {
             SatelliteDataType dataType = PacketUtil.readEnum(payloadBuf, SatelliteDataType.class);
             long amountKb = payloadBuf.readLong();
             int durationTicks = payloadBuf.readInt();
-            CelestialObjectKey originBodyId = payloadBuf.readBoolean() ? PacketUtil.readCelestialObjectKey(payloadBuf)
+            CelestialObjectKey originBodyKey = payloadBuf.readBoolean() ? PacketUtil.readCelestialObjectKey(payloadBuf)
                 : null;
             if (payloadBuf.isReadable()) {
                 throw new IllegalArgumentException("malformed debug data generator payload");
             }
-            return new ModuleDebugDataGenerator.Config(mode, enabled, dataType, amountKb, durationTicks, originBodyId);
+            return new ModuleDebugDataGenerator.Config(mode, enabled, dataType, amountKb, durationTicks, originBodyKey);
         } catch (RuntimeException e) {
             if (e instanceof IllegalArgumentException) throw e;
             throw new IllegalArgumentException("malformed debug data generator payload", e);
@@ -442,9 +442,9 @@ public final class AssetModuleUpdatePacket implements IMessage {
         PacketUtil.writeEnum(payloadBuf, config.dataType());
         payloadBuf.writeLong(config.amountKb());
         payloadBuf.writeInt(config.durationTicks());
-        CelestialObjectKey originBodyId = config.originBodyId();
-        payloadBuf.writeBoolean(originBodyId != null);
-        if (originBodyId != null) PacketUtil.writeCelestialObjectKey(payloadBuf, originBodyId);
+        CelestialObjectKey originBodyKey = config.originBodyKey();
+        payloadBuf.writeBoolean(originBodyKey != null);
+        if (originBodyKey != null) PacketUtil.writeCelestialObjectKey(payloadBuf, originBodyKey);
         pkt.rawPayload = new byte[payloadBuf.writerIndex()];
         payloadBuf.readBytes(pkt.rawPayload);
         return pkt;

@@ -665,7 +665,7 @@ public final class InterplanetaryTransferSystem {
                 || !route.hasTrajectoryGeometry()) {
                 return null;
             }
-            CelestialObject attractor = GalaxiaCelestialAPI.findBodyById(root, route.attractorBodyId());
+            CelestialObject attractor = GalaxiaCelestialAPI.findBodyById(root, route.attractorBodyKey());
             if (attractor == null) return null;
 
             double[] trajectoryXs = new double[TRAJECTORY_SAMPLES];

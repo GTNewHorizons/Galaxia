@@ -226,10 +226,10 @@ public final class SatelliteNetworkCalculator {
             .toList();
     }
 
-    private static long capacity(Map<CelestialObjectKey, Long> capacityByBody, CelestialObjectKey bodyId) {
+    private static long capacity(Map<CelestialObjectKey, Long> capacityByBody, CelestialObjectKey bodyKey) {
         return Math.max(
             0L,
-            (capacityByBody == null ? Map.<CelestialObjectKey, Long>of() : capacityByBody).getOrDefault(bodyId, 0L));
+            (capacityByBody == null ? Map.<CelestialObjectKey, Long>of() : capacityByBody).getOrDefault(bodyKey, 0L));
     }
 
     private static List<SatelliteNetworkGraph.Edge> withCapacityBackbone(List<SatelliteNetworkGraph.Node> nodes,

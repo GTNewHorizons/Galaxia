@@ -142,8 +142,8 @@ final class SatelliteDataJobServiceTest {
             store,
             network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD));
 
-        assertEquals(CelestialObjectKey.registered(CelestialObjectId.EGORA), producer.detectedCounterpartBodyId());
-        assertEquals(CelestialObjectKey.registered(CelestialObjectId.MARS), consumer.detectedCounterpartBodyId());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.EGORA), producer.detectedCounterpartBodyKey());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.MARS), consumer.detectedCounterpartBodyKey());
     }
 
     @Test
@@ -189,7 +189,7 @@ final class SatelliteDataJobServiceTest {
             endpoints.endpoints(TEAM),
             store,
             network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD));
-        assertEquals(CelestialObjectKey.registered(CelestialObjectId.EGORA), producer.detectedCounterpartBodyId());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.EGORA), producer.detectedCounterpartBodyKey());
 
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
         endpoints.refreshFacility(TEAM, destination);
@@ -200,8 +200,8 @@ final class SatelliteDataJobServiceTest {
             store,
             network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD));
 
-        assertNull(producer.detectedCounterpartBodyId());
-        assertNull(consumer.detectedCounterpartBodyId());
+        assertNull(producer.detectedCounterpartBodyKey());
+        assertNull(consumer.detectedCounterpartBodyKey());
     }
 
     @Test

@@ -50,9 +50,9 @@ public final class AsteroidClientProjectionService {
      * Discovery view that keeps synced {@code discoveryState} facts intact while
      * treating active scan targets and in-radius sensor ghosts as temporarily visible.
      */
-    public CelestialDiscoveryView discoveryView(@Nullable CelestialObjectKey parentId,
+    public CelestialDiscoveryView discoveryView(@Nullable CelestialObjectKey parentKey,
         @Nonnull List<CelestialDiscoveryScanSnapshot> scanSnapshots, @Nonnull CelestialDiscoveryView baseView) {
-        Set<CelestialObjectKey> temporaryVisible = temporaryVisibleKeys(parentId, scanSnapshots);
+        Set<CelestialObjectKey> temporaryVisible = temporaryVisibleKeys(parentKey, scanSnapshots);
         return new CelestialDiscoveryView() {
 
             @Override
@@ -71,14 +71,14 @@ public final class AsteroidClientProjectionService {
         @Nonnull List<CelestialObject> canonicalSiblings, @Nonnull List<CelestialDiscoveryScanSnapshot> scanSnapshots) {
         if (body == null || !body.key()
             .isMinorBody()) return Optional.empty();
-        CelestialObjectKey parentId = body.parentKey();
-        if (parentId == null) return Optional.empty();
+        CelestialObjectKey parentKey = body.parentKey();
+        if (parentKey == null) return Optional.empty();
         boolean sibling = canonicalSiblings.stream()
             .anyMatch(
                 candidate -> candidate.key()
                     .equals(body.key()));
         if (!sibling) return Optional.empty();
-        return CelestialRegistry.get(parentId.registeredBodyId())
+        return CelestialRegistry.get(parentKey.registeredBodyId())
             .filter(
                 belt -> belt.properties()
                     .asteroidFieldProfile() != null)
@@ -145,16 +145,16 @@ public final class AsteroidClientProjectionService {
         return Map.copyOf(facts);
     }
 
-    private Set<CelestialObjectKey> temporaryVisibleKeys(CelestialObjectKey parentId,
+    private Set<CelestialObjectKey> temporaryVisibleKeys(CelestialObjectKey parentKey,
         List<CelestialDiscoveryScanSnapshot> scanSnapshots) {
-        if (parentId == null || !parentId.isRegistered()) return Set.of();
-        return CelestialRegistry.get(parentId.registeredBodyId())
+        if (parentKey == null || !parentKey.isRegistered()) return Set.of();
+        return CelestialRegistry.get(parentKey.registeredBodyId())
             .filter(
                 belt -> belt.properties()
                     .asteroidFieldProfile() != null)
             .map(belt -> {
                 Set<CelestialObjectKey> keys = new LinkedHashSet<>();
-                for (MinorCelestialBodyId id : scanTargets(parentId, scanSnapshots)) {
+                for (MinorCelestialBodyId id : scanTargets(parentKey, scanSnapshots)) {
                     keys.add(CelestialObjectKey.minorBody(id));
                 }
                 for (MinorCelestialBodyId id : sensorRevealTargets(belt, scanSnapshots)) {

@@ -546,7 +546,7 @@ final class StationPacketRoundTripTest {
             .component();
         assertEquals(
             CelestialObjectKey.registered(CelestialObjectId.EGORA),
-            clientProducer.detectedCounterpartBodyId());
+            clientProducer.detectedCounterpartBodyKey());
         assertEquals(
             SatelliteDataType.COMMUNICATION,
             clientConsumer.config()

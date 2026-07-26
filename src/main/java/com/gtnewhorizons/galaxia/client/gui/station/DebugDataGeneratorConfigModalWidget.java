@@ -122,7 +122,7 @@ final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGe
     }
 
     private String originLabel() {
-        CelestialObjectKey origin = config().originBodyId();
+        CelestialObjectKey origin = config().originBodyKey();
         if (origin == null) return "Any origin";
         return origin.isRegistered() ? origin.registeredBodyId()
             .name() : origin.toString();
@@ -140,7 +140,7 @@ final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGe
                 config.dataType(),
                 config.amountKb(),
                 config.durationTicks(),
-                mode == ModuleDebugDataGenerator.Mode.CONSUME ? config.originBodyId() : null));
+                mode == ModuleDebugDataGenerator.Mode.CONSUME ? config.originBodyKey() : null));
     }
 
     private void cycleDataType() {
@@ -155,12 +155,12 @@ final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGe
                 next,
                 config.amountKb(),
                 config.durationTicks(),
-                config.originBodyId()));
+                config.originBodyKey()));
     }
 
     private void cycleOrigin() {
         ModuleDebugDataGenerator.Config config = config();
-        CelestialObjectKey next = nextOrigin(config.originBodyId());
+        CelestialObjectKey next = nextOrigin(config.originBodyKey());
         apply(
             new ModuleDebugDataGenerator.Config(
                 config.mode(),
@@ -180,7 +180,7 @@ final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGe
                 config.dataType(),
                 Math.max(0L, config.amountKb() + delta),
                 config.durationTicks(),
-                config.originBodyId()));
+                config.originBodyKey()));
     }
 
     private void adjustDuration(int delta) {
@@ -192,7 +192,7 @@ final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGe
                 config.dataType(),
                 config.amountKb(),
                 Math.max(1, config.durationTicks() + delta),
-                config.originBodyId()));
+                config.originBodyKey()));
     }
 
     private void apply(ModuleDebugDataGenerator.Config config) {
@@ -215,7 +215,7 @@ final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGe
     }
 
     private String counterpartStatus(ModuleDebugDataGenerator generator) {
-        CelestialObjectKey bodyKey = generator.detectedCounterpartBodyId();
+        CelestialObjectKey bodyKey = generator.detectedCounterpartBodyKey();
         String role = generator.isProducer() ? "Consumer" : "Producer";
         if (bodyKey == null) return role + " not detected";
         String label = bodyKey.isRegistered() ? bodyKey.registeredBodyId()

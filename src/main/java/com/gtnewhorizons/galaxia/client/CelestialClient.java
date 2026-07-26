@@ -448,8 +448,8 @@ public final class CelestialClient {
         return result != null ? Collections.unmodifiableMap(result) : Collections.emptyMap();
     }
 
-    public static Map<String, Long> clientSignalsForPlanet(CelestialObjectKey anchorBodyId) {
-        Map<String, Long> result = planetSignals.get(anchorBodyId);
+    public static Map<String, Long> clientSignalsForPlanet(CelestialObjectKey anchorBodyKey) {
+        Map<String, Long> result = planetSignals.get(anchorBodyKey);
         return result != null ? Collections.unmodifiableMap(result) : Collections.emptyMap();
     }
 
@@ -496,11 +496,11 @@ public final class CelestialClient {
         return parent == null ? List.of() : getChildren(parent.key());
     }
 
-    public static List<CelestialObject> getChildren(CelestialObjectKey parentId) {
+    public static List<CelestialObject> getChildren(CelestialObjectKey parentKey) {
         return CelestialRegistry.children(
-            parentId,
+            parentKey,
             asteroidProjections.discoveryView(
-                parentId,
+                parentKey,
                 CelestialDiscoveryClientState.snapshots(),
                 CelestialKnowledgeClientState.discoveryView()),
             asteroidProjections.includeHidden());
