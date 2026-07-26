@@ -580,12 +580,6 @@ public class OrbitalScene {
 
         interface Callbacks {
 
-            double getScale();
-
-            float worldToScreenX(double wx);
-
-            float worldToScreenY(double wy);
-
             ResourceLocation getRenderTexture(CelestialObject body);
 
             float getDisplaySpriteSize(CelestialObject body);
@@ -600,9 +594,11 @@ public class OrbitalScene {
         private static final int GALAXY_TITLE_HEIGHT = 21;
         private static final int SOI_FILL_COLOR = EnumColors.MAP_COLOR_SPHERE_OF_INFLUENCE_FILL.getColor();
         private final Callbacks callbacks;
+        private final StarmapViewContext view;
 
-        OrbitalSceneRenderer(Callbacks callbacks) {
+        OrbitalSceneRenderer(Callbacks callbacks, StarmapViewContext view) {
             this.callbacks = callbacks;
+            this.view = view;
         }
 
         void drawBodies(OrbitalSceneFrame frame, CelestialObject viewRoot) {
@@ -640,7 +636,7 @@ public class OrbitalScene {
                 }
                 double soiRadius = OrbitalMechanics.getSphereOfInfluenceRadius(state.parent(), state.body());
                 if (soiRadius <= 1e-6) continue;
-                float screenRadius = (float) (soiRadius * callbacks.getScale());
+                float screenRadius = (float) (soiRadius * view.scale());
                 if (screenRadius < 1.0f) continue;
                 drawFilledCircle(state.screenX(), state.screenY(), screenRadius, SOI_FILL_COLOR, state.bodyAlpha());
             }
@@ -662,9 +658,9 @@ public class OrbitalScene {
                         parentState.worldX(),
                         parentState.worldY(),
                         ellipseAlpha * state.bodyAlpha(),
-                        callbacks.getScale(),
-                        callbacks::worldToScreenX,
-                        callbacks::worldToScreenY);
+                        view.scale(),
+                        view::worldToScreenX,
+                        view::worldToScreenY);
                     continue;
                 }
                 if (AsteroidStarmapScenePresentation.isBeltContainer(state.body())) continue;
@@ -716,7 +712,7 @@ public class OrbitalScene {
                 EnumColors.MAP_COLOR_DEBUG_TITLE.getColor());
             mc.fontRenderer
                 .drawStringWithShadow("Toggle: B", 14, widgetHeight - 18, EnumColors.MAP_COLOR_DEBUG_INFO.getColor());
-            AsteroidStarmapScenePresentation.drawProspectingScanRanges(frame, callbacks.getScale());
+            AsteroidStarmapScenePresentation.drawProspectingScanRanges(frame, view.scale());
             for (ScreenBodyBounds bounds : frame.screenBodies) {
                 drawSquareOutline(
                     bounds.centerX(),
@@ -938,7 +934,7 @@ public class OrbitalScene {
             double rot = p.argumentOfPeriapsis();
             GlStateManager.disableTexture2D();
             GlStateManager.color(1f, 1f, 1f, alpha * 0.92f);
-            GL11.glLineWidth((float) Math.max(1.4, callbacks.getScale() * 0.035));
+            GL11.glLineWidth((float) Math.max(1.4, view.scale() * 0.035));
             GL11.glBegin(GL11.GL_LINE_LOOP);
             for (int i = 0; i <= 360; i++) {
                 double E = i * Math.PI * 2.0 / 360.0;
@@ -946,7 +942,7 @@ public class OrbitalScene {
                 double ey = b * Math.sin(E);
                 double rx = ex * Math.cos(rot) - ey * Math.sin(rot);
                 double ry = ex * Math.sin(rot) + ey * Math.cos(rot);
-                GL11.glVertex2d(callbacks.worldToScreenX(parentX + rx), callbacks.worldToScreenY(parentY + ry));
+                GL11.glVertex2d(view.worldToScreenX(parentX + rx), view.worldToScreenY(parentY + ry));
             }
             GL11.glEnd();
             GlStateManager.color(1f, 1f, 1f, 1f);

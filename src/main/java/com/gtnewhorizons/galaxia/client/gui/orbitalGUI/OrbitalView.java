@@ -398,6 +398,59 @@ public class OrbitalView {
         private final OrbitalContextMenuState contextMenuState = new OrbitalContextMenuState();
         private String actionStatusMessage = "";
         private long actionStatusExpiresAt = 0L;
+        /** The one implementation of the read-only view every collaborator on this map shares. */
+        private final StarmapViewContext viewContext = new StarmapViewContext() {
+
+            @Override
+            public int viewportWidth() {
+                return getArea().width;
+            }
+
+            @Override
+            public int viewportHeight() {
+                return getArea().height;
+            }
+
+            @Override
+            public float worldToScreenX(double worldX) {
+                return OrbitalMapWidget.this.worldToScreenX(worldX);
+            }
+
+            @Override
+            public float worldToScreenY(double worldY) {
+                return OrbitalMapWidget.this.worldToScreenY(worldY);
+            }
+
+            @Override
+            public double scale() {
+                return getScale();
+            }
+
+            @Override
+            public double currentTime() {
+                return clock.time();
+            }
+
+            @Override
+            public double timeScale() {
+                return clock.timeScale();
+            }
+
+            @Override
+            public double serverOrbitalTime() {
+                return OrbitalMapWidget.this.getServerOrbitalTime();
+            }
+
+            @Override
+            public boolean creativeBuildMode() {
+                return isCreativeBuildModeEnabled();
+            }
+
+            @Override
+            public boolean gt5AutomationAvailable() {
+                return isGT5AutomationAvailable();
+            }
+        };
         private final StarmapAssetActions.OrbitalAssetSupport assetSupport = new StarmapAssetActions.OrbitalAssetSupport();
         private final InterplanetaryTransferSystem.OrbitalTransferSupport transferSupport = new InterplanetaryTransferSystem.OrbitalTransferSupport();
         private final StarmapAssetActions.OrbitalAssetActionController assetActionController;
@@ -452,11 +505,6 @@ public class OrbitalView {
                 new StarmapAssetActions.OrbitalAssetActionController.Callbacks() {
 
                     @Override
-                    public boolean isCreativeBuildModeEnabled() {
-                        return OrbitalMapWidget.this.isCreativeBuildModeEnabled();
-                    }
-
-                    @Override
                     public void showActionStatus(String message) {
                         OrbitalMapWidget.this.showActionStatus(message);
                     }
@@ -484,36 +532,17 @@ public class OrbitalView {
                         StationTransferTarget target) {
                         OrbitalMapWidget.this.createResourceTransfer(sourceBody, sourceAsset, target);
                     }
-                });
+                },
+                viewContext);
             this.assetActionsWidget = new StarmapAssetActions.StarmapAssetActionsWidget(
                 assetUiState,
                 new StarmapAssetActions.StarmapAssetActionsWidget.Callbacks() {
-
-                    @Override
-                    public int getViewportWidth() {
-                        return OrbitalMapWidget.this.getArea().width;
-                    }
-
-                    @Override
-                    public int getViewportHeight() {
-                        return OrbitalMapWidget.this.getArea().height;
-                    }
 
                     @Override
                     public void closeAssetActions() {
                         assetActionController.closeAssetActions(assetUiState);
                         transferSimulatorState.resetSelection();
                         assetActionsWidget.markStructureDirty();
-                    }
-
-                    @Override
-                    public boolean isCreativeBuildModeEnabled() {
-                        return OrbitalMapWidget.this.isCreativeBuildModeEnabled();
-                    }
-
-                    @Override
-                    public boolean isGT5AutomationAvailable() {
-                        return OrbitalMapWidget.this.isGT5AutomationAvailable();
                     }
 
                     @Override
@@ -703,19 +732,10 @@ public class OrbitalView {
                     public void showActionStatus(String message) {
                         OrbitalMapWidget.this.showActionStatus(message);
                     }
-                });
+                },
+                viewContext);
             this.transferRenderer = new InterplanetaryTransferSystem.OrbitalTransferRenderer(
                 new InterplanetaryTransferSystem.OrbitalTransferRenderer.Callbacks() {
-
-                    @Override
-                    public float worldToScreenX(double worldX) {
-                        return OrbitalMapWidget.this.worldToScreenX(worldX);
-                    }
-
-                    @Override
-                    public float worldToScreenY(double worldY) {
-                        return OrbitalMapWidget.this.worldToScreenY(worldY);
-                    }
 
                     @Override
                     public double[] getWorldPosition(CelestialObject body) {
@@ -723,15 +743,11 @@ public class OrbitalView {
                     }
 
                     @Override
-                    public double getServerOrbitalTime() {
-                        return OrbitalMapWidget.this.getServerOrbitalTime();
-                    }
-
-                    @Override
                     public boolean isBodyRendered(CelestialObject body) {
                         return OrbitalMapWidget.this.isTransferEndpointRendered(body);
                     }
-                });
+                },
+                viewContext);
             this.transferTooltipWidget = new InterplanetaryTransferSystem.OrbitalTransferTooltipWidget(
                 new InterplanetaryTransferSystem.OrbitalTransferTooltipWidget.Callbacks() {
 
@@ -753,44 +769,11 @@ public class OrbitalView {
                             : clientSimulatedTransferState.hoverY();
                     }
 
-                    @Override
-                    public int getViewportWidth() {
-                        return OrbitalMapWidget.this.getArea().width;
-                    }
-
-                    @Override
-                    public int getViewportHeight() {
-                        return OrbitalMapWidget.this.getArea().height;
-                    }
-
-                    @Override
-                    public double getCurrentTime() {
-                        return clock.time();
-                    }
-
-                    @Override
-                    public double getTimeScale() {
-                        return clock.timeScale();
-                    }
-
-                    @Override
-                    public double getServerOrbitalTime() {
-                        return OrbitalMapWidget.this.getServerOrbitalTime();
-                    }
-                });
+                },
+                viewContext);
             this.transferSimulatorWidget = new InterplanetaryTransferSystem.OrbitalTransferSimulatorWidget(
                 transferSimulatorState,
                 new InterplanetaryTransferSystem.OrbitalTransferSimulatorWidget.Callbacks() {
-
-                    @Override
-                    public int getViewportWidth() {
-                        return OrbitalMapWidget.this.getArea().width;
-                    }
-
-                    @Override
-                    public int getViewportHeight() {
-                        return OrbitalMapWidget.this.getArea().height;
-                    }
 
                     @Override
                     public void closeTransferSimulator() {
@@ -834,29 +817,10 @@ public class OrbitalView {
                     public void runLambertStressTest() {
                         runTransferPlannerStressTest();
                     }
-
-                    @Override
-                    public double getTimeScale() {
-                        return clock.timeScale();
-                    }
-                });
+                },
+                viewContext);
             this.sceneRenderer = new OrbitalScene.OrbitalSceneRenderer(
                 new OrbitalScene.OrbitalSceneRenderer.Callbacks() {
-
-                    @Override
-                    public double getScale() {
-                        return OrbitalMapWidget.this.getScale();
-                    }
-
-                    @Override
-                    public float worldToScreenX(double wx) {
-                        return OrbitalMapWidget.this.worldToScreenX(wx);
-                    }
-
-                    @Override
-                    public float worldToScreenY(double wy) {
-                        return OrbitalMapWidget.this.worldToScreenY(wy);
-                    }
 
                     @Override
                     public ResourceLocation getRenderTexture(CelestialObject body) {
@@ -877,23 +841,14 @@ public class OrbitalView {
                     public ResourceLocation getAssetIconTexture(CelestialAsset.Kind kind) {
                         return OrbitalMapWidget.this.getAssetIconTexture(kind);
                     }
-                });
+                },
+                viewContext);
             this.pinnedInfoWidget = new OrbitalPinnedInfoContentBuilder.OrbitalPinnedInfoWidget(
                 new OrbitalPinnedInfoContentBuilder.OrbitalPinnedInfoWidget.Callbacks() {
 
                     @Override
                     public CelestialObject getPinnedInfoBody() {
                         return OrbitalMapWidget.this.getPinnedInfoBody();
-                    }
-
-                    @Override
-                    public int getViewportWidth() {
-                        return OrbitalMapWidget.this.getArea().width;
-                    }
-
-                    @Override
-                    public int getViewportHeight() {
-                        return OrbitalMapWidget.this.getArea().height;
                     }
 
                     @Override
@@ -905,20 +860,11 @@ public class OrbitalView {
                     public List<PinnedInfoRow> buildRows(CelestialObject body) {
                         return pinnedInfoContentBuilder.buildRows(body);
                     }
-                });
+                },
+                viewContext);
             this.contextMenuWidget = new OrbitalContextMenuWidget(
                 contextMenuState,
                 new OrbitalContextMenuWidget.Callbacks() {
-
-                    @Override
-                    public int getViewportWidth() {
-                        return OrbitalMapWidget.this.getArea().width;
-                    }
-
-                    @Override
-                    public int getViewportHeight() {
-                        return OrbitalMapWidget.this.getArea().height;
-                    }
 
                     @Override
                     public void openAssetActions(CelestialObject body) {
@@ -945,7 +891,8 @@ public class OrbitalView {
                     public void closeContextMenu() {
                         OrbitalMapWidget.this.closeContextMenu();
                     }
-                });
+                },
+                viewContext);
             this.sceneFrameBuilder = new OrbitalScene.OrbitalSceneFrameBuilder(
                 new OrbitalScene.OrbitalSceneFrameBuilder.Callbacks() {
 

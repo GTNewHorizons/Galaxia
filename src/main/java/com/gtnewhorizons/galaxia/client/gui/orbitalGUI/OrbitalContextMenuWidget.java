@@ -37,10 +37,6 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
 
     interface Callbacks {
 
-        int getViewportWidth();
-
-        int getViewportHeight();
-
         void openAssetActions(CelestialObject body);
 
         boolean canDebugSatellites(CelestialObject body);
@@ -54,11 +50,13 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
 
     private final OrbitalView.OrbitalContextMenuState state;
     private final Callbacks callbacks;
+    private final StarmapViewContext view;
     private String lastSignature = "";
 
-    OrbitalContextMenuWidget(OrbitalView.OrbitalContextMenuState state, Callbacks callbacks) {
+    OrbitalContextMenuWidget(OrbitalView.OrbitalContextMenuState state, Callbacks callbacks, StarmapViewContext view) {
         this.state = state;
         this.callbacks = callbacks;
+        this.view = view;
         setEnabled(false);
         size(0, 0);
     }
@@ -86,7 +84,7 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
             return;
         }
         setEnabled(true);
-        size(callbacks.getViewportWidth(), callbacks.getViewportHeight());
+        size(view.viewportWidth(), view.viewportHeight());
         String signature = buildSignature();
         if (!signature.equals(lastSignature)) {
             rebuildChildren();
