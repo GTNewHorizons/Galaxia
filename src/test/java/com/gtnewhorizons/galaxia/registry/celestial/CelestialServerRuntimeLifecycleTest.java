@@ -2,18 +2,21 @@ package com.gtnewhorizons.galaxia.registry.celestial;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.OptionalLong;
-
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 /**
  * Discovery domains are registered once during mod init, while {@code reset()} runs on every world load and unload.
  * Clearing domains on reset silently disables prospecting for the whole process.
+ * <p>
+ * Scan anchors are minor bodies (individual asteroids), not the belt container, so the ownership probe has to use an
+ * asteroid key.
  */
 final class CelestialServerRuntimeLifecycleTest {
 
@@ -30,20 +33,31 @@ final class CelestialServerRuntimeLifecycleTest {
 
     @Test
     void discoveryStaysRegisteredAcrossWorldReloads() {
-        CelestialObjectKey belt = CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT);
+        CelestialObjectKey anchor = firstAsteroidAnchor();
         CelestialServerRuntime runtime = CelestialServerRuntime.create();
 
         assertTrue(
-            CelestialKnowledgeService.discoveryScopeRevision(belt)
+            CelestialKnowledgeService.discoveryScopeRevision(anchor)
                 .isPresent(),
-            "belt must own a discovery domain right after create()");
+            "asteroid anchor must own a discovery domain right after create()");
 
         runtime.reset();
         runtime.reset();
 
-        OptionalLong afterReload = CelestialKnowledgeService.discoveryScopeRevision(belt);
         assertTrue(
-            afterReload.isPresent(),
-            "belt must still own a discovery domain after world reloads, otherwise prospecting satellites are skipped");
+            CelestialKnowledgeService.discoveryScopeRevision(anchor)
+                .isPresent(),
+            "anchor must still own a discovery domain after world reloads, otherwise prospecting satellites are skipped");
+    }
+
+    private static CelestialObjectKey firstAsteroidAnchor() {
+        AsteroidFieldProfile profile = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
+            .orElseThrow()
+            .properties()
+            .asteroidFieldProfile();
+        return CelestialObjectKey.minorBody(
+            AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile)
+                .get(0)
+                .id());
     }
 }
