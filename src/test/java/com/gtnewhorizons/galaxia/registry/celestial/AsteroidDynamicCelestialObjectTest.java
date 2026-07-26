@@ -81,7 +81,7 @@ final class AsteroidDynamicCelestialObjectTest {
         CelestialObjectKey key = CelestialObjectKey
             .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN));
 
-        CelestialObject asteroid = CelestialRegistry.findById(key)
+        CelestialObject asteroid = CelestialRegistry.get(key)
             .orElseThrow();
 
         assertEquals(key, asteroid.id());

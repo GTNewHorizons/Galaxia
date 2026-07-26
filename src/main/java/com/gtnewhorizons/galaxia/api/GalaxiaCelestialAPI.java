@@ -57,11 +57,11 @@ public final class GalaxiaCelestialAPI {
     }
 
     public static CelestialHierarchy getHierarchy() {
-        return CelestialRegistry.hierarchy;
+        return CelestialRegistry.hierarchy();
     }
 
     public static Optional<CelestialObject> findBodyById(CelestialObjectKey id) {
-        return CelestialRegistry.findById(id);
+        return CelestialRegistry.get(id);
     }
 
     public static List<CelestialObject> getChildren(CelestialObject parent) {

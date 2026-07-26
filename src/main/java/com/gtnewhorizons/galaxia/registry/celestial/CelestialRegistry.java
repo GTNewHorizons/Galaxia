@@ -46,9 +46,20 @@ public final class CelestialRegistry {
     private static boolean bootstrapped;
     private static boolean frozen;
 
-    public static CelestialHierarchy hierarchy;
+    private static CelestialHierarchy hierarchy;
 
     private CelestialRegistry() {}
+
+    /**
+     * Baked parent/child view of the registry. Only available after {@link #freezeAndBake()}, which runs during mod
+     * init; asking earlier is a lifecycle bug, so it fails loudly instead of throwing NPE at the call site.
+     */
+    public static CelestialHierarchy hierarchy() {
+        if (hierarchy == null) {
+            throw new IllegalStateException("Celestial hierarchy is not baked yet; freezeAndBake() has not run");
+        }
+        return hierarchy;
+    }
 
     private static double seededPhase(@Nonnull String id) {
         long hash = id.hashCode() & 0xFFFFFFFFL;
@@ -394,7 +405,7 @@ public final class CelestialRegistry {
 
     public static void register(@Nonnull CelestialObject registration) {
         assertMutable();
-        validateRegistration(registration, null);
+        validateRegistration(registration);
         REGISTRATIONS.put(registration.id(), registration);
         if (registration.dimensionEnum() != null) {
             IDS_BY_DIMENSION.put(registration.dimensionEnum(), registration.id());
@@ -462,7 +473,7 @@ public final class CelestialRegistry {
         registerDefaults();
         if (parentId == null) return List.of();
         return Collections.unmodifiableList(
-            hierarchy.childrenByParentId()
+            hierarchy().childrenByParentId()
                 .getOrDefault(parentId, List.of()));
     }
 
@@ -519,7 +530,7 @@ public final class CelestialRegistry {
     }
 
     public static List<CelestialObject> getRoots() {
-        return hierarchy.roots();
+        return hierarchy().roots();
     }
 
     public static CelestialObject getPrimaryRoot() {
@@ -533,25 +544,12 @@ public final class CelestialRegistry {
         CelestialObjectKey objectId = IDS_BY_DIMENSION.get(dimension);
         if (objectId == null) return Optional.empty();
         return Optional.ofNullable(
-            hierarchy.bodiesById()
+            hierarchy().bodiesById()
                 .get(objectId));
     }
 
-    public static Optional<CelestialObject> findById(CelestialObjectId id) {
-        return id == null ? Optional.empty() : findById(CelestialObjectKey.registered(id));
-    }
-
-    public static Optional<CelestialObject> findById(CelestialObjectKey id) {
-        registerDefaults();
-        CelestialObject registered = hierarchy.bodiesById()
-            .get(id);
-        if (registered != null) return Optional.of(registered);
-        return resolveDynamicMinorBody(id);
-    }
-
-    private static void validateRegistration(CelestialObject registration, CelestialObjectKey existingId) {
-        if (REGISTRATIONS.containsKey(registration.id()) && !registration.id()
-            .equals(existingId)) {
+    private static void validateRegistration(CelestialObject registration) {
+        if (REGISTRATIONS.containsKey(registration.id())) {
             throw new IllegalArgumentException("Duplicate celestial object id: " + registration.id());
         }
         if (registration.parentId() != null && registration.parentId()
@@ -564,8 +562,7 @@ public final class CelestialRegistry {
         if (registration.dimensionEnum() != null) {
             // A dimension can only have one owning celestial key. This keeps
             // dynamic/minor bodies from accidentally stealing a planet dimension.
-            CelestialObjectKey existingDimensionOwner = IDS_BY_DIMENSION.get(registration.dimensionEnum());
-            if (existingDimensionOwner != null && !existingDimensionOwner.equals(existingId)) {
+            if (IDS_BY_DIMENSION.containsKey(registration.dimensionEnum())) {
                 throw new IllegalArgumentException("Duplicate dimension mapping for " + registration.dimensionEnum());
             }
         }

@@ -477,7 +477,7 @@ public final class CelestialAssetStore {
     public List<CelestialAsset> listAssetsInSystemInternal(CelestialObjectKey systemId, UUID teamId) {
         List<CelestialAsset> assets = new ArrayList<>();
         if (systemId == null || teamId == null) return assets;
-        CelestialObject systemRoot = CelestialRegistry.findById(systemId)
+        CelestialObject systemRoot = CelestialRegistry.get(systemId)
             .orElse(null);
         if (systemRoot == null) return assets;
         collectAssetsInSubtree(systemRoot, teamId, assets);
