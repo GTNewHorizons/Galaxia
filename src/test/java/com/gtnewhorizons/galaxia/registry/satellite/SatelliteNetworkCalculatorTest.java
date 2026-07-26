@@ -186,7 +186,11 @@ final class SatelliteNetworkCalculatorTest {
 
         assertEquals(
             100L,
-            SatelliteNetworkCalculator.widestPath(CelestialObjectId.MARS, CelestialObjectId.OVERWORLD, state)
+            SatelliteNetworkCalculator
+                .widestPath(
+                    CelestialObjectKey.registered(CelestialObjectId.MARS),
+                    CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
+                    state)
                 .capacityKbps());
     }
 

@@ -22,7 +22,7 @@ final class SatelliteDataBufferStoreTest {
     @Test
     void originDataKeyIsDistinctFromAnyDataKeyAndMatchesOriginDemandFirst() {
         SatelliteDataKey egoraProspecting = SatelliteDataKey
-            .origin(SatelliteDataType.PROSPECTING, CelestialObjectId.EGORA);
+            .origin(SatelliteDataType.PROSPECTING, CelestialObjectKey.registered(CelestialObjectId.EGORA));
         SatelliteDataKey anyProspecting = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
 
         assertNotEquals(egoraProspecting, anyProspecting);
@@ -36,9 +36,9 @@ final class SatelliteDataBufferStoreTest {
     @Test
     void anyDemandMatchesWhenNoConcreteOriginDemandExists() {
         SatelliteDataKey marsProspecting = SatelliteDataKey
-            .origin(SatelliteDataType.PROSPECTING, CelestialObjectId.MARS);
+            .origin(SatelliteDataType.PROSPECTING, CelestialObjectKey.registered(CelestialObjectId.MARS));
         SatelliteDataKey egoraProspecting = SatelliteDataKey
-            .origin(SatelliteDataType.PROSPECTING, CelestialObjectId.EGORA);
+            .origin(SatelliteDataType.PROSPECTING, CelestialObjectKey.registered(CelestialObjectId.EGORA));
         SatelliteDataKey anyProspecting = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
 
         List<SatelliteDataKey> matches = SatelliteDataKey
@@ -74,7 +74,7 @@ final class SatelliteDataBufferStoreTest {
     void finishProductionCanOverfillBufferAndBlocksOnlyThatKeyUntilDrained() {
         SatelliteDataBufferStore store = new SatelliteDataBufferStore();
         SatelliteDataKey egoraProspecting = SatelliteDataKey
-            .origin(SatelliteDataType.PROSPECTING, CelestialObjectId.EGORA);
+            .origin(SatelliteDataType.PROSPECTING, CelestialObjectKey.registered(CelestialObjectId.EGORA));
         SatelliteDataKey anyProspecting = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
 
         store.finishProduction(

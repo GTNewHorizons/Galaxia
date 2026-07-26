@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
@@ -34,7 +35,7 @@ final class OrbitalSceneSatelliteMarkerTest {
     void satelliteMarkerCountIgnoresNonSatelliteAssets() {
         List<CelestialAsset> assets = List.of(
             CelestialAsset.create(
-                CelestialObjectId.OVERWORLD,
+                CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
                 CelestialAsset.Kind.AUTOMATED_STATION,
                 Buildable.Status.OPERATIONAL),
             satellite(SatelliteKind.COMMUNICATION));
@@ -43,7 +44,10 @@ final class OrbitalSceneSatelliteMarkerTest {
     }
 
     private static CelestialAsset satellite(SatelliteKind kind) {
-        return CelestialAsset
-            .create(CelestialObjectId.OVERWORLD, CelestialAsset.Kind.SATELLITE, Buildable.Status.OPERATIONAL, kind);
+        return CelestialAsset.create(
+            CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
+            CelestialAsset.Kind.SATELLITE,
+            Buildable.Status.OPERATIONAL,
+            kind);
     }
 }

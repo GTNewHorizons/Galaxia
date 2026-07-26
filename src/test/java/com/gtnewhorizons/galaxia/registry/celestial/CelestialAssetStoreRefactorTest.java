@@ -35,10 +35,8 @@ final class CelestialAssetStoreRefactorTest {
 
     private static final UUID TEAM_A = UUID.randomUUID();
     private static final UUID TEAM_B = UUID.randomUUID();
-    private static final CelestialObjectId BODY_1 = CelestialObjectId.MARS;
-    private static final CelestialObjectId BODY_2 = CelestialObjectId.MOON;
-    private static final CelestialObjectKey BODY_1_KEY = CelestialObjectKey.registered(BODY_1);
-    private static final CelestialObjectKey BODY_2_KEY = CelestialObjectKey.registered(BODY_2);
+    private static final CelestialObjectKey BODY_1 = CelestialObjectKey.registered(CelestialObjectId.MARS);
+    private static final CelestialObjectKey BODY_2 = CelestialObjectKey.registered(CelestialObjectId.MOON);
 
     @BeforeAll
     static void init() {
@@ -156,8 +154,8 @@ final class CelestialAssetStoreRefactorTest {
 
         Map<CelestialObjectKey, Set<CelestialAsset>> teamAssets = store.getTeamAssetsInternal(TEAM_A);
         assertEquals(2, teamAssets.size());
-        assertTrue(teamAssets.containsKey(BODY_1_KEY));
-        assertTrue(teamAssets.containsKey(BODY_2_KEY));
+        assertTrue(teamAssets.containsKey(BODY_1));
+        assertTrue(teamAssets.containsKey(BODY_2));
     }
 
     @Test
@@ -359,7 +357,7 @@ final class CelestialAssetStoreRefactorTest {
         return new CelestialAssetStore();
     }
 
-    private static CelestialAsset createAsset(CelestialObjectId bodyId) {
+    private static CelestialAsset createAsset(CelestialObjectKey bodyId) {
         return CelestialAsset.create(bodyId, CelestialAsset.Kind.AUTOMATED_OUTPOST, Buildable.Status.OPERATIONAL);
     }
 }

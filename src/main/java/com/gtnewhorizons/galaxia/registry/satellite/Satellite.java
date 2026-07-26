@@ -3,7 +3,6 @@ package com.gtnewhorizons.galaxia.registry.satellite;
 import java.util.stream.Stream;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -15,10 +14,6 @@ public final class Satellite extends CelestialAsset {
     public Satellite(ID assetId, CelestialObjectKey celestialObjectId, Status status, SatelliteKind satelliteKind) {
         super(assetId, celestialObjectId, Kind.SATELLITE, status, null);
         this.satelliteKind = satelliteKind;
-    }
-
-    public Satellite(ID assetId, CelestialObjectId celestialObjectId, Status status, SatelliteKind satelliteKind) {
-        this(assetId, CelestialObjectKey.registered(celestialObjectId), status, satelliteKind);
     }
 
     public SatelliteKind satelliteKind() {

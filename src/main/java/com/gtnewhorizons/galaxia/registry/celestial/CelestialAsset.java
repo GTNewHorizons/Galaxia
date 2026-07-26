@@ -62,17 +62,8 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
             .getOrDefault(resource, 0L);
     }
 
-    public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, boolean operational) {
-        return create(CelestialObjectKey.registered(celestialObjectId), kind, operational);
-    }
-
     public static CelestialAsset create(CelestialObjectKey celestialObjectId, Kind kind, boolean operational) {
         return create(celestialObjectId, kind, operational ? Status.OPERATIONAL : Status.CONSTRUCTION_SITE);
-    }
-
-    public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, boolean operational,
-        SatelliteKind satelliteKind) {
-        return create(CelestialObjectKey.registered(celestialObjectId), kind, operational, satelliteKind);
     }
 
     public static CelestialAsset create(CelestialObjectKey celestialObjectId, Kind kind, boolean operational,
@@ -84,17 +75,8 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
             satelliteKind);
     }
 
-    public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, Status status) {
-        return create(CelestialObjectKey.registered(celestialObjectId), kind, status);
-    }
-
     public static CelestialAsset create(CelestialObjectKey celestialObjectId, Kind kind, Status status) {
         return create(celestialObjectId, kind, status, SatelliteKind.COMMUNICATION);
-    }
-
-    public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, Status status,
-        SatelliteKind satelliteKind) {
-        return create(CelestialObjectKey.registered(celestialObjectId), kind, status, satelliteKind);
     }
 
     public static CelestialAsset create(CelestialObjectKey celestialObjectId, Kind kind, Status status,
@@ -113,17 +95,8 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         };
     }
 
-    public static CelestialAsset create(ID id, CelestialObjectId celestialObjectId, Kind kind, Status status) {
-        return create(id, CelestialObjectKey.registered(celestialObjectId), kind, status);
-    }
-
     public static CelestialAsset create(ID id, CelestialObjectKey celestialObjectId, Kind kind, Status status) {
         return create(id, celestialObjectId, kind, status, SatelliteKind.COMMUNICATION);
-    }
-
-    public static CelestialAsset create(ID id, CelestialObjectId celestialObjectId, Kind kind, Status status,
-        SatelliteKind satelliteKind) {
-        return create(id, CelestialObjectKey.registered(celestialObjectId), kind, status, satelliteKind);
     }
 
     public static CelestialAsset create(ID id, CelestialObjectKey celestialObjectId, Kind kind, Status status,

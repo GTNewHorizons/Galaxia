@@ -22,7 +22,7 @@ final class SatelliteDataTransferPlannerTest {
     void concreteOriginDemandTransfersBeforeAnyDemandForSameType() {
         SatelliteDataBufferStore store = new SatelliteDataBufferStore();
         SatelliteDataKey egoraProspecting = SatelliteDataKey
-            .origin(SatelliteDataType.PROSPECTING, CelestialObjectId.EGORA);
+            .origin(SatelliteDataType.PROSPECTING, CelestialObjectKey.registered(CelestialObjectId.EGORA));
         SatelliteDataKey anyProspecting = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
         store
             .finishProduction(TEAM, CelestialObjectKey.registered(CelestialObjectId.EGORA), egoraProspecting, kb(100L));

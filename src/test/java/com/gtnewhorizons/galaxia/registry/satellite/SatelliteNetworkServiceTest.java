@@ -237,8 +237,16 @@ final class SatelliteNetworkServiceTest {
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.COMMUNICATION, 10L, 1, null));
         SatelliteNetworkService.refreshFacilityEndpoints(source);
         SatelliteNetworkService.refreshFacilityEndpoints(destination);
-        CelestialAssetStore.SERVER.setSatelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, 1);
-        CelestialAssetStore.SERVER.setSatelliteCount(TEAM, CelestialObjectId.EGORA, SatelliteKind.COMMUNICATION, 1);
+        CelestialAssetStore.SERVER.setSatelliteCount(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            SatelliteKind.COMMUNICATION,
+            1);
+        CelestialAssetStore.SERVER.setSatelliteCount(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.EGORA),
+            SatelliteKind.COMMUNICATION,
+            1);
         SatelliteNetworkService.rebuild(TEAM, 0.0D);
 
         SatelliteNetworkService.tickDataJobs();
@@ -308,8 +316,16 @@ final class SatelliteNetworkServiceTest {
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.RESEARCH, 500L, 1, null));
         SatelliteNetworkService.refreshFacilityEndpoints(source);
         SatelliteNetworkService.refreshFacilityEndpoints(destination);
-        CelestialAssetStore.SERVER.setSatelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, 1);
-        CelestialAssetStore.SERVER.setSatelliteCount(TEAM, CelestialObjectId.EGORA, SatelliteKind.COMMUNICATION, 1);
+        CelestialAssetStore.SERVER.setSatelliteCount(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            SatelliteKind.COMMUNICATION,
+            1);
+        CelestialAssetStore.SERVER.setSatelliteCount(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.EGORA),
+            SatelliteKind.COMMUNICATION,
+            1);
         SatelliteNetworkService.rebuild(TEAM, 0.0D);
 
         SatelliteNetworkService.tickDataJobs();

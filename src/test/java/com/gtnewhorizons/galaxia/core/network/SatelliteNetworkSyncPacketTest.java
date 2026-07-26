@@ -44,7 +44,8 @@ final class SatelliteNetworkSyncPacketTest {
                 new SatelliteNetworkState.PendingData(
                     CelestialObjectKey.registered(CelestialObjectId.MARS),
                     List.of(CelestialObjectKey.registered(CelestialObjectId.OVERWORLD)),
-                    SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, CelestialObjectId.EGORA),
+                    SatelliteDataKey
+                        .origin(SatelliteDataType.PROSPECTING, CelestialObjectKey.registered(CelestialObjectId.EGORA)),
                     SatelliteBandwidthFormatter.kilobits(12L))));
 
         SatelliteNetworkSyncPacket packet = new SatelliteNetworkSyncPacket(state);

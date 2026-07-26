@@ -49,8 +49,10 @@ final class ClientStateLifecycleTest {
 
     @Test
     void clearAllClearsEveryClientSideSyncStore() {
-        CelestialAsset asset = CelestialAsset
-            .create(CelestialObjectId.MARS, CelestialAsset.Kind.AUTOMATED_OUTPOST, Buildable.Status.OPERATIONAL);
+        CelestialAsset asset = CelestialAsset.create(
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
         CelestialAssetStore.CLIENT.registerAssetInternal(TEAM, asset);
         CelestialKnowledgeClientState.apply(
             Map.of(

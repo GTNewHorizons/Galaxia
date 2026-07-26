@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 /**
@@ -134,10 +133,6 @@ public final class SatelliteNetworkCalculator {
     public static WidestPath widestPath(CelestialObjectKey from, CelestialObjectKey to, SatelliteNetworkState state) {
         if (state == null) return WidestPath.empty();
         return widestPath(from, to, state.links(), state.capacityKbps(from));
-    }
-
-    public static WidestPath widestPath(CelestialObjectId from, CelestialObjectId to, SatelliteNetworkState state) {
-        return widestPath(CelestialObjectKey.registered(from), CelestialObjectKey.registered(to), state);
     }
 
     public record WidestPath(List<SatelliteNetworkGraph.Edge> edges, long capacityKbps) {

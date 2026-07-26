@@ -59,7 +59,10 @@ final class AssetCreateRequestPacketTest {
         assertNotNull(sync);
         assertEquals(
             1,
-            CelestialAssetStore.SERVER.satelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION));
+            CelestialAssetStore.SERVER.satelliteCount(
+                TEAM,
+                CelestialObjectKey.registered(CelestialObjectId.MARS),
+                SatelliteKind.COMMUNICATION));
     }
 
     @Test

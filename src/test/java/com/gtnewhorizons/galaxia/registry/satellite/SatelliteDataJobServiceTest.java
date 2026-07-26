@@ -50,7 +50,8 @@ final class SatelliteDataJobServiceTest {
             store.pendingDeciKb(
                 TEAM,
                 CelestialObjectKey.registered(CelestialObjectId.MARS),
-                SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, CelestialObjectId.MARS)));
+                SatelliteDataKey
+                    .origin(SatelliteDataType.PROSPECTING, CelestialObjectKey.registered(CelestialObjectId.MARS))));
     }
 
     @Test
@@ -240,7 +241,8 @@ final class SatelliteDataJobServiceTest {
         store.finishProduction(
             TEAM,
             CelestialObjectKey.registered(CelestialObjectId.MARS),
-            SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, CelestialObjectId.MARS),
+            SatelliteDataKey
+                .origin(SatelliteDataType.PROSPECTING, CelestialObjectKey.registered(CelestialObjectId.MARS)),
             SatelliteBandwidthFormatter.kilobits(11L));
 
         SatelliteDataJobService.tick(
@@ -272,7 +274,8 @@ final class SatelliteDataJobServiceTest {
             store.pendingDeciKb(
                 TEAM,
                 CelestialObjectKey.registered(CelestialObjectId.MARS),
-                SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, CelestialObjectId.MARS)));
+                SatelliteDataKey
+                    .origin(SatelliteDataType.PROSPECTING, CelestialObjectKey.registered(CelestialObjectId.MARS))));
     }
 
     @Test
