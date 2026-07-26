@@ -39,11 +39,11 @@ public record CelestialServerRuntime(CelestialDiscoveryScanService scans,
         scans.tick(discoveryWorkers.get(), 1);
     }
 
+    /** Clears per-world state. Discovery domains are process-wide registrations from {@link #create()}. */
     public void reset() {
         CelestialAssetStore.SERVER.clearInternal();
         SatelliteNetworkService.clear();
         CelestialKnowledgeService.clearFacts();
-        CelestialKnowledgeService.clearDiscoveryDomains();
         AsteroidFieldNodeCatalog.clearRestored();
         scans.clear();
     }
