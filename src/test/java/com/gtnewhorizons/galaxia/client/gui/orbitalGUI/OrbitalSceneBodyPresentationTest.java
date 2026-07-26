@@ -75,6 +75,22 @@ final class OrbitalSceneBodyPresentationTest {
     }
 
     @Test
+    void nonAsteroidBodiesAlwaysDrawTheirLabel() {
+        CelestialObject planet = CelestialRegistry.get(CelestialObjectId.MARS)
+            .orElseThrow();
+
+        assertTrue(AsteroidStarmapScenePresentation.drawsDefaultBodyLabel(planet));
+        assertTrue(AsteroidStarmapScenePresentation.drawsDefaultBodyLabel(asteroidBelt()));
+    }
+
+    @Test
+    void generatedAsteroidsDoNotDrawDefaultLabelThroughSharedPresentation() {
+        assertFalse(
+            AsteroidStarmapScenePresentation
+                .drawsDefaultBodyLabel(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.LARGE)));
+    }
+
+    @Test
     void defaultAsteroidLabelsAreLimitedToAuthoredAsteroids() {
         assertFalse(
             CelestialClient.asteroidProjection(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.LARGE))

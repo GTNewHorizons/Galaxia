@@ -2205,9 +2205,8 @@ public class OrbitalView {
             if (labelAlpha > 0.02f && !sameBody(body, root)
                 && !sameBody(body, focusedBody)
                 && renderBody
-                && (CelestialClient.asteroidProjection(body)
-                    .map(AsteroidStarmapProjection::drawDefaultLabel)
-                    .orElse(false) || CelestialClient.isAsteroidScanInProgress(body))) {
+                && (AsteroidStarmapScenePresentation.drawsDefaultBodyLabel(body)
+                    || CelestialClient.isAsteroidScanInProgress(body))) {
                 float actualLabelAlpha = getLabelRenderAlpha(body, labelAlpha);
                 if (actualLabelAlpha > 0.01f) {
                     drawLabel = true;

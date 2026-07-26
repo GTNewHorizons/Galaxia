@@ -5,9 +5,11 @@ import java.util.function.DoubleUnaryOperator;
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.utils.GlStateManager;
+import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot.CelestialDiscoveryCapability;
@@ -21,6 +23,15 @@ final class AsteroidStarmapScenePresentation {
 
     static boolean isBeltContainer(CelestialObject body) {
         return body != null && body.objectClass() == CelestialObject.Class.ASTEROID_BELT;
+    }
+
+    /** Only asteroids gate their label on discovery; every other body labels by default. */
+    static boolean drawsDefaultBodyLabel(CelestialObject body) {
+        if (body == null) return false;
+        if (!isAsteroid(body)) return true;
+        return CelestialClient.asteroidProjection(body)
+            .map(AsteroidStarmapProjection::drawDefaultLabel)
+            .orElse(false);
     }
 
     static void drawProspectingScanRanges(OrbitalScene.OrbitalSceneFrame frame, double scale) {
