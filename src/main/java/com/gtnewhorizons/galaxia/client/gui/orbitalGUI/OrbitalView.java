@@ -3,13 +3,11 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTech5UnofficialNewHorizonsLoaded;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import net.minecraft.client.Minecraft;
@@ -428,14 +426,10 @@ public class OrbitalView {
         private final OrbitalPlanetTrackingController planetTrackingController = new OrbitalPlanetTrackingController();
         private boolean guiActionsRegistered = false;
         private OrbitalLayerTransitionState transitionState = new OrbitalLayerTransitionState();
-        private static final double ZOOM_BASE = 1.18;
-        private static final double BASE_SCALE = 82.0;
         private static final double SERVER_OSU_PER_SECOND = OrbitalTransferPlanner.OSU_PER_SECOND;
         private static final double LERP_SPEED = 0.045;
         private static final double PENDING_LAYER_CENTER_LERP_SPEED = 0.08;
         private static final double LAYER_SWITCH_LERP_SPEED = 0.036;
-        private static final double OVERVIEW_SCREEN_RADIUS = 420.0;
-        private static final double ISO_OVERVIEW_SCREEN_RADIUS = 350.0;
         private static final float ISO_BASE_CUBE_SIZE = 42f;
         private static final float ISO_SPACING = 90f;
         private static final float ISO_OFFSET = 110f;
@@ -1386,17 +1380,13 @@ public class OrbitalView {
         }
 
         private double getScale() {
-            return BASE_SCALE * Math.pow(ZOOM_BASE, viewState.zoomLevel);
-        }
-
-        private double getScaleForZoomLevel(double zoomLevel) {
-            return BASE_SCALE * Math.pow(ZOOM_BASE, zoomLevel);
+            return OrbitalZoom.scaleForZoomLevel(viewState.zoomLevel);
         }
 
         private double getDisplayZoomMultiplier() {
             CelestialObject referenceBody = viewRoot != null ? viewRoot : root;
             if (referenceBody == null) return 1.0;
-            double referenceScale = getScaleForZoomLevel(getOverviewZoomForBody(referenceBody));
+            double referenceScale = OrbitalZoom.scaleForZoomLevel(getOverviewZoomForBody(referenceBody));
             if (referenceScale <= 1e-9) return 1.0;
             return getScale() / referenceScale;
         }
@@ -1599,7 +1589,7 @@ public class OrbitalView {
                 viewState.targetCameraX = pos[0];
                 viewState.targetCameraY = pos[1];
             }
-            boolean goIso = shouldUseIsometricOverview(body);
+            boolean goIso = OrbitalZoom.useIsometricOverview(body);
             viewState.targetIsometricProgress = goIso ? 1.0 : 0.0;
             viewState.targetZoomLevel = getOverviewZoomForBody(body);
         }
@@ -1639,11 +1629,6 @@ public class OrbitalView {
             return maxSize;
         }
 
-        private boolean shouldUseIsometricOverview(CelestialObject body) {
-            return body.objectClass() != CelestialObject.Class.GALAXY
-                && body.objectClass() != CelestialObject.Class.STAR;
-        }
-
         private double calculateFocusedOrbitExtent(CelestialObject body) {
             CelestialObject parent = findParent(root, body);
             if (parent == null) return 0.0;
@@ -1657,71 +1642,44 @@ public class OrbitalView {
 
         private double computeOverviewZoom(CelestialObject body, boolean goIso) {
             double extent = goIso ? calculateFocusedOrbitExtent(body) : calculateOverviewExtent(body);
-            double screenRadius = goIso ? ISO_OVERVIEW_SCREEN_RADIUS : OVERVIEW_SCREEN_RADIUS;
-            return extent > 1e-9 ? zoomForWorldDistance(extent, screenRadius) : goIso ? 3.0 : -0.8;
-        }
-
-        private double clampZoom(double zoom) {
-            return Math.max(-7000.0, Math.min(14000.0, zoom));
-        }
-
-        private double zoomForWorldDistance(double worldDistance, double screenDistance) {
-            if (worldDistance <= 1e-9 || screenDistance <= 1e-9) return -0.8;
-            return clampZoom(Math.log((screenDistance / worldDistance) / BASE_SCALE) / Math.log(ZOOM_BASE));
-        }
-
-        private double getViewportHalfDiagonal() {
-            double width = getArea().width > 0 ? getArea().width : 960.0;
-            double height = getArea().height > 0 ? getArea().height : 640.0;
-            return Math.hypot(width * 0.5, height * 0.5);
-        }
-
-        private double getViewportMinDimension() {
-            double width = getArea().width > 0 ? getArea().width : 960.0;
-            double height = getArea().height > 0 ? getArea().height : 640.0;
-            return Math.min(width, height);
+            return OrbitalZoom.overviewZoomForExtent(extent, goIso);
         }
 
         private double getOverviewZoomForBody(CelestialObject body) {
-            return computeOverviewZoom(body, shouldUseIsometricOverview(body));
+            return computeOverviewZoom(body, OrbitalZoom.useIsometricOverview(body));
+        }
+
+        private double viewportHalfDiagonal() {
+            return OrbitalZoom.viewportHalfDiagonal(getArea().width, getArea().height);
+        }
+
+        private double viewportMinDimension() {
+            return OrbitalZoom.viewportMinDimension(getArea().width, getArea().height);
         }
 
         private double getSystemDepartureZoom(CelestialObject star) {
             double farthestOrbit = calculateOverviewExtent(star);
-            return zoomForWorldDistance(farthestOrbit * SYSTEM_DEPARTURE_EXTENT_MULTIPLIER, OVERVIEW_SCREEN_RADIUS);
+            return OrbitalZoom.zoomForWorldDistance(
+                farthestOrbit * SYSTEM_DEPARTURE_EXTENT_MULTIPLIER,
+                OrbitalZoom.OVERVIEW_SCREEN_RADIUS);
         }
 
         private double getNearestOtherStarDistance(CelestialObject anchorStar) {
-            return nearestOtherStarDistance(anchorStar, CelestialClient.getChildren(root), this::getAbsoluteWorldPos);
-        }
-
-        static double nearestOtherStarDistance(CelestialObject anchorStar, Collection<CelestialObject> galaxyBodies,
-            Function<CelestialObject, double[]> worldPositionProvider) {
-            if (anchorStar == null || galaxyBodies == null || worldPositionProvider == null) return Double.MAX_VALUE;
-            double[] anchorPos = worldPositionProvider.apply(anchorStar);
-            if (anchorPos == null) return Double.MAX_VALUE;
-            double nearestDistance = Double.MAX_VALUE;
-            for (CelestialObject body : galaxyBodies) {
-                if (body == anchorStar || body.objectClass() != CelestialObject.Class.STAR) continue;
-                double[] bodyPos = worldPositionProvider.apply(body);
-                if (bodyPos == null) continue;
-                nearestDistance = Math
-                    .min(nearestDistance, Math.hypot(bodyPos[0] - anchorPos[0], bodyPos[1] - anchorPos[1]));
-            }
-            return nearestDistance;
+            return OrbitalZoom
+                .nearestOtherStarDistance(anchorStar, CelestialClient.getChildren(root), this::getAbsoluteWorldPos);
         }
 
         private double getGalaxyOverviewZoom(CelestialObject anchorStar) {
             double nearestDistance = getNearestOtherStarDistance(anchorStar);
             if (nearestDistance == Double.MAX_VALUE || nearestDistance <= 1e-9) return getOverviewZoomForBody(root);
-            return zoomForWorldDistance(nearestDistance, getViewportMinDimension() * 0.2);
+            return OrbitalZoom.zoomForWorldDistance(nearestDistance, viewportMinDimension() * 0.2);
         }
 
         private double getGalaxyCutZoom(CelestialObject anchorStar) {
             double nearestDistance = getNearestOtherStarDistance(anchorStar);
             if (nearestDistance == Double.MAX_VALUE || nearestDistance <= 1e-9)
                 return getGalaxyOverviewZoom(anchorStar);
-            return zoomForWorldDistance(nearestDistance, getViewportHalfDiagonal() * 1.5);
+            return OrbitalZoom.zoomForWorldDistance(nearestDistance, viewportHalfDiagonal() * 1.5);
         }
 
         private boolean isLayerSwitchActive() {
