@@ -141,7 +141,7 @@ public class Station extends CelestialAsset {
         MinecraftServer server = MinecraftServer.getServer();
         if (server == null) return null;
 
-        int dimId = celestialObjectId.requireRegisteredBodyId()
+        int dimId = celestialObjectKey.requireRegisteredBodyId()
             .dimension()
             .getId();
         WorldServer world = server.worldServerForDimension(dimId);

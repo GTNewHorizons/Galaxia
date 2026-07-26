@@ -108,7 +108,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
 
@@ -384,7 +384,7 @@ final class FacilityPersistenceManagerTest {
         CelestialAsset loaded = CelestialAssetStore.findAsset(asset.assetId);
         assertNotNull(loaded);
         assertEquals(teamId, CelestialAssetStore.getTeamId(asset.assetId));
-        assertEquals(key, loaded.celestialObjectId);
+        assertEquals(key, loaded.celestialObjectKey);
     }
 
     @Test
@@ -417,7 +417,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
 
@@ -447,7 +447,7 @@ final class FacilityPersistenceManagerTest {
 
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -512,7 +512,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -537,7 +537,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -561,7 +561,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -609,7 +609,7 @@ final class FacilityPersistenceManagerTest {
 
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -645,7 +645,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -698,7 +698,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -726,7 +726,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -758,7 +758,7 @@ final class FacilityPersistenceManagerTest {
 
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
 
@@ -775,7 +775,7 @@ final class FacilityPersistenceManagerTest {
 
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
 
@@ -1052,7 +1052,7 @@ final class FacilityPersistenceManagerTest {
         // Decode
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -1129,7 +1129,7 @@ final class FacilityPersistenceManagerTest {
 
         AutomatedFacility malformedTier = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         assertThrows(IllegalStateException.class, () -> manager.decodeFacilityState(malformedTier, encoded));
@@ -1180,7 +1180,7 @@ final class FacilityPersistenceManagerTest {
         // Decode into fresh facility
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -1257,7 +1257,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -1458,7 +1458,7 @@ final class FacilityPersistenceManagerTest {
         // Decode into fresh facility
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -1562,7 +1562,7 @@ final class FacilityPersistenceManagerTest {
 
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -1618,7 +1618,7 @@ final class FacilityPersistenceManagerTest {
 
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -1777,7 +1777,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -2022,7 +2022,7 @@ final class FacilityPersistenceManagerTest {
         // Decode
         AutomatedFacility after = new AutomatedFacility(
             before.assetId,
-            before.celestialObjectId,
+            before.celestialObjectKey,
             before.kind,
             before.status());
         manager.decodeFacilityState(after, encoded);

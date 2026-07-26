@@ -52,7 +52,7 @@ record ButtonRect(int left, int top, int right, int bottom) {
 
 record ModalBounds(int left, int top, int right, int bottom) {}
 
-record PendingAssetCreation(CelestialObjectKey celestialObjectId, String displayName, CelestialAsset.Kind kind,
+record PendingAssetCreation(CelestialObjectKey celestialObjectKey, String displayName, CelestialAsset.Kind kind,
     CelestialAsset.Location location, Map<ItemStack, Long> requiredResources) {}
 
 record PendingAssetRename(CelestialAsset asset) {}
@@ -289,9 +289,9 @@ public final class StarmapAssetActions {
             if (state.pendingAssetCreation == null) return;
             if (callbacks.isCreativeBuildModeEnabled()) {
                 CelestialAsset asset = CelestialAsset
-                    .create(state.pendingAssetCreation.celestialObjectId(), state.pendingAssetCreation.kind(), true);
+                    .create(state.pendingAssetCreation.celestialObjectKey(), state.pendingAssetCreation.kind(), true);
                 asset.setDisplayName(state.pendingAssetCreation.displayName());
-                if (!CelestialClient.registerAsset(state.pendingAssetCreation.celestialObjectId(), asset)) {
+                if (!CelestialClient.registerAsset(state.pendingAssetCreation.celestialObjectKey(), asset)) {
                     callbacks.showActionStatus(
                         assetSupport.formatAssetKind(state.pendingAssetCreation.kind()) + " creation failed");
                     return;
@@ -302,9 +302,9 @@ public final class StarmapAssetActions {
                     assetSupport.formatAssetKind(state.pendingAssetCreation.kind()) + " creation requested");
             } else {
                 CelestialAsset asset = CelestialAsset
-                    .create(state.pendingAssetCreation.celestialObjectId(), state.pendingAssetCreation.kind(), false);
+                    .create(state.pendingAssetCreation.celestialObjectKey(), state.pendingAssetCreation.kind(), false);
                 asset.setDisplayName(state.pendingAssetCreation.displayName());
-                if (!CelestialClient.registerAsset(state.pendingAssetCreation.celestialObjectId(), asset)) {
+                if (!CelestialClient.registerAsset(state.pendingAssetCreation.celestialObjectKey(), asset)) {
                     callbacks.showActionStatus(
                         assetSupport.formatAssetKind(state.pendingAssetCreation.kind()) + " construction failed");
                     return;

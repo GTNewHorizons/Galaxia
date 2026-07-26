@@ -204,7 +204,7 @@ public class CelestialEventHandler {
     private boolean handleDispatch(CelestialAsset supplier, CelestialAsset requester, ItemStackWrapper resource,
         double orbitalTime, boolean profileHammerTrajectoryLoad) {
 
-        boolean sameBody = supplier.celestialObjectId.equals(requester.celestialObjectId);
+        boolean sameBody = supplier.celestialObjectKey.equals(requester.celestialObjectKey);
 
         Map<ModuleInstance, TileHammerCannon> moduleCannon = null;
         if (supplier instanceof Station station) {
@@ -280,8 +280,8 @@ public class CelestialEventHandler {
                 plan.sendAmount(),
                 plan.travelTimeTicks(),
                 plan.deliveryScope(),
-                supplier.celestialObjectId,
-                requester.celestialObjectId,
+                supplier.celestialObjectKey,
+                requester.celestialObjectKey,
                 orbitalTime,
                 plan.tofOrbitalSeconds(),
                 plan.route());

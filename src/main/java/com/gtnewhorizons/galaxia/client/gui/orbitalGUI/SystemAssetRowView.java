@@ -26,7 +26,7 @@ public final class SystemAssetRowView {
     public SystemAssetRowView(CelestialAsset asset) {
         this.assetId = asset.assetId;
         this.kind = asset.kind;
-        this.hostBodyId = asset.celestialObjectId;
+        this.hostBodyId = asset.celestialObjectKey;
         this.displayName = asset.displayName();
         this.status = asset.status();
         this.underConstruction = asset.isInConstruction();

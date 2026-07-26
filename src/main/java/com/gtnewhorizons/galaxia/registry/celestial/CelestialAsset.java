@@ -35,9 +35,9 @@ import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 public abstract class CelestialAsset implements Buildable, IDistributedInventory {
 
     public final ID assetId;
-    public final CelestialObjectKey celestialObjectId;
-    public final CelestialObjectKey systemId;
-    public final CelestialObjectKey planetaryAnchorBodyId;
+    public final CelestialObjectKey celestialObjectKey;
+    public final CelestialObjectKey systemKey;
+    public final CelestialObjectKey planetaryAnchorBodyKey;
     public final Kind kind;
     public final Location location;
 
@@ -143,9 +143,9 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
 
         this.assetId = assetId;
         this.status = status;
-        this.celestialObjectId = celestialObjectId;
-        this.systemId = resolveStar(celestialObjectId).key();
-        this.planetaryAnchorBodyId = resolvePlanetaryAnchor(celestialObjectId).key();
+        this.celestialObjectKey = celestialObjectId;
+        this.systemKey = resolveStar(celestialObjectId).key();
+        this.planetaryAnchorBodyKey = resolvePlanetaryAnchor(celestialObjectId).key();
         this.displayName = displayName(celestialObjectId) + ":" + kind.getDisplayName();
         this.kind = kind;
         this.location = Location.ofKind(kind);

@@ -203,8 +203,8 @@ final class HammerDispatchStatusTest {
                 64L,
                 0,
                 LogisticSignal.Scope.PLANETARY,
-                supplier.celestialObjectId,
-                requester.celestialObjectId,
+                supplier.celestialObjectKey,
+                requester.celestialObjectKey,
                 0,
                 0));
         ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 1_000_000L);

@@ -48,19 +48,19 @@ public final class LogisticsSyncPacket implements IMessage {
         for (Map.Entry<CelestialObjectKey, List<LogisticSignal>> entry : LogisticStore
             .allSignalsForScope(LogisticSignal.Scope.SYSTEM)
             .entrySet()) {
-            CelestialObjectKey systemId = entry.getKey();
+            CelestialObjectKey systemKey = entry.getKey();
             Map<String, Long> systemAgg = new LinkedHashMap<>();
             for (LogisticSignal sig : entry.getValue()) {
                 String key = sig.resourceId()
                     .toKey();
                 systemAgg.merge(key, sig.amount(), Long::sum);
-                CelestialObjectKey anchorId = sig.planetaryAnchorBodyId();
+                CelestialObjectKey anchorId = sig.planetaryAnchorBodyKey();
                 if (anchorId != null) {
                     pkt.byPlanet.computeIfAbsent(anchorId, k -> new LinkedHashMap<>())
                         .merge(key, sig.amount(), Long::sum);
                 }
             }
-            if (!systemAgg.isEmpty()) pkt.bySystem.put(systemId, systemAgg);
+            if (!systemAgg.isEmpty()) pkt.bySystem.put(systemKey, systemAgg);
         }
 
         return pkt;

@@ -368,7 +368,7 @@ public final class FacilityPersistenceManager {
         AssetJson json = new AssetJson();
         json.teamId = String.valueOf(CelestialAssetStore.getTeamId(asset.assetId));
         json.assetId = asset.assetId;
-        json.celestialObjectKey = encodeCelestialObjectKey(asset.celestialObjectId);
+        json.celestialObjectKey = encodeCelestialObjectKey(asset.celestialObjectKey);
         json.displayName = asset.displayName();
         json.kind = asset.kind.name();
         json.location = asset.location.name();
@@ -708,7 +708,7 @@ public final class FacilityPersistenceManager {
     }
 
     AutomatedFacility decodeFacilityState(CelestialAsset asset, FacilityStateJson json) {
-        if (asset == null || json == null || asset.systemId == null) return null;
+        if (asset == null || json == null || asset.systemKey == null) return null;
         if (!(asset instanceof AutomatedFacility state)) return null;
         state.setEnergyStored(json.energyStored);
         state.setStationFeatureSalt(json.stationFeatureSalt);

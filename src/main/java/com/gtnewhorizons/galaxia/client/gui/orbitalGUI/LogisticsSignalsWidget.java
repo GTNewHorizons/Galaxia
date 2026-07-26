@@ -316,11 +316,11 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
                 return true;
             case SYSTEM:
                 return viewRoot.key()
-                    .equals(outpost.systemId);
+                    .equals(outpost.systemKey);
             case PLANETARY: {
                 CelestialObject viewAnchor = GalaxiaCelestialAPI.findPlanetaryAnchor(galaxyRoot, viewRoot);
                 CelestialObjectKey viewAnchorId = viewAnchor != null ? viewAnchor.key() : viewRoot.key();
-                return outpost.planetaryAnchorBodyId != null && outpost.planetaryAnchorBodyId.equals(viewAnchorId);
+                return outpost.planetaryAnchorBodyKey != null && outpost.planetaryAnchorBodyKey.equals(viewAnchorId);
             }
             default:
                 return false;

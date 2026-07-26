@@ -69,8 +69,8 @@ public final class CelestialClient {
         return CelestialAssetStore.CLIENT.findAssetInternal(assetId);
     }
 
-    public static List<CelestialAsset> getState(CelestialObjectKey celestialObjectId) {
-        return CelestialAssetStore.CLIENT.getStateInternal(GTTeamsCompat.getTeam(), celestialObjectId);
+    public static List<CelestialAsset> getState(CelestialObjectKey celestialObjectKey) {
+        return CelestialAssetStore.CLIENT.getStateInternal(GTTeamsCompat.getTeam(), celestialObjectKey);
     }
 
     public static List<CelestialAsset> allAssets() {
@@ -100,8 +100,8 @@ public final class CelestialClient {
 
     private CelestialClient() {}
 
-    public static boolean registerAsset(CelestialObjectKey celestialObjectId, CelestialAsset asset) {
-        return StarmapActionSyncHandler.sendRegisterAsset(celestialObjectId, asset);
+    public static boolean registerAsset(CelestialObjectKey celestialObjectKey, CelestialAsset asset) {
+        return StarmapActionSyncHandler.sendRegisterAsset(celestialObjectKey, asset);
     }
 
     public static void add(CelestialAsset state) {
@@ -443,8 +443,8 @@ public final class CelestialClient {
         signalRevision++;
     }
 
-    public static Map<String, Long> clientSignalsForSystem(CelestialObjectKey systemId) {
-        Map<String, Long> result = systemSignals.get(systemId);
+    public static Map<String, Long> clientSignalsForSystem(CelestialObjectKey systemKey) {
+        Map<String, Long> result = systemSignals.get(systemKey);
         return result != null ? Collections.unmodifiableMap(result) : Collections.emptyMap();
     }
 
@@ -483,8 +483,8 @@ public final class CelestialClient {
         return hammerTrajectoryLoadSample;
     }
 
-    public static List<CelestialAsset> listAssetsInSystem(CelestialObjectKey systemId) {
-        return CelestialAssetStore.CLIENT.listAssetsInSystemInternal(systemId, GTTeamsCompat.getTeam());
+    public static List<CelestialAsset> listAssetsInSystem(CelestialObjectKey systemKey) {
+        return CelestialAssetStore.CLIENT.listAssetsInSystemInternal(systemKey, GTTeamsCompat.getTeam());
     }
 
     /**

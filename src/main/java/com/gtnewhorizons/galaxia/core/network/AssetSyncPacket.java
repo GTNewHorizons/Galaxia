@@ -115,8 +115,8 @@ public final class AssetSyncPacket implements IMessage {
 
     private UUID teamId;
     private CelestialObjectKey celestialBodyId;
-    private CelestialObjectKey systemId;
-    private CelestialObjectKey planetaryAnchorBodyId;
+    private CelestialObjectKey systemKey;
+    private CelestialObjectKey planetaryAnchorBodyKey;
     private Buildable.Status assetStatus;
     private CelestialAsset.Kind assetKind;
     private String displayName;
@@ -177,7 +177,7 @@ public final class AssetSyncPacket implements IMessage {
         pkt.syncRevision = state.getSyncRevision();
         pkt.assetStatus = state.status();
 
-        pkt.celestialBodyId = state.celestialObjectId;
+        pkt.celestialBodyId = state.celestialObjectKey;
         pkt.stationControllerPos = state.getController();
 
         pkt.fullSyncDeltas = new ArrayList<>();
@@ -206,9 +206,9 @@ public final class AssetSyncPacket implements IMessage {
         pkt.assetStatus = state.status();
 
         pkt.teamId = CelestialAssetStore.getTeamId(state.assetId);
-        pkt.celestialBodyId = state.celestialObjectId;
-        pkt.systemId = state.systemId;
-        pkt.planetaryAnchorBodyId = state.planetaryAnchorBodyId;
+        pkt.celestialBodyId = state.celestialObjectKey;
+        pkt.systemKey = state.systemKey;
+        pkt.planetaryAnchorBodyKey = state.planetaryAnchorBodyKey;
         pkt.energyStored = state.getEnergyStored();
         pkt.stationFeatureSalt = state.stationFeatureSalt();
         pkt.upkeepCredits = state.upkeepCredits();
@@ -225,7 +225,7 @@ public final class AssetSyncPacket implements IMessage {
         pkt.syncRevision = state.getSyncRevision();
         pkt.assetStatus = state.status();
         pkt.teamId = CelestialAssetStore.getTeamId(state.assetId);
-        pkt.celestialBodyId = state.celestialObjectId;
+        pkt.celestialBodyId = state.celestialObjectKey;
         pkt.satelliteKind = state.satelliteKind();
 
         return pkt;
@@ -529,8 +529,8 @@ public final class AssetSyncPacket implements IMessage {
                         buf.writeLong(teamId.getMostSignificantBits());
                         buf.writeLong(teamId.getLeastSignificantBits());
                         PacketUtil.writeCelestialObjectKey(buf, celestialBodyId);
-                        PacketUtil.writeCelestialObjectKey(buf, systemId);
-                        PacketUtil.writeCelestialObjectKey(buf, planetaryAnchorBodyId);
+                        PacketUtil.writeCelestialObjectKey(buf, systemKey);
+                        PacketUtil.writeCelestialObjectKey(buf, planetaryAnchorBodyKey);
                         buf.writeLong(energyStored);
                         buf.writeLong(stationFeatureSalt);
                         writeUpkeepCredits(buf, upkeepCredits);
@@ -586,8 +586,8 @@ public final class AssetSyncPacket implements IMessage {
                     case AUTOMATED_OUTPOST, AUTOMATED_STATION -> {
                         teamId = new UUID(buf.readLong(), buf.readLong());
                         celestialBodyId = PacketUtil.readCelestialObjectKey(buf);
-                        systemId = PacketUtil.readCelestialObjectKey(buf);
-                        planetaryAnchorBodyId = PacketUtil.readCelestialObjectKey(buf);
+                        systemKey = PacketUtil.readCelestialObjectKey(buf);
+                        planetaryAnchorBodyKey = PacketUtil.readCelestialObjectKey(buf);
                         energyStored = buf.readLong();
                         stationFeatureSalt = buf.readLong();
                         upkeepCredits = readUpkeepCredits(buf);

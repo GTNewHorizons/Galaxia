@@ -153,9 +153,9 @@ public final class CelestialAssetStore {
         byId.put(asset.assetId, asset);
         teamById.put(asset.assetId, teamId);
         bodyIndex.computeIfAbsent(teamId, k -> new LinkedHashMap<>())
-            .computeIfAbsent(asset.celestialObjectId, k -> new HashSet<>())
+            .computeIfAbsent(asset.celestialObjectKey, k -> new HashSet<>())
             .add(asset.assetId);
-        byBody.computeIfAbsent(asset.celestialObjectId, k -> new HashSet<>()) // ← new
+        byBody.computeIfAbsent(asset.celestialObjectKey, k -> new HashSet<>()) // ← new
             .add(asset.assetId);
         if (this == SERVER) SatelliteNetworkService.refreshAssetEndpoints(teamId, asset);
     }
@@ -199,18 +199,18 @@ public final class CelestialAssetStore {
 
         Map<CelestialObjectKey, Set<CelestialAsset.ID>> teamIndex = bodyIndex.get(teamId);
         if (teamIndex != null) {
-            Set<CelestialAsset.ID> ids = teamIndex.get(asset.celestialObjectId);
+            Set<CelestialAsset.ID> ids = teamIndex.get(asset.celestialObjectKey);
             if (ids != null) {
                 ids.remove(assetId);
-                if (ids.isEmpty()) teamIndex.remove(asset.celestialObjectId);
+                if (ids.isEmpty()) teamIndex.remove(asset.celestialObjectKey);
             }
             if (teamIndex.isEmpty()) bodyIndex.remove(teamId);
         }
 
-        Set<CelestialAsset.ID> bodyIds = byBody.get(asset.celestialObjectId); // ← new
+        Set<CelestialAsset.ID> bodyIds = byBody.get(asset.celestialObjectKey); // ← new
         if (bodyIds != null) {
             bodyIds.remove(assetId);
-            if (bodyIds.isEmpty()) byBody.remove(asset.celestialObjectId);
+            if (bodyIds.isEmpty()) byBody.remove(asset.celestialObjectKey);
         }
         LogisticStore.removeSignalsFor(assetId);
 

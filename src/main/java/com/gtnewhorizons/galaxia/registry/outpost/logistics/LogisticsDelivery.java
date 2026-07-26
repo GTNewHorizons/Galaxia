@@ -157,8 +157,8 @@ public class LogisticsDelivery {
 
         AutomatedFacility from = CelestialClient.getByAssetId(fromAssetId) instanceof AutomatedFacility o ? o : null;
         AutomatedFacility to = CelestialClient.getByAssetId(toAssetId) instanceof AutomatedFacility o ? o : null;
-        CelestialObjectKey fromBody = from != null ? from.celestialObjectId : null;
-        CelestialObjectKey toBody = to != null ? to.celestialObjectId : null;
+        CelestialObjectKey fromBody = from != null ? from.celestialObjectKey : null;
+        CelestialObjectKey toBody = to != null ? to.celestialObjectKey : null;
 
         return createWithTrajectory(
             fromAssetId,

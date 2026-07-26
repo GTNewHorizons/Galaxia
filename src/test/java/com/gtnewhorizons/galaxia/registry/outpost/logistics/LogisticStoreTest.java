@@ -54,8 +54,8 @@ final class LogisticStoreTest {
                 5L,
                 1,
                 LogisticSignal.Scope.SYSTEM,
-                source.celestialObjectId,
-                destination.celestialObjectId,
+                source.celestialObjectKey,
+                destination.celestialObjectKey,
                 0,
                 0));
 
@@ -100,8 +100,8 @@ final class LogisticStoreTest {
                 5L,
                 1,
                 LogisticSignal.Scope.SYSTEM,
-                source.celestialObjectId,
-                destination.celestialObjectId,
+                source.celestialObjectKey,
+                destination.celestialObjectKey,
                 0,
                 0));
         LogisticStore.addDelivery(
@@ -112,8 +112,8 @@ final class LogisticStoreTest {
                 7L,
                 1,
                 LogisticSignal.Scope.SYSTEM,
-                source.celestialObjectId,
-                destination.celestialObjectId,
+                source.celestialObjectKey,
+                destination.celestialObjectKey,
                 0,
                 0));
         LogisticStore.addDelivery(
@@ -124,8 +124,8 @@ final class LogisticStoreTest {
                 11L,
                 1,
                 LogisticSignal.Scope.SYSTEM,
-                source.celestialObjectId,
-                destination.celestialObjectId,
+                source.celestialObjectKey,
+                destination.celestialObjectKey,
                 0,
                 0));
         LogisticStore.addDelivery(
@@ -136,8 +136,8 @@ final class LogisticStoreTest {
                 13L,
                 1,
                 LogisticSignal.Scope.SYSTEM,
-                source.celestialObjectId,
-                otherDestination.celestialObjectId,
+                source.celestialObjectKey,
+                otherDestination.celestialObjectKey,
                 0,
                 0));
 

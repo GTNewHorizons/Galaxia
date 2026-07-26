@@ -223,7 +223,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         Map<CelestialObjectKey, EnumMap<SatelliteKind, Integer>> counts = new LinkedHashMap<>();
         for (CelestialAsset asset : assets) {
             if (!(asset instanceof Satellite satellite)) continue;
-            counts.computeIfAbsent(asset.celestialObjectId, ignored -> new EnumMap<>(SatelliteKind.class))
+            counts.computeIfAbsent(asset.celestialObjectKey, ignored -> new EnumMap<>(SatelliteKind.class))
                 .merge(satellite.satelliteKind(), 1, Integer::sum);
         }
         List<SatelliteRow> rows = new ArrayList<>();

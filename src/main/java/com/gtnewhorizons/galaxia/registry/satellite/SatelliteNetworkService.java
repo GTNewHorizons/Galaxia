@@ -356,7 +356,8 @@ public final class SatelliteNetworkService {
             .stream()
             .flatMap(Set::stream)
             .toList()) {
-            if (asset instanceof Satellite && asset.celestialObjectId.isMinorBody()) keys.add(asset.celestialObjectId);
+            if (asset instanceof Satellite && asset.celestialObjectKey.isMinorBody())
+                keys.add(asset.celestialObjectKey);
         }
         return keys;
     }

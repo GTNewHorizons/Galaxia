@@ -101,7 +101,7 @@ public final class HammerDispatchPlanner {
             for (Object asset : assets) {
                 if (!(asset instanceof CelestialAsset requester)) continue;
                 if (supplier.assetId.equals(requester.assetId)) continue;
-                if (!Objects.equals(supplier.systemId, requester.systemId)) continue;
+                if (!Objects.equals(supplier.systemKey, requester.systemKey)) continue;
 
                 LogisticsResourceConfig requesterCfg = requester.logisticsConfig.get(resource);
                 if (requesterCfg == null || !requesterCfg.isImportEnabled()) continue;
@@ -164,7 +164,7 @@ public final class HammerDispatchPlanner {
             || !(hammerModule.component() instanceof ModuleHammer hammer)) {
             return new Result(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, 0L, 0L, 0L, 0, null);
         }
-        if (supplier.assetId.equals(requester.assetId) || !Objects.equals(supplier.systemId, requester.systemId)) {
+        if (supplier.assetId.equals(requester.assetId) || !Objects.equals(supplier.systemKey, requester.systemKey)) {
             return Result.simple(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, hammer);
         }
 
@@ -361,10 +361,10 @@ public final class HammerDispatchPlanner {
     private static Result evaluateCandidateFor(CelestialAsset supplier, CelestialAsset requester,
         ItemStackWrapper resource, long availableSurplus, long requestedAmount, LogisticsResourceConfig requesterCfg,
         ModuleInstance hammerModule, ModuleHammer hammer, double orbitalTime, UUID routeProfileTeamId) {
-        boolean sameBody = supplier.celestialObjectId.equals(requester.celestialObjectId);
+        boolean sameBody = supplier.celestialObjectKey.equals(requester.celestialObjectKey);
         CelestialObject root = GalaxiaCelestialAPI.getPrimaryRoot();
         boolean shareAnchor = GalaxiaCelestialAPI
-            .sharesPlanetaryAnchor(root, supplier.celestialObjectId, requester.celestialObjectId);
+            .sharesPlanetaryAnchor(root, supplier.celestialObjectKey, requester.celestialObjectKey);
 
         if (sameBody) {
             return evaluateCandidate(
@@ -436,8 +436,8 @@ public final class HammerDispatchPlanner {
 
     private static OrbitalTransferPlanner.TransferRoute routeBetween(CelestialObject root, CelestialAsset supplier,
         CelestialAsset requester, double orbitalTime, ModuleHammer hammer, UUID routeProfileTeamId) {
-        CelestialObject srcBody = GalaxiaCelestialAPI.findBodyById(root, supplier.celestialObjectId);
-        CelestialObject dstBody = GalaxiaCelestialAPI.findBodyById(root, requester.celestialObjectId);
+        CelestialObject srcBody = GalaxiaCelestialAPI.findBodyById(root, supplier.celestialObjectKey);
+        CelestialObject dstBody = GalaxiaCelestialAPI.findBodyById(root, requester.celestialObjectKey);
         CelestialObject attractor = srcBody != null ? GalaxiaCelestialAPI.findStar(root, srcBody) : null;
         if (srcBody == null || dstBody == null || attractor == null) return null;
 
