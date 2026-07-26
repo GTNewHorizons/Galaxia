@@ -47,7 +47,11 @@ final class SatelliteNetworkGraphTest {
 
         assertTrue(
             edges.stream()
-                .filter(edge -> edge.touches(CelestialObjectKey.registered(CelestialObjectId.MARS)))
+                .filter(
+                    edge -> edge.from()
+                        .equals(CelestialObjectKey.registered(CelestialObjectId.MARS))
+                        || edge.to()
+                            .equals(CelestialObjectKey.registered(CelestialObjectId.MARS)))
                 .count() <= 2);
     }
 

@@ -51,10 +51,6 @@ public final class SatelliteNetworkGraph {
             }
         }
 
-        public boolean touches(CelestialObjectKey bodyKey) {
-            return from.equals(bodyKey) || to.equals(bodyKey);
-        }
-
     }
 
     public record DirectedEdge(CelestialObjectKey from, CelestialObjectKey to) {

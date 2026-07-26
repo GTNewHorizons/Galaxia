@@ -31,11 +31,6 @@ public final class SatelliteDataJobService {
         }
     }
 
-    public static Map<SatelliteNetworkGraph.Edge, Long> tick(UUID teamId, List<AutomatedFacility> facilities,
-        SatelliteDataBufferStore store, SatelliteNetworkState networkState) {
-        return tickUsage(teamId, facilities, store, networkState).usedByEdge();
-    }
-
     public static Usage tickUsage(UUID teamId, List<AutomatedFacility> facilities, SatelliteDataBufferStore store,
         SatelliteNetworkState networkState) {
         SatelliteDataEndpointRegistry endpoints = new SatelliteDataEndpointRegistry();
@@ -45,12 +40,6 @@ public final class SatelliteDataJobService {
             }
         }
         return tickEndpointsUsage(teamId, endpoints.endpoints(teamId), store, networkState);
-    }
-
-    public static Map<SatelliteNetworkGraph.Edge, Long> tickEndpoints(UUID teamId,
-        List<SatelliteDataEndpointRegistry.Endpoint> endpoints, SatelliteDataBufferStore store,
-        SatelliteNetworkState networkState) {
-        return tickEndpointsUsage(teamId, endpoints, store, networkState).usedByEdge();
     }
 
     /*

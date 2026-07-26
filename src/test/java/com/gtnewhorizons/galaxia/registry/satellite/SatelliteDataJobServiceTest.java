@@ -42,7 +42,7 @@ final class SatelliteDataJobServiceTest {
         producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
 
-        SatelliteDataJobService.tick(TEAM, List.of(facility), store, emptyNetwork());
+        SatelliteDataJobService.tickUsage(TEAM, List.of(facility), store, emptyNetwork());
 
         assertEquals(SatelliteBandwidthFormatter.kilobits(10L), consumer.consumedDeciKb());
         assertEquals(
@@ -69,7 +69,7 @@ final class SatelliteDataJobServiceTest {
                 .consume(SatelliteDataType.PROSPECTING, 10L, 1, CelestialObjectKey.registered(CelestialObjectId.MARS)));
         anyConsumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
 
-        SatelliteDataJobService.tick(
+        SatelliteDataJobService.tickUsage(
             TEAM,
             List.of(source, specificDestination, anyDestination),
             store,
@@ -92,11 +92,13 @@ final class SatelliteDataJobServiceTest {
             CelestialObjectKey.registered(CelestialObjectId.MARS),
             CelestialObjectKey.registered(CelestialObjectId.EGORA));
 
-        Map<SatelliteNetworkGraph.Edge, Long> usedByEdge = SatelliteDataJobService.tick(
-            TEAM,
-            List.of(source, destination),
-            store,
-            network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD));
+        Map<SatelliteNetworkGraph.Edge, Long> usedByEdge = SatelliteDataJobService
+            .tickUsage(
+                TEAM,
+                List.of(source, destination),
+                store,
+                network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD))
+            .usedByEdge();
 
         assertEquals(10L, usedByEdge.get(edge));
         assertEquals(5L, consumer.consumedDeciKb());
@@ -153,7 +155,7 @@ final class SatelliteDataJobServiceTest {
         producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
 
-        SatelliteDataJobService.tick(
+        SatelliteDataJobService.tickUsage(
             TEAM,
             List.of(source, destination),
             store,
@@ -184,7 +186,7 @@ final class SatelliteDataJobServiceTest {
             key,
             SatelliteBandwidthFormatter.kilobits(400L));
 
-        SatelliteDataJobService.tick(
+        SatelliteDataJobService.tickUsage(
             TEAM,
             List.of(source, destination),
             store,
@@ -209,7 +211,7 @@ final class SatelliteDataJobServiceTest {
         endpoints.refreshFacility(TEAM, source);
         endpoints.refreshFacility(TEAM, destination);
 
-        SatelliteDataJobService.tickEndpoints(
+        SatelliteDataJobService.tickEndpointsUsage(
             TEAM,
             endpoints.endpoints(TEAM),
             store,
@@ -219,7 +221,7 @@ final class SatelliteDataJobServiceTest {
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
         endpoints.refreshFacility(TEAM, destination);
 
-        SatelliteDataJobService.tickEndpoints(
+        SatelliteDataJobService.tickEndpointsUsage(
             TEAM,
             endpoints.endpoints(TEAM),
             store,
@@ -245,7 +247,7 @@ final class SatelliteDataJobServiceTest {
                 .origin(SatelliteDataType.PROSPECTING, CelestialObjectKey.registered(CelestialObjectId.MARS)),
             SatelliteBandwidthFormatter.kilobits(11L));
 
-        SatelliteDataJobService.tick(
+        SatelliteDataJobService.tickUsage(
             TEAM,
             List.of(source, destination),
             store,
@@ -262,7 +264,7 @@ final class SatelliteDataJobServiceTest {
         ModuleDebugDataGenerator producer = addDebugModule(source);
         producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
 
-        SatelliteDataJobService.tick(
+        SatelliteDataJobService.tickUsage(
             TEAM,
             List.of(source),
             store,
