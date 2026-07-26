@@ -16,8 +16,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientCatalogState;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNodeCatalog;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
@@ -52,10 +50,8 @@ final class CelestialKnowledgeSyncPacketTest {
         runtime.scans()
             .clear();
         CelestialKnowledgeService.clearFacts();
-        AsteroidFieldNodeCatalog.clearRestored();
         SatelliteNetworkService.clear();
         CelestialKnowledgeClientState.clear();
-        AsteroidFieldClientCatalogState.clear();
         CelestialDiscoveryClientState.clear();
     }
 
@@ -89,7 +85,6 @@ final class CelestialKnowledgeSyncPacketTest {
         read.fromBytes(buf);
         CelestialKnowledgeClientState.clear();
         CelestialDiscoveryClientState.clear();
-        AsteroidFieldClientCatalogState.clear();
 
         new CelestialKnowledgeSyncPacket.Handler().onMessage(read, null);
 
@@ -141,15 +136,6 @@ final class CelestialKnowledgeSyncPacketTest {
     @ValueSource(ints = { -1, 4097 })
     void rejectsMalformedDiscoverySnapshotCounts(int count) {
         ByteBuf buf = singleSection("galaxia:celestial_discovery");
-        buf.writeInt(count);
-
-        assertThrows(IllegalStateException.class, () -> new CelestialKnowledgeSyncPacket().fromBytes(buf));
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = { -1, 1025 })
-    void rejectsMalformedCatalogBeltCounts(int count) {
-        ByteBuf buf = singleSection("galaxia:asteroid_catalog");
         buf.writeInt(count);
 
         assertThrows(IllegalStateException.class, () -> new CelestialKnowledgeSyncPacket().fromBytes(buf));

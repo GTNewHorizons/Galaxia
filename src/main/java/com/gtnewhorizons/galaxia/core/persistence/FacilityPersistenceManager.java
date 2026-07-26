@@ -105,7 +105,6 @@ public final class FacilityPersistenceManager {
     private static final String DATA_DIR = "galaxiadata";
     private static final String ASSETS_FILE = "_assets.json";
     private static final String TASKS_FILE = "_tasks.json";
-    private static final String CATALOG_FILE = "_asteroid_catalog.json";
     private static final String KNOWLEDGE_FILE = "_celestial_knowledge.json";
     private static final String DISCOVERY_FILE = "_discovery.json";
 
@@ -113,7 +112,6 @@ public final class FacilityPersistenceManager {
     private static final Gson PURE_GSON = new GsonBuilder().create();
     private File worldSaveDir;
     private final CelestialServerRuntime celestialRuntime;
-    private final AsteroidFieldCatalogPersistenceAdapter asteroidCatalog;
     private final CelestialKnowledgePersistenceAdapter celestialKnowledge;
     private final CelestialDiscoveryPersistenceAdapter celestialDiscovery;
 
@@ -122,7 +120,6 @@ public final class FacilityPersistenceManager {
 
     public FacilityPersistenceManager(CelestialServerRuntime celestialRuntime) {
         this.celestialRuntime = celestialRuntime;
-        this.asteroidCatalog = new AsteroidFieldCatalogPersistenceAdapter(celestialRuntime.scans());
         this.celestialKnowledge = new CelestialKnowledgePersistenceAdapter();
         this.celestialDiscovery = new CelestialDiscoveryPersistenceAdapter(celestialRuntime.scans());
         gson = new GsonBuilder().setPrettyPrinting()
@@ -181,7 +178,6 @@ public final class FacilityPersistenceManager {
         loadTasks(new File(galaxiaRoot, TASKS_FILE));
         // Content catalog restores before minor-key facts so those keys resolve;
         // shared facts restore before scan progress that references them.
-        asteroidCatalog.load(new File(galaxiaRoot, CATALOG_FILE), gson);
         celestialKnowledge.load(new File(galaxiaRoot, KNOWLEDGE_FILE), gson);
         celestialDiscovery.load(new File(galaxiaRoot, DISCOVERY_FILE), gson);
     }
@@ -192,7 +188,6 @@ public final class FacilityPersistenceManager {
         LOG.info("[PERSIST] SAVE START: writing to {}", galaxiaRoot);
         saveAssets(new File(galaxiaRoot, ASSETS_FILE));
         saveTasks(new File(galaxiaRoot, TASKS_FILE));
-        asteroidCatalog.save(new File(galaxiaRoot, CATALOG_FILE), gson);
         celestialKnowledge.save(new File(galaxiaRoot, KNOWLEDGE_FILE), gson);
         celestialDiscovery.save(new File(galaxiaRoot, DISCOVERY_FILE), gson);
     }

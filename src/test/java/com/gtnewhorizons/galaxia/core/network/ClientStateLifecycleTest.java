@@ -14,7 +14,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientCatalogState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
@@ -44,7 +43,6 @@ final class ClientStateLifecycleTest {
     void clearState() {
         CelestialAssetStore.CLIENT.clearInternal();
         CelestialKnowledgeClientState.clear();
-        AsteroidFieldClientCatalogState.clear();
         CelestialDiscoveryClientState.clear();
         SatelliteNetworkClientState.clear();
     }

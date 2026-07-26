@@ -33,16 +33,14 @@ public final class AsteroidClientProjectionService {
     private final Map<CelestialObjectKey, CachedProjections> cache = new LinkedHashMap<>();
     private boolean includeHidden;
 
-    private record CachedProjections(List<CelestialObjectKey> canonicalChildKeys, int catalogVersion,
+    private record CachedProjections(List<CelestialObjectKey> canonicalChildKeys,
         List<CelestialDiscoveryScanSnapshot> scanSnapshots,
         Map<CelestialObjectKey, CelestialKnowledgeFacts> factsSnapshot, boolean includeHidden,
         List<AsteroidStarmapProjection> projections, Map<CelestialObjectKey, AsteroidStarmapProjection> byBodyId) {
 
-        boolean matches(List<CelestialObjectKey> currentChildKeys, int currentCatalogVersion,
-            List<CelestialDiscoveryScanSnapshot> currentScans,
+        boolean matches(List<CelestialObjectKey> currentChildKeys, List<CelestialDiscoveryScanSnapshot> currentScans,
             Map<CelestialObjectKey, CelestialKnowledgeFacts> currentFacts, boolean currentIncludeHidden) {
-            return canonicalChildKeys.equals(currentChildKeys) && catalogVersion == currentCatalogVersion
-                && scanSnapshots.equals(currentScans)
+            return canonicalChildKeys.equals(currentChildKeys) && scanSnapshots.equals(currentScans)
                 && factsSnapshot.equals(currentFacts)
                 && includeHidden == currentIncludeHidden;
         }
@@ -113,10 +111,8 @@ public final class AsteroidClientProjectionService {
             .map(CelestialObject::id)
             .toList();
         Map<CelestialObjectKey, CelestialKnowledgeFacts> factsSnapshot = factsForChildren(childKeys);
-        int catalogVersion = AsteroidFieldClientCatalogState.version();
         CachedProjections cached = cache.get(belt.id());
-        if (cached != null && cached.matches(childKeys, catalogVersion, scanSnapshots, factsSnapshot, includeHidden))
-            return cached;
+        if (cached != null && cached.matches(childKeys, scanSnapshots, factsSnapshot, includeHidden)) return cached;
 
         Set<MinorCelestialBodyId> scanTargets = scanTargets(belt.id(), scanSnapshots);
         Set<MinorCelestialBodyId> sensorRevealTargets = sensorRevealTargets(belt, scanSnapshots);
@@ -130,7 +126,6 @@ public final class AsteroidClientProjectionService {
                     Function.identity()));
         CachedProjections rebuilt = new CachedProjections(
             childKeys,
-            catalogVersion,
             scanSnapshots,
             factsSnapshot,
             includeHidden,
@@ -198,7 +193,7 @@ public final class AsteroidClientProjectionService {
             .isRegistered()) return Set.of();
         CelestialObjectId beltId = belt.id()
             .registeredBodyId();
-        AsteroidFieldNodeCatalog catalog = AsteroidFieldClientCatalogState.catalog(beltId, profile);
+        List<AsteroidFieldNode> nodes = AsteroidFieldResolver.resolveAll(beltId, profile);
 
         Set<MinorCelestialBodyId> targets = new LinkedHashSet<>();
         for (CelestialDiscoveryScanSnapshot scan : scanSnapshots) {
@@ -208,11 +203,14 @@ public final class AsteroidClientProjectionService {
                     .minorBodyId()
                     .parentBodyId() != beltId)
                 continue;
-            Optional<AsteroidFieldNode> anchor = catalog.resolve(
+            Optional<AsteroidFieldNode> anchor = AsteroidFieldResolver.findNode(
+                beltId,
+                profile,
                 scan.anchorKey()
-                    .minorBodyId());
+                    .minorBodyId()
+                    .index());
             if (anchor.isEmpty()) continue;
-            for (AsteroidFieldNode candidate : catalog.nodes()) {
+            for (AsteroidFieldNode candidate : nodes) {
                 if (isHidden(candidate)
                     && AsteroidFieldOrbitResolver.separation(profile, anchor.get(), candidate) <= scan.radius()) {
                     targets.add(candidate.id());

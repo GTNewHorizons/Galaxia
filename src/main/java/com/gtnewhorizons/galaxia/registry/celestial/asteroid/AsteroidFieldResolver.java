@@ -2,8 +2,10 @@ package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nonnull;
@@ -26,20 +28,46 @@ public final class AsteroidFieldResolver {
 
     // Field resolution is called by registry, starmap, and scanning code. Cache
     // the immutable result so those callers share one deterministic node list.
-    private static final Map<ResolveAllKey, List<AsteroidFieldNode>> RESOLVE_ALL_CACHE = new ConcurrentHashMap<>();
+    private static final Map<ResolveAllKey, ResolvedField> RESOLVE_ALL_CACHE = new ConcurrentHashMap<>();
 
     private static final long INITIAL_ORE_KNOWLEDGE_SALT = 5L;
     private static final double INITIAL_PROFILE_CHANCE = 0.20;
 
     private record ResolveAllKey(CelestialObjectId beltId, AsteroidFieldProfile profile) {}
 
+    /** Nodes of one belt, plus their index, so per-node lookups do not scan the list. */
+    private record ResolvedField(List<AsteroidFieldNode> nodes, Map<Integer, AsteroidFieldNode> byIndex) {
+
+        static ResolvedField of(List<AsteroidFieldNode> nodes) {
+            Map<Integer, AsteroidFieldNode> byIndex = new LinkedHashMap<>();
+            for (AsteroidFieldNode node : nodes) {
+                if (byIndex.put(node.index(), node) != null) {
+                    throw new IllegalStateException("duplicate asteroid node index: " + node.index());
+                }
+            }
+            return new ResolvedField(nodes, Map.copyOf(byIndex));
+        }
+    }
+
     private AsteroidFieldResolver() {}
 
     public static List<AsteroidFieldNode> resolveAll(@Nonnull CelestialObjectId beltId,
         @Nonnull AsteroidFieldProfile profile) {
+        return field(beltId, profile).nodes();
+    }
+
+    /** The node in this belt at {@code index}, or empty when the belt has no such slot. */
+    public static Optional<AsteroidFieldNode> findNode(@Nonnull CelestialObjectId beltId,
+        @Nonnull AsteroidFieldProfile profile, int index) {
+        return Optional.ofNullable(
+            field(beltId, profile).byIndex()
+                .get(index));
+    }
+
+    private static ResolvedField field(CelestialObjectId beltId, AsteroidFieldProfile profile) {
         return RESOLVE_ALL_CACHE.computeIfAbsent(
             new ResolveAllKey(beltId, profile),
-            key -> resolveAllUncached(key.beltId(), key.profile()));
+            key -> ResolvedField.of(resolveAllUncached(key.beltId(), key.profile())));
     }
 
     private static List<AsteroidFieldNode> resolveAllUncached(CelestialObjectId beltId, AsteroidFieldProfile profile) {
@@ -83,10 +111,7 @@ public final class AsteroidFieldResolver {
         if (!profile.hasNodeIndex(index)) {
             throw new IllegalArgumentException("node index must be within the asteroid field profile");
         }
-        return resolveAll(beltId, profile).stream()
-            .filter(node -> node.index() == index)
-            .findFirst()
-            .orElseThrow();
+        return findNode(beltId, profile, index).orElseThrow();
     }
 
     public static CelestialKnowledgeFacts initialFacts(@Nonnull AsteroidFieldNode node) {

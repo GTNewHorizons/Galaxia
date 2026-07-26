@@ -9,7 +9,6 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nonnull;
 
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidCelestialMaterializer;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
@@ -168,8 +167,7 @@ final class AsteroidFieldDiscoveryPolicy implements CelestialDiscoveryDomain {
     }
 
     private static List<AsteroidFieldNode> catalogNodes(CelestialObjectId beltId, AsteroidFieldProfile profile) {
-        return AsteroidCelestialMaterializer.restoredOrGeneratedCatalog(beltId, profile)
-            .nodes();
+        return AsteroidFieldResolver.resolveAll(beltId, profile);
     }
 
     // Inner-to-outer, importance-weighted ordering: a satellite parked on one

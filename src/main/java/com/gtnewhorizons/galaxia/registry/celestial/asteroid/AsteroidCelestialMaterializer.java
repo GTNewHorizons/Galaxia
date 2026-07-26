@@ -49,7 +49,7 @@ public final class AsteroidCelestialMaterializer {
             .asteroidFieldProfile();
         if (profile == null) return Optional.empty();
 
-        return restoredOrGeneratedCatalog(minorId.parentBodyId(), profile).resolve(minorId)
+        return AsteroidFieldResolver.findNode(minorId.parentBodyId(), profile, minorId.index())
             .map(AsteroidFieldResolver::initialFacts);
     }
 
@@ -58,7 +58,7 @@ public final class AsteroidCelestialMaterializer {
             .asteroidFieldProfile();
         if (profile == null) return Optional.empty();
 
-        return restoredOrGeneratedCatalog(minorId.parentBodyId(), profile).resolve(minorId)
+        return AsteroidFieldResolver.findNode(minorId.parentBodyId(), profile, minorId.index())
             .map(node -> materialize(node, profile));
     }
 
@@ -125,18 +125,11 @@ public final class AsteroidCelestialMaterializer {
             .asteroidFieldProfile();
         if (profile == null) return List.of();
 
-        return restoredOrGeneratedCatalog(parentId, profile).nodes()
+        return AsteroidFieldResolver.resolveAll(parentId, profile)
             .stream()
             .filter(node -> includeHidden || isVisible(node, discoveryView))
             .map(node -> materialize(node, profile))
             .toList();
-    }
-
-    public static AsteroidFieldNodeCatalog restoredOrGeneratedCatalog(CelestialObjectId beltId,
-        AsteroidFieldProfile profile) {
-
-        return AsteroidFieldNodeCatalog.restored(beltId)
-            .orElseGet(() -> AsteroidFieldNodeCatalog.fromGenerated(beltId, profile));
     }
 
     private static boolean isVisible(AsteroidFieldNode node, CelestialDiscoveryView discoveryView) {

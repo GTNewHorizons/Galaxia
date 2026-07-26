@@ -39,7 +39,6 @@ public final class AsteroidStarmapProjectionBuilder {
             throw new IllegalArgumentException("Asteroid starmap projection requires an asteroid field profile");
         }
 
-        AsteroidFieldNodeCatalog catalog = AsteroidFieldClientCatalogState.catalog(beltId, profile);
         List<AsteroidStarmapProjection> projections = new ArrayList<>();
         for (CelestialObject body : canonicalBodies) {
             if (body == null || !body.id()
@@ -47,7 +46,7 @@ public final class AsteroidStarmapProjectionBuilder {
             MinorCelestialBodyId minorId = body.id()
                 .minorBodyId();
             if (minorId.parentBodyId() != beltId) continue;
-            Optional<AsteroidFieldNode> node = catalog.resolve(minorId);
+            Optional<AsteroidFieldNode> node = AsteroidFieldResolver.findNode(beltId, profile, minorId.index());
             if (node.isEmpty()) continue;
             projections.add(toProjection(body, node.get(), includeHidden, scanTargets, sensorRevealTargets));
         }

@@ -4,7 +4,6 @@ import net.minecraftforge.event.world.WorldEvent;
 
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientCatalogState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkClientState;
@@ -22,7 +21,6 @@ public final class ClientStateLifecycle {
         CelestialClient.clearLocalState();
         CelestialAssetStore.CLIENT.clearInternal();
         CelestialKnowledgeClientState.clear();
-        AsteroidFieldClientCatalogState.clear();
         CelestialDiscoveryClientState.clear();
         SatelliteNetworkClientState.clear();
     }

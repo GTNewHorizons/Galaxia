@@ -125,7 +125,7 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
-    void celestialDiscoveryScansPersistWithoutAsteroidCatalog(@TempDir Path tempDir) throws Exception {
+    void celestialDiscoveryScansSurviveSaveAndReload(@TempDir Path tempDir) throws Exception {
         UUID teamId = UUID.randomUUID();
         CelestialServerRuntime runtime = CelestialServerRuntime.create();
         CelestialDiscoveryScanSnapshot expected = new CelestialDiscoveryScanSnapshot(
@@ -142,7 +142,6 @@ final class FacilityPersistenceManagerTest {
             .restore(teamId, List.of(expected));
 
         new FacilityPersistenceManager(runtime).saveToSaveDirectory(tempDir.toFile());
-        Files.delete(tempDir.resolve("galaxiadata/_asteroid_catalog.json"));
 
         CelestialServerRuntime reloaded = CelestialServerRuntime.create();
         new FacilityPersistenceManager(reloaded).loadFromSaveDirectory(tempDir.toFile());
