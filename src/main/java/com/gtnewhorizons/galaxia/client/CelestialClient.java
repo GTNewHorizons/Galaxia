@@ -508,6 +508,9 @@ public final class CelestialClient {
 
     public static Optional<AsteroidStarmapProjection> asteroidProjection(CelestialObject body) {
         if (body == null || body.parentId() == null) return Optional.empty();
+        // Resolving siblings rebuilds the belt catalog; skip it for bodies that can never have a projection.
+        if (!body.id()
+            .isMinorBody()) return Optional.empty();
         List<CelestialObject> siblings = getChildren(body.parentId());
         return asteroidProjections.projectionFor(body, siblings, CelestialDiscoveryClientState.snapshots());
     }
