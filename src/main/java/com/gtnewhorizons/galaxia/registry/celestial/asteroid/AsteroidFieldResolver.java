@@ -28,6 +28,9 @@ public final class AsteroidFieldResolver {
     // the immutable result so those callers share one deterministic node list.
     private static final Map<ResolveAllKey, List<AsteroidFieldNode>> RESOLVE_ALL_CACHE = new ConcurrentHashMap<>();
 
+    private static final long INITIAL_ORE_KNOWLEDGE_SALT = 5L;
+    private static final double INITIAL_PROFILE_CHANCE = 0.20;
+
     private record ResolveAllKey(CelestialObjectId beltId, AsteroidFieldProfile profile) {}
 
     private AsteroidFieldResolver() {}
@@ -48,7 +51,7 @@ public final class AsteroidFieldResolver {
         for (AuthoredAsteroidDefinition definition : profile.authoredAsteroids()) {
             AsteroidFieldNode node = AsteroidNodeMaterializer.resolveNode(beltId, profile, definition.index());
             nodes.add(node);
-            if (initialDetectionState(node) == DiscoveryState.DISCOVERED) {
+            if (node.initialDetectionState() == DiscoveryState.DISCOVERED) {
                 reachableAnchors.add(AsteroidPlacementGraph.anchor(node, 0));
             }
         }
@@ -87,35 +90,26 @@ public final class AsteroidFieldResolver {
     }
 
     public static CelestialKnowledgeFacts initialFacts(@Nonnull AsteroidFieldNode node) {
-        return CelestialKnowledgeFacts.of(initialDetectionState(node), initialOreKnowledge(node));
+        return CelestialKnowledgeFacts.of(node.initialDetectionState(), initialOreKnowledge(node));
     }
 
-    public static DiscoveryState initialDetectionState(@Nonnull AsteroidFieldNode node) {
-        return node.initialDetectionState();
-    }
-
+    /**
+     * Ore knowledge a team starts with, before any scan. Authored nodes may pin it;
+     * otherwise only LARGE nodes get a deterministic chance at a free profile.
+     */
     public static CelestialResourceKnowledgeState initialOreKnowledge(@Nonnull AsteroidFieldNode node) {
         if (node.initialOreKnowledgeState() != null) return node.initialOreKnowledgeState();
         if (node.sizeClass() != AsteroidSizeClass.LARGE) return CelestialResourceKnowledgeState.UNKNOWN;
-        return rolledOreKnowledge(node, 5L);
-    }
-
-    public static CelestialResourceKnowledgeState oreKnowledgeAfterDetection(@Nonnull AsteroidFieldNode node) {
-        // Detection only reveals the body. Ore details require a PROFILE scan.
-        return CelestialResourceKnowledgeState.UNKNOWN;
-    }
-
-    static DiscoveryState defaultInitialDetectionState(AsteroidSizeClass sizeClass) {
-        return sizeClass == AsteroidSizeClass.LARGE ? DiscoveryState.DISCOVERED : DiscoveryState.HIDDEN;
-    }
-
-    private static CelestialResourceKnowledgeState rolledOreKnowledge(AsteroidFieldNode node, long salt) {
         double roll = DeterministicHash.unitDouble(
             DeterministicHash.mix(
                 node.appearance()
                     .variantSeed(),
-                salt));
-        if (roll < 0.20) return CelestialResourceKnowledgeState.PROFILE;
-        return CelestialResourceKnowledgeState.UNKNOWN;
+                INITIAL_ORE_KNOWLEDGE_SALT));
+        return roll < INITIAL_PROFILE_CHANCE ? CelestialResourceKnowledgeState.PROFILE
+            : CelestialResourceKnowledgeState.UNKNOWN;
+    }
+
+    static DiscoveryState defaultInitialDetectionState(AsteroidSizeClass sizeClass) {
+        return sizeClass == AsteroidSizeClass.LARGE ? DiscoveryState.DISCOVERED : DiscoveryState.HIDDEN;
     }
 }

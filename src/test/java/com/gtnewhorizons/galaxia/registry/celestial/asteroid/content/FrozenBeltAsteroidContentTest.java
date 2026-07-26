@@ -44,7 +44,7 @@ final class FrozenBeltAsteroidContentTest {
             "rare_crystal",
             lore.oreProfile()
                 .id());
-        assertEquals(DiscoveryState.DISCOVERED, AsteroidFieldResolver.initialDetectionState(lore));
+        assertEquals(DiscoveryState.DISCOVERED, lore.initialDetectionState());
         assertEquals(CelestialResourceKnowledgeState.PROFILE, AsteroidFieldResolver.initialOreKnowledge(lore));
         assertEquals(AsteroidNodeKind.GENERATED, generated.kind());
     }

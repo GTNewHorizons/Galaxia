@@ -115,11 +115,11 @@ final class AsteroidFieldDiscoveryPolicy implements CelestialDiscoveryDomain {
 
         if (work.step() == CelestialDiscoveryStep.DETECTION) {
             if (current.discoveryState() == DiscoveryState.DISCOVERED) return;
+            // Detection only reveals the body. Ore details require a PROFILE scan.
             CelestialKnowledgeService.putFacts(
                 teamId,
                 targetKey,
-                CelestialKnowledgeFacts
-                    .of(DiscoveryState.DISCOVERED, AsteroidFieldResolver.oreKnowledgeAfterDetection(node)));
+                CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.UNKNOWN));
             return;
         }
 
@@ -133,13 +133,11 @@ final class AsteroidFieldDiscoveryPolicy implements CelestialDiscoveryDomain {
         if (hasDetectionWork(teamId, catalogNodes(beltId, profile), inScope)) {
             throw new IllegalStateException("Asteroid detection must finish before prospecting can start");
         }
+        // A completed PROFILE scan is the only way to learn ore details.
         CelestialKnowledgeService.putFacts(
             teamId,
             targetKey,
-            CelestialKnowledgeFacts.of(
-                DiscoveryState.DISCOVERED,
-                current.resourceKnowledgeState()
-                    .advance()));
+            CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.PROFILE));
     }
 
     private DiscoveryState discoveryState(UUID teamId, AsteroidFieldNode node) {

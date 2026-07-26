@@ -42,8 +42,8 @@ final class AsteroidPlacementGraph {
         // range of an anchor we keep it; otherwise we project candidate positions
         // from every reachable anchor toward or around that natural target.
         for (ReachableAnchor anchor : reachableAnchors) {
-            if (AsteroidFieldOrbitResolver
-                .separation(profile, anchor.node(), naturalNode) <= profile.placementConnectionRadius()) {
+            if (AsteroidFieldOrbitResolver.separation(profile, anchor.node(), naturalNode)
+                <= profile.placementConnectionRadius()) {
                 candidates.add(
                     new GeneratedCandidate(
                         naturalNode,
@@ -124,7 +124,7 @@ final class AsteroidPlacementGraph {
         Set<MinorCelestialBodyId> visited = new HashSet<>();
         Queue<AsteroidFieldNode> queue = new ArrayDeque<>();
         for (AsteroidFieldNode node : nodes) {
-            if (AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.DISCOVERED) {
+            if (node.initialDetectionState() == DiscoveryState.DISCOVERED) {
                 visited.add(node.id());
                 queue.add(node);
             }
@@ -134,8 +134,8 @@ final class AsteroidPlacementGraph {
             AsteroidFieldNode current = queue.remove();
             for (AsteroidFieldNode candidate : nodes) {
                 if (!visited.contains(candidate.id())
-                    && AsteroidFieldOrbitResolver
-                        .separation(profile, current, candidate) <= profile.placementConnectionRadius()) {
+                    && AsteroidFieldOrbitResolver.separation(profile, current, candidate)
+                        <= profile.placementConnectionRadius()) {
                     visited.add(candidate.id());
                     queue.add(candidate);
                 }
@@ -143,8 +143,7 @@ final class AsteroidPlacementGraph {
         }
 
         for (AsteroidFieldNode node : nodes) {
-            if (AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.HIDDEN
-                && !visited.contains(node.id())) {
+            if (node.initialDetectionState() == DiscoveryState.HIDDEN && !visited.contains(node.id())) {
                 throw new IllegalStateException("unreachable hidden asteroid in scan graph: " + node.id());
             }
         }

@@ -21,13 +21,8 @@ public record CelestialKnowledgeFacts(@Nonnull DiscoveryState discoveryState,
     }
 
     public enum CelestialResourceKnowledgeState {
-
         UNKNOWN,
-        PROFILE;
-
-        public CelestialResourceKnowledgeState advance() {
-            return PROFILE;
-        }
+        PROFILE
     }
 
     public CelestialKnowledgeFacts {

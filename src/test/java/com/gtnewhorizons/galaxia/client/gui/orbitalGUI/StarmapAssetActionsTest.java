@@ -100,7 +100,7 @@ final class StarmapAssetActionsTest {
             belt.properties()
                 .asteroidFieldProfile())
             .stream()
-            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.HIDDEN)
+            .filter(node -> node.initialDetectionState() == DiscoveryState.HIDDEN)
             .findFirst()
             .flatMap(node -> CelestialRegistry.get(CelestialObjectKey.minorBody(node.id())))
             .orElseThrow();

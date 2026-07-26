@@ -114,16 +114,14 @@ final class AsteroidFieldResolverTest {
             .findFirst()
             .orElseThrow();
 
-        assertEquals(DiscoveryState.DISCOVERED, AsteroidFieldResolver.initialDetectionState(large));
-        assertEquals(DiscoveryState.HIDDEN, AsteroidFieldResolver.initialDetectionState(medium));
-        assertEquals(DiscoveryState.HIDDEN, AsteroidFieldResolver.initialDetectionState(small));
+        assertEquals(DiscoveryState.DISCOVERED, large.initialDetectionState());
+        assertEquals(DiscoveryState.HIDDEN, medium.initialDetectionState());
+        assertEquals(DiscoveryState.HIDDEN, small.initialDetectionState());
         assertTrue(
             List.of(CelestialResourceKnowledgeState.UNKNOWN, CelestialResourceKnowledgeState.PROFILE)
                 .contains(AsteroidFieldResolver.initialOreKnowledge(large)));
         assertEquals(CelestialResourceKnowledgeState.UNKNOWN, AsteroidFieldResolver.initialOreKnowledge(medium));
         assertEquals(CelestialResourceKnowledgeState.UNKNOWN, AsteroidFieldResolver.initialOreKnowledge(small));
-        assertEquals(CelestialResourceKnowledgeState.UNKNOWN, AsteroidFieldResolver.oreKnowledgeAfterDetection(medium));
-        assertEquals(CelestialResourceKnowledgeState.UNKNOWN, AsteroidFieldResolver.oreKnowledgeAfterDetection(small));
     }
 
     @Test
@@ -142,7 +140,7 @@ final class AsteroidFieldResolverTest {
 
         assertEquals(AsteroidNodeKind.UNIQUE, node.kind());
         assertEquals("The Anvil", node.displayName());
-        assertEquals(DiscoveryState.DISCOVERED, AsteroidFieldResolver.initialDetectionState(node));
+        assertEquals(DiscoveryState.DISCOVERED, node.initialDetectionState());
     }
 
     @Test
@@ -234,7 +232,7 @@ final class AsteroidFieldResolverTest {
         Set<MinorCelestialBodyId> visited = new HashSet<>();
         Queue<AsteroidFieldNode> queue = new ArrayDeque<>();
         for (AsteroidFieldNode node : nodes) {
-            if (AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.DISCOVERED) {
+            if (node.initialDetectionState() == DiscoveryState.DISCOVERED) {
                 visited.add(node.id());
                 queue.add(node);
             }
@@ -253,7 +251,7 @@ final class AsteroidFieldResolverTest {
 
         assertTrue(
             nodes.stream()
-                .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.HIDDEN)
+                .filter(node -> node.initialDetectionState() == DiscoveryState.HIDDEN)
                 .allMatch(node -> visited.contains(node.id())));
     }
 
@@ -270,10 +268,10 @@ final class AsteroidFieldResolverTest {
     private static int maxHiddenNeighborsWithinScanRadius(AsteroidFieldProfile profile, List<AsteroidFieldNode> nodes) {
         int maxNeighbors = 0;
         for (AsteroidFieldNode node : nodes) {
-            if (AsteroidFieldResolver.initialDetectionState(node) != DiscoveryState.HIDDEN) continue;
+            if (node.initialDetectionState() != DiscoveryState.HIDDEN) continue;
             int neighbors = 0;
             for (AsteroidFieldNode candidate : nodes) {
-                if (candidate != node && AsteroidFieldResolver.initialDetectionState(candidate) == DiscoveryState.HIDDEN
+                if (candidate != node && candidate.initialDetectionState() == DiscoveryState.HIDDEN
                     && distance(profile, node, candidate) <= profile.placementConnectionRadius()) {
                     neighbors++;
                 }

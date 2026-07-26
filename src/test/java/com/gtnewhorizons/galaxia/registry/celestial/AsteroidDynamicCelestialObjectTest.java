@@ -135,7 +135,7 @@ final class AsteroidDynamicCelestialObjectTest {
         Set<CelestialObjectKey> initiallyDetectedKeys = AsteroidFieldResolver
             .resolveAll(CelestialObjectId.FROZEN_BELT, profile)
             .stream()
-            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.DISCOVERED)
+            .filter(node -> node.initialDetectionState() == DiscoveryState.DISCOVERED)
             .map(AsteroidFieldNode::id)
             .map(CelestialObjectKey::minorBody)
             .collect(Collectors.toSet());
@@ -173,7 +173,7 @@ final class AsteroidDynamicCelestialObjectTest {
             .asteroidFieldProfile();
         AsteroidFieldNode hiddenNode = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile)
             .stream()
-            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.HIDDEN)
+            .filter(node -> node.initialDetectionState() == DiscoveryState.HIDDEN)
             .findFirst()
             .orElseThrow();
 
@@ -195,7 +195,7 @@ final class AsteroidDynamicCelestialObjectTest {
         Set<CelestialObjectKey> initiallyDetectedKeys = AsteroidFieldResolver
             .resolveAll(CelestialObjectId.FROZEN_BELT, profile)
             .stream()
-            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.DISCOVERED)
+            .filter(node -> node.initialDetectionState() == DiscoveryState.DISCOVERED)
             .map(AsteroidFieldNode::id)
             .map(CelestialObjectKey::minorBody)
             .collect(Collectors.toSet());

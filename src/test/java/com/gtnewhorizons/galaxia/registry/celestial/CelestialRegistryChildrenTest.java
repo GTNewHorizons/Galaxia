@@ -143,7 +143,7 @@ final class CelestialRegistryChildrenTest {
 
     private static Set<CelestialObjectKey> initiallyDetectedAsteroidKeys() {
         return resolveAllNodes().stream()
-            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.DISCOVERED)
+            .filter(node -> node.initialDetectionState() == DiscoveryState.DISCOVERED)
             .map(AsteroidFieldNode::id)
             .map(CelestialObjectKey::minorBody)
             .collect(Collectors.toSet());
@@ -158,7 +158,7 @@ final class CelestialRegistryChildrenTest {
 
     private static AsteroidFieldNode firstHiddenAsteroid() {
         return resolveAllNodes().stream()
-            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.HIDDEN)
+            .filter(node -> node.initialDetectionState() == DiscoveryState.HIDDEN)
             .findFirst()
             .orElseThrow();
     }

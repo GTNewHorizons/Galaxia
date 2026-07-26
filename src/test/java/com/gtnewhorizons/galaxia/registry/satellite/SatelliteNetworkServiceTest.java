@@ -187,7 +187,7 @@ final class SatelliteNetworkServiceTest {
             .asteroidFieldProfile();
         long initiallyDetected = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile)
             .stream()
-            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.DISCOVERED)
+            .filter(node -> node.initialDetectionState() == DiscoveryState.DISCOVERED)
             .count();
         AutomatedFacility facility = facility(CelestialObjectId.FROZEN_BELT);
         CelestialAssetStore.registerAsset(TEAM, facility);

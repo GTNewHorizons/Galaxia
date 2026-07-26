@@ -161,7 +161,7 @@ final class AssetCreateRequestPacketTest {
             belt.properties()
                 .asteroidFieldProfile())
             .stream()
-            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == detectionState)
+            .filter(node -> node.initialDetectionState() == detectionState)
             .map(node -> CelestialObjectKey.minorBody(node.id()))
             .findFirst()
             .orElseThrow();
