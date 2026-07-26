@@ -31,7 +31,7 @@ final class AsteroidPlacementGraph {
             throw new IllegalStateException("Asteroid field has hidden generated asteroids but no visible anchor");
         }
         AsteroidFieldDeterminism nodeSeed = AsteroidFieldDeterminism.forNode(beltId, profile, index);
-        AsteroidFieldNode naturalNode = AsteroidNodeMaterializer.resolveNode(beltId, profile, index);
+        AsteroidFieldNode naturalNode = AsteroidNodeMaterializer.naturalNode(beltId, profile, index);
         List<GeneratedCandidate> candidates = new ArrayList<>();
         double targetRadius = AsteroidFieldOrbitResolver.resolveRadius(profile, naturalNode);
         double targetAngle = Math.toRadians(naturalNode.angleOffsetDeg());

@@ -80,7 +80,7 @@ final class OrbitalPinnedInfoContentBuilderTest {
         AsteroidFieldProfile profile = frozenBelt.properties()
             .asteroidFieldProfile();
         AsteroidFieldNode node = AsteroidFieldResolver
-            .resolveNode(CelestialObjectId.FROZEN_BELT, profile, AsteroidSlotRanges.GENERATED_SLOT_MIN);
+            .placedNode(CelestialObjectId.FROZEN_BELT, profile, AsteroidSlotRanges.GENERATED_SLOT_MIN);
         CelestialObject asteroid = CelestialRegistry
             .get(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, node.index())))
             .orElseThrow();

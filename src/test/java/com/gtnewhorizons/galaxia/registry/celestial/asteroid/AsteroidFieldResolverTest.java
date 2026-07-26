@@ -136,7 +136,7 @@ final class AsteroidFieldResolverTest {
             .authoredAsteroid(1, AsteroidNodeKind.UNIQUE, "The Anvil", DiscoveryState.DISCOVERED)
             .build();
 
-        AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(CelestialObjectId.FROZEN_BELT, profile, 1);
+        AsteroidFieldNode node = AsteroidFieldResolver.placedNode(CelestialObjectId.FROZEN_BELT, profile, 1);
 
         assertEquals(AsteroidNodeKind.UNIQUE, node.kind());
         assertEquals("The Anvil", node.displayName());

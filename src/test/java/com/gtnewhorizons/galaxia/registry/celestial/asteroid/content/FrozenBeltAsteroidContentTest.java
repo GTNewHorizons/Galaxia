@@ -30,9 +30,9 @@ final class FrozenBeltAsteroidContentTest {
             .orElseThrow()
             .properties()
             .asteroidFieldProfile();
-        AsteroidFieldNode lore = AsteroidFieldResolver.resolveNode(CelestialObjectId.FROZEN_BELT, profile, 1);
+        AsteroidFieldNode lore = AsteroidFieldResolver.placedNode(CelestialObjectId.FROZEN_BELT, profile, 1);
         AsteroidFieldNode generated = AsteroidFieldResolver
-            .resolveNode(CelestialObjectId.FROZEN_BELT, profile, AsteroidSlotRanges.GENERATED_SLOT_MIN);
+            .placedNode(CelestialObjectId.FROZEN_BELT, profile, AsteroidSlotRanges.GENERATED_SLOT_MIN);
 
         assertEquals(26, profile.totalNodes());
         assertEquals(AsteroidNodeKind.LORE, lore.kind());

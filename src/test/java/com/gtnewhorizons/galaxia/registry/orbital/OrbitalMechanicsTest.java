@@ -44,7 +44,7 @@ final class OrbitalMechanicsTest {
             CelestialObjectId.FROZEN_BELT,
             AsteroidSlotRanges.GENERATED_SLOT_MIN);
         AsteroidFieldNode node = AsteroidFieldResolver
-            .resolveNode(CelestialObjectId.FROZEN_BELT, profile, AsteroidSlotRanges.GENERATED_SLOT_MIN);
+            .placedNode(CelestialObjectId.FROZEN_BELT, profile, AsteroidSlotRanges.GENERATED_SLOT_MIN);
         CelestialObject belt = CelestialObject.builder()
             .key(CelestialObjectId.FROZEN_BELT)
             .name("Frozen Belt")

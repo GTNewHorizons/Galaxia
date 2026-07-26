@@ -108,7 +108,7 @@ final class AsteroidFieldDiscoveryPolicy implements CelestialDiscoveryDomain {
         if (targetId.parentBodyId() != beltId || !profile.hasNodeIndex(targetId.index())) {
             throw new IllegalArgumentException("Asteroid discovery work target is outside the scan belt: " + targetKey);
         }
-        AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(beltId, profile, targetId.index());
+        AsteroidFieldNode node = AsteroidFieldResolver.placedNode(beltId, profile, targetId.index());
         CelestialKnowledgeFacts current = CelestialKnowledgeService.facts(teamId, targetKey);
 
         if (work.step() == CelestialDiscoveryStep.DETECTION) {
@@ -193,7 +193,7 @@ final class AsteroidFieldDiscoveryPolicy implements CelestialDiscoveryDomain {
             throw new IllegalArgumentException("scan radius must be finite and non-negative");
         }
         MinorCelestialBodyId anchorId = anchorKey.minorBodyId();
-        AsteroidFieldNode anchor = AsteroidFieldResolver.resolveNode(beltId, profile, anchorId.index());
+        AsteroidFieldNode anchor = AsteroidFieldResolver.placedNode(beltId, profile, anchorId.index());
         OrbitalMechanics.OrbitalState beltState = new OrbitalMechanics.OrbitalState(1.0, 0.0, 0.0, 0.0);
         OrbitalMechanics.OrbitalState center = AsteroidFieldOrbitResolver.resolveWorldState(profile, anchor, beltState);
         double radiusSquared = radius * radius;

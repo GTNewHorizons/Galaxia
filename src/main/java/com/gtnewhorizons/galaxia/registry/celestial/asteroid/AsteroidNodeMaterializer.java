@@ -7,7 +7,8 @@ final class AsteroidNodeMaterializer {
 
     private AsteroidNodeMaterializer() {}
 
-    static AsteroidFieldNode resolveNode(CelestialObjectId beltId, AsteroidFieldProfile profile, int index) {
+    /** Node at its generated slot position, before {@link AsteroidPlacementGraph} moves it for reachability. */
+    static AsteroidFieldNode naturalNode(CelestialObjectId beltId, AsteroidFieldProfile profile, int index) {
         AsteroidFieldDeterminism nodeSeed = AsteroidFieldDeterminism.forNode(beltId, profile, index);
         MinorCelestialBodyId id = new MinorCelestialBodyId(beltId, index);
         AuthoredAsteroidDefinition definition = profile.authoredAsteroid(index)

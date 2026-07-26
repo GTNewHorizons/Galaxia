@@ -77,7 +77,7 @@ public final class AsteroidFieldResolver {
         List<AsteroidPlacementGraph.ReachableAnchor> reachableAnchors = new ArrayList<>();
 
         for (AuthoredAsteroidDefinition definition : profile.authoredAsteroids()) {
-            AsteroidFieldNode node = AsteroidNodeMaterializer.resolveNode(beltId, profile, definition.index());
+            AsteroidFieldNode node = AsteroidNodeMaterializer.naturalNode(beltId, profile, definition.index());
             nodes.add(node);
             if (node.initialDetectionState() == DiscoveryState.DISCOVERED) {
                 reachableAnchors.add(AsteroidPlacementGraph.anchor(node, 0));
@@ -87,7 +87,7 @@ public final class AsteroidFieldResolver {
         for (int ordinal = 0; ordinal < profile.totalNodes(); ordinal++) {
             int index = AsteroidSlotRanges.generatedSlot(ordinal);
             if (AsteroidGeneratedSlotAllocator.generatedSizeClass(profile, index) != AsteroidSizeClass.LARGE) continue;
-            AsteroidFieldNode node = AsteroidNodeMaterializer.resolveNode(beltId, profile, index);
+            AsteroidFieldNode node = AsteroidNodeMaterializer.naturalNode(beltId, profile, index);
             nodes.add(node);
             reachableAnchors.add(AsteroidPlacementGraph.anchor(node, 0));
         }
@@ -106,8 +106,9 @@ public final class AsteroidFieldResolver {
         return List.copyOf(nodes);
     }
 
-    public static AsteroidFieldNode resolveNode(@Nonnull CelestialObjectId beltId,
-        @Nonnull AsteroidFieldProfile profile, int index) {
+    /** Node at its final position, after the placement graph has moved it. This is what the rest of the mod sees. */
+    public static AsteroidFieldNode placedNode(@Nonnull CelestialObjectId beltId, @Nonnull AsteroidFieldProfile profile,
+        int index) {
         if (!profile.hasNodeIndex(index)) {
             throw new IllegalArgumentException("node index must be within the asteroid field profile");
         }
