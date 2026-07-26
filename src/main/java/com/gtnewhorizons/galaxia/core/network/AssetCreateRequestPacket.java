@@ -118,8 +118,14 @@ public final class AssetCreateRequestPacket implements IMessage {
     }
 
     public AssetSyncPacket apply(UUID teamId) {
+        return apply(teamId, false);
+    }
+
+    /** Only a creative operator may skip construction; everyone else starts the asset as a construction site. */
+    public AssetSyncPacket apply(UUID teamId, boolean creative) {
         validateTargetBody(teamId);
-        CelestialAsset asset = CelestialAsset.create(celestialObjectKey, kind, operational, requiredSatelliteKind());
+        CelestialAsset asset = CelestialAsset
+            .create(celestialObjectKey, kind, operational && creative, requiredSatelliteKind());
         asset.setDisplayName(displayName);
         if (kind == CelestialAsset.Kind.STATION) {
             Station station = (Station) asset;
@@ -174,7 +180,7 @@ public final class AssetCreateRequestPacket implements IMessage {
 
             UUID teamId = GTTeamsCompat.getTeam(player);
             try {
-                return packet.apply(teamId);
+                return packet.apply(teamId, DebugActionAuthorization.isAuthorized(player));
             } catch (IllegalArgumentException ex) {
                 Galaxia.LOG
                     .warn("Rejected asset create request from {}: {}", player.getCommandSenderName(), ex.getMessage());

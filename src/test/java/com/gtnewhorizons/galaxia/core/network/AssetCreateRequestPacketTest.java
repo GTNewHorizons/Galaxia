@@ -22,6 +22,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolv
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
@@ -63,6 +64,24 @@ final class AssetCreateRequestPacketTest {
                 TEAM,
                 CelestialObjectKey.registered(CelestialObjectId.MARS),
                 SatelliteKind.COMMUNICATION));
+    }
+
+    @Test
+    void operationalRequestIsHonouredOnlyForCreativeOperators() {
+        AssetCreateRequestPacket request = AssetCreateRequestPacket
+            .createFacility(CelestialObjectId.MARS, "Skip Construction", CelestialAsset.Kind.AUTOMATED_OUTPOST, true);
+
+        request.apply(TEAM, false);
+
+        assertEquals(
+            Buildable.Status.CONSTRUCTION_SITE,
+            onlyMarsAsset().status(),
+            "a plain client asking for an operational asset must still start a construction site");
+
+        CelestialAssetStore.SERVER.clearInternal();
+        request.apply(TEAM, true);
+
+        assertEquals(Buildable.Status.OPERATIONAL, onlyMarsAsset().status());
     }
 
     @Test
@@ -168,5 +187,10 @@ final class AssetCreateRequestPacketTest {
             .map(node -> CelestialObjectKey.minorBody(node.id()))
             .findFirst()
             .orElseThrow();
+    }
+
+    private static CelestialAsset onlyMarsAsset() {
+        return CelestialAssetStore.SERVER.getStateInternal(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS))
+            .get(0);
     }
 }
