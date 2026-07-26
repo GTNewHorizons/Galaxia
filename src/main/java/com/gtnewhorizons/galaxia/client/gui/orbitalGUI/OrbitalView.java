@@ -383,12 +383,9 @@ public class OrbitalView {
         private final OrbitalWorldStateCache worldStateCache = new OrbitalWorldStateCache();
         private boolean dragging = false;
         private double lastMouseX, lastMouseY;
-        private double globalTime = 0.0;
-        private double timeScale = OrbitalTransferPlanner.OSU_PER_SECOND;
-        private boolean paused = false;
-        private long lastFrameTime = System.currentTimeMillis();
-        private double displayOrbitalTimeAnchor = 0.0;
-        private double serverOrbitalTimeAnchor = Double.NaN;
+        private final OrbitalClock clock = new OrbitalClock(
+            OrbitalTransferPlanner.OSU_PER_SECOND,
+            SERVER_OSU_PER_SECOND);
         private final InterplanetaryTransferSystem.MutableTransferPoint focusedTransferPoint = new InterplanetaryTransferSystem.MutableTransferPoint();
         private final float[] isoScratchPos = new float[2];
         private CelestialObject focusedBody = null;
@@ -425,7 +422,6 @@ public class OrbitalView {
         private final SatelliteNetworkOverlay satelliteNetworkOverlay = new SatelliteNetworkOverlay();
         private final OrbitalScene.OrbitalSceneFrameBuilder sceneFrameBuilder;
         private int lastRenderedLogisticsTaskRevision = Integer.MIN_VALUE;
-        private int orbitalClockRevision = Integer.MIN_VALUE;
         private int lastRenderedLogisticsClockRevision = Integer.MIN_VALUE;
         private TextFieldWidget renameField = null;
         private boolean creativeBuildMode = creativeBuildModePersisted;
@@ -775,12 +771,12 @@ public class OrbitalView {
 
                     @Override
                     public double getCurrentTime() {
-                        return globalTime;
+                        return clock.time();
                     }
 
                     @Override
                     public double getTimeScale() {
-                        return timeScale;
+                        return clock.timeScale();
                     }
 
                     @Override
@@ -832,7 +828,7 @@ public class OrbitalView {
 
                     @Override
                     public void onPreviewNeeded() {
-                        InterplanetaryTransferSystem.updatePreview(transferSimulatorState, root, globalTime);
+                        InterplanetaryTransferSystem.updatePreview(transferSimulatorState, root, clock.time());
                     }
 
                     @Override
@@ -847,7 +843,7 @@ public class OrbitalView {
 
                     @Override
                     public double getTimeScale() {
-                        return timeScale;
+                        return clock.timeScale();
                     }
                 });
             this.sceneRenderer = new OrbitalScene.OrbitalSceneRenderer(
@@ -1317,9 +1313,7 @@ public class OrbitalView {
                 return false;
             }
             if (keyCode == 57) {
-                double displayTime = captureCurrentDisplayOrbitalTime();
-                paused = !paused;
-                reanchorOrbitalClock(displayTime);
+                clock.togglePaused(isInWorld(), getServerOrbitalTime());
                 return true;
             }
             if (keyCode == Keyboard.KEY_B) {
@@ -1389,47 +1383,6 @@ public class OrbitalView {
             planetTrackingController.onManualCameraMoved();
             lastMouseX = lx;
             lastMouseY = ly;
-        }
-
-        private void updateSimulationTime() {
-            long now = System.currentTimeMillis();
-            double dt = (now - lastFrameTime) / 1000.0;
-            lastFrameTime = now;
-            if (Minecraft.getMinecraft().theWorld == null) {
-                if (!paused) globalTime += dt * timeScale;
-                return;
-            }
-            double serverNow = getServerOrbitalTime();
-            if (Double.isNaN(serverOrbitalTimeAnchor)) {
-                globalTime = serverNow;
-                displayOrbitalTimeAnchor = serverNow;
-                serverOrbitalTimeAnchor = serverNow;
-                orbitalClockRevision++;
-                return;
-            }
-            globalTime = paused ? displayOrbitalTimeAnchor : mapServerOrbitalTimeToDisplay(serverNow);
-        }
-
-        private double captureCurrentDisplayOrbitalTime() {
-            if (Minecraft.getMinecraft().theWorld == null) return globalTime;
-            double serverNow = getServerOrbitalTime();
-            if (Double.isNaN(serverOrbitalTimeAnchor)) return serverNow;
-            return paused ? displayOrbitalTimeAnchor : mapServerOrbitalTimeToDisplay(serverNow);
-        }
-
-        private double mapServerOrbitalTimeToDisplay(double serverOrbitalTime) {
-            if (Double.isNaN(serverOrbitalTimeAnchor)) return serverOrbitalTime;
-            return displayOrbitalTimeAnchor
-                + (serverOrbitalTime - serverOrbitalTimeAnchor) * (timeScale / SERVER_OSU_PER_SECOND);
-        }
-
-        private void reanchorOrbitalClock(double displayTime) {
-            globalTime = displayTime;
-            if (Minecraft.getMinecraft().theWorld == null) return;
-            double serverNow = getServerOrbitalTime();
-            displayOrbitalTimeAnchor = displayTime;
-            serverOrbitalTimeAnchor = serverNow;
-            orbitalClockRevision++;
         }
 
         private double getScale() {
@@ -1857,7 +1810,7 @@ public class OrbitalView {
         }
 
         private void ensureWorldStateCache() {
-            worldStateCache.ensure(root, globalTime);
+            worldStateCache.ensure(root, clock.time());
         }
 
         private double[] getAbsoluteWorldPos(CelestialObject target) {
@@ -1960,7 +1913,7 @@ public class OrbitalView {
 
         @Override
         public void drawBackground(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
-            updateSimulationTime();
+            clock.advance(isInWorld(), getServerOrbitalTime());
             updateManualDragging();
             updateRenameFieldLayout();
             double activeLerpSpeed = transitionState.hasPending() ? PENDING_LAYER_CENTER_LERP_SPEED
@@ -1982,9 +1935,9 @@ public class OrbitalView {
             ensureWorldStateCache();
             if (isFollowing && focusedTransfer != null) {
                 if (InterplanetaryTransferSystem
-                    .writeCurrentTransferPoint(focusedTransfer, globalTime, focusedTransferPoint)
+                    .writeCurrentTransferPoint(focusedTransfer, clock.time(), focusedTransferPoint)
                     && focusedTransferPoint.valid()
-                    && !focusedTransfer.isFinished(globalTime)) {
+                    && !focusedTransfer.isFinished(clock.time())) {
                     viewState.cameraX = focusedTransferPoint.worldX();
                     viewState.cameraY = focusedTransferPoint.worldY();
                     viewState.targetCameraX = focusedTransferPoint.worldX();
@@ -2008,24 +1961,24 @@ public class OrbitalView {
             GlStateManager.disableTexture2D();
             GL11.glEnable(GL11.GL_LINE_SMOOTH);
             float labelAlpha = (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 2.5);
-            sceneFrame = sceneFrameBuilder.buildInto(sceneFrame, viewRoot, globalTime, labelAlpha);
+            sceneFrame = sceneFrameBuilder.buildInto(sceneFrame, viewRoot, clock.time(), labelAlpha);
             syncRenderedLogisticsTransfers();
             if (transferSimulatorState.isOpen() && !transferSimulatorState.isWaitingForPick()
                 && viewRoot.objectClass() == CelestialObject.Class.STAR) {
-                InterplanetaryTransferSystem.updatePreview(transferSimulatorState, root, globalTime);
+                InterplanetaryTransferSystem.updatePreview(transferSimulatorState, root, clock.time());
             }
             if (!transfersHidden) {
                 transferRenderer.drawTransferPaths(
                     transferState,
                     viewRoot,
-                    globalTime,
+                    clock.time(),
                     viewRoot.objectClass() == CelestialObject.Class.STAR
                         ? (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 2.5)
                         : 0f);
                 transferRenderer.drawTransferPaths(
                     clientSimulatedTransferState,
                     viewRoot,
-                    globalTime,
+                    clock.time(),
                     viewRoot.objectClass() == CelestialObject.Class.STAR
                         ? (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 2.5)
                         : 0f);
@@ -2052,14 +2005,14 @@ public class OrbitalView {
                 transferRenderer.drawTransferDots(
                     transferState,
                     viewRoot,
-                    globalTime,
+                    clock.time(),
                     viewRoot.objectClass() == CelestialObject.Class.STAR
                         ? (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 2.5)
                         : 0f);
                 transferRenderer.drawTransferDots(
                     clientSimulatedTransferState,
                     viewRoot,
-                    globalTime,
+                    clock.time(),
                     viewRoot.objectClass() == CelestialObject.Class.STAR
                         ? (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 2.5)
                         : 0f);
@@ -2084,13 +2037,17 @@ public class OrbitalView {
                 transferState.updateHoveredTransfer(null, localMouseX, localMouseY);
                 clientSimulatedTransferState.updateHoveredTransfer(null, localMouseX, localMouseY);
             } else {
-                InterplanetaryTransferJob hoveredSimulatedTransfer = transferRenderer
-                    .findHoveredTransfer(clientSimulatedTransferState, viewRoot, globalTime, localMouseX, localMouseY);
+                InterplanetaryTransferJob hoveredSimulatedTransfer = transferRenderer.findHoveredTransfer(
+                    clientSimulatedTransferState,
+                    viewRoot,
+                    clock.time(),
+                    localMouseX,
+                    localMouseY);
                 clientSimulatedTransferState.updateHoveredTransfer(hoveredSimulatedTransfer, localMouseX, localMouseY);
                 transferState.updateHoveredTransfer(
                     hoveredSimulatedTransfer == null
                         ? transferRenderer
-                            .findHoveredTransfer(transferState, viewRoot, globalTime, localMouseX, localMouseY)
+                            .findHoveredTransfer(transferState, viewRoot, clock.time(), localMouseX, localMouseY)
                         : null,
                     localMouseX,
                     localMouseY);
@@ -2168,9 +2125,9 @@ public class OrbitalView {
                 || contextMenuState.isOpen()
                 || transferSimulatorState.isWaitingForPick()) return null;
             InterplanetaryTransferJob simulatedTransfer = transferRenderer
-                .findHoveredTransfer(clientSimulatedTransferState, viewRoot, globalTime, mouseX, mouseY);
+                .findHoveredTransfer(clientSimulatedTransferState, viewRoot, clock.time(), mouseX, mouseY);
             return simulatedTransfer == null
-                ? transferRenderer.findHoveredTransfer(transferState, viewRoot, globalTime, mouseX, mouseY)
+                ? transferRenderer.findHoveredTransfer(transferState, viewRoot, clock.time(), mouseX, mouseY)
                 : simulatedTransfer;
         }
 
@@ -2219,7 +2176,7 @@ public class OrbitalView {
                 target.hostBody(),
                 sourceAsset.displayName() + " -> " + target.displayName(),
                 assetSupport.buildConstructionInventorySummary(sourceAsset),
-                globalTime);
+                clock.time());
             if (transfer == null) {
                 showActionStatus("Transfer failed");
                 return;
@@ -2228,17 +2185,21 @@ public class OrbitalView {
             showActionStatus("Transfer dispatched");
         }
 
+        private static boolean isInWorld() {
+            return Minecraft.getMinecraft().theWorld != null;
+        }
+
         private double getServerOrbitalTime() {
             Minecraft mc = Minecraft.getMinecraft();
-            if (mc.theWorld == null) return globalTime;
+            if (mc.theWorld == null) return clock.time();
             double partialTicks = RenderTickState.getLastPartialTicks();
             return (mc.theWorld.getTotalWorldTime() + partialTicks) * OrbitalTransferPlanner.OSU_PER_TICK;
         }
 
         private void syncRenderedLogisticsTransfers() {
             int revision = CelestialClient.clientDeliveryRevision();
-            if (revision == lastRenderedLogisticsTaskRevision
-                && orbitalClockRevision == lastRenderedLogisticsClockRevision) return;
+            if (revision == lastRenderedLogisticsTaskRevision && clock.revision() == lastRenderedLogisticsClockRevision)
+                return;
 
             List<InterplanetaryTransferJob> logisticsTransfers = new ArrayList<>();
             for (LogisticsDelivery delivery : CelestialClient.clientDeliveries()) {
@@ -2251,7 +2212,7 @@ public class OrbitalView {
                     .startsWith("logistics:"),
                 logisticsTransfers);
             lastRenderedLogisticsTaskRevision = revision;
-            lastRenderedLogisticsClockRevision = orbitalClockRevision;
+            lastRenderedLogisticsClockRevision = clock.revision();
         }
 
         private InterplanetaryTransferJob buildRenderedLogisticsTransfer(LogisticsDelivery delivery) {
@@ -2264,9 +2225,9 @@ public class OrbitalView {
                 .toStack(1)
                 .getDisplayName();
             String summary = delivery.data.amount() + " x " + itemName;
-            double departureDisplayTime = mapServerOrbitalTimeToDisplay(delivery.data.departureOrbitalTime());
-            double arrivalDisplayTime = mapServerOrbitalTimeToDisplay(
-                delivery.data.departureOrbitalTime() + delivery.data.tofOrbitalSeconds());
+            double departureDisplayTime = clock.toDisplayTime(delivery.data.departureOrbitalTime());
+            double arrivalDisplayTime = clock
+                .toDisplayTime(delivery.data.departureOrbitalTime() + delivery.data.tofOrbitalSeconds());
             double displayedTof = Math.max(1e-6, arrivalDisplayTime - departureDisplayTime);
             OrbitalTransferPlanner.TransferRoute route = delivery.data.transferRoute();
             InterplanetaryTransferJob base = route != null && route.hasTrajectoryGeometry()
@@ -2326,7 +2287,7 @@ public class OrbitalView {
                     + transferSimulatorState.destinationBody()
                         .displayName(),
                 "Simulation",
-                globalTime,
+                clock.time(),
                 transferSimulatorState.previewTof());
             if (transfer == null) {
                 showActionStatus("Transfer failed");
@@ -2345,7 +2306,7 @@ public class OrbitalView {
 
             long startNanos = System.nanoTime();
             InterplanetaryTransferSystem.LambertStressReport report = InterplanetaryTransferSystem
-                .runLambertStress(root, viewRoot, globalTime, 1000, 500.0);
+                .runLambertStress(root, viewRoot, clock.time(), 1000, 500.0);
             long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000L;
 
             if (!report.hasEnoughPlanets()) {
