@@ -44,8 +44,7 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
     private static final int OPTION_ROW_GAP = 4;
     private static final int OPTION_LABEL_WIDTH = 74;
     private static final int OPTION_BUTTON_LEFT = ModuleConfigModalSupport.PANEL_PADDING + OPTION_LABEL_WIDTH;
-    private static final int CONTROL_GAP = 8;
-    static final int CONTROL_GAP_FOR_TEST = CONTROL_GAP;
+    static final int CONTROL_GAP = 8;
     private static final int FLAG_TOP = 214;
     private static final int FOOTER_TOP = HEIGHT - 32;
     private static final int BUTTON_HEIGHT = 20;
@@ -70,44 +69,43 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
             int col = slot % OPTION_COLUMNS;
             int row = slot / OPTION_COLUMNS;
             int optionSlot = slot;
+            ControlRect optionRect = optionRect(row, col);
             child(
-                createOptionButton(optionSlot)
-                    .pos(
-                        OPTION_BUTTON_LEFT + col * (OPTION_BUTTON_WIDTH + OPTION_COLUMN_GAP),
-                        OPTION_TOP + row * (OPTION_BUTTON_HEIGHT + OPTION_ROW_GAP))
-                    .size(OPTION_BUTTON_WIDTH, OPTION_BUTTON_HEIGHT));
+                createOptionButton(optionSlot).pos(optionRect.x(), optionRect.y())
+                    .size(optionRect.width(), optionRect.height()));
         }
+        ControlRect reserve = control("reserve");
+        ControlRect voidRefund = control("voidRefund");
+        ControlRect confirm = control("confirm");
+        ControlRect multiple = control("multiple");
+        ControlRect cancel = control("cancel");
+        ControlRect back = control("back");
         child(
             ModuleConfigModalSupport
                 .button(this::canUseHammerFlags, this::reserveLabel, controller::toggleHammerUpgradeReserveItems)
-                .pos(ModuleConfigModalSupport.PANEL_PADDING, FLAG_TOP)
-                .size(RESERVE_BUTTON_WIDTH, BUTTON_HEIGHT));
+                .pos(reserve.x(), reserve.y())
+                .size(reserve.width(), reserve.height()));
         child(
             ModuleConfigModalSupport
                 .button(this::canUseHammerFlags, this::voidLabel, controller::toggleHammerUpgradeVoidRefund)
-                .pos(ModuleConfigModalSupport.PANEL_PADDING + RESERVE_BUTTON_WIDTH + CONTROL_GAP, FLAG_TOP)
-                .size(VOID_REFUND_BUTTON_WIDTH, BUTTON_HEIGHT));
+                .pos(voidRefund.x(), voidRefund.y())
+                .size(voidRefund.width(), voidRefund.height()));
         child(
             ModuleConfigModalSupport.button(this::canConfirm, "Confirm", this::confirm)
-                .pos(ModuleConfigModalSupport.PANEL_PADDING, FOOTER_TOP)
-                .size(CONFIRM_BUTTON_WIDTH, BUTTON_HEIGHT));
+                .pos(confirm.x(), confirm.y())
+                .size(confirm.width(), confirm.height()));
         child(
             ModuleConfigModalSupport.button(this::canConfirmMultiple, "Multiple...", this::startMultiplePicker)
-                .pos(ModuleConfigModalSupport.PANEL_PADDING + CONFIRM_BUTTON_WIDTH + CONTROL_GAP, FOOTER_TOP)
-                .size(MULTIPLE_BUTTON_WIDTH, BUTTON_HEIGHT));
+                .pos(multiple.x(), multiple.y())
+                .size(multiple.width(), multiple.height()));
         child(
             ModuleConfigModalSupport.button(this::hasCancellableBuild, this::cancelLabel, this::cancelBuild)
-                .pos(
-                    ModuleConfigModalSupport.PANEL_PADDING + CONFIRM_BUTTON_WIDTH
-                        + CONTROL_GAP
-                        + MULTIPLE_BUTTON_WIDTH
-                        + CONTROL_GAP,
-                    FOOTER_TOP)
-                .size(CANCEL_BUTTON_WIDTH, BUTTON_HEIGHT));
+                .pos(cancel.x(), cancel.y())
+                .size(cancel.width(), cancel.height()));
         child(
             ModuleConfigModalSupport.button(controller::isModuleUpgradeOpen, "Back", controller::close)
-                .pos(WIDTH - ModuleConfigModalSupport.PANEL_PADDING - BACK_BUTTON_WIDTH, FOOTER_TOP)
-                .size(BACK_BUTTON_WIDTH, BUTTON_HEIGHT));
+                .pos(back.x(), back.y())
+                .size(back.width(), back.height()));
     }
 
     @Override
@@ -503,7 +501,16 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
         return tier == MinerFocusTier.NONE ? "None" : tier.name();
     }
 
-    static List<ControlRect> controlRectsForTest() {
+    static ControlRect control(String name) {
+        return controlRects().stream()
+            .filter(
+                rect -> rect.name()
+                    .equals(name))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("unknown control rect: " + name));
+    }
+
+    static List<ControlRect> controlRects() {
         int left = ModuleConfigModalSupport.PANEL_PADDING;
         return List.of(
             new ControlRect("reserve", left, FLAG_TOP, RESERVE_BUTTON_WIDTH, BUTTON_HEIGHT),
@@ -534,18 +541,7 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
                 BUTTON_HEIGHT));
     }
 
-    static ControlRect optionRectForTest(int slot) {
-        int col = slot % OPTION_COLUMNS;
-        int row = slot / OPTION_COLUMNS;
-        return new ControlRect(
-            "option" + slot,
-            OPTION_BUTTON_LEFT + col * (OPTION_BUTTON_WIDTH + OPTION_COLUMN_GAP),
-            OPTION_TOP + row * (OPTION_BUTTON_HEIGHT + OPTION_ROW_GAP),
-            OPTION_BUTTON_WIDTH,
-            OPTION_BUTTON_HEIGHT);
-    }
-
-    static ControlRect optionRectForTest(int row, int column) {
+    static ControlRect optionRect(int row, int column) {
         return new ControlRect(
             "option" + row + "_" + column,
             OPTION_BUTTON_LEFT + column * (OPTION_BUTTON_WIDTH + OPTION_COLUMN_GAP),

@@ -11,7 +11,7 @@ final class ModuleUpgradeModalWidgetTest {
 
     @Test
     void footerAndFlagControlsDoNotOverlap() {
-        List<ModuleUpgradeModalWidget.ControlRect> rects = ModuleUpgradeModalWidget.controlRectsForTest();
+        List<ModuleUpgradeModalWidget.ControlRect> rects = ModuleUpgradeModalWidget.controlRects();
 
         for (int i = 0; i < rects.size(); i++) {
             for (int j = i + 1; j < rects.size(); j++) {
@@ -24,24 +24,18 @@ final class ModuleUpgradeModalWidgetTest {
 
     @Test
     void hammerOptionGridAndFlagsHaveVisibleGap() {
-        ModuleUpgradeModalWidget.ControlRect lastOptionRow = ModuleUpgradeModalWidget.optionRectForTest(1, 4);
-        ModuleUpgradeModalWidget.ControlRect reserve = ModuleUpgradeModalWidget.controlRectsForTest()
-            .stream()
-            .filter(
-                rect -> rect.name()
-                    .equals("reserve"))
-            .findFirst()
-            .orElseThrow();
+        ModuleUpgradeModalWidget.ControlRect lastOptionRow = ModuleUpgradeModalWidget.optionRect(1, 4);
+        ModuleUpgradeModalWidget.ControlRect reserve = ModuleUpgradeModalWidget.control("reserve");
 
-        assertTrue(reserve.y() - lastOptionRow.bottom() >= ModuleUpgradeModalWidget.CONTROL_GAP_FOR_TEST);
+        assertTrue(reserve.y() - lastOptionRow.bottom() >= ModuleUpgradeModalWidget.CONTROL_GAP);
     }
 
     @Test
     void optionGroupsUseOneRowPerCategory() {
-        ModuleUpgradeModalWidget.ControlRect firstTier = ModuleUpgradeModalWidget.optionRectForTest(0, 0);
-        ModuleUpgradeModalWidget.ControlRect lastTier = ModuleUpgradeModalWidget.optionRectForTest(0, 2);
-        ModuleUpgradeModalWidget.ControlRect firstFocus = ModuleUpgradeModalWidget.optionRectForTest(1, 0);
-        ModuleUpgradeModalWidget.ControlRect lastFocus = ModuleUpgradeModalWidget.optionRectForTest(1, 3);
+        ModuleUpgradeModalWidget.ControlRect firstTier = ModuleUpgradeModalWidget.optionRect(0, 0);
+        ModuleUpgradeModalWidget.ControlRect lastTier = ModuleUpgradeModalWidget.optionRect(0, 2);
+        ModuleUpgradeModalWidget.ControlRect firstFocus = ModuleUpgradeModalWidget.optionRect(1, 0);
+        ModuleUpgradeModalWidget.ControlRect lastFocus = ModuleUpgradeModalWidget.optionRect(1, 3);
 
         assertTrue(firstTier.y() == lastTier.y());
         assertTrue(firstFocus.y() == lastFocus.y());
