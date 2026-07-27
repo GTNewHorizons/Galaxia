@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.client.render.rockets;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraftforge.client.model.IModelCustom;
 
 import org.lwjgl.opengl.GL11;
@@ -8,6 +9,8 @@ import org.lwjgl.opengl.GL11;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityRocketTrophy;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 
 /**
  * Central rendering engine for all rockets and rocket-like structures.
@@ -16,6 +19,55 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPa
 public final class RocketVisualHelper {
 
     private RocketVisualHelper() {}
+
+    public static void renderTrophy(TileEntityRocketTrophy trophy, double x, double y, double z, float partialTicks) {
+        if (trophy == null) return;
+        RocketBlueprint blueprint = trophy.getBlueprint();
+        if (blueprint == null || blueprint.isEmpty()) return;
+
+        GL11.glDisable(GL11.GL_CULL_FACE);
+        GL11.glPushMatrix();
+
+        double dx = x + 0.5 + trophy.getOffsetX();
+        double dy = y + 0.5 + trophy.getOffsetY();
+        double dz = z + 0.5 + trophy.getOffsetZ();
+
+        GL11.glTranslated(dx, dy, dz);
+
+        GL11.glRotatef(trophy.getYaw(), 0f, 1f, 0f);
+        GL11.glRotatef(trophy.getPitch(), 1f, 0f, 0f);
+        GL11.glScalef(trophy.getScale(), trophy.getScale(), trophy.getScale());
+
+        renderBlueprint(blueprint, 0, 0, 0, 0f, partialTicks, false);
+
+        GL11.glPopMatrix();
+        GL11.glEnable(GL11.GL_CULL_FACE);
+    }
+
+    public static void renderSilo(TileEntitySilo silo, double x, double y, double z, float partialTicks) {
+        if (silo == null || !silo.shouldRender) return;
+
+        RocketBlueprint blueprint = silo.getBuiltBlueprint();
+        if (blueprint == null || blueprint.isEmpty()) return;
+
+        final int[] offset = TileEntitySilo.getRotatedOffset(
+            TileEntitySilo.SILO_DEFAULT_X_OFFSET,
+            TileEntitySilo.SILO_DEFAULT_Y_OFFSET,
+            TileEntitySilo.SILO_DEFAULT_Z_OFFSET,
+            silo.currentFacing);
+
+        int px = silo.xCoord + offset[0];
+        int py = silo.yCoord + offset[1];
+        int pz = silo.zCoord + offset[2];
+
+        int brightness = silo.getWorldObj()
+            .getLightBrightnessForSkyBlocks(px, py, pz, 0);
+        int blockLight = brightness % 65536;
+        int skyLight = brightness / 65536;
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, blockLight, skyLight);
+
+        renderBlueprint(blueprint, x + offset[0], y + offset[1], z + offset[2], 0.0f, partialTicks, true);
+    }
 
     public static void renderBlueprint(RocketBlueprint blueprint, double x, double y, double z, float yaw,
         float partialTicks, boolean isInSilo) {
@@ -53,7 +105,6 @@ public final class RocketVisualHelper {
             GL11.glRotatef(yaw, 0.0F, 1.0F, 0.0F);
         }
 
-        // Center the blueprint in the block
         GL11.glTranslatef(0.5f, 0.0f, 0.5f);
 
         for (RocketPartInstance part : blueprint.getParts()) {
