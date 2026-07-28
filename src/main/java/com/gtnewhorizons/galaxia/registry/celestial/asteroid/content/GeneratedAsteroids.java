@@ -20,8 +20,7 @@ public final class GeneratedAsteroids {
 
     public static void register(AsteroidFieldProfile.Builder field) {
         field.seedSalt(0xF20A3E11L)
-            .generationVersion(1)
-            .sizeCounts(6, 8, 12)
+            .sizeCounts(40, 80, 200)
             .radialBand(2.15 * EARTH_RADIUS_TO_AU, 2.45 * EARTH_RADIUS_TO_AU)
             .placementConnectionRadius(0.12 * EARTH_RADIUS_TO_AU)
             .oreProfile(METALLIC, 3.0)

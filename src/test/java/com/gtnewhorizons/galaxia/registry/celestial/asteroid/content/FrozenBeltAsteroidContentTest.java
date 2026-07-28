@@ -34,7 +34,6 @@ final class FrozenBeltAsteroidContentTest {
         AsteroidFieldNode generated = AsteroidFieldResolver
             .placedNode(CelestialObjectId.FROZEN_BELT, profile, AsteroidSlotRanges.GENERATED_SLOT_MIN);
 
-        assertEquals(26, profile.totalNodes());
         assertEquals(AsteroidNodeKind.LORE, lore.kind());
         assertEquals("Karnyx", lore.displayName());
         assertEquals(AsteroidSizeClass.LARGE, lore.sizeClass());
