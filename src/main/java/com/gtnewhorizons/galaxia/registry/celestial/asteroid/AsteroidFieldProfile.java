@@ -11,10 +11,9 @@ import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
 
-public record AsteroidFieldProfile(long seedSalt, int generationVersion, int totalNodes, int largeCount,
-    int mediumCount, int smallCount, double innerOrbitalRadius, double outerOrbitalRadius,
-    double placementConnectionRadius, @Nonnull List<OreProfileEntry> oreProfileEntries,
-    @Nonnull List<AuthoredAsteroidDefinition> authoredAsteroids) {
+public record AsteroidFieldProfile(long seedSalt, int totalNodes, int largeCount, int mediumCount, int smallCount,
+    double innerOrbitalRadius, double outerOrbitalRadius, double placementConnectionRadius,
+    @Nonnull List<OreProfileEntry> oreProfileEntries, @Nonnull List<AuthoredAsteroidDefinition> authoredAsteroids) {
 
     public record OreProfileEntry(@Nonnull AsteroidOreProfile profile, double weight) {
 
@@ -29,7 +28,6 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
     }
 
     public AsteroidFieldProfile {
-        generationVersion = requirePositive("generationVersion", generationVersion);
         largeCount = requireNonNegative("largeCount", largeCount);
         mediumCount = requireNonNegative("mediumCount", mediumCount);
         smallCount = requireNonNegative("smallCount", smallCount);
@@ -121,13 +119,6 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
         return value;
     }
 
-    private static int requirePositive(String name, int value) {
-        if (value <= 0) {
-            throw new IllegalArgumentException(name + " must be positive");
-        }
-        return value;
-    }
-
     private static double requirePositiveFinite(String name, double value) {
         if (!Double.isFinite(value) || value <= 0.0) {
             throw new IllegalArgumentException(name + " must be a finite positive value");
@@ -145,7 +136,6 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
     public static final class Builder {
 
         private long seedSalt;
-        private int generationVersion = 1;
         private int largeCount;
         private int mediumCount;
         private int smallCount;
@@ -157,11 +147,6 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
 
         public Builder seedSalt(long value) {
             this.seedSalt = value;
-            return this;
-        }
-
-        public Builder generationVersion(int value) {
-            this.generationVersion = requirePositive("generationVersion", value);
             return this;
         }
 
@@ -210,7 +195,6 @@ public record AsteroidFieldProfile(long seedSalt, int generationVersion, int tot
             int totalNodes = largeCount + mediumCount + smallCount;
             return new AsteroidFieldProfile(
                 seedSalt,
-                generationVersion,
                 totalNodes,
                 largeCount,
                 mediumCount,

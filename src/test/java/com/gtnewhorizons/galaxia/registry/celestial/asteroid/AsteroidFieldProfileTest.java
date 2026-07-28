@@ -17,7 +17,6 @@ final class AsteroidFieldProfileTest {
     void generatedAsteroidSizesAreInterleavedAcrossSlots() {
         AsteroidFieldProfile profile = AsteroidFieldProfile.builder()
             .seedSalt(123L)
-            .generationVersion(4)
             .sizeCounts(4, 8, 12)
             .radialBand(10.0, 20.0)
             .placementConnectionRadius(1000.0)
@@ -69,7 +68,6 @@ final class AsteroidFieldProfileTest {
 
         AsteroidFieldProfile profile = AsteroidFieldProfile.builder()
             .seedSalt(123L)
-            .generationVersion(4)
             .sizeCounts(1, 2, 3)
             .radialBand(10.0, 20.0)
             .placementConnectionRadius(1000.0)
@@ -77,7 +75,6 @@ final class AsteroidFieldProfileTest {
             .build();
 
         assertEquals(123L, profile.seedSalt());
-        assertEquals(4, profile.generationVersion());
         assertEquals(6, profile.totalNodes());
         assertEquals(1, profile.largeCount());
         assertEquals(2, profile.mediumCount());
@@ -115,10 +112,6 @@ final class AsteroidFieldProfileTest {
             IllegalArgumentException.class,
             () -> AsteroidFieldProfile.builder()
                 .sizeCounts(-1, 0, 0));
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> AsteroidFieldProfile.builder()
-                .generationVersion(0));
         assertThrows(
             IllegalArgumentException.class,
             () -> AsteroidFieldProfile.builder()

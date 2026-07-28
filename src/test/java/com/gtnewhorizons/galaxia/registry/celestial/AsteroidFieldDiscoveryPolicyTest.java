@@ -121,7 +121,7 @@ final class AsteroidFieldDiscoveryPolicyTest {
         CelestialDiscoveryScanScope tight = new CelestialDiscoveryScanScope(
             CelestialObjectKey.minorBody(near.id()),
             0.0,
-            profile.generationVersion());
+            scopeRevision(near));
         CelestialDiscoveryWork work = policy.nextDiscoveryWork(TEAM, tight)
             .orElseThrow();
         assertEquals(CelestialObjectKey.minorBody(near.id()), work.targetKey());
@@ -137,14 +137,16 @@ final class AsteroidFieldDiscoveryPolicyTest {
         return new CelestialDiscoveryScanScope(
             CelestialObjectKey.minorBody(anchor.id()),
             1_000_000.0,
-            profile.generationVersion());
+            scopeRevision(anchor));
     }
 
     private CelestialDiscoveryScanScope nodeOnlyScope(AsteroidFieldNode anchor) {
-        return new CelestialDiscoveryScanScope(
-            CelestialObjectKey.minorBody(anchor.id()),
-            0.0,
-            profile.generationVersion());
+        return new CelestialDiscoveryScanScope(CelestialObjectKey.minorBody(anchor.id()), 0.0, scopeRevision(anchor));
+    }
+
+    private long scopeRevision(AsteroidFieldNode anchor) {
+        return policy.discoveryScopeRevision(CelestialObjectKey.minorBody(anchor.id()))
+            .orElseThrow();
     }
 
     private AsteroidFieldNode firstHidden(AsteroidSizeClass size) {

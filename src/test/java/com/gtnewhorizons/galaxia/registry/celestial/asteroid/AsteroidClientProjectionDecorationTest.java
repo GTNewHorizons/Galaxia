@@ -273,7 +273,6 @@ final class AsteroidClientProjectionDecorationTest {
     private static AsteroidFieldProfile profile() {
         return AsteroidFieldProfile.builder()
             .seedSalt(31L)
-            .generationVersion(1)
             .sizeCounts(1, 1, 1)
             .radialBand(1.20, 1.40)
             .placementConnectionRadius(1.0)

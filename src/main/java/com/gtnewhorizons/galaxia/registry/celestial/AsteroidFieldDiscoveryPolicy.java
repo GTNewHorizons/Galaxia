@@ -49,7 +49,7 @@ final class AsteroidFieldDiscoveryPolicy implements CelestialDiscoveryDomain {
         MinorCelestialBodyId anchorId = scope.anchorKey()
             .minorBodyId();
         return profile(anchorId.parentBodyId()).filter(field -> field.hasNodeIndex(anchorId.index()))
-            .filter(field -> field.generationVersion() == scope.revision())
+            .filter(field -> AsteroidFieldResolver.layoutRevision(anchorId.parentBodyId(), field) == scope.revision())
             .isPresent();
     }
 
@@ -58,7 +58,7 @@ final class AsteroidFieldDiscoveryPolicy implements CelestialDiscoveryDomain {
         if (!anchorKey.isMinorBody()) return OptionalLong.empty();
         MinorCelestialBodyId anchorId = anchorKey.minorBodyId();
         return profile(anchorId.parentBodyId()).filter(field -> field.hasNodeIndex(anchorId.index()))
-            .map(field -> OptionalLong.of(field.generationVersion()))
+            .map(field -> OptionalLong.of(AsteroidFieldResolver.layoutRevision(anchorId.parentBodyId(), field)))
             .orElseGet(OptionalLong::empty);
     }
 
@@ -222,7 +222,8 @@ final class AsteroidFieldDiscoveryPolicy implements CelestialDiscoveryDomain {
             .minorBodyId();
         AsteroidFieldProfile profile = profile(anchorId.parentBodyId())
             .orElseThrow(() -> new IllegalStateException("Unknown asteroid field for " + scope.anchorKey()));
-        if (!profile.hasNodeIndex(anchorId.index()) || profile.generationVersion() != scope.revision()) {
+        if (!profile.hasNodeIndex(anchorId.index())
+            || AsteroidFieldResolver.layoutRevision(anchorId.parentBodyId(), profile) != scope.revision()) {
             throw new IllegalStateException("Stale asteroid discovery scope " + scope);
         }
         return profile;
