@@ -4,8 +4,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
-public record LogisticSignal(CelestialAsset.ID outpostAssetId, CelestialObjectKey systemId, ItemStackWrapper resourceId,
-    long amount, Scope scope, CelestialObjectKey bodyId, CelestialObjectKey planetaryAnchorBodyId) {
+public record LogisticSignal(CelestialAsset.ID outpostAssetId, CelestialObjectKey systemKey,
+    ItemStackWrapper resourceId, long amount, Scope scope, CelestialObjectKey bodyKey,
+    CelestialObjectKey planetaryAnchorBodyKey) {
 
     public enum Scope {
         PLANETARY,

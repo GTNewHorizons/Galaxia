@@ -21,14 +21,11 @@ final class AsteroidStarmapScenePresentation {
 
     private AsteroidStarmapScenePresentation() {}
 
-    static boolean drawsBodySprite(CelestialObject body) {
-        return !isBeltContainer(body);
+    static boolean isBeltContainer(CelestialObject body) {
+        return body != null && body.isAsteroidBelt();
     }
 
-    static boolean registersBodyInteraction(CelestialObject body) {
-        return !isBeltContainer(body);
-    }
-
+    /** Only asteroids gate their label on discovery; every other body labels by default. */
     static boolean drawsDefaultBodyLabel(CelestialObject body) {
         if (body == null) return false;
         if (!isAsteroid(body)) return true;
@@ -37,37 +34,12 @@ final class AsteroidStarmapScenePresentation {
             .orElse(false);
     }
 
-    static String bodyLabel(CelestialObject body) {
-        if (CelestialClient.isAsteroidScanInProgress(body)) {
-            return CelestialClient.asteroidScanSnapshotByTarget(body)
-                .map(snapshot -> "??? " + scanProgressPercent(snapshot) + "%")
-                .orElse("???");
-        }
-        return body.displayName();
-    }
-
-    static boolean drawsOrbitLine(CelestialObject body) {
-        return !isBeltContainer(body);
-    }
-
-    static boolean drawsBeltBand(CelestialObject body) {
-        return isBeltContainer(body) && body.properties()
-            .asteroidFieldProfile() != null;
-    }
-
-    static int presentationPriority(CelestialObject body) {
-        if (!isAsteroid(body)) return 1000;
-        return CelestialClient.asteroidProjection(body)
-            .map(AsteroidStarmapProjection::presentationPriority)
-            .orElse(0);
-    }
-
     static void drawProspectingScanRanges(OrbitalScene.OrbitalSceneFrame frame, double scale) {
         for (OrbitalScene.ResolvedBodyDrawState state : frame.resolvedBodies) {
             if (!isAsteroid(state.body()) || !state.renderBody()) continue;
             double radius = CelestialDiscoveryClientState.scan(
                 state.body()
-                    .id(),
+                    .key(),
                 CelestialDiscoveryCapability.PROSPECTING)
                 .filter(snapshot -> snapshot.status() == CelestialDiscoveryScanSnapshot.Status.ACTIVE)
                 .map(CelestialDiscoveryScanSnapshot::radius)
@@ -118,19 +90,8 @@ final class AsteroidStarmapScenePresentation {
         GlStateManager.enableTexture2D();
     }
 
-    private static int scanProgressPercent(CelestialDiscoveryScanSnapshot snapshot) {
-        int duration = snapshot.step()
-            .durationTicks();
-        if (duration <= 0) return 0;
-        return Math.max(0, Math.min(99, Math.round(snapshot.elapsedTicks() * 100.0f / duration)));
-    }
-
-    private static boolean isBeltContainer(CelestialObject body) {
-        return body != null && body.objectClass() == CelestialObject.Class.ASTEROID_BELT;
-    }
-
     private static boolean isAsteroid(CelestialObject body) {
-        return body != null && body.objectClass() == CelestialObject.Class.ASTEROID;
+        return body != null && body.isAsteroid();
     }
 
     private static void drawCircleOutline(float x, float y, float radius, int color, float alpha, float lineWidth) {

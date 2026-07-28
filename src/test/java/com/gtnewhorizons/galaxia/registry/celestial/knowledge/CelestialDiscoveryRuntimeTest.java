@@ -14,9 +14,8 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
@@ -25,10 +24,8 @@ import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 final class CelestialDiscoveryRuntimeTest {
 
     private static final UUID TEAM = UUID.fromString("00000000-0000-0000-0000-000000000780");
-    private static final CelestialDiscoveryScanScope SCOPE = new CelestialDiscoveryScanScope(
-        CelestialObjectKey.registered(CelestialObjectId.MARS),
-        0.25,
-        1L);
+    private static final CelestialObjectKey MARS = CelestialObjectKey.registered(CelestialObjectId.MARS);
+    private static final CelestialDiscoveryScanScope SCOPE = new CelestialDiscoveryScanScope(MARS, 0.25, 1L);
     private CelestialServerRuntime runtime;
 
     @BeforeAll
@@ -39,44 +36,32 @@ final class CelestialDiscoveryRuntimeTest {
     @BeforeEach
     void createRuntime() {
         runtime = CelestialServerRuntime.create();
+        CelestialKnowledgeService.clearFacts();
     }
 
     @AfterEach
     void clearState() {
         CelestialAssetStore.SERVER.clearInternal();
         SatelliteNetworkService.clear();
-        AsteroidFieldKnowledgeStore.global()
-            .clear();
+        CelestialKnowledgeService.clearFacts();
     }
 
     @Test
-    void satelliteTopologyClearDoesNotClearDiscoveryProgress() {
+    void satelliteTopologyClearDoesNotClearDiscoveryProgressOrFacts() {
         addRuntimeProgress();
-        AsteroidFieldKnowledgeStore.global()
-            .getOrCreate(
-                TEAM,
-                CelestialObjectId.FROZEN_BELT,
-                CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
-                    .orElseThrow()
-                    .properties()
-                    .asteroidFieldProfile());
+        CelestialKnowledgeService.putFacts(TEAM, MARS, CelestialKnowledgeFacts.hidden());
 
         SatelliteNetworkService.clear();
 
         assertEquals(50L, elapsedProgress());
-        assertEquals(
-            1,
-            AsteroidFieldKnowledgeStore.global()
-                .snapshots(TEAM)
-                .size());
+        assertEquals(DiscoveryState.HIDDEN, CelestialKnowledgeService.discoveryState(TEAM, MARS));
     }
 
     @Test
-    void asteroidKnowledgeClearDoesNotClearDiscoveryProgress() {
+    void knowledgeClearDoesNotClearDiscoveryProgress() {
         addRuntimeProgress();
 
-        AsteroidFieldKnowledgeStore.global()
-            .clear();
+        CelestialKnowledgeService.clearFacts();
 
         assertEquals(50L, elapsedProgress());
     }
@@ -85,7 +70,7 @@ final class CelestialDiscoveryRuntimeTest {
     void explicitRuntimeClearClearsDiscoveryProgress() {
         addRuntimeProgress();
 
-        runtime.discovery()
+        runtime.scans()
             .clear();
 
         assertTrue(
@@ -97,14 +82,7 @@ final class CelestialDiscoveryRuntimeTest {
     @Test
     void assetStoreClearDoesNotClearSiblingRuntimeState() {
         addRuntimeProgress();
-        AsteroidFieldKnowledgeStore.global()
-            .getOrCreate(
-                TEAM,
-                CelestialObjectId.FROZEN_BELT,
-                CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
-                    .orElseThrow()
-                    .properties()
-                    .asteroidFieldProfile());
+        CelestialKnowledgeService.putFacts(TEAM, MARS, CelestialKnowledgeFacts.hidden());
         CelestialAssetStore.registerAsset(
             TEAM,
             com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.create(
@@ -120,11 +98,7 @@ final class CelestialDiscoveryRuntimeTest {
             CelestialAssetStore.allAssets()
                 .isEmpty());
         assertEquals(50L, elapsedProgress());
-        assertEquals(
-            1,
-            AsteroidFieldKnowledgeStore.global()
-                .snapshots(TEAM)
-                .size());
+        assertEquals(DiscoveryState.HIDDEN, CelestialKnowledgeService.discoveryState(TEAM, MARS));
         assertEquals(
             1,
             SatelliteNetworkService.current(TEAM)
@@ -134,14 +108,7 @@ final class CelestialDiscoveryRuntimeTest {
     @Test
     void topLevelRuntimeResetClearsAllServerState() {
         addRuntimeProgress();
-        AsteroidFieldKnowledgeStore.global()
-            .getOrCreate(
-                TEAM,
-                CelestialObjectId.FROZEN_BELT,
-                CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
-                    .orElseThrow()
-                    .properties()
-                    .asteroidFieldProfile());
+        CelestialKnowledgeService.putFacts(TEAM, MARS, CelestialKnowledgeFacts.hidden());
         SatelliteNetworkService.rebuild(TEAM, 0.0D);
 
         runtime.reset();
@@ -154,8 +121,7 @@ final class CelestialDiscoveryRuntimeTest {
                 .snapshots(TEAM)
                 .isEmpty());
         assertTrue(
-            AsteroidFieldKnowledgeStore.global()
-                .snapshots(TEAM)
+            CelestialKnowledgeService.snapshot(TEAM)
                 .isEmpty());
         assertEquals(
             0,
@@ -173,7 +139,7 @@ final class CelestialDiscoveryRuntimeTest {
         second.scans()
             .restore(otherTeam, List.of(activeSnapshot(otherTeam, 75L)));
 
-        first.discovery()
+        first.scans()
             .clear();
 
         assertTrue(

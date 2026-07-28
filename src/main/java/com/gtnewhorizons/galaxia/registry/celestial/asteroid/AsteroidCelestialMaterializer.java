@@ -10,8 +10,9 @@ import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryView;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState.CelestialDiscoveryView;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
 
 public final class AsteroidCelestialMaterializer {
 
@@ -27,12 +28,37 @@ public final class AsteroidCelestialMaterializer {
             .flatMap(belt -> resolveMinorBody(minorId, belt));
     }
 
+    /**
+     * Definition-default facts for a minor body, resolved from its asteroid content
+     * node. Returns empty when the key is not a resolvable minor body so callers can
+     * fail loudly at the registry boundary.
+     */
+    public static Optional<CelestialKnowledgeFacts> initialKnowledge(@Nonnull CelestialObjectKey key,
+        @Nonnull Function<CelestialObjectId, Optional<CelestialObject>> beltLookup) {
+
+        if (!key.isMinorBody()) return Optional.empty();
+
+        MinorCelestialBodyId minorId = key.minorBodyId();
+        return beltLookup.apply(minorId.parentBodyId())
+            .flatMap(belt -> resolveNodeFacts(minorId, belt));
+    }
+
+    private static Optional<CelestialKnowledgeFacts> resolveNodeFacts(MinorCelestialBodyId minorId,
+        CelestialObject belt) {
+        AsteroidFieldProfile profile = belt.properties()
+            .asteroidFieldProfile();
+        if (profile == null) return Optional.empty();
+
+        return AsteroidFieldResolver.findNode(minorId.parentBodyId(), profile, minorId.index())
+            .map(AsteroidFieldResolver::initialFacts);
+    }
+
     private static Optional<CelestialObject> resolveMinorBody(MinorCelestialBodyId minorId, CelestialObject belt) {
         AsteroidFieldProfile profile = belt.properties()
             .asteroidFieldProfile();
         if (profile == null) return Optional.empty();
 
-        return restoredOrGeneratedCatalog(minorId.parentBodyId(), profile).resolve(minorId)
+        return AsteroidFieldResolver.findNode(minorId.parentBodyId(), profile, minorId.index())
             .map(node -> materialize(node, profile));
     }
 
@@ -51,7 +77,7 @@ public final class AsteroidCelestialMaterializer {
         };
 
         return CelestialObject.builder()
-            .id(CelestialObjectKey.minorBody(node.id()))
+            .key(CelestialObjectKey.minorBody(node.id()))
             .name(node.displayName())
             .parent(CelestialObjectKey.registered(node.beltId()))
             .objectClass(CelestialObject.Class.ASTEROID)
@@ -82,13 +108,13 @@ public final class AsteroidCelestialMaterializer {
             .build();
     }
 
-    public static List<CelestialObject> knownChildren(@Nonnull CelestialObjectKey parentId,
+    public static List<CelestialObject> knownChildren(@Nonnull CelestialObjectKey parentKey,
         @Nonnull CelestialDiscoveryView discoveryView, boolean includeHidden,
         @Nonnull Function<CelestialObjectId, Optional<CelestialObject>> beltLookup) {
 
-        if (parentId == null || !parentId.isRegistered()) return List.of();
-        return beltLookup.apply(parentId.registeredBodyId())
-            .map(parent -> knownChildren(parentId.registeredBodyId(), parent, discoveryView, includeHidden))
+        if (parentKey == null || !parentKey.isRegistered()) return List.of();
+        return beltLookup.apply(parentKey.registeredBodyId())
+            .map(parent -> knownChildren(parentKey.registeredBodyId(), parent, discoveryView, includeHidden))
             .orElseGet(List::of);
     }
 
@@ -99,25 +125,16 @@ public final class AsteroidCelestialMaterializer {
             .asteroidFieldProfile();
         if (profile == null) return List.of();
 
-        return restoredOrGeneratedCatalog(parentId, profile).nodes()
+        return AsteroidFieldResolver.resolveAll(parentId, profile)
             .stream()
             .filter(node -> includeHidden || isVisible(node, discoveryView))
             .map(node -> materialize(node, profile))
             .toList();
     }
 
-    public static AsteroidFieldNodeCatalog restoredOrGeneratedCatalog(CelestialObjectId beltId,
-        AsteroidFieldProfile profile) {
-
-        return AsteroidFieldNodeCatalog.restored(beltId)
-            .orElseGet(() -> AsteroidFieldNodeCatalog.fromGenerated(beltId, profile));
-    }
-
     private static boolean isVisible(AsteroidFieldNode node, CelestialDiscoveryView discoveryView) {
-        DiscoveryState initialState = AsteroidFieldResolver.initialDetectionState(node);
-        DiscoveryState state = discoveryView == null ? initialState
-            : discoveryView.discoveryState(CelestialObjectKey.minorBody(node.id()))
-                .orElse(initialState);
-        return state == DiscoveryState.DISCOVERED;
+        DiscoveryState initialState = node.initialDetectionState();
+        CelestialDiscoveryView view = discoveryView == null ? CelestialDiscoveryView.empty() : discoveryView;
+        return view.isVisible(CelestialObjectKey.minorBody(node.id()), initialState);
     }
 }

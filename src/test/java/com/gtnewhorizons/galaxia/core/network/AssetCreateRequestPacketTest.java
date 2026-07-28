@@ -18,13 +18,11 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldDiscoveryWork;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeStore;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanContext;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldScanOrder;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryStep;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
@@ -62,108 +60,118 @@ final class AssetCreateRequestPacketTest {
         assertNotNull(sync);
         assertEquals(
             1,
-            CelestialAssetStore.SERVER.satelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION));
+            CelestialAssetStore.SERVER.satelliteCount(
+                TEAM,
+                CelestialObjectKey.registered(CelestialObjectId.MARS),
+                SatelliteKind.COMMUNICATION));
+    }
+
+    @Test
+    void operationalRequestIsHonouredOnlyForCreativeOperators() {
+        AssetCreateRequestPacket request = AssetCreateRequestPacket
+            .createFacility(CelestialObjectId.MARS, "Skip Construction", CelestialAsset.Kind.AUTOMATED_OUTPOST, true);
+
+        request.apply(TEAM, false);
+
+        assertEquals(
+            Buildable.Status.CONSTRUCTION_SITE,
+            onlyMarsAsset().status(),
+            "a plain client asking for an operational asset must still start a construction site");
+
+        CelestialAssetStore.SERVER.clearInternal();
+        request.apply(TEAM, true);
+
+        assertEquals(Buildable.Status.OPERATIONAL, onlyMarsAsset().status());
     }
 
     @Test
     void asteroidCreateRequestAllowsOutpostsAndRejectsAutomatedStations() {
-        CelestialObjectKey asteroidId = detectedAsteroidId();
+        CelestialObjectKey asteroidKey = detectedAsteroidKey();
 
         AssetSyncPacket outpostSync = AssetCreateRequestPacket
-            .createFacility(asteroidId, "Asteroid Outpost", CelestialAsset.Kind.AUTOMATED_OUTPOST, true)
+            .createFacility(asteroidKey, "Asteroid Outpost", CelestialAsset.Kind.AUTOMATED_OUTPOST, true)
             .apply(TEAM);
 
         assertNotNull(outpostSync);
         assertEquals(
             1,
-            CelestialAssetStore.getAssetsOnBody(asteroidId)
+            CelestialAssetStore.getAssetsOnBody(asteroidKey)
                 .size());
         assertThrows(
             IllegalArgumentException.class,
             () -> AssetCreateRequestPacket
-                .createFacility(asteroidId, "Asteroid Station", CelestialAsset.Kind.AUTOMATED_STATION, true)
+                .createFacility(asteroidKey, "Asteroid Station", CelestialAsset.Kind.AUTOMATED_STATION, true)
                 .apply(TEAM));
         assertEquals(
             1,
-            CelestialAssetStore.getAssetsOnBody(asteroidId)
+            CelestialAssetStore.getAssetsOnBody(asteroidKey)
                 .size());
     }
 
     @Test
     void asteroidCreateRequestRejectsHiddenAsteroidOutposts() {
-        CelestialObjectKey hiddenAsteroidId = hiddenAsteroidId();
+        CelestialObjectKey hiddenAsteroidKey = hiddenAsteroidKey();
 
         assertThrows(
             IllegalArgumentException.class,
             () -> AssetCreateRequestPacket
-                .createFacility(hiddenAsteroidId, "Hidden Outpost", CelestialAsset.Kind.AUTOMATED_OUTPOST, true)
+                .createFacility(hiddenAsteroidKey, "Hidden Outpost", CelestialAsset.Kind.AUTOMATED_OUTPOST, true)
                 .apply(TEAM));
         assertEquals(
             0,
-            CelestialAssetStore.getAssetsOnBody(hiddenAsteroidId)
+            CelestialAssetStore.getAssetsOnBody(hiddenAsteroidKey)
                 .size());
     }
 
     @Test
     void asteroidCreateRequestRejectsHiddenAsteroidSatellites() {
-        CelestialObjectKey hiddenAsteroidId = hiddenAsteroidId();
+        CelestialObjectKey hiddenAsteroidKey = hiddenAsteroidKey();
 
         assertThrows(
             IllegalArgumentException.class,
-            () -> AssetCreateRequestPacket.createSatellite(hiddenAsteroidId, SatelliteKind.PROSPECTING, true)
+            () -> AssetCreateRequestPacket.createSatellite(hiddenAsteroidKey, SatelliteKind.PROSPECTING, true)
                 .apply(TEAM));
         assertEquals(
             0,
-            CelestialAssetStore.getAssetsOnBody(hiddenAsteroidId)
+            CelestialAssetStore.getAssetsOnBody(hiddenAsteroidKey)
                 .size());
     }
 
     @Test
     void asteroidCreateRequestAllowsCommunicationSatellites() {
-        CelestialObjectKey asteroidId = detectedAsteroidId();
+        CelestialObjectKey asteroidKey = detectedAsteroidKey();
 
-        AssetSyncPacket sync = AssetCreateRequestPacket.createSatellite(asteroidId, SatelliteKind.COMMUNICATION, true)
+        AssetSyncPacket sync = AssetCreateRequestPacket.createSatellite(asteroidKey, SatelliteKind.COMMUNICATION, true)
             .apply(TEAM);
 
         assertNotNull(sync);
         assertEquals(
             1,
-            CelestialAssetStore.getAssetsOnBody(asteroidId)
+            CelestialAssetStore.getAssetsOnBody(asteroidKey)
                 .size());
     }
 
     @Test
     void asteroidCreateRequestAllowsTeamDetectedHiddenAsteroidOutposts() {
-        CelestialObjectKey hiddenAsteroidId = hiddenAsteroidId();
-        CelestialObject belt = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
-            .orElseThrow();
-        var knowledge = AsteroidFieldKnowledgeStore.global()
-            .getOrCreate(
-                TEAM,
-                CelestialObjectId.FROZEN_BELT,
-                belt.properties()
-                    .asteroidFieldProfile());
-        var context = new AsteroidFieldScanContext(node -> true, AsteroidFieldScanOrder.byIndex());
-        knowledge.revealDiscovery(
-            new AsteroidFieldDiscoveryWork(hiddenAsteroidId, CelestialDiscoveryStep.DETECTION),
-            context);
+        CelestialObjectKey hiddenAsteroidKey = hiddenAsteroidKey();
+        CelestialKnowledgeService.putFacts(TEAM, hiddenAsteroidKey, CelestialKnowledgeFacts.discoveredUnknown());
 
         AssetSyncPacket outpostSync = AssetCreateRequestPacket
-            .createFacility(hiddenAsteroidId, "Detected Outpost", CelestialAsset.Kind.AUTOMATED_OUTPOST, true)
+            .createFacility(hiddenAsteroidKey, "Detected Outpost", CelestialAsset.Kind.AUTOMATED_OUTPOST, true)
             .apply(TEAM);
 
         assertNotNull(outpostSync);
         assertEquals(
             1,
-            CelestialAssetStore.getAssetsOnBody(hiddenAsteroidId)
+            CelestialAssetStore.getAssetsOnBody(hiddenAsteroidKey)
                 .size());
     }
 
-    private static CelestialObjectKey hiddenAsteroidId() {
+    private static CelestialObjectKey hiddenAsteroidKey() {
         return asteroidIdWithDetectionState(DiscoveryState.HIDDEN);
     }
 
-    private static CelestialObjectKey detectedAsteroidId() {
+    private static CelestialObjectKey detectedAsteroidKey() {
         return asteroidIdWithDetectionState(DiscoveryState.DISCOVERED);
     }
 
@@ -175,9 +183,14 @@ final class AssetCreateRequestPacketTest {
             belt.properties()
                 .asteroidFieldProfile())
             .stream()
-            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == detectionState)
+            .filter(node -> node.initialDetectionState() == detectionState)
             .map(node -> CelestialObjectKey.minorBody(node.id()))
             .findFirst()
             .orElseThrow();
+    }
+
+    private static CelestialAsset onlyMarsAsset() {
+        return CelestialAssetStore.SERVER.getStateInternal(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS))
+            .get(0);
     }
 }

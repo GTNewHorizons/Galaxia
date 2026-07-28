@@ -559,8 +559,8 @@ public final class InterplanetaryTransferSystem {
 
         private static boolean isSameOrbitAnchor(CelestialObject transferAnchor, CelestialObject visibleSystem) {
             return transferAnchor == visibleSystem || (transferAnchor != null && visibleSystem != null
-                && transferAnchor.id()
-                    .equals(visibleSystem.id()));
+                && transferAnchor.key()
+                    .equals(visibleSystem.key()));
         }
 
         int version() {
@@ -665,7 +665,7 @@ public final class InterplanetaryTransferSystem {
                 || !route.hasTrajectoryGeometry()) {
                 return null;
             }
-            CelestialObject attractor = GalaxiaCelestialAPI.findBodyById(root, route.attractorBodyId());
+            CelestialObject attractor = GalaxiaCelestialAPI.findBodyByKey(root, route.attractorBodyKey());
             if (attractor == null) return null;
 
             double[] trajectoryXs = new double[TRAJECTORY_SAMPLES];
@@ -684,7 +684,7 @@ public final class InterplanetaryTransferSystem {
                 TRAJECTORY_SAMPLES);
             if (trajectoryPointCount < 2) return null;
 
-            String id = sourceBody.id() + "->" + destinationBody.id() + "@" + Math.round(departureTime * 1000.0);
+            String id = sourceBody.key() + "->" + destinationBody.key() + "@" + Math.round(departureTime * 1000.0);
             String inv = (inventorySummary == null || inventorySummary.isEmpty()) ? "Empty" : inventorySummary;
             return new InterplanetaryTransferJob(
                 id,

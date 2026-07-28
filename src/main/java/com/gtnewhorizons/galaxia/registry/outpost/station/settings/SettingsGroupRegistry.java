@@ -171,11 +171,4 @@ public final class SettingsGroupRegistry {
         return groupBecameEmpty;
     }
 
-    /**
-     * Skeleton - Phase 8 (T8.2) wires the diff-into-atomic-MutationKinds batch path.
-     */
-    public void updateSettings(short groupId, ModuleSettings newSettings) {
-        SettingsGroup group = require(groupId);
-        group.setSettings(newSettings);
-    }
 }

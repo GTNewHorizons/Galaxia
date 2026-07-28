@@ -53,7 +53,7 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
         if (!(outpost instanceof AutomatedFacility facility)) {
             throw new IllegalStateException("Miner should be only created in the AutomatedFacility");
         }
-        GalaxiaCelestialAPI.get(outpost.celestialObjectId)
+        GalaxiaCelestialAPI.get(outpost.celestialObjectKey)
             .ifPresent(registration -> {
                 MiningFeatureEffects featureEffects = featureMiningEffects(instance, facility);
                 List<ItemStack> candidates = miningCandidates(instance, facility, featureEffects);
@@ -93,7 +93,7 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
 
     private static List<ItemStack> miningCandidates(@Nonnull ModuleInstance instance,
         @Nonnull AutomatedFacility facility, @Nonnull MiningFeatureEffects featureEffects) {
-        return GalaxiaCelestialAPI.get(facility.celestialObjectId)
+        return GalaxiaCelestialAPI.get(facility.celestialObjectKey)
             .map(registration -> {
                 var properties = registration.properties();
                 List<ItemStack> bodyOres = properties.getResolvedGtVeinOreStacks();

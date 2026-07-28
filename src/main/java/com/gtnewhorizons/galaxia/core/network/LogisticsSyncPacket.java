@@ -48,19 +48,19 @@ public final class LogisticsSyncPacket implements IMessage {
         for (Map.Entry<CelestialObjectKey, List<LogisticSignal>> entry : LogisticStore
             .allSignalsForScope(LogisticSignal.Scope.SYSTEM)
             .entrySet()) {
-            CelestialObjectKey systemId = entry.getKey();
+            CelestialObjectKey systemKey = entry.getKey();
             Map<String, Long> systemAgg = new LinkedHashMap<>();
             for (LogisticSignal sig : entry.getValue()) {
                 String key = sig.resourceId()
                     .toKey();
                 systemAgg.merge(key, sig.amount(), Long::sum);
-                CelestialObjectKey anchorId = sig.planetaryAnchorBodyId();
-                if (anchorId != null) {
-                    pkt.byPlanet.computeIfAbsent(anchorId, k -> new LinkedHashMap<>())
+                CelestialObjectKey anchorKey = sig.planetaryAnchorBodyKey();
+                if (anchorKey != null) {
+                    pkt.byPlanet.computeIfAbsent(anchorKey, k -> new LinkedHashMap<>())
                         .merge(key, sig.amount(), Long::sum);
                 }
             }
-            if (!systemAgg.isEmpty()) pkt.bySystem.put(systemId, systemAgg);
+            if (!systemAgg.isEmpty()) pkt.bySystem.put(systemKey, systemAgg);
         }
 
         return pkt;
@@ -81,8 +81,8 @@ public final class LogisticsSyncPacket implements IMessage {
             buf.writeLong(d.amount());
             buf.writeInt(t.getRemainingTicks());
             PacketUtil.writeEnum(buf, d.scope());
-            PacketUtil.writeCelestialObjectKey(buf, d.fromBodyId());
-            PacketUtil.writeCelestialObjectKey(buf, d.toBodyId());
+            PacketUtil.writeCelestialObjectKey(buf, d.fromBodyKey());
+            PacketUtil.writeCelestialObjectKey(buf, d.toBodyKey());
             buf.writeDouble(d.departureOrbitalTime());
             buf.writeDouble(d.tofOrbitalSeconds());
             writeTransferRoute(buf, d.transferRoute());
@@ -104,8 +104,8 @@ public final class LogisticsSyncPacket implements IMessage {
             long amount = buf.readLong();
             int remainingTicks = buf.readInt();
             LogisticSignal.Scope scope = PacketUtil.readEnum(buf, LogisticSignal.Scope.class);
-            CelestialObjectKey fromBodyId = PacketUtil.readCelestialObjectKey(buf);
-            CelestialObjectKey toBodyId = PacketUtil.readCelestialObjectKey(buf);
+            CelestialObjectKey fromBodyKey = PacketUtil.readCelestialObjectKey(buf);
+            CelestialObjectKey toBodyKey = PacketUtil.readCelestialObjectKey(buf);
             double departureOrbitalTime = buf.readDouble();
             double tofOrbitalSeconds = buf.readDouble();
             OrbitalTransferPlanner.TransferRoute transferRoute = readTransferRoute(buf);
@@ -118,8 +118,8 @@ public final class LogisticsSyncPacket implements IMessage {
                     amount,
                     remainingTicks,
                     scope,
-                    fromBodyId,
-                    toBodyId,
+                    fromBodyKey,
+                    toBodyKey,
                     departureOrbitalTime,
                     tofOrbitalSeconds,
                     transferRoute));
@@ -153,7 +153,7 @@ public final class LogisticsSyncPacket implements IMessage {
         buf.writeDouble(route.totalDv());
         buf.writeDouble(route.departureDv());
         buf.writeDouble(route.captureDv());
-        PacketUtil.writeCelestialObjectKey(buf, route.attractorBodyId());
+        PacketUtil.writeCelestialObjectKey(buf, route.attractorBodyKey());
         buf.writeDouble(route.anchorX());
         buf.writeDouble(route.anchorY());
         buf.writeDouble(route.r1x());
@@ -169,7 +169,7 @@ public final class LogisticsSyncPacket implements IMessage {
         double totalDv = buf.readDouble();
         double departureDv = buf.readDouble();
         double captureDv = buf.readDouble();
-        CelestialObjectKey attractorBodyId = PacketUtil.readCelestialObjectKey(buf);
+        CelestialObjectKey attractorBodyKey = PacketUtil.readCelestialObjectKey(buf);
         double anchorX = buf.readDouble();
         double anchorY = buf.readDouble();
         double r1x = buf.readDouble();
@@ -182,7 +182,7 @@ public final class LogisticsSyncPacket implements IMessage {
             totalDv,
             departureDv,
             captureDv,
-            attractorBodyId,
+            attractorBodyKey,
             anchorX,
             anchorY,
             r1x,

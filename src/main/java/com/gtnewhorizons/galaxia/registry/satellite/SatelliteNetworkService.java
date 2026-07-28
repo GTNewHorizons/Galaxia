@@ -13,7 +13,6 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
@@ -114,10 +113,6 @@ public final class SatelliteNetworkService {
 
     static SatelliteDataBufferStore dataBuffers() {
         return DATA_BUFFERS;
-    }
-
-    public static boolean canStartProcess(UUID teamId, CelestialObjectId bodyId, SatelliteDataKey outputKey) {
-        return canStartProcess(teamId, CelestialObjectKey.registered(bodyId), outputKey);
     }
 
     public static boolean canStartProcess(UUID teamId, CelestialObjectKey bodyKey, SatelliteDataKey outputKey) {
@@ -263,8 +258,8 @@ public final class SatelliteNetworkService {
     private static SatelliteNetworkGraph.Node nodeFor(CelestialObject root, CelestialObject body, double orbitalTime) {
         OrbitalMechanics.OrbitalState state = resolveNodeWorldState(root, body, orbitalTime);
         return new SatelliteNetworkGraph.Node(
-            body.id(),
-            body.parentId(),
+            body.key(),
+            body.parentKey(),
             orbitalOrder(body),
             state.x(),
             state.y(),
@@ -275,14 +270,14 @@ public final class SatelliteNetworkService {
         double orbitalTime) {
         OrbitalMechanics.OrbitalState state = OrbitalMechanics.resolveWorldState(root, body, orbitalTime);
         if (state == null) {
-            throw new IllegalStateException("Cannot resolve orbital state for satellite network body: " + body.id());
+            throw new IllegalStateException("Cannot resolve orbital state for satellite network body: " + body.key());
         }
         return state;
     }
 
     private static double orbitalOrder(CelestialObject body) {
         OrbitalParams params = body.orbitalParams();
-        return params == null ? body.id()
+        return params == null ? body.key()
             .parentSortOrdinal() : params.semiMajorAxis();
     }
 
@@ -356,7 +351,8 @@ public final class SatelliteNetworkService {
             .stream()
             .flatMap(Set::stream)
             .toList()) {
-            if (asset instanceof Satellite && asset.celestialObjectId.isMinorBody()) keys.add(asset.celestialObjectId);
+            if (asset instanceof Satellite && asset.celestialObjectKey.isMinorBody())
+                keys.add(asset.celestialObjectKey);
         }
         return keys;
     }

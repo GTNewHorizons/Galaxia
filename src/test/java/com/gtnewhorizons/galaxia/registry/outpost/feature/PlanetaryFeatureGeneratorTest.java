@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -18,11 +17,10 @@ final class PlanetaryFeatureGeneratorTest {
     @Test
     void emptyProfileGeneratesNoFeatures() {
         CelestialObject body = CelestialObject.builder()
-            .id(CelestialObjectId.EGORA)
+            .key(CelestialObjectId.EGORA)
             .featureProfile(PlanetaryFeatureProfile.NONE)
             .build();
 
-        assertNull(PlanetaryFeatureGenerator.featureAt(123L, StationTileCoord.of(1, 2), body));
         assertTrue(
             PlanetaryFeatureGenerator.featuresAt(123L, StationTileCoord.of(1, 2), body)
                 .isEmpty());
@@ -31,7 +29,7 @@ final class PlanetaryFeatureGeneratorTest {
     @Test
     void singleWeightedFeatureIsDeterministic() {
         CelestialObject body = CelestialObject.builder()
-            .id(CelestialObjectId.EGORA)
+            .key(CelestialObjectId.EGORA)
             .featureProfile(
                 p -> p.featureTileChance(1.0)
                     .weight(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0))
@@ -39,21 +37,18 @@ final class PlanetaryFeatureGeneratorTest {
 
         StationTileCoord tile = findTileWith(987654321L, body, PlanetaryFeatureRegistry.MINERAL_VEIN.key());
 
-        assertEquals(
-            PlanetaryFeatureRegistry.MINERAL_VEIN.key(),
-            PlanetaryFeatureGenerator.featureAt(987654321L, tile, body));
         assertTrue(
             PlanetaryFeatureGenerator.featuresAt(987654321L, tile, body)
                 .contains(PlanetaryFeatureRegistry.MINERAL_VEIN.key()));
         assertEquals(
-            PlanetaryFeatureGenerator.featureAt(987654321L, tile, body),
-            PlanetaryFeatureGenerator.featureAt(987654321L, tile, body));
+            PlanetaryFeatureGenerator.featuresAt(987654321L, tile, body),
+            PlanetaryFeatureGenerator.featuresAt(987654321L, tile, body));
     }
 
     @Test
     void intCoordinateGenerationMatchesStationTileCoordinateGeneration() {
         CelestialObject body = CelestialObject.builder()
-            .id(CelestialObjectId.EGORA)
+            .key(CelestialObjectId.EGORA)
             .featureProfile(
                 p -> p.featureTileChance(1.0)
                     .weight(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0))
@@ -61,14 +56,14 @@ final class PlanetaryFeatureGeneratorTest {
         StationTileCoord tile = findTileWith(987654321L, body, PlanetaryFeatureRegistry.MINERAL_VEIN.key());
 
         assertEquals(
-            PlanetaryFeatureGenerator.featureAt(987654321L, tile, body),
-            PlanetaryFeatureGenerator.featureAt(987654321L, tile.dx(), tile.dy(), body));
+            PlanetaryFeatureGenerator.featuresAt(987654321L, tile, body),
+            PlanetaryFeatureGenerator.featuresAt(987654321L, tile.dx(), tile.dy(), body));
     }
 
     @Test
     void differentStationSaltsCanProduceDifferentFeatureLayouts() {
         CelestialObject body = CelestialObject.builder()
-            .id(CelestialObjectId.EGORA)
+            .key(CelestialObjectId.EGORA)
             .featureProfile(
                 p -> p.featureTileChance(0.5)
                     .weight(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0))
@@ -77,9 +72,8 @@ final class PlanetaryFeatureGeneratorTest {
         int differences = 0;
         for (int i = -8; i <= 8; i++) {
             StationTileCoord tile = StationTileCoord.of(i, 0);
-            if (!java.util.Objects.equals(
-                PlanetaryFeatureGenerator.featureAt(1L, tile, body),
-                PlanetaryFeatureGenerator.featureAt(2L, tile, body))) {
+            if (!PlanetaryFeatureGenerator.featuresAt(1L, tile, body)
+                .equals(PlanetaryFeatureGenerator.featuresAt(2L, tile, body))) {
                 differences++;
             }
         }
@@ -90,7 +84,7 @@ final class PlanetaryFeatureGeneratorTest {
     @Test
     void terrainAndResourceFeaturesCanCoexistOnOneTile() {
         CelestialObject body = CelestialObject.builder()
-            .id(CelestialObjectId.EGORA)
+            .key(CelestialObjectId.EGORA)
             .featureProfile(
                 p -> p.featureTileChance(1.0)
                     .weight(PlanetaryFeatureRegistry.STABLE_BEDROCK, 1.0)
@@ -129,7 +123,7 @@ final class PlanetaryFeatureGeneratorTest {
     @Test
     void isolatedMagmaPoolsRejectNearbySecondPool() {
         CelestialObject body = CelestialObject.builder()
-            .id(CelestialObjectId.EGORA)
+            .key(CelestialObjectId.EGORA)
             .featureProfile(
                 p -> p.featureTileChance(1.0)
                     .weight(PlanetaryFeatureRegistry.MAGMA_POOL, 1.0))

@@ -4,6 +4,7 @@ import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.ToIntFunction;
 
@@ -25,7 +26,7 @@ import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializer;
@@ -360,10 +361,12 @@ public final class GalaxiaAPI {
     }
 
     public static @Nullable TileStation getStationAround(@Nonnull World world, int dim, int x, int y, int z) {
-        CelestialObjectId id = GalaxiaCelestialAPI.getObjectFromDimension(dim);
-        if (id == CelestialObjectId.INVALID) return null;
+        Optional<CelestialObject> body = GalaxiaCelestialAPI.findByDimension(dim);
+        if (body.isEmpty()) return null;
 
-        Set<CelestialAsset.ID> assets = CelestialAssetStore.getAssetsOnBody(id);
+        Set<CelestialAsset.ID> assets = CelestialAssetStore.getAssetsOnBody(
+            body.get()
+                .key());
         for (var assetId : assets) {
             CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
             if (!(asset instanceof Station station)) continue;

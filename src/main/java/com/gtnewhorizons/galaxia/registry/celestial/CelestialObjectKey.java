@@ -2,8 +2,6 @@ package com.gtnewhorizons.galaxia.registry.celestial;
 
 import javax.annotation.Nonnull;
 
-import net.minecraft.nbt.NBTTagCompound;
-
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 
 /**
@@ -67,48 +65,4 @@ public record CelestialObjectKey(CelestialObjectId registeredBodyId, MinorCelest
         return registeredBodyId;
     }
 
-    public NBTTagCompound toNbt() {
-        NBTTagCompound tag = new NBTTagCompound();
-        // The explicit discriminator keeps registered enum bodies and generated
-        // minor bodies from sharing an ambiguous "id" field.
-        if (isRegistered()) {
-            tag.setString("kind", "registered");
-            tag.setString("id", registeredBodyId.name());
-            return tag;
-        }
-        tag.setString("kind", "minor");
-        tag.setString(
-            "parentBodyId",
-            minorBodyId.parentBodyId()
-                .name());
-        tag.setInteger("index", minorBodyId.index());
-        return tag;
-    }
-
-    public static CelestialObjectKey fromNbt(@Nonnull NBTTagCompound tag) {
-        if (tag == null) {
-            throw new IllegalArgumentException("tag cannot be null");
-        }
-        String kind = tag.getString("kind");
-        // Invalid data is intentionally loud: a bad body key can attach assets to
-        // the wrong place, which is worse than failing the load or packet decode.
-        if ("registered".equals(kind)) {
-            return registered(parseRegisteredId(tag.getString("id"), "id"));
-        }
-        if ("minor".equals(kind)) {
-            return minorBody(
-                new MinorCelestialBodyId(
-                    parseRegisteredId(tag.getString("parentBodyId"), "parentBodyId"),
-                    tag.getInteger("index")));
-        }
-        throw new IllegalArgumentException("Unknown celestial object key kind: " + kind);
-    }
-
-    private static CelestialObjectId parseRegisteredId(String name, String fieldName) {
-        try {
-            return CelestialObjectId.valueOf(name);
-        } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException("Invalid " + fieldName + " celestial object id: " + name, ex);
-        }
-    }
 }

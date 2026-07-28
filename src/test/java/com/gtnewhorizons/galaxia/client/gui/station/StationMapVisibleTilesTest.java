@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
@@ -13,37 +14,33 @@ final class StationMapVisibleTilesTest {
 
     @Test
     void visibleTilesIncludeEmptyTileCoordinatesWithinViewport() {
-        Set<StationTileCoord> tiles = StationMapViewport.visibleTiles(320, 240, 20, 20, 12, 0, 0);
+        Set<StationMapViewport.TilePosition> positions = visible(0, 0);
 
-        assertTrue(tiles.contains(StationTileCoord.CORE));
-        assertTrue(tiles.contains(StationTileCoord.of(1, 0)));
-        assertTrue(tiles.contains(StationTileCoord.of(-1, 0)));
+        assertTrue(contains(positions, StationTileCoord.CORE.dx(), StationTileCoord.CORE.dy()));
+        assertTrue(contains(positions, 1, 0));
+        assertTrue(contains(positions, -1, 0));
     }
 
     @Test
     void visibleTilesRespectPanOffset() {
-        Set<StationTileCoord> normal = StationMapViewport.visibleTiles(320, 240, 20, 20, 12, 0, 0);
-        Set<StationTileCoord> panned = StationMapViewport.visibleTiles(320, 240, 20, 20, 12, 200, 0);
-
-        assertFalse(normal.equals(panned));
+        assertFalse(visible(0, 0).equals(visible(200, 0)));
     }
 
     @Test
     void visibleTilePositionsAreNotClampedToBuildableStationBounds() {
-        Set<StationMapViewport.TilePosition> positions = StationMapViewport
-            .visibleTilePositions(320, 240, 20, 20, 12, 0, -2000);
-
         assertTrue(
-            positions.stream()
+            visible(0, -2000).stream()
                 .anyMatch(position -> position.dy() > StationTileCoord.MAX));
     }
 
-    @Test
-    void stationTileCoordsRemainClampedToBuildableStationBounds() {
-        Set<StationTileCoord> tiles = StationMapViewport.visibleTiles(320, 240, 20, 20, 12, 0, -2000);
+    private static Set<StationMapViewport.TilePosition> visible(int panX, int panY) {
+        Set<StationMapViewport.TilePosition> positions = new LinkedHashSet<>();
+        StationMapViewport.collectVisibleTilePositions(320, 240, 20, 20, 12, panX, panY, positions);
+        return positions;
+    }
 
-        assertTrue(
-            tiles.stream()
-                .allMatch(tile -> tile.dy() <= StationTileCoord.MAX));
+    private static boolean contains(Set<StationMapViewport.TilePosition> positions, int dx, int dy) {
+        return positions.stream()
+            .anyMatch(position -> position.dx() == dx && position.dy() == dy);
     }
 }

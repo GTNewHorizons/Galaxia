@@ -15,12 +15,12 @@ final class CelestialSidebarWidgetTest {
     @Test
     void searchResultsAreLimitedToRegisteredMajorBodies() {
         CelestialObject majorBody = CelestialObject.builder()
-            .id(CelestialObjectId.MARS)
+            .key(CelestialObjectId.MARS)
             .name("Mars")
             .objectClass(CelestialObject.Class.PLANET)
             .build();
         CelestialObject minorAsteroid = CelestialObject.builder()
-            .id(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 7)))
+            .key(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 7)))
             .name("Frozen Belt 7")
             .objectClass(CelestialObject.Class.ASTEROID)
             .build();

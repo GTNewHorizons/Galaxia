@@ -22,33 +22,51 @@ final class SatelliteDataTransferPlannerTest {
     void concreteOriginDemandTransfersBeforeAnyDemandForSameType() {
         SatelliteDataBufferStore store = new SatelliteDataBufferStore();
         SatelliteDataKey egoraProspecting = SatelliteDataKey
-            .origin(SatelliteDataType.PROSPECTING, CelestialObjectId.EGORA);
+            .origin(SatelliteDataType.PROSPECTING, CelestialObjectKey.registered(CelestialObjectId.EGORA));
         SatelliteDataKey anyProspecting = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
-        store.finishProduction(TEAM, CelestialObjectId.EGORA, egoraProspecting, kb(100L));
-        store.requestData(TEAM, CelestialObjectId.FROZEN_BELT, egoraProspecting, kb(100L));
-        store.requestData(TEAM, CelestialObjectId.MARS, anyProspecting, kb(100L));
+        store
+            .finishProduction(TEAM, CelestialObjectKey.registered(CelestialObjectId.EGORA), egoraProspecting, kb(100L));
+        store.requestData(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT),
+            egoraProspecting,
+            kb(100L));
+        store.requestData(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), anyProspecting, kb(100L));
 
         SatelliteDataTransferPlanner.Plan plan = SatelliteDataTransferPlanner.plan(TEAM, network(), store);
         apply(store, plan);
 
-        assertEquals(kb(100L) - 5L, store.pendingDeciKb(TEAM, CelestialObjectId.EGORA, egoraProspecting));
-        assertEquals(kb(100L) - 5L, store.pendingDemandDeciKb(TEAM, CelestialObjectId.FROZEN_BELT, egoraProspecting));
-        assertEquals(kb(100L), store.pendingDemandDeciKb(TEAM, CelestialObjectId.MARS, anyProspecting));
+        assertEquals(
+            kb(100L) - 5L,
+            store.pendingDeciKb(TEAM, CelestialObjectKey.registered(CelestialObjectId.EGORA), egoraProspecting));
+        assertEquals(
+            kb(100L) - 5L,
+            store.pendingDemandDeciKb(
+                TEAM,
+                CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT),
+                egoraProspecting));
+        assertEquals(
+            kb(100L),
+            store.pendingDemandDeciKb(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), anyProspecting));
     }
 
     @Test
     void equalReachableDemandSplitsSourceDataEvenly() {
         SatelliteDataBufferStore store = new SatelliteDataBufferStore();
         SatelliteDataKey prospecting = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
-        store.finishProduction(TEAM, CelestialObjectId.MARS, prospecting, kb(100L));
-        store.requestData(TEAM, CelestialObjectId.EGORA, prospecting, kb(100L));
-        store.requestData(TEAM, CelestialObjectId.FROZEN_BELT, prospecting, kb(100L));
+        store.finishProduction(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), prospecting, kb(100L));
+        store.requestData(TEAM, CelestialObjectKey.registered(CelestialObjectId.EGORA), prospecting, kb(100L));
+        store.requestData(TEAM, CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT), prospecting, kb(100L));
 
         SatelliteDataTransferPlanner.Plan plan = SatelliteDataTransferPlanner.plan(TEAM, sourceFanoutNetwork(), store);
         apply(store, plan);
 
-        assertEquals(kb(100L) - 5L, store.pendingDemandDeciKb(TEAM, CelestialObjectId.EGORA, prospecting));
-        assertEquals(kb(100L) - 5L, store.pendingDemandDeciKb(TEAM, CelestialObjectId.FROZEN_BELT, prospecting));
+        assertEquals(
+            kb(100L) - 5L,
+            store.pendingDemandDeciKb(TEAM, CelestialObjectKey.registered(CelestialObjectId.EGORA), prospecting));
+        assertEquals(
+            kb(100L) - 5L,
+            store.pendingDemandDeciKb(TEAM, CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT), prospecting));
     }
 
     @Test
@@ -56,16 +74,16 @@ final class SatelliteDataTransferPlannerTest {
         SatelliteDataBufferStore store = new SatelliteDataBufferStore();
         SatelliteDataKey prospecting = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
         SatelliteNetworkGraph.Edge edge = new SatelliteNetworkGraph.Edge(
-            CelestialObjectId.MARS,
-            CelestialObjectId.EGORA);
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            CelestialObjectKey.registered(CelestialObjectId.EGORA));
         SatelliteNetworkGraph.DirectedEdge forward = new SatelliteNetworkGraph.DirectedEdge(
-            CelestialObjectId.MARS,
-            CelestialObjectId.EGORA);
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            CelestialObjectKey.registered(CelestialObjectId.EGORA));
         SatelliteNetworkGraph.DirectedEdge reverse = new SatelliteNetworkGraph.DirectedEdge(
-            CelestialObjectId.EGORA,
-            CelestialObjectId.MARS);
-        store.finishProduction(TEAM, CelestialObjectId.MARS, prospecting, kb(100L));
-        store.requestData(TEAM, CelestialObjectId.EGORA, prospecting, kb(100L));
+            CelestialObjectKey.registered(CelestialObjectId.EGORA),
+            CelestialObjectKey.registered(CelestialObjectId.MARS));
+        store.finishProduction(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), prospecting, kb(100L));
+        store.requestData(TEAM, CelestialObjectKey.registered(CelestialObjectId.EGORA), prospecting, kb(100L));
 
         SatelliteDataTransferPlanner.Plan plan = SatelliteDataTransferPlanner.plan(TEAM, network(), store);
 
@@ -86,15 +104,17 @@ final class SatelliteDataTransferPlannerTest {
     void multipleRoutesIntoSameDestinationShareDestinationBandwidth() {
         SatelliteDataBufferStore store = new SatelliteDataBufferStore();
         SatelliteDataKey research = SatelliteDataKey.any(SatelliteDataType.RESEARCH);
-        store.finishProduction(TEAM, CelestialObjectId.MARS, research, kb(100L));
-        store.finishProduction(TEAM, CelestialObjectId.FROZEN_BELT, research, kb(100L));
-        store.requestData(TEAM, CelestialObjectId.OVERWORLD, research, kb(100L));
+        store.finishProduction(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), research, kb(100L));
+        store.finishProduction(TEAM, CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT), research, kb(100L));
+        store.requestData(TEAM, CelestialObjectKey.registered(CelestialObjectId.OVERWORLD), research, kb(100L));
 
         SatelliteDataTransferPlanner.Plan plan = SatelliteDataTransferPlanner.plan(TEAM, convergingNetwork(), store);
 
         long transferredToOverworld = plan.transfers()
             .stream()
-            .filter(transfer -> transfer.destinationBodyId() == CelestialObjectId.OVERWORLD)
+            .filter(
+                transfer -> transfer.destinationBodyKey()
+                    .equals(CelestialObjectKey.registered(CelestialObjectId.OVERWORLD)))
             .mapToLong(SatelliteDataTransferPlanner.Transfer::deciKb)
             .sum();
         assertEquals(5L, transferredToOverworld);
@@ -109,10 +129,10 @@ final class SatelliteDataTransferPlannerTest {
         SatelliteDataBufferStore store = new SatelliteDataBufferStore();
         SatelliteDataKey research = SatelliteDataKey.any(SatelliteDataType.RESEARCH);
         long amount = kb(1L);
-        store.finishProduction(TEAM, CelestialObjectId.MARS, research, amount);
-        store.finishProduction(TEAM, CelestialObjectId.EGORA, research, amount);
-        store.requestData(TEAM, CelestialObjectId.MARS, research, amount);
-        store.requestData(TEAM, CelestialObjectId.EGORA, research, amount);
+        store.finishProduction(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), research, amount);
+        store.finishProduction(TEAM, CelestialObjectKey.registered(CelestialObjectId.EGORA), research, amount);
+        store.requestData(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), research, amount);
+        store.requestData(TEAM, CelestialObjectKey.registered(CelestialObjectId.EGORA), research, amount);
 
         SatelliteDataTransferPlanner.Plan plan = SatelliteDataTransferPlanner.plan(TEAM, reciprocalNetwork(), store);
         apply(store, plan);
@@ -123,8 +143,12 @@ final class SatelliteDataTransferPlannerTest {
         assertTrue(
             plan.directedUsedByEdge()
                 .isEmpty());
-        assertEquals(0L, store.pendingDemandDeciKb(TEAM, CelestialObjectId.MARS, research));
-        assertEquals(0L, store.pendingDemandDeciKb(TEAM, CelestialObjectId.EGORA, research));
+        assertEquals(
+            0L,
+            store.pendingDemandDeciKb(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), research));
+        assertEquals(
+            0L,
+            store.pendingDemandDeciKb(TEAM, CelestialObjectKey.registered(CelestialObjectId.EGORA), research));
     }
 
     @Test
@@ -186,9 +210,15 @@ final class SatelliteDataTransferPlannerTest {
                 node(CelestialObjectId.EGORA, 10.0D, 0.0D),
                 node(CelestialObjectId.FROZEN_BELT, 0.0D, 10.0D)),
             List.of(
-                new SatelliteNetworkGraph.Edge(CelestialObjectId.MARS, CelestialObjectId.EGORA),
-                new SatelliteNetworkGraph.Edge(CelestialObjectId.MARS, CelestialObjectId.FROZEN_BELT),
-                new SatelliteNetworkGraph.Edge(CelestialObjectId.EGORA, CelestialObjectId.FROZEN_BELT)),
+                new SatelliteNetworkGraph.Edge(
+                    CelestialObjectKey.registered(CelestialObjectId.MARS),
+                    CelestialObjectKey.registered(CelestialObjectId.EGORA)),
+                new SatelliteNetworkGraph.Edge(
+                    CelestialObjectKey.registered(CelestialObjectId.MARS),
+                    CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT)),
+                new SatelliteNetworkGraph.Edge(
+                    CelestialObjectKey.registered(CelestialObjectId.EGORA),
+                    CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT))),
             Map.of(
                 key(CelestialObjectId.MARS),
                 marsCapacityKbps,
@@ -208,8 +238,12 @@ final class SatelliteDataTransferPlannerTest {
                 node(CelestialObjectId.FROZEN_BELT, 20.0D, 0.0D),
                 node(CelestialObjectId.OVERWORLD, 10.0D, 0.0D)),
             List.of(
-                new SatelliteNetworkGraph.Edge(CelestialObjectId.MARS, CelestialObjectId.OVERWORLD),
-                new SatelliteNetworkGraph.Edge(CelestialObjectId.FROZEN_BELT, CelestialObjectId.OVERWORLD)),
+                new SatelliteNetworkGraph.Edge(
+                    CelestialObjectKey.registered(CelestialObjectId.MARS),
+                    CelestialObjectKey.registered(CelestialObjectId.OVERWORLD)),
+                new SatelliteNetworkGraph.Edge(
+                    CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT),
+                    CelestialObjectKey.registered(CelestialObjectId.OVERWORLD))),
             Map.of(
                 key(CelestialObjectId.MARS),
                 10L,
@@ -229,8 +263,12 @@ final class SatelliteDataTransferPlannerTest {
                 node(CelestialObjectId.EGORA, 10.0D, 0.0D),
                 node(CelestialObjectId.FROZEN_BELT, 0.0D, 10.0D)),
             List.of(
-                new SatelliteNetworkGraph.Edge(CelestialObjectId.MARS, CelestialObjectId.EGORA),
-                new SatelliteNetworkGraph.Edge(CelestialObjectId.MARS, CelestialObjectId.FROZEN_BELT)),
+                new SatelliteNetworkGraph.Edge(
+                    CelestialObjectKey.registered(CelestialObjectId.MARS),
+                    CelestialObjectKey.registered(CelestialObjectId.EGORA)),
+                new SatelliteNetworkGraph.Edge(
+                    CelestialObjectKey.registered(CelestialObjectId.MARS),
+                    CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT))),
             Map.of(
                 key(CelestialObjectId.MARS),
                 20L,
@@ -246,13 +284,22 @@ final class SatelliteDataTransferPlannerTest {
             TEAM,
             4,
             List.of(node(CelestialObjectId.MARS, 0.0D, 0.0D), node(CelestialObjectId.EGORA, 10.0D, 0.0D)),
-            List.of(new SatelliteNetworkGraph.Edge(CelestialObjectId.MARS, CelestialObjectId.EGORA)),
+            List.of(
+                new SatelliteNetworkGraph.Edge(
+                    CelestialObjectKey.registered(CelestialObjectId.MARS),
+                    CelestialObjectKey.registered(CelestialObjectId.EGORA))),
             Map.of(key(CelestialObjectId.MARS), 40L, key(CelestialObjectId.EGORA), 40L),
             Map.of());
     }
 
     private static SatelliteNetworkGraph.Node node(CelestialObjectId id, double x, double y) {
-        return new SatelliteNetworkGraph.Node(id, x, y, 1.0D);
+        return new SatelliteNetworkGraph.Node(
+            CelestialObjectKey.registered(id),
+            CelestialObjectKey.registered(id),
+            0.0D,
+            x,
+            y,
+            1.0D);
     }
 
     private static CelestialObjectKey asteroidKey(int index) {
@@ -267,9 +314,9 @@ final class SatelliteDataTransferPlannerTest {
         for (SatelliteDataTransferPlanner.Transfer transfer : plan.transfers()) {
             store.transfer(
                 transfer.teamId(),
-                transfer.sourceBodyId(),
+                transfer.sourceBodyKey(),
                 transfer.sourceKey(),
-                transfer.destinationBodyId(),
+                transfer.destinationBodyKey(),
                 transfer.demandKey(),
                 transfer.deciKb());
         }

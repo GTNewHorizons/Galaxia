@@ -10,6 +10,10 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 /**
  * Domain rules for one family of celestial discovery work.
+ * <p>
+ * Implementations own which anchors and scopes they answer for, pick the next
+ * work item for a team, and apply the result through
+ * {@link CelestialKnowledgeService}.
  */
 public interface CelestialDiscoveryDomain {
 

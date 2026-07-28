@@ -23,7 +23,7 @@ final class AsteroidDomainTypesTest {
     }
 
     @Test
-    void oreProfileKeepsStableCompositionWhilePoolOwnsWeights() {
+    void oreProfileKeepsStableCompositionWhileFieldProfileOwnsWeights() {
         assertThrows(IllegalArgumentException.class, () -> new AsteroidOreProfile("", List.of("vein")));
 
         List<String> veins = new ArrayList<>();
@@ -33,16 +33,20 @@ final class AsteroidDomainTypesTest {
 
         assertEquals("metallic", profile.id());
         assertEquals(List.of("galaxia:iron"), profile.gtOreVeinIds());
-        assertEquals(
-            profile,
-            AsteroidOreProfilePool.builder()
-                .profile(profile, 2.5)
-                .build()
-                .select(0.0));
+        AsteroidFieldProfile fieldProfile = AsteroidFieldProfile.builder()
+            .sizeCounts(1, 0, 0)
+            .radialBand(1.0, 2.0)
+            .placementConnectionRadius(1000.0)
+            .oreProfile(profile, 2.5)
+            .build();
+        assertEquals(profile, fieldProfile.selectOreProfile(0.0));
         assertThrows(
             IllegalArgumentException.class,
-            () -> AsteroidOreProfilePool.builder()
-                .profile(profile, -1.0));
+            () -> AsteroidFieldProfile.builder()
+                .sizeCounts(1, 0, 0)
+                .radialBand(1.0, 2.0)
+                .placementConnectionRadius(1000.0)
+                .oreProfile(profile, -1.0));
     }
 
     @Test

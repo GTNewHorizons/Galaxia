@@ -17,7 +17,6 @@ final class AsteroidFieldProfileTest {
     void generatedAsteroidSizesAreInterleavedAcrossSlots() {
         AsteroidFieldProfile profile = AsteroidFieldProfile.builder()
             .seedSalt(123L)
-            .generationVersion(4)
             .sizeCounts(4, 8, 12)
             .radialBand(10.0, 20.0)
             .placementConnectionRadius(1000.0)
@@ -69,7 +68,6 @@ final class AsteroidFieldProfileTest {
 
         AsteroidFieldProfile profile = AsteroidFieldProfile.builder()
             .seedSalt(123L)
-            .generationVersion(4)
             .sizeCounts(1, 2, 3)
             .radialBand(10.0, 20.0)
             .placementConnectionRadius(1000.0)
@@ -77,7 +75,6 @@ final class AsteroidFieldProfileTest {
             .build();
 
         assertEquals(123L, profile.seedSalt());
-        assertEquals(4, profile.generationVersion());
         assertEquals(6, profile.totalNodes());
         assertEquals(1, profile.largeCount());
         assertEquals(2, profile.mediumCount());
@@ -85,7 +82,26 @@ final class AsteroidFieldProfileTest {
         assertEquals(10.0, profile.innerOrbitalRadius());
         assertEquals(20.0, profile.outerOrbitalRadius());
         assertEquals(1000.0, profile.placementConnectionRadius());
-        assertEquals(List.of(metallic), profile.oreProfiles());
+        assertEquals(metallic, profile.selectOreProfile(0.0));
+    }
+
+    @Test
+    void weightedOreProfilesSelectByRoll() {
+        AsteroidOreProfile metallic = new AsteroidOreProfile("metallic", List.of("ore.mix.iron"));
+        AsteroidOreProfile volatileIce = new AsteroidOreProfile("volatile_ice", List.of("ore.mix.lapis"));
+        AsteroidFieldProfile profile = AsteroidFieldProfile.builder()
+            .sizeCounts(1, 0, 0)
+            .radialBand(1.0, 2.0)
+            .placementConnectionRadius(1000.0)
+            .oreProfile(metallic, 3.0)
+            .oreProfile(volatileIce, 1.0)
+            .build();
+
+        assertEquals(metallic, profile.selectOreProfile(0.0));
+        assertEquals(metallic, profile.selectOreProfile(0.74));
+        assertEquals(volatileIce, profile.selectOreProfile(0.75));
+        assertEquals(volatileIce, profile.selectOreProfile(0.99));
+        assertEquals(volatileIce, profile.requireOreProfile("volatile_ice"));
     }
 
     @Test
@@ -96,10 +112,6 @@ final class AsteroidFieldProfileTest {
             IllegalArgumentException.class,
             () -> AsteroidFieldProfile.builder()
                 .sizeCounts(-1, 0, 0));
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> AsteroidFieldProfile.builder()
-                .generationVersion(0));
         assertThrows(
             IllegalArgumentException.class,
             () -> AsteroidFieldProfile.builder()

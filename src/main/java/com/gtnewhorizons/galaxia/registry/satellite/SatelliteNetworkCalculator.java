@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 /**
@@ -136,10 +135,6 @@ public final class SatelliteNetworkCalculator {
         return widestPath(from, to, state.links(), state.capacityKbps(from));
     }
 
-    public static WidestPath widestPath(CelestialObjectId from, CelestialObjectId to, SatelliteNetworkState state) {
-        return widestPath(CelestialObjectKey.registered(from), CelestialObjectKey.registered(to), state);
-    }
-
     public record WidestPath(List<SatelliteNetworkGraph.Edge> edges, long capacityKbps) {
 
         public WidestPath {
@@ -226,10 +221,10 @@ public final class SatelliteNetworkCalculator {
             .toList();
     }
 
-    private static long capacity(Map<CelestialObjectKey, Long> capacityByBody, CelestialObjectKey bodyId) {
+    private static long capacity(Map<CelestialObjectKey, Long> capacityByBody, CelestialObjectKey bodyKey) {
         return Math.max(
             0L,
-            (capacityByBody == null ? Map.<CelestialObjectKey, Long>of() : capacityByBody).getOrDefault(bodyId, 0L));
+            (capacityByBody == null ? Map.<CelestialObjectKey, Long>of() : capacityByBody).getOrDefault(bodyKey, 0L));
     }
 
     private static List<SatelliteNetworkGraph.Edge> withCapacityBackbone(List<SatelliteNetworkGraph.Node> nodes,

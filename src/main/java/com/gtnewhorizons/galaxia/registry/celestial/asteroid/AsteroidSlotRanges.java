@@ -16,14 +16,6 @@ public final class AsteroidSlotRanges {
 
     private AsteroidSlotRanges() {}
 
-    public static boolean isLoreSlot(int slot) {
-        return slot >= LORE_SLOT_MIN && slot <= LORE_SLOT_MAX;
-    }
-
-    public static boolean isUniqueSlot(int slot) {
-        return slot >= UNIQUE_SLOT_MIN && slot <= UNIQUE_SLOT_MAX;
-    }
-
     public static boolean isGeneratedSlot(int slot) {
         return slot >= GENERATED_SLOT_MIN;
     }

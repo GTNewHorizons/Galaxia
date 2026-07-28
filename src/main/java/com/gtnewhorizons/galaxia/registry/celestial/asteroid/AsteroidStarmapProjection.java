@@ -6,16 +6,20 @@ import java.util.List;
 import java.util.Optional;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.CelestialResourceKnowledgeState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
 
 public record AsteroidStarmapProjection(@Nonnull CelestialObject body, @Nonnull MinorCelestialBodyId id,
     @Nonnull AsteroidNodeKind nodeKind, @Nonnull AsteroidSizeClass sizeClass, @Nonnull DiscoveryState detectionState,
     @Nonnull CelestialResourceKnowledgeState oreKnowledgeState, @Nonnull Optional<String> visibleOreProfileId,
     @Nonnull List<String> visibleGtOreVeinIds, @Nonnull AsteroidAppearanceProfile appearanceProfile,
     boolean debugHidden, boolean scanInProgress, boolean sensorRevealed) {
+
+    private static final float MAP_ICON_BASE_SCALE = 60f;
+    private static final float MIN_RENDERED_DIAMETER = 2f;
 
     public AsteroidStarmapProjection {
         if (oreKnowledgeState == CelestialResourceKnowledgeState.UNKNOWN && visibleOreProfileId.isPresent()) {
@@ -35,6 +39,21 @@ public record AsteroidStarmapProjection(@Nonnull CelestialObject body, @Nonnull 
         if (sensorRevealed && detectionState != DiscoveryState.HIDDEN) {
             throw new IllegalArgumentException("Only hidden asteroid projections can be sensor-revealed ghosts");
         }
+    }
+
+    public static float spriteRadius(@Nullable CelestialObject body, float spriteSize, double relativeZoom) {
+        if (body == null || !body.isAsteroid() || spriteSize <= 0.0001f) return 0f;
+        return Math.max(0.0f, spriteSize * MAP_ICON_BASE_SCALE * (float) relativeZoom);
+    }
+
+    public static boolean shouldCull(@Nullable CelestialObject body, @Nullable AsteroidStarmapProjection projection,
+        float naturalRadius) {
+        if (body == null || !body.isAsteroid() || projection == null) return false;
+        return projection.shouldCull(naturalRadius);
+    }
+
+    public boolean shouldCull(float naturalRadius) {
+        return shouldCullAtNaturalRadius(naturalRadius, MIN_RENDERED_DIAMETER);
     }
 
     public boolean drawDefaultLabel() {

@@ -25,13 +25,6 @@ public final class GalaxiaAtmosphereFluids {
             295);
     }
 
-    public static Fluid oxygenNitrogenAtmosphere() {
-        if (oxygenNitrogenAtmosphere == null) {
-            throw new IllegalStateException("Galaxia atmosphere fluids have not been initialized");
-        }
-        return oxygenNitrogenAtmosphere;
-    }
-
     private static Fluid registerAtmosphereGas(String fluidName, String localizedName, int temperatureK) {
         Fluid existing = FluidRegistry.getFluid(fluidName);
         if (existing != null) {

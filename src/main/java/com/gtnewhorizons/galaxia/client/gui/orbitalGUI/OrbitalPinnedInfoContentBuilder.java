@@ -26,18 +26,18 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.CelestialResourceKnowledgeState;
 
 public final class OrbitalPinnedInfoContentBuilder {
 
     List<PinnedInfoRow> buildRows(CelestialObject body) {
         if (CelestialClient.isAsteroidScanInProgress(body)) {
-            return CelestialDiscoveryClientState.scanTarget(body.id(), CelestialDiscoveryCapability.PROSPECTING)
+            return CelestialDiscoveryClientState.scanTarget(body.key(), CelestialDiscoveryCapability.PROSPECTING)
                 .map(scan -> List.of(row("name", "???"), row("scan", formatScanProgress(scan))))
                 .orElseGet(() -> List.of(row("name", "???")));
         }
@@ -59,7 +59,7 @@ public final class OrbitalPinnedInfoContentBuilder {
 
     void buildSignatureInto(StringBuilder signature, CelestialObject body, int width, int height) {
         signature.setLength(0);
-        signature.append(body.id())
+        signature.append(body.key())
             .append('|')
             .append(width)
             .append('|')
@@ -103,7 +103,7 @@ public final class OrbitalPinnedInfoContentBuilder {
                     .append(',');
             }
         }
-        CelestialDiscoveryClientState.scanTarget(body.id(), CelestialDiscoveryCapability.PROSPECTING)
+        CelestialDiscoveryClientState.scanTarget(body.key(), CelestialDiscoveryCapability.PROSPECTING)
             .ifPresent(
                 scan -> signature.append("|asteroidScan:")
                     .append(scan.step())
@@ -114,7 +114,7 @@ public final class OrbitalPinnedInfoContentBuilder {
     }
 
     private boolean canShowOreDetails(CelestialObject body) {
-        if (!body.id()
+        if (!body.key()
             .isMinorBody()) return true;
         return CelestialClient.asteroidProjection(body)
             .map(AsteroidStarmapProjection::canShowOreDetails)
@@ -122,7 +122,7 @@ public final class OrbitalPinnedInfoContentBuilder {
     }
 
     private PinnedInfoRow buildOreRow(CelestialObject body) {
-        if (body.id()
+        if (body.key()
             .isMinorBody()) {
             AsteroidStarmapProjection projection = CelestialClient.asteroidProjection(body)
                 .orElse(null);
@@ -131,14 +131,6 @@ public final class OrbitalPinnedInfoContentBuilder {
             // Asteroids can have real ore data before the player knows it. The
             // sidebar gates presentation on knowledge state, not on the profile.
             if (oreKnowledge == CelestialResourceKnowledgeState.UNKNOWN) return row("ores", tr("ore.unknown"));
-            if (oreKnowledge == CelestialResourceKnowledgeState.SIGNATURE) {
-                return row(
-                    "ores",
-                    StatCollector.translateToLocalFormatted(
-                        key("ore.signature"),
-                        projection.visibleOreProfileId()
-                            .orElse("")));
-            }
         }
 
         if (!canShowOreDetails(body)) return row("ores", tr("ore.unknown"));
@@ -150,11 +142,11 @@ public final class OrbitalPinnedInfoContentBuilder {
     }
 
     private java.util.Optional<PinnedInfoRow> buildScanRow(CelestialObject body) {
-        if (!body.id()
+        if (!body.key()
             .isMinorBody()) return java.util.Optional.empty();
         // Active scan progress is keyed by the minor-body id so switching focus
         // between generated asteroids shows the satellite's current target.
-        return CelestialDiscoveryClientState.scanTarget(body.id(), CelestialDiscoveryCapability.PROSPECTING)
+        return CelestialDiscoveryClientState.scanTarget(body.key(), CelestialDiscoveryCapability.PROSPECTING)
             .map(scan -> row("scan", formatScanProgress(scan)));
     }
 
@@ -180,7 +172,7 @@ public final class OrbitalPinnedInfoContentBuilder {
     }
 
     private CelestialResourceKnowledgeState asteroidOreKnowledge(CelestialObject body) {
-        return AsteroidFieldClientKnowledgeState.oreKnowledge(body.id())
+        return CelestialKnowledgeClientState.resourceKnowledge(body.key())
             .orElse(CelestialResourceKnowledgeState.UNKNOWN);
     }
 

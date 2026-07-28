@@ -55,7 +55,7 @@ final class OrbitalPlanetTrackingControllerTest {
 
     private static CelestialObject body(CelestialObjectId id, String name, CelestialObject.Class objectClass) {
         return CelestialObject.builder()
-            .id(id)
+            .key(id)
             .name(name)
             .objectClass(objectClass)
             .build();

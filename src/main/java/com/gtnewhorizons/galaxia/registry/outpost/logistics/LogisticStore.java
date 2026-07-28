@@ -132,9 +132,9 @@ public final class LogisticStore {
         for (ItemStackWrapper r : currentSignals.keySet()) {
             if (!allResources.contains(r)) allResources.add(r);
         }
-        CelestialObjectKey bodyId = asset.celestialObjectId;
-        CelestialObjectKey systemId = asset.systemId;
-        CelestialObjectKey planetaryAnchorBodyId = asset.planetaryAnchorBodyId;
+        CelestialObjectKey bodyKey = asset.celestialObjectKey;
+        CelestialObjectKey systemKey = asset.systemKey;
+        CelestialObjectKey planetaryAnchorBodyKey = asset.planetaryAnchorBodyKey;
 
         for (ItemStackWrapper resource : allResources) {
             long stock = snapshot.getOrDefault(resource, 0L);
@@ -172,12 +172,12 @@ public final class LogisticStore {
             } else {
                 LogisticSignal newSignal = new LogisticSignal(
                     assetId,
-                    systemId,
+                    systemKey,
                     resource,
                     newAmount,
                     newScope,
-                    bodyId,
-                    planetaryAnchorBodyId);
+                    bodyKey,
+                    planetaryAnchorBodyKey);
 
                 if (!Objects.equals(oldSignal, newSignal)) {
                     currentSignals.put(resource, newSignal);
@@ -208,9 +208,9 @@ public final class LogisticStore {
 
     private static CelestialObjectKey scopeKeyFor(LogisticSignal signal) {
         return switch (signal.scope()) {
-            case PLANETARY -> signal.planetaryAnchorBodyId();
-            case SYSTEM -> signal.systemId();
-            case GALACTIC -> signal.systemId();
+            case PLANETARY -> signal.planetaryAnchorBodyKey();
+            case SYSTEM -> signal.systemKey();
+            case GALACTIC -> signal.systemKey();
         };
     }
 }

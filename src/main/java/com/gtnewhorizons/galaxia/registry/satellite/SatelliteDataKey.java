@@ -5,7 +5,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 /*
@@ -24,10 +23,6 @@ public record SatelliteDataKey(SatelliteDataType type, CelestialObjectKey origin
 
     public static SatelliteDataKey origin(SatelliteDataType type, CelestialObjectKey origin) {
         return new SatelliteDataKey(type, Objects.requireNonNull(origin, "origin"));
-    }
-
-    public static SatelliteDataKey origin(SatelliteDataType type, CelestialObjectId origin) {
-        return origin(type, CelestialObjectKey.registered(Objects.requireNonNull(origin, "origin")));
     }
 
     public boolean hasOrigin() {

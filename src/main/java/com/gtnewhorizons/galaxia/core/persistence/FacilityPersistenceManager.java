@@ -35,12 +35,11 @@ import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.core.network.PacketUtil;
+import com.gtnewhorizons.galaxia.core.persistence.CelestialObjectKeyJsonCodec.CelestialObjectKeyJson;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
@@ -105,14 +104,14 @@ public final class FacilityPersistenceManager {
     private static final String DATA_DIR = "galaxiadata";
     private static final String ASSETS_FILE = "_assets.json";
     private static final String TASKS_FILE = "_tasks.json";
-    private static final String ASTEROIDS_FILE = "_asteroids.json";
+    private static final String KNOWLEDGE_FILE = "_celestial_knowledge.json";
     private static final String DISCOVERY_FILE = "_discovery.json";
 
     private final Gson gson;
     private static final Gson PURE_GSON = new GsonBuilder().create();
     private File worldSaveDir;
     private final CelestialServerRuntime celestialRuntime;
-    private final AsteroidKnowledgePersistenceAdapter asteroidKnowledge;
+    private final CelestialKnowledgePersistenceAdapter celestialKnowledge;
     private final CelestialDiscoveryPersistenceAdapter celestialDiscovery;
 
     private static final String INVENTORY_KEY_ITEM_PREFIX = "I";
@@ -120,7 +119,7 @@ public final class FacilityPersistenceManager {
 
     public FacilityPersistenceManager(CelestialServerRuntime celestialRuntime) {
         this.celestialRuntime = celestialRuntime;
-        this.asteroidKnowledge = new AsteroidKnowledgePersistenceAdapter();
+        this.celestialKnowledge = new CelestialKnowledgePersistenceAdapter();
         this.celestialDiscovery = new CelestialDiscoveryPersistenceAdapter(celestialRuntime.scans());
         gson = new GsonBuilder().setPrettyPrinting()
             .serializeNulls()
@@ -139,6 +138,7 @@ public final class FacilityPersistenceManager {
         this.worldSaveDir = worldSaveDir;
         celestialRuntime.reset();
         LogisticStore.clearDeliveries();
+        LogisticStore.clearSignals();
         HammerTrajectoryLoadTracker.reset();
         loadAll();
     }
@@ -163,6 +163,7 @@ public final class FacilityPersistenceManager {
         if (worldSaveDir != null) saveAll();
         celestialRuntime.reset();
         LogisticStore.clearDeliveries();
+        LogisticStore.clearSignals();
         HammerTrajectoryLoadTracker.reset();
         worldSaveDir = null;
     }
@@ -176,7 +177,9 @@ public final class FacilityPersistenceManager {
         LOG.info("[PERSIST] LOAD START: reading from {}", galaxiaRoot);
         loadAssets(new File(galaxiaRoot, ASSETS_FILE));
         loadTasks(new File(galaxiaRoot, TASKS_FILE));
-        loadAsteroidKnowledge(new File(galaxiaRoot, ASTEROIDS_FILE));
+        // Content catalog restores before minor-key facts so those keys resolve;
+        // shared facts restore before scan progress that references them.
+        celestialKnowledge.load(new File(galaxiaRoot, KNOWLEDGE_FILE), gson);
         celestialDiscovery.load(new File(galaxiaRoot, DISCOVERY_FILE), gson);
     }
 
@@ -186,16 +189,8 @@ public final class FacilityPersistenceManager {
         LOG.info("[PERSIST] SAVE START: writing to {}", galaxiaRoot);
         saveAssets(new File(galaxiaRoot, ASSETS_FILE));
         saveTasks(new File(galaxiaRoot, TASKS_FILE));
-        saveAsteroidKnowledge(new File(galaxiaRoot, ASTEROIDS_FILE));
+        celestialKnowledge.save(new File(galaxiaRoot, KNOWLEDGE_FILE), gson);
         celestialDiscovery.save(new File(galaxiaRoot, DISCOVERY_FILE), gson);
-    }
-
-    private void loadAsteroidKnowledge(File file) {
-        asteroidKnowledge.load(file, gson);
-    }
-
-    private void saveAsteroidKnowledge(File file) {
-        asteroidKnowledge.save(file, gson);
     }
 
     private void loadAssets(File file) {
@@ -311,8 +306,8 @@ public final class FacilityPersistenceManager {
                             tj.amount,
                             tj.remainingTicks,
                             LogisticSignal.Scope.valueOf(tj.transportKind),
-                            CelestialObjectId.valueOf(tj.fromBodyId),
-                            CelestialObjectId.valueOf(tj.toBodyId),
+                            tj.fromBodyId == null ? null : CelestialObjectKeyJsonCodec.decode(tj.fromBodyId),
+                            tj.toBodyId == null ? null : CelestialObjectKeyJsonCodec.decode(tj.toBodyId),
                             tj.departureOrbitalTime,
                             tj.tofOrbitalSeconds));
                 }
@@ -334,8 +329,8 @@ public final class FacilityPersistenceManager {
             tj.amount = delivery.data.amount();
             tj.remainingTicks = delivery.getRemainingTicks();
             tj.transportKind = String.valueOf(delivery.data.scope());
-            tj.fromBodyId = String.valueOf(delivery.data.fromBodyId());
-            tj.toBodyId = String.valueOf(delivery.data.toBodyId());
+            tj.fromBodyId = encodeCelestialObjectKey(delivery.data.fromBodyKey());
+            tj.toBodyId = encodeCelestialObjectKey(delivery.data.toBodyKey());
             tj.departureOrbitalTime = delivery.data.departureOrbitalTime();
             tj.tofOrbitalSeconds = delivery.data.tofOrbitalSeconds();
             list.add(tj);
@@ -374,7 +369,7 @@ public final class FacilityPersistenceManager {
         AssetJson json = new AssetJson();
         json.teamId = String.valueOf(CelestialAssetStore.getTeamId(asset.assetId));
         json.assetId = asset.assetId;
-        json.celestialObjectKey = encodeCelestialObjectKey(asset.celestialObjectId);
+        json.celestialObjectKey = encodeCelestialObjectKey(asset.celestialObjectKey);
         json.displayName = asset.displayName();
         json.kind = asset.kind.name();
         json.location = asset.location.name();
@@ -430,14 +425,14 @@ public final class FacilityPersistenceManager {
             || json.status == null) {
             return null;
         }
-        CelestialObjectKey objectId = decodeCelestialObjectKey(json);
-        if (objectId == null) return null;
+        CelestialObjectKey objectKey = decodeCelestialObjectKey(json);
+        if (objectKey == null) return null;
         CelestialAsset.Kind kind = safeValueOf(CelestialAsset.Kind.class, json.kind);
         Buildable.Status status = safeValueOf(Buildable.Status.class, json.status);
         if (kind == null || status == null) return null;
         SatelliteKind satelliteKind = safeValueOf(SatelliteKind.class, json.satelliteKind);
         if (kind == CelestialAsset.Kind.SATELLITE && satelliteKind == null) return null;
-        CelestialAsset asset = CelestialAsset.create(json.assetId, objectId, kind, status, satelliteKind);
+        CelestialAsset asset = CelestialAsset.create(json.assetId, objectKey, kind, status, satelliteKind);
         asset.setConstructionInventory(decodeRequirements(json.constructionInventory));
         asset.setDisplayName(json.displayName);
         if (asset instanceof Station station && json.controllerX != null
@@ -503,66 +498,11 @@ public final class FacilityPersistenceManager {
     }
 
     private static CelestialObjectKeyJson encodeCelestialObjectKey(CelestialObjectKey key) {
-        if (key == null) return null;
-        CelestialObjectKeyJson json = new CelestialObjectKeyJson();
-        // New saves persist structured keys so generated minor bodies do not have
-        // to be packed into a string that future code must parse heuristically.
-        if (key.isRegistered()) {
-            json.kind = "registered";
-            json.registeredBodyId = key.registeredBodyId()
-                .name();
-            return json;
-        }
-        MinorCelestialBodyId minorId = key.minorBodyId();
-        json.kind = "minor";
-        json.parentBodyId = minorId.parentBodyId()
-            .name();
-        json.index = minorId.index();
-        return json;
+        return CelestialObjectKeyJsonCodec.encode(key);
     }
 
     private static CelestialObjectKey decodeCelestialObjectKey(AssetJson json) {
-        if (json.celestialObjectKey != null) return decodeStructuredCelestialObjectKey(json.celestialObjectKey);
-        throw invalidCelestialKey("celestialObjectKey", null, "structured celestial object key is required");
-    }
-
-    private static CelestialObjectKey decodeStructuredCelestialObjectKey(CelestialObjectKeyJson json) {
-        if (json.kind == null || json.kind.isBlank()) {
-            throw invalidCelestialKey("celestialObjectKey.kind", String.valueOf(json.kind), "kind is required");
-        }
-        if ("registered".equals(json.kind)) {
-            CelestialObjectId registeredId = CelestialObjectId.fromString(json.registeredBodyId);
-            if (registeredId == null) {
-                throw invalidCelestialKey(
-                    "celestialObjectKey.registeredBodyId",
-                    String.valueOf(json.registeredBodyId),
-                    "invalid registeredBodyId");
-            }
-            return CelestialObjectKey.registered(registeredId);
-        }
-        if ("minor".equals(json.kind)) {
-            CelestialObjectId parentBodyId = CelestialObjectId.fromString(json.parentBodyId);
-            if (parentBodyId == null) {
-                throw invalidCelestialKey(
-                    "celestialObjectKey.parentBodyId",
-                    String.valueOf(json.parentBodyId),
-                    "invalid parentBodyId");
-            }
-            if (json.index == null) {
-                throw invalidCelestialKey("celestialObjectKey.index", "null", "index is required");
-            }
-            try {
-                return CelestialObjectKey.minorBody(new MinorCelestialBodyId(parentBodyId, json.index));
-            } catch (IllegalArgumentException ex) {
-                throw invalidCelestialKey("celestialObjectKey.index", String.valueOf(json.index), ex.getMessage());
-            }
-        }
-        throw invalidCelestialKey("celestialObjectKey.kind", json.kind, "unknown key kind");
-    }
-
-    private static IllegalArgumentException invalidCelestialKey(String fieldName, String value, String reason) {
-        return new IllegalArgumentException(
-            "[PERSIST] Invalid persisted celestial key field " + fieldName + "='" + value + "': " + reason);
+        return CelestialObjectKeyJsonCodec.decode(json.celestialObjectKey);
     }
 
     FacilityStateJson encodeFacilityState(AutomatedFacility state) {
@@ -626,12 +566,18 @@ public final class FacilityPersistenceManager {
                         .name());
                 moduleData.addProperty("amountKb", config.amountKb());
                 moduleData.addProperty("durationTicks", config.durationTicks());
-                CelestialObjectId originBodyId = config.originBodyId();
+                CelestialObjectKey originBodyKey = config.originBodyKey();
                 moduleData.add(
-                    "originBodyId",
-                    originBodyId == null ? JsonNull.INSTANCE : PURE_GSON.toJsonTree(originBodyId.name()));
+                    "originBodyKey",
+                    originBodyKey == null ? JsonNull.INSTANCE
+                        : PURE_GSON.toJsonTree(encodeCelestialObjectKey(originBodyKey)));
                 moduleData.addProperty("jobProgressTicks", debugGenerator.jobProgressTicks());
                 moduleData.addProperty("consumedDeciKb", debugGenerator.consumedDeciKb());
+                CelestialObjectKey detectedCounterpartBodyKey = debugGenerator.detectedCounterpartBodyKey();
+                moduleData.add(
+                    "detectedCounterpartBodyKey",
+                    detectedCounterpartBodyKey == null ? JsonNull.INSTANCE
+                        : PURE_GSON.toJsonTree(encodeCelestialObjectKey(detectedCounterpartBodyKey)));
             } else if (m.component() instanceof IRecipeModule recipeModule) {
                 RecipeConfig rc = recipeModule.getRecipeConfig();
                 if (rc != null) {
@@ -708,7 +654,7 @@ public final class FacilityPersistenceManager {
     }
 
     AutomatedFacility decodeFacilityState(CelestialAsset asset, FacilityStateJson json) {
-        if (asset == null || json == null || asset.systemId == null) return null;
+        if (asset == null || json == null || asset.systemKey == null) return null;
         if (!(asset instanceof AutomatedFacility state)) return null;
         state.setEnergyStored(json.energyStored);
         state.setStationFeatureSalt(json.stationFeatureSalt);
@@ -832,12 +778,17 @@ public final class FacilityPersistenceManager {
                         SatelliteDataType dataType = Objects.requireNonNull(
                             PURE_GSON.fromJson(generatorData.get("dataType"), SatelliteDataType.class),
                             "[PERSIST] Debug data generator missing dataType");
-                        CelestialObjectId originBodyId = null;
-                        JsonElement originElement = generatorData.get("originBodyId");
+                        CelestialObjectKey originBodyKey = null;
+                        JsonElement originElement = generatorData.get("originBodyKey");
                         if (originElement != null && !originElement.isJsonNull()) {
-                            originBodyId = Objects.requireNonNull(
-                                safeValueOf(CelestialObjectId.class, originElement.getAsString()),
-                                "[PERSIST] Debug data generator has invalid originBodyId");
+                            originBodyKey = CelestialObjectKeyJsonCodec
+                                .decode(PURE_GSON.fromJson(originElement, CelestialObjectKeyJson.class));
+                        }
+                        CelestialObjectKey detectedCounterpartBodyKey = null;
+                        JsonElement detectedElement = generatorData.get("detectedCounterpartBodyKey");
+                        if (detectedElement != null && !detectedElement.isJsonNull()) {
+                            detectedCounterpartBodyKey = CelestialObjectKeyJsonCodec
+                                .decode(PURE_GSON.fromJson(detectedElement, CelestialObjectKeyJson.class));
                         }
                         debugGenerator.restore(
                             new ModuleDebugDataGenerator.Config(
@@ -846,10 +797,10 @@ public final class FacilityPersistenceManager {
                                 dataType,
                                 requireLong(generatorData, "amountKb", moduleId),
                                 requireInt(generatorData, "durationTicks", moduleId),
-                                originBodyId),
+                                originBodyKey),
                             requireInt(generatorData, "jobProgressTicks", moduleId),
                             requireLong(generatorData, "consumedDeciKb", moduleId),
-                            null);
+                            detectedCounterpartBodyKey);
                     }
                     case POWER, GEOTHERMAL_GENERATOR -> {}
                     case STORAGE, TANK, BATTERY, MAINTENANCE_BAY -> {}
@@ -1179,14 +1130,6 @@ public final class FacilityPersistenceManager {
         Map<Boolean, List<String>> filters;
     }
 
-    static final class CelestialObjectKeyJson {
-
-        String kind;
-        String registeredBodyId;
-        String parentBodyId;
-        Integer index;
-    }
-
     static final class BoundsJson {
 
         Long low;
@@ -1297,8 +1240,8 @@ public final class FacilityPersistenceManager {
         long amount;
         int remainingTicks;
         String transportKind;
-        String fromBodyId;
-        String toBodyId;
+        CelestialObjectKeyJson fromBodyId;
+        CelestialObjectKeyJson toBodyId;
         double departureOrbitalTime;
         double tofOrbitalSeconds;
     }

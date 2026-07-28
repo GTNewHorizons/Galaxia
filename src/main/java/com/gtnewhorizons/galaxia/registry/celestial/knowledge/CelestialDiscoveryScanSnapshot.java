@@ -7,6 +7,13 @@ import javax.annotation.Nullable;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
+/**
+ * Read model of one team's discovery scan: what is being scanned, how far along it is, and whether it finished.
+ * <p>
+ * TLDR: wire/UI projection of scan progress. It owns only its own {@link Status}; the scan vocabulary it refers to
+ * ({@link CelestialDiscoveryScanScope}, {@link CelestialDiscoveryStep}, {@link CelestialDiscoveryCapability}) is
+ * owned by the discovery domain, not by this projection.
+ */
 public record CelestialDiscoveryScanSnapshot(@Nonnull UUID teamId, @Nonnull CelestialObjectKey anchorKey, double radius,
     long scopeRevision, @Nonnull CelestialDiscoveryCapability capability, @Nonnull Status status,
     @Nullable CelestialObjectKey targetKey, @Nullable CelestialDiscoveryStep step, long elapsedTicks) {

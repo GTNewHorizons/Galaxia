@@ -44,15 +44,15 @@ final class OrbitalMechanicsTest {
             CelestialObjectId.FROZEN_BELT,
             AsteroidSlotRanges.GENERATED_SLOT_MIN);
         AsteroidFieldNode node = AsteroidFieldResolver
-            .resolveNode(CelestialObjectId.FROZEN_BELT, profile, AsteroidSlotRanges.GENERATED_SLOT_MIN);
+            .placedNode(CelestialObjectId.FROZEN_BELT, profile, AsteroidSlotRanges.GENERATED_SLOT_MIN);
         CelestialObject belt = CelestialObject.builder()
-            .id(CelestialObjectId.FROZEN_BELT)
+            .key(CelestialObjectId.FROZEN_BELT)
             .name("Frozen Belt")
             .objectClass(CelestialObject.Class.ASTEROID_BELT)
             .properties(properties -> properties.asteroidFieldProfile(profile))
             .build();
         CelestialObject asteroid = CelestialObject.builder()
-            .id(CelestialObjectKey.minorBody(minorId))
+            .key(CelestialObjectKey.minorBody(minorId))
             .name(node.displayName())
             .parent(CelestialObjectId.FROZEN_BELT)
             .objectClass(CelestialObject.Class.ASTEROID)
@@ -75,12 +75,12 @@ final class OrbitalMechanicsTest {
     void standaloneMinorAsteroidUsesNormalChildOrbitWhenParentHasNoAsteroidField() {
         MinorCelestialBodyId minorId = new MinorCelestialBodyId(CelestialObjectId.MARS, 0);
         CelestialObject parent = CelestialObject.builder()
-            .id(CelestialObjectId.MARS)
+            .key(CelestialObjectId.MARS)
             .name("Mars")
             .objectClass(CelestialObject.Class.PLANET)
             .build();
         CelestialObject asteroid = CelestialObject.builder()
-            .id(CelestialObjectKey.minorBody(minorId))
+            .key(CelestialObjectKey.minorBody(minorId))
             .name("Mars Trojan")
             .parent(CelestialObjectId.MARS)
             .objectClass(CelestialObject.Class.ASTEROID)
