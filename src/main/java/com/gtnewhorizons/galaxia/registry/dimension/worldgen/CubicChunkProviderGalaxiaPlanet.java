@@ -6,6 +6,7 @@ import java.util.Random;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle.MantleRules;
 import net.minecraft.block.Block;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.init.Blocks;
@@ -139,6 +140,10 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
     private void generateUpperMantle(int cubeX, int cubeY, int cubeZ, ExtendedBlockStorage ebs) {
         ImmutableBlockMeta block = UPPER_MANTLE_PLACEHOLDER;
+        MantleRules upperMantleRules = dimension.getUpperMantleRules();
+        if (upperMantleRules != null) {
+            block = upperMantleRules.fillerBlock;
+        }
 
         for (int localX = 0; localX < CHUNK_WIDTH; localX++) {
             for (int localZ = 0; localZ < CHUNK_WIDTH; localZ++) {
@@ -153,6 +158,10 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
     private void generateLowerMantle(int cubeX, int cubeY, int cubeZ, ExtendedBlockStorage ebs) {
         ImmutableBlockMeta block = LOWER_MANTLE_PLACEHOLDER;
+        MantleRules lowerMantleRules = dimension.getLowerMantleRules();
+        if (lowerMantleRules != null) {
+            block = lowerMantleRules.fillerBlock;
+        }
 
         for (int localX = 0; localX < CHUNK_WIDTH; localX++) {
             for (int localZ = 0; localZ < CHUNK_WIDTH; localZ++) {
