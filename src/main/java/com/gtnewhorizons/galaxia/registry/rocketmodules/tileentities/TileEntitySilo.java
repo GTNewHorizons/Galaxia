@@ -97,8 +97,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
      * half-built rocket.
      */
     public RocketBlueprint getBuiltBlueprint() {
-        return buildStatus == RocketBuildStatus.READY || buildStatus == RocketBuildStatus.LAUNCHED ? assembledBlueprint
-            : new RocketBlueprint();
+        return buildStatus == RocketBuildStatus.READY ? assembledBlueprint : new RocketBlueprint();
     }
 
     /**
@@ -325,24 +324,29 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     public void enterRocket(PosGuiData data) {
         if (!buildStatus.canLaunch() || assembledBlueprint.isEmpty()) return;
 
+        boolean isNew = (entityRocket == null || entityRocket.isDead);
         EntityRocket rocket = getOrCreateEntityRocket();
         if (rocket == null) return;
 
         rocket.setBlueprint(assembledBlueprint.copy());
         rocket.setDestination(destination);
+        rocket.setTargetSilo(this);
+        rocket.initializeSeats();
 
-        shouldRender = false;
-        buildStatus = RocketBuildStatus.LAUNCHED;
+        if (isNew) {
+            worldObj.spawnEntityInWorld(rocket);
+        }
+
         sync();
-
         rocket.interactFirst(data.getPlayer());
-        rocket.launch();
     }
 
     public void returnModules() {
         if (moduleAssembler == null || worldObj.isRemote) return;
+        for (RocketPartInstance part : assembledBlueprint.getParts()) {
+            GantryAPI.injectModule(part.copy(), moduleAssembler, this, true);
+        }
 
-        // TODO: physically return modules via gantry rather than resetting state
         this.designBlueprint.clear();
         this.assembledBlueprint.clear();
         this.currentBuildOrder = null;
@@ -369,8 +373,17 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
             SILO_DEFAULT_Z_OFFSET,
             currentFacing);
         entityRocket.setPosition(xCoord + offset[0] + 0.5, yCoord + offset[1], zCoord + offset[2] + 0.5);
-        worldObj.spawnEntityInWorld(entityRocket);
         return entityRocket;
+    }
+
+    public void onRocketLaunched() {
+        if (worldObj.isRemote) return;
+
+        this.assembledBlueprint.clear();
+        this.currentBuildOrder = null;
+        this.buildStatus = RocketBuildStatus.DESIGNED;
+        this.shouldRender = true;
+        sync();
     }
 
     public void sync() {
@@ -386,7 +399,11 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         if (shouldRender && (entityRocket == null || entityRocket.isDead)
             && structureValid
             && buildStatus == RocketBuildStatus.READY) {
-            getOrCreateEntityRocket();
+            EntityRocket rocket = getOrCreateEntityRocket();
+            rocket.setBlueprint(assembledBlueprint.copy());
+            rocket.setDestination(destination);
+            rocket.setTargetSilo(this);
+            worldObj.spawnEntityInWorld(rocket);
         }
 
         if (pendingAssemblerCoords != null) {
