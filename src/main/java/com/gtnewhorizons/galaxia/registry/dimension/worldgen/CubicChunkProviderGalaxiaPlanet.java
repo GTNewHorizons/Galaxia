@@ -278,7 +278,7 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
         ICubeLoader loader = getCubeLoader();
 
         if (isSurface) {
-            loader.cacheCubes(new Box(cx - 1, surfaceMinY, cz - 1, cx + 1, surfaceMaxY, cz + 1), Requirement.GENERATE);
+            loader.cacheCubes(new Box(cx - 1, surfaceMinY, cz - 1, cx + 1, surfaceMaxY, cz + 1));
 
             if (biome != null) {
                 for (SurfaceFeature feature : biome.getSurfaceFeatures()) {
@@ -290,7 +290,7 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
             loader.uncacheCubes();
         } else {
-            loader.cacheCubes(new Box(cx - 1, cy - 1, cz - 1, cx + 1, cy + 1, cz + 1), Requirement.GENERATE);
+            loader.cacheCubes(new Box(cx - 1, cy - 1, cz - 1, cx + 1, cy + 1, cz + 1));
 
             populateCubes(loader, biome, new Box(cx, cy, cz, cx, cy, cz), surfaceMaxY);
 
