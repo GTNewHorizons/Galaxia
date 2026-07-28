@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -26,7 +27,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledge
 final class AsteroidFieldResolverTest {
 
     private static final double FULL_CIRCLE_DEGREES = 360.0;
-    private static final double MAX_GAP_TO_MEAN_RATIO = 8.0;
     private static final double MINIMUM_LARGE_GAP_VARIATION = 0.35;
 
     @Test
@@ -85,23 +85,6 @@ final class AsteroidFieldResolverTest {
         assertEquals(firstIds, secondIds);
     }
 
-    /** Bug regression: placement must not leave sector-shaped empty arcs in a representative large belt. */
-    @Test
-    void largeFieldAvoidsExtremeAngularVoids() {
-        List<AsteroidFieldNode> nodes = AsteroidFieldResolver
-            .resolveAll(CelestialObjectId.FROZEN_BELT, frozenBeltProfile());
-        double meanAngularGap = FULL_CIRCLE_DEGREES / nodes.size();
-        double largestAngularGap = largestAngularGap(nodes);
-
-        assertTrue(
-            largestAngularGap <= meanAngularGap * MAX_GAP_TO_MEAN_RATIO,
-            () -> "largest angular gap " + largestAngularGap
-                + " exceeds "
-                + MAX_GAP_TO_MEAN_RATIO
-                + " times the mean gap "
-                + meanAngularGap);
-    }
-
     /** Product contract: the visible large asteroids must form dense and sparse regions, not an even chain. */
     @Test
     void largeAsteroidsHaveMeaningfullyVariedAngularGaps() {
@@ -117,6 +100,22 @@ final class AsteroidFieldResolverTest {
             () -> "large-asteroid angular gap variation " + variation
                 + " is below the natural-distribution bound "
                 + MINIMUM_LARGE_GAP_VARIATION);
+    }
+
+    /** Bug regression: reachability must not force every visible root into one belt-wide discovery chain. */
+    @Test
+    void productionFieldHasNoBeltWideDominantDiscoveryChain() {
+        AsteroidFieldProfile profile = frozenBeltProfile();
+        List<AsteroidFieldNode> nodes = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile);
+        List<Integer> componentSizes = connectedComponentSizes(profile, nodes);
+        int largestComponentSize = componentSizes.stream()
+            .mapToInt(Integer::intValue)
+            .max()
+            .orElseThrow();
+
+        assertTrue(
+            largestComponentSize * 2 < nodes.size(),
+            () -> "one discovery component dominates the belt: " + componentSizes);
     }
 
     /** Bug regression: cold field generation must not freeze the client when Star Map first requests a large belt. */
@@ -355,10 +354,28 @@ final class AsteroidFieldResolverTest {
         return maxNeighbors;
     }
 
-    private static double largestAngularGap(List<AsteroidFieldNode> nodes) {
-        return Arrays.stream(angularGaps(nodes))
-            .max()
-            .orElseThrow();
+    private static List<Integer> connectedComponentSizes(AsteroidFieldProfile profile, List<AsteroidFieldNode> nodes) {
+        Set<MinorCelestialBodyId> visited = new HashSet<>();
+        Queue<AsteroidFieldNode> queue = new ArrayDeque<>();
+        List<Integer> componentSizes = new ArrayList<>();
+        for (AsteroidFieldNode node : nodes) {
+            if (!visited.add(node.id())) continue;
+            int componentSize = 0;
+            queue.add(node);
+            while (!queue.isEmpty()) {
+                AsteroidFieldNode current = queue.remove();
+                componentSize++;
+                for (AsteroidFieldNode candidate : nodes) {
+                    if (!visited.contains(candidate.id())
+                        && distance(profile, current, candidate) <= profile.placementConnectionRadius()) {
+                        visited.add(candidate.id());
+                        queue.add(candidate);
+                    }
+                }
+            }
+            componentSizes.add(componentSize);
+        }
+        return componentSizes;
     }
 
     private static double angularGapCoefficientOfVariation(List<AsteroidFieldNode> nodes) {

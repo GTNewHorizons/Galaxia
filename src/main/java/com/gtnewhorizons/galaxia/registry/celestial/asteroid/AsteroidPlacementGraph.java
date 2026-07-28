@@ -6,10 +6,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
 import java.util.Queue;
 import java.util.Set;
-import java.util.TreeSet;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
@@ -21,7 +19,6 @@ final class AsteroidPlacementGraph {
     private static final int CELL_KEY_ROTATION = 31;
 
     private static final double FULL_ROTATION_RADIANS = Math.PI * 2.0;
-    private static final double FULL_CIRCLE_DEGREES = 360.0;
     private static final double ZERO_CONNECTION_RADIUS = 0.0;
     private static final double DENSITY_CONTRAST = 0.9;
     private static final double PRIMARY_DENSITY_WEIGHT = 0.5;
@@ -33,14 +30,9 @@ final class AsteroidPlacementGraph {
     private static final double SECONDARY_RADIAL_SCALE = 0.5;
     private static final double TERTIARY_RADIAL_SCALE = 1.0;
     private static final double EMPTY_FIELD_CLEARANCE_FACTOR = 2.0;
-    private static final double ANGULAR_CLEARANCE_WEIGHT = 8.0;
-    private static final double ANGULAR_CLEARANCE_SATURATION = 4.0;
     private static final double CLEARANCE_SATURATION = 1.0;
-    private static final double ROOT_COVERAGE_GAP_FACTOR = 2.0;
-    private static final double FIELD_COVERAGE_GAP_FACTOR = 8.0;
     private static final double MINIMUM_POINT_SEPARATION = 0.000_001;
     private static final double MINIMUM_SELECTION_WEIGHT = 0.000_001;
-    private static final double NEUTRAL_SELECTION_MULTIPLIER = 1.0;
     private static final double MINIMUM_CONNECTION_FRACTION = 0.25;
     private static final double CONNECTION_FRACTION_SPAN = 0.70;
 
@@ -53,6 +45,7 @@ final class AsteroidPlacementGraph {
     private static final long CONNECTION_DISTANCE_SALT = 311L;
     private static final long CONNECTION_ANGLE_SALT = 313L;
     private static final long CANDIDATE_SELECTION_SALT = 317L;
+    private static final long ROOT_ASSIGNMENT_SALT = 331L;
     private static final long CELL_X_SALT = 0x9E3779B97F4A7C15L;
     private static final long CELL_Y_SALT = 0xC2B2AE3D27D4EB4FL;
 
@@ -62,15 +55,12 @@ final class AsteroidPlacementGraph {
 
         private final PlacementContext placement;
         private final AsteroidFieldDeterminism nodeSeed;
-        private final boolean coverageRequired;
         private PlacementPoint selectedPoint;
         private double selectedPriority = Double.POSITIVE_INFINITY;
 
-        private CandidateSelection(PlacementContext placement, AsteroidFieldDeterminism nodeSeed,
-            boolean coverageRequired) {
+        private CandidateSelection(PlacementContext placement, AsteroidFieldDeterminism nodeSeed) {
             this.placement = placement;
             this.nodeSeed = nodeSeed;
-            this.coverageRequired = coverageRequired;
         }
 
         private void consider(PlacementPoint candidate, int attempt) {
@@ -78,8 +68,7 @@ final class AsteroidPlacementGraph {
             double clearance = placement.nearestDistance(candidate);
             if (clearance <= MINIMUM_POINT_SEPARATION) return;
 
-            double priority = coverageRequired ? -placement.coverageRank(candidate)
-                : weightedPriority(candidate, clearance, attempt);
+            double priority = weightedPriority(candidate, clearance, attempt);
             if (selectedPoint == null || Double.compare(priority, selectedPriority) < 0) {
                 selectedPoint = candidate;
                 selectedPriority = priority;
@@ -109,9 +98,8 @@ final class AsteroidPlacementGraph {
         private final double emptyFieldClearance;
         private final double growthRadius;
         private final double cellSize;
-        private final List<PlacementPoint> reachableAnchors = new ArrayList<>();
+        private final List<List<PlacementPoint>> anchorsByRoot = new ArrayList<>();
         private final Map<Long, List<PlacementPoint>> pointsByCell = new HashMap<>();
-        private final NavigableSet<Double> occupiedAngles = new TreeSet<>();
         private long minimumCellX = Long.MAX_VALUE;
         private long maximumCellX = Long.MIN_VALUE;
         private long minimumCellY = Long.MAX_VALUE;
@@ -130,30 +118,50 @@ final class AsteroidPlacementGraph {
             cellSize = Math.max(baseSpacing, profile.placementConnectionRadius());
         }
 
-        private void addNode(AsteroidFieldNode node, boolean reachable) {
+        private void addRootNode(AsteroidFieldNode node) {
+            List<PlacementPoint> rootAnchors = new ArrayList<>();
+            rootAnchors.add(addPoint(node));
+            anchorsByRoot.add(rootAnchors);
+        }
+
+        private void addUnownedNode(AsteroidFieldNode node) {
+            addPoint(node);
+        }
+
+        private void addNodeToRoot(AsteroidFieldNode node, int rootIndex) {
+            anchorsByRoot.get(rootIndex)
+                .add(addPoint(node));
+        }
+
+        private PlacementPoint addPoint(AsteroidFieldNode node) {
             PlacementPoint point = point(profile, node);
             long cellX = cellCoordinate(point.x());
             long cellY = cellCoordinate(point.y());
             pointsByCell.computeIfAbsent(cellKey(cellX, cellY), ignored -> new ArrayList<>())
                 .add(point);
-            occupiedAngles.add(point.angleOffsetDeg());
             minimumCellX = Math.min(minimumCellX, cellX);
             maximumCellX = Math.max(maximumCellX, cellX);
             minimumCellY = Math.min(minimumCellY, cellY);
             maximumCellY = Math.max(maximumCellY, cellY);
-            if (reachable) reachableAnchors.add(point);
+            return point;
         }
 
-        private boolean hasReachableAnchor() {
-            return !reachableAnchors.isEmpty();
+        private int selectRootIndex(AsteroidFieldDeterminism nodeSeed) {
+            if (anchorsByRoot.isEmpty()) {
+                throw new IllegalStateException("Asteroid field has hidden generated asteroids but no visible anchor");
+            }
+            int rootCount = anchorsByRoot.size();
+            return Math.min(rootCount - 1, (int) (nodeSeed.unit(ROOT_ASSIGNMENT_SALT) * rootCount));
         }
 
-        private PlacementPoint reachableAnchor(int index) {
-            return reachableAnchors.get(index);
+        private PlacementPoint rootAnchor(int rootIndex, int anchorIndex) {
+            return anchorsByRoot.get(rootIndex)
+                .get(anchorIndex);
         }
 
-        private int reachableAnchorCount() {
-            return reachableAnchors.size();
+        private int rootAnchorCount(int rootIndex) {
+            return anchorsByRoot.get(rootIndex)
+                .size();
         }
 
         private double growthRadius() {
@@ -167,55 +175,12 @@ final class AsteroidPlacementGraph {
         private double selectionWeight(PlacementPoint point, double spatialClearance) {
             double desiredSpacing = desiredSpacing(point);
             double spatialSuitability = saturatedClearance(spatialClearance, desiredSpacing);
-            double angularSuitability = saturatedClearance(
-                angularClearance(point),
-                desiredSpacing * ANGULAR_CLEARANCE_SATURATION);
             double spatialWeight = spatialSuitability * spatialSuitability * spatialSuitability * spatialSuitability;
-            return MINIMUM_SELECTION_WEIGHT + densityAt(point) * spatialWeight
-                * (NEUTRAL_SELECTION_MULTIPLIER + ANGULAR_CLEARANCE_WEIGHT * angularSuitability * angularSuitability);
-        }
-
-        private double coverageRank(PlacementPoint point) {
-            return angularClearance(point) / desiredSpacing(point);
-        }
-
-        private boolean requiresRootCoverage() {
-            double maximumRootGap = FULL_CIRCLE_DEGREES / Math.max(1, profile.largeCount()) * ROOT_COVERAGE_GAP_FACTOR;
-            return largestAngularGap() > maximumRootGap;
-        }
-
-        private boolean requiresFieldCoverage() {
-            int finalPointCount = profile.totalNodes() + profile.authoredAsteroids()
-                .size();
-            double maximumFieldGap = FULL_CIRCLE_DEGREES / Math.max(1, finalPointCount) * FIELD_COVERAGE_GAP_FACTOR;
-            return largestAngularGap() > maximumFieldGap;
-        }
-
-        private double largestAngularGap() {
-            if (occupiedAngles.isEmpty()) return FULL_CIRCLE_DEGREES;
-            double largestGap = occupiedAngles.first() + FULL_CIRCLE_DEGREES - occupiedAngles.last();
-            Double previous = null;
-            for (double angle : occupiedAngles) {
-                if (previous != null) largestGap = Math.max(largestGap, angle - previous);
-                previous = angle;
-            }
-            return largestGap;
+            return MINIMUM_SELECTION_WEIGHT + densityAt(point) * spatialWeight;
         }
 
         private double saturatedClearance(double clearance, double desiredSpacing) {
             return Math.min(CLEARANCE_SATURATION, clearance / desiredSpacing);
-        }
-
-        private double angularClearance(PlacementPoint point) {
-            if (occupiedAngles.isEmpty()) return emptyFieldClearance;
-            Double lower = occupiedAngles.floor(point.angleOffsetDeg());
-            Double upper = occupiedAngles.ceiling(point.angleOffsetDeg());
-            double lowerGap = lower == null ? point.angleOffsetDeg() + FULL_CIRCLE_DEGREES - occupiedAngles.last()
-                : point.angleOffsetDeg() - lower;
-            double upperGap = upper == null ? occupiedAngles.first() + FULL_CIRCLE_DEGREES - point.angleOffsetDeg()
-                : upper - point.angleOffsetDeg();
-            double angularGapRadians = Math.toRadians(Math.min(lowerGap, upperGap));
-            return angularGapRadians * Math.sqrt(point.x() * point.x() + point.y() * point.y());
         }
 
         private double densityAt(PlacementPoint point) {
@@ -320,7 +285,11 @@ final class AsteroidPlacementGraph {
         for (AuthoredAsteroidDefinition definition : profile.authoredAsteroids()) {
             AsteroidFieldNode node = AsteroidNodeMaterializer.resolveAuthoredNode(beltId, profile, definition);
             nodes.add(node);
-            placement.addNode(node, node.initialDetectionState() == DiscoveryState.DISCOVERED);
+            if (node.initialDetectionState() == DiscoveryState.DISCOVERED) {
+                placement.addRootNode(node);
+            } else {
+                placement.addUnownedNode(node);
+            }
         }
 
         for (int ordinal = 0; ordinal < profile.totalNodes(); ordinal++) {
@@ -328,15 +297,23 @@ final class AsteroidPlacementGraph {
             if (AsteroidGeneratedSlotAllocator.generatedSizeClass(profile, index) != AsteroidSizeClass.LARGE) continue;
             AsteroidFieldNode node = resolveGeneratedRoot(beltId, profile, index, placement);
             nodes.add(node);
-            placement.addNode(node, true);
+            placement.addRootNode(node);
         }
 
         for (int ordinal = 0; ordinal < profile.totalNodes(); ordinal++) {
             int index = AsteroidSlotRanges.generatedSlot(ordinal);
             if (AsteroidGeneratedSlotAllocator.generatedSizeClass(profile, index) == AsteroidSizeClass.LARGE) continue;
-            AsteroidFieldNode node = resolveReachableGeneratedNode(beltId, profile, index, placement);
+            AsteroidFieldDeterminism nodeSeed = AsteroidFieldDeterminism.forNode(beltId, profile, index);
+            int rootIndex = placement.selectRootIndex(nodeSeed);
+            AsteroidFieldNode node = resolveReachableGeneratedNode(
+                beltId,
+                profile,
+                index,
+                placement,
+                nodeSeed,
+                rootIndex);
             nodes.add(node);
-            placement.addNode(node, true);
+            placement.addNodeToRoot(node, rootIndex);
         }
 
         nodes.sort((first, second) -> Integer.compare(first.index(), second.index()));
@@ -347,7 +324,7 @@ final class AsteroidPlacementGraph {
     private static AsteroidFieldNode resolveGeneratedRoot(CelestialObjectId beltId, AsteroidFieldProfile profile,
         int index, PlacementContext placement) {
         AsteroidFieldDeterminism nodeSeed = AsteroidFieldDeterminism.forNode(beltId, profile, index);
-        CandidateSelection candidates = new CandidateSelection(placement, nodeSeed, placement.requiresRootCoverage());
+        CandidateSelection candidates = new CandidateSelection(placement, nodeSeed);
         for (int attempt = 0; attempt < CANDIDATES_PER_NODE; attempt++) {
             candidates.consider(
                 point(profile, nodeSeed.degrees(ROOT_ANGLE_SALT, attempt), nodeSeed.unit(ROOT_DEPTH_SALT, attempt)),
@@ -357,22 +334,19 @@ final class AsteroidPlacementGraph {
     }
 
     private static AsteroidFieldNode resolveReachableGeneratedNode(CelestialObjectId beltId,
-        AsteroidFieldProfile profile, int index, PlacementContext placement) {
-        if (!placement.hasReachableAnchor()) {
-            throw new IllegalStateException("Asteroid field has hidden generated asteroids but no visible anchor");
-        }
+        AsteroidFieldProfile profile, int index, PlacementContext placement, AsteroidFieldDeterminism nodeSeed,
+        int rootIndex) {
         if (profile.placementConnectionRadius() <= ZERO_CONNECTION_RADIUS) {
             throw new IllegalStateException(
                 "Asteroid field cannot place hidden asteroids with a zero connection radius");
         }
 
-        AsteroidFieldDeterminism nodeSeed = AsteroidFieldDeterminism.forNode(beltId, profile, index);
-        CandidateSelection candidates = new CandidateSelection(placement, nodeSeed, placement.requiresFieldCoverage());
-        int anchorCount = placement.reachableAnchorCount();
+        CandidateSelection candidates = new CandidateSelection(placement, nodeSeed);
+        int anchorCount = placement.rootAnchorCount(rootIndex);
         for (int attempt = 0; attempt < CANDIDATES_PER_NODE; attempt++) {
             int anchorIndex = Math
                 .min(anchorCount - 1, (int) (nodeSeed.unit(CONNECTION_ANCHOR_SALT, attempt) * anchorCount));
-            PlacementPoint anchor = placement.reachableAnchor(anchorIndex);
+            PlacementPoint anchor = placement.rootAnchor(rootIndex, anchorIndex);
             double distance = placement.growthRadius() * (MINIMUM_CONNECTION_FRACTION
                 + nodeSeed.unit(CONNECTION_DISTANCE_SALT, attempt) * CONNECTION_FRACTION_SPAN);
             double angle = nodeSeed.unit(CONNECTION_ANGLE_SALT, attempt) * FULL_ROTATION_RADIANS;
