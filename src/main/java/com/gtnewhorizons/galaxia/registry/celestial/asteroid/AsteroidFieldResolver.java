@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,8 +17,8 @@ import com.gtnewhorizons.galaxia.registry.util.DeterministicHash;
 /**
  * Deterministically materializes asteroid definitions from a field profile.
  *
- * The resolver is intentionally pure: the same belt id, profile, and generation
- * version always produce the same nodes. Player-specific discovery state lives in
+ * The resolver is intentionally pure: the same belt id and profile always produce
+ * the same nodes. Player-specific discovery state lives in
  * {@link com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService},
  * not in these resolved definitions.
  */
@@ -31,21 +29,33 @@ public final class AsteroidFieldResolver {
     private static final Map<ResolveAllKey, ResolvedField> RESOLVE_ALL_CACHE = new ConcurrentHashMap<>();
 
     private static final long INITIAL_ORE_KNOWLEDGE_SALT = 5L;
+    private static final long LAYOUT_REVISION_SALT = 0x004C41594F555452L;
     private static final double INITIAL_PROFILE_CHANCE = 0.20;
 
     private record ResolveAllKey(CelestialObjectId beltId, AsteroidFieldProfile profile) {}
 
     /** Nodes of one belt, plus their index, so per-node lookups do not scan the list. */
-    private record ResolvedField(List<AsteroidFieldNode> nodes, Map<Integer, AsteroidFieldNode> byIndex) {
+    private record ResolvedField(List<AsteroidFieldNode> nodes, Map<Integer, AsteroidFieldNode> byIndex,
+        long layoutRevision) {
 
         static ResolvedField of(List<AsteroidFieldNode> nodes) {
             Map<Integer, AsteroidFieldNode> byIndex = new LinkedHashMap<>();
+            long layoutRevision = LAYOUT_REVISION_SALT;
             for (AsteroidFieldNode node : nodes) {
                 if (byIndex.put(node.index(), node) != null) {
                     throw new IllegalStateException("duplicate asteroid node index: " + node.index());
                 }
+                layoutRevision = DeterministicHash.mix(
+                    layoutRevision,
+                    node.index(),
+                    node.sizeClass()
+                        .ordinal(),
+                    node.initialDetectionState()
+                        .ordinal(),
+                    Double.doubleToLongBits(node.angleOffsetDeg()),
+                    Double.doubleToLongBits(node.orbitalDepth01()));
             }
-            return new ResolvedField(nodes, Map.copyOf(byIndex));
+            return new ResolvedField(nodes, Map.copyOf(byIndex), layoutRevision);
         }
     }
 
@@ -54,6 +64,11 @@ public final class AsteroidFieldResolver {
     public static List<AsteroidFieldNode> resolveAll(@Nonnull CelestialObjectId beltId,
         @Nonnull AsteroidFieldProfile profile) {
         return field(beltId, profile).nodes();
+    }
+
+    /** Stable fingerprint of the resolved membership and discovery geometry. */
+    public static long layoutRevision(@Nonnull CelestialObjectId beltId, @Nonnull AsteroidFieldProfile profile) {
+        return field(beltId, profile).layoutRevision();
     }
 
     /** The node in this belt at {@code index}, or empty when the belt has no such slot. */
@@ -71,39 +86,7 @@ public final class AsteroidFieldResolver {
     }
 
     private static List<AsteroidFieldNode> resolveAllUncached(CelestialObjectId beltId, AsteroidFieldProfile profile) {
-        List<AsteroidFieldNode> nodes = new ArrayList<>(
-            profile.totalNodes() + profile.authoredAsteroids()
-                .size());
-        List<AsteroidPlacementGraph.ReachableAnchor> reachableAnchors = new ArrayList<>();
-
-        for (AuthoredAsteroidDefinition definition : profile.authoredAsteroids()) {
-            AsteroidFieldNode node = AsteroidNodeMaterializer.naturalNode(beltId, profile, definition.index());
-            nodes.add(node);
-            if (node.initialDetectionState() == DiscoveryState.DISCOVERED) {
-                reachableAnchors.add(AsteroidPlacementGraph.anchor(node, 0));
-            }
-        }
-
-        for (int ordinal = 0; ordinal < profile.totalNodes(); ordinal++) {
-            int index = AsteroidSlotRanges.generatedSlot(ordinal);
-            if (AsteroidGeneratedSlotAllocator.generatedSizeClass(profile, index) != AsteroidSizeClass.LARGE) continue;
-            AsteroidFieldNode node = AsteroidNodeMaterializer.naturalNode(beltId, profile, index);
-            nodes.add(node);
-            reachableAnchors.add(AsteroidPlacementGraph.anchor(node, 0));
-        }
-
-        for (int ordinal = 0; ordinal < profile.totalNodes(); ordinal++) {
-            int index = AsteroidSlotRanges.generatedSlot(ordinal);
-            if (AsteroidGeneratedSlotAllocator.generatedSizeClass(profile, index) == AsteroidSizeClass.LARGE) continue;
-            AsteroidPlacementGraph.ResolvedGeneratedNode resolved = AsteroidPlacementGraph
-                .resolveReachableGeneratedNode(beltId, profile, index, reachableAnchors);
-            nodes.add(resolved.node());
-            reachableAnchors.add(AsteroidPlacementGraph.anchor(resolved.node(), resolved.depth()));
-        }
-
-        nodes.sort(Comparator.comparingInt(AsteroidFieldNode::index));
-        AsteroidPlacementGraph.validateReachability(profile, nodes);
-        return List.copyOf(nodes);
+        return AsteroidPlacementGraph.resolveAll(beltId, profile);
     }
 
     /** Node at its final position, after the placement graph has moved it. This is what the rest of the mod sees. */

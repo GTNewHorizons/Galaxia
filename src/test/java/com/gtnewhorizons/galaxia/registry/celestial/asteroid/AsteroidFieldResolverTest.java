@@ -4,9 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
 import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Queue;
@@ -16,10 +19,15 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.MinorBodyOrbitSlot;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.GeneratedAsteroids;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
 
 final class AsteroidFieldResolverTest {
+
+    private static final double FULL_CIRCLE_DEGREES = 360.0;
+    private static final double MAX_GAP_TO_MEAN_RATIO = 8.0;
+    private static final double MINIMUM_LARGE_GAP_VARIATION = 0.35;
 
     @Test
     void sameBeltAndProfileResolveIdenticalNodes() {
@@ -50,11 +58,81 @@ final class AsteroidFieldResolverTest {
     }
 
     @Test
-    void generationVersionChangesGeneratedFacts() {
+    void seedSaltChangesResolvedLayoutAndItsRevision() {
         List<AsteroidFieldNode> first = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile(1));
         List<AsteroidFieldNode> second = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile(2));
 
         assertNotEquals(first, second);
+        assertNotEquals(
+            AsteroidFieldResolver.layoutRevision(CelestialObjectId.FROZEN_BELT, profile(1)),
+            AsteroidFieldResolver.layoutRevision(CelestialObjectId.FROZEN_BELT, profile(2)));
+    }
+
+    /** Product contract: layout changes may move an asteroid but must not detach state keyed to its identity. */
+    @Test
+    void seedSaltChangesPreserveGeneratedMinorBodyIdentities() {
+        List<MinorCelestialBodyId> firstIds = AsteroidFieldResolver
+            .resolveAll(CelestialObjectId.FROZEN_BELT, profile(1))
+            .stream()
+            .map(AsteroidFieldNode::id)
+            .toList();
+        List<MinorCelestialBodyId> secondIds = AsteroidFieldResolver
+            .resolveAll(CelestialObjectId.FROZEN_BELT, profile(2))
+            .stream()
+            .map(AsteroidFieldNode::id)
+            .toList();
+
+        assertEquals(firstIds, secondIds);
+    }
+
+    /** Bug regression: placement must not leave sector-shaped empty arcs in a representative large belt. */
+    @Test
+    void largeFieldAvoidsExtremeAngularVoids() {
+        List<AsteroidFieldNode> nodes = AsteroidFieldResolver
+            .resolveAll(CelestialObjectId.FROZEN_BELT, frozenBeltProfile());
+        double meanAngularGap = FULL_CIRCLE_DEGREES / nodes.size();
+        double largestAngularGap = largestAngularGap(nodes);
+
+        assertTrue(
+            largestAngularGap <= meanAngularGap * MAX_GAP_TO_MEAN_RATIO,
+            () -> "largest angular gap " + largestAngularGap
+                + " exceeds "
+                + MAX_GAP_TO_MEAN_RATIO
+                + " times the mean gap "
+                + meanAngularGap);
+    }
+
+    /** Product contract: the visible large asteroids must form dense and sparse regions, not an even chain. */
+    @Test
+    void largeAsteroidsHaveMeaningfullyVariedAngularGaps() {
+        List<AsteroidFieldNode> largeAsteroids = AsteroidFieldResolver
+            .resolveAll(CelestialObjectId.FROZEN_BELT, frozenBeltProfile())
+            .stream()
+            .filter(node -> node.sizeClass() == AsteroidSizeClass.LARGE)
+            .toList();
+        double variation = angularGapCoefficientOfVariation(largeAsteroids);
+
+        assertTrue(
+            variation >= MINIMUM_LARGE_GAP_VARIATION,
+            () -> "large-asteroid angular gap variation " + variation
+                + " is below the natural-distribution bound "
+                + MINIMUM_LARGE_GAP_VARIATION);
+    }
+
+    /** Bug regression: cold field generation must not freeze the client when Star Map first requests a large belt. */
+    @Test
+    void largeFieldResolvesWithinInteractiveLatencyBudget() {
+        AsteroidFieldProfile largeProfile = AsteroidFieldProfile.builder()
+            .seedSalt(0x51A7F13DL)
+            .sizeCounts(40, 80, 200)
+            .radialBand(1000.0, 2000.0)
+            .placementConnectionRadius(120.0)
+            .oreProfile(new AsteroidOreProfile("metallic", List.of("galaxia:iron")))
+            .build();
+
+        assertTimeout(
+            Duration.ofSeconds(2),
+            () -> AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, largeProfile));
     }
 
     @Test
@@ -128,7 +206,6 @@ final class AsteroidFieldResolverTest {
     void authoredAsteroidOverridesGeneratedNameKindAndInitialVisibility() {
         AsteroidFieldProfile profile = AsteroidFieldProfile.builder()
             .seedSalt(99L)
-            .generationVersion(1)
             .sizeCounts(0, 1, 1)
             .radialBand(10.0, 20.0)
             .placementConnectionRadius(1000.0)
@@ -147,7 +224,6 @@ final class AsteroidFieldResolverTest {
     void generatedHiddenAsteroidsAreReachableFromDetectedAsteroids() {
         AsteroidFieldProfile profile = AsteroidFieldProfile.builder()
             .seedSalt(99L)
-            .generationVersion(1)
             .sizeCounts(1, 4, 6)
             .radialBand(1000.0, 2000.0)
             .placementConnectionRadius(75.0)
@@ -163,7 +239,6 @@ final class AsteroidFieldResolverTest {
     void generatedHiddenAsteroidsAvoidSingleLineAndOvercrowdedClusters() {
         AsteroidFieldProfile profile = AsteroidFieldProfile.builder()
             .seedSalt(99L)
-            .generationVersion(1)
             .sizeCounts(0, 24, 0)
             .radialBand(1000.0, 2000.0)
             .placementConnectionRadius(75.0)
@@ -198,7 +273,6 @@ final class AsteroidFieldResolverTest {
     void authoredHiddenAsteroidOutsideScanGraphFailsLoudly() {
         AsteroidFieldProfile profile = AsteroidFieldProfile.builder()
             .seedSalt(99L)
-            .generationVersion(1)
             .sizeCounts(1, 0, 0)
             .radialBand(1000.0, 2000.0)
             .placementConnectionRadius(50.0)
@@ -281,10 +355,44 @@ final class AsteroidFieldResolverTest {
         return maxNeighbors;
     }
 
-    private static AsteroidFieldProfile profile(int generationVersion) {
+    private static double largestAngularGap(List<AsteroidFieldNode> nodes) {
+        return Arrays.stream(angularGaps(nodes))
+            .max()
+            .orElseThrow();
+    }
+
+    private static double angularGapCoefficientOfVariation(List<AsteroidFieldNode> nodes) {
+        double[] gaps = angularGaps(nodes);
+        double mean = FULL_CIRCLE_DEGREES / gaps.length;
+        double variance = Arrays.stream(gaps)
+            .map(gap -> (gap - mean) * (gap - mean))
+            .average()
+            .orElseThrow();
+        return Math.sqrt(variance) / mean;
+    }
+
+    private static double[] angularGaps(List<AsteroidFieldNode> nodes) {
+        double[] sortedAngles = nodes.stream()
+            .mapToDouble(AsteroidFieldNode::angleOffsetDeg)
+            .sorted()
+            .toArray();
+        double[] gaps = new double[sortedAngles.length];
+        gaps[0] = sortedAngles[0] + FULL_CIRCLE_DEGREES - sortedAngles[sortedAngles.length - 1];
+        for (int index = 1; index < sortedAngles.length; index++) {
+            gaps[index] = sortedAngles[index] - sortedAngles[index - 1];
+        }
+        return gaps;
+    }
+
+    private static AsteroidFieldProfile frozenBeltProfile() {
+        AsteroidFieldProfile.Builder builder = AsteroidFieldProfile.builder();
+        GeneratedAsteroids.register(builder);
+        return builder.build();
+    }
+
+    private static AsteroidFieldProfile profile(long seedSalt) {
         return AsteroidFieldProfile.builder()
-            .seedSalt(99L)
-            .generationVersion(generationVersion)
+            .seedSalt(seedSalt)
             .sizeCounts(1, 2, 3)
             .radialBand(10.0, 20.0)
             .placementConnectionRadius(1000.0)
