@@ -1,7 +1,10 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -26,6 +29,9 @@ import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 /**
  * Solar-system asset list overlay (Feature A, T1.4).
@@ -52,6 +58,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     private static final int HEADER_H = 24;
     private static final int CONTROLS_H = 22;
     private static final int ROW_H = 20;
+    private static final int SECTION_HEADER_H = 14;
     private static final int MAX_VISIBLE_ROWS = 16;
     private static final int CONTENT_SCROLLBAR_GAP = 14;
     private static final int FILTER_BTN_W = 96;
@@ -89,6 +96,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     private SystemAssetFilter currentFilter = SystemAssetFilter.ALL;
     private SystemAssetSort currentSort = SystemAssetSort.BY_BODY;
     private final List<SystemAssetRowView> visibleRows = new ArrayList<>();
+    private final List<SatelliteRow> visibleSatelliteRows = new ArrayList<>();
     private String lastStructureSignature = "";
     private CelestialObject lastViewRoot;
     private SystemAssetFilter lastFilter;
@@ -163,6 +171,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         scrollWidget = null;
         scrollData = null;
         visibleRows.clear();
+        visibleSatelliteRows.clear();
         lastStructureSignature = "";
         lastViewRoot = null;
         lastFilter = null;
@@ -193,20 +202,49 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
 
     private void refreshRows(CelestialObject viewRoot) {
         visibleRows.clear();
+        visibleSatelliteRows.clear();
         List<CelestialAsset> assets = new ArrayList<>(assetProvider.apply(viewRoot));
-        assets.sort(currentSort.comparator());
-        for (CelestialAsset asset : assets) {
-            if (currentFilter.accepts(asset)) visibleRows.add(new SystemAssetRowView(asset));
+        visibleRows.addAll(assetRows(assets, currentFilter, currentSort));
+        visibleSatelliteRows.addAll(satelliteRows(assets));
+    }
+
+    static List<SystemAssetRowView> assetRows(List<CelestialAsset> assets, SystemAssetFilter filter,
+        SystemAssetSort sort) {
+        List<CelestialAsset> sorted = new ArrayList<>(assets);
+        sorted.sort(sort.comparator());
+        List<SystemAssetRowView> rows = new ArrayList<>();
+        for (CelestialAsset asset : sorted) {
+            if (filter.accepts(asset)) rows.add(new SystemAssetRowView(asset));
         }
+        return rows;
+    }
+
+    static List<SatelliteRow> satelliteRows(List<CelestialAsset> assets) {
+        Map<CelestialObjectKey, EnumMap<SatelliteKind, Integer>> counts = new LinkedHashMap<>();
+        for (CelestialAsset asset : assets) {
+            if (!(asset instanceof Satellite satellite)) continue;
+            counts.computeIfAbsent(asset.celestialObjectId, ignored -> new EnumMap<>(SatelliteKind.class))
+                .merge(satellite.satelliteKind(), 1, Integer::sum);
+        }
+        List<SatelliteRow> rows = new ArrayList<>();
+        for (Map.Entry<CelestialObjectKey, EnumMap<SatelliteKind, Integer>> body : counts.entrySet()) {
+            for (Map.Entry<SatelliteKind, Integer> kind : body.getValue()
+                .entrySet()) {
+                rows.add(new SatelliteRow(body.getKey(), kind.getKey(), kind.getValue()));
+            }
+        }
+        return rows;
     }
 
     private String buildStructureSignature() {
-        StringBuilder sig = new StringBuilder(visibleRows.size() * 24);
+        StringBuilder sig = new StringBuilder((visibleRows.size() + visibleSatelliteRows.size()) * 24);
         sig.append(currentFilter.name())
             .append('|')
             .append(currentSort.name())
             .append('|')
             .append(visibleRows.size())
+            .append(':')
+            .append(visibleSatelliteRows.size())
             .append('|');
         int rowsToShow = Math.min(MAX_VISIBLE_ROWS, visibleRows.size());
         for (int i = 0; i < rowsToShow; i++) {
@@ -225,6 +263,14 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
                 .append(row.displayName)
                 .append('|');
         }
+        for (SatelliteRow row : visibleSatelliteRows) {
+            sig.append(row.bodyId())
+                .append(':')
+                .append(row.kind())
+                .append(':')
+                .append(row.count())
+                .append('|');
+        }
         return sig.toString();
     }
 
@@ -233,8 +279,9 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
             .orElse(null);
         String title = teamName != null ? teamName + " Assets \u2014 " + viewRoot.displayName() + " system"
             : "Assets \u2014 " + viewRoot.displayName() + " system";
-        int rowsToShow = Math.clamp(visibleRows.size(), 1, MAX_VISIBLE_ROWS);
-        int viewportH = visibleRows.isEmpty() ? EMPTY_VIEWPORT_H : rowsToShow * (ROW_H + ROW_GAP);
+        int contentRows = visibleRows.size() + visibleSatelliteRows.size() + (visibleSatelliteRows.isEmpty() ? 0 : 1);
+        int rowsToShow = Math.clamp(contentRows, 1, MAX_VISIBLE_ROWS);
+        int viewportH = contentRows == 0 ? EMPTY_VIEWPORT_H : rowsToShow * (ROW_H + ROW_GAP);
         int panelH = HEADER_H + CONTROLS_H + viewportH + PANEL_BOTTOM_PAD;
 
         panelRoot.removeAll();
@@ -274,7 +321,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
                     .size(SORT_BTN_W, CTRL_BTN_H));
 
         int listY = HEADER_H + CONTROLS_H + LIST_TOP_GAP;
-        if (visibleRows.isEmpty()) {
+        if (contentRows == 0) {
             panelRoot.child(
                 new TextWidget<>(IKey.str("No assets in this system."))
                     .color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
@@ -284,7 +331,8 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
             return;
         }
 
-        int contentHeight = visibleRows.size() * (ROW_H + ROW_GAP);
+        int contentHeight = visibleRows.size() * (ROW_H + ROW_GAP)
+            + (visibleSatelliteRows.isEmpty() ? 0 : SECTION_HEADER_H + visibleSatelliteRows.size() * (ROW_H + ROW_GAP));
         rowsContainer = new ParentWidget<>().widthRel(1f)
             .height(contentHeight);
         scrollData = new VerticalScrollData();
@@ -292,8 +340,21 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
             .size(PANEL_W - 2 * SCROLL_PAD_X - CONTENT_SCROLLBAR_GAP, viewportH);
         scrollWidget.child(rowsContainer);
         panelRoot.child(scrollWidget);
+        int rowY = 0;
         for (int i = 0; i < visibleRows.size(); i++) {
-            rowsContainer.child(buildRowWidget(visibleRows.get(i)).pos(0, i * (ROW_H + ROW_GAP)));
+            rowsContainer.child(buildRowWidget(visibleRows.get(i)).pos(0, rowY));
+            rowY += ROW_H + ROW_GAP;
+        }
+        if (!visibleSatelliteRows.isEmpty()) {
+            rowsContainer.child(
+                new TextWidget<>(IKey.str("Satellites")).color(EnumColors.MAP_COLOR_TEXT_SECTION.getColor())
+                    .shadow(true)
+                    .pos(ROW_PAD_X, rowY + 2));
+            rowY += SECTION_HEADER_H;
+            for (SatelliteRow row : visibleSatelliteRows) {
+                rowsContainer.child(buildSatelliteRowWidget(row).pos(0, rowY));
+                rowY += ROW_H + ROW_GAP;
+            }
         }
         scrollData.setScrollSize(contentHeight);
         panelRoot.scheduleResize();
@@ -355,6 +416,26 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         return button;
     }
 
+    private ParentWidget<?> buildSatelliteRowWidget(SatelliteRow row) {
+        CelestialObject hostBody = GalaxiaCelestialAPI.findBodyById(galaxyRoot, row.bodyId());
+        String bodyName = hostBody != null ? hostBody.displayName()
+            : row.bodyId()
+                .toString();
+        String displayName = trimToPixels(
+            bodyName + " "
+                + row.kind()
+                    .name()
+                + " x"
+                + row.count(),
+            NAME_W + BODY_ICON_SIZE + CAP_ICON_SIZE);
+        ResourceLocation satelliteIcon = CelestialMarkerBase.CelestialAssetIcons.get(CelestialAsset.Kind.SATELLITE);
+        return new ParentWidget<>().widthRel(1f)
+            .height(ROW_H)
+            .background(
+                drawable((ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())))
+            .overlay(drawable((ctx, x, y, w, h) -> drawSatelliteRowContent(displayName, satelliteIcon, x, y, h)));
+    }
+
     /**
      * Draws every visible row element in one overlay pass so the row owns no extra child widgets
      * (avoids hover-blocking surfaces wider than the thing they render).
@@ -400,6 +481,17 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         if (warn != null) {
             AssetPanelIcons.drawSprite(warn, cursor, capY, CAP_ICON_SIZE);
         }
+    }
+
+    private static void drawSatelliteRowContent(String displayName, ResourceLocation satelliteIcon, int x, int y,
+        int h) {
+        net.minecraft.client.gui.FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
+        int textY = y + (h - fr.FONT_HEIGHT) / 2 + 1;
+        int cursor = x + ROW_PAD_X + 5;
+        int iconY = y + (h - BODY_ICON_SIZE) / 2;
+        AssetPanelIcons.drawSprite(satelliteIcon, cursor, iconY, BODY_ICON_SIZE);
+        cursor += BODY_ICON_SIZE + ROW_PAD_X;
+        fr.drawStringWithShadow(displayName, cursor, textY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
     }
 
     private ButtonWidget<?> cycleButton(Supplier<String> labelSupplier, Runnable onClick) {
@@ -453,4 +545,6 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     private IDrawable drawable(DrawableCommand cmd) {
         return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
     }
+
+    record SatelliteRow(CelestialObjectKey bodyId, SatelliteKind kind, int count) {}
 }

@@ -7,6 +7,9 @@ import java.util.Objects;
 import java.util.UUID;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
@@ -35,6 +38,24 @@ public final class PacketUtil {
         byte[] bytes = new byte[len];
         buf.readBytes(bytes);
         return new String(bytes, StandardCharsets.UTF_8);
+    }
+
+    static int readBoundedCount(ByteBuf buf, String description, int maximum) {
+        int count = buf.readInt();
+        validateBoundedCount(count, description, maximum);
+        return count;
+    }
+
+    static void writeBoundedCount(ByteBuf buf, int count, String description, int maximum) {
+        validateBoundedCount(count, description, maximum);
+        buf.writeInt(count);
+    }
+
+    static void validateBoundedCount(int count, String description, int maximum) {
+        if (count < 0 || count > maximum) {
+            throw new IllegalStateException(
+                "[PacketUtil] Invalid " + description + " count " + count + "; expected 0.." + maximum);
+        }
     }
 
     // ── ID helpers ──────────────────────────────────────────────────
@@ -118,6 +139,38 @@ public final class PacketUtil {
         if (value != null) return value;
         throw new IllegalStateException(
             "[PacketUtil] Unknown enum ordinal " + ordinal + " for " + enumClass.getSimpleName());
+    }
+
+    /**
+     * Wire format is a compact mirror of the typed key model: a variant flag plus
+     * only the fields needed for that variant.
+     */
+    static void writeCelestialObjectKey(ByteBuf buf, CelestialObjectKey key) {
+        Objects.requireNonNull(key, "key");
+        buf.writeBoolean(key.isRegistered());
+        if (key.isRegistered()) {
+            writeEnum(buf, key.registeredBodyId());
+            return;
+        }
+        writeEnum(
+            buf,
+            key.minorBodyId()
+                .parentBodyId());
+        buf.writeInt(
+            key.minorBodyId()
+                .index());
+    }
+
+    static CelestialObjectKey readCelestialObjectKey(ByteBuf buf) {
+        boolean registered = buf.readBoolean();
+        if (registered) {
+            return CelestialObjectKey.registered(readEnum(buf, CelestialObjectId.class));
+        }
+        // Minor body packets always carry their registered belt plus stable slot
+        // index; they never depend on a transient client-side object instance.
+        CelestialObjectId parentBodyId = readEnum(buf, CelestialObjectId.class);
+        int index = buf.readInt();
+        return CelestialObjectKey.minorBody(new MinorCelestialBodyId(parentBodyId, index));
     }
 
     // ── ItemStack helpers ──────────────────────────────────────────────

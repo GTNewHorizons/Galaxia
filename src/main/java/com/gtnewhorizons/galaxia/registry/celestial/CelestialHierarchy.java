@@ -7,8 +7,8 @@ import java.util.Map;
 
 import javax.annotation.Nonnull;
 
-public record CelestialHierarchy(Map<CelestialObjectId, CelestialObject> bodiesById,
-    Map<CelestialObjectId, List<CelestialObject>> childrenByParentId, List<CelestialObject> roots) {
+public record CelestialHierarchy(Map<CelestialObjectKey, CelestialObject> bodiesById,
+    Map<CelestialObjectKey, List<CelestialObject>> childrenByParentId, List<CelestialObject> roots) {
 
     public static Builder builder() {
         return new Builder();
@@ -16,8 +16,8 @@ public record CelestialHierarchy(Map<CelestialObjectId, CelestialObject> bodiesB
 
     public static final class Builder {
 
-        private Map<CelestialObjectId, CelestialObject> bodiesById = new HashMap<>();
-        private Map<CelestialObjectId, List<CelestialObject>> childrenByParentId = new HashMap<>();
+        private Map<CelestialObjectKey, CelestialObject> bodiesById = new HashMap<>();
+        private Map<CelestialObjectKey, List<CelestialObject>> childrenByParentId = new HashMap<>();
         private List<CelestialObject> roots = new ArrayList<>();
 
         private Builder() {}

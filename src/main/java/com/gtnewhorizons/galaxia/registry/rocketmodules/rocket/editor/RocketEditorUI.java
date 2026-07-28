@@ -213,8 +213,6 @@ public class RocketEditorUI {
                         + ")";
 
                     case READY -> EnumChatFormatting.GREEN + "Ready to Launch";
-
-                    case LAUNCHED -> EnumChatFormatting.GRAY + "Launched";
                 };
             })
                 .alignment(Alignment.Center))

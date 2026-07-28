@@ -17,11 +17,14 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.CelestialKnowledgeSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.SatelliteNetworkSyncPacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
@@ -37,6 +40,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkState;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
@@ -46,7 +51,11 @@ public class CelestialEventHandler {
     // TODO: Is there a centralized way to get ticks?
     private int syncCooldownTicks;
 
-    public CelestialEventHandler() {}
+    private final CelestialServerRuntime celestialRuntime;
+
+    public CelestialEventHandler(CelestialServerRuntime celestialRuntime) {
+        this.celestialRuntime = celestialRuntime;
+    }
 
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
@@ -58,6 +67,7 @@ public class CelestialEventHandler {
         for (CelestialAsset asset : CelestialAssetStore.allAssets()) {
             asset.tick();
         }
+        celestialRuntime.tick();
 
         LogisticStore.tickDeliveries();
         double orbitalTime = GalaxiaCelestialAPI.currentOrbitalTime();
@@ -66,7 +76,7 @@ public class CelestialEventHandler {
         // Dispatch routing is decided at match time:
         // same planetary anchor → HAMMER
         // different planetary anchors -> BIG HAMMER
-        for (Map.Entry<CelestialObjectId, List<LogisticSignal>> entry : LogisticStore
+        for (Map.Entry<CelestialObjectKey, List<LogisticSignal>> entry : LogisticStore
             // TODO: Use different scopes also?
             .allSignalsForScope(LogisticSignal.Scope.SYSTEM)
             .entrySet()) {
@@ -75,6 +85,8 @@ public class CelestialEventHandler {
         }
 
         HammerTrajectoryLoadTracker.endTick();
+
+        syncSatelliteNetworks(orbitalTime);
 
         syncCooldownTicks--;
         if (syncCooldownTicks > 0) return;
@@ -96,7 +108,7 @@ public class CelestialEventHandler {
                 // Wait until next sync just to be sure this gets first, otherwise it could easily become a race
                 continue;
             }
-            Map<CelestialObjectId, Set<CelestialAsset>> teamAssets = CelestialAssetStore.getTeamAssets(playerTeam);
+            Map<CelestialObjectKey, Set<CelestialAsset>> teamAssets = CelestialAssetStore.getTeamAssets(playerTeam);
             if (teamAssets == null) continue;
             Set<CelestialAsset> aggregatedAssets = teamAssets.values()
                 .stream()
@@ -121,6 +133,18 @@ public class CelestialEventHandler {
                 .collect(Collectors.toList());
 
             Galaxia.GALAXIA_NETWORK.sendTo(LogisticsSyncPacket.from(relevantDeliveries), player);
+        }
+    }
+
+    private static void syncSatelliteNetworks(double orbitalTime) {
+        for (EntityPlayerMP player : MinecraftServer.getServer()
+            .getConfigurationManager().playerEntityList) {
+            if (player == null) continue;
+            if (TeamEventHandler.playersToClear.contains(player.getUniqueID())) continue;
+            UUID playerTeam = GTTeamsCompat.getTeam(player);
+            SatelliteNetworkState satelliteNetwork = SatelliteNetworkService.rebuild(playerTeam, orbitalTime);
+            Galaxia.GALAXIA_NETWORK.sendTo(new SatelliteNetworkSyncPacket(satelliteNetwork), player);
+            Galaxia.GALAXIA_NETWORK.sendTo(CelestialKnowledgeSyncPacket.forTeam(playerTeam), player);
         }
     }
 

@@ -1,0 +1,104 @@
+package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
+
+import com.gtnewhorizons.galaxia.registry.util.DeterministicHash;
+
+final class AsteroidGeneratedSlotAllocator {
+
+    private static final double GOLDEN_ANGLE_DEG = 137.50776405003785;
+
+    private AsteroidGeneratedSlotAllocator() {}
+
+    static AsteroidSizeClass generatedSizeClass(AsteroidFieldProfile profile, int index) {
+        int ordinal = AsteroidSlotRanges.generatedOrdinal(index);
+        if (ordinal >= profile.totalNodes()) return AsteroidSizeClass.SMALL;
+        return generatedSizeClassAtOrdinal(profile, ordinal);
+    }
+
+    static AsteroidSizeClass generatedSizeClassAtOrdinal(AsteroidFieldProfile profile, int ordinal) {
+        int total = profile.totalNodes();
+        int[] counts = { profile.largeCount(), profile.mediumCount(), profile.smallCount() };
+        int[] emitted = new int[counts.length];
+        int[] score = new int[counts.length];
+        int selected = 0;
+        for (int slot = 0; slot <= ordinal; slot++) {
+            selected = nextInterleavedSizeClass(counts, emitted, score, total);
+            emitted[selected]++;
+            score[selected] -= total;
+        }
+        return switch (selected) {
+            case 0 -> AsteroidSizeClass.LARGE;
+            case 1 -> AsteroidSizeClass.MEDIUM;
+            default -> AsteroidSizeClass.SMALL;
+        };
+    }
+
+    static double generatedAngleOffsetDeg(AsteroidFieldProfile profile, int index, AsteroidFieldDeterminism nodeSeed,
+        AsteroidSizeClass sizeClass) {
+        int ordinal = AsteroidSlotRanges.generatedOrdinal(index);
+        int classOrdinal = generatedSizeClassOrdinal(profile, ordinal, sizeClass);
+        int classCount = generatedSizeClassCount(profile, sizeClass);
+        if (classCount <= 0) return nodeSeed.degrees(1L);
+        if (sizeClass == AsteroidSizeClass.LARGE) return generatedLargeAngleOffsetDeg(profile, nodeSeed, classOrdinal);
+
+        double sectorWidth = 360.0 / classCount;
+        double phase = DeterministicHash.unitDouble(
+            DeterministicHash.mix(
+                profile.seedSalt(),
+                profile.generationVersion(),
+                sizeClass.name()
+                    .hashCode(),
+                19L))
+            * sectorWidth;
+        double jitterScale = switch (sizeClass) {
+            case LARGE -> 0.35;
+            case MEDIUM -> 0.85;
+            case SMALL -> 0.95;
+        };
+        double jitter = (nodeSeed.unit(1L) - 0.5) * sectorWidth * jitterScale;
+        return AsteroidFieldDeterminism.normalizeDegrees((classOrdinal + 0.5) * sectorWidth + phase + jitter);
+    }
+
+    private static double generatedLargeAngleOffsetDeg(AsteroidFieldProfile profile, AsteroidFieldDeterminism nodeSeed,
+        int classOrdinal) {
+        double phase = DeterministicHash
+            .unitDouble(DeterministicHash.mix(profile.seedSalt(), profile.generationVersion(), 31L)) * 360.0;
+        double jitter = (nodeSeed.unit(17L) - 0.5) * GOLDEN_ANGLE_DEG * 0.18;
+        return AsteroidFieldDeterminism.normalizeDegrees(phase + classOrdinal * GOLDEN_ANGLE_DEG + jitter);
+    }
+
+    private static int nextInterleavedSizeClass(int[] counts, int[] emitted, int[] score, int total) {
+        int selected = -1;
+        int bestScore = Integer.MIN_VALUE;
+        for (int sizeClass = 0; sizeClass < counts.length; sizeClass++) {
+            if (emitted[sizeClass] >= counts[sizeClass]) continue;
+            score[sizeClass] += counts[sizeClass];
+            if (score[sizeClass] > bestScore || score[sizeClass] == bestScore && counts[sizeClass] > counts[selected]) {
+                selected = sizeClass;
+                bestScore = score[sizeClass];
+            }
+        }
+        if (selected < 0) throw new IllegalStateException("generated asteroid size class allocation exhausted");
+        return selected;
+    }
+
+    private static int generatedSizeClassOrdinal(AsteroidFieldProfile profile, int ordinal,
+        AsteroidSizeClass sizeClass) {
+        int count = 0;
+        int boundedOrdinal = Math.min(ordinal, profile.totalNodes());
+        for (int previous = 0; previous < boundedOrdinal; previous++) {
+            if (generatedSizeClassAtOrdinal(profile, previous) == sizeClass) count++;
+        }
+        if (ordinal >= profile.totalNodes() && sizeClass == AsteroidSizeClass.SMALL) {
+            count += ordinal - profile.totalNodes();
+        }
+        return count;
+    }
+
+    private static int generatedSizeClassCount(AsteroidFieldProfile profile, AsteroidSizeClass sizeClass) {
+        return switch (sizeClass) {
+            case LARGE -> profile.largeCount();
+            case MEDIUM -> profile.mediumCount();
+            case SMALL -> profile.smallCount();
+        };
+    }
+}

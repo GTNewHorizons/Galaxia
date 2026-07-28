@@ -35,9 +35,9 @@ import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 public abstract class CelestialAsset implements Buildable, IDistributedInventory {
 
     public final ID assetId;
-    public final CelestialObjectId celestialObjectId;
-    public final CelestialObjectId systemId;
-    public final CelestialObjectId planetaryAnchorBodyId;
+    public final CelestialObjectKey celestialObjectId;
+    public final CelestialObjectKey systemId;
+    public final CelestialObjectKey planetaryAnchorBodyId;
     public final Kind kind;
     public final Location location;
 
@@ -63,10 +63,19 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     }
 
     public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, boolean operational) {
+        return create(CelestialObjectKey.registered(celestialObjectId), kind, operational);
+    }
+
+    public static CelestialAsset create(CelestialObjectKey celestialObjectId, Kind kind, boolean operational) {
         return create(celestialObjectId, kind, operational ? Status.OPERATIONAL : Status.CONSTRUCTION_SITE);
     }
 
     public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, boolean operational,
+        SatelliteKind satelliteKind) {
+        return create(CelestialObjectKey.registered(celestialObjectId), kind, operational, satelliteKind);
+    }
+
+    public static CelestialAsset create(CelestialObjectKey celestialObjectId, Kind kind, boolean operational,
         SatelliteKind satelliteKind) {
         return create(
             celestialObjectId,
@@ -76,10 +85,19 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     }
 
     public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, Status status) {
+        return create(CelestialObjectKey.registered(celestialObjectId), kind, status);
+    }
+
+    public static CelestialAsset create(CelestialObjectKey celestialObjectId, Kind kind, Status status) {
         return create(celestialObjectId, kind, status, SatelliteKind.COMMUNICATION);
     }
 
     public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, Status status,
+        SatelliteKind satelliteKind) {
+        return create(CelestialObjectKey.registered(celestialObjectId), kind, status, satelliteKind);
+    }
+
+    public static CelestialAsset create(CelestialObjectKey celestialObjectId, Kind kind, Status status,
         SatelliteKind satelliteKind) {
         return switch (kind) {
             case STATION -> new Station(ID.create(), celestialObjectId, status);
@@ -96,10 +114,19 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     }
 
     public static CelestialAsset create(ID id, CelestialObjectId celestialObjectId, Kind kind, Status status) {
+        return create(id, CelestialObjectKey.registered(celestialObjectId), kind, status);
+    }
+
+    public static CelestialAsset create(ID id, CelestialObjectKey celestialObjectId, Kind kind, Status status) {
         return create(id, celestialObjectId, kind, status, SatelliteKind.COMMUNICATION);
     }
 
     public static CelestialAsset create(ID id, CelestialObjectId celestialObjectId, Kind kind, Status status,
+        SatelliteKind satelliteKind) {
+        return create(id, CelestialObjectKey.registered(celestialObjectId), kind, status, satelliteKind);
+    }
+
+    public static CelestialAsset create(ID id, CelestialObjectKey celestialObjectId, Kind kind, Status status,
         SatelliteKind satelliteKind) {
         return switch (kind) {
             case STATION -> new Station(id, celestialObjectId, status);
@@ -111,23 +138,64 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         };
     }
 
-    protected CelestialAsset(ID assetId, CelestialObjectId celestialObjectId, Kind kind, Status status,
+    protected CelestialAsset(ID assetId, CelestialObjectKey celestialObjectId, Kind kind, Status status,
         Map<ItemStack, Long> constructionInventory) {
 
         this.assetId = assetId;
         this.status = status;
         this.celestialObjectId = celestialObjectId;
-        this.systemId = GalaxiaCelestialAPI.findStar(celestialObjectId)
-            .id();
-        this.planetaryAnchorBodyId = GalaxiaCelestialAPI.findPlanetaryAnchor(celestialObjectId)
-            .id();
-        this.displayName = celestialObjectId.displayName() + ":" + kind.getDisplayName();
+        this.systemId = resolveStar(celestialObjectId).id();
+        this.planetaryAnchorBodyId = resolvePlanetaryAnchor(celestialObjectId).id();
+        this.displayName = displayName(celestialObjectId) + ":" + kind.getDisplayName();
         this.kind = kind;
         this.location = Location.ofKind(kind);
         this.requiredResources = defaultRequirements(kind);
         this.constructionInventory = constructionInventory == null ? Collections.emptyMap() : constructionInventory;
         this.syncRevision = 0;
         this.logisticsConfig = new LogisticsConfiguration();
+    }
+
+    protected CelestialAsset(ID assetId, CelestialObjectId celestialObjectId, Kind kind, Status status,
+        Map<ItemStack, Long> constructionInventory) {
+
+        this(assetId, CelestialObjectKey.registered(celestialObjectId), kind, status, constructionInventory);
+    }
+
+    private static CelestialObject resolveStar(CelestialObjectKey key) {
+        CelestialObject star = GalaxiaCelestialAPI.findStar(key);
+        if (star != null) return star;
+        if (key != null && key.isMinorBody()) {
+            star = GalaxiaCelestialAPI.findStar(
+                CelestialObjectKey.registered(
+                    key.minorBodyId()
+                        .parentBodyId()));
+        }
+        if (star != null) return star;
+        throw new IllegalStateException("Cannot resolve asset system for celestial object: " + key);
+    }
+
+    private static CelestialObject resolvePlanetaryAnchor(CelestialObjectKey key) {
+        CelestialObject anchor = GalaxiaCelestialAPI.findPlanetaryAnchor(key);
+        if (anchor != null) return anchor;
+        if (key != null && key.isMinorBody()) {
+            anchor = GalaxiaCelestialAPI.findPlanetaryAnchor(
+                CelestialObjectKey.registered(
+                    key.minorBodyId()
+                        .parentBodyId()));
+        }
+        if (anchor != null) return anchor;
+        throw new IllegalStateException("Cannot resolve asset planetary anchor for celestial object: " + key);
+    }
+
+    private static String displayName(CelestialObjectKey key) {
+        if (key == null) return "";
+        if (key.isRegistered()) return key.registeredBodyId()
+            .displayName();
+        return key.minorBodyId()
+            .parentBodyId()
+            .displayName() + " "
+            + (key.minorBodyId()
+                .index() + 1);
     }
 
     public abstract boolean tryConsumeEnergy(long powerDraw);

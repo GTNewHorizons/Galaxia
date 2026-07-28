@@ -38,6 +38,9 @@ import com.gtnewhorizons.galaxia.core.network.PacketUtil;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
@@ -68,6 +71,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperati
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
@@ -88,6 +92,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -100,15 +105,23 @@ public final class FacilityPersistenceManager {
     private static final String DATA_DIR = "galaxiadata";
     private static final String ASSETS_FILE = "_assets.json";
     private static final String TASKS_FILE = "_tasks.json";
+    private static final String ASTEROIDS_FILE = "_asteroids.json";
+    private static final String DISCOVERY_FILE = "_discovery.json";
 
     private final Gson gson;
     private static final Gson PURE_GSON = new GsonBuilder().create();
     private File worldSaveDir;
+    private final CelestialServerRuntime celestialRuntime;
+    private final AsteroidKnowledgePersistenceAdapter asteroidKnowledge;
+    private final CelestialDiscoveryPersistenceAdapter celestialDiscovery;
 
     private static final String INVENTORY_KEY_ITEM_PREFIX = "I";
     private static final String INVENTORY_KEY_FLUID_PREFIX = "F";
 
-    public FacilityPersistenceManager() {
+    public FacilityPersistenceManager(CelestialServerRuntime celestialRuntime) {
+        this.celestialRuntime = celestialRuntime;
+        this.asteroidKnowledge = new AsteroidKnowledgePersistenceAdapter();
+        this.celestialDiscovery = new CelestialDiscoveryPersistenceAdapter(celestialRuntime.scans());
         gson = new GsonBuilder().setPrettyPrinting()
             .serializeNulls()
             .create();
@@ -124,7 +137,7 @@ public final class FacilityPersistenceManager {
 
     public void loadFromSaveDirectory(File worldSaveDir) {
         this.worldSaveDir = worldSaveDir;
-        CelestialAssetStore.clear();
+        celestialRuntime.reset();
         LogisticStore.clearDeliveries();
         HammerTrajectoryLoadTracker.reset();
         loadAll();
@@ -148,7 +161,7 @@ public final class FacilityPersistenceManager {
         if (!(event.world instanceof WorldServer)) return;
         if (event.world.provider.dimensionId != 0) return;
         if (worldSaveDir != null) saveAll();
-        CelestialAssetStore.clear();
+        celestialRuntime.reset();
         LogisticStore.clearDeliveries();
         HammerTrajectoryLoadTracker.reset();
         worldSaveDir = null;
@@ -163,6 +176,8 @@ public final class FacilityPersistenceManager {
         LOG.info("[PERSIST] LOAD START: reading from {}", galaxiaRoot);
         loadAssets(new File(galaxiaRoot, ASSETS_FILE));
         loadTasks(new File(galaxiaRoot, TASKS_FILE));
+        loadAsteroidKnowledge(new File(galaxiaRoot, ASTEROIDS_FILE));
+        celestialDiscovery.load(new File(galaxiaRoot, DISCOVERY_FILE), gson);
     }
 
     private void saveAll() {
@@ -171,6 +186,16 @@ public final class FacilityPersistenceManager {
         LOG.info("[PERSIST] SAVE START: writing to {}", galaxiaRoot);
         saveAssets(new File(galaxiaRoot, ASSETS_FILE));
         saveTasks(new File(galaxiaRoot, TASKS_FILE));
+        saveAsteroidKnowledge(new File(galaxiaRoot, ASTEROIDS_FILE));
+        celestialDiscovery.save(new File(galaxiaRoot, DISCOVERY_FILE), gson);
+    }
+
+    private void loadAsteroidKnowledge(File file) {
+        asteroidKnowledge.load(file, gson);
+    }
+
+    private void saveAsteroidKnowledge(File file) {
+        asteroidKnowledge.save(file, gson);
     }
 
     private void loadAssets(File file) {
@@ -349,7 +374,7 @@ public final class FacilityPersistenceManager {
         AssetJson json = new AssetJson();
         json.teamId = String.valueOf(CelestialAssetStore.getTeamId(asset.assetId));
         json.assetId = asset.assetId;
-        json.celestialObjectId = String.valueOf(asset.celestialObjectId);
+        json.celestialObjectKey = encodeCelestialObjectKey(asset.celestialObjectId);
         json.displayName = asset.displayName();
         json.kind = asset.kind.name();
         json.location = asset.location.name();
@@ -400,13 +425,12 @@ public final class FacilityPersistenceManager {
     CelestialAsset decodeAsset(AssetJson json) {
         if (json == null || json.teamId == null
             || json.assetId == null
-            || json.celestialObjectId == null
             || json.kind == null
             || json.location == null
             || json.status == null) {
             return null;
         }
-        CelestialObjectId objectId = CelestialObjectId.fromString(json.celestialObjectId);
+        CelestialObjectKey objectId = decodeCelestialObjectKey(json);
         if (objectId == null) return null;
         CelestialAsset.Kind kind = safeValueOf(CelestialAsset.Kind.class, json.kind);
         Buildable.Status status = safeValueOf(Buildable.Status.class, json.status);
@@ -478,6 +502,69 @@ public final class FacilityPersistenceManager {
         return asset;
     }
 
+    private static CelestialObjectKeyJson encodeCelestialObjectKey(CelestialObjectKey key) {
+        if (key == null) return null;
+        CelestialObjectKeyJson json = new CelestialObjectKeyJson();
+        // New saves persist structured keys so generated minor bodies do not have
+        // to be packed into a string that future code must parse heuristically.
+        if (key.isRegistered()) {
+            json.kind = "registered";
+            json.registeredBodyId = key.registeredBodyId()
+                .name();
+            return json;
+        }
+        MinorCelestialBodyId minorId = key.minorBodyId();
+        json.kind = "minor";
+        json.parentBodyId = minorId.parentBodyId()
+            .name();
+        json.index = minorId.index();
+        return json;
+    }
+
+    private static CelestialObjectKey decodeCelestialObjectKey(AssetJson json) {
+        if (json.celestialObjectKey != null) return decodeStructuredCelestialObjectKey(json.celestialObjectKey);
+        throw invalidCelestialKey("celestialObjectKey", null, "structured celestial object key is required");
+    }
+
+    private static CelestialObjectKey decodeStructuredCelestialObjectKey(CelestialObjectKeyJson json) {
+        if (json.kind == null || json.kind.isBlank()) {
+            throw invalidCelestialKey("celestialObjectKey.kind", String.valueOf(json.kind), "kind is required");
+        }
+        if ("registered".equals(json.kind)) {
+            CelestialObjectId registeredId = CelestialObjectId.fromString(json.registeredBodyId);
+            if (registeredId == null) {
+                throw invalidCelestialKey(
+                    "celestialObjectKey.registeredBodyId",
+                    String.valueOf(json.registeredBodyId),
+                    "invalid registeredBodyId");
+            }
+            return CelestialObjectKey.registered(registeredId);
+        }
+        if ("minor".equals(json.kind)) {
+            CelestialObjectId parentBodyId = CelestialObjectId.fromString(json.parentBodyId);
+            if (parentBodyId == null) {
+                throw invalidCelestialKey(
+                    "celestialObjectKey.parentBodyId",
+                    String.valueOf(json.parentBodyId),
+                    "invalid parentBodyId");
+            }
+            if (json.index == null) {
+                throw invalidCelestialKey("celestialObjectKey.index", "null", "index is required");
+            }
+            try {
+                return CelestialObjectKey.minorBody(new MinorCelestialBodyId(parentBodyId, json.index));
+            } catch (IllegalArgumentException ex) {
+                throw invalidCelestialKey("celestialObjectKey.index", String.valueOf(json.index), ex.getMessage());
+            }
+        }
+        throw invalidCelestialKey("celestialObjectKey.kind", json.kind, "unknown key kind");
+    }
+
+    private static IllegalArgumentException invalidCelestialKey(String fieldName, String value, String reason) {
+        return new IllegalArgumentException(
+            "[PERSIST] Invalid persisted celestial key field " + fieldName + "='" + value + "': " + reason);
+    }
+
     FacilityStateJson encodeFacilityState(AutomatedFacility state) {
         state.syncRecipeSettingsGroupsFromModules();
         FacilityStateJson out = new FacilityStateJson();
@@ -526,6 +613,25 @@ public final class FacilityPersistenceManager {
                 moduleData
                     .add("focusOreKey", focusOreKey == null ? JsonNull.INSTANCE : PURE_GSON.toJsonTree(focusOreKey));
                 moduleData.addProperty("focusAlignmentProgress", miner.focusAlignmentProgress());
+            } else if (m.component() instanceof ModuleDebugDataGenerator debugGenerator) {
+                ModuleDebugDataGenerator.Config config = debugGenerator.config();
+                moduleData.addProperty(
+                    "mode",
+                    config.mode()
+                        .name());
+                moduleData.addProperty("enabled", config.enabled());
+                moduleData.addProperty(
+                    "dataType",
+                    config.dataType()
+                        .name());
+                moduleData.addProperty("amountKb", config.amountKb());
+                moduleData.addProperty("durationTicks", config.durationTicks());
+                CelestialObjectId originBodyId = config.originBodyId();
+                moduleData.add(
+                    "originBodyId",
+                    originBodyId == null ? JsonNull.INSTANCE : PURE_GSON.toJsonTree(originBodyId.name()));
+                moduleData.addProperty("jobProgressTicks", debugGenerator.jobProgressTicks());
+                moduleData.addProperty("consumedDeciKb", debugGenerator.consumedDeciKb());
             } else if (m.component() instanceof IRecipeModule recipeModule) {
                 RecipeConfig rc = recipeModule.getRecipeConfig();
                 if (rc != null) {
@@ -712,6 +818,38 @@ public final class FacilityPersistenceManager {
                                 "[PERSIST] Miner module " + moduleId + " malformed: has no settings group");
                         }
                         decodeMinerSettings(module, miner, data);
+                    }
+                    case DEBUG_DATA_GENERATOR -> {
+                        if (!(module.component() instanceof ModuleDebugDataGenerator debugGenerator)) {
+                            throw new IllegalStateException(
+                                "[PERSIST] Debug data generator module " + moduleId + " has invalid component");
+                        }
+                        JsonObject generatorData = Objects
+                            .requireNonNull(data, "[PERSIST] Debug data generator module missing data");
+                        ModuleDebugDataGenerator.Mode mode = Objects.requireNonNull(
+                            PURE_GSON.fromJson(generatorData.get("mode"), ModuleDebugDataGenerator.Mode.class),
+                            "[PERSIST] Debug data generator missing mode");
+                        SatelliteDataType dataType = Objects.requireNonNull(
+                            PURE_GSON.fromJson(generatorData.get("dataType"), SatelliteDataType.class),
+                            "[PERSIST] Debug data generator missing dataType");
+                        CelestialObjectId originBodyId = null;
+                        JsonElement originElement = generatorData.get("originBodyId");
+                        if (originElement != null && !originElement.isJsonNull()) {
+                            originBodyId = Objects.requireNonNull(
+                                safeValueOf(CelestialObjectId.class, originElement.getAsString()),
+                                "[PERSIST] Debug data generator has invalid originBodyId");
+                        }
+                        debugGenerator.restore(
+                            new ModuleDebugDataGenerator.Config(
+                                mode,
+                                requireBoolean(generatorData, "enabled", moduleId),
+                                dataType,
+                                requireLong(generatorData, "amountKb", moduleId),
+                                requireInt(generatorData, "durationTicks", moduleId),
+                                originBodyId),
+                            requireInt(generatorData, "jobProgressTicks", moduleId),
+                            requireLong(generatorData, "consumedDeciKb", moduleId),
+                            null);
                     }
                     case POWER, GEOTHERMAL_GENERATOR -> {}
                     case STORAGE, TANK, BATTERY, MAINTENANCE_BAY -> {}
@@ -1021,7 +1159,7 @@ public final class FacilityPersistenceManager {
 
         CelestialAsset.ID assetId;
         String teamId;
-        String celestialObjectId;
+        CelestialObjectKeyJson celestialObjectKey;
         String systemId;
         String planetaryAnchorBodyId;
         String displayName;
@@ -1039,6 +1177,14 @@ public final class FacilityPersistenceManager {
         Map<String, BoundsJson> fluidsBounds;
         Map<String, LogisticsConfigJson> logisticsConfig;
         Map<Boolean, List<String>> filters;
+    }
+
+    static final class CelestialObjectKeyJson {
+
+        String kind;
+        String registeredBodyId;
+        String parentBodyId;
+        Integer index;
     }
 
     static final class BoundsJson {
@@ -1236,6 +1382,24 @@ public final class FacilityPersistenceManager {
     private static int optionalInt(JsonObject source, String key, int fallback) {
         return source != null && source.has(key) ? source.get(key)
             .getAsInt() : fallback;
+    }
+
+    private static int requireInt(JsonObject source, String key, ModuleInstance.ID moduleId) {
+        JsonElement element = Objects
+            .requireNonNull(source.get(key), "[PERSIST] Module " + moduleId + " missing required int field " + key);
+        return element.getAsInt();
+    }
+
+    private static long requireLong(JsonObject source, String key, ModuleInstance.ID moduleId) {
+        JsonElement element = Objects
+            .requireNonNull(source.get(key), "[PERSIST] Module " + moduleId + " missing required long field " + key);
+        return element.getAsLong();
+    }
+
+    private static boolean requireBoolean(JsonObject source, String key, ModuleInstance.ID moduleId) {
+        JsonElement element = Objects
+            .requireNonNull(source.get(key), "[PERSIST] Module " + moduleId + " missing required boolean field " + key);
+        return element.getAsBoolean();
     }
 
     private static void writeIntArray(JsonObject target, String key, int[] values) {

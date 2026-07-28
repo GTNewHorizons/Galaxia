@@ -10,7 +10,12 @@ import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
@@ -21,7 +26,7 @@ import io.netty.buffer.ByteBuf;
 
 public final class AssetCreateRequestPacket implements IMessage {
 
-    private CelestialObjectId celestialObjectId;
+    private CelestialObjectKey celestialObjectId;
     private String displayName;
     private CelestialAsset.Kind kind;
     private boolean operational;
@@ -32,6 +37,11 @@ public final class AssetCreateRequestPacket implements IMessage {
     public AssetCreateRequestPacket() {}
 
     public static AssetCreateRequestPacket createFacility(CelestialObjectId celestialObjectId, String displayName,
+        CelestialAsset.Kind kind, boolean operational) {
+        return createFacility(CelestialObjectKey.registered(celestialObjectId), displayName, kind, operational);
+    }
+
+    public static AssetCreateRequestPacket createFacility(CelestialObjectKey celestialObjectId, String displayName,
         CelestialAsset.Kind kind, boolean operational) {
         AssetCreateRequestPacket pkt = new AssetCreateRequestPacket();
 
@@ -44,6 +54,11 @@ public final class AssetCreateRequestPacket implements IMessage {
     }
 
     public static AssetCreateRequestPacket createSatellite(CelestialObjectId celestialObjectId, SatelliteKind kind,
+        boolean operational) {
+        return createSatellite(CelestialObjectKey.registered(celestialObjectId), kind, operational);
+    }
+
+    public static AssetCreateRequestPacket createSatellite(CelestialObjectKey celestialObjectId, SatelliteKind kind,
         boolean operational) {
         AssetCreateRequestPacket pkt = new AssetCreateRequestPacket();
 
@@ -58,6 +73,11 @@ public final class AssetCreateRequestPacket implements IMessage {
 
     public static AssetCreateRequestPacket createStation(CelestialObjectId celestialObjectId, String displayName,
         BlockPos controller) {
+        return createStation(CelestialObjectKey.registered(celestialObjectId), displayName, controller);
+    }
+
+    public static AssetCreateRequestPacket createStation(CelestialObjectKey celestialObjectId, String displayName,
+        BlockPos controller) {
         AssetCreateRequestPacket pkt = new AssetCreateRequestPacket();
 
         pkt.celestialObjectId = celestialObjectId;
@@ -71,7 +91,7 @@ public final class AssetCreateRequestPacket implements IMessage {
 
     @Override
     public void toBytes(ByteBuf buf) {
-        PacketUtil.writeEnum(buf, celestialObjectId);
+        PacketUtil.writeCelestialObjectKey(buf, celestialObjectId);
         PacketUtil.writeString(buf, displayName);
         PacketUtil.writeEnum(buf, kind);
         buf.writeBoolean(operational);
@@ -86,7 +106,7 @@ public final class AssetCreateRequestPacket implements IMessage {
 
     @Override
     public void fromBytes(ByteBuf buf) {
-        celestialObjectId = PacketUtil.readEnum(buf, CelestialObjectId.class);
+        celestialObjectId = PacketUtil.readCelestialObjectKey(buf);
         displayName = PacketUtil.readString(buf);
         kind = PacketUtil.readEnum(buf, CelestialAsset.Kind.class);
         operational = buf.readBoolean();
@@ -98,6 +118,7 @@ public final class AssetCreateRequestPacket implements IMessage {
     }
 
     public AssetSyncPacket apply(UUID teamId) {
+        validateTargetBody(teamId);
         CelestialAsset asset = CelestialAsset.create(celestialObjectId, kind, operational, requiredSatelliteKind());
         asset.setDisplayName(displayName);
         if (kind == CelestialAsset.Kind.STATION) {
@@ -110,6 +131,30 @@ public final class AssetCreateRequestPacket implements IMessage {
         Galaxia.LOG.info("[Outpost] Created asset {} ({}) at {}", asset.assetId, kind, celestialObjectId);
 
         return AssetSyncPacket.fullSync(asset);
+    }
+
+    private void validateTargetBody(UUID teamId) {
+        CelestialObject body = CelestialRegistry.get(celestialObjectId)
+            .orElseThrow(
+                () -> new IllegalArgumentException(
+                    "Unknown celestial object for asset creation: " + celestialObjectId));
+        if (kind == CelestialAsset.Kind.AUTOMATED_STATION && !body.properties()
+            .canCreateStation()) {
+            throw new IllegalArgumentException("Cannot create automated station on " + celestialObjectId);
+        }
+        if (kind == CelestialAsset.Kind.AUTOMATED_OUTPOST && !body.properties()
+            .canCreateOutpost()) {
+            throw new IllegalArgumentException("Cannot create automated outpost on " + celestialObjectId);
+        }
+        if (requiresDetectedAsteroidTarget() && body.id()
+            .isMinorBody()
+            && CelestialKnowledgeService.discoveryState(teamId, body.id()) != DiscoveryState.DISCOVERED) {
+            throw new IllegalArgumentException("Cannot create asset on hidden asteroid " + celestialObjectId);
+        }
+    }
+
+    private boolean requiresDetectedAsteroidTarget() {
+        return kind == CelestialAsset.Kind.AUTOMATED_OUTPOST || kind == CelestialAsset.Kind.SATELLITE;
     }
 
     private SatelliteKind requiredSatelliteKind() {
@@ -129,7 +174,14 @@ public final class AssetCreateRequestPacket implements IMessage {
             if (!GTTeamsCompat.hasPermission(player, TeamAction.CREATE_ASSET)) return null;
 
             UUID teamId = GTTeamsCompat.getTeam(player);
-            return packet.apply(teamId);
+            try {
+                return packet.apply(teamId);
+            } catch (IllegalArgumentException ex) {
+                Galaxia.LOG
+                    .warn("Rejected asset create request from {}: {}", player.getCommandSenderName(), ex.getMessage());
+                Galaxia.GALAXIA_NETWORK.sendTo(StarmapActionStatusPacket.rejected(ex.getMessage()), player);
+                return null;
+            }
         }
     }
 }

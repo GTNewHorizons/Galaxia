@@ -39,64 +39,64 @@ galaxia.celestial.overworld=Overworld
 
 #### Blocks
 # Blocks - "Moon"
-tile.moon_andesite.name=Moon Andesite
-tile.moon_anorthosite.name=Moon Anorthosite
-tile.moon_basalt.name=Moon Basalt
-tile.moon_breccia.name=Moon Breccia
-tile.moon_gabbro.name=Moon Gabbro
-tile.moon_magma.name=Moon Magma
-tile.moon_obsidian.name=Moon Obsidian
-tile.moon_regolith.name=Moon Regolith
-tile.moon_tektite.name=Moon Tektite
+tile.moon_andesite.name=Lunar Andesite
+tile.moon_anorthosite.name=Lunar Anorthosite
+tile.moon_basalt.name=Lunar Basalt
+tile.moon_breccia.name=Lunar Breccia
+tile.moon_gabbro.name=Lunar Gabbro
+tile.moon_magma.name=Lunar Magma
+tile.moon_obsidian.name=Lunar Obsidian
+tile.moon_regolith.name=Lunar Regolith
+tile.moon_tektite.name=Lunar Tektite
 
 # Blocks - "Moon Decoration"
-tile.moon_andesite_bricks.name=Moon Andesite Bricks
-tile.moon_andesite_smooth.name=Smooth Moon Andesite
-tile.moon_andesite_tiles.name=Moon Andesite Tiles
-tile.moon_andesite_small_bricks.name=Small Moon Andesite Bricks
-tile.moon_andesite_fancy_bricks.name=Fancy Moon Andesite Bricks
-tile.moon_basalt_bricks.name=Moon Basalt Bricks
-tile.moon_basalt_smooth.name=Smooth Moon Basalt
-tile.moon_basalt_tiles.name=Moon Basalt Tiles
-tile.moon_basalt_small_bricks.name=Small Moon Basalt Bricks
-tile.moon_basalt_fancy_bricks.name=Fancy Moon Basalt Bricks
-tile.moon_tektite_bricks.name=Moon Tektite Bricks
-tile.moon_tektite_smooth.name=Smooth Moon Tektite
-tile.moon_tektite_tiles.name=Moon Tektite Tiles
-tile.moon_tektite_small_bricks.name=Small Moon Tektite Bricks
-tile.moon_tektite_fancy_bricks.name=Fancy Moon Tektite Bricks
-tile.moon_breccia_bricks.name=Moon Breccia Bricks
-tile.moon_breccia_smooth.name=Smooth Moon Breccia
-tile.moon_breccia_tiles.name=Moon Breccia Tiles
-tile.moon_breccia_small_bricks.name=Small Moon Breccia Bricks
-tile.moon_breccia_fancy_bricks.name=Fancy Moon Breccia Bricks
-tile.moon_gabbro_bricks.name=Moon Gabbro Bricks
-tile.moon_gabbro_smooth.name=Smooth Moon Gabbro
-tile.moon_gabbro_tiles.name=Moon Gabbro Tiles
-tile.moon_gabbro_small_bricks.name=Small Moon Gabbro Bricks
-tile.moon_gabbro_fancy_bricks.name=Fancy Moon Gabbro Bricks
-tile.moon_anorthosite_bricks.name=Moon Anorthosite Bricks
-tile.moon_anorthosite_smooth.name=Smooth Moon Anorthosite 
-tile.moon_anorthosite_tiles.name=Moon Anorthosite Tiles
-tile.moon_anorthosite_small_bricks.name=Small Moon Anorthosite Bricks
-tile.moon_anorthosite_fancy_bricks.name=Fancy Moon Anorthosite Bricks
+tile.moon_andesite_bricks.name=Lunar Andesite Bricks
+tile.moon_andesite_smooth.name=Smooth Lunar Andesite
+tile.moon_andesite_tiles.name=Lunar Andesite Tiles
+tile.moon_andesite_small_bricks.name=Small Lunar Andesite Bricks
+tile.moon_andesite_fancy_bricks.name=Fancy Lunar Andesite Bricks
+tile.moon_basalt_bricks.name=Lunar Basalt Bricks
+tile.moon_basalt_smooth.name=Smooth Lunar Basalt
+tile.moon_basalt_tiles.name=Lunar Basalt Tiles
+tile.moon_basalt_small_bricks.name=Small Lunar Basalt Bricks
+tile.moon_basalt_fancy_bricks.name=Fancy Lunar Basalt Bricks
+tile.moon_tektite_bricks.name=Lunar Tektite Bricks
+tile.moon_tektite_smooth.name=Smooth Lunar Tektite
+tile.moon_tektite_tiles.name=Lunar Tektite Tiles
+tile.moon_tektite_small_bricks.name=Small Lunar Tektite Bricks
+tile.moon_tektite_fancy_bricks.name=Fancy Lunar Tektite Bricks
+tile.moon_breccia_bricks.name=Lunar Breccia Bricks
+tile.moon_breccia_smooth.name=Smooth Lunar Breccia
+tile.moon_breccia_tiles.name=Lunar Breccia Tiles
+tile.moon_breccia_small_bricks.name=Small Lunar Breccia Bricks
+tile.moon_breccia_fancy_bricks.name=Fancy Lunar Breccia Bricks
+tile.moon_gabbro_bricks.name=Lunar Gabbro Bricks
+tile.moon_gabbro_smooth.name=Smooth Lunar Gabbro
+tile.moon_gabbro_tiles.name=Lunar Gabbro Tiles
+tile.moon_gabbro_small_bricks.name=Small Lunar Gabbro Bricks
+tile.moon_gabbro_fancy_bricks.name=Fancy Lunar Gabbro Bricks
+tile.moon_anorthosite_bricks.name=Lunar Anorthosite Bricks
+tile.moon_anorthosite_smooth.name=Smooth Lunar Anorthosite 
+tile.moon_anorthosite_tiles.name=Lunar Anorthosite Tiles
+tile.moon_anorthosite_small_bricks.name=Small Lunar Anorthosite Bricks
+tile.moon_anorthosite_fancy_bricks.name=Fancy Lunar Anorthosite Bricks
 
 
 # Blocks - "Mars"
-tile.mars_andesite.name=Mars Andesite
-tile.mars_anorthosite.name=Mars Anorthosite
-tile.mars_basalt.name=Mars Basalt
-tile.mars_dense_ice.name=Mars Dense Ice
-tile.mars_ice.name=Mars Ice
-tile.mars_magma.name=Mars Magma
-tile.mars_peridotite.name=Mars Peridotite
-tile.mars_regolith.name=Mars Regolith
-tile.mars_rhyolite.name=Mars Rhyolite
-tile.mars_sand.name=Mars Sand
-tile.mars_sandstone.name=Mars Sandstone
-tile.mars_snow.name=Mars Snow
-tile.mars_tektite.name=Mars Tektite
-tile.mars_tuff.name=Mars Tuff
+tile.mars_andesite.name=Martian Andesite
+tile.mars_anorthosite.name=Martian Anorthosite
+tile.mars_basalt.name=Martian Basalt
+tile.mars_dense_ice.name=Martian Dense Ice
+tile.mars_ice.name=Martian Ice
+tile.mars_magma.name=Martian Magma
+tile.mars_peridotite.name=Martian Peridotite
+tile.mars_regolith.name=Martian Regolith
+tile.mars_rhyolite.name=Martian Rhyolite
+tile.mars_sand.name=Martian Sand
+tile.mars_sandstone.name=Martian Sandstone
+tile.mars_snow.name=Martian Snow
+tile.mars_tektite.name=Martian Tektite
+tile.mars_tuff.name=Martian Tuff
 
 # Blocks - "Frozen Belt"
 tile.frozen_belt_andesite.name=Frozen Belt Andesite
@@ -107,16 +107,16 @@ tile.frozen_belt_gabbro.name=Frozen Belt Gabbro
 tile.frozen_belt_ice.name=Frozen Belt Ice
 
 # Blocks - "Tenebrae"
-tile.tenebrae_andesite.name=Tenebrae Andesite
-tile.tenebrae_ash.name=Tenebrae Ash
-tile.tenebrae_basalt.name=Tenebrae Basalt
-tile.tenebrae_brimstone.name=Tenebrae Brimstone
-tile.tenebrae_latite.name=Tenebrae Latite
-tile.tenebrae_magma.name=Tenebrae Magma
-tile.tenebrae_pyrite_regolith.name=Tenebrae Pyrite Regolith
-tile.tenebrae_regolith.name=Tenebrae Regolith
-tile.tenebrae_rhyolite.name=Tenebrae Rhyolite
-tile.tenebrae_sulfuric_regolith.name=Tenebrae Sulfuric Regolith
+tile.tenebrae_andesite.name=Tenebraen Andesite
+tile.tenebrae_ash.name=Tenebraen Ash
+tile.tenebrae_basalt.name=Tenebraen Basalt
+tile.tenebrae_brimstone.name=Tenebraen Brimstone
+tile.tenebrae_latite.name=Tenebraen Latite
+tile.tenebrae_magma.name=Tenebraen Magma
+tile.tenebrae_pyrite_regolith.name=Tenebraen Pyrite Regolith
+tile.tenebrae_regolith.name=Tenebraen Regolith
+tile.tenebrae_rhyolite.name=Tenebraen Rhyolite
+tile.tenebrae_sulfuric_regolith.name=Tenebraen Sulfuric Regolith
 
 # Blocks - "Asteroid Belt"
 tile.black_asteroid_shell.name=Black Asteroid Shell
@@ -158,7 +158,7 @@ tile.rusty_sheetmetal.name=Rusty Sheetmetal
 tile.lahar.name=Lahar
 tile.liquid_mercury.name=Liquid Mercury
 tile.molten_resin.name=Molten Resin
-tile.tenebrae_lava.name=Tenebrae Lava
+tile.tenebrae_lava.name=Tenebraen Lava
 
 # Blocks - "Tile Entities"
 tile.module_controller.name=Station Module Controller
@@ -169,14 +169,30 @@ tile.module_assembler_controller.name=Module Assembler
 tile.tenebrae_fumarole.name=Fumarole
 tile.gantry_block.name=Gantry Shaft
 tile.hammer_cannon.name=Hammer Cannon
+tile.hammer_target.name=Hammer Target
 tile.gantry_terminal.name=Gantry Terminal
 tile.rocket_trophy.name=Rocket Trophy
+tile.oxygen_collector.name=Oxygen Collector
+tile.oxygen_filler.name=Oxygen Filler
+tile.oxygen_pylon.name=Oxygen Pylon
+tile.heating_coil.name=Heating Coil
+tile.cooling_coil.name=Cooling Coil
+tile.air_purifier.name=Air Purifier
+tile.oxygenator.name=Oxygenator
+tile.wither_blocker.name=Atmospheric Withering Blocker
+
+# Fluids
+fluid.lahar=Lahar
+fluid.liquid_mercury=Liquid Mercury
+fluid.molten_resin=Molten Resin
+fluid.tenebrae_lava=Tenebraen Lava
 
 #### Items
 item.galaxia.galaxia_logo.name=Galaxia
 # Items - "Tools"
 item.galaxia.galactic_map.name=Galactic Map
 item.galaxia.teleporter.name=Teleporter
+item.galaxia.kinetic_tether.name=Kinetic Tether
 
 # Items - Tools - "Rocket Schematic"
 item.galaxia.schematic.name=Rocket Schematic
@@ -190,9 +206,9 @@ item.galaxia.rocket_schematic.width=Width: %.1fm
 item.galaxia.amber_shard.name=Amber Shard
 item.galaxia.cinnabar_scale.name=Cinnabar Scale
 item.galaxia.enchanted_cinnabar_scale.name=Enchanted Cinnabar Scale
-item.galaxia.mars_dust.name=Mars Dust
-item.galaxia.mars_ice_cubes.name=Mars Ice Cubes
-item.galaxia.mars_tektite_shard.name=Mars Tektite Shard
+item.galaxia.mars_dust.name=Martian Dust
+item.galaxia.mars_ice_cubes.name=Martian Ice Cubes
+item.galaxia.mars_tektite_shard.name=Martian Tektite Shard
 item.galaxia.hematite_dust.name=Hematite Dust
 item.galaxia.hematite_ingot.name=Hematite Ingot
 item.galaxia.meteoric_iron_ingot.name=Meteoric Iron Ingot
@@ -200,8 +216,8 @@ item.galaxia.meteoric_iron_shard.name=Meteoric Iron Shard
 item.galaxia.psychedelic_amber_shard.name=Enchanted Amber Shard
 item.galaxia.pyrite_cubes.name=Pyrite Cubes
 item.galaxia.raw_meteoric_iron.name=Raw Meteoric Iron
-item.galaxia.moon_dust.name=Moon Dust
-item.galaxia.moon_tektite_shard.name=Moon Tektite Shard
+item.galaxia.moon_dust.name=Lunar Dust
+item.galaxia.moon_tektite_shard.name=Lunar Tektite Shard
 
 # Items - "Armor"
 item.galaxia.spacesuit_helmet.name=Space Suit Helmet
@@ -233,7 +249,7 @@ item.galaxia.satellite_dish.name=Satellite Transmitter Dish
 # Liquids - "Buckets"
 item.lahar_bucket.name=Bucket of Lahar
 item.molten_resin_bucket.name=Bucket of Molten Resin
-item.tenebrae_lava_bucket.name=Bucket of Tenebrae Lava
+item.tenebrae_lava_bucket.name=Bucket of Tenebraen Lava
 item.liquid_mercury_bucket.name=Bucket of Liquid Mercury
 
 #### Elements
@@ -246,6 +262,9 @@ galaxia.gui.planet_teleporter.selected=Selected: %s
 # Elements - GUI - "Orbital GUI"
 galaxia.gui.orbital.search=Search
 galaxia.gui.orbital.search.placeholder=Enter name...
+galaxia.gui.orbital.click_mode.hierarchy=Hierarchy
+galaxia.gui.orbital.click_mode.follow=Follow
+galaxia.gui.orbital.click_mode.tooltip=Changes planet click mode between opening hierarchy and following the selected planet
 
 # Elements - GUI - "Rocket Silo"
 galaxia.gui.rocket_silo.title=Rocket Silo
@@ -503,6 +522,7 @@ galaxia.config.category.hazard_pulse.tooltip=Enable pulse animation
 galaxia.gui.orbital.status=Zoom: x%.2f   Speed: %s
 galaxia.gui.orbital.paused=PAUSED
 galaxia.gui.orbital.speed_multiplier=x%.1f
+galaxia.gui.orbital.debug=Debug
 
 galaxia.system_asset.title=Assets - %s system
 galaxia.system_asset.empty=No assets in this system.
@@ -525,6 +545,20 @@ galaxia.system_asset.tooltip.body=Body: %s
 galaxia.system_asset.tooltip.status=Status: %s
 galaxia.system_asset.tooltip.warning=Warning: %s
 galaxia.system_asset.tooltip.construction=Construction: %d%%
+
+galaxia.asset_manager.tab.assets=Assets
+galaxia.asset_manager.tab.satellites=Satellites
+galaxia.asset_manager.satellites.empty=No satellites
+galaxia.asset_manager.satellites.count=Count: %d
+galaxia.asset_manager.satellites.delete_one=Delete 1
+galaxia.asset_manager.satellites.delete_amount=Delete %d
+galaxia.asset_manager.satellites.delete_all=Delete all
+galaxia.asset_manager.satellites.confirm_delete=Confirm
+
+#### Satellites
+galaxia.satellite.kind.communication=Communication Satellites
+galaxia.satellite.kind.prospecting=Prospecting Satellites
+galaxia.satellite.tooltip.count=%s: %d
 
 #### Machine GUI
 # Oxygen Collector GUI

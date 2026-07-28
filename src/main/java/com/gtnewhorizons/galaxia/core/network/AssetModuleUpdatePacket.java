@@ -25,6 +25,7 @@ import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -45,6 +46,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOpe
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
@@ -55,6 +57,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -77,6 +81,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
     private static final int MODULE_UPGRADE_TARGET_HEADER_BYTES = 4;
     private static final int MAX_MODULE_UPGRADE_TARGET_PAYLOAD_BYTES = MODULE_UPGRADE_TARGET_HEADER_BYTES
         + MAX_TILE_COORD_PAYLOAD_BYTES;
+    private static final int MAX_DEBUG_DATA_GENERATOR_CONFIG_PAYLOAD_BYTES = 18;
     private static final int NO_HAMMER_VARIANT = 255;
 
     private CelestialAsset.ID assetId;
@@ -330,6 +335,31 @@ public final class AssetModuleUpdatePacket implements IMessage {
             decodeTileCoordPayload(coordPayload));
     }
 
+    private static ModuleDebugDataGenerator.Config decodeDebugDataGeneratorConfigPayload(byte[] payload) {
+        if (payload == null || payload.length <= 0 || payload.length > MAX_DEBUG_DATA_GENERATOR_CONFIG_PAYLOAD_BYTES) {
+            throw new IllegalArgumentException(
+                "invalid debug data generator payload length: " + (payload == null ? 0 : payload.length));
+        }
+        try {
+            ByteBuf payloadBuf = Unpooled.wrappedBuffer(payload);
+            ModuleDebugDataGenerator.Mode mode = PacketUtil.readEnum(payloadBuf, ModuleDebugDataGenerator.Mode.class);
+            boolean enabled = payloadBuf.readBoolean();
+            SatelliteDataType dataType = PacketUtil.readEnum(payloadBuf, SatelliteDataType.class);
+            long amountKb = payloadBuf.readLong();
+            int durationTicks = payloadBuf.readInt();
+            CelestialObjectId originBodyId = payloadBuf.readBoolean()
+                ? PacketUtil.readEnum(payloadBuf, CelestialObjectId.class)
+                : null;
+            if (payloadBuf.isReadable()) {
+                throw new IllegalArgumentException("malformed debug data generator payload");
+            }
+            return new ModuleDebugDataGenerator.Config(mode, enabled, dataType, amountKb, durationTicks, originBodyId);
+        } catch (RuntimeException e) {
+            if (e instanceof IllegalArgumentException) throw e;
+            throw new IllegalArgumentException("malformed debug data generator payload", e);
+        }
+    }
+
     public static AssetModuleUpdatePacket recipeSlotPayload(CelestialAsset.ID assetId, int moduleIndex,
         ModuleInstance.ID moduleId, ConfigAction action, byte slotIndex, SavedRecipe slot) {
         AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, action);
@@ -400,6 +430,27 @@ public final class AssetModuleUpdatePacket implements IMessage {
         return pkt;
     }
 
+    public static AssetModuleUpdatePacket debugDataGeneratorConfig(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, ModuleDebugDataGenerator.Config config) {
+        AssetModuleUpdatePacket pkt = config(
+            assetId,
+            moduleIndex,
+            moduleId,
+            ConfigAction.SET_DEBUG_DATA_GENERATOR_CONFIG);
+        ByteBuf payloadBuf = Unpooled.buffer(MAX_DEBUG_DATA_GENERATOR_CONFIG_PAYLOAD_BYTES);
+        PacketUtil.writeEnum(payloadBuf, config.mode());
+        payloadBuf.writeBoolean(config.enabled());
+        PacketUtil.writeEnum(payloadBuf, config.dataType());
+        payloadBuf.writeLong(config.amountKb());
+        payloadBuf.writeInt(config.durationTicks());
+        CelestialObjectId originBodyId = config.originBodyId();
+        payloadBuf.writeBoolean(originBodyId != null);
+        if (originBodyId != null) PacketUtil.writeEnum(payloadBuf, originBodyId);
+        pkt.rawPayload = new byte[payloadBuf.writerIndex()];
+        payloadBuf.readBytes(pkt.rawPayload);
+        return pkt;
+    }
+
     public enum Action {
         ENABLE,
         DISABLE,
@@ -429,7 +480,8 @@ public final class AssetModuleUpdatePacket implements IMessage {
         UPDATE_RECIPE_SLOT,
         REMOVE_RECIPE_SLOT,
         SET_INVENTORY_BOUND,
-        CLEAR_INVENTORY_BOUND
+        CLEAR_INVENTORY_BOUND,
+        SET_DEBUG_DATA_GENERATOR_CONFIG
     }
 
     public void toBytes(ByteBuf buf) {
@@ -484,7 +536,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
                         buf.writeInt(0);
                     }
                 }
-                case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT, SET_INVENTORY_BOUND, CLEAR_INVENTORY_BOUND -> {
+                case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT, SET_INVENTORY_BOUND, CLEAR_INVENTORY_BOUND, SET_DEBUG_DATA_GENERATOR_CONFIG -> {
                     if (rawPayload != null) {
                         buf.writeInt(rawPayload.length);
                         buf.writeBytes(rawPayload);
@@ -585,6 +637,15 @@ public final class AssetModuleUpdatePacket implements IMessage {
                 rawPayload = new byte[len];
                 buf.readBytes(rawPayload);
             }
+            case SET_DEBUG_DATA_GENERATOR_CONFIG -> {
+                int len = buf.readInt();
+                if (len <= 0 || len > MAX_DEBUG_DATA_GENERATOR_CONFIG_PAYLOAD_BYTES || len > buf.readableBytes()) {
+                    throw new IllegalArgumentException("invalid debug data generator payload length: " + len);
+                }
+                rawPayload = new byte[len];
+                buf.readBytes(rawPayload);
+                decodeDebugDataGeneratorConfigPayload(rawPayload);
+            }
         }
     }
 
@@ -620,12 +681,22 @@ public final class AssetModuleUpdatePacket implements IMessage {
         return apply(teamId, false);
     }
 
-    public AssetSyncPacket apply(UUID teamId, boolean creative) {
+    public AssetSyncPacket apply(UUID teamId, boolean debugActionAuthorized) {
+        return applyAuthorized(teamId, debugActionAuthorized);
+    }
+
+    public AssetSyncPacket apply(UUID teamId, EntityPlayerMP player) {
+        if (player == null) return null;
+        return applyAuthorized(teamId, DebugActionAuthorization.isAuthorized(player));
+    }
+
+    private AssetSyncPacket applyAuthorized(UUID teamId, boolean debugActionAuthorized) {
         CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
         if (!(asset instanceof AutomatedFacility state)) return null;
         if (!CelestialAssetStore.isOwnedBy(teamId, assetId)) return null;
         if (type == ACTION_TYPE && action == null) return null;
         if (type == CONFIG_TYPE && configAction == null) return null;
+        if (configAction == ConfigAction.SET_DEBUG_DATA_GENERATOR_CONFIG && !debugActionAuthorized) return null;
 
         var modules = state.modules();
         moduleIndex = state.moduleIndex(moduleId);
@@ -636,7 +707,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
 
         switch (type) {
             case ACTION_TYPE -> handleAction(this, state, module);
-            case CONFIG_TYPE -> handleConfig(this, state, module, creative);
+            case CONFIG_TYPE -> handleConfig(this, state, module, debugActionAuthorized);
             default -> {
                 return null;
             }
@@ -755,6 +826,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
             case SET_RECIPE_SCHEDULER_MODE -> handleRecipeSchedulerMode(packet, state, module);
             case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> handleRecipeSlot(packet, state, module);
             case SET_INVENTORY_BOUND, CLEAR_INVENTORY_BOUND -> handleInventoryBound(packet, state);
+            case SET_DEBUG_DATA_GENERATOR_CONFIG -> handleDebugDataGeneratorConfig(packet, state, module);
         }
     }
 
@@ -1054,6 +1126,15 @@ public final class AssetModuleUpdatePacket implements IMessage {
         }
     }
 
+    private static void handleDebugDataGeneratorConfig(AssetModuleUpdatePacket packet, AutomatedFacility state,
+        ModuleInstance module) {
+        if (!(module.component() instanceof ModuleDebugDataGenerator debugGenerator)) {
+            throw new IllegalStateException("SET_DEBUG_DATA_GENERATOR_CONFIG sent to non-debug module " + module.id);
+        }
+        debugGenerator.configure(decodeDebugDataGeneratorConfigPayload(packet.rawPayload));
+        SatelliteNetworkService.refreshFacilityEndpoints(state);
+    }
+
     private static void handleRecipeSlot(AssetModuleUpdatePacket packet, AutomatedFacility state,
         ModuleInstance module) {
         if (!(module.component() instanceof IRecipeModule recipeModule)) return;
@@ -1292,7 +1373,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
             if (!GTTeamsCompat.hasPermission(player, TeamAction.MODIFY_MODULE)) return null;
             UUID teamId = GTTeamsCompat.getTeam(player);
-            return message.apply(teamId, player.capabilities.isCreativeMode);
+            return message.apply(teamId, player);
         }
     }
 }

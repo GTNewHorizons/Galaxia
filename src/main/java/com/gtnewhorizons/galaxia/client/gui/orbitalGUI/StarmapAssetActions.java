@@ -2,12 +2,15 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.StatCollector;
 
 import org.jetbrains.annotations.UnknownNullability;
 
@@ -31,10 +34,14 @@ import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
+import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 record ButtonRect(int left, int top, int right, int bottom) {
 
@@ -45,7 +52,7 @@ record ButtonRect(int left, int top, int right, int bottom) {
 
 record ModalBounds(int left, int top, int right, int bottom) {}
 
-record PendingAssetCreation(CelestialObjectId celestialObjectId, String displayName, CelestialAsset.Kind kind,
+record PendingAssetCreation(CelestialObjectKey celestialObjectId, String displayName, CelestialAsset.Kind kind,
     CelestialAsset.Location location, Map<ItemStack, Long> requiredResources) {}
 
 record PendingAssetRename(CelestialAsset asset) {}
@@ -60,6 +67,10 @@ record StationTransferTarget(CelestialAsset.ID assetId, String displayName, Cele
 
 record TransferTargetRow(StationTransferTarget target, int left, int top, int right, int bottom,
     ButtonRect sendButton) {}
+
+record SatelliteAssetRow(SatelliteKind kind, int count) {}
+
+record PendingSatelliteDeletion(SatelliteKind kind, int amount) {}
 
 record PinnedInfoRow(String label, String value, List<ItemStack> items, boolean inlineItems) {
 
@@ -81,6 +92,28 @@ record PinnedInfoRow(String label, String value, List<ItemStack> items, boolean 
 }
 
 public final class StarmapAssetActions {
+
+    static List<CelestialAsset> deployedAssetRows(List<CelestialAsset> assets) {
+        List<CelestialAsset> matching = new ArrayList<>();
+        for (CelestialAsset asset : assets) {
+            if (asset.kind == CelestialAsset.Kind.SATELLITE) continue;
+            if (asset.status() == CelestialAsset.Status.OPERATIONAL) matching.add(asset);
+        }
+        return matching;
+    }
+
+    static List<SatelliteAssetRow> satelliteAssetRows(List<CelestialAsset> assets) {
+        EnumMap<SatelliteKind, Integer> counts = new EnumMap<>(SatelliteKind.class);
+        for (CelestialAsset asset : assets) {
+            if (!(asset instanceof Satellite satellite)) continue;
+            counts.merge(satellite.satelliteKind(), 1, Integer::sum);
+        }
+        List<SatelliteAssetRow> rows = new ArrayList<>();
+        for (Map.Entry<SatelliteKind, Integer> entry : counts.entrySet()) {
+            rows.add(new SatelliteAssetRow(entry.getKey(), entry.getValue()));
+        }
+        return rows;
+    }
 
     public static final class OrbitalAssetSupport {
 
@@ -204,6 +237,13 @@ public final class StarmapAssetActions {
             boolean openActionsFirst) {
             if (body == null) return;
             if (openActionsFirst) openAssetActions(state, body);
+            if (!canCreateAssetOnBody(body, kind)) {
+                callbacks.showActionStatus(
+                    StatCollector.translateToLocalFormatted(
+                        "galaxia.gui.orbital.asset.create.unsupported_body",
+                        assetSupport.formatAssetKind(kind)));
+                return;
+            }
             CelestialAsset.Location location = getDefaultAssetLocation(kind);
             String displayName = buildDefaultAssetDisplayName(body, kind);
             if (kind == CelestialAsset.Kind.STATION) {
@@ -226,6 +266,25 @@ public final class StarmapAssetActions {
                 kind,
                 location,
                 CelestialAsset.defaultRequirements(kind));
+        }
+
+        private boolean canCreateAssetOnBody(CelestialObject body, CelestialAsset.Kind kind) {
+            if (requiresDiscoveredMinorBody(kind) && body.id()
+                .isMinorBody()
+                && CelestialKnowledgeClientState.discoveryState(body.id())
+                    .orElse(DiscoveryState.HIDDEN) != DiscoveryState.DISCOVERED)
+                return false;
+            return switch (kind) {
+                case AUTOMATED_STATION -> body.properties()
+                    .canCreateStation();
+                case AUTOMATED_OUTPOST -> body.properties()
+                    .canCreateOutpost();
+                default -> true;
+            };
+        }
+
+        private boolean requiresDiscoveredMinorBody(CelestialAsset.Kind kind) {
+            return kind == CelestialAsset.Kind.AUTOMATED_OUTPOST || kind == CelestialAsset.Kind.SATELLITE;
         }
 
         void confirmPendingAssetCreation(OrbitalAssetUiState state) {
@@ -430,6 +489,7 @@ public final class StarmapAssetActions {
         PendingConstructionCancellation pendingConstructionCancellation;
         PendingResourceTransfer pendingResourceTransfer;
         PendingAssetRename pendingAssetRename;
+        PendingSatelliteDeletion pendingSatelliteDeletion;
 
         boolean isAssetActionsOpen() {
             return assetActionsBody != null;
@@ -458,6 +518,7 @@ public final class StarmapAssetActions {
             pendingConstructionCancellation = null;
             pendingResourceTransfer = null;
             pendingAssetRename = null;
+            pendingSatelliteDeletion = null;
         }
     }
 
@@ -509,6 +570,10 @@ public final class StarmapAssetActions {
 
             void openPendingAssetDestruction(CelestialAsset asset);
 
+            void deleteSatelliteAmount(CelestialObject body, SatelliteKind kind, int amount);
+
+            void deleteSatellites(CelestialObject body, SatelliteKind kind);
+
             void confirmPendingAssetCreation();
 
             void dismissPendingAssetCreation();
@@ -558,6 +623,11 @@ public final class StarmapAssetActions {
         private static final int CREATE_BUTTON_TOP = 30;
         private static final int CREATE_BUTTON_LEFT = 14;
         private static final int CREATE_BUTTON_GAP = 28;
+        private static final int TAB_BUTTON_WIDTH = 86;
+        private static final int TAB_BUTTON_HEIGHT = 16;
+        private static final int TAB_BUTTON_GAP = 6;
+        private static final int SATELLITE_ACTION_BUTTON_WIDTH = 64;
+        private static final int SATELLITE_DELETE_AMOUNT = 10;
         private static final int ROW_HEIGHT = 42;
         private static final int ROW_SPACING = 6;
         private static final int ROW_LEFT_PADDING = 4;
@@ -604,6 +674,7 @@ public final class StarmapAssetActions {
         private VerticalScrollData modalScrollData;
         private int modalScrollPosition;
         private int mainContentWidth, mainContentHeight;
+        private AssetManagementTab currentTab = AssetManagementTab.ASSETS;
         private final List<TextFieldWidget> modalTextFields = new ArrayList<>();
 
         StarmapAssetActionsWidget(OrbitalAssetUiState state, Callbacks callbacks) {
@@ -627,6 +698,7 @@ public final class StarmapAssetActions {
 
         public void markContentDirty() {
             contentVersion++;
+            state.pendingSatelliteDeletion = null;
         }
 
         boolean isPointInScrollViewport(int localX, int localY) {
@@ -737,7 +809,6 @@ public final class StarmapAssetActions {
                     .hashCode();
                 result = 31 * result + asset.displayName()
                     .hashCode();
-                result = 31 * result + asset.getSyncRevision();
             }
             return result;
         }
@@ -828,7 +899,14 @@ public final class StarmapAssetActions {
                     createBodyText("GT5U required for automated assets", EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
                         .pos(CREATE_BUTTON_LEFT + CREATE_BUTTON_GAP * 3 + PANEL_CONTEXT_TEXT_GAP, 36));
             }
-            modal.child(createSectionText("Assets").pos(CONTENT_PADDING + ROW_LEFT_PADDING, CONTENT_TOP));
+            modal.child(
+                createTabButton("galaxia.asset_manager.tab.assets", AssetManagementTab.ASSETS)
+                    .pos(CONTENT_PADDING + ROW_LEFT_PADDING, CONTENT_TOP)
+                    .size(TAB_BUTTON_WIDTH, TAB_BUTTON_HEIGHT));
+            modal.child(
+                createTabButton("galaxia.asset_manager.tab.satellites", AssetManagementTab.SATELLITES)
+                    .pos(CONTENT_PADDING + ROW_LEFT_PADDING + TAB_BUTTON_WIDTH + TAB_BUTTON_GAP, CONTENT_TOP)
+                    .size(TAB_BUTTON_WIDTH, TAB_BUTTON_HEIGHT));
             VerticalScrollData scrollData = new VerticalScrollData();
             mainScrollData = scrollData;
             ScrollWidget<?> scroll = new ScrollWidget<>(scrollData).pos(CONTENT_PADDING, contentTop)
@@ -1130,8 +1208,13 @@ public final class StarmapAssetActions {
         }
 
         private int computeContentHeight(@UnknownNullability List<CelestialAsset> assetState) {
+            if (currentTab == AssetManagementTab.SATELLITES) {
+                List<SatelliteAssetRow> satellites = satelliteAssetRows(assetState);
+                if (satellites.isEmpty()) return 24;
+                return satellites.size() * ROW_HEIGHT + Math.max(0, satellites.size() - 1) * ROW_SPACING + 8;
+            }
             List<CelestialAsset> construction = getConstructionAssets(assetState);
-            List<CelestialAsset> deployed = getOperationalAssets(assetState);
+            List<CelestialAsset> deployed = deployedAssetRows(assetState);
             int y = 0;
             if (!construction.isEmpty()) {
                 y += 16;
@@ -1144,8 +1227,12 @@ public final class StarmapAssetActions {
         }
 
         private void populateContent(ParentWidget<?> content, int contentWidth, List<CelestialAsset> assetState) {
+            if (currentTab == AssetManagementTab.SATELLITES) {
+                populateSatelliteContent(content, contentWidth, assetState);
+                return;
+            }
             List<CelestialAsset> construction = getConstructionAssets(assetState);
-            List<CelestialAsset> deployed = getOperationalAssets(assetState);
+            List<CelestialAsset> deployed = deployedAssetRows(assetState);
             int y = 0;
             if (!construction.isEmpty()) {
                 content.child(createSectionText("Construction").pos(ROW_LEFT_PADDING, y));
@@ -1238,6 +1325,98 @@ public final class StarmapAssetActions {
                     asset.kind == CelestialAsset.Kind.STATION ? callbacks.isCreativeBuildModeEnabled() : true,
                     () -> callbacks.openPendingAssetDestruction(asset)).pos(buttonX, ROW_ICON_Y));
             return row;
+        }
+
+        private void populateSatelliteContent(ParentWidget<?> content, int contentWidth,
+            List<CelestialAsset> assetState) {
+            List<SatelliteAssetRow> satellites = satelliteAssetRows(assetState);
+            int y = 0;
+            if (satellites.isEmpty()) {
+                content.child(
+                    createBodyText(
+                        StatCollector.translateToLocal("galaxia.asset_manager.satellites.empty"),
+                        EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(EMPTY_ROW_TEXT_X, y));
+                return;
+            }
+            for (SatelliteAssetRow row : satellites) {
+                content.child(createSatelliteAssetRow(row, contentWidth - ROW_WIDTH_INSET).pos(ROW_LEFT_PADDING, y));
+                y += ROW_HEIGHT + ROW_SPACING;
+            }
+        }
+
+        private ParentWidget<?> createSatelliteAssetRow(SatelliteAssetRow satellite, int rowWidth) {
+            ParentWidget<?> row = new PassiveRow().widthRelOffset(1f, -ROW_WIDTH_INSET)
+                .height(ROW_HEIGHT)
+                .background(
+                    drawable(
+                        (context, x, y, width, height) -> Gui
+                            .drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_ROW_BG.getColor())));
+            row.child(
+                createAssetIconWidget(CelestialAsset.Kind.SATELLITE, 1.0f).pos(ROW_ICON_X, ROW_ICON_Y)
+                    .size(ROW_ICON_SLOT_SIZE, ROW_ICON_SLOT_SIZE));
+
+            int actionButtonsWidth = SATELLITE_ACTION_BUTTON_WIDTH * 3 + ROW_ACTION_BUTTON_GAP * 2;
+            int textWidth = rowWidth - ROW_TEXT_LEFT - actionButtonsWidth - ROW_TEXT_RIGHT_GAP;
+            row.child(
+                createBodyText(
+                    trimToWidth(satelliteKindLabel(satellite.kind()), textWidth),
+                    EnumColors.MAP_COLOR_TEXT_TITLE.getColor()).pos(ROW_TEXT_LEFT, ROW_NAME_Y)
+                        .width(textWidth));
+            row.child(
+                createBodyText(
+                    trimToWidth(
+                        StatCollector
+                            .translateToLocalFormatted("galaxia.asset_manager.satellites.count", satellite.count()),
+                        textWidth),
+                    EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(ROW_TEXT_LEFT, ROW_DETAIL_Y)
+                        .width(textWidth));
+
+            int buttonX = rowWidth - ROW_ACTION_BUTTON_RIGHT_INSET - actionButtonsWidth + ICON_BUTTON_SIZE;
+            row.child(
+                createSatelliteDeleteButton(
+                    satellite.kind(),
+                    1,
+                    StatCollector.translateToLocal("galaxia.asset_manager.satellites.delete_one"))
+                        .pos(buttonX, ROW_ICON_Y)
+                        .size(SATELLITE_ACTION_BUTTON_WIDTH, ICON_BUTTON_SIZE));
+            row.child(
+                createSatelliteDeleteButton(
+                    satellite.kind(),
+                    SATELLITE_DELETE_AMOUNT,
+                    StatCollector.translateToLocalFormatted(
+                        "galaxia.asset_manager.satellites.delete_amount",
+                        SATELLITE_DELETE_AMOUNT))
+                            .pos(buttonX + SATELLITE_ACTION_BUTTON_WIDTH + ROW_ACTION_BUTTON_GAP, ROW_ICON_Y)
+                            .size(SATELLITE_ACTION_BUTTON_WIDTH, ICON_BUTTON_SIZE));
+            row.child(
+                createSatelliteDeleteButton(
+                    satellite.kind(),
+                    0,
+                    StatCollector.translateToLocal("galaxia.asset_manager.satellites.delete_all"))
+                        .pos(buttonX + (SATELLITE_ACTION_BUTTON_WIDTH + ROW_ACTION_BUTTON_GAP) * 2, ROW_ICON_Y)
+                        .size(SATELLITE_ACTION_BUTTON_WIDTH, ICON_BUTTON_SIZE));
+            return row;
+        }
+
+        private ButtonWidget<?> createSatelliteDeleteButton(SatelliteKind kind, int amount, String label) {
+            boolean armed = state.pendingSatelliteDeletion != null && state.pendingSatelliteDeletion.kind() == kind
+                && state.pendingSatelliteDeletion.amount() == amount;
+            String visibleLabel = armed
+                ? StatCollector.translateToLocal("galaxia.asset_manager.satellites.confirm_delete")
+                : label;
+            return createTextButton(visibleLabel, state.assetActionsBody != null, () -> {
+                if (!armed) {
+                    state.pendingSatelliteDeletion = new PendingSatelliteDeletion(kind, amount);
+                    markStructureDirty();
+                    return;
+                }
+                state.pendingSatelliteDeletion = null;
+                if (amount == 0) {
+                    callbacks.deleteSatellites(state.assetActionsBody, kind);
+                } else {
+                    callbacks.deleteSatelliteAmount(state.assetActionsBody, kind, amount);
+                }
+            }, true);
         }
 
         private ButtonWidget<?> createNameButton(CelestialAsset asset, int width) {
@@ -1378,6 +1557,22 @@ public final class StarmapAssetActions {
             return createIconButton(null, glyph, tooltip, enabled, action);
         }
 
+        private ButtonWidget<?> createTabButton(String labelKey, AssetManagementTab tab) {
+            boolean selected = currentTab == tab;
+            return createTextButton(StatCollector.translateToLocal(labelKey), true, () -> {
+                if (currentTab == tab) return;
+                currentTab = tab;
+                markStructureDirty();
+            }, false).background(createTabButtonBackground(selected, false))
+                .hoverBackground(createTabButtonBackground(selected, true));
+        }
+
+        private String satelliteKindLabel(SatelliteKind kind) {
+            return StatCollector.translateToLocal(
+                "galaxia.satellite.kind." + kind.name()
+                    .toLowerCase(Locale.ROOT));
+        }
+
         private ButtonWidget<?> createIconButton(CelestialAsset.Kind iconKind, StarmapActionGlyph glyph, String tooltip,
             boolean enabled, Runnable action) {
             ButtonWidget<?> button = new ScrollAwareButtonWidget().size(ICON_BUTTON_SIZE, ICON_BUTTON_SIZE)
@@ -1446,6 +1641,13 @@ public final class StarmapAssetActions {
                 return createRectFrameDrawable(bg, EnumColors.MAP_COLOR_BTN_DANGER_BORDER.getColor());
             }
             return createButtonBackground(enabled, hovered);
+        }
+
+        private IDrawable createTabButtonBackground(boolean selected, boolean hovered) {
+            if (!selected) return createButtonBackground(true, hovered);
+            int bg = hovered ? EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor()
+                : EnumColors.MAP_COLOR_MODAL_HEADER.getColor();
+            return createRectFrameDrawable(bg, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
         }
 
         private IDrawable createRectFrameDrawable(int backgroundColor, int borderColor) {
@@ -1530,16 +1732,9 @@ public final class StarmapAssetActions {
         private List<CelestialAsset> getConstructionAssets(List<CelestialAsset> assets) {
             List<CelestialAsset> matching = new ArrayList<>();
             for (CelestialAsset asset : assets) {
+                if (asset.kind == CelestialAsset.Kind.SATELLITE) continue;
                 if (asset.status() == CelestialAsset.Status.CONSTRUCTION_SITE
                     || asset.status() == CelestialAsset.Status.DECONSTRUCTION) matching.add(asset);
-            }
-            return matching;
-        }
-
-        private List<CelestialAsset> getOperationalAssets(List<CelestialAsset> assets) {
-            List<CelestialAsset> matching = new ArrayList<>();
-            for (CelestialAsset asset : assets) {
-                if (asset.status() == CelestialAsset.Status.OPERATIONAL) matching.add(asset);
             }
             return matching;
         }
@@ -1598,6 +1793,11 @@ public final class StarmapAssetActions {
             SEND,
             DESTROY,
             MANAGE
+        }
+
+        private enum AssetManagementTab {
+            ASSETS,
+            SATELLITES
         }
 
         private final class PassiveRow extends ParentWidget<PassiveRow> {

@@ -10,6 +10,7 @@ import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.AssetUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.BeamEffectPacket;
+import com.gtnewhorizons.galaxia.core.network.CelestialKnowledgeSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.CommitBlueprintAndOrderPacket;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
 import com.gtnewhorizons.galaxia.core.network.HazardWarningPacket;
@@ -19,6 +20,8 @@ import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.RocketDestinationSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.RocketLaunchPacket;
+import com.gtnewhorizons.galaxia.core.network.SatelliteNetworkSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.StarmapActionStatusPacket;
 import com.gtnewhorizons.galaxia.core.network.TeamConfigPacket;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.core.network.TetherAnchorSyncPacket;
@@ -77,6 +80,12 @@ public final class NetworkManager {
         GALAXIA_NETWORK.registerMessage(BeamEffectPacket.Handler.class, BeamEffectPacket.class, id++,
             Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(TetherAnchorSyncPacket.Handler.class, TetherAnchorSyncPacket.class, id++,
+            Side.CLIENT);
+        GALAXIA_NETWORK.registerMessage(SatelliteNetworkSyncPacket.Handler.class, SatelliteNetworkSyncPacket.class, id++,
+            Side.CLIENT);
+        GALAXIA_NETWORK.registerMessage(CelestialKnowledgeSyncPacket.Handler.class, CelestialKnowledgeSyncPacket.class, id++,
+            Side.CLIENT);
+        GALAXIA_NETWORK.registerMessage(StarmapActionStatusPacket.Handler.class, StarmapActionStatusPacket.class, id++,
             Side.CLIENT);
     }
     // spotless:on
