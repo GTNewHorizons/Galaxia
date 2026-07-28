@@ -208,7 +208,6 @@ public final class Moon {
     protected static BiomeGenBase createLandBiome(String name, TerrainConfiguration terrainConfiguration) {
         BlockMeta andesite = new BlockMeta(MOON_ANDESITE);
         BlockMeta anorthosite = new BlockMeta(MOON_ANORTHOSITE);
-        BlockMeta bedrock = new BlockMeta(Blocks.bedrock);
 
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .height(0.1F, 0.11F)
@@ -216,7 +215,6 @@ public final class Moon {
             .rainfall(0.99F)
             .topBlock(MOON_REGOLITH)
             .fillerBlocks(height -> {
-                if (height == 0) return bedrock;
                 if (height <= 32) return anorthosite;
                 return andesite;
             })
@@ -268,7 +266,6 @@ public final class Moon {
     protected static BiomeGenBase createOceanBiome(String name, TerrainConfiguration terrainConfiguration) {
         BlockMeta basalt = new BlockMeta(MOON_BASALT);
         BlockMeta gabbro = new BlockMeta(MOON_GABBRO);
-        BlockMeta bedrock = new BlockMeta(Blocks.bedrock);
 
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .height(0.1F, 0.11F)
@@ -276,7 +273,6 @@ public final class Moon {
             .rainfall(0.99F)
             .topBlock(MOON_BASALT)
             .fillerBlocks(height -> {
-                if (height == 0) return bedrock;
                 if (height <= 32) return gabbro;
                 return basalt;
             })

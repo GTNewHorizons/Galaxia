@@ -55,6 +55,8 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
     private static final DefaultBlockPalette DEFAULT_PALETTE = new DefaultBlockPalette();
 
     private static final ImmutableBlockMeta AIR = new BlockMeta(Blocks.air);
+    private static final ImmutableBlockMeta UPPER_MANTLE_PLACEHOLDER = new BlockMeta(Blocks.brick_block);
+    private static final ImmutableBlockMeta LOWER_MANTLE_PLACEHOLDER = new BlockMeta(Blocks.coal_block);
 
     @Getter
     private final DimensionEnum dimension;
@@ -114,10 +116,57 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
         Cube cube = new Cube(chunk, cubeY);
 
         var data = heightOracle.getOrCompute(cubeX, cubeZ);
-
-        CaveShape caveShape = null;
-
         ExtendedBlockStorage ebs = cube.getOrCreateStorage();
+
+        if (cubeY >= 0) {
+            generateCrust(cubeX, cubeY, cubeZ, data, ebs);
+        } else if (cubeY >= -8) {
+            generateUpperMantle(cubeX, cubeY, cubeZ, ebs);
+        } else {
+            generateLowerMantle(cubeX, cubeY, cubeZ, ebs);
+        }
+
+        drainDeferredWrites(cubeX, cubeY, cubeZ, cube);
+
+        if (chunkGenerated) {
+            chunk.generateSkylightMap();
+
+            return new GenerationResult<>(cube, List.of(chunk), List.of());
+        } else {
+            return new GenerationResult<>(cube);
+        }
+    }
+
+    private void generateUpperMantle(int cubeX, int cubeY, int cubeZ, ExtendedBlockStorage ebs) {
+        ImmutableBlockMeta block = UPPER_MANTLE_PLACEHOLDER;
+
+        for (int localX = 0; localX < CHUNK_WIDTH; localX++) {
+            for (int localZ = 0; localZ < CHUNK_WIDTH; localZ++) {
+                int minY = cubeY << 4;
+                int maxY = minY + 16;
+                for (int y = minY; y < maxY; y++) {
+                    placeBlock(ebs, block, localX, y, localZ);
+                }
+            }
+        }
+    }
+
+    private void generateLowerMantle(int cubeX, int cubeY, int cubeZ, ExtendedBlockStorage ebs) {
+        ImmutableBlockMeta block = LOWER_MANTLE_PLACEHOLDER;
+
+        for (int localX = 0; localX < CHUNK_WIDTH; localX++) {
+            for (int localZ = 0; localZ < CHUNK_WIDTH; localZ++) {
+                int minY = cubeY << 4;
+                int maxY = minY + 16;
+                for (int y = minY; y < maxY; y++) {
+                    placeBlock(ebs, block, localX, y, localZ);
+                }
+            }
+        }
+    }
+
+    private void generateCrust(int cubeX, int cubeY, int cubeZ, HeightOracle.ChunkData data, ExtendedBlockStorage ebs) {
+        CaveShape caveShape = null;
 
         for (int localX = 0; localX < CHUNK_WIDTH; localX++) {
             for (int localZ = 0; localZ < CHUNK_WIDTH; localZ++) {
@@ -209,26 +258,20 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                         block = AIR;
                     }
 
-                    if (block != null) {
-                        if (block.getBlock() != Blocks.air) {
-                            ebs.func_150818_a(localX, y & 15, localZ, block.getBlock());
-                        }
-                        if (block.getBlockMeta() != 0) {
-                            ebs.setExtBlockMetadata(localX, y & 15, localZ, block.getBlockMeta());
-                        }
-                    }
+                    placeBlock(ebs, block, localX, y, localZ);
                 }
             }
         }
+    }
 
-        drainDeferredWrites(cubeX, cubeY, cubeZ, cube);
-
-        if (chunkGenerated) {
-            chunk.generateSkylightMap();
-
-            return new GenerationResult<>(cube, List.of(chunk), List.of());
-        } else {
-            return new GenerationResult<>(cube);
+    private static void placeBlock(ExtendedBlockStorage ebs, ImmutableBlockMeta block, int localX, int y, int localZ) {
+        if (block != null) {
+            if (block.getBlock() != Blocks.air) {
+                ebs.func_150818_a(localX, y & 15, localZ, block.getBlock());
+            }
+            if (block.getBlockMeta() != 0) {
+                ebs.setExtBlockMetadata(localX, y & 15, localZ, block.getBlockMeta());
+            }
         }
     }
 
