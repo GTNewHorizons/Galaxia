@@ -354,10 +354,10 @@ public final class GalaxiaAPI {
     }
 
     /**
-     * Checks if gt is loaded (who would guess)
+     * Checks if gt5u_nh is loaded (who would guess)
      */
-    public static boolean isGregTechLoaded() {
-        return Loader.isModLoaded("gregtech");
+    public static boolean isGregTech5UnofficialNewHorizonsLoaded() {
+        return Loader.isModLoaded("gregtech_nh");
     }
 
     public static @Nullable TileStation getStationAround(@Nonnull World world, int dim, int x, int y, int z) {
@@ -382,7 +382,7 @@ public final class GalaxiaAPI {
     }
 
     public static boolean isMachineBlock(Block block, int blockMetadata) {
-        if (isGregTechLoaded()) {
+        if (isGregTech5UnofficialNewHorizonsLoaded()) {
             return GregTechAPI.isMachineBlock(block, blockMetadata);
         }
 
@@ -399,7 +399,7 @@ public final class GalaxiaAPI {
      */
     @SuppressWarnings("UnusedReturnValue")
     public static boolean registerMachineBlock(Block aBlock, int aMeta) {
-        if (isGregTechLoaded()) {
+        if (isGregTech5UnofficialNewHorizonsLoaded()) {
             return GregTechAPI.registerMachineBlock(aBlock, -1);
         }
 
@@ -416,7 +416,7 @@ public final class GalaxiaAPI {
      * @param aZ     is the Z-Coord of the update causing Block
      */
     public static boolean causeMachineUpdate(World aWorld, int aX, int aY, int aZ) {
-        if (isGregTechLoaded()) {
+        if (isGregTech5UnofficialNewHorizonsLoaded()) {
             return GregTechAPI.causeMachineUpdate(aWorld, aX, aY, aZ);
         }
 

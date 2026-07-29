@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.compat;
 
-import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTechLoaded;
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTech5UnofficialNewHorizonsLoaded;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,7 +32,7 @@ public final class GTCompat {
     private GTCompat() {}
 
     public static List<String> getGtVeinOres(@Nonnull String veinId) {
-        if (!isGregTechLoaded() || veinId.isEmpty()) return List.of();
+        if (!isGregTech5UnofficialNewHorizonsLoaded() || veinId.isEmpty()) return List.of();
 
         OreMixes oreMix = null;
         for (OreMixes mix : OreMixes.values()) {
@@ -97,7 +97,7 @@ public final class GTCompat {
     }
 
     public static ItemStack getGtOreStack(String materialName) {
-        if (!isGregTechLoaded()) return null;
+        if (!isGregTech5UnofficialNewHorizonsLoaded()) return null;
         if (materialName == null || materialName.isEmpty()) return null;
 
         ItemStack cached = GT_ORE_CACHE.get(materialName);

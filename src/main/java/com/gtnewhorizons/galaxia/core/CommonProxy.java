@@ -2,7 +2,7 @@ package com.gtnewhorizons.galaxia.core;
 
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.FMLBusRegister;
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.ForgeBusRegister;
-import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTechLoaded;
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTech5UnofficialNewHorizonsLoaded;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask.BAUBLE_TYPE_OXYGEN_MASK;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank.BAUBLE_TYPE_OXYGEN_TANK;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield.BAUBLE_TYPE_PROTECTION_SHIELD;
@@ -86,7 +86,7 @@ public class CommonProxy {
         GalaxiaEffects.init();
 
         // Facility setup
-        FacilityModuleKind.setGt5Available(isGregTechLoaded());
+        FacilityModuleKind.setGt5Available(isGregTech5UnofficialNewHorizonsLoaded());
         FacilityModuleRegistry.init();
 
         if (Loader.isModLoaded("Baubles|Expanded")) registerBaublesSlots();
@@ -129,7 +129,7 @@ public class CommonProxy {
     public void serverStarting(FMLServerStartingEvent event) {}
 
     private void registerAttachments() {
-        if (isGregTechLoaded()) {
+        if (isGregTech5UnofficialNewHorizonsLoaded()) {
             GalaxiaGTAttachmentRegistration.init();
         }
 
@@ -138,7 +138,7 @@ public class CommonProxy {
     }
 
     private void validateGtCelestialOrePools() {
-        if (!isGregTechLoaded()) return;
+        if (!isGregTech5UnofficialNewHorizonsLoaded()) return;
 
         int bodyCount = 0;
         int stackCount = 0;

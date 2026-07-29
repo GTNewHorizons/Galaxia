@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
-import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTechLoaded;
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTech5UnofficialNewHorizonsLoaded;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -3115,7 +3115,7 @@ public class OrbitalView {
         }
 
         private boolean isGT5AutomationAvailable() {
-            return isGregTechLoaded();
+            return isGregTech5UnofficialNewHorizonsLoaded();
         }
 
         private boolean canCreateBaseStation(CelestialObject body) {
