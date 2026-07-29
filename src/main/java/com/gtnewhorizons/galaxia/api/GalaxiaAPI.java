@@ -354,9 +354,9 @@ public final class GalaxiaAPI {
     }
 
     /**
-     * Checks if gt5u is loaded (who would guess)
+     * Checks if gt5u_nh is loaded (who would guess)
      */
-    public static boolean isGregTechLoaded() {
+    public static boolean isGregTech5UnofficialNewHorizonsLoaded() {
         return Loader.isModLoaded("gregtech_nh");
     }
 
