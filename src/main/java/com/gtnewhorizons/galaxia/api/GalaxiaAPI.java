@@ -354,10 +354,10 @@ public final class GalaxiaAPI {
     }
 
     /**
-     * Checks if gt is loaded (who would guess)
+     * Checks if gt5u is loaded (who would guess)
      */
     public static boolean isGregTechLoaded() {
-        return Loader.isModLoaded("gregtech");
+        return Loader.isModLoaded("gregtech_nh");
     }
 
     public static @Nullable TileStation getStationAround(@Nonnull World world, int dim, int x, int y, int z) {
