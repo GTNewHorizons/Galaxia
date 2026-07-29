@@ -21,7 +21,7 @@ import gregtech.api.interfaces.tileentity.IMachineBlockUpdateable;
 import lombok.Getter;
 import lombok.Setter;
 
-@Optional.Interface(iface = "gregtech.api.interfaces.tileentity.IMachineBlockUpdateable", modid = "gregtech")
+@Optional.Interface(iface = "gregtech.api.interfaces.tileentity.IMachineBlockUpdateable", modid = "gregtech_nh")
 public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> extends TileEntity
     implements ISurvivalConstructable, IMachineBlockUpdateable {
 
@@ -158,7 +158,7 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
 
         if (mCheckTimer <= 0) {
             // Just in case, but a proper checking with onMachineBlockUpdate would be better
-            if (!GalaxiaAPI.isGregTechLoaded()) this.updated = true;
+            if (!GalaxiaAPI.isGregTech5UnofficialNewHorizonsLoaded()) this.updated = true;
 
             if (this.updated) {
                 this.updated = false;
