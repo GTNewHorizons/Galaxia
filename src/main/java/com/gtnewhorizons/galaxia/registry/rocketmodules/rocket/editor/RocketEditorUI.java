@@ -169,13 +169,16 @@ public class RocketEditorUI {
                     new ButtonWidget<>().size(34, 34)
                         .background(new DynamicDrawable(() -> {
                             if (selectedPartId.getValue() == partId)
-                                return EnumTextures.SILO_CATEGORY_BASE_SELECTED.getImage();
-                            return EnumTextures.SILO_CATEGORY_BASE.getImage();
+                                return EnumTextures.SILO_PART_BACKGROUND_SELECTED.getImage();
+                            return EnumTextures.SILO_PART_BACKGROUND.getImage();
                         }))
-                        .overlay(EnumTextures.SELECTION_FRAME.getImage())
+                        .overlay(UITexture.fullImage(part.siloIconLocation()))
                         .tooltip(t -> {
                             t.addLine(IKey.str(part.name()));
-                            t.add(UITexture.fullImage(part.spriteLocation()));
+                            t.add(
+                                UITexture.fullImage(part.spriteLocation())
+                                    .asIcon()
+                                    .size(48, 48 * part.height() / part.width()));
                         })
                         .onMousePressed(b -> {
                             if (b == 0) {

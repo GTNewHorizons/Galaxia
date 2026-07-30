@@ -100,6 +100,8 @@ public enum EnumTextures {
     SILO_CATEGORY_FUEL_TANKS("textures/gui/silo/categories/category_fuel_tanks.png"),
     SILO_CATEGORY_LIQUID_ENGINES("textures/gui/silo/categories/category_liquid_engines.png"),
     SILO_CATEGORY_STRUCTURAL("textures/gui/silo/categories/category_structural.png"),
+    SILO_PART_BACKGROUND("textures/gui/silo/categories/part_bg.png"),
+    SILO_PART_BACKGROUND_SELECTED("textures/gui/silo/categories/part_bg_selected.png"),
 
     // Fields
     SILO_FIELD_ICON_LEFT("textures/gui/silo/fields/icon_left.png"),

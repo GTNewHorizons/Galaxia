@@ -148,6 +148,7 @@ tile.enchanted_block_of_cinnabar.name=Enchanted Block of Cinnabar
 tile.launchpad.name=Launchpad Casing
 tile.launchpad_framebox.name=Launchpad Framebox
 tile.launchpad_reinforcement.name=Launchpad Reinforcement
+tile.launchpad_assembling_casing.name=Launchpad Assembling Casing
 tile.meteoric_iron_block.name=Meteoric Iron Block
 tile.raw_sulfur_block.name=Raw Sulfur Block
 tile.research_outpost_casing.name=Research Outpost Casing
