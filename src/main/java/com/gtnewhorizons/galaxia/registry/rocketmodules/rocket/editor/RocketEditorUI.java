@@ -78,7 +78,7 @@ public class RocketEditorUI {
         panel.child(createNameFieldLayer().margin(156, 9));
         panel.child(createStagesPanel().margin(403, 2));
         panel
-            .child(createBottomToolbar(silo, workingBlueprint, selectedPartId, buildStatusSync, data).margin(274, 219));
+            .child(createBottomToolbar(silo, workingBlueprint, selectedPartId, buildStatusSync, data).margin(258, 219));
 
         panel.onCloseAction(() -> {
             if (silo.getBuildStatus()
@@ -371,6 +371,20 @@ public class RocketEditorUI {
                 .child(
                     new ButtonWidget<>().size(16, 16)
                         .margin(0, 2)
+                        .background(EnumTextures.SILO_SAVE_BLUEPRINT_ICON.getImage())
+                        .tooltip(t -> t.addLine(IKey.lang("galaxia.rocket_editor.return_modules")))
+                        .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
+                            if (md.mouseButton == 0 && !silo.getWorldObj().isRemote) {
+                                silo.returnModules();
+                            }
+                        }))));
+
+        row.child(
+            new SingleChildWidget<>().size(16, 20)
+                .background(EnumTextures.SILO_FIELD_ICON_MIDDLE.getImage())
+                .child(
+                    new ButtonWidget<>().size(16, 16)
+                        .margin(0, 2)
                         .background(EnumTextures.SILO_ORDER_MODULES_ICON.getImage())
                         .tooltip(t -> {
                             RocketBuildStatus status = RocketBuildStatus.values()[buildStatusSync.getValue()];
@@ -451,7 +465,7 @@ public class RocketEditorUI {
                             }
                         }))));
 
-        return new ParentWidget<>().size(84, 20)
+        return new ParentWidget<>().size(100, 20)
             .child(row);
     }
 }

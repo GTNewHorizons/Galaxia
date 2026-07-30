@@ -81,7 +81,6 @@ public enum GalaxiaBlocksEnum {
             .hardnessAndResistance(16, 500)
             .harvest("pickaxe", 3)),
     RESEARCH_OUTPOST_CASING(new BlockConfigurable("machine/research_outpost_casing")),
-    LAUNCHPAD_CASING(new BlockConfigurable("machine/launchpad")),
 
     // MISC - PLANET DECORATION BLOCKS
 
@@ -129,6 +128,8 @@ public enum GalaxiaBlocksEnum {
     LAUNCHPAD_FRAMEBOX(new BlockCasing("machine/launchpad_framebox").glass()),
     LAUNCHPAD_REINFORCEMENT(new BlockCasing("machine/launchpad_reinforcement")),
     LAUNCHPAD_ASSEMBLING_CASING(new BlockCasing("machine/launchpad_assembling_casing")),
+    LAUNCHPAD_SHEETING(new BlockCasing("machine/launchpad_sheeting")),
+    LAUNCHPAD_CASING(new BlockConfigurable("machine/launchpad")),
 
     ; // leave trailing semicolon
 
