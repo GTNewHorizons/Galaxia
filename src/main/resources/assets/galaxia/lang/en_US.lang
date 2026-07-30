@@ -146,6 +146,8 @@ tile.block_of_cinnabar.name=Block of Cinnabar
 tile.block_of_pyrite.name=Block of Pyrite
 tile.enchanted_block_of_cinnabar.name=Enchanted Block of Cinnabar
 tile.launchpad.name=Launchpad Casing
+tile.launchpad_framebox.name=Launchpad Framebox
+tile.launchpad_reinforcement.name=Launchpad Reinforcement
 tile.meteoric_iron_block.name=Meteoric Iron Block
 tile.raw_sulfur_block.name=Raw Sulfur Block
 tile.research_outpost_casing.name=Research Outpost Casing
@@ -621,6 +623,27 @@ galaxia.gui.team_config.action.rename_asset=Rename Asset
 galaxia.gui.team_config.action.destroy_asset=Destroy Asset
 galaxia.gui.team_config.action.deconstruct_asset=Deconstruct Asset
 galaxia.gui.team_config.button=Team config
+
+# Silo GUI
+galaxia.rocket_editor.category.capsules=Capsules
+galaxia.rocket_editor.category.fuel_tanks=Fuel Tanks
+galaxia.rocket_editor.category.liquid_engines=Liquid Fuel Engines
+galaxia.rocket_editor.category.decouplers=Decouplers
+galaxia.rocket_editor.category.cabins=Cabins
+galaxia.rocket_editor.category.structural=Structural parts
+galaxia.rocket_editor.module=MODULE #%d
+galaxia.rocket_editor.name_placeholder=Rocket Name
+galaxia.rocket_editor.silo_not_found=Silo not found!
+galaxia.rocket_editor.clear_blueprint=Clear Blueprint
+galaxia.rocket_editor.save_schematic=Save Schematic
+galaxia.rocket_editor.order_modules=Order Modules
+galaxia.rocket_editor.order_modules_empty=Order Modules (empty)
+galaxia.rocket_editor.assembling=Assembling...
+galaxia.rocket_editor.ready_launch=Ready to Launch
+galaxia.rocket_editor.destination=Destination: %s
+galaxia.rocket_editor.click_cycle=Click to cycle
+galaxia.rocket_editor.enter_rocket=Enter Rocket
+galaxia.rocket_editor.enter_rocket_not_ready=Enter Rocket (not ready)
 
 # Team Info
 galaxia.gui.team_info.team=Team: %s

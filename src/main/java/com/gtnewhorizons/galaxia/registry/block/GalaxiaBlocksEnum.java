@@ -126,6 +126,8 @@ public enum GalaxiaBlocksEnum {
     RUSTY_IRON_BLOCK(new BlockCasing("rusty_iron_block")),
     SPACE_STATION_BLOCK(new BlockCasing("space_station/space_station_block")),
     AIRLOCK_CASING(new BlockAirlockCasing()),
+    LAUNCHPAD_FRAMEBOX(new BlockCasing("machine/launchpad_framebox").glass()),
+    LAUNCHPAD_REINFORCEMENT(new BlockCasing("machine/launchpad_reinforcement")),
 
     ; // leave trailing semicolon
 
