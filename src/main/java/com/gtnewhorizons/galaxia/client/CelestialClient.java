@@ -46,6 +46,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -124,7 +125,7 @@ public final class CelestialClient {
     }
 
     public static void createModules(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled,
-        List<StationTileCoord> tileCoords) {
+        List<ModulePlacement> placements) {
         createModules(
             assetId,
             kind,
@@ -134,44 +135,12 @@ public final class CelestialClient {
             MinerFocusTier.NONE,
             (short) 0,
             creativeBuildModeEnabled,
-            tileCoords);
+            placements);
     }
 
     public static boolean createModules(ID assetId, FacilityModuleKind kind, ModuleShape shape, ModuleTier tier,
         @Nullable HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId,
-        boolean creativeBuildModeEnabled, List<StationTileCoord> tileCoords) {
-        return createModules(
-            assetId,
-            kind,
-            shape,
-            tier,
-            hammerVariant,
-            minerFocusTier,
-            settingsGroupId,
-            0,
-            creativeBuildModeEnabled,
-            tileCoords);
-    }
-
-    public static boolean createModules(ID assetId, FacilityModuleKind kind, ModuleShape shape, ModuleTier tier,
-        @Nullable HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId, int rotation,
-        boolean creativeBuildModeEnabled, List<StationTileCoord> tileCoords) {
-        return createModules(
-            assetId,
-            kind,
-            shape,
-            tier,
-            hammerVariant,
-            minerFocusTier,
-            settingsGroupId,
-            rotationsFor(tileCoords, rotation),
-            creativeBuildModeEnabled,
-            tileCoords);
-    }
-
-    public static boolean createModules(ID assetId, FacilityModuleKind kind, ModuleShape shape, ModuleTier tier,
-        @Nullable HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId,
-        List<Integer> rotations, boolean creativeBuildModeEnabled, List<StationTileCoord> tileCoords) {
+        boolean creativeBuildModeEnabled, List<ModulePlacement> placements) {
         AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null) return false;
         if (!kind.isAllowedOn(state.kind)) return false;
@@ -183,48 +152,20 @@ public final class CelestialClient {
             hammerVariant,
             minerFocusTier,
             settingsGroupId,
-            rotations,
             creativeBuildModeEnabled,
-            tileCoords);
+            placements);
     }
 
     public static boolean copyModule(ID assetId, int sourceModuleIndex, ModuleInstance.ID sourceModuleId,
-        boolean creativeBuildModeEnabled, List<StationTileCoord> tileCoords) {
-        return copyModule(assetId, sourceModuleIndex, sourceModuleId, 0, creativeBuildModeEnabled, tileCoords);
-    }
-
-    public static boolean copyModule(ID assetId, int sourceModuleIndex, ModuleInstance.ID sourceModuleId, int rotation,
-        boolean creativeBuildModeEnabled, List<StationTileCoord> tileCoords) {
-        return copyModule(
-            assetId,
-            sourceModuleIndex,
-            sourceModuleId,
-            rotationsFor(tileCoords, rotation),
-            creativeBuildModeEnabled,
-            tileCoords);
-    }
-
-    public static boolean copyModule(ID assetId, int sourceModuleIndex, ModuleInstance.ID sourceModuleId,
-        List<Integer> rotations, boolean creativeBuildModeEnabled, List<StationTileCoord> tileCoords) {
+        boolean creativeBuildModeEnabled, List<ModulePlacement> placements) {
         AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null || sourceModuleIndex < 0
             || sourceModuleIndex >= state.modules()
                 .size()) {
             return false;
         }
-        return StarmapActionSyncHandler.sendCopyModule(
-            assetId,
-            sourceModuleIndex,
-            sourceModuleId,
-            rotations,
-            creativeBuildModeEnabled,
-            tileCoords);
-    }
-
-    private static List<Integer> rotationsFor(List<StationTileCoord> tileCoords, int rotation) {
-        if (tileCoords == null) return null;
-        Integer normalized = ModuleShape.normalizeRotation(rotation);
-        return java.util.Collections.nCopies(tileCoords.size(), normalized);
+        return StarmapActionSyncHandler
+            .sendCopyModule(assetId, sourceModuleIndex, sourceModuleId, creativeBuildModeEnabled, placements);
     }
 
     public static boolean destroyAsset(ID assetId) {

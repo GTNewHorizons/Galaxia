@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
-import java.util.List;
-
 import javax.annotation.Nullable;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
@@ -27,7 +25,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
-import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.relauncher.Side;
@@ -235,7 +232,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         ModuleShape shape = copySource == null ? request.shape() : copySource.shape();
         ModuleTier tier = copySource == null ? request.tier() : copySource.tier();
         if (kind == null || shape == null || tier == null) return;
-        controller.startTileModeWithTargetSelections(
+        controller.startTileModeWithPlacements(
             copySource == null ? StationEditModeController.Mode.MASS_BUILD : StationEditModeController.Mode.COPY_MODULE,
             (copySource == null ? "Build " : "Copy ") + kind.getDisplayName(),
             "Confirm",
@@ -249,18 +246,15 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 controller.selectedTargetRotations(),
                 controller.footprintRotation()),
             coord -> coord,
-            selections -> {
-                List<StationTileCoord> targets = targetCoords(selections);
-                List<Integer> rotations = targetRotations(selections);
+            placements -> {
                 boolean sent;
                 if (copySource != null) {
                     sent = com.gtnewhorizons.galaxia.client.CelestialClient.copyModule(
                         assetId,
                         request.copySourceModuleIndex(),
                         request.copySourceModuleId(),
-                        rotations,
                         request.creativeBuildMode(),
-                        targets);
+                        placements);
                 } else {
                     sent = com.gtnewhorizons.galaxia.client.CelestialClient.createModules(
                         assetId,
@@ -270,9 +264,8 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                         request.hammerVariant(),
                         request.minerFocusTier(),
                         request.settingsGroupId(),
-                        rotations,
                         request.creativeBuildMode(),
-                        targets);
+                        placements);
                 }
                 if (!sent) StationNotificationHelper.showFailure("Module build request failed");
             },
@@ -284,22 +277,6 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 controller.footprintRotation()));
         controller.setSelectionFootprint(shape, shape != ModuleShape.SINGLE);
         controller.setPreviewModuleKind(kind);
-    }
-
-    private static List<StationTileCoord> targetCoords(List<StationTilePickerController.TargetSelection> selections) {
-        List<StationTileCoord> result = new java.util.ArrayList<>(selections.size());
-        for (StationTilePickerController.TargetSelection selection : selections) {
-            result.add(selection.coord());
-        }
-        return result;
-    }
-
-    private static List<Integer> targetRotations(List<StationTilePickerController.TargetSelection> selections) {
-        List<Integer> result = new java.util.ArrayList<>(selections.size());
-        for (StationTilePickerController.TargetSelection selection : selections) {
-            result.add(selection.rotation());
-        }
-        return result;
     }
 
     private static final class StationScreenBackground extends ParentWidget<StationScreenBackground> {

@@ -14,6 +14,7 @@ import java.util.function.UnaryOperator;
 import javax.annotation.Nullable;
 
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -29,7 +30,7 @@ final class StationTilePickerController {
     private BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility = (coord, selected) -> false;
     private UnaryOperator<StationTileCoord> normalizer = coord -> coord;
     private UnaryOperator<List<StationTileCoord>> selectionPruner = targets -> targets;
-    private Consumer<List<TargetSelection>> confirmHandler = selected -> {};
+    private Consumer<List<ModulePlacement>> confirmHandler = selected -> {};
     private ModuleShape selectionFootprint = ModuleShape.SINGLE;
     private @Nullable FacilityModuleKind previewModuleKind;
     private VisualStyle visualStyle = VisualStyle.BUILD;
@@ -37,8 +38,6 @@ final class StationTilePickerController {
     private int footprintRotation;
     private final LinkedHashMap<StationTileCoord, Integer> selected = new LinkedHashMap<>();
     private boolean active;
-
-    record TargetSelection(StationTileCoord coord, int rotation) {}
 
     void start(String title, String confirmLabel, Predicate<StationTileCoord> compatibility,
         UnaryOperator<StationTileCoord> normalizer, Consumer<List<StationTileCoord>> confirmHandler) {
@@ -58,7 +57,7 @@ final class StationTilePickerController {
     void start(String title, String confirmLabel, BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility,
         UnaryOperator<StationTileCoord> normalizer, Consumer<List<StationTileCoord>> confirmHandler,
         UnaryOperator<List<StationTileCoord>> selectionPruner) {
-        startWithTargetSelections(
+        startWithPlacements(
             title,
             confirmLabel,
             compatibility,
@@ -67,9 +66,9 @@ final class StationTilePickerController {
             selectionPruner);
     }
 
-    void startWithTargetSelections(String title, String confirmLabel,
+    void startWithPlacements(String title, String confirmLabel,
         BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility, UnaryOperator<StationTileCoord> normalizer,
-        Consumer<List<TargetSelection>> confirmHandler, UnaryOperator<List<StationTileCoord>> selectionPruner) {
+        Consumer<List<ModulePlacement>> confirmHandler, UnaryOperator<List<StationTileCoord>> selectionPruner) {
         this.title = title == null ? "" : title;
         this.confirmLabel = confirmLabel == null || confirmLabel.isBlank() ? "Confirm" : confirmLabel;
         this.compatibility = compatibility == null ? (coord, selected) -> false : compatibility;
@@ -196,8 +195,8 @@ final class StationTilePickerController {
 
     void confirm() {
         if (!canConfirm()) return;
-        List<TargetSelection> confirmed = selections();
-        Consumer<List<TargetSelection>> handler = confirmHandler;
+        List<ModulePlacement> confirmed = placements();
+        Consumer<List<ModulePlacement>> handler = confirmHandler;
         clear();
         handler.accept(confirmed);
     }
@@ -235,18 +234,18 @@ final class StationTilePickerController {
         }
     }
 
-    private List<TargetSelection> selections() {
-        List<TargetSelection> result = new ArrayList<>(selected.size());
+    private List<ModulePlacement> placements() {
+        List<ModulePlacement> result = new ArrayList<>(selected.size());
         for (Map.Entry<StationTileCoord, Integer> entry : selected.entrySet()) {
-            result.add(new TargetSelection(entry.getKey(), entry.getValue()));
+            result.add(new ModulePlacement(entry.getKey(), entry.getValue()));
         }
         return result;
     }
 
-    private static List<StationTileCoord> coords(List<TargetSelection> selections) {
-        List<StationTileCoord> result = new ArrayList<>(selections.size());
-        for (TargetSelection selection : selections) {
-            result.add(selection.coord());
+    private static List<StationTileCoord> coords(List<ModulePlacement> placements) {
+        List<StationTileCoord> result = new ArrayList<>(placements.size());
+        for (ModulePlacement placement : placements) {
+            result.add(placement.anchor());
         }
         return result;
     }

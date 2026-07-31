@@ -11,6 +11,7 @@ import java.util.function.UnaryOperator;
 import javax.annotation.Nullable;
 
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -68,26 +69,24 @@ final class StationEditModeController {
     void startTileMode(Mode mode, String title, String confirmLabel,
         BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility, UnaryOperator<StationTileCoord> normalizer,
         Consumer<List<StationTileCoord>> confirmHandler, UnaryOperator<List<StationTileCoord>> selectionPruner) {
-        startTileModeWithTargetSelections(mode, title, confirmLabel, compatibility, normalizer, selections -> {
+        startTileModeWithPlacements(mode, title, confirmLabel, compatibility, normalizer, placements -> {
             if (confirmHandler != null) {
-                List<StationTileCoord> coords = new java.util.ArrayList<>(selections.size());
-                for (StationTilePickerController.TargetSelection selection : selections) {
-                    coords.add(selection.coord());
+                List<StationTileCoord> coords = new java.util.ArrayList<>(placements.size());
+                for (ModulePlacement placement : placements) {
+                    coords.add(placement.anchor());
                 }
                 confirmHandler.accept(coords);
             }
         }, selectionPruner);
     }
 
-    void startTileModeWithTargetSelections(Mode mode, String title, String confirmLabel,
+    void startTileModeWithPlacements(Mode mode, String title, String confirmLabel,
         BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility, UnaryOperator<StationTileCoord> normalizer,
-        Consumer<List<StationTilePickerController.TargetSelection>> confirmHandler,
-        UnaryOperator<List<StationTileCoord>> selectionPruner) {
+        Consumer<List<ModulePlacement>> confirmHandler, UnaryOperator<List<StationTileCoord>> selectionPruner) {
         if (mode == null || mode == Mode.IDLE) {
             throw new IllegalArgumentException("Station edit mode must be a concrete active mode");
         }
-        tilePicker
-            .startWithTargetSelections(title, confirmLabel, compatibility, normalizer, confirmHandler, selectionPruner);
+        tilePicker.startWithPlacements(title, confirmLabel, compatibility, normalizer, confirmHandler, selectionPruner);
         this.mode = mode;
     }
 

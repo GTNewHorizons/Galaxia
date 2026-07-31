@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -139,9 +140,9 @@ final class StationTilePickerControllerTest {
     void confirmCanReturnSelectedTargetsWithTheirRotations() {
         StationTileCoord first = StationTileCoord.of(1, 0);
         StationTileCoord second = StationTileCoord.of(2, 0);
-        List<StationTilePickerController.TargetSelection> confirmed = new ArrayList<>();
+        List<ModulePlacement> confirmed = new ArrayList<>();
         StationTilePickerController controller = new StationTilePickerController();
-        controller.startWithTargetSelections(
+        controller.startWithPlacements(
             "Build",
             "Confirm",
             (coord, selected) -> true,
@@ -155,10 +156,6 @@ final class StationTilePickerControllerTest {
         controller.toggle(second);
         controller.confirm();
 
-        assertEquals(
-            List.of(
-                new StationTilePickerController.TargetSelection(first, 0),
-                new StationTilePickerController.TargetSelection(second, 1)),
-            confirmed);
+        assertEquals(List.of(new ModulePlacement(first, 0), new ModulePlacement(second, 1)), confirmed);
     }
 }
