@@ -7,12 +7,18 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketP
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.EnginePartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.FuelTankPartDef;
 
+import lombok.Getter;
+
 public class RocketStage {
 
+    @Getter
     private final int number;
+    @Getter
     private final List<RocketPartInstance> parts = new ArrayList<>();
+    @Getter
     private double totalMass = 0;
     private double totalFuel = 0;
+    @Getter
     private double totalThrust = 0;
 
     public RocketStage(int number) {
@@ -40,15 +46,4 @@ public class RocketStage {
         return totalThrust > totalMassWithPayload * 1.5;
     }
 
-    public List<RocketPartInstance> getParts() {
-        return parts;
-    }
-
-    public int getNumber() {
-        return number;
-    }
-
-    public double getTotalMass() {
-        return totalMass;
-    }
 }

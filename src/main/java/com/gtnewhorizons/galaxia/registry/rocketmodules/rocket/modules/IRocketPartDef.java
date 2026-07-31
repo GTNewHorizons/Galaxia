@@ -31,4 +31,8 @@ public interface IRocketPartDef {
     default ResourceLocation textureLocation() {
         return LocationGalaxia(MODULE_DOMAIN + assetFolder() + "/texture.png");
     }
+
+    default ResourceLocation siloIconLocation() {
+        return LocationGalaxia(MODULE_DOMAIN + assetFolder() + "/silo_icon.png");
+    }
 }

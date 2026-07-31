@@ -1,11 +1,16 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.util.ResourceLocation;
 
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
@@ -16,6 +21,7 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.cleanroommc.modularui.widget.Widget;
+import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
@@ -30,6 +36,8 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
     private static final double ZOOM_FACTOR_OUT = 0.85;
     private static final int DRAG_THRESHOLD = 5;
     private static final float PREVIEW_ALPHA = 0.30f;
+
+    private static final ResourceLocation BACKGROUND_TEXTURE = EnumTextures.SILO_BLUEPRINT_TILE.get();
 
     private final RocketBlueprint blueprint;
     private final TileEntitySilo silo;
@@ -47,6 +55,10 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
     private double pressMouseY;
     private double lastDragMouseX;
     private double lastDragMouseY;
+
+    private ScaledResolution cachedScaledResolution;
+    private int cachedDisplayWidth = -1;
+    private int cachedDisplayHeight = -1;
 
     public RocketCanvasWidget(RocketBlueprint blueprint, TileEntitySilo silo) {
         this.blueprint = blueprint;
@@ -124,11 +136,21 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
         scale = 1.0;
     }
 
+    private ScaledResolution getScaledResolution() {
+        if (cachedScaledResolution == null || cachedDisplayWidth != mc.displayWidth
+            || cachedDisplayHeight != mc.displayHeight) {
+            cachedScaledResolution = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight);
+            cachedDisplayWidth = mc.displayWidth;
+            cachedDisplayHeight = mc.displayHeight;
+        }
+        return cachedScaledResolution;
+    }
+
     @Override
     public void drawBackground(ModularGuiContext ctx, WidgetThemeEntry widgetTheme) {
-        Gui.drawRect(0, 0, getArea().width, getArea().height, 0xFF1A1C1E);
+        Gui.drawRect(0, 0, getArea().width, getArea().height, 0xFF7C9DFB);
 
-        ScaledResolution sr = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight);
+        ScaledResolution sr = getScaledResolution();
         int sf = sr.getScaleFactor();
         int scissorX = getArea().x * sf;
         int scissorY = (sr.getScaledHeight() - getArea().y - getArea().height) * sf;
@@ -145,7 +167,7 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
         GlStateManager.translate(panX, panY, 0);
         GlStateManager.scale(scale, scale, 1.0);
 
-        drawGrid();
+        drawTiledBackground();
         drawParts();
         // Only show placement preview when the canvas is editable
         if (isEditable()) drawHoverPreview();
@@ -154,6 +176,7 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
 
         // Draw a subtle locked overlay when not editable
         if (!isEditable()) {
+            GlStateManager.disableBlend();
             GL11.glColor4f(1f, 1f, 1f, 1f);
             GL11.glDisable(GL11.GL_SCISSOR_TEST);
             Gui.drawRect(0, 0, getArea().width, getArea().height, 0x44000000);
@@ -164,45 +187,77 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
         GL11.glDisable(GL11.GL_SCISSOR_TEST);
     }
 
-    private void drawGrid() {
-        Tessellator tes = Tessellator.instance;
-
+    private void drawTiledBackground() {
         double invScale = 1.0 / scale;
         double worldLeft = -panX * invScale;
         double worldTop = -panY * invScale;
         double worldRight = worldLeft + getArea().width * invScale;
         double worldBottom = worldTop + getArea().height * invScale;
 
-        int startX = (int) Math.floor(worldLeft / CELL) - 1;
-        int endX = (int) Math.ceil(worldRight / CELL) + 1;
-        int startY = (int) Math.floor(worldTop / CELL) - 1;
-        int endY = (int) Math.ceil(worldBottom / CELL) + 1;
+        mc.renderEngine.bindTexture(BACKGROUND_TEXTURE);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL11.GL_REPEAT);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL11.GL_REPEAT);
 
-        GlStateManager.disableTexture2D();
-        GL11.glColor4f(0.30f, 0.33f, 0.36f, 1.0f);
-        GL11.glLineWidth(1.0f);
-
-        tes.startDrawing(GL11.GL_LINES);
-
-        for (int x = startX; x <= endX; x++) {
-            int px = x * CELL;
-            tes.addVertex(px, startY * CELL, 0);
-            tes.addVertex(px, endY * CELL, 0);
-        }
-        for (int y = startY; y <= endY; y++) {
-            int py = y * CELL;
-            tes.addVertex(startX * CELL, py, 0);
-            tes.addVertex(endX * CELL, py, 0);
-        }
-
-        tes.draw();
         GL11.glColor4f(1f, 1f, 1f, 1f);
-        GlStateManager.enableTexture2D();
+
+        float uLeft = (float) (worldLeft / CELL);
+        float uRight = (float) (worldRight / CELL);
+        float vTop = (float) (worldTop / CELL);
+        float vBottom = (float) (worldBottom / CELL);
+
+        Tessellator tes = Tessellator.instance;
+        tes.startDrawingQuads();
+        tes.addVertexWithUV(worldLeft, worldBottom, 0, uLeft, vBottom);
+        tes.addVertexWithUV(worldRight, worldBottom, 0, uRight, vBottom);
+        tes.addVertexWithUV(worldRight, worldTop, 0, uRight, vTop);
+        tes.addVertexWithUV(worldLeft, worldTop, 0, uLeft, vTop);
+        tes.draw();
     }
 
     private void drawParts() {
-        for (RocketPartInstance part : blueprint.getParts()) {
-            drawPartAt(part.def(), part.x(), part.y(), 1.0f);
+        List<RocketPartInstance> parts = blueprint.getParts();
+        if (parts.isEmpty()) return;
+
+        Map<ResourceLocation, List<RocketPartInstance>> byTexture = new LinkedHashMap<>();
+        List<RocketPartInstance> untextured = new ArrayList<>();
+
+        for (RocketPartInstance part : parts) {
+            IRocketPartDef def = part.def();
+            if (def.assetFolder() != null) {
+                byTexture.computeIfAbsent(def.spriteLocation(), k -> new ArrayList<>())
+                    .add(part);
+            } else {
+                untextured.add(part);
+            }
+        }
+
+        Tessellator tes = Tessellator.instance;
+
+        if (!untextured.isEmpty()) {
+            GlStateManager.disableTexture2D();
+            GL11.glColor4f(0.85f, 0.55f, 0.15f, 1.0f);
+
+            tes.startDrawingQuads();
+            for (RocketPartInstance part : untextured) {
+                addPlainQuad(tes, part.def(), part.x(), part.y());
+            }
+            tes.draw();
+
+            GlStateManager.enableTexture2D();
+            GL11.glColor4f(1f, 1f, 1f, 1f);
+        }
+
+        if (!byTexture.isEmpty()) {
+            GL11.glColor4f(1f, 1f, 1f, 1f);
+            for (Map.Entry<ResourceLocation, List<RocketPartInstance>> entry : byTexture.entrySet()) {
+                mc.renderEngine.bindTexture(entry.getKey());
+
+                tes.startDrawingQuads();
+                for (RocketPartInstance part : entry.getValue()) {
+                    addTexturedQuad(tes, part.def(), part.x(), part.y());
+                }
+                tes.draw();
+            }
         }
     }
 
@@ -249,14 +304,10 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
             return;
         }
 
-        drawPartAt(sel, originX, originY, PREVIEW_ALPHA, canPlace);
+        drawPreviewPart(sel, originX, originY, canPlace);
     }
 
-    private void drawPartAt(IRocketPartDef def, int partX, int partY, float alpha) {
-        drawPartAt(def, partX, partY, alpha, true);
-    }
-
-    private void drawPartAt(IRocketPartDef def, int partX, int partY, float alpha, boolean valid) {
+    private void drawPreviewPart(IRocketPartDef def, int partX, int partY, boolean valid) {
         int px = partX * CELL;
         int py = partY * CELL;
         int pw = def.width() * CELL;
@@ -266,25 +317,26 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
         float g = valid ? 1.0f : 0.35f;
         float b = valid ? 1.0f : 0.35f;
 
+        Tessellator tes = Tessellator.instance;
+
         if (def.assetFolder() != null) {
-            GL11.glColor4f(r, g, b, alpha);
+            GL11.glColor4f(r, g, b, PREVIEW_ALPHA);
             mc.renderEngine.bindTexture(def.spriteLocation());
 
-            Tessellator tes = Tessellator.instance;
             tes.startDrawingQuads();
             tes.addVertexWithUV(px, py + ph, 0, 0, 1);
             tes.addVertexWithUV(px + pw, py + ph, 0, 1, 1);
             tes.addVertexWithUV(px + pw, py, 0, 1, 0);
             tes.addVertexWithUV(px, py, 0, 0, 0);
             tes.draw();
+
             GL11.glColor4f(1f, 1f, 1f, 1f);
             return;
         }
 
         GlStateManager.disableTexture2D();
-        GL11.glColor4f(valid ? 0.85f : 1.0f, valid ? 0.55f : 0.35f, valid ? 0.15f : 0.35f, alpha);
+        GL11.glColor4f(valid ? 0.85f : 1.0f, valid ? 0.55f : 0.35f, valid ? 0.15f : 0.35f, PREVIEW_ALPHA);
 
-        Tessellator tes = Tessellator.instance;
         tes.startDrawingQuads();
         tes.addVertex(px, py + ph, 0);
         tes.addVertex(px + pw, py + ph, 0);
@@ -294,6 +346,30 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
 
         GlStateManager.enableTexture2D();
         GL11.glColor4f(1f, 1f, 1f, 1f);
+    }
+
+    private void addPlainQuad(Tessellator tes, IRocketPartDef def, int partX, int partY) {
+        int px = partX * CELL;
+        int py = partY * CELL;
+        int pw = def.width() * CELL;
+        int ph = def.height() * CELL;
+
+        tes.addVertex(px, py + ph, 0);
+        tes.addVertex(px + pw, py + ph, 0);
+        tes.addVertex(px + pw, py, 0);
+        tes.addVertex(px, py, 0);
+    }
+
+    private void addTexturedQuad(Tessellator tes, IRocketPartDef def, int partX, int partY) {
+        int px = partX * CELL;
+        int py = partY * CELL;
+        int pw = def.width() * CELL;
+        int ph = def.height() * CELL;
+
+        tes.addVertexWithUV(px, py + ph, 0, 0, 1);
+        tes.addVertexWithUV(px + pw, py + ph, 0, 1, 1);
+        tes.addVertexWithUV(px + pw, py, 0, 1, 0);
+        tes.addVertexWithUV(px, py, 0, 0, 0);
     }
 
     private void pollDrag() {

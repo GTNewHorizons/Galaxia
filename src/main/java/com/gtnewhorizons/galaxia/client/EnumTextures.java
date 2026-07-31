@@ -85,6 +85,70 @@ public enum EnumTextures {
     ICON_MISSING("textures/gui/asset_panel/missing.png"),
     ICON_TRANSFER_HAMMER("textures/items/module/item_hammer_package.png"),
 
+    // Silo GUI
+    SILO_BLUEPRINT("textures/gui/silo/blueprint.png"),
+    SILO_BLUEPRINT_TILE("textures/gui/silo/blueprint_tile.png"),
+    SILO_GUI_BASE("textures/gui/silo/gui_base.png"),
+
+    // Categories
+    SILO_CATEGORY_BASE("textures/gui/silo/categories/category_base.png"),
+    SILO_CATEGORY_BASE_HOVERED("textures/gui/silo/categories/category_base_hovered.png"),
+    SILO_CATEGORY_BASE_SELECTED("textures/gui/silo/categories/category_base_selected.png"),
+    SILO_CATEGORY_CABINS("textures/gui/silo/categories/category_cabins.png"),
+    SILO_CATEGORY_CAPSULES("textures/gui/silo/categories/category_capsules.png"),
+    SILO_CATEGORY_DECOUPLERS("textures/gui/silo/categories/category_decouplers.png"),
+    SILO_CATEGORY_FUEL_TANKS("textures/gui/silo/categories/category_fuel_tanks.png"),
+    SILO_CATEGORY_LIQUID_ENGINES("textures/gui/silo/categories/category_liquid_engines.png"),
+    SILO_CATEGORY_STRUCTURAL("textures/gui/silo/categories/category_structural.png"),
+    SILO_PART_BACKGROUND("textures/gui/silo/categories/part_bg.png"),
+    SILO_PART_BACKGROUND_SELECTED("textures/gui/silo/categories/part_bg_selected.png"),
+
+    // Fields
+    SILO_FIELD_ICON_LEFT("textures/gui/silo/fields/icon_left.png"),
+    SILO_FIELD_ICON_MIDDLE("textures/gui/silo/fields/icon_middle.png"),
+    SILO_FIELD_ICON_RIGHT("textures/gui/silo/fields/icon_right.png"),
+    SILO_FIELD_TEXT_LEFT("textures/gui/silo/fields/text_left.png"),
+    SILO_FIELD_TEXT_MIDDLE("textures/gui/silo/fields/text_middle.png"),
+    SILO_FIELD_TEXT_RIGHT("textures/gui/silo/fields/text_right.png"),
+
+    // Icons
+    SILO_CLEAR_ICON("textures/gui/silo/fields/clear_icon.png"),
+    SILO_DESTINATION_ICON("textures/gui/silo/fields/destination_icon.png"),
+    SILO_ORDER_MODULES_ICON("textures/gui/silo/fields/order_modules_icon.png"),
+    SILO_SAVE_BLUEPRINT_ICON("textures/gui/silo/fields/save_blueprint_icon.png"),
+    SILO_ENTER_ROCKET_ICON("textures/gui/silo/fields/enter_rocket_icon.png"),
+
+    // Scroll Bars
+    SILO_SCROLL_BAR_BOTTOM("textures/gui/silo/scroll_bars/bar_bottom.png"),
+    SILO_SCROLL_BAR_BOTTOM_HOVERED("textures/gui/silo/scroll_bars/bar_bottom_hovered.png"),
+    SILO_SCROLL_BAR_HANDLE("textures/gui/silo/scroll_bars/bar_handle.png"),
+    SILO_SCROLL_BAR_HANDLE_HOVERED("textures/gui/silo/scroll_bars/bar_handle_hovered.png"),
+    SILO_SCROLL_BAR_MIDDLE("textures/gui/silo/scroll_bars/bar_middle.png"),
+    SILO_SCROLL_BAR_MIDDLE_HOVERED("textures/gui/silo/scroll_bars/bar_middle_hovered.png"),
+    SILO_SCROLL_BAR_TOP("textures/gui/silo/scroll_bars/bar_top.png"),
+    SILO_SCROLL_BAR_TOP_HOVERED("textures/gui/silo/scroll_bars/bar_top_hovered.png"),
+
+    // Stages
+    SILO_STAGE_ADD("textures/gui/silo/stages/stage_add.png"),
+    SILO_STAGE_ADD_HOVERED("textures/gui/silo/stages/stage_add_hovered.png"),
+    SILO_STAGE_REMOVE("textures/gui/silo/stages/stage_remove.png"),
+    SILO_STAGE_REMOVE_HOVERED("textures/gui/silo/stages/stage_remove_hovered.png"),
+    SILO_STAGE_BURN_LIQUID("textures/gui/silo/stages/stage_burn_liquid.png"),
+    SILO_STAGE_BURN_SOLID("textures/gui/silo/stages/stage_burn_solid.png"),
+    SILO_STAGE_DECOUPLE("textures/gui/silo/stages/stage_decouple.png"),
+    SILO_STAGE_DECOUPLE_SIDE("textures/gui/silo/stages/stage_decouple_side.png"),
+    SILO_STAGE_EMPTY("textures/gui/silo/stages/stage_empty.png"),
+    SILO_STAGE_EMPTY_HOVERED("textures/gui/silo/stages/stage_empty_hovered.png"),
+    SILO_STAGE_MULTIPLE_BOTTOM("textures/gui/silo/stages/stage_multiple_bottom.png"),
+    SILO_STAGE_MULTIPLE_BOTTOM_HOVERED("textures/gui/silo/stages/stage_multiple_bottom_hovered.png"),
+    SILO_STAGE_MULTIPLE_MIDDLE("textures/gui/silo/stages/stage_multiple_middle.png"),
+    SILO_STAGE_MULTIPLE_MIDDLE_HOVERED("textures/gui/silo/stages/stage_multiple_middle_hovered.png"),
+    SILO_STAGE_MULTIPLE_TOP("textures/gui/silo/stages/stage_multiple_top.png"),
+    SILO_STAGE_MULTIPLE_TOP_HOVERED("textures/gui/silo/stages/stage_multiple_top_hovered.png"),
+    SILO_STAGE_PARACHUTE("textures/gui/silo/stages/stage_parachute.png"),
+    SILO_STAGE_SINGLE("textures/gui/silo/stages/stage_single.png"),
+    SILO_STAGE_SINGLE_HOVERED("textures/gui/silo/stages/stage_single_hovered.png"),
+
     // Add more textures here
     ; // leave trailing semicolon
 

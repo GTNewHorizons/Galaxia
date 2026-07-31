@@ -11,9 +11,12 @@ import net.minecraftforge.common.util.Constants;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAnalyzer;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAssembly;
 
+import lombok.Getter;
+
 public class RocketBlueprint {
 
     private final List<RocketPartInstance> parts = new ArrayList<>();
+    @Getter
     private String name = "";
 
     public RocketBlueprint() {}
@@ -92,34 +95,42 @@ public class RocketBlueprint {
         return Collections.unmodifiableList(parts);
     }
 
-    public String getName() {
-        return name;
-    }
-
     public void setName(String name) {
         this.name = name == null ? "" : name.trim();
     }
 
     public int getWidth() {
-        int max = 0;
+        if (parts.isEmpty()) return 0;
+
+        int min = Integer.MAX_VALUE;
+        int max = Integer.MIN_VALUE;
+
         for (RocketPartInstance part : parts) {
+            min = Math.min(min, part.x());
             max = Math.max(
                 max,
                 part.x() + part.def()
                     .width());
         }
-        return max;
+
+        return max - min;
     }
 
     public int getHeight() {
-        int max = 0;
+        if (parts.isEmpty()) return 0;
+
+        int min = Integer.MAX_VALUE;
+        int max = Integer.MIN_VALUE;
+
         for (RocketPartInstance part : parts) {
+            min = Math.min(min, part.y());
             max = Math.max(
                 max,
                 part.y() + part.def()
                     .height());
         }
-        return max;
+
+        return max - min;
     }
 
     public RocketAssembly analyze() {

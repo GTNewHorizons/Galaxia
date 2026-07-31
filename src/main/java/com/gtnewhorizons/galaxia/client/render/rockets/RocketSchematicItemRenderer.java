@@ -47,19 +47,13 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
 
     @Override
     public void renderItem(ItemRenderType type, ItemStack stack, Object... data) {
-        // TODO fix y-flip for first person view
         switch (type) {
             case FIRST_PERSON_MAP:
-                GL11.glPushMatrix();
-                GL11.glRotatef(180F, 0F, 0F, 1F); // mirror
-                GL11.glScalef(0.01F, 0.01F, 0.01F);
-                renderSchematic(stack, Minecraft.getMinecraft().renderEngine);
-                GL11.glPopMatrix();
-                break;
-
             case EQUIPPED_FIRST_PERSON:
                 GL11.glPushMatrix();
-                GL11.glRotatef(0F, 180F, 0F, 1F); // mirror
+                GL11.glRotatef(90F, 0F, 1F, 0F);
+                GL11.glRotatef(180F, 0F, 0F, 1F);
+                GL11.glTranslatef(-1.60F, -1.4F, 0.7F);
                 GL11.glScalef(0.01F, 0.01F, 0.01F);
                 renderSchematic(stack, Minecraft.getMinecraft().renderEngine);
                 GL11.glPopMatrix();
@@ -196,15 +190,18 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
 
         String[] lines = {
             StatCollector.translateToLocalFormatted("galaxia.item.schematic.label.name", blueprint.getName()),
+
             StatCollector.translateToLocalFormatted("galaxia.item.schematic.label.stages", assembly.getStageCount()),
-            StatCollector.translateToLocalFormatted(
-                "galaxia.item.schematic.label.parts",
-                blueprint.getParts()
-                    .size()),
+
+            StatCollector.translateToLocalFormatted("galaxia.item.schematic.label.height", blueprint.getHeight()),
+
+            StatCollector.translateToLocalFormatted("galaxia.item.schematic.label.width", blueprint.getWidth()),
+
             StatCollector
-                .translateToLocalFormatted("galaxia.item.schematic.label.delta_v", (int) assembly.getTotalDeltaV()),
+                .translateToLocalFormatted("galaxia.item.schematic.label.weight", (int) assembly.getTotalMass()),
+
             StatCollector
-                .translateToLocalFormatted("galaxia.item.schematic.label.viable", assembly.viable() ? "YES" : "NO") };
+                .translateToLocalFormatted("galaxia.item.schematic.label.thrust", (int) assembly.getTotalThrust()) };
 
         float offsetY = 16f;
         for (String line : lines) {
