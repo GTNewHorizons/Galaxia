@@ -93,9 +93,6 @@ record InterplanetaryTransferJob(String transferId, String displayName, String i
 
 public final class InterplanetaryTransferSystem {
 
-    private static final int MAX_TRAJECTORY_INTEGRATION_SUBSTEPS_PER_SEGMENT = 16;
-    private static final double TRAJECTORY_INTEGRATION_TIME_SCALE_FRACTION = 0.03;
-
     private static final int PREVIEW_TRAJECTORY_SAMPLES = 96;
 
     private InterplanetaryTransferSystem() {}
@@ -249,18 +246,6 @@ public final class InterplanetaryTransferSystem {
     static int sampleTransferArcInto(double ax, double ay, double rx1, double ry1, double vx1, double vy1, double tof,
         double mu, double[] outXs, double[] outYs, int n) {
         return OrbitalTransferPlanner.sampleTransferArcInto(ax, ay, rx1, ry1, vx1, vy1, tof, mu, outXs, outYs, n);
-    }
-
-    private static int trajectoryIntegrationSubsteps(OrbitalMechanics.OrbitalState state, double mu, double segmentDt) {
-        if (state == null || mu <= 0.0 || segmentDt <= 0.0) return 1;
-        double radius = Math.hypot(state.x(), state.y());
-        if (radius <= 1e-9) return MAX_TRAJECTORY_INTEGRATION_SUBSTEPS_PER_SEGMENT;
-        double localTimeScale = Math.sqrt(radius * radius * radius / mu);
-        if (!Double.isFinite(localTimeScale) || localTimeScale <= 1e-9) {
-            return MAX_TRAJECTORY_INTEGRATION_SUBSTEPS_PER_SEGMENT;
-        }
-        int substeps = (int) Math.ceil(segmentDt / (localTimeScale * TRAJECTORY_INTEGRATION_TIME_SCALE_FRACTION));
-        return Math.max(1, Math.min(MAX_TRAJECTORY_INTEGRATION_SUBSTEPS_PER_SEGMENT, substeps));
     }
 
     // -----------------------------------------------------------------------
@@ -1657,22 +1642,6 @@ public final class InterplanetaryTransferSystem {
         public void drawBackground(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
             if (!isEnabled()) return;
             super.drawBackground(context, widgetTheme);
-        }
-
-        private String formatProgress(InterplanetaryTransferJob transfer) {
-            double pct = transfer.progress(
-                effectiveTransferTime(transfer, callbacks.getCurrentTime(), callbacks.getServerOrbitalTime())) * 100.0;
-            return Math.round(pct) + "%";
-        }
-
-        private String formatRemaining(InterplanetaryTransferJob transfer) {
-            double timeScale = Math.max(1e-6, effectiveTransferTimeScale(transfer, callbacks.getTimeScale()));
-            double remaining = Math.max(
-                0.0,
-                transfer.arrivalTime()
-                    - effectiveTransferTime(transfer, callbacks.getCurrentTime(), callbacks.getServerOrbitalTime()))
-                / timeScale;
-            return formatFixed1(remaining) + "s";
         }
 
         private void updateTooltipPosition() {

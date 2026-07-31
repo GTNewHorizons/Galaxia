@@ -426,7 +426,6 @@ public class OrbitalView {
         private InterplanetaryTransferJob focusedTransfer = null;
         private boolean isFollowing = false;
         private CelestialObject pendingFocusBody = null;
-        private boolean clickCandidate = false;
         private boolean dragEnabledForCurrentPress = false;
         private CelestialObject pressedBodyCandidate = null;
         private boolean debugOverlayEnabled = false;
@@ -1260,21 +1259,18 @@ public class OrbitalView {
                 int localMouseY = toLocalMouseY(getContext().getMouseY());
                 if (transferSimulatorState.isOpen()
                     && transferSimulatorWidget.isPointInPanel(localMouseX, localMouseY)) {
-                    clickCandidate = false;
                     dragging = false;
                     dragEnabledForCurrentPress = false;
                     pressedBodyCandidate = null;
                     return false;
                 }
                 if (assetUiState.isAssetActionsOpen()) {
-                    clickCandidate = false;
                     dragging = false;
                     dragEnabledForCurrentPress = false;
                     pressedBodyCandidate = null;
                     return button == 1;
                 }
                 if (button == 0 && contextMenuState.isOpen()) {
-                    clickCandidate = false;
                     dragging = false;
                     dragEnabledForCurrentPress = false;
                     pressedBodyCandidate = null;
@@ -1292,7 +1288,6 @@ public class OrbitalView {
                     focusedTransfer = clickedTransfer;
                     focusedBody = null;
                     isFollowing = true;
-                    clickCandidate = false;
                     dragging = false;
                     dragEnabledForCurrentPress = false;
                     pressedBodyCandidate = null;
@@ -1300,7 +1295,6 @@ public class OrbitalView {
                     return true;
                 }
                 pressedBodyCandidate = findBodyAtLocal(pressMouseX, pressMouseY);
-                clickCandidate = pressedBodyCandidate != null;
                 dragEnabledForCurrentPress = pressedBodyCandidate == null && !transferSimulatorState.isWaitingForPick();
                 dragging = false;
                 return false;
@@ -1316,14 +1310,12 @@ public class OrbitalView {
                 int localMouseY = toLocalMouseY(getContext().getMouseY());
                 if (transferSimulatorState.isOpen()
                     && transferSimulatorWidget.isPointInPanel(localMouseX, localMouseY)) {
-                    clickCandidate = false;
                     dragging = false;
                     dragEnabledForCurrentPress = false;
                     pressedBodyCandidate = null;
                     return false;
                 }
                 if (assetUiState.isAssetActionsOpen()) {
-                    clickCandidate = false;
                     dragging = false;
                     dragEnabledForCurrentPress = false;
                     pressedBodyCandidate = null;
@@ -1332,14 +1324,12 @@ public class OrbitalView {
                 if (contextMenuState.isOpen()) {
                     if (mouseButton == 0) {
                         if (isPointInContextMenu(localMouseX, localMouseY)) {
-                            clickCandidate = false;
                             dragging = false;
                             dragEnabledForCurrentPress = false;
                             pressedBodyCandidate = null;
                             return true;
                         }
                         closeContextMenu();
-                        clickCandidate = false;
                         dragging = false;
                         dragEnabledForCurrentPress = false;
                         pressedBodyCandidate = null;
@@ -1350,7 +1340,6 @@ public class OrbitalView {
                     CelestialObject clickedBody = findBodyAtLocal(localMouseX, localMouseY);
                     if (clickedBody != null) {
                         openContextMenu(clickedBody, localMouseX, localMouseY);
-                        clickCandidate = false;
                         dragging = false;
                         dragEnabledForCurrentPress = false;
                         pressedBodyCandidate = null;
@@ -1363,7 +1352,6 @@ public class OrbitalView {
                     CelestialObject clickedBody = pressedBodyCandidate;
                     if (clickedBody == null) clickedBody = findBodyAtLocal(localMouseX, localMouseY);
                     if (handleTransferSimulatorPick(clickedBody)) {
-                        clickCandidate = false;
                         dragging = false;
                         dragEnabledForCurrentPress = false;
                         pressedBodyCandidate = null;
@@ -1371,7 +1359,6 @@ public class OrbitalView {
                     }
                     if (clickedBody != null) handleBodyClick(clickedBody);
                 }
-                clickCandidate = false;
                 dragging = false;
                 dragEnabledForCurrentPress = false;
                 pressedBodyCandidate = null;
@@ -1449,7 +1436,6 @@ public class OrbitalView {
                 if (Math.abs(mx - pressMouseX) <= CLICK_DRAG_THRESHOLD
                     && Math.abs(my - pressMouseY) <= CLICK_DRAG_THRESHOLD) return;
                 dragging = true;
-                clickCandidate = false;
                 lastMouseX = lx;
                 lastMouseY = ly;
                 return;
@@ -3143,10 +3129,6 @@ public class OrbitalView {
             mutateSatellites(body, kind, SatelliteMutationOperation.ADD, 1);
         }
 
-        private void setSatellites(CelestialObject body, SatelliteKind kind) {
-            mutateSatellites(body, kind, SatelliteMutationOperation.SET, 10);
-        }
-
         private void deleteSatellites(CelestialObject body, SatelliteKind kind) {
             mutateSatellites(body, kind, SatelliteMutationOperation.DELETE_ALL, 0);
         }
@@ -3274,20 +3256,12 @@ public class OrbitalView {
             return body == null ? null : body.key();
         }
 
-        private float getInteractionRadius(CelestialObject body) {
-            return getInteractionRadius(getRenderedBodyRadius(body));
-        }
-
         private float getInteractionRadius(float renderedRadius) {
             return Math.max(5f, renderedRadius);
         }
 
         private boolean isOnScreen(float sx, float sy, float radius) {
             return sx >= 0 && sy >= 0 && sx <= getArea().width && sy <= getArea().height;
-        }
-
-        private float getLabelYOffset(CelestialObject body) {
-            return getLabelYOffset(getRenderedBodyRadius(body));
         }
 
         private float getLabelYOffset(float renderedRadius) {

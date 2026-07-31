@@ -662,15 +662,11 @@ public final class StarmapAssetActions {
         private int lastContentVersion = -1;
         private int lastAssetListSignature = 0;
 
-        private int modalLeft, modalTop, modalRight, modalBottom;
         private int scrollLeft, scrollTop, scrollRight, scrollBottom;
         private ScrollWidget<?> activeScrollWidget;
         private ScrollWidget<?> mainScrollWidget;
         private ParentWidget<?> mainScrollContent;
         private VerticalScrollData mainScrollData;
-        private ScrollWidget<?> modalScrollWidget;
-        private VerticalScrollData modalScrollData;
-        private int modalScrollPosition;
         private int mainContentWidth, mainContentHeight;
         private AssetManagementTab currentTab = AssetManagementTab.ASSETS;
         private final List<TextFieldWidget> modalTextFields = new ArrayList<>();
@@ -843,7 +839,6 @@ public final class StarmapAssetActions {
 
         private void buildMainPanel(CelestialObject body) {
             ModalBounds bounds = calculateActionsBounds();
-            updateModalBounds(bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
             int modalWidth = bounds.right() - bounds.left();
             int modalHeight = bounds.bottom() - bounds.top();
             int contentTop = CONTENT_TOP + SECTION_HEADER_HEIGHT;
@@ -973,7 +968,6 @@ public final class StarmapAssetActions {
                     .size() - 2)
                 * 12;
             ModalBounds bounds = createCenteredModalBounds(320, height);
-            updateModalBounds(bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
             ParentWidget<?> modal = createModalRoot(bounds);
             modal.child(
                 createAssetIconWidget(creation.kind(), 1.0f).pos(12, 10)
@@ -1007,7 +1001,6 @@ public final class StarmapAssetActions {
         private void buildPendingAssetRenameModal() {
             if (state.pendingAssetRename == null) return;
             ModalBounds bounds = createCenteredModalBounds(RENAME_MODAL_WIDTH, 126);
-            updateModalBounds(bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
             ParentWidget<?> modal = createModalRoot(bounds);
             modal.child(createTitleText("Rename Asset").pos(12, 10));
             modal.child(
@@ -1040,7 +1033,6 @@ public final class StarmapAssetActions {
             PendingAssetDestruction destruction = state.pendingAssetDestruction;
             if (destruction == null) return;
             ModalBounds bounds = createCenteredModalBounds(360, 150);
-            updateModalBounds(bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
             int modalWidth = bounds.right() - bounds.left();
             ParentWidget<?> modal = createModalRoot(
                 bounds.left(),
@@ -1080,7 +1072,6 @@ public final class StarmapAssetActions {
         private void buildPendingConstructionCancellationModal() {
             if (state.pendingConstructionCancellation == null) return;
             ModalBounds bounds = createCenteredModalBounds(360, 124);
-            updateModalBounds(bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
             ParentWidget<?> modal = createModalRoot(
                 bounds.left(),
                 bounds.top(),
@@ -1116,7 +1107,6 @@ public final class StarmapAssetActions {
                 120 + transfer.targets()
                     .size() * 42);
             ModalBounds bounds = createCenteredModalBounds(420, height);
-            updateModalBounds(bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
             ParentWidget<?> modal = createModalRoot(bounds);
             modal.child(createTitleText("Send Resources To").pos(12, 10));
             modal.child(
@@ -1480,16 +1470,6 @@ public final class StarmapAssetActions {
                 EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
         }
 
-        private ParentWidget<?> createModalRoot(int left, int top, int right, int bottom) {
-            return createModalRoot(
-                left,
-                top,
-                right,
-                bottom,
-                EnumColors.MAP_COLOR_MODAL_BG.getColor(),
-                EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
-        }
-
         private ParentWidget<?> createModalRoot(int left, int top, int right, int bottom, int backgroundColor,
             int accentColor) {
             return createModalRoot(
@@ -1741,15 +1721,7 @@ public final class StarmapAssetActions {
             callbacks.handleConstructionAction(asset);
         }
 
-        private void updateModalBounds(int left, int top, int right, int bottom) {
-            modalLeft = left;
-            modalTop = top;
-            modalRight = right;
-            modalBottom = bottom;
-        }
-
         private void clearBounds() {
-            modalLeft = modalTop = modalRight = modalBottom = 0;
             scrollLeft = scrollTop = scrollRight = scrollBottom = 0;
         }
 
@@ -1769,8 +1741,6 @@ public final class StarmapAssetActions {
             mainScrollWidget = null;
             mainScrollContent = null;
             mainScrollData = null;
-            modalScrollWidget = null;
-            modalScrollData = null;
             modalTextFields.clear();
             mainContentWidth = 0;
             mainContentHeight = 0;

@@ -63,8 +63,6 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
     private static final int COL_NET = 208;
     private static final int COL_TRANSIT = 285;
     private static final int NAME_W = 180;
-    private static final int NET_W = 68;
-    private static final int TRANSIT_W = 52;
 
     private enum ViewScope {
         GALACTIC,

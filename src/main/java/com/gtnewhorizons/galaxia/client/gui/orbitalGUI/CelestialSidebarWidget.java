@@ -502,7 +502,6 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     private void drawSupplyDebugPanel(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
         int panelLeft = DEBUG_PANEL_PADDING;
         int panelRight = getArea().width - DEBUG_PANEL_PADDING;
-        int panelWidth = panelRight - panelLeft;
 
         // Panel background
         Gui.drawRect(
