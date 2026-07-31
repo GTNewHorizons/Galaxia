@@ -79,7 +79,6 @@ public final class AutomatedFacility extends CelestialAsset {
     private final Set<ModuleInstance.ID> dirtyModuleIds = new HashSet<>();
     private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
-    private final Set<String> dirtyMinerVoidChanceOreKeys = new HashSet<>();
     private long ticks;
 
     public static final long MAX_ENERGY = 8_000_000L;
@@ -337,14 +336,6 @@ public final class AutomatedFacility extends CelestialAsset {
             if (moduleId.equals(modules.get(i).id)) return i;
         }
         return -1;
-    }
-
-    private @Nullable ModuleInstance moduleAtAnchor(StationTileCoord coord) {
-        if (coord == null) return null;
-        for (ModuleInstance module : modules) {
-            if (coord.equals(module.anchorOrNull())) return module;
-        }
-        return null;
     }
 
     public void clearModules() {
@@ -696,10 +687,6 @@ public final class AutomatedFacility extends CelestialAsset {
                 .create(module.kind(), settings),
             this::markModuleDirty);
         markModuleDirty(module.id);
-    }
-
-    private void setPrivateMinerSettings(ModuleInstance module, MinerSettings settings) {
-        setPrivateModuleSettings(module, settings);
     }
 
     private void setPrivateModuleSettings(ModuleInstance module, ModuleSettings settings) {
