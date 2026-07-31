@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 final class SatelliteNetworkClientStateTest {
 
@@ -33,7 +34,7 @@ final class SatelliteNetworkClientStateTest {
         assertEquals(
             10L,
             SatelliteNetworkClientState.current()
-                .capacityKbps(CelestialObjectId.MARS));
+                .capacityKbps(CelestialObjectKey.registered(CelestialObjectId.MARS)));
     }
 
     @Test
@@ -51,7 +52,7 @@ final class SatelliteNetworkClientStateTest {
         assertEquals(
             20L,
             SatelliteNetworkClientState.current()
-                .capacityKbps(CelestialObjectId.MARS));
+                .capacityKbps(CelestialObjectKey.registered(CelestialObjectId.MARS)));
     }
 
     @Test
@@ -67,7 +68,7 @@ final class SatelliteNetworkClientStateTest {
         assertEquals(
             0L,
             SatelliteNetworkClientState.current()
-                .capacityKbps(CelestialObjectId.MARS));
+                .capacityKbps(CelestialObjectKey.registered(CelestialObjectId.MARS)));
     }
 
     private static SatelliteNetworkState state(int revision, long capacityKbps) {
@@ -78,7 +79,12 @@ final class SatelliteNetworkClientStateTest {
         return new SatelliteNetworkState(
             teamId,
             revision,
-            Map.of(CelestialObjectId.MARS, new SatelliteNetworkState.Body(CelestialObjectId.MARS, capacityKbps, 0L)),
+            Map.of(
+                CelestialObjectKey.registered(CelestialObjectId.MARS),
+                new SatelliteNetworkState.Body(
+                    CelestialObjectKey.registered(CelestialObjectId.MARS),
+                    capacityKbps,
+                    0L)),
             java.util.List.of());
     }
 }

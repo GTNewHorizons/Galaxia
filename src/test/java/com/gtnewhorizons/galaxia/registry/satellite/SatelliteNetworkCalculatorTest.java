@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 final class SatelliteNetworkCalculatorTest {
 
@@ -20,12 +21,15 @@ final class SatelliteNetworkCalculatorTest {
             teamId,
             7,
             List.of(node(CelestialObjectId.MARS, 0.0D, 0.0D), node(CelestialObjectId.OVERWORLD, 10.0D, 0.0D)),
-            List.of(new SatelliteNetworkGraph.Edge(CelestialObjectId.MARS, CelestialObjectId.OVERWORLD)),
-            Map.of(CelestialObjectId.MARS, 20L, CelestialObjectId.OVERWORLD, 10L),
+            List.of(
+                new SatelliteNetworkGraph.Edge(
+                    CelestialObjectKey.registered(CelestialObjectId.MARS),
+                    CelestialObjectKey.registered(CelestialObjectId.OVERWORLD))),
+            Map.of(key(CelestialObjectId.MARS), 20L, key(CelestialObjectId.OVERWORLD), 10L),
             Map.of());
 
-        assertEquals(20L, state.capacityKbps(CelestialObjectId.MARS));
-        assertEquals(10L, state.capacityKbps(CelestialObjectId.OVERWORLD));
+        assertEquals(20L, state.capacityKbps(CelestialObjectKey.registered(CelestialObjectId.MARS)));
+        assertEquals(10L, state.capacityKbps(CelestialObjectKey.registered(CelestialObjectId.OVERWORLD)));
         assertEquals(
             10L,
             state.links()
@@ -35,23 +39,31 @@ final class SatelliteNetworkCalculatorTest {
 
     @Test
     void widestPathCapacityUsesWorstPlanetOnBestRoute() {
-        Map<CelestialObjectId, Long> capacity = Map.of(
-            CelestialObjectId.MARS,
+        Map<CelestialObjectKey, Long> capacity = Map.of(
+            key(CelestialObjectId.MARS),
             40L,
-            CelestialObjectId.OVERWORLD,
+            key(CelestialObjectId.OVERWORLD),
             10L,
-            CelestialObjectId.EGORA,
+            key(CelestialObjectId.EGORA),
             30L,
-            CelestialObjectId.FROZEN_BELT,
+            key(CelestialObjectId.FROZEN_BELT),
             30L);
         List<SatelliteNetworkGraph.Edge> edges = List.of(
-            new SatelliteNetworkGraph.Edge(CelestialObjectId.MARS, CelestialObjectId.OVERWORLD),
-            new SatelliteNetworkGraph.Edge(CelestialObjectId.OVERWORLD, CelestialObjectId.FROZEN_BELT),
-            new SatelliteNetworkGraph.Edge(CelestialObjectId.MARS, CelestialObjectId.EGORA),
-            new SatelliteNetworkGraph.Edge(CelestialObjectId.EGORA, CelestialObjectId.FROZEN_BELT));
+            new SatelliteNetworkGraph.Edge(
+                CelestialObjectKey.registered(CelestialObjectId.MARS),
+                CelestialObjectKey.registered(CelestialObjectId.OVERWORLD)),
+            new SatelliteNetworkGraph.Edge(
+                CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
+                CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT)),
+            new SatelliteNetworkGraph.Edge(
+                CelestialObjectKey.registered(CelestialObjectId.MARS),
+                CelestialObjectKey.registered(CelestialObjectId.EGORA)),
+            new SatelliteNetworkGraph.Edge(
+                CelestialObjectKey.registered(CelestialObjectId.EGORA),
+                CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT)));
 
         long capacityKbps = SatelliteNetworkCalculator
-            .widestPathCapacity(CelestialObjectId.MARS, CelestialObjectId.FROZEN_BELT, capacity, edges);
+            .widestPathCapacity(key(CelestialObjectId.MARS), key(CelestialObjectId.FROZEN_BELT), capacity, edges);
 
         assertEquals(30L, capacityKbps);
     }
@@ -60,11 +72,11 @@ final class SatelliteNetworkCalculatorTest {
     void stateBodyUsedKbpsUsesLargestIncidentLinkUsage() {
         UUID teamId = new UUID(3L, 4L);
         SatelliteNetworkGraph.Edge marsOverworld = new SatelliteNetworkGraph.Edge(
-            CelestialObjectId.MARS,
-            CelestialObjectId.OVERWORLD);
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            CelestialObjectKey.registered(CelestialObjectId.OVERWORLD));
         SatelliteNetworkGraph.Edge overworldFrozen = new SatelliteNetworkGraph.Edge(
-            CelestialObjectId.OVERWORLD,
-            CelestialObjectId.FROZEN_BELT);
+            CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
+            CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT));
 
         SatelliteNetworkState state = SatelliteNetworkCalculator.fromGraph(
             teamId,
@@ -74,23 +86,29 @@ final class SatelliteNetworkCalculatorTest {
                 node(CelestialObjectId.OVERWORLD, 10.0D, 0.0D),
                 node(CelestialObjectId.FROZEN_BELT, 20.0D, 0.0D)),
             List.of(marsOverworld, overworldFrozen),
-            Map.of(CelestialObjectId.MARS, 20L, CelestialObjectId.OVERWORLD, 30L, CelestialObjectId.FROZEN_BELT, 20L),
+            Map.of(
+                key(CelestialObjectId.MARS),
+                20L,
+                key(CelestialObjectId.OVERWORLD),
+                30L,
+                key(CelestialObjectId.FROZEN_BELT),
+                20L),
             Map.of(marsOverworld, 4L, overworldFrozen, 6L));
 
-        assertEquals(4L, state.usedKbps(CelestialObjectId.MARS));
-        assertEquals(6L, state.usedKbps(CelestialObjectId.OVERWORLD));
-        assertEquals(6L, state.usedKbps(CelestialObjectId.FROZEN_BELT));
+        assertEquals(4L, state.usedKbps(CelestialObjectKey.registered(CelestialObjectId.MARS)));
+        assertEquals(6L, state.usedKbps(CelestialObjectKey.registered(CelestialObjectId.OVERWORLD)));
+        assertEquals(6L, state.usedKbps(CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT)));
     }
 
     @Test
     void stateBodyUsedKbpsUsesPlannedBodyUsageWhenProvided() {
         UUID teamId = new UUID(4L, 5L);
         SatelliteNetworkGraph.Edge marsOverworld = new SatelliteNetworkGraph.Edge(
-            CelestialObjectId.MARS,
-            CelestialObjectId.OVERWORLD);
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            CelestialObjectKey.registered(CelestialObjectId.OVERWORLD));
         SatelliteNetworkGraph.Edge overworldFrozen = new SatelliteNetworkGraph.Edge(
-            CelestialObjectId.OVERWORLD,
-            CelestialObjectId.FROZEN_BELT);
+            CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
+            CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT));
 
         SatelliteNetworkState state = SatelliteNetworkCalculator.fromGraph(
             teamId,
@@ -100,12 +118,18 @@ final class SatelliteNetworkCalculatorTest {
                 node(CelestialObjectId.OVERWORLD, 10.0D, 0.0D),
                 node(CelestialObjectId.FROZEN_BELT, 20.0D, 0.0D)),
             List.of(marsOverworld, overworldFrozen),
-            Map.of(CelestialObjectId.MARS, 20L, CelestialObjectId.OVERWORLD, 30L, CelestialObjectId.FROZEN_BELT, 20L),
+            Map.of(
+                key(CelestialObjectId.MARS),
+                20L,
+                key(CelestialObjectId.OVERWORLD),
+                30L,
+                key(CelestialObjectId.FROZEN_BELT),
+                20L),
             Map.of(marsOverworld, 4L, overworldFrozen, 6L),
             Map.of(),
-            Map.of(CelestialObjectId.OVERWORLD, 10L));
+            Map.of(key(CelestialObjectId.OVERWORLD), 10L));
 
-        assertEquals(10L, state.usedKbps(CelestialObjectId.OVERWORLD));
+        assertEquals(10L, state.usedKbps(CelestialObjectKey.registered(CelestialObjectId.OVERWORLD)));
     }
 
     @Test
@@ -119,7 +143,7 @@ final class SatelliteNetworkCalculatorTest {
                 node(CelestialObjectId.MARS, 0.0D, 0.0D),
                 node(CelestialObjectId.OVERWORLD, 10.0D, 0.0D),
                 node(CelestialObjectId.FROZEN_BELT, 20.0D, 0.0D)),
-            Map.of(CelestialObjectId.MARS, 10L, CelestialObjectId.FROZEN_BELT, 10L),
+            Map.of(key(CelestialObjectId.MARS), 10L, key(CelestialObjectId.FROZEN_BELT), 10L),
             Map.of());
 
         assertEquals(11, state.revision());
@@ -132,7 +156,9 @@ final class SatelliteNetworkCalculatorTest {
             state.links()
                 .size());
         assertEquals(
-            new SatelliteNetworkGraph.Edge(CelestialObjectId.MARS, CelestialObjectId.FROZEN_BELT),
+            new SatelliteNetworkGraph.Edge(
+                CelestialObjectKey.registered(CelestialObjectId.MARS),
+                CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT)),
             state.links()
                 .get(0)
                 .asEdge());
@@ -149,16 +175,30 @@ final class SatelliteNetworkCalculatorTest {
                 node(CelestialObjectId.MARS, 0.0D, 0.0D),
                 node(CelestialObjectId.EGORA, 10.0D, 0.0D),
                 node(CelestialObjectId.OVERWORLD, 20.0D, 0.0D)),
-            Map.of(CelestialObjectId.MARS, 100L, CelestialObjectId.EGORA, 10L, CelestialObjectId.OVERWORLD, 100L),
+            Map.of(
+                key(CelestialObjectId.MARS),
+                100L,
+                key(CelestialObjectId.EGORA),
+                10L,
+                key(CelestialObjectId.OVERWORLD),
+                100L),
             Map.of());
 
         assertEquals(
             100L,
-            SatelliteNetworkCalculator.widestPath(CelestialObjectId.MARS, CelestialObjectId.OVERWORLD, state)
+            SatelliteNetworkCalculator
+                .widestPath(
+                    CelestialObjectKey.registered(CelestialObjectId.MARS),
+                    CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
+                    state)
                 .capacityKbps());
     }
 
     private static SatelliteNetworkGraph.Node node(CelestialObjectId id, double x, double y) {
-        return new SatelliteNetworkGraph.Node(id, null, id.ordinal(), x, y, 1.0D);
+        return new SatelliteNetworkGraph.Node(CelestialObjectKey.registered(id), null, id.ordinal(), x, y, 1.0D);
+    }
+
+    private static CelestialObjectKey key(CelestialObjectId id) {
+        return CelestialObjectKey.registered(id);
     }
 }

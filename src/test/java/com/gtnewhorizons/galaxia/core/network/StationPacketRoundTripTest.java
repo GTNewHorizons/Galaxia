@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
@@ -541,8 +542,16 @@ final class StationPacketRoundTripTest {
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.COMMUNICATION, 10L, 1, null));
         SatelliteNetworkService.refreshFacilityEndpoints(source);
         SatelliteNetworkService.refreshFacilityEndpoints(destination);
-        CelestialAssetStore.SERVER.setSatelliteCount(TEAM, CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, 1);
-        CelestialAssetStore.SERVER.setSatelliteCount(TEAM, CelestialObjectId.EGORA, SatelliteKind.COMMUNICATION, 1);
+        CelestialAssetStore.SERVER.setSatelliteCount(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            SatelliteKind.COMMUNICATION,
+            1);
+        CelestialAssetStore.SERVER.setSatelliteCount(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.EGORA),
+            SatelliteKind.COMMUNICATION,
+            1);
         SatelliteNetworkService.rebuild(TEAM, 0.0D);
 
         List<AssetSyncPacket> initialPackets = AssetSyncPacket.figureOutWhatToSend(source, playerId);
@@ -568,7 +577,9 @@ final class StationPacketRoundTripTest {
         ModuleDebugDataGenerator clientConsumer = (ModuleDebugDataGenerator) clientDestination.modules()
             .get(0)
             .component();
-        assertEquals(CelestialObjectId.EGORA, clientProducer.detectedCounterpartBodyId());
+        assertEquals(
+            CelestialObjectKey.registered(CelestialObjectId.EGORA),
+            clientProducer.detectedCounterpartBodyKey());
         assertEquals(
             SatelliteDataType.COMMUNICATION,
             clientConsumer.config()

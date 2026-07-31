@@ -16,7 +16,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureDefini
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureProfile;
 
-public record CelestialObject(CelestialObjectId id, String name, String nameKey, CelestialObjectId parentId,
+public record CelestialObject(CelestialObjectKey key, String name, String nameKey, CelestialObjectKey parentKey,
     DimensionEnum dimensionEnum, Class objectClass, OrbitalParams orbitalParams,
     OrbitalMechanics.AbsolutePosition absolutePosition, ResourceLocation texture, double spriteSize,
     CelestialBodyProperties properties, PlanetaryFeatureProfile featureProfile,
@@ -36,7 +36,7 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
     }
 
     public CelestialObject {
-        if (id == null) throw new IllegalStateException("Celestial object id is required");
+        if (key == null) throw new IllegalStateException("Celestial object key is required");
         if (name == null || name.isEmpty()) throw new IllegalStateException("Celestial object name is required");
         objectClass = objectClass == null ? Class.PLANET : objectClass;
         orbitalParams = orbitalParams == null ? OrbitalParams.circular(0.0, 0.0) : orbitalParams;
@@ -92,6 +92,15 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
         return name();
     }
 
+    public boolean isAsteroid() {
+        return objectClass() == Class.ASTEROID;
+    }
+
+    /** The belt container itself, not one of the asteroids inside it. */
+    public boolean isAsteroidBelt() {
+        return objectClass() == Class.ASTEROID_BELT;
+    }
+
     public boolean isLandable() {
         return switch (this.objectClass()) {
             case PLANET, MOON, ASTEROID -> this.properties()
@@ -100,12 +109,16 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
         };
     }
 
+    public CelestialObjectId requireRegisteredId() {
+        return key.requireRegisteredBodyId();
+    }
+
     public static final class Builder {
 
-        private CelestialObjectId id;
+        private CelestialObjectKey key;
         private String name;
         private String nameKey;
-        private CelestialObjectId parentId;
+        private CelestialObjectKey parentKey;
         private DimensionEnum dimensionEnum;
         private Class objectClass = Class.PLANET;
         private OrbitalParams orbitalParams = OrbitalParams.circular(0.0, 0.0);
@@ -121,10 +134,10 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
 
         public Builder(CelestialObject source) {
             if (source == null) return;
-            this.id = source.id;
+            this.key = source.key;
             this.name = source.name;
             this.nameKey = source.nameKey;
-            this.parentId = source.parentId;
+            this.parentKey = source.parentKey;
             this.dimensionEnum = source.dimensionEnum;
             this.objectClass = source.objectClass;
             this.orbitalParams = source.orbitalParams;
@@ -136,13 +149,20 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
             this.playableDimensionProfile = source.playableDimensionProfile;
         }
 
-        public Builder id(CelestialObjectId value) {
-            this.id = value;
-            this.name = value.displayName();
-            if (value != null && value.dimension() != null) {
-                this.dimensionEnum = value.dimension();
+        public Builder key(CelestialObjectKey value) {
+            this.key = value;
+            if (value != null && value.isRegistered()) {
+                CelestialObjectId registeredId = value.registeredBodyId();
+                this.name = registeredId.displayName();
+                if (registeredId.dimension() != null) {
+                    this.dimensionEnum = registeredId.dimension();
+                }
             }
             return this;
+        }
+
+        public Builder key(CelestialObjectId value) {
+            return key(value == null ? null : CelestialObjectKey.registered(value));
         }
 
         public Builder name(String value) {
@@ -155,20 +175,22 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
             return this;
         }
 
-        public Builder parent(CelestialObjectId value) {
-            this.parentId = value;
+        public Builder parent(CelestialObjectKey value) {
+            this.parentKey = value;
             return this;
         }
 
-        public Builder parentId(CelestialObjectId value) {
-            this.parentId = value;
-            return this;
+        public Builder parent(CelestialObjectId value) {
+            return parent(value == null ? null : CelestialObjectKey.registered(value));
         }
 
         public Builder dimension(DimensionEnum value) {
             this.dimensionEnum = value;
             if (value != null) {
-                if (this.id == null) this.id = CelestialObjectId.fromDimension(value);
+                if (this.key == null) {
+                    CelestialObjectId dimensionId = CelestialObjectId.fromDimension(value);
+                    this.key = dimensionId == null ? null : CelestialObjectKey.registered(dimensionId);
+                }
                 if (this.name == null) this.name = value.getName();
                 if (this.nameKey == null) this.nameKey = value.getTranslationKey();
             }
@@ -281,10 +303,10 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
 
         public CelestialObject build() {
             return new CelestialObject(
-                id,
+                key,
                 name,
                 nameKey,
-                parentId,
+                parentKey,
                 dimensionEnum,
                 objectClass,
                 orbitalParams,

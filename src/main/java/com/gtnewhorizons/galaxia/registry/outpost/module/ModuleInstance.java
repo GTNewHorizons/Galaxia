@@ -31,7 +31,7 @@ public class ModuleInstance implements Buildable {
     private StationTileCoord anchor;
     private final ModuleShape shape;
     private int rotation = 0;
-    private ModuleTier tier = ModuleTier.NONE;
+    private ModuleTier tier;
     private ModulePriority priorityOverride = ModulePriority.NORMAL;
     private boolean enabled = true;
     private short groupId = 0;

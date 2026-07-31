@@ -50,7 +50,7 @@ final class OrbitalTransferSimulatorStateTest {
 
     private static CelestialObject body(CelestialObjectId id) {
         return CelestialObject.builder()
-            .id(id)
+            .key(id)
             .objectClass(CelestialObject.Class.PLANET)
             .build();
     }

@@ -17,7 +17,7 @@ import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
-record ContextMenuAction(String label, boolean enabled, OrbitalContextMenuWidget.ContextMenuActionType actionType) {}
+record ContextMenuAction(String labelKey, boolean enabled, OrbitalContextMenuWidget.ContextMenuActionType actionType) {}
 
 record ContextMenuLayout(int left, int top, int right, int bottom, int headerHeight, int rowHeight,
     List<ContextMenuAction> actions) {}
@@ -55,7 +55,6 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
     private final OrbitalView.OrbitalContextMenuState state;
     private final Callbacks callbacks;
     private String lastSignature = "";
-    private ParentWidget<?> menuRoot;
 
     OrbitalContextMenuWidget(OrbitalView.OrbitalContextMenuState state, Callbacks callbacks) {
         this.state = state;
@@ -81,7 +80,6 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
                 removeAll();
                 scheduleResize();
             }
-            menuRoot = null;
             lastSignature = "";
             setEnabled(false);
             size(0, 0);
@@ -113,8 +111,7 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
     private String buildSignature() {
         CelestialObject body = state.body();
         if (body == null) return "";
-        return body.id()
-            .getId() + '|'
+        return body.key() + "|"
             + body.displayName()
             + '|'
             + state.x()
@@ -130,15 +127,12 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
 
     private void rebuildChildren() {
         removeAll();
-        menuRoot = null;
-
         CelestialObject body = state.body();
         ContextMenuLayout layout = getLayout(body, state.x(), state.y(), getArea().width, getArea().height);
         if (layout == null) return;
 
         ParentWidget<?> root = new ParentWidget<>().pos(layout.left(), layout.top())
             .size(layout.right() - layout.left(), layout.bottom() - layout.top());
-        menuRoot = root;
 
         PassiveBackgroundLayer backgroundLayer = new PassiveBackgroundLayer().pos(0, 0)
             .widthRel(1f)
@@ -184,14 +178,14 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
                         return true;
                     }));
             row.child(
-                new TextWidget<>(IKey.str(action.label())).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
+                new TextWidget<>(IKey.lang(action.labelKey())).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
                     .shadow(true)
                     .pos(ROW_TEXT_X, ROW_TEXT_Y));
             return row;
         }
 
         row.child(
-            new TextWidget<>(IKey.str(action.label())).color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
+            new TextWidget<>(IKey.lang(action.labelKey())).color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
                 .shadow(true)
                 .pos(ROW_TEXT_X, ROW_TEXT_Y));
         return row;
@@ -214,11 +208,15 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
     private ContextMenuLayout getLayout(CelestialObject body, int menuX, int menuY, int widgetWidth, int widgetHeight) {
         if (body == null || body.objectClass() == CelestialObject.Class.GALAXY) return null;
 
-        List<ContextMenuAction> actions = buildActions(body);
+        List<ContextMenuAction> actions = buildActions(body, callbacks.canDebugSatellites(body));
         Minecraft mc = Minecraft.getMinecraft();
         int maxTextWidth = mc.fontRenderer.getStringWidth(body.displayName());
         for (ContextMenuAction action : actions) {
-            maxTextWidth = Math.max(maxTextWidth, mc.fontRenderer.getStringWidth(action.label()));
+            maxTextWidth = Math.max(
+                maxTextWidth,
+                mc.fontRenderer.getStringWidth(
+                    IKey.lang(action.labelKey())
+                        .get()));
         }
 
         int width = Math.max(160, maxTextWidth + MENU_SIDE_PADDING * 2);
@@ -232,28 +230,32 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
         return new ContextMenuLayout(left, top, left + width, top + height, headerHeight, rowHeight, actions);
     }
 
-    private List<ContextMenuAction> buildActions(CelestialObject body) {
+    static List<ContextMenuAction> buildActions(CelestialObject body, boolean canDebugSatellites) {
         List<ContextMenuAction> actions = new ArrayList<>();
-        actions.add(new ContextMenuAction("Manage Assets", true, ContextMenuActionType.MANAGE_ASSETS));
-        if (callbacks.canDebugSatellites(body)) {
+        actions.add(
+            new ContextMenuAction(
+                "galaxia.gui.orbital.context_menu.manage_assets",
+                true,
+                ContextMenuActionType.MANAGE_ASSETS));
+        if (canDebugSatellites) {
             actions.add(
                 new ContextMenuAction(
-                    "Add Communication Satellite",
+                    "galaxia.satellite.action.add_communication",
                     true,
                     ContextMenuActionType.ADD_COMMUNICATION_SATELLITE));
             actions.add(
                 new ContextMenuAction(
-                    "Delete Communication Satellites",
+                    "galaxia.satellite.action.delete_communication",
                     true,
                     ContextMenuActionType.DELETE_COMMUNICATION_SATELLITES));
             actions.add(
                 new ContextMenuAction(
-                    "Add Prospecting Satellite",
+                    "galaxia.satellite.action.add_prospecting",
                     true,
                     ContextMenuActionType.ADD_PROSPECTING_SATELLITE));
             actions.add(
                 new ContextMenuAction(
-                    "Delete Prospecting Satellites",
+                    "galaxia.satellite.action.delete_prospecting",
                     true,
                     ContextMenuActionType.DELETE_PROSPECTING_SATELLITES));
         }

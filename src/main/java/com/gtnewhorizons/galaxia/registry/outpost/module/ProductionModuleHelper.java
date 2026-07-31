@@ -255,15 +255,6 @@ public final class ProductionModuleHelper {
         return new SelectedFluidOutputs(selected.isEmpty() ? Map.of() : selected, slotFluidNames, slotAmounts);
     }
 
-    private static ItemStackWrapper wrapperAt(ItemStackWrapper[] wrappers, int index) {
-        return index >= 0 && index < wrappers.length ? wrappers[index] : null;
-    }
-
-    private static String fluidNameAt(FluidStack[] stacks, int index) {
-        if (stacks == null || index < 0 || index >= stacks.length) return null;
-        return fluidName(stacks[index]);
-    }
-
     private static boolean shouldProduceOutput(int[] chances, int index, Random random) {
         return GTRecipeChance.shouldProduce(chances, index, random);
     }
@@ -300,9 +291,6 @@ public final class ProductionModuleHelper {
             return new SelectedItemOutputs(Map.of(), new long[0]);
         }
 
-        private long slotAmount(int slotIndex) {
-            return slotIndex >= 0 && slotIndex < slotAmounts.length ? slotAmounts[slotIndex] : 0L;
-        }
     }
 
     private record SelectedFluidOutputs(Map<FluidKey, Long> totals, String[] slotFluidNames, long[] slotAmounts) {
@@ -311,12 +299,5 @@ public final class ProductionModuleHelper {
             return new SelectedFluidOutputs(Map.of(), new String[0], new long[0]);
         }
 
-        private String slotFluidName(int slotIndex) {
-            return slotIndex >= 0 && slotIndex < slotFluidNames.length ? slotFluidNames[slotIndex] : null;
-        }
-
-        private long slotAmount(int slotIndex) {
-            return slotIndex >= 0 && slotIndex < slotAmounts.length ? slotAmounts[slotIndex] : 0L;
-        }
     }
 }

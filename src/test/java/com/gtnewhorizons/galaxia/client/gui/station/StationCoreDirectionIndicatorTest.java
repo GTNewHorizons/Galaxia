@@ -43,28 +43,13 @@ final class StationCoreDirectionIndicatorTest {
     }
 
     @Test
-    void occupiedTilesIntersectViewportOnlyWhenTheirRectIsVisible() {
+    void occupiedTilesIntersectScreenOnlyWhenTheirRectIsOnIt() {
         int visibleX = StationMapViewport.tileLeftX(0, WIDTH, CONTENT_LEFT, CONTENT_RIGHT_PADDING, 0);
         int visibleY = StationMapViewport.tileTopY(0, HEIGHT, CONTENT_VERTICAL_PADDING, 0);
 
-        assertTrue(
-            StationCoreDirectionIndicator.tileIntersectsViewport(
-                visibleX,
-                visibleY,
-                WIDTH,
-                HEIGHT,
-                CONTENT_LEFT,
-                CONTENT_RIGHT_PADDING,
-                CONTENT_VERTICAL_PADDING));
+        assertTrue(StationCoreDirectionIndicator.tileIntersectsScreen(visibleX, visibleY, WIDTH, HEIGHT));
         assertFalse(
-            StationCoreDirectionIndicator.tileIntersectsViewport(
-                visibleX,
-                -StationMapViewport.TILE_SIZE,
-                WIDTH,
-                HEIGHT,
-                CONTENT_LEFT,
-                CONTENT_RIGHT_PADDING,
-                CONTENT_VERTICAL_PADDING));
+            StationCoreDirectionIndicator.tileIntersectsScreen(visibleX, -StationMapViewport.TILE_SIZE, WIDTH, HEIGHT));
     }
 
     @Test
@@ -72,15 +57,6 @@ final class StationCoreDirectionIndicatorTest {
         int tileX = CONTENT_LEFT - StationMapViewport.TILE_SIZE - 1;
         int tileY = HEIGHT / 2;
 
-        assertFalse(
-            StationCoreDirectionIndicator.tileIntersectsViewport(
-                tileX,
-                tileY,
-                WIDTH,
-                HEIGHT,
-                CONTENT_LEFT,
-                CONTENT_RIGHT_PADDING,
-                CONTENT_VERTICAL_PADDING));
         assertTrue(StationCoreDirectionIndicator.tileIntersectsScreen(tileX, tileY, WIDTH, HEIGHT));
     }
 }

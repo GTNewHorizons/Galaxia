@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -19,15 +17,7 @@ final class StationFeatureSurface {
         return output;
     }
 
-    static List<PlanetaryFeatureDefinition> definitionsFor(Iterable<PlanetaryFeatureKey> features) {
-        if (features == null) return Collections.emptyList();
-        List<PlanetaryFeatureDefinition> definitions = new ArrayList<>();
-        appendDefinitions(features, definitions);
-        return definitions;
-    }
-
-    private static void appendDefinitions(Iterable<PlanetaryFeatureKey> features,
-        List<PlanetaryFeatureDefinition> output) {
+    static void appendDefinitions(Iterable<PlanetaryFeatureKey> features, List<PlanetaryFeatureDefinition> output) {
         if (features == null) return;
         for (PlanetaryFeatureKey key : features) {
             if (key == null) continue;

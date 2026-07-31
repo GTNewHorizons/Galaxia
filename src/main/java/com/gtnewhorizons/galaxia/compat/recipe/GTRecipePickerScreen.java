@@ -179,8 +179,6 @@ public final class GTRecipePickerScreen implements IGuiHolder<GuiData> {
 
         int rowY = 0;
         for (RecipeEntry entry : entries) {
-            int rowIndex = entry.index;
-            GTRecipe recipe = entry.recipe;
             GTRecipeMapId finalMapId = mapId;
             scroll.child(
                 createRecipeRow(entry, finalMapId).pos(0, rowY)

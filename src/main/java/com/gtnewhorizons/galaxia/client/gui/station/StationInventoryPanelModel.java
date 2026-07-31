@@ -56,10 +56,9 @@ final class StationInventoryPanelModel {
         Map<ItemStackWrapper, Long> rows = new LinkedHashMap<>(inventory.aggregatedItems());
         Set<ItemStackWrapper> upkeepItems = Set.of();
         AutomatedFacility facility = null;
-        UpkeepLedger.UpkeepSummary upkeepSummary = UpkeepLedger.UpkeepSummary.EMPTY;
         if (inventory instanceof AutomatedFacility af) {
             facility = af;
-            upkeepSummary = af.upkeepSummary();
+            UpkeepLedger.UpkeepSummary upkeepSummary = af.upkeepSummary();
             upkeepItems = upkeepSummary.itemsPerMinute()
                 .keySet();
             for (ItemStackWrapper item : upkeepItems) {

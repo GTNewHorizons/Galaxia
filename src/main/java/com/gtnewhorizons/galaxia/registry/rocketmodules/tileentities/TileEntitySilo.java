@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities;
 
-import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
-
 import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
@@ -13,13 +11,11 @@ import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
-import com.cleanroommc.modularui.value.IntValue;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
-import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemRocketSchematic;
@@ -46,11 +42,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     @Getter
     private int destination = -1;
 
-    private final IntValue.Dynamic selectedDim = new IntValue.Dynamic(() -> destination, v -> {
-        destination = v;
-        GALAXIA_NETWORK.sendToServer(new DestinationSetPacket(xCoord, yCoord, zCoord, v));
-    });
-
     @Getter
     @Setter
     private String pendingSchematicName = "";
@@ -67,7 +58,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
 
     public static final int SILO_DEFAULT_X_OFFSET = 0;
     public static final int SILO_DEFAULT_Y_OFFSET = 1;
-    public static final int SILO_DEFAULT_Z_OFFSET = 2;
+    public static final int SILO_DEFAULT_Z_OFFSET = 3;
 
     private static final String STRUCTURE_PIECE_MAIN = "main";
 
@@ -97,8 +88,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
      * half-built rocket.
      */
     public RocketBlueprint getBuiltBlueprint() {
-        return buildStatus == RocketBuildStatus.READY || buildStatus == RocketBuildStatus.LAUNCHED ? assembledBlueprint
-            : new RocketBlueprint();
+        return buildStatus == RocketBuildStatus.READY ? assembledBlueprint : new RocketBlueprint();
     }
 
     /**
@@ -217,16 +207,22 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         .addShape(
             STRUCTURE_PIECE_MAIN,
             // spotless:off
-            StructureUtility.transpose(
-                new String[][] {
-                    { "  T  ", "     ", "T   T", "     ", "  T  " },
-                    { "  T  ", "     ", "T   T", "     ", "  T  " },
-                    { "  C  ", "     ", "C   C", "     ", "  C  " },
-                    { " CCC ", "C   C", "C   C", "C   C", " CCC " },
-                    { " C~C ", "CCCCC", "CCCCC", "CCCCC", " CCC " }
-                }))
+                new String[][]{
+                    {"         ","         ","         ","         ","         ","         ","         ","         ","  DDDDD  ","   C C   ","  EE~EE  ","  EEEEE  "},
+                    {"         ","         ","         ","         ","         ","         ","         ","         "," D     D ","         "," EAAAAAE "," EAAAAAE "},
+                    {" C     C "," C     C "," C     C "," C     C "," C     C "," C     C "," C     C "," C     C "," D     D "," C     C ","EEAAAAAEE","EEAAAAAEE"},
+                    {"CB     BC","CB     BC","CB     BC","CB     BC","CB     BC","CB     BC","CB     BC","CB     BC","CB     BC","TB     BT","EEAAAAAEE","EEAAAAAEE"},
+                    {" D     D "," C     C "," C     C "," C     C "," D     D "," C     C "," C     C "," C     C "," D     D "," C     C ","EEAAAAAEE","EEAAAAAEE"},
+                    {" D     D ","         ","         ","         "," D     D ","         ","         ","         "," D     D ","         "," EAAAAAE "," EAAAAAE "},
+                    {"  DDBDD  ","   CBC   ","   CBC   ","   CBC   ","  DDBDD  ","   CBC   ","   CBC   ","   CBC   ","  DDBDD  ","   DBD   ","  EEEEE  ","  EEEEE  "},
+                    {"    C    ","    C    ","    C    ","    C    ","    C    ","    C    ","    C    ","    C    ","    C    ","    T    ","   EEE   ","   EEE   "}
+                })
         // spotless:on
-        .addElement('C', StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0))
+        .addElement('A', StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_CASING.get(), 0))
+        .addElement('B', StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_ASSEMBLING_CASING.get(), 0))
+        .addElement('C', StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_FRAMEBOX.get(), 0))
+        .addElement('D', StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_REINFORCEMENT.get(), 0))
+        .addElement('E', StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_SHEETING.get(), 0))
         .addElement('T', StructureUtility.ofChain(StructureUtility.ofTileAdder((silo, te) -> {
             if (te instanceof TileEntityGantryTerminal terminal) {
                 silo.setGantryTerminal(terminal);
@@ -235,7 +231,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
             }
             return false;
         }, GalaxiaBlocksEnum.GANTRY_TERMINAL.get(), 0),
-            StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0)))
+            StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_SHEETING.get(), 0)))
         .build();
 
     public TileEntitySilo() {
@@ -249,12 +245,12 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
 
     @Override
     protected int getControllerOffsetX() {
-        return 2;
+        return 4;
     }
 
     @Override
     protected int getControllerOffsetY() {
-        return 4;
+        return 10;
     }
 
     @Override
@@ -325,24 +321,29 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     public void enterRocket(PosGuiData data) {
         if (!buildStatus.canLaunch() || assembledBlueprint.isEmpty()) return;
 
+        boolean isNew = (entityRocket == null || entityRocket.isDead);
         EntityRocket rocket = getOrCreateEntityRocket();
         if (rocket == null) return;
 
         rocket.setBlueprint(assembledBlueprint.copy());
         rocket.setDestination(destination);
+        rocket.setTargetSilo(this);
+        rocket.initializeSeats();
 
-        shouldRender = false;
-        buildStatus = RocketBuildStatus.LAUNCHED;
+        if (isNew) {
+            worldObj.spawnEntityInWorld(rocket);
+        }
+
         sync();
-
         rocket.interactFirst(data.getPlayer());
-        rocket.launch();
     }
 
     public void returnModules() {
         if (moduleAssembler == null || worldObj.isRemote) return;
+        for (RocketPartInstance part : assembledBlueprint.getParts()) {
+            GantryAPI.injectModule(part.copy(), moduleAssembler, this, true);
+        }
 
-        // TODO: physically return modules via gantry rather than resetting state
         this.designBlueprint.clear();
         this.assembledBlueprint.clear();
         this.currentBuildOrder = null;
@@ -369,8 +370,17 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
             SILO_DEFAULT_Z_OFFSET,
             currentFacing);
         entityRocket.setPosition(xCoord + offset[0] + 0.5, yCoord + offset[1], zCoord + offset[2] + 0.5);
-        worldObj.spawnEntityInWorld(entityRocket);
         return entityRocket;
+    }
+
+    public void onRocketLaunched() {
+        if (worldObj.isRemote) return;
+
+        this.assembledBlueprint.clear();
+        this.currentBuildOrder = null;
+        this.buildStatus = RocketBuildStatus.DESIGNED;
+        this.shouldRender = true;
+        sync();
     }
 
     public void sync() {
@@ -386,7 +396,11 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         if (shouldRender && (entityRocket == null || entityRocket.isDead)
             && structureValid
             && buildStatus == RocketBuildStatus.READY) {
-            getOrCreateEntityRocket();
+            EntityRocket rocket = getOrCreateEntityRocket();
+            rocket.setBlueprint(assembledBlueprint.copy());
+            rocket.setDestination(destination);
+            rocket.setTargetSilo(this);
+            worldObj.spawnEntityInWorld(rocket);
         }
 
         if (pendingAssemblerCoords != null) {
@@ -411,7 +425,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
 
         nbt.setBoolean("shouldRender", shouldRender);
 
-        // Build state — all three layers persisted independently
         nbt.setInteger("buildStatus", buildStatus.ordinal());
         nbt.setTag("designBlueprint", designBlueprint.serializeNBT());
         nbt.setTag("assembledBlueprint", assembledBlueprint.serializeNBT());

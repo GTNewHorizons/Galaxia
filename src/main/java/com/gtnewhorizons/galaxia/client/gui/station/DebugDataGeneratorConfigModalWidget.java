@@ -7,6 +7,7 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteBandwidthFormatter;
@@ -121,8 +122,10 @@ final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGe
     }
 
     private String originLabel() {
-        CelestialObjectId origin = config().originBodyId();
-        return origin == null ? "Any origin" : origin.name();
+        CelestialObjectKey origin = config().originBodyKey();
+        if (origin == null) return "Any origin";
+        return origin.isRegistered() ? origin.registeredBodyId()
+            .name() : origin.toString();
     }
 
     private void toggleMode() {
@@ -137,7 +140,7 @@ final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGe
                 config.dataType(),
                 config.amountKb(),
                 config.durationTicks(),
-                mode == ModuleDebugDataGenerator.Mode.CONSUME ? config.originBodyId() : null));
+                mode == ModuleDebugDataGenerator.Mode.CONSUME ? config.originBodyKey() : null));
     }
 
     private void cycleDataType() {
@@ -152,12 +155,12 @@ final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGe
                 next,
                 config.amountKb(),
                 config.durationTicks(),
-                config.originBodyId()));
+                config.originBodyKey()));
     }
 
     private void cycleOrigin() {
         ModuleDebugDataGenerator.Config config = config();
-        CelestialObjectId next = nextOrigin(config.originBodyId());
+        CelestialObjectKey next = nextOrigin(config.originBodyKey());
         apply(
             new ModuleDebugDataGenerator.Config(
                 config.mode(),
@@ -177,7 +180,7 @@ final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGe
                 config.dataType(),
                 Math.max(0L, config.amountKb() + delta),
                 config.durationTicks(),
-                config.originBodyId()));
+                config.originBodyKey()));
     }
 
     private void adjustDuration(int delta) {
@@ -189,7 +192,7 @@ final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGe
                 config.dataType(),
                 config.amountKb(),
                 Math.max(1, config.durationTicks() + delta),
-                config.originBodyId()));
+                config.originBodyKey()));
     }
 
     private void apply(ModuleDebugDataGenerator.Config config) {
@@ -212,15 +215,21 @@ final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGe
     }
 
     private String counterpartStatus(ModuleDebugDataGenerator generator) {
-        CelestialObjectId bodyId = generator.detectedCounterpartBodyId();
+        CelestialObjectKey bodyKey = generator.detectedCounterpartBodyKey();
         String role = generator.isProducer() ? "Consumer" : "Producer";
-        return bodyId == null ? role + " not detected" : role + " detected at: " + bodyId.name();
+        if (bodyKey == null) return role + " not detected";
+        String label = bodyKey.isRegistered() ? bodyKey.registeredBodyId()
+            .name() : bodyKey.toString();
+        return role + " detected at: " + label;
     }
 
-    private static @Nullable CelestialObjectId nextOrigin(@Nullable CelestialObjectId current) {
+    private static @Nullable CelestialObjectKey nextOrigin(@Nullable CelestialObjectKey current) {
         CelestialObjectId[] values = CelestialObjectId.values();
-        if (current == null) return values.length == 0 ? null : values[0];
-        int nextOrdinal = current.ordinal() + 1;
-        return nextOrdinal >= values.length ? null : values[nextOrdinal];
+        CelestialObjectId currentId = current != null && current.isRegistered() ? current.registeredBodyId() : null;
+        if (currentId == null) {
+            return values.length == 0 ? null : CelestialObjectKey.registered(values[0]);
+        }
+        int nextOrdinal = currentId.ordinal() + 1;
+        return nextOrdinal >= values.length ? null : CelestialObjectKey.registered(values[nextOrdinal]);
     }
 }

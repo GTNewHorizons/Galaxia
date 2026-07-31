@@ -249,7 +249,7 @@ final class LayoutCacheBundleTest {
                 .size());
 
         // Remove b — cluster should shrink to just a
-        layout.deconstruct(StationTileCoord.of(2, 0));
+        layout.removeTileForModule(b.id);
         cache.applyMutation(MutationKind.DECONSTRUCT, FacilityModuleKind.STORAGE, b);
         List<CapacityCluster> clusters = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
         assertEquals(1, clusters.size());
@@ -281,7 +281,7 @@ final class LayoutCacheBundleTest {
             cache.getCapacityClusters(FacilityModuleKind.STORAGE)
                 .size());
 
-        layout.deconstruct(StationTileCoord.of(2, 0));
+        layout.removeTileForModule(c.id);
         cache.applyMutation(MutationKind.DECONSTRUCT, FacilityModuleKind.STORAGE, c);
         List<CapacityCluster> clusters = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
         assertEquals(2, clusters.size());

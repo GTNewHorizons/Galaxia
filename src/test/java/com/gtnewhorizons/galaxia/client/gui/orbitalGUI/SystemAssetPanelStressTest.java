@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
@@ -52,15 +53,15 @@ final class SystemAssetPanelStressTest {
             asset(
                 "Mars Outpost",
                 CelestialAsset.Kind.AUTOMATED_OUTPOST,
-                CelestialObjectId.MARS,
+                CelestialObjectKey.registered(CelestialObjectId.MARS),
                 Buildable.Status.OPERATIONAL,
                 WarningPriority.NONE,
                 true,
                 false),
-            satellite(CelestialObjectId.MARS, SatelliteKind.COMMUNICATION),
-            satellite(CelestialObjectId.MARS, SatelliteKind.COMMUNICATION),
-            satellite(CelestialObjectId.MARS, SatelliteKind.PROSPECTING),
-            satellite(CelestialObjectId.MOON, SatelliteKind.COMMUNICATION));
+            satellite(CelestialObjectKey.registered(CelestialObjectId.MARS), SatelliteKind.COMMUNICATION),
+            satellite(CelestialObjectKey.registered(CelestialObjectId.MARS), SatelliteKind.COMMUNICATION),
+            satellite(CelestialObjectKey.registered(CelestialObjectId.MARS), SatelliteKind.PROSPECTING),
+            satellite(CelestialObjectKey.registered(CelestialObjectId.MOON), SatelliteKind.COMMUNICATION));
 
         assertEquals(
             1,
@@ -70,7 +71,12 @@ final class SystemAssetPanelStressTest {
             List.of("MARS:COMMUNICATION:2", "MARS:PROSPECTING:1", "MOON:COMMUNICATION:1"),
             SolarSystemAssetPanelWidget.satelliteRows(assets)
                 .stream()
-                .map(row -> row.bodyId() + ":" + row.kind() + ":" + row.count())
+                .map(
+                    row -> row.bodyKey()
+                        .requireRegisteredBodyId() + ":"
+                        + row.kind()
+                        + ":"
+                        + row.count())
                 .collect(Collectors.toList()));
     }
 
@@ -80,14 +86,14 @@ final class SystemAssetPanelStressTest {
             asset(
                 "Mars Outpost",
                 CelestialAsset.Kind.AUTOMATED_OUTPOST,
-                CelestialObjectId.MARS,
+                CelestialObjectKey.registered(CelestialObjectId.MARS),
                 Buildable.Status.OPERATIONAL,
                 WarningPriority.NONE,
                 true,
                 false),
-            satellite(CelestialObjectId.MARS, SatelliteKind.COMMUNICATION),
-            satellite(CelestialObjectId.MARS, SatelliteKind.COMMUNICATION),
-            satellite(CelestialObjectId.MARS, SatelliteKind.PROSPECTING));
+            satellite(CelestialObjectKey.registered(CelestialObjectId.MARS), SatelliteKind.COMMUNICATION),
+            satellite(CelestialObjectKey.registered(CelestialObjectId.MARS), SatelliteKind.COMMUNICATION),
+            satellite(CelestialObjectKey.registered(CelestialObjectId.MARS), SatelliteKind.PROSPECTING));
 
         assertEquals(List.of("Mars Outpost"), namesOf(StarmapAssetActions.deployedAssetRows(assets)));
         assertEquals(
@@ -144,7 +150,7 @@ final class SystemAssetPanelStressTest {
             asset(
                 "Alpha Station",
                 CelestialAsset.Kind.AUTOMATED_STATION,
-                CelestialObjectId.OVERWORLD,
+                CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
                 Buildable.Status.OPERATIONAL,
                 WarningPriority.NONE,
                 false,
@@ -152,7 +158,7 @@ final class SystemAssetPanelStressTest {
             asset(
                 "Beta Station",
                 CelestialAsset.Kind.AUTOMATED_STATION,
-                CelestialObjectId.OVERWORLD,
+                CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
                 Buildable.Status.OPERATIONAL,
                 WarningPriority.NO_POWER,
                 false,
@@ -160,7 +166,7 @@ final class SystemAssetPanelStressTest {
             asset(
                 "Gamma Outpost",
                 CelestialAsset.Kind.AUTOMATED_OUTPOST,
-                CelestialObjectId.OVERWORLD,
+                CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
                 Buildable.Status.OPERATIONAL,
                 WarningPriority.NONE,
                 false,
@@ -168,7 +174,7 @@ final class SystemAssetPanelStressTest {
             asset(
                 "Delta Station Build",
                 CelestialAsset.Kind.STATION,
-                CelestialObjectId.OVERWORLD,
+                CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
                 Buildable.Status.IN_CONSTRUCTION,
                 WarningPriority.IDLE,
                 false,
@@ -176,7 +182,7 @@ final class SystemAssetPanelStressTest {
             asset(
                 "Epsilon Outpost",
                 CelestialAsset.Kind.AUTOMATED_OUTPOST,
-                CelestialObjectId.OVERWORLD,
+                CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
                 Buildable.Status.DISABLED,
                 WarningPriority.NONE,
                 true,
@@ -184,7 +190,7 @@ final class SystemAssetPanelStressTest {
             asset(
                 "Communication Satellite",
                 CelestialAsset.Kind.SATELLITE,
-                CelestialObjectId.OVERWORLD,
+                CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
                 Buildable.Status.OPERATIONAL,
                 WarningPriority.NO_POWER,
                 true,
@@ -193,7 +199,7 @@ final class SystemAssetPanelStressTest {
 
     private static CelestialObject star(CelestialObjectId id, String name) {
         return CelestialObject.builder()
-            .id(id)
+            .key(id)
             .name(name)
             .objectClass(CelestialObject.Class.STAR)
             .build();
@@ -212,14 +218,14 @@ final class SystemAssetPanelStressTest {
             .collect(Collectors.toList());
     }
 
-    private static CelestialAsset asset(String name, CelestialAsset.Kind kind, CelestialObjectId body,
+    private static CelestialAsset asset(String name, CelestialAsset.Kind kind, CelestialObjectKey body,
         Buildable.Status status, WarningPriority warning, boolean mining, boolean production) {
         FakeAsset asset = new FakeAsset(kind, body, status, warning, mining, production);
         asset.setDisplayName(name);
         return asset;
     }
 
-    private static CelestialAsset satellite(CelestialObjectId body, SatelliteKind kind) {
+    private static CelestialAsset satellite(CelestialObjectKey body, SatelliteKind kind) {
         return CelestialAsset.create(body, CelestialAsset.Kind.SATELLITE, Buildable.Status.OPERATIONAL, kind);
     }
 
@@ -229,7 +235,7 @@ final class SystemAssetPanelStressTest {
         private final boolean mining;
         private final boolean production;
 
-        private FakeAsset(Kind kind, CelestialObjectId body, Buildable.Status status, WarningPriority warning,
+        private FakeAsset(Kind kind, CelestialObjectKey body, Buildable.Status status, WarningPriority warning,
             boolean mining, boolean production) {
             super(ID.create(), body, kind, status, Collections.emptyMap());
             this.warning = warning;

@@ -2,7 +2,7 @@ package com.gtnewhorizons.galaxia.core;
 
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.FMLBusRegister;
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.ForgeBusRegister;
-import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTechLoaded;
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTech5UnofficialNewHorizonsLoaded;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask.BAUBLE_TYPE_OXYGEN_MASK;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank.BAUBLE_TYPE_OXYGEN_TANK;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield.BAUBLE_TYPE_PROTECTION_SHIELD;
@@ -33,6 +33,7 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
 import com.gtnewhorizons.galaxia.registry.celestial.GalaxiaAtmosphereFluids;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
@@ -60,17 +61,18 @@ public class CommonProxy {
     // etc, and register them with the
     // GameRegistry." (Remove if not needed)
     public void preInit(FMLPreInitializationEvent event) {
+        CelestialServerRuntime celestialRuntime = CelestialServerRuntime.create();
         GalaxiaAtmosphereFluids.init();
         CelestialDimensionMaterializer.registerPlayableDimensions();
 
         // FML bus registering
         FMLBusRegister(new DimensionEventHandler());
-        FMLBusRegister(new CelestialEventHandler());
+        FMLBusRegister(new CelestialEventHandler(celestialRuntime));
         FMLBusRegister(new ServerTickTaskQueue());
         FMLBusRegister(new TetherEventHandler());
 
         // Forge bus registering
-        ForgeBusRegister(new FacilityPersistenceManager());
+        ForgeBusRegister(new FacilityPersistenceManager(celestialRuntime));
         ForgeBusRegister(new TeamEventHandler());
         ForgeBusRegister(new GalaxiaPlayerProperties.PlayerEventHandler());
 
@@ -84,7 +86,7 @@ public class CommonProxy {
         GalaxiaEffects.init();
 
         // Facility setup
-        FacilityModuleKind.setGt5Available(isGregTechLoaded());
+        FacilityModuleKind.setGt5Available(isGregTech5UnofficialNewHorizonsLoaded());
         FacilityModuleRegistry.init();
 
         if (Loader.isModLoaded("Baubles|Expanded")) registerBaublesSlots();
@@ -127,7 +129,7 @@ public class CommonProxy {
     public void serverStarting(FMLServerStartingEvent event) {}
 
     private void registerAttachments() {
-        if (isGregTechLoaded()) {
+        if (isGregTech5UnofficialNewHorizonsLoaded()) {
             GalaxiaGTAttachmentRegistration.init();
         }
 
@@ -136,7 +138,7 @@ public class CommonProxy {
     }
 
     private void validateGtCelestialOrePools() {
-        if (!isGregTechLoaded()) return;
+        if (!isGregTech5UnofficialNewHorizonsLoaded()) return;
 
         int bodyCount = 0;
         int stackCount = 0;
@@ -149,7 +151,7 @@ public class CommonProxy {
             if (gtOres.isEmpty()) {
                 Galaxia.LOG.error(
                     "[GT_ORE_AUDIT] {} declares GT ore veins {} but resolved no GT ore stacks",
-                    body.id(),
+                    body.key(),
                     properties.gtOreVeinIds());
                 continue;
             }
@@ -157,7 +159,7 @@ public class CommonProxy {
             stackCount += gtOres.size();
             Galaxia.LOG.info(
                 "[GT_ORE_AUDIT] {} resolved {} GT ore stacks from {}",
-                body.id(),
+                body.key(),
                 gtOres.size(),
                 properties.gtOreVeinIds());
         }

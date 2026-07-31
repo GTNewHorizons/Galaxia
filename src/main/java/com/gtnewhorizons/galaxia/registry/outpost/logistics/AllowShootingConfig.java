@@ -14,6 +14,15 @@ package com.gtnewhorizons.galaxia.registry.outpost.logistics;
 
 public record AllowShootingConfig(Mode mode, double threshold) {
 
+    public AllowShootingConfig {
+        if (mode == null) throw new IllegalArgumentException("allow shooting mode is required");
+        // NaN would silently mute the module, since every comparison against it is false.
+        if (!Double.isFinite(threshold) || threshold < 0.0) {
+            throw new IllegalArgumentException(
+                "allow shooting threshold must be finite and non-negative: " + threshold);
+        }
+    }
+
     /**
      * Controls when a logistics module is permitted to spend EU to dispatch a trajectory transfer.
      */

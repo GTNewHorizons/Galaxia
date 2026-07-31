@@ -53,7 +53,6 @@ public class GalaxiaOverlayHandler {
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 
         if (ConfigOverlay.ConfigOverlayOxygenBar.showOxygenBar && GalaxiaAPI.hasOxygenTank(player)) {
-            boolean oxygenCritical = oxygenLevel < ConfigOverlay.ConfigOverlayOxygenBar.lowOxygenThreshold;
             drawBar(
                 pos.oxygenX,
                 pos.oxygenY,

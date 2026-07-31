@@ -5,7 +5,7 @@ import java.util.UUID;
 
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -30,22 +30,22 @@ public class LogisticsDelivery {
         private final ItemStackWrapper resourceId;
         private long amount;
         private final LogisticSignal.Scope scope;
-        private final CelestialObjectId fromBodyId;
-        private final CelestialObjectId toBodyId;
+        private final CelestialObjectKey fromBodyKey;
+        private final CelestialObjectKey toBodyKey;
         private final double departureOrbitalTime;
         private final double tofOrbitalSeconds;
         private final OrbitalTransferPlanner.TransferRoute transferRoute;
 
         public Data(CelestialAsset.ID fromAssetId, CelestialAsset.ID toAssetId, ItemStackWrapper resourceId,
-            long amount, LogisticSignal.Scope scope, CelestialObjectId fromBodyId, CelestialObjectId toBodyId,
+            long amount, LogisticSignal.Scope scope, CelestialObjectKey fromBodyKey, CelestialObjectKey toBodyKey,
             double departureOrbitalTime, double tofOrbitalSeconds, OrbitalTransferPlanner.TransferRoute transferRoute) {
             this.fromAssetId = fromAssetId;
             this.toAssetId = toAssetId;
             this.resourceId = resourceId;
             this.amount = amount;
             this.scope = scope;
-            this.fromBodyId = fromBodyId;
-            this.toBodyId = toBodyId;
+            this.fromBodyKey = fromBodyKey;
+            this.toBodyKey = toBodyKey;
             this.departureOrbitalTime = departureOrbitalTime;
             this.tofOrbitalSeconds = tofOrbitalSeconds;
             this.transferRoute = transferRoute;
@@ -75,12 +75,12 @@ public class LogisticsDelivery {
             return scope;
         }
 
-        public CelestialObjectId fromBodyId() {
-            return fromBodyId;
+        public CelestialObjectKey fromBodyKey() {
+            return fromBodyKey;
         }
 
-        public CelestialObjectId toBodyId() {
-            return toBodyId;
+        public CelestialObjectKey toBodyKey() {
+            return toBodyKey;
         }
 
         public double departureOrbitalTime() {
@@ -106,8 +106,8 @@ public class LogisticsDelivery {
                 && Objects.equals(toAssetId, other.toAssetId)
                 && Objects.equals(resourceId, other.resourceId)
                 && scope == other.scope
-                && Objects.equals(fromBodyId, other.fromBodyId)
-                && Objects.equals(toBodyId, other.toBodyId)
+                && Objects.equals(fromBodyKey, other.fromBodyKey)
+                && Objects.equals(toBodyKey, other.toBodyKey)
                 && Objects.equals(transferRoute, other.transferRoute);
         }
 
@@ -119,8 +119,8 @@ public class LogisticsDelivery {
                 resourceId,
                 amount,
                 scope,
-                fromBodyId,
-                toBodyId,
+                fromBodyKey,
+                toBodyKey,
                 departureOrbitalTime,
                 tofOrbitalSeconds,
                 transferRoute);
@@ -137,10 +137,10 @@ public class LogisticsDelivery {
                 + amount
                 + ", scope="
                 + scope
-                + ", fromBodyId="
-                + fromBodyId
-                + ", toBodyId="
-                + toBodyId
+                + ", fromBodyKey="
+                + fromBodyKey
+                + ", toBodyKey="
+                + toBodyKey
                 + ", departureOrbitalTime="
                 + departureOrbitalTime
                 + ", tofOrbitalSeconds="
@@ -156,8 +156,8 @@ public class LogisticsDelivery {
 
         AutomatedFacility from = CelestialClient.getByAssetId(fromAssetId) instanceof AutomatedFacility o ? o : null;
         AutomatedFacility to = CelestialClient.getByAssetId(toAssetId) instanceof AutomatedFacility o ? o : null;
-        CelestialObjectId fromBody = from != null ? from.celestialObjectId : CelestialObjectId.INVALID;
-        CelestialObjectId toBody = to != null ? to.celestialObjectId : CelestialObjectId.INVALID;
+        CelestialObjectKey fromBody = from != null ? from.celestialObjectKey : null;
+        CelestialObjectKey toBody = to != null ? to.celestialObjectKey : null;
 
         return createWithTrajectory(
             fromAssetId,
@@ -175,7 +175,7 @@ public class LogisticsDelivery {
 
     public static LogisticsDelivery createWithTrajectory(CelestialAsset.ID fromAssetId, CelestialAsset.ID toAssetId,
         ItemStackWrapper resourceId, long amount, int deliveryTicks, LogisticSignal.Scope scope,
-        CelestialObjectId fromBodyId, CelestialObjectId toBodyId, double departureOrbitalTime,
+        CelestialObjectKey fromBodyKey, CelestialObjectKey toBodyKey, double departureOrbitalTime,
         double tofOrbitalSeconds) {
         return createWithTrajectory(
             fromAssetId,
@@ -184,8 +184,8 @@ public class LogisticsDelivery {
             amount,
             deliveryTicks,
             scope,
-            fromBodyId,
-            toBodyId,
+            fromBodyKey,
+            toBodyKey,
             departureOrbitalTime,
             tofOrbitalSeconds,
             null);
@@ -193,8 +193,8 @@ public class LogisticsDelivery {
 
     public static LogisticsDelivery createWithTrajectory(CelestialAsset.ID fromAssetId, CelestialAsset.ID toAssetId,
         ItemStackWrapper resourceId, long amount, int deliveryTicks, LogisticSignal.Scope scope,
-        CelestialObjectId fromBodyId, CelestialObjectId toBodyId, double departureOrbitalTime, double tofOrbitalSeconds,
-        OrbitalTransferPlanner.TransferRoute transferRoute) {
+        CelestialObjectKey fromBodyKey, CelestialObjectKey toBodyKey, double departureOrbitalTime,
+        double tofOrbitalSeconds, OrbitalTransferPlanner.TransferRoute transferRoute) {
         return createWithTrajectory(
             ID.create(),
             fromAssetId,
@@ -203,8 +203,8 @@ public class LogisticsDelivery {
             amount,
             deliveryTicks,
             scope,
-            fromBodyId,
-            toBodyId,
+            fromBodyKey,
+            toBodyKey,
             departureOrbitalTime,
             tofOrbitalSeconds,
             transferRoute);
@@ -212,7 +212,7 @@ public class LogisticsDelivery {
 
     public static LogisticsDelivery createWithTrajectory(ID id, CelestialAsset.ID fromAssetId,
         CelestialAsset.ID toAssetId, ItemStackWrapper resourceId, long amount, int deliveryTicks,
-        LogisticSignal.Scope scope, CelestialObjectId fromBodyId, CelestialObjectId toBodyId,
+        LogisticSignal.Scope scope, CelestialObjectKey fromBodyKey, CelestialObjectKey toBodyKey,
         double departureOrbitalTime, double tofOrbitalSeconds) {
         return createWithTrajectory(
             id,
@@ -222,8 +222,8 @@ public class LogisticsDelivery {
             amount,
             deliveryTicks,
             scope,
-            fromBodyId,
-            toBodyId,
+            fromBodyKey,
+            toBodyKey,
             departureOrbitalTime,
             tofOrbitalSeconds,
             null);
@@ -231,7 +231,7 @@ public class LogisticsDelivery {
 
     public static LogisticsDelivery createWithTrajectory(ID id, CelestialAsset.ID fromAssetId,
         CelestialAsset.ID toAssetId, ItemStackWrapper resourceId, long amount, int deliveryTicks,
-        LogisticSignal.Scope scope, CelestialObjectId fromBodyId, CelestialObjectId toBodyId,
+        LogisticSignal.Scope scope, CelestialObjectKey fromBodyKey, CelestialObjectKey toBodyKey,
         double departureOrbitalTime, double tofOrbitalSeconds, OrbitalTransferPlanner.TransferRoute transferRoute) {
         return new LogisticsDelivery(
             id,
@@ -241,8 +241,8 @@ public class LogisticsDelivery {
                 resourceId,
                 amount,
                 scope,
-                fromBodyId,
-                toBodyId,
+                fromBodyKey,
+                toBodyKey,
                 departureOrbitalTime,
                 tofOrbitalSeconds,
                 transferRoute),

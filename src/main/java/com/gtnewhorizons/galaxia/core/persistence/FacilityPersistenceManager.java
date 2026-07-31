@@ -35,9 +35,11 @@ import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.core.network.PacketUtil;
+import com.gtnewhorizons.galaxia.core.persistence.CelestialObjectKeyJsonCodec.CelestialObjectKeyJson;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
@@ -91,7 +93,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
-import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import sun.misc.Unsafe;
@@ -103,15 +104,23 @@ public final class FacilityPersistenceManager {
     private static final String DATA_DIR = "galaxiadata";
     private static final String ASSETS_FILE = "_assets.json";
     private static final String TASKS_FILE = "_tasks.json";
+    private static final String KNOWLEDGE_FILE = "_celestial_knowledge.json";
+    private static final String DISCOVERY_FILE = "_discovery.json";
 
     private final Gson gson;
     private static final Gson PURE_GSON = new GsonBuilder().create();
     private File worldSaveDir;
+    private final CelestialServerRuntime celestialRuntime;
+    private final CelestialKnowledgePersistenceAdapter celestialKnowledge;
+    private final CelestialDiscoveryPersistenceAdapter celestialDiscovery;
 
     private static final String INVENTORY_KEY_ITEM_PREFIX = "I";
     private static final String INVENTORY_KEY_FLUID_PREFIX = "F";
 
-    public FacilityPersistenceManager() {
+    public FacilityPersistenceManager(CelestialServerRuntime celestialRuntime) {
+        this.celestialRuntime = celestialRuntime;
+        this.celestialKnowledge = new CelestialKnowledgePersistenceAdapter();
+        this.celestialDiscovery = new CelestialDiscoveryPersistenceAdapter(celestialRuntime.scans());
         gson = new GsonBuilder().setPrettyPrinting()
             .serializeNulls()
             .create();
@@ -127,9 +136,9 @@ public final class FacilityPersistenceManager {
 
     public void loadFromSaveDirectory(File worldSaveDir) {
         this.worldSaveDir = worldSaveDir;
-        CelestialAssetStore.clear();
-        SatelliteNetworkService.clear();
+        celestialRuntime.reset();
         LogisticStore.clearDeliveries();
+        LogisticStore.clearSignals();
         HammerTrajectoryLoadTracker.reset();
         loadAll();
     }
@@ -152,9 +161,9 @@ public final class FacilityPersistenceManager {
         if (!(event.world instanceof WorldServer)) return;
         if (event.world.provider.dimensionId != 0) return;
         if (worldSaveDir != null) saveAll();
-        CelestialAssetStore.clear();
-        SatelliteNetworkService.clear();
+        celestialRuntime.reset();
         LogisticStore.clearDeliveries();
+        LogisticStore.clearSignals();
         HammerTrajectoryLoadTracker.reset();
         worldSaveDir = null;
     }
@@ -168,6 +177,10 @@ public final class FacilityPersistenceManager {
         LOG.info("[PERSIST] LOAD START: reading from {}", galaxiaRoot);
         loadAssets(new File(galaxiaRoot, ASSETS_FILE));
         loadTasks(new File(galaxiaRoot, TASKS_FILE));
+        // Content catalog restores before minor-key facts so those keys resolve;
+        // shared facts restore before scan progress that references them.
+        celestialKnowledge.load(new File(galaxiaRoot, KNOWLEDGE_FILE), gson);
+        celestialDiscovery.load(new File(galaxiaRoot, DISCOVERY_FILE), gson);
     }
 
     private void saveAll() {
@@ -176,6 +189,8 @@ public final class FacilityPersistenceManager {
         LOG.info("[PERSIST] SAVE START: writing to {}", galaxiaRoot);
         saveAssets(new File(galaxiaRoot, ASSETS_FILE));
         saveTasks(new File(galaxiaRoot, TASKS_FILE));
+        celestialKnowledge.save(new File(galaxiaRoot, KNOWLEDGE_FILE), gson);
+        celestialDiscovery.save(new File(galaxiaRoot, DISCOVERY_FILE), gson);
     }
 
     private void loadAssets(File file) {
@@ -291,8 +306,8 @@ public final class FacilityPersistenceManager {
                             tj.amount,
                             tj.remainingTicks,
                             LogisticSignal.Scope.valueOf(tj.transportKind),
-                            CelestialObjectId.valueOf(tj.fromBodyId),
-                            CelestialObjectId.valueOf(tj.toBodyId),
+                            tj.fromBodyId == null ? null : CelestialObjectKeyJsonCodec.decode(tj.fromBodyId),
+                            tj.toBodyId == null ? null : CelestialObjectKeyJsonCodec.decode(tj.toBodyId),
                             tj.departureOrbitalTime,
                             tj.tofOrbitalSeconds));
                 }
@@ -314,8 +329,8 @@ public final class FacilityPersistenceManager {
             tj.amount = delivery.data.amount();
             tj.remainingTicks = delivery.getRemainingTicks();
             tj.transportKind = String.valueOf(delivery.data.scope());
-            tj.fromBodyId = String.valueOf(delivery.data.fromBodyId());
-            tj.toBodyId = String.valueOf(delivery.data.toBodyId());
+            tj.fromBodyId = encodeCelestialObjectKey(delivery.data.fromBodyKey());
+            tj.toBodyId = encodeCelestialObjectKey(delivery.data.toBodyKey());
             tj.departureOrbitalTime = delivery.data.departureOrbitalTime();
             tj.tofOrbitalSeconds = delivery.data.tofOrbitalSeconds();
             list.add(tj);
@@ -354,7 +369,7 @@ public final class FacilityPersistenceManager {
         AssetJson json = new AssetJson();
         json.teamId = String.valueOf(CelestialAssetStore.getTeamId(asset.assetId));
         json.assetId = asset.assetId;
-        json.celestialObjectId = String.valueOf(asset.celestialObjectId);
+        json.celestialObjectKey = encodeCelestialObjectKey(asset.celestialObjectKey);
         json.displayName = asset.displayName();
         json.kind = asset.kind.name();
         json.location = asset.location.name();
@@ -405,20 +420,19 @@ public final class FacilityPersistenceManager {
     CelestialAsset decodeAsset(AssetJson json) {
         if (json == null || json.teamId == null
             || json.assetId == null
-            || json.celestialObjectId == null
             || json.kind == null
             || json.location == null
             || json.status == null) {
             return null;
         }
-        CelestialObjectId objectId = CelestialObjectId.fromString(json.celestialObjectId);
-        if (objectId == null) return null;
+        CelestialObjectKey objectKey = decodeCelestialObjectKey(json);
+        if (objectKey == null) return null;
         CelestialAsset.Kind kind = safeValueOf(CelestialAsset.Kind.class, json.kind);
         Buildable.Status status = safeValueOf(Buildable.Status.class, json.status);
         if (kind == null || status == null) return null;
         SatelliteKind satelliteKind = safeValueOf(SatelliteKind.class, json.satelliteKind);
         if (kind == CelestialAsset.Kind.SATELLITE && satelliteKind == null) return null;
-        CelestialAsset asset = CelestialAsset.create(json.assetId, objectId, kind, status, satelliteKind);
+        CelestialAsset asset = CelestialAsset.create(json.assetId, objectKey, kind, status, satelliteKind);
         asset.setConstructionInventory(decodeRequirements(json.constructionInventory));
         asset.setDisplayName(json.displayName);
         if (asset instanceof Station station && json.controllerX != null
@@ -483,6 +497,14 @@ public final class FacilityPersistenceManager {
         return asset;
     }
 
+    private static CelestialObjectKeyJson encodeCelestialObjectKey(CelestialObjectKey key) {
+        return CelestialObjectKeyJsonCodec.encode(key);
+    }
+
+    private static CelestialObjectKey decodeCelestialObjectKey(AssetJson json) {
+        return CelestialObjectKeyJsonCodec.decode(json.celestialObjectKey);
+    }
+
     FacilityStateJson encodeFacilityState(AutomatedFacility state) {
         state.syncRecipeSettingsGroupsFromModules();
         FacilityStateJson out = new FacilityStateJson();
@@ -545,12 +567,18 @@ public final class FacilityPersistenceManager {
                         .name());
                 moduleData.addProperty("amountKb", config.amountKb());
                 moduleData.addProperty("durationTicks", config.durationTicks());
-                CelestialObjectId originBodyId = config.originBodyId();
+                CelestialObjectKey originBodyKey = config.originBodyKey();
                 moduleData.add(
-                    "originBodyId",
-                    originBodyId == null ? JsonNull.INSTANCE : PURE_GSON.toJsonTree(originBodyId.name()));
+                    "originBodyKey",
+                    originBodyKey == null ? JsonNull.INSTANCE
+                        : PURE_GSON.toJsonTree(encodeCelestialObjectKey(originBodyKey)));
                 moduleData.addProperty("jobProgressTicks", debugGenerator.jobProgressTicks());
                 moduleData.addProperty("consumedDeciKb", debugGenerator.consumedDeciKb());
+                CelestialObjectKey detectedCounterpartBodyKey = debugGenerator.detectedCounterpartBodyKey();
+                moduleData.add(
+                    "detectedCounterpartBodyKey",
+                    detectedCounterpartBodyKey == null ? JsonNull.INSTANCE
+                        : PURE_GSON.toJsonTree(encodeCelestialObjectKey(detectedCounterpartBodyKey)));
             } else if (m.component() instanceof IRecipeModule recipeModule) {
                 RecipeConfig rc = recipeModule.getRecipeConfig();
                 if (rc != null) {
@@ -627,7 +655,7 @@ public final class FacilityPersistenceManager {
     }
 
     AutomatedFacility decodeFacilityState(CelestialAsset asset, FacilityStateJson json) {
-        if (asset == null || json == null || asset.systemId == null) return null;
+        if (asset == null || json == null || asset.systemKey == null) return null;
         if (!(asset instanceof AutomatedFacility state)) return null;
         state.setEnergyStored(json.energyStored);
         state.setStationFeatureSalt(json.stationFeatureSalt);
@@ -752,12 +780,17 @@ public final class FacilityPersistenceManager {
                         SatelliteDataType dataType = Objects.requireNonNull(
                             PURE_GSON.fromJson(generatorData.get("dataType"), SatelliteDataType.class),
                             "[PERSIST] Debug data generator missing dataType");
-                        CelestialObjectId originBodyId = null;
-                        JsonElement originElement = generatorData.get("originBodyId");
+                        CelestialObjectKey originBodyKey = null;
+                        JsonElement originElement = generatorData.get("originBodyKey");
                         if (originElement != null && !originElement.isJsonNull()) {
-                            originBodyId = Objects.requireNonNull(
-                                safeValueOf(CelestialObjectId.class, originElement.getAsString()),
-                                "[PERSIST] Debug data generator has invalid originBodyId");
+                            originBodyKey = CelestialObjectKeyJsonCodec
+                                .decode(PURE_GSON.fromJson(originElement, CelestialObjectKeyJson.class));
+                        }
+                        CelestialObjectKey detectedCounterpartBodyKey = null;
+                        JsonElement detectedElement = generatorData.get("detectedCounterpartBodyKey");
+                        if (detectedElement != null && !detectedElement.isJsonNull()) {
+                            detectedCounterpartBodyKey = CelestialObjectKeyJsonCodec
+                                .decode(PURE_GSON.fromJson(detectedElement, CelestialObjectKeyJson.class));
                         }
                         debugGenerator.restore(
                             new ModuleDebugDataGenerator.Config(
@@ -766,10 +799,10 @@ public final class FacilityPersistenceManager {
                                 dataType,
                                 requireLong(generatorData, "amountKb", moduleId),
                                 requireInt(generatorData, "durationTicks", moduleId),
-                                originBodyId),
+                                originBodyKey),
                             requireInt(generatorData, "jobProgressTicks", moduleId),
                             requireLong(generatorData, "consumedDeciKb", moduleId),
-                            null);
+                            detectedCounterpartBodyKey);
                     }
                     case POWER, GEOTHERMAL_GENERATOR -> {}
                     case STORAGE, TANK, BATTERY, MAINTENANCE_BAY -> {}
@@ -1004,18 +1037,6 @@ public final class FacilityPersistenceManager {
         return decoded;
     }
 
-    private static Map<String, Long> toFluidBounds(Map<FluidKey, Long> bounds) {
-        Map<String, Long> result = new LinkedHashMap<>();
-        for (Map.Entry<FluidKey, Long> e : bounds.entrySet()) {
-            result.put(
-                e.getKey()
-                    .fluid()
-                    .getName(),
-                e.getValue());
-        }
-        return result;
-    }
-
     private static Map<String, Long> encodeItemUpkeepAmountMap(Map<ItemStackWrapper, UpkeepAmount> amounts) {
         Map<String, Long> encoded = new LinkedHashMap<>();
         if (amounts == null) return encoded;
@@ -1079,7 +1100,7 @@ public final class FacilityPersistenceManager {
 
         CelestialAsset.ID assetId;
         String teamId;
-        String celestialObjectId;
+        CelestialObjectKeyJson celestialObjectKey;
         String systemId;
         String planetaryAnchorBodyId;
         String displayName;
@@ -1210,8 +1231,8 @@ public final class FacilityPersistenceManager {
         long amount;
         int remainingTicks;
         String transportKind;
-        String fromBodyId;
-        String toBodyId;
+        CelestialObjectKeyJson fromBodyId;
+        CelestialObjectKeyJson toBodyId;
         double departureOrbitalTime;
         double tofOrbitalSeconds;
     }
@@ -1474,7 +1495,6 @@ public final class FacilityPersistenceManager {
             ModuleTier.class,
             json.targetTier,
             "[PERSIST] Module " + moduleId + " has invalid target tier: " + json.targetTier);
-        FacilityModuleKind kindForLookup = regKind != null ? regKind : FacilityModuleKind.HAMMER;
         if (json.buildTicks <= 0) {
             throw new IllegalStateException(
                 "[PERSIST] Module " + moduleId + " operation has invalid buildTicks: " + json.buildTicks);

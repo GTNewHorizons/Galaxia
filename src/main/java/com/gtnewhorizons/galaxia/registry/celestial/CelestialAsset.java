@@ -35,9 +35,9 @@ import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 public abstract class CelestialAsset implements Buildable, IDistributedInventory {
 
     public final ID assetId;
-    public final CelestialObjectId celestialObjectId;
-    public final CelestialObjectId systemId;
-    public final CelestialObjectId planetaryAnchorBodyId;
+    public final CelestialObjectKey celestialObjectKey;
+    public final CelestialObjectKey systemKey;
+    public final CelestialObjectKey planetaryAnchorBodyKey;
     public final Kind kind;
     public final Location location;
 
@@ -62,72 +62,113 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
             .getOrDefault(resource, 0L);
     }
 
-    public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, boolean operational) {
-        return create(celestialObjectId, kind, operational ? Status.OPERATIONAL : Status.CONSTRUCTION_SITE);
+    public static CelestialAsset create(CelestialObjectKey celestialObjectKey, Kind kind, boolean operational) {
+        return create(celestialObjectKey, kind, operational ? Status.OPERATIONAL : Status.CONSTRUCTION_SITE);
     }
 
-    public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, boolean operational,
+    public static CelestialAsset create(CelestialObjectKey celestialObjectKey, Kind kind, boolean operational,
         SatelliteKind satelliteKind) {
         return create(
-            celestialObjectId,
+            celestialObjectKey,
             kind,
             operational ? Status.OPERATIONAL : Status.CONSTRUCTION_SITE,
             satelliteKind);
     }
 
-    public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, Status status) {
-        return create(celestialObjectId, kind, status, SatelliteKind.COMMUNICATION);
+    public static CelestialAsset create(CelestialObjectKey celestialObjectKey, Kind kind, Status status) {
+        return create(celestialObjectKey, kind, status, SatelliteKind.COMMUNICATION);
     }
 
-    public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, Status status,
+    public static CelestialAsset create(CelestialObjectKey celestialObjectKey, Kind kind, Status status,
         SatelliteKind satelliteKind) {
         return switch (kind) {
-            case STATION -> new Station(ID.create(), celestialObjectId, status);
+            case STATION -> new Station(ID.create(), celestialObjectKey, status);
             case AUTOMATED_STATION, AUTOMATED_OUTPOST -> new AutomatedFacility(
                 ID.create(),
-                celestialObjectId,
+                celestialObjectKey,
                 kind,
                 status);
             case SATELLITE -> {
                 if (satelliteKind == null) throw new IllegalArgumentException("satelliteKind is required");
-                yield new Satellite(ID.create(), celestialObjectId, status, satelliteKind);
+                yield new Satellite(ID.create(), celestialObjectKey, status, satelliteKind);
             }
         };
     }
 
-    public static CelestialAsset create(ID id, CelestialObjectId celestialObjectId, Kind kind, Status status) {
-        return create(id, celestialObjectId, kind, status, SatelliteKind.COMMUNICATION);
+    public static CelestialAsset create(ID id, CelestialObjectKey celestialObjectKey, Kind kind, Status status) {
+        return create(id, celestialObjectKey, kind, status, SatelliteKind.COMMUNICATION);
     }
 
-    public static CelestialAsset create(ID id, CelestialObjectId celestialObjectId, Kind kind, Status status,
+    public static CelestialAsset create(ID id, CelestialObjectKey celestialObjectKey, Kind kind, Status status,
         SatelliteKind satelliteKind) {
         return switch (kind) {
-            case STATION -> new Station(id, celestialObjectId, status);
-            case AUTOMATED_STATION, AUTOMATED_OUTPOST -> new AutomatedFacility(id, celestialObjectId, kind, status);
+            case STATION -> new Station(id, celestialObjectKey, status);
+            case AUTOMATED_STATION, AUTOMATED_OUTPOST -> new AutomatedFacility(id, celestialObjectKey, kind, status);
             case SATELLITE -> {
                 if (satelliteKind == null) throw new IllegalArgumentException("satelliteKind is required");
-                yield new Satellite(id, celestialObjectId, status, satelliteKind);
+                yield new Satellite(id, celestialObjectKey, status, satelliteKind);
             }
         };
     }
 
-    protected CelestialAsset(ID assetId, CelestialObjectId celestialObjectId, Kind kind, Status status,
+    protected CelestialAsset(ID assetId, CelestialObjectKey celestialObjectKey, Kind kind, Status status,
         Map<ItemStack, Long> constructionInventory) {
 
         this.assetId = assetId;
         this.status = status;
-        this.celestialObjectId = celestialObjectId;
-        this.systemId = GalaxiaCelestialAPI.findStar(celestialObjectId)
-            .id();
-        this.planetaryAnchorBodyId = GalaxiaCelestialAPI.findPlanetaryAnchor(celestialObjectId)
-            .id();
-        this.displayName = celestialObjectId.displayName() + ":" + kind.getDisplayName();
+        this.celestialObjectKey = celestialObjectKey;
+        this.systemKey = resolveStar(celestialObjectKey).key();
+        this.planetaryAnchorBodyKey = resolvePlanetaryAnchor(celestialObjectKey).key();
+        this.displayName = displayName(celestialObjectKey) + ":" + kind.getDisplayName();
         this.kind = kind;
         this.location = Location.ofKind(kind);
         this.requiredResources = defaultRequirements(kind);
         this.constructionInventory = constructionInventory == null ? Collections.emptyMap() : constructionInventory;
         this.syncRevision = 0;
         this.logisticsConfig = new LogisticsConfiguration();
+    }
+
+    protected CelestialAsset(ID assetId, CelestialObjectId celestialObjectId, Kind kind, Status status,
+        Map<ItemStack, Long> constructionInventory) {
+
+        this(assetId, CelestialObjectKey.registered(celestialObjectId), kind, status, constructionInventory);
+    }
+
+    private static CelestialObject resolveStar(CelestialObjectKey key) {
+        CelestialObject star = GalaxiaCelestialAPI.findStar(key);
+        if (star != null) return star;
+        if (key != null && key.isMinorBody()) {
+            star = GalaxiaCelestialAPI.findStar(
+                CelestialObjectKey.registered(
+                    key.minorBodyId()
+                        .parentBodyId()));
+        }
+        if (star != null) return star;
+        throw new IllegalStateException("Cannot resolve asset system for celestial object: " + key);
+    }
+
+    private static CelestialObject resolvePlanetaryAnchor(CelestialObjectKey key) {
+        CelestialObject anchor = GalaxiaCelestialAPI.findPlanetaryAnchor(key);
+        if (anchor != null) return anchor;
+        if (key != null && key.isMinorBody()) {
+            anchor = GalaxiaCelestialAPI.findPlanetaryAnchor(
+                CelestialObjectKey.registered(
+                    key.minorBodyId()
+                        .parentBodyId()));
+        }
+        if (anchor != null) return anchor;
+        throw new IllegalStateException("Cannot resolve asset planetary anchor for celestial object: " + key);
+    }
+
+    private static String displayName(CelestialObjectKey key) {
+        if (key == null) return "";
+        if (key.isRegistered()) return key.registeredBodyId()
+            .displayName();
+        return key.minorBodyId()
+            .parentBodyId()
+            .displayName() + " "
+            + (key.minorBodyId()
+                .index() + 1);
     }
 
     public abstract boolean tryConsumeEnergy(long powerDraw);

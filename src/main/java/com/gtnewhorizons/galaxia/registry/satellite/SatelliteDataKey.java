@@ -5,13 +5,13 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 /*
  * Data keys are typed, with an optional origin body. A null origin means "any origin" demand; produced data keeps its
  * real origin so consumers can ask for either any prospecting data or data from a specific planet.
  */
-public record SatelliteDataKey(SatelliteDataType type, CelestialObjectId origin) {
+public record SatelliteDataKey(SatelliteDataType type, CelestialObjectKey origin) {
 
     public SatelliteDataKey {
         type = Objects.requireNonNull(type, "type");
@@ -21,7 +21,7 @@ public record SatelliteDataKey(SatelliteDataType type, CelestialObjectId origin)
         return new SatelliteDataKey(type, null);
     }
 
-    public static SatelliteDataKey origin(SatelliteDataType type, CelestialObjectId origin) {
+    public static SatelliteDataKey origin(SatelliteDataType type, CelestialObjectKey origin) {
         return new SatelliteDataKey(type, Objects.requireNonNull(origin, "origin"));
     }
 
@@ -31,7 +31,7 @@ public record SatelliteDataKey(SatelliteDataType type, CelestialObjectId origin)
 
     public boolean matchesProduced(SatelliteDataKey producedKey) {
         if (producedKey == null || type != producedKey.type) return false;
-        return origin == null || origin == producedKey.origin;
+        return origin == null || origin.equals(producedKey.origin);
     }
 
     /*

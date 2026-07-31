@@ -29,7 +29,7 @@ import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
@@ -113,7 +113,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
             viewRootSupplier,
             openSupplier,
             onAssetSelect,
-            viewRoot -> CelestialClient.listAssetsInSystem(viewRoot.id()));
+            viewRoot -> CelestialClient.listAssetsInSystem(viewRoot.key()));
     }
 
     SolarSystemAssetPanelWidget(CelestialObject galaxyRoot, Supplier<CelestialObject> viewRootSupplier,
@@ -220,14 +220,14 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     }
 
     static List<SatelliteRow> satelliteRows(List<CelestialAsset> assets) {
-        Map<CelestialObjectId, EnumMap<SatelliteKind, Integer>> counts = new LinkedHashMap<>();
+        Map<CelestialObjectKey, EnumMap<SatelliteKind, Integer>> counts = new LinkedHashMap<>();
         for (CelestialAsset asset : assets) {
             if (!(asset instanceof Satellite satellite)) continue;
-            counts.computeIfAbsent(asset.celestialObjectId, ignored -> new EnumMap<>(SatelliteKind.class))
+            counts.computeIfAbsent(asset.celestialObjectKey, ignored -> new EnumMap<>(SatelliteKind.class))
                 .merge(satellite.satelliteKind(), 1, Integer::sum);
         }
         List<SatelliteRow> rows = new ArrayList<>();
-        for (Map.Entry<CelestialObjectId, EnumMap<SatelliteKind, Integer>> body : counts.entrySet()) {
+        for (Map.Entry<CelestialObjectKey, EnumMap<SatelliteKind, Integer>> body : counts.entrySet()) {
             for (Map.Entry<SatelliteKind, Integer> kind : body.getValue()
                 .entrySet()) {
                 rows.add(new SatelliteRow(body.getKey(), kind.getKey(), kind.getValue()));
@@ -264,7 +264,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
                 .append('|');
         }
         for (SatelliteRow row : visibleSatelliteRows) {
-            sig.append(row.bodyId())
+            sig.append(row.bodyKey())
                 .append(':')
                 .append(row.kind())
                 .append(':')
@@ -362,7 +362,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     }
 
     private ButtonWidget<?> buildRowWidget(SystemAssetRowView row) {
-        CelestialObject hostBody = GalaxiaCelestialAPI.findBodyById(galaxyRoot, row.hostBodyId);
+        CelestialObject hostBody = GalaxiaCelestialAPI.findBodyByKey(galaxyRoot, row.hostBodyKey);
         String displayName = trimToPixels(row.displayName, NAME_W);
         ResourceLocation bodyIcon = AssetPanelIcons.iconForBody(hostBody);
 
@@ -417,10 +417,10 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     }
 
     private ParentWidget<?> buildSatelliteRowWidget(SatelliteRow row) {
-        CelestialObject hostBody = GalaxiaCelestialAPI.findBodyById(galaxyRoot, row.bodyId());
+        CelestialObject hostBody = GalaxiaCelestialAPI.findBodyByKey(galaxyRoot, row.bodyKey());
         String bodyName = hostBody != null ? hostBody.displayName()
-            : row.bodyId()
-                .name();
+            : row.bodyKey()
+                .toString();
         String displayName = trimToPixels(
             bodyName + " "
                 + row.kind()
@@ -546,5 +546,5 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
     }
 
-    record SatelliteRow(CelestialObjectId bodyId, SatelliteKind kind, int count) {}
+    record SatelliteRow(CelestialObjectKey bodyKey, SatelliteKind kind, int count) {}
 }

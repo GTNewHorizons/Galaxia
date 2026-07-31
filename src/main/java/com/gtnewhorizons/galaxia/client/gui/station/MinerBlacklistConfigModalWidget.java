@@ -49,8 +49,6 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
     private static final int ROW_CHECKBOX_X = WIDTH - 34;
     private static final int ROW_CHECKBOX_SIZE = 14;
     private static final int ROW_CHECKBOX_Y_OFFSET = 2;
-    private static final int PAGE_LABEL_Y = HEIGHT - 24;
-
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
     private final StationEditModeController editModeController;
@@ -236,7 +234,7 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
             "Copy miner settings",
             "Copy",
             coord -> ModuleSettingsCopyPickerModel.isCompatibleTarget(facility, source, coord),
-            coord -> ModuleSettingsCopyPickerModel.normalizeTarget(facility, coord),
+            coord -> StationTargetPicker.normalizeTarget(facility, coord),
             targets -> CelestialClient.copyModuleSettings(assetId, sourceModuleIndex, targets));
     }
 

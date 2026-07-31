@@ -57,17 +57,6 @@ public final class StationCoreDirectionIndicator {
         return new Arrow(roundedTipX, roundedTipY, tipToCoreX / tipToCoreLength, tipToCoreY / tipToCoreLength);
     }
 
-    public static boolean tileIntersectsViewport(int tileX, int tileY, int width, int height, int contentLeft,
-        int contentRightPadding, int contentVerticalPadding) {
-        int left = contentLeft;
-        int right = width - contentRightPadding;
-        int top = contentVerticalPadding;
-        int bottom = height - contentVerticalPadding;
-        return tileX < right && tileX + StationMapViewport.TILE_SIZE > left
-            && tileY < bottom
-            && tileY + StationMapViewport.TILE_SIZE > top;
-    }
-
     public static boolean tileIntersectsScreen(int tileX, int tileY, int width, int height) {
         return tileX < width && tileX + StationMapViewport.TILE_SIZE > 0
             && tileY < height

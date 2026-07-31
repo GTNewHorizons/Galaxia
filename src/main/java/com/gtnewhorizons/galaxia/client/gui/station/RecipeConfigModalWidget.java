@@ -484,7 +484,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             "Copy module settings",
             "Copy",
             coord -> ModuleSettingsCopyPickerModel.isCompatibleTarget(facility, source, coord),
-            coord -> ModuleSettingsCopyPickerModel.normalizeTarget(facility, coord),
+            coord -> StationTargetPicker.normalizeTarget(facility, coord),
             targets -> CelestialClient.copyModuleSettings(assetId, sourceModuleIndex, targets));
     }
 
@@ -918,17 +918,6 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         GTRecipeMapId mapId = recipeModule != null ? GTRecipeMapId.fromRecipeMapName(recipeModule.getRecipeMapName())
             : null;
         return GTRecipeMapLayout.fromRecipeMap(GTRecipeMapId.findRecipeMap(mapId));
-    }
-
-    private @Nullable String fluidName(BoundTarget target) {
-        FluidStack stack = fluidStack(target);
-        if (stack == null) return null;
-        try {
-            Fluid fluid = stack.getFluid();
-            return fluid != null ? fluid.getName() : null;
-        } catch (RuntimeException ignored) {
-            return null;
-        }
     }
 
     private String fluidLabel(FluidStack stack) {

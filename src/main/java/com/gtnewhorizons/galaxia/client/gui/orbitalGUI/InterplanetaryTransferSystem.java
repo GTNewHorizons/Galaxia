@@ -21,6 +21,7 @@ import com.cleanroommc.modularui.widgets.SliderWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
+import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
@@ -91,9 +92,6 @@ record InterplanetaryTransferJob(String transferId, String displayName, String i
 // ---------------------------------------------------------------------------
 
 public final class InterplanetaryTransferSystem {
-
-    private static final int MAX_TRAJECTORY_INTEGRATION_SUBSTEPS_PER_SEGMENT = 16;
-    private static final double TRAJECTORY_INTEGRATION_TIME_SCALE_FRACTION = 0.03;
 
     private static final int PREVIEW_TRAJECTORY_SAMPLES = 96;
 
@@ -250,18 +248,6 @@ public final class InterplanetaryTransferSystem {
         return OrbitalTransferPlanner.sampleTransferArcInto(ax, ay, rx1, ry1, vx1, vy1, tof, mu, outXs, outYs, n);
     }
 
-    private static int trajectoryIntegrationSubsteps(OrbitalMechanics.OrbitalState state, double mu, double segmentDt) {
-        if (state == null || mu <= 0.0 || segmentDt <= 0.0) return 1;
-        double radius = Math.hypot(state.x(), state.y());
-        if (radius <= 1e-9) return MAX_TRAJECTORY_INTEGRATION_SUBSTEPS_PER_SEGMENT;
-        double localTimeScale = Math.sqrt(radius * radius * radius / mu);
-        if (!Double.isFinite(localTimeScale) || localTimeScale <= 1e-9) {
-            return MAX_TRAJECTORY_INTEGRATION_SUBSTEPS_PER_SEGMENT;
-        }
-        int substeps = (int) Math.ceil(segmentDt / (localTimeScale * TRAJECTORY_INTEGRATION_TIME_SCALE_FRACTION));
-        return Math.max(1, Math.min(MAX_TRAJECTORY_INTEGRATION_SUBSTEPS_PER_SEGMENT, substeps));
-    }
-
     // -----------------------------------------------------------------------
     // Helper methods (delegates to shared OrbitalTransferPlanner)
     // -----------------------------------------------------------------------
@@ -382,7 +368,7 @@ public final class InterplanetaryTransferSystem {
         if (objectClass == CelestialObject.Class.PLANET || objectClass == CelestialObject.Class.GAS_GIANT) {
             out.add(current);
         }
-        for (CelestialObject child : GalaxiaCelestialAPI.getChildren(current)) {
+        for (CelestialObject child : CelestialClient.getChildren(current)) {
             collectStressPlanets(child, out);
         }
     }
@@ -557,8 +543,9 @@ public final class InterplanetaryTransferSystem {
         }
 
         private static boolean isSameOrbitAnchor(CelestialObject transferAnchor, CelestialObject visibleSystem) {
-            return transferAnchor == visibleSystem
-                || (transferAnchor != null && visibleSystem != null && transferAnchor.id() == visibleSystem.id());
+            return transferAnchor == visibleSystem || (transferAnchor != null && visibleSystem != null
+                && transferAnchor.key()
+                    .equals(visibleSystem.key()));
         }
 
         int version() {
@@ -663,7 +650,7 @@ public final class InterplanetaryTransferSystem {
                 || !route.hasTrajectoryGeometry()) {
                 return null;
             }
-            CelestialObject attractor = GalaxiaCelestialAPI.findBodyById(root, route.attractorBodyId());
+            CelestialObject attractor = GalaxiaCelestialAPI.findBodyByKey(root, route.attractorBodyKey());
             if (attractor == null) return null;
 
             double[] trajectoryXs = new double[TRAJECTORY_SAMPLES];
@@ -682,7 +669,7 @@ public final class InterplanetaryTransferSystem {
                 TRAJECTORY_SAMPLES);
             if (trajectoryPointCount < 2) return null;
 
-            String id = sourceBody.id() + "->" + destinationBody.id() + "@" + Math.round(departureTime * 1000.0);
+            String id = sourceBody.key() + "->" + destinationBody.key() + "@" + Math.round(departureTime * 1000.0);
             String inv = (inventorySummary == null || inventorySummary.isEmpty()) ? "Empty" : inventorySummary;
             return new InterplanetaryTransferJob(
                 id,
@@ -1655,22 +1642,6 @@ public final class InterplanetaryTransferSystem {
         public void drawBackground(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
             if (!isEnabled()) return;
             super.drawBackground(context, widgetTheme);
-        }
-
-        private String formatProgress(InterplanetaryTransferJob transfer) {
-            double pct = transfer.progress(
-                effectiveTransferTime(transfer, callbacks.getCurrentTime(), callbacks.getServerOrbitalTime())) * 100.0;
-            return Math.round(pct) + "%";
-        }
-
-        private String formatRemaining(InterplanetaryTransferJob transfer) {
-            double timeScale = Math.max(1e-6, effectiveTransferTimeScale(transfer, callbacks.getTimeScale()));
-            double remaining = Math.max(
-                0.0,
-                transfer.arrivalTime()
-                    - effectiveTransferTime(transfer, callbacks.getCurrentTime(), callbacks.getServerOrbitalTime()))
-                / timeScale;
-            return formatFixed1(remaining) + "s";
         }
 
         private void updateTooltipPosition() {

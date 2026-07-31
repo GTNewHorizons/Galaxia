@@ -5,11 +5,10 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
-
-import net.minecraftforge.event.world.WorldEvent;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
@@ -17,6 +16,7 @@ import com.gtnewhorizons.galaxia.core.network.AssetFilterUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket.ConfigAction;
+import com.gtnewhorizons.galaxia.core.network.ClientStateLifecycle;
 import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.core.profiling.HammerTrajectoryLoadSample;
@@ -24,7 +24,14 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidClientProjectionService;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
@@ -42,7 +49,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
-import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
@@ -63,14 +69,8 @@ public final class CelestialClient {
         return CelestialAssetStore.CLIENT.findAssetInternal(assetId);
     }
 
-    public static List<CelestialAsset> getState(CelestialObjectId celestialObjectId) {
-        List<CelestialAsset> result = new ArrayList<>();
-        for (CelestialAsset asset : CelestialAssetStore.CLIENT.allAssetsInternal()) {
-            if (asset.celestialObjectId == celestialObjectId) {
-                result.add(asset);
-            }
-        }
-        return result;
+    public static List<CelestialAsset> getState(CelestialObjectKey celestialObjectKey) {
+        return CelestialAssetStore.CLIENT.getStateInternal(GTTeamsCompat.getTeam(), celestialObjectKey);
     }
 
     public static List<CelestialAsset> allAssets() {
@@ -93,14 +93,17 @@ public final class CelestialClient {
     private static int deliveryRevision = 0;
     private static int signalRevision = 0;
     private static HammerTrajectoryLoadSample hammerTrajectoryLoadSample = new HammerTrajectoryLoadSample(0.0, 0.0);
+    private static final AsteroidClientProjectionService asteroidProjections = new AsteroidClientProjectionService();
 
-    private static final Map<CelestialObjectId, Map<String, Long>> systemSignals = new LinkedHashMap<>();
-    private static final Map<CelestialObjectId, Map<String, Long>> planetSignals = new LinkedHashMap<>();
+    private static final Map<CelestialObjectKey, Map<String, Long>> systemSignals = new LinkedHashMap<>();
+    private static final Map<CelestialObjectKey, Map<String, Long>> planetSignals = new LinkedHashMap<>();
+
+    private static final Map<CelestialObjectKey, CachedChildren> childrenCache = new LinkedHashMap<>();
 
     private CelestialClient() {}
 
-    public static boolean registerAsset(CelestialObjectId celestialObjectId, CelestialAsset asset) {
-        return StarmapActionSyncHandler.sendRegisterAsset(celestialObjectId, asset);
+    public static boolean registerAsset(CelestialObjectKey celestialObjectKey, CelestialAsset asset) {
+        return StarmapActionSyncHandler.sendRegisterAsset(celestialObjectKey, asset);
     }
 
     public static void add(CelestialAsset state) {
@@ -108,20 +111,16 @@ public final class CelestialClient {
     }
 
     public static void clear() {
-        CelestialAssetStore.CLIENT.clearInternal();
+        ClientStateLifecycle.clearAll();
+    }
+
+    public static void clearLocalState() {
         deliveries.clear();
         deliveryRevision = 0;
         signalRevision = 0;
+        asteroidProjections.clear();
+        childrenCache.clear();
         hammerTrajectoryLoadSample = new HammerTrajectoryLoadSample(0.0, 0.0);
-    }
-
-    public static void createModule(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled) {
-        createModules(assetId, kind, creativeBuildModeEnabled, null);
-    }
-
-    public static void createModule(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled,
-        @Nullable StationTileCoord tileCoord) {
-        createModules(assetId, kind, creativeBuildModeEnabled, tileCoord == null ? null : List.of(tileCoord));
     }
 
     public static void createModules(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled,
@@ -489,8 +488,8 @@ public final class CelestialClient {
 
     // ── Signal mirror ──
 
-    public static void updateClientSignals(Map<CelestialObjectId, Map<String, Long>> bySystem,
-        Map<CelestialObjectId, Map<String, Long>> byPlanet) {
+    public static void updateClientSignals(Map<CelestialObjectKey, Map<String, Long>> bySystem,
+        Map<CelestialObjectKey, Map<String, Long>> byPlanet) {
         systemSignals.clear();
         systemSignals.putAll(bySystem);
         planetSignals.clear();
@@ -498,13 +497,13 @@ public final class CelestialClient {
         signalRevision++;
     }
 
-    public static Map<String, Long> clientSignalsForSystem(CelestialObjectId systemId) {
-        Map<String, Long> result = systemSignals.get(systemId);
+    public static Map<String, Long> clientSignalsForSystem(CelestialObjectKey systemKey) {
+        Map<String, Long> result = systemSignals.get(systemKey);
         return result != null ? Collections.unmodifiableMap(result) : Collections.emptyMap();
     }
 
-    public static Map<String, Long> clientSignalsForPlanet(CelestialObjectId anchorBodyId) {
-        Map<String, Long> result = planetSignals.get(anchorBodyId);
+    public static Map<String, Long> clientSignalsForPlanet(CelestialObjectKey anchorBodyKey) {
+        Map<String, Long> result = planetSignals.get(anchorBodyKey);
         return result != null ? Collections.unmodifiableMap(result) : Collections.emptyMap();
     }
 
@@ -538,29 +537,110 @@ public final class CelestialClient {
         return hammerTrajectoryLoadSample;
     }
 
-    public static List<CelestialAsset> listAssetsInSystem(CelestialObjectId systemId) {
-        return CelestialAssetStore.CLIENT.listAssetsInSystemInternal(systemId, GTTeamsCompat.getTeam());
+    public static List<CelestialAsset> listAssetsInSystem(CelestialObjectKey systemKey) {
+        return CelestialAssetStore.CLIENT.listAssetsInSystemInternal(systemKey, GTTeamsCompat.getTeam());
+    }
+
+    /**
+     * Thin client adapter over {@link CelestialRegistry#children}: supplies the synced
+     * discovery view plus temporary scan/sensor visibility and the debug include-hidden flag.
+     * Does not rebuild or materialize a second child list.
+     */
+    public static List<CelestialObject> getChildren(CelestialObject parent) {
+        return parent == null ? List.of() : getChildren(parent.key());
+    }
+
+    public static List<CelestialObject> getChildren(CelestialObjectKey parentKey) {
+        // Starmap rendering asks for the same children several times per body per frame, and each miss
+        // materializes every child. The result only changes when synced knowledge, synced scans or the
+        // debug include-hidden flag change, so key the cache on those.
+        boolean includeHidden = asteroidProjections.includeHidden();
+        CachedChildren cached = childrenCache.get(parentKey);
+        if (cached != null && cached.matches(
+            CelestialKnowledgeClientState.revision(),
+            CelestialDiscoveryClientState.revision(),
+            includeHidden)) {
+            return cached.children();
+        }
+        List<CelestialObject> children = CelestialRegistry.children(
+            parentKey,
+            asteroidProjections.discoveryView(
+                parentKey,
+                CelestialDiscoveryClientState.snapshots(),
+                CelestialKnowledgeClientState.discoveryView()),
+            includeHidden);
+        childrenCache.put(
+            parentKey,
+            new CachedChildren(
+                CelestialKnowledgeClientState.revision(),
+                CelestialDiscoveryClientState.revision(),
+                includeHidden,
+                children));
+        return children;
+    }
+
+    private record CachedChildren(int knowledgeRevision, int discoveryRevision, boolean includeHidden,
+        List<CelestialObject> children) {
+
+        boolean matches(int currentKnowledge, int currentDiscovery, boolean currentIncludeHidden) {
+            return knowledgeRevision == currentKnowledge && discoveryRevision == currentDiscovery
+                && includeHidden == currentIncludeHidden;
+        }
+    }
+
+    public static Optional<AsteroidStarmapProjection> asteroidProjection(CelestialObject body) {
+        if (body == null || body.parentKey() == null) return Optional.empty();
+        // Resolving siblings rebuilds the belt catalog; skip it for bodies that can never have a projection.
+        if (!body.key()
+            .isMinorBody()) return Optional.empty();
+        List<CelestialObject> siblings = getChildren(body.parentKey());
+        return asteroidProjections.projectionFor(body, siblings, CelestialDiscoveryClientState.snapshots());
+    }
+
+    public static boolean showHiddenAsteroidObjects() {
+        return asteroidProjections.includeHidden();
+    }
+
+    public static void toggleShowHiddenAsteroidObjects() {
+        asteroidProjections.toggleIncludeHidden();
+    }
+
+    public static void setShowHiddenAsteroidObjects(boolean value) {
+        asteroidProjections.setIncludeHidden(value);
+    }
+
+    public static boolean isDebugHiddenAsteroid(CelestialObject body) {
+        return asteroidProjection(body).map(AsteroidStarmapProjection::debugHidden)
+            .orElse(false);
+    }
+
+    public static boolean isAsteroidScanInProgress(CelestialObject body) {
+        return asteroidProjection(body).map(AsteroidStarmapProjection::scanInProgress)
+            .orElse(false);
+    }
+
+    public static boolean isSensorRevealedAsteroid(CelestialObject body) {
+        return asteroidProjection(body).map(AsteroidStarmapProjection::sensorRevealed)
+            .orElse(false);
+    }
+
+    public static Optional<CelestialDiscoveryScanSnapshot> asteroidScanSnapshotByTarget(CelestialObject body) {
+        if (body == null) return Optional.empty();
+        return CelestialDiscoveryClientState.scanTarget(body.key(), CelestialDiscoveryCapability.PROSPECTING);
     }
 
     // ── Helpers ──
 
     private static void collectTransferTargets(CelestialObject current, List<TransferTarget> targets) {
-        List<CelestialAsset> state = getState(current.id());
+        List<CelestialAsset> state = getState(current.key());
         for (CelestialAsset asset : state) {
             if (asset.isManageable()) {
                 targets.add(new TransferTarget(asset.assetId, asset.displayName(), current));
             }
         }
-        for (CelestialObject child : GalaxiaCelestialAPI.getChildren(current)) {
+        for (CelestialObject child : getChildren(current)) {
             collectTransferTargets(child, targets);
         }
     }
 
-    @SubscribeEvent
-    @SideOnly(Side.CLIENT)
-    public void onClientWorldLoad(WorldEvent.Load event) {
-        if (event.world.isRemote) {
-            clear();
-        }
-    }
 }

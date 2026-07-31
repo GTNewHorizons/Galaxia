@@ -34,7 +34,9 @@ import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
@@ -50,7 +52,7 @@ record ButtonRect(int left, int top, int right, int bottom) {
 
 record ModalBounds(int left, int top, int right, int bottom) {}
 
-record PendingAssetCreation(CelestialObjectId celestialObjectId, String displayName, CelestialAsset.Kind kind,
+record PendingAssetCreation(CelestialObjectKey celestialObjectKey, String displayName, CelestialAsset.Kind kind,
     CelestialAsset.Location location, Map<ItemStack, Long> requiredResources) {}
 
 record PendingAssetRename(CelestialAsset asset) {}
@@ -235,6 +237,13 @@ public final class StarmapAssetActions {
             boolean openActionsFirst) {
             if (body == null) return;
             if (openActionsFirst) openAssetActions(state, body);
+            if (!canCreateAssetOnBody(body, kind)) {
+                callbacks.showActionStatus(
+                    StatCollector.translateToLocalFormatted(
+                        "galaxia.gui.orbital.asset.create.unsupported_body",
+                        assetSupport.formatAssetKind(kind)));
+                return;
+            }
             CelestialAsset.Location location = getDefaultAssetLocation(kind);
             String displayName = buildDefaultAssetDisplayName(body, kind);
             if (kind == CelestialAsset.Kind.STATION) {
@@ -242,9 +251,9 @@ public final class StarmapAssetActions {
                 return;
             }
             if (callbacks.isCreativeBuildModeEnabled()) {
-                CelestialAsset asset = CelestialAsset.create(body.id(), kind, true);
+                CelestialAsset asset = CelestialAsset.create(body.key(), kind, true);
                 asset.setDisplayName(displayName);
-                if (CelestialClient.registerAsset(body.id(), asset)) {
+                if (CelestialClient.registerAsset(body.key(), asset)) {
                     callbacks.showActionStatus(assetSupport.formatAssetKind(kind) + " creation requested");
                 } else {
                     callbacks.showActionStatus(assetSupport.formatAssetKind(kind) + " creation failed");
@@ -252,20 +261,37 @@ public final class StarmapAssetActions {
                 return;
             }
             state.pendingAssetCreation = new PendingAssetCreation(
-                body.id(),
+                body.key(),
                 displayName,
                 kind,
                 location,
                 CelestialAsset.defaultRequirements(kind));
         }
 
+        private boolean canCreateAssetOnBody(CelestialObject body, CelestialAsset.Kind kind) {
+            if (requiresDiscoveredTarget(kind)
+                && CelestialKnowledgeClientState.effectiveDiscoveryState(body.key()) != DiscoveryState.DISCOVERED)
+                return false;
+            return switch (kind) {
+                case AUTOMATED_STATION -> body.properties()
+                    .canCreateStation();
+                case AUTOMATED_OUTPOST -> body.properties()
+                    .canCreateOutpost();
+                default -> true;
+            };
+        }
+
+        private boolean requiresDiscoveredTarget(CelestialAsset.Kind kind) {
+            return kind == CelestialAsset.Kind.AUTOMATED_OUTPOST || kind == CelestialAsset.Kind.SATELLITE;
+        }
+
         void confirmPendingAssetCreation(OrbitalAssetUiState state) {
             if (state.pendingAssetCreation == null) return;
             if (callbacks.isCreativeBuildModeEnabled()) {
                 CelestialAsset asset = CelestialAsset
-                    .create(state.pendingAssetCreation.celestialObjectId(), state.pendingAssetCreation.kind(), true);
+                    .create(state.pendingAssetCreation.celestialObjectKey(), state.pendingAssetCreation.kind(), true);
                 asset.setDisplayName(state.pendingAssetCreation.displayName());
-                if (!CelestialClient.registerAsset(state.pendingAssetCreation.celestialObjectId(), asset)) {
+                if (!CelestialClient.registerAsset(state.pendingAssetCreation.celestialObjectKey(), asset)) {
                     callbacks.showActionStatus(
                         assetSupport.formatAssetKind(state.pendingAssetCreation.kind()) + " creation failed");
                     return;
@@ -276,9 +302,9 @@ public final class StarmapAssetActions {
                     assetSupport.formatAssetKind(state.pendingAssetCreation.kind()) + " creation requested");
             } else {
                 CelestialAsset asset = CelestialAsset
-                    .create(state.pendingAssetCreation.celestialObjectId(), state.pendingAssetCreation.kind(), false);
+                    .create(state.pendingAssetCreation.celestialObjectKey(), state.pendingAssetCreation.kind(), false);
                 asset.setDisplayName(state.pendingAssetCreation.displayName());
-                if (!CelestialClient.registerAsset(state.pendingAssetCreation.celestialObjectId(), asset)) {
+                if (!CelestialClient.registerAsset(state.pendingAssetCreation.celestialObjectKey(), asset)) {
                     callbacks.showActionStatus(
                         assetSupport.formatAssetKind(state.pendingAssetCreation.kind()) + " construction failed");
                     return;
@@ -636,15 +662,11 @@ public final class StarmapAssetActions {
         private int lastContentVersion = -1;
         private int lastAssetListSignature = 0;
 
-        private int modalLeft, modalTop, modalRight, modalBottom;
         private int scrollLeft, scrollTop, scrollRight, scrollBottom;
         private ScrollWidget<?> activeScrollWidget;
         private ScrollWidget<?> mainScrollWidget;
         private ParentWidget<?> mainScrollContent;
         private VerticalScrollData mainScrollData;
-        private ScrollWidget<?> modalScrollWidget;
-        private VerticalScrollData modalScrollData;
-        private int modalScrollPosition;
         private int mainContentWidth, mainContentHeight;
         private AssetManagementTab currentTab = AssetManagementTab.ASSETS;
         private final List<TextFieldWidget> modalTextFields = new ArrayList<>();
@@ -770,7 +792,7 @@ public final class StarmapAssetActions {
         private int computeAssetListSignature(CelestialObject body) {
             if (body == null) return 0;
 
-            List<CelestialAsset> assets = new ArrayList<>(CelestialClient.getState(body.id()));
+            List<CelestialAsset> assets = new ArrayList<>(CelestialClient.getState(body.key()));
             assets.sort(Comparator.comparing(asset -> asset.assetId.toString()));
 
             int result = 1;
@@ -817,7 +839,6 @@ public final class StarmapAssetActions {
 
         private void buildMainPanel(CelestialObject body) {
             ModalBounds bounds = calculateActionsBounds();
-            updateModalBounds(bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
             int modalWidth = bounds.right() - bounds.left();
             int modalHeight = bounds.bottom() - bounds.top();
             int contentTop = CONTENT_TOP + SECTION_HEADER_HEIGHT;
@@ -905,7 +926,7 @@ public final class StarmapAssetActions {
                 return;
             CelestialObject body = state.assetActionsBody;
             if (body == null) return;
-            List<CelestialAsset> assetState = CelestialClient.getState(body.id());
+            List<CelestialAsset> assetState = CelestialClient.getState(body.key());
             int contentScrollSize = Math.max(mainContentHeight, computeContentHeight(assetState));
             mainScrollData.setScrollSize(contentScrollSize);
             mainScrollContent.removeAll();
@@ -947,7 +968,6 @@ public final class StarmapAssetActions {
                     .size() - 2)
                 * 12;
             ModalBounds bounds = createCenteredModalBounds(320, height);
-            updateModalBounds(bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
             ParentWidget<?> modal = createModalRoot(bounds);
             modal.child(
                 createAssetIconWidget(creation.kind(), 1.0f).pos(12, 10)
@@ -981,7 +1001,6 @@ public final class StarmapAssetActions {
         private void buildPendingAssetRenameModal() {
             if (state.pendingAssetRename == null) return;
             ModalBounds bounds = createCenteredModalBounds(RENAME_MODAL_WIDTH, 126);
-            updateModalBounds(bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
             ParentWidget<?> modal = createModalRoot(bounds);
             modal.child(createTitleText("Rename Asset").pos(12, 10));
             modal.child(
@@ -1014,7 +1033,6 @@ public final class StarmapAssetActions {
             PendingAssetDestruction destruction = state.pendingAssetDestruction;
             if (destruction == null) return;
             ModalBounds bounds = createCenteredModalBounds(360, 150);
-            updateModalBounds(bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
             int modalWidth = bounds.right() - bounds.left();
             ParentWidget<?> modal = createModalRoot(
                 bounds.left(),
@@ -1054,7 +1072,6 @@ public final class StarmapAssetActions {
         private void buildPendingConstructionCancellationModal() {
             if (state.pendingConstructionCancellation == null) return;
             ModalBounds bounds = createCenteredModalBounds(360, 124);
-            updateModalBounds(bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
             ParentWidget<?> modal = createModalRoot(
                 bounds.left(),
                 bounds.top(),
@@ -1090,7 +1107,6 @@ public final class StarmapAssetActions {
                 120 + transfer.targets()
                     .size() * 42);
             ModalBounds bounds = createCenteredModalBounds(420, height);
-            updateModalBounds(bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
             ParentWidget<?> modal = createModalRoot(bounds);
             modal.child(createTitleText("Send Resources To").pos(12, 10));
             modal.child(
@@ -1454,16 +1470,6 @@ public final class StarmapAssetActions {
                 EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
         }
 
-        private ParentWidget<?> createModalRoot(int left, int top, int right, int bottom) {
-            return createModalRoot(
-                left,
-                top,
-                right,
-                bottom,
-                EnumColors.MAP_COLOR_MODAL_BG.getColor(),
-                EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
-        }
-
         private ParentWidget<?> createModalRoot(int left, int top, int right, int bottom, int backgroundColor,
             int accentColor) {
             return createModalRoot(
@@ -1715,15 +1721,7 @@ public final class StarmapAssetActions {
             callbacks.handleConstructionAction(asset);
         }
 
-        private void updateModalBounds(int left, int top, int right, int bottom) {
-            modalLeft = left;
-            modalTop = top;
-            modalRight = right;
-            modalBottom = bottom;
-        }
-
         private void clearBounds() {
-            modalLeft = modalTop = modalRight = modalBottom = 0;
             scrollLeft = scrollTop = scrollRight = scrollBottom = 0;
         }
 
@@ -1743,8 +1741,6 @@ public final class StarmapAssetActions {
             mainScrollWidget = null;
             mainScrollContent = null;
             mainScrollData = null;
-            modalScrollWidget = null;
-            modalScrollData = null;
             modalTextFields.clear();
             mainContentWidth = 0;
             mainContentHeight = 0;

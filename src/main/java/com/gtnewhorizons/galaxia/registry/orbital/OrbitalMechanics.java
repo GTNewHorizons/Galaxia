@@ -1,7 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.orbital;
 
+import java.util.ArrayList;
+
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 
 public final class OrbitalMechanics {
 
@@ -10,8 +13,16 @@ public final class OrbitalMechanics {
     private static final double MINIMUM_MEAN_MOTION = 1e-9;
     private static final double MINIMUM_RADIUS = 1e-8;
     private static final int KEPLER_ITERATIONS = 10;
+    private static final ArrayList<MinorBodyOrbitResolver> MINOR_BODY_ORBIT_RESOLVERS = new ArrayList<>();
 
     private OrbitalMechanics() {}
+
+    public static void registerMinorBodyResolver(MinorBodyOrbitResolver resolver) {
+        if (resolver == null) throw new IllegalArgumentException("minor body orbit resolver is required");
+        if (!MINOR_BODY_ORBIT_RESOLVERS.contains(resolver)) {
+            MINOR_BODY_ORBIT_RESOLVERS.add(resolver);
+        }
+    }
 
     public record OrbitalState(double x, double y, double vx, double vy) {
 
@@ -33,7 +44,13 @@ public final class OrbitalMechanics {
 
     public static OrbitalState resolveWorldState(CelestialObject root, CelestialObject target, double globalTime) {
         if (root == null || target == null) return null;
-        return resolveWorldState(root, target, new OrbitalState(0.0, 0.0, 0.0, 0.0), globalTime);
+        OrbitalState traversedState = resolveWorldState(root, target, new OrbitalState(0.0, 0.0, 0.0, 0.0), globalTime);
+        if (traversedState != null || target.parentKey() == null) return traversedState;
+
+        CelestialObject parent = GalaxiaCelestialAPI.findBodyByKey(root, target.parentKey());
+        if (parent == null || parent == target) return null;
+        OrbitalState parentState = resolveWorldState(root, parent, globalTime);
+        return parentState == null ? null : resolveChildWorldState(parent, target, parentState, globalTime);
     }
 
     public static OrbitalState resolveChildWorldState(CelestialObject parent, CelestialObject child,
@@ -43,11 +60,50 @@ public final class OrbitalMechanics {
             AbsolutePosition absolute = child.absolutePosition();
             return new OrbitalState(absolute.x(), absolute.y(), 0.0, 0.0);
         }
+        OrbitalState minorBodyState = resolveMinorBodyWorldState(parent, child, safeParentState);
+        if (minorBodyState != null) return minorBodyState;
         OrbitalState localState = calculateOrbitalState(
             child.orbitalParams(),
             resolveAttractorMu(parent, child.orbitalParams()),
             globalTime);
         return safeParentState.add(localState);
+    }
+
+    public static boolean usesMinorBodyResolvedPosition(CelestialObject parent, CelestialObject child) {
+        return resolveMinorBodyWorldState(parent, child, new OrbitalState(0.0, 0.0, 0.0, 0.0)) != null;
+    }
+
+    static void resetMinorBodyResolversForTesting() {
+        MINOR_BODY_ORBIT_RESOLVERS.clear();
+    }
+
+    private static OrbitalState resolveMinorBodyWorldState(CelestialObject parent, CelestialObject child,
+        OrbitalState parentState) {
+        if (child == null || child.key() == null
+            || !child.key()
+                .isMinorBody()) {
+            return null;
+        }
+        if (parent == null || parent.key() == null
+            || !parent.key()
+                .isRegistered()) {
+            throw new IllegalStateException("Minor celestial body requires a registered parent body");
+        }
+
+        CelestialObjectId parentId = parent.key()
+            .registeredBodyId();
+        if (child.key()
+            .minorBodyId()
+            .parentBodyId() != parentId) {
+            throw new IllegalStateException(
+                "Minor celestial body parent does not match traversal parent: " + child.key());
+        }
+
+        for (MinorBodyOrbitResolver resolver : MINOR_BODY_ORBIT_RESOLVERS) {
+            OrbitalState resolved = resolver.resolveWorldState(parent, child, parentState);
+            if (resolved != null) return resolved;
+        }
+        return null;
     }
 
     public static OrbitalState calculateOrbitalState(OrbitalParams params, double attractorMu, double globalTime) {

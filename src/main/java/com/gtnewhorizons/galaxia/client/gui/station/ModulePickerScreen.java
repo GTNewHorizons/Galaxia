@@ -85,7 +85,6 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private static final float LIST_TOP_REL = (float) (HEADER_HEIGHT + PANEL_PADDING) / PANEL_HEIGHT;
     private static final float LIST_HEIGHT_REL = FULL_REL - LIST_TOP_REL - PANEL_PADDING_Y_REL;
     private static final float LIST_COLUMN_GAP_REL = 5f / (PANEL_WIDTH - PANEL_PADDING * 2);
-    private static final float LIST_ROW_GAP_REL = 5f / (PANEL_HEIGHT - HEADER_HEIGHT - PANEL_PADDING * 2);
     private static final float LIST_CARD_HEIGHT_REL = 72f / (PANEL_HEIGHT - HEADER_HEIGHT - PANEL_PADDING * 2);
     private static final float LIST_CARD_WIDTH_REL = (FULL_REL - LIST_COLUMN_GAP_REL * (BUTTON_COLUMNS - 1))
         / BUTTON_COLUMNS;
@@ -645,11 +644,9 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
 
     private static final class BuildSpecLayer extends ParentWidget<BuildSpecLayer> {
 
-        private final AutomatedFacility facility;
         private final FacilityModuleKind kind;
 
         private BuildSpecLayer(AutomatedFacility facility, FacilityModuleKind kind) {
-            this.facility = facility;
             this.kind = kind;
         }
 
@@ -681,7 +678,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
             ModuleTierData data = FacilityModuleRegistry.get(kind)
                 .getTierData(selectedTier);
             if (data != null) {
-                y = drawSpecLine(
+                drawSpecLine(
                     "Build: " + formatTicks(data.buildTicks()) + "  Cost: " + formatCost(data.constructionCost()),
                     SPEC_LEFT,
                     y,

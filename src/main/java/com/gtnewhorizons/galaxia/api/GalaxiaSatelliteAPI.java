@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataKey;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkCalculator;
@@ -19,32 +19,32 @@ public final class GalaxiaSatelliteAPI {
 
     private GalaxiaSatelliteAPI() {}
 
-    public record PendingData(CelestialObjectId bodyId, List<CelestialObjectId> destinationBodyIds,
+    public record PendingData(CelestialObjectKey bodyKey, List<CelestialObjectKey> destinationBodyKeys,
         SatelliteDataKey key, long deciKb) {}
 
-    public static int count(UUID teamId, CelestialObjectId bodyId, SatelliteKind kind) {
-        return CelestialAssetStore.SERVER.satelliteCount(teamId, bodyId, kind);
+    public static int count(UUID teamId, CelestialObjectKey bodyKey, SatelliteKind kind) {
+        return CelestialAssetStore.SERVER.satelliteCount(teamId, bodyKey, kind);
     }
 
-    public static long bandwidth(UUID teamId, CelestialObjectId bodyId) {
-        return CelestialAssetStore.SERVER.satelliteBandwidth(teamId, bodyId);
+    public static long bandwidth(UUID teamId, CelestialObjectKey bodyKey) {
+        return CelestialAssetStore.SERVER.satelliteBandwidth(teamId, bodyKey);
     }
 
-    public static double miningSpeedBonus(UUID teamId, CelestialObjectId bodyId) {
-        return CelestialAssetStore.SERVER.satelliteMiningSpeedBonus(teamId, bodyId);
+    public static double miningSpeedBonus(UUID teamId, CelestialObjectKey bodyKey) {
+        return CelestialAssetStore.SERVER.satelliteMiningSpeedBonus(teamId, bodyKey);
     }
 
-    public static long localCapacityKbps(UUID teamId, CelestialObjectId bodyId) {
+    public static long localCapacityKbps(UUID teamId, CelestialObjectKey bodyKey) {
         return SatelliteNetworkService.current(teamId)
-            .capacityKbps(bodyId);
+            .capacityKbps(bodyKey);
     }
 
-    public static long localUsedKbps(UUID teamId, CelestialObjectId bodyId) {
+    public static long localUsedKbps(UUID teamId, CelestialObjectKey bodyKey) {
         return SatelliteNetworkService.current(teamId)
-            .usedKbps(bodyId);
+            .usedKbps(bodyKey);
     }
 
-    public static long pathCapacityKbps(UUID teamId, CelestialObjectId from, CelestialObjectId to) {
+    public static long pathCapacityKbps(UUID teamId, CelestialObjectKey from, CelestialObjectKey to) {
         SatelliteNetworkState state = SatelliteNetworkService.current(teamId);
         /*
          * Path capacity is the best available bottleneck between two bodies, not a sum of every possible route. That
@@ -54,15 +54,15 @@ public final class GalaxiaSatelliteAPI {
             .capacityKbps();
     }
 
-    public static List<PendingData> pendingData(UUID teamId, CelestialObjectId bodyId) {
+    public static List<PendingData> pendingData(UUID teamId, CelestialObjectKey bodyKey) {
         return SatelliteNetworkService.current(teamId)
-            .pendingData(bodyId)
+            .pendingData(bodyKey)
             .stream()
-            .map(entry -> new PendingData(entry.bodyId(), entry.destinationBodyIds(), entry.key(), entry.deciKb()))
+            .map(entry -> new PendingData(entry.bodyKey(), entry.destinationBodyKeys(), entry.key(), entry.deciKb()))
             .toList();
     }
 
-    public static boolean canStartProcess(UUID teamId, CelestialObjectId bodyId, SatelliteDataKey outputKey) {
-        return SatelliteNetworkService.canStartProcess(teamId, bodyId, outputKey);
+    public static boolean canStartProcess(UUID teamId, CelestialObjectKey bodyKey, SatelliteDataKey outputKey) {
+        return SatelliteNetworkService.canStartProcess(teamId, bodyKey, outputKey);
     }
 }

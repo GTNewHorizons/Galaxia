@@ -300,20 +300,6 @@ public final class TerrainFeatureApplier {
     }
 
     /**
-     * Applies generic noise to the height map
-     *
-     * @param hm     The current height map
-     * @param preset The terrain preset to use
-     * @param size   The size of the noise application
-     * @param r      Random instance
-     */
-    private static void applyGenericNoise(double[] hm, TerrainPreset preset, double size, Random r) {
-        for (int i = 0; i < 256; i++) {
-            hm[i] += r.nextGaussian() * 6 * size;
-        }
-    }
-
-    /**
      * Generates Perlin noise for a given chunk
      *
      * @param chunkX Chunk x coordinates
