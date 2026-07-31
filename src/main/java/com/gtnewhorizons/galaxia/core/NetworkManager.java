@@ -85,7 +85,7 @@ public final class NetworkManager {
             Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(CelestialKnowledgeSyncPacket.Handler.class, CelestialKnowledgeSyncPacket.class, id++,
             Side.CLIENT);
-        GALAXIA_NETWORK.registerMessage(StarmapActionStatusPacket.Handler.class, StarmapActionStatusPacket.class, id,
+        GALAXIA_NETWORK.registerMessage(StarmapActionStatusPacket.Handler.class, StarmapActionStatusPacket.class, id++,
             Side.CLIENT);
     }
     // spotless:on

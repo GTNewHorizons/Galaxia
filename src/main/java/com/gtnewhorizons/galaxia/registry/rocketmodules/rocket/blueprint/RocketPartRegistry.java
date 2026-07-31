@@ -102,7 +102,7 @@ public class RocketPartRegistry {
 
         register(
             new FunctionalPartDef(
-                id,
+                id++,
                 "Basic Storage",
                 3,
                 4,
