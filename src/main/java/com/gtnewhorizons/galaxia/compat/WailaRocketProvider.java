@@ -31,7 +31,7 @@ public class WailaRocketProvider implements IWailaEntityProvider {
     @Override
     public List<String> getWailaHead(Entity entity, List<String> tip, IWailaEntityAccessor accessor,
         IWailaConfigHandler config) {
-        if (entity instanceof EntityRocket rocket) {
+        if (entity instanceof EntityRocket) {
             tip.clear(); // Remove default name
             // re add landers
             if (false) {

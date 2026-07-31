@@ -94,7 +94,7 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
     private final @Nullable gregtech.api.recipe.RecipeMap<?> recipeMap;
     private final String[] neiTransferIds;
     private GTRecipe[] allRecipes = new GTRecipe[0];
-    private GTRecipeMapId mapId = GTRecipeMapId.INVALID;
+    private GTRecipeMapId mapId;
     private RecipeIntentMatcher.Result match = new RecipeIntentMatcher.Result(
         RecipeIntentMatcher.Status.NO_INPUT,
         0,
