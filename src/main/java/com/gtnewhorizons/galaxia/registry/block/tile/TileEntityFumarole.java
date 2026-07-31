@@ -14,10 +14,6 @@ public class TileEntityFumarole extends TileEntity {
 
     // How frequently the vent activates
     private static final int CYCLE_TICKS = 200;
-    // For how long the vent activates
-    private static final int ACTIVE_TICKS = 80;
-    // Size of collision box for damage;
-    private static final int JET_HEIGHT = 3;
 
     private int activeTicksThisCycle = -1;
 
