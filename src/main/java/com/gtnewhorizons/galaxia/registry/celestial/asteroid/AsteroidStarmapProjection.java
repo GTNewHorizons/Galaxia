@@ -20,6 +20,16 @@ public record AsteroidStarmapProjection(@Nonnull CelestialObject body, @Nonnull 
 
     private static final float MAP_ICON_BASE_SCALE = 60f;
     private static final float MIN_RENDERED_DIAMETER = 2f;
+    private static final float NO_SPRITE_RADIUS = 0.0f;
+    private static final float MINIMUM_SPRITE_SIZE = 0.0001f;
+    private static final int LARGE_PRESENTATION_PRIORITY = 80;
+    private static final int MEDIUM_PRESENTATION_PRIORITY = 50;
+    private static final int SMALL_PRESENTATION_PRIORITY = 20;
+    private static final int LORE_PRESENTATION_PRIORITY_BONUS = 30;
+    private static final float DIAMETER_MULTIPLIER = 2.0f;
+    private static final float LARGE_MINIMUM_RADIUS = 0.45f;
+    private static final float MEDIUM_MINIMUM_RADIUS = 0.40f;
+    private static final float SMALL_MINIMUM_RADIUS = 0.35f;
 
     public AsteroidStarmapProjection {
         if (oreKnowledgeState == CelestialResourceKnowledgeState.UNKNOWN && visibleOreProfileId.isPresent()) {
@@ -42,8 +52,8 @@ public record AsteroidStarmapProjection(@Nonnull CelestialObject body, @Nonnull 
     }
 
     public static float spriteRadius(@Nullable CelestialObject body, float spriteSize, double relativeZoom) {
-        if (body == null || !body.isAsteroid() || spriteSize <= 0.0001f) return 0f;
-        return Math.max(0.0f, spriteSize * MAP_ICON_BASE_SCALE * (float) relativeZoom);
+        if (body == null || !body.isAsteroid() || spriteSize <= MINIMUM_SPRITE_SIZE) return NO_SPRITE_RADIUS;
+        return Math.max(NO_SPRITE_RADIUS, spriteSize * MAP_ICON_BASE_SCALE * (float) relativeZoom);
     }
 
     public static boolean shouldCull(@Nullable CelestialObject body, @Nullable AsteroidStarmapProjection projection,
@@ -62,11 +72,11 @@ public record AsteroidStarmapProjection(@Nonnull CelestialObject body, @Nonnull 
 
     public int presentationPriority() {
         int priority = switch (sizeClass) {
-            case LARGE -> 80;
-            case MEDIUM -> 50;
-            case SMALL -> 20;
+            case LARGE -> LARGE_PRESENTATION_PRIORITY;
+            case MEDIUM -> MEDIUM_PRESENTATION_PRIORITY;
+            case SMALL -> SMALL_PRESENTATION_PRIORITY;
         };
-        if (nodeKind == AsteroidNodeKind.LORE) priority += 30;
+        if (nodeKind == AsteroidNodeKind.LORE) priority += LORE_PRESENTATION_PRIORITY_BONUS;
         return priority;
     }
 
@@ -75,11 +85,11 @@ public record AsteroidStarmapProjection(@Nonnull CelestialObject body, @Nonnull 
     }
 
     public boolean shouldCullAtNaturalRadius(float naturalRadius, float minimumRenderedDiameter) {
-        if (naturalRadius * 2.0f < minimumRenderedDiameter) return true;
+        if (naturalRadius * DIAMETER_MULTIPLIER < minimumRenderedDiameter) return true;
         float minimumRadius = switch (sizeClass) {
-            case LARGE -> 0.45f;
-            case MEDIUM -> 0.40f;
-            case SMALL -> 0.35f;
+            case LARGE -> LARGE_MINIMUM_RADIUS;
+            case MEDIUM -> MEDIUM_MINIMUM_RADIUS;
+            case SMALL -> SMALL_MINIMUM_RADIUS;
         };
         return naturalRadius < minimumRadius;
     }
