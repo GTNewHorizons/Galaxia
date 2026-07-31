@@ -22,14 +22,12 @@ final class StationCopyModuleMapButton extends ButtonWidget<StationCopyModuleMap
     private final @Nullable CelestialAsset.ID assetId;
     private final StationMapWidget map;
     private final StationEditModeController editModeController;
-    private final boolean creativeBuildMode;
 
     StationCopyModuleMapButton(@Nullable CelestialAsset.ID assetId, StationMapWidget map,
         StationEditModeController editModeController, boolean creativeBuildMode) {
         this.assetId = assetId;
         this.map = map;
         this.editModeController = editModeController;
-        this.creativeBuildMode = creativeBuildMode;
         background(drawable((ctx, x, y, w, h) -> drawButton(x, y, w, h, false)));
         hoverBackground(drawable((ctx, x, y, w, h) -> drawButton(x, y, w, h, true)));
         overlay(drawable((ctx, x, y, w, h) -> drawLabel(x, y, w, h)));

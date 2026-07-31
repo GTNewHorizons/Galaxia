@@ -552,10 +552,6 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
         }
     }
 
-    private void drawPickerFootprint(StationTileCoord anchor, ModuleShape footprint, boolean selected) {
-        drawPickerFootprint(anchor, footprint, selected, pickerPrimaryTile(anchor, footprint));
-    }
-
     private StationTileCoord pickerPrimaryTile(StationTileCoord anchor, ModuleShape footprint) {
         return ModuleBuildPickerModel
             .tileForAnchorRotation(anchor, footprint, tilePickerController.footprintRotation());

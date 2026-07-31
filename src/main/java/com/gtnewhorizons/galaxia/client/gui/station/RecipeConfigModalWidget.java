@@ -920,17 +920,6 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         return GTRecipeMapLayout.fromRecipeMap(GTRecipeMapId.findRecipeMap(mapId));
     }
 
-    private @Nullable String fluidName(BoundTarget target) {
-        FluidStack stack = fluidStack(target);
-        if (stack == null) return null;
-        try {
-            Fluid fluid = stack.getFluid();
-            return fluid != null ? fluid.getName() : null;
-        } catch (RuntimeException ignored) {
-            return null;
-        }
-    }
-
     private String fluidLabel(FluidStack stack) {
         String name = null;
         try {
