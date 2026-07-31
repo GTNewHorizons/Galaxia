@@ -58,7 +58,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
 
     public static final int SILO_DEFAULT_X_OFFSET = 0;
     public static final int SILO_DEFAULT_Y_OFFSET = 1;
-    public static final int SILO_DEFAULT_Z_OFFSET = 2;
+    public static final int SILO_DEFAULT_Z_OFFSET = 3;
 
     private static final String STRUCTURE_PIECE_MAIN = "main";
 
@@ -207,16 +207,22 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         .addShape(
             STRUCTURE_PIECE_MAIN,
             // spotless:off
-            StructureUtility.transpose(
-                new String[][] {
-                    { "  T  ", "     ", "T   T", "     ", "  T  " },
-                    { "  T  ", "     ", "T   T", "     ", "  T  " },
-                    { "  C  ", "     ", "C   C", "     ", "  C  " },
-                    { " CCC ", "C   C", "C   C", "C   C", " CCC " },
-                    { " C~C ", "CCCCC", "CCCCC", "CCCCC", " CCC " }
-                }))
+                new String[][]{
+                    {"         ","         ","         ","         ","         ","         ","         ","         ","  DDDDD  ","   C C   ","  EE~EE  ","  EEEEE  "},
+                    {"         ","         ","         ","         ","         ","         ","         ","         "," D     D ","         "," EAAAAAE "," EAAAAAE "},
+                    {" C     C "," C     C "," C     C "," C     C "," C     C "," C     C "," C     C "," C     C "," D     D "," C     C ","EEAAAAAEE","EEAAAAAEE"},
+                    {"CB     BC","CB     BC","CB     BC","CB     BC","CB     BC","CB     BC","CB     BC","CB     BC","CB     BC","TB     BT","EEAAAAAEE","EEAAAAAEE"},
+                    {" D     D "," C     C "," C     C "," C     C "," D     D "," C     C "," C     C "," C     C "," D     D "," C     C ","EEAAAAAEE","EEAAAAAEE"},
+                    {" D     D ","         ","         ","         "," D     D ","         ","         ","         "," D     D ","         "," EAAAAAE "," EAAAAAE "},
+                    {"  DDBDD  ","   CBC   ","   CBC   ","   CBC   ","  DDBDD  ","   CBC   ","   CBC   ","   CBC   ","  DDBDD  ","   DBD   ","  EEEEE  ","  EEEEE  "},
+                    {"    C    ","    C    ","    C    ","    C    ","    C    ","    C    ","    C    ","    C    ","    C    ","    T    ","   EEE   ","   EEE   "}
+                })
         // spotless:on
-        .addElement('C', StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0))
+        .addElement('A', StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_CASING.get(), 0))
+        .addElement('B', StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_ASSEMBLING_CASING.get(), 0))
+        .addElement('C', StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_FRAMEBOX.get(), 0))
+        .addElement('D', StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_REINFORCEMENT.get(), 0))
+        .addElement('E', StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_SHEETING.get(), 0))
         .addElement('T', StructureUtility.ofChain(StructureUtility.ofTileAdder((silo, te) -> {
             if (te instanceof TileEntityGantryTerminal terminal) {
                 silo.setGantryTerminal(terminal);
@@ -225,7 +231,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
             }
             return false;
         }, GalaxiaBlocksEnum.GANTRY_TERMINAL.get(), 0),
-            StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0)))
+            StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_SHEETING.get(), 0)))
         .build();
 
     public TileEntitySilo() {
@@ -239,12 +245,12 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
 
     @Override
     protected int getControllerOffsetX() {
-        return 2;
+        return 4;
     }
 
     @Override
     protected int getControllerOffsetY() {
-        return 4;
+        return 10;
     }
 
     @Override
@@ -419,7 +425,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
 
         nbt.setBoolean("shouldRender", shouldRender);
 
-        // Build state — all three layers persisted independently
         nbt.setInteger("buildStatus", buildStatus.ordinal());
         nbt.setTag("designBlueprint", designBlueprint.serializeNBT());
         nbt.setTag("assembledBlueprint", assembledBlueprint.serializeNBT());
