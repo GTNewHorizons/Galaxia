@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities;
 
-import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
-
 import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
@@ -13,13 +11,11 @@ import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
-import com.cleanroommc.modularui.value.IntValue;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
-import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemRocketSchematic;
@@ -45,11 +41,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
 
     @Getter
     private int destination = -1;
-
-    private final IntValue.Dynamic selectedDim = new IntValue.Dynamic(() -> destination, v -> {
-        destination = v;
-        GALAXIA_NETWORK.sendToServer(new DestinationSetPacket(xCoord, yCoord, zCoord, v));
-    });
 
     @Getter
     @Setter

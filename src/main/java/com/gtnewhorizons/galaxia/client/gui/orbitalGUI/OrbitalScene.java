@@ -858,23 +858,6 @@ public class OrbitalScene {
             GlStateManager.color(1f, 1f, 1f, 1f);
         }
 
-        private void drawCircleOutline(float x, float y, float radius, int color, float alpha, float lineWidth) {
-            GlStateManager.disableTexture2D();
-            float red = ((color >> 16) & 0xFF) / 255f;
-            float green = ((color >> 8) & 0xFF) / 255f;
-            float blue = (color & 0xFF) / 255f;
-            GlStateManager.color(red, green, blue, alpha);
-            GL11.glLineWidth(lineWidth);
-            GL11.glBegin(GL11.GL_LINE_LOOP);
-            for (int i = 0; i < 64; i++) {
-                double angle = i * Math.PI * 2.0 / 64.0;
-                GL11.glVertex2f(x + (float) Math.cos(angle) * radius, y + (float) Math.sin(angle) * radius);
-            }
-            GL11.glEnd();
-            GL11.glLineWidth(1f);
-            GlStateManager.color(1f, 1f, 1f, 1f);
-        }
-
         private void drawCenteredString(String text, float x, float y, int color) {
             Minecraft mc = Minecraft.getMinecraft();
             int w = mc.fontRenderer.getStringWidth(text);

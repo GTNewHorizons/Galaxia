@@ -24,12 +24,4 @@ public class IMCForNEI {
         handlerInfo.setInteger("maxRecipesPerPage", 1);
         FMLInterModComms.sendMessage("NotEnoughItems", "registerHandlerInfo", handlerInfo);
     }
-
-    private static void registerCatalystInfo(String handlerName, String stack) {
-        NBTTagCompound catalystInfo = new NBTTagCompound();
-        catalystInfo.setString("handlerID", handlerName);
-        catalystInfo.setString("itemName", stack);
-        catalystInfo.setInteger("priority", 0);
-        FMLInterModComms.sendMessage("NotEnoughItems", "registerCatalystInfo", catalystInfo);
-    }
 }

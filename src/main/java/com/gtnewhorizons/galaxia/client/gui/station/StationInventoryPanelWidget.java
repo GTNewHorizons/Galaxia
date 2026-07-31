@@ -44,7 +44,6 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     static final int PANEL_HEIGHT = 236;
 
     private static final int PANEL_Y = BUTTON_HEIGHT + 4;
-    private static final int HEADER_HEIGHT = 24;
     private static final int ROW_HEIGHT = 24;
     private static final int ROW_GAP = 2;
     private static final int SCROLL_X = 6;

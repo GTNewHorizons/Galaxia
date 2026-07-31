@@ -1097,7 +1097,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
 
     private static void handleRecipeSchedulerMode(AssetModuleUpdatePacket packet, AutomatedFacility state,
         ModuleInstance module) {
-        if (!(module.component() instanceof IRecipeModule recipeModule)) return;
+        if (!(module.component() instanceof IRecipeModule)) return;
         RecipeSchedulerMode mode = PacketUtil.enumFromByte(packet.bytePayload, RecipeSchedulerMode.class);
         if (mode == null) throw new IllegalArgumentException("invalid recipe scheduler mode: " + packet.bytePayload);
 

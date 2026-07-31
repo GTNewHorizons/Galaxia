@@ -37,7 +37,6 @@ import lombok.Getter;
  */
 public class ChunkProviderGalaxiaPlanet implements IChunkProvider, GalaxiaPlanetGenerator {
 
-    private static final int CHUNK_AREA = 256;
     private static final int CHUNK_WIDTH = 16;
     public static final int HEIGHT_LIMIT = 256;
 

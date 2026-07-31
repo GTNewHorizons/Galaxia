@@ -70,7 +70,4 @@ public final class PlanetaryFeatureGenerator {
         return value;
     }
 
-    private static double unitDouble(long value) {
-        return (value >>> 11) * 0x1.0p-53;
-    }
 }

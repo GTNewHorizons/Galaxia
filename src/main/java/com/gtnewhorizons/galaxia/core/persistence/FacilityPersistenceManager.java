@@ -1035,18 +1035,6 @@ public final class FacilityPersistenceManager {
         return decoded;
     }
 
-    private static Map<String, Long> toFluidBounds(Map<FluidKey, Long> bounds) {
-        Map<String, Long> result = new LinkedHashMap<>();
-        for (Map.Entry<FluidKey, Long> e : bounds.entrySet()) {
-            result.put(
-                e.getKey()
-                    .fluid()
-                    .getName(),
-                e.getValue());
-        }
-        return result;
-    }
-
     private static Map<String, Long> encodeItemUpkeepAmountMap(Map<ItemStackWrapper, UpkeepAmount> amounts) {
         Map<String, Long> encoded = new LinkedHashMap<>();
         if (amounts == null) return encoded;
@@ -1504,7 +1492,6 @@ public final class FacilityPersistenceManager {
             ModuleTier.class,
             json.targetTier,
             "[PERSIST] Module " + moduleId + " has invalid target tier: " + json.targetTier);
-        FacilityModuleKind kindForLookup = regKind != null ? regKind : FacilityModuleKind.HAMMER;
         if (json.buildTicks <= 0) {
             throw new IllegalStateException(
                 "[PERSIST] Module " + moduleId + " operation has invalid buildTicks: " + json.buildTicks);
