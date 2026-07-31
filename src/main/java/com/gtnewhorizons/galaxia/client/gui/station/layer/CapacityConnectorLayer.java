@@ -6,6 +6,7 @@ import java.util.Map;
 import net.minecraft.util.ResourceLocation;
 
 import com.cleanroommc.modularui.screen.viewport.GuiContext;
+import com.gtnewhorizons.galaxia.client.gui.station.StationMapFrame;
 import com.gtnewhorizons.galaxia.client.gui.station.StationMapViewport;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.ConnectorTextureBatchRenderer.Quad;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.StationTextureRegistry.ConnectorKind;
@@ -19,8 +20,7 @@ public final class CapacityConnectorLayer {
 
     private CapacityConnectorLayer() {}
 
-    public static void draw(GuiContext ctx, Map<StationTileCoord, PlacedTile> tiles, int widgetWidth, int widgetHeight,
-        int contentLeft, int contentRightPadding, int contentVerticalPadding, int panX, int panY) {
+    public static void draw(GuiContext ctx, Map<StationTileCoord, PlacedTile> tiles, StationMapFrame frame) {
         if (tiles == null) return;
         int connW = StationMapViewport.connectorWidth();
         int connH = StationMapViewport.connectorHeight();
@@ -38,9 +38,8 @@ public final class CapacityConnectorLayer {
             PlacedTile b = tiles.get(right);
             FacilityModuleKind horizontalKind = ConnectorRoutePolicy.capacityConnectorKind(a, b);
             if (horizontalKind != null) {
-                int cx = StationMapViewport.connectorLeftX(coord, widgetWidth, contentLeft, contentRightPadding, panX);
-                int cy = StationMapViewport.tileTopY(coord, widgetHeight, contentVerticalPadding, panY)
-                    + (tileSize - connH) / 2;
+                int cx = frame.connectorLocalX(coord);
+                int cy = frame.tileLocalY(coord) + (tileSize - connH) / 2;
                 addConnector(cx, cy, connW, connH, horizontalKind, ConnectorKind.HORIZONTAL);
             }
 
@@ -49,9 +48,8 @@ public final class CapacityConnectorLayer {
             PlacedTile c = tiles.get(down);
             FacilityModuleKind verticalKind = ConnectorRoutePolicy.capacityConnectorKind(a, c);
             if (verticalKind != null) {
-                int cx = StationMapViewport.tileLeftX(coord, widgetWidth, contentLeft, contentRightPadding, panX)
-                    + (tileSize - connW) / 2;
-                int cy = StationMapViewport.connectorTopY(coord, widgetHeight, contentVerticalPadding, panY);
+                int cx = frame.tileLocalX(coord) + (tileSize - connW) / 2;
+                int cy = frame.connectorLocalY(coord);
                 addConnector(cx, cy, connW, connH, verticalKind, ConnectorKind.VERTICAL);
             }
         }

@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.outpost.station;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -63,5 +64,17 @@ final class ModuleShapeTest {
         assertEquals(
             new ModuleShape.TextureTile(1, 1),
             ModuleShape.L_2x2.textureTile(anchor, StationTileCoord.of(3, 5), 1));
+    }
+
+    @Test
+    void fitsAtRejectsRotatedFootprintsOutsideCoordinateRange() {
+        assertFalse(ModuleShape.QUAD_2x2.fitsAt(StationTileCoord.of(StationTileCoord.MAX, 0), 0));
+        assertFalse(ModuleShape.QUAD_2x2.fitsAt(StationTileCoord.of(0, StationTileCoord.MAX), 0));
+        assertFalse(ModuleShape.QUAD_2x2.fitsAt(StationTileCoord.of(StationTileCoord.MIN, 0), 1));
+        assertFalse(ModuleShape.QUAD_2x2.fitsAt(StationTileCoord.of(0, StationTileCoord.MAX), 1));
+        assertFalse(ModuleShape.QUAD_2x2.fitsAt(StationTileCoord.of(StationTileCoord.MIN, 0), 2));
+        assertFalse(ModuleShape.QUAD_2x2.fitsAt(StationTileCoord.of(0, StationTileCoord.MIN), 2));
+        assertFalse(ModuleShape.QUAD_2x2.fitsAt(StationTileCoord.of(StationTileCoord.MAX, 0), 3));
+        assertFalse(ModuleShape.QUAD_2x2.fitsAt(StationTileCoord.of(0, StationTileCoord.MIN), 3));
     }
 }

@@ -13,8 +13,7 @@ public final class ModuleFootprintProjection {
     private ModuleFootprintProjection() {}
 
     public static List<Segment> filledSegments(ModuleShape shape, StationTileCoord anchor, int rotation,
-        int widgetWidth, int widgetHeight, int contentLeft, int contentRightPadding, int contentVerticalPadding,
-        int panX, int panY) {
+        StationMapFrame frame) {
         StationTileCoord[] tiles = shape.tiles(anchor, rotation);
         Set<StationTileCoord> occupied = new HashSet<>();
         for (StationTileCoord tile : tiles) {
@@ -22,8 +21,8 @@ public final class ModuleFootprintProjection {
         }
         List<Segment> segments = new ArrayList<>();
         for (StationTileCoord tile : tiles) {
-            int x = StationMapViewport.tileLeftX(tile.dx(), widgetWidth, contentLeft, contentRightPadding, panX);
-            int y = StationMapViewport.tileTopY(tile.dy(), widgetHeight, contentVerticalPadding, panY);
+            int x = frame.tileLocalX(tile);
+            int y = frame.tileLocalY(tile);
             segments.add(new Segment(x, y, StationMapViewport.TILE_SIZE, StationMapViewport.TILE_SIZE));
             if (isOccupied(occupied, tile.dx() + 1, tile.dy())) {
                 segments.add(
@@ -55,19 +54,8 @@ public final class ModuleFootprintProjection {
     }
 
     public static List<Segment> outlineSegments(ModuleShape shape, StationTileCoord anchor, int rotation,
-        int widgetWidth, int widgetHeight, int contentLeft, int contentRightPadding, int contentVerticalPadding,
-        int panX, int panY) {
-        List<Segment> filledSegments = filledSegments(
-            shape,
-            anchor,
-            rotation,
-            widgetWidth,
-            widgetHeight,
-            contentLeft,
-            contentRightPadding,
-            contentVerticalPadding,
-            panX,
-            panY);
+        StationMapFrame frame) {
+        List<Segment> filledSegments = filledSegments(shape, anchor, rotation, frame);
         if (filledSegments.isEmpty()) return List.of();
 
         int minX = Integer.MAX_VALUE;
@@ -96,25 +84,16 @@ public final class ModuleFootprintProjection {
     }
 
     public static boolean contains(ModuleShape shape, StationTileCoord anchor, int rotation, int x, int y,
-        int widgetWidth, int widgetHeight, int contentLeft, int contentRightPadding, int contentVerticalPadding,
-        int panX, int panY) {
-        for (Segment segment : filledSegments(
-            shape,
-            anchor,
-            rotation,
-            widgetWidth,
-            widgetHeight,
-            contentLeft,
-            contentRightPadding,
-            contentVerticalPadding,
-            panX,
-            panY)) {
+        StationMapFrame frame) {
+        for (Segment segment : filledSegments(shape, anchor, rotation, frame)) {
             if (segment.contains(x, y)) return true;
         }
         return false;
     }
 
     private static boolean isOccupied(Set<StationTileCoord> occupied, int dx, int dy) {
+        if (dx < StationTileCoord.MIN || dx > StationTileCoord.MAX) return false;
+        if (dy < StationTileCoord.MIN || dy > StationTileCoord.MAX) return false;
         return occupied.contains(StationTileCoord.of(dx, dy));
     }
 

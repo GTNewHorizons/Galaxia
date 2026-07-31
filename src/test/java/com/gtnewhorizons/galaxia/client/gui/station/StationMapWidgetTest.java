@@ -22,6 +22,8 @@ import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class StationMapWidgetTest {
 
+    private static final StationMapFrame FRAME = new StationMapFrame(200, 200, 0, 0, 0, 0, 0);
+
     @BeforeAll
     static void initRegistries() {
         GalaxiaTestBootstrap.ensureFacilityModules();
@@ -42,7 +44,7 @@ final class StationMapWidgetTest {
                 tiles.put(tile, new PlacedTile(module, StationTileState.OCCUPIED_OPERATIONAL));
             }
 
-            assertTrue(tiles.containsKey(StationMapWidget.alertBadgeCoord(module, tiles)));
+            assertTrue(tiles.containsKey(StationMapOverlayPainter.alertBadgeCoord(module, tiles)));
         }
     }
 
@@ -61,9 +63,7 @@ final class StationMapWidgetTest {
         int y = StationMapViewport.tileTopY(0, 200, 0, 0) + StationMapViewport.TILE_SIZE
             + StationMapViewport.CONNECTOR_GAP / 2;
 
-        assertEquals(
-            StationTileCoord.CORE,
-            StationMapWidget.hitTestModuleFootprint(layout, x, y, 200, 200, 0, 0, 0, 0, 0));
+        assertEquals(StationTileCoord.CORE, StationMapHitTester.hitTestModuleFootprint(layout, x, y, FRAME));
     }
 
     @Test
@@ -82,9 +82,7 @@ final class StationMapWidgetTest {
         int y = StationMapViewport.tileTopY(0, 200, 0, 0) + StationMapViewport.TILE_SIZE
             + StationMapViewport.CONNECTOR_GAP / 2;
 
-        assertEquals(
-            StationTileCoord.CORE,
-            StationMapWidget.hitTestModuleFootprint(layout, x, y, 200, 200, 0, 0, 0, 0, 0));
+        assertEquals(StationTileCoord.CORE, StationMapHitTester.hitTestModuleFootprint(layout, x, y, FRAME));
     }
 
     @Test
@@ -101,68 +99,7 @@ final class StationMapWidgetTest {
         int x = StationMapViewport.tileLeftX(0, 200, 0, 0, 0) + StationMapViewport.TILE_SIZE / 2;
         int y = StationMapViewport.tileTopY(1, 200, 0, 0) + StationMapViewport.TILE_SIZE / 2;
 
-        assertEquals(
-            StationTileCoord.CORE,
-            StationMapWidget.hitTestModuleFootprint(layout, x, y, 200, 200, 0, 0, 0, 0, 0));
-    }
-
-    @Test
-    void moduleOverlaySegmentsSkipInternalBordersBetweenConnectedTiles() {
-        ModuleInstance module = FacilityModuleRegistry.create(
-            ModuleInstance.ID.create(),
-            FacilityModuleKind.MACERATOR,
-            StationTileCoord.CORE,
-            ModuleShape.L_2x2,
-            ModuleTier.EV);
-        List<ModuleFootprintProjection.Segment> segments = StationMapWidget
-            .moduleOverlaySegments(module, 200, 200, 0, 0, 0, 0, 0);
-        int xInsideLeftColumn = StationMapViewport.tileLeftX(0, 200, 0, 0, 0) + StationMapViewport.TILE_SIZE / 2;
-        int internalTopBottomJoin = StationMapViewport.tileTopY(0, 200, 0, 0) + StationMapViewport.TILE_SIZE;
-        int leftOuterEdge = StationMapViewport.tileLeftX(0, 200, 0, 0, 0);
-        int yInsideTopTile = StationMapViewport.tileTopY(0, 200, 0, 0) + StationMapViewport.TILE_SIZE / 2;
-
-        assertFalse(covers(segments, xInsideLeftColumn, internalTopBottomJoin));
-        assertTrue(covers(segments, leftOuterEdge, yInsideTopTile));
-    }
-
-    @Test
-    void moduleOverlaySegmentsSkipInternalBorderAroundCenterGapWhereFourTilesMeet() {
-        ModuleInstance module = FacilityModuleRegistry.create(
-            ModuleInstance.ID.create(),
-            FacilityModuleKind.MINER,
-            StationTileCoord.CORE,
-            ModuleShape.QUAD_2x2,
-            ModuleTier.EV);
-        List<ModuleFootprintProjection.Segment> segments = StationMapWidget
-            .moduleOverlaySegments(module, 200, 200, 0, 0, 0, 0, 0);
-        int centerGapX = StationMapViewport.tileLeftX(0, 200, 0, 0, 0) + StationMapViewport.TILE_SIZE;
-        int centerGapY = StationMapViewport.tileTopY(0, 200, 0, 0) + StationMapViewport.TILE_SIZE;
-
-        assertFalse(covers(segments, centerGapX, centerGapY));
-    }
-
-    @Test
-    void moduleOverlaySegmentsKeepMissingCornerOutOfLShapedFootprint() {
-        ModuleInstance module = FacilityModuleRegistry.create(
-            ModuleInstance.ID.create(),
-            FacilityModuleKind.MACERATOR,
-            StationTileCoord.CORE,
-            ModuleShape.L_2x2,
-            ModuleTier.EV);
-        List<ModuleFootprintProjection.Segment> segments = StationMapWidget
-            .moduleOverlaySegments(module, 200, 200, 0, 0, 0, 0, 0);
-        int topLeftRightEdge = StationMapViewport.tileLeftX(0, 200, 0, 0, 0) + StationMapViewport.TILE_SIZE - 1;
-        int centerGapX = topLeftRightEdge + 1 + StationMapViewport.CONNECTOR_GAP / 2;
-        int centerGapY = StationMapViewport.tileTopY(0, 200, 0, 0) + StationMapViewport.TILE_SIZE
-            + StationMapViewport.CONNECTOR_GAP / 2;
-        int yInsideTopTile = StationMapViewport.tileTopY(0, 200, 0, 0) + StationMapViewport.TILE_SIZE / 2;
-        int topLeftBottomEdge = StationMapViewport.tileTopY(0, 200, 0, 0) + StationMapViewport.TILE_SIZE;
-        int lowerLegTopEdge = StationMapViewport.tileTopY(1, 200, 0, 0);
-
-        assertFalse(covers(segments, centerGapX, centerGapY));
-        assertTrue(covers(segments, topLeftRightEdge, yInsideTopTile));
-        assertTrue(covers(segments, topLeftRightEdge, topLeftBottomEdge));
-        assertTrue(covers(segments, topLeftRightEdge, lowerLegTopEdge));
+        assertEquals(StationTileCoord.CORE, StationMapHitTester.hitTestModuleFootprint(layout, x, y, FRAME));
     }
 
     @Test
@@ -179,7 +116,7 @@ final class StationMapWidgetTest {
         int x = StationMapViewport.tileLeftX(1, 200, 0, 0, 0) + StationMapViewport.TILE_SIZE / 2;
         int y = StationMapViewport.tileTopY(0, 200, 0, 0) + StationMapViewport.TILE_SIZE / 2;
 
-        assertNull(StationMapWidget.hitTestModuleFootprint(layout, x, y, 200, 200, 0, 0, 0, 0, 0));
+        assertNull(StationMapHitTester.hitTestModuleFootprint(layout, x, y, FRAME));
     }
 
     @Test

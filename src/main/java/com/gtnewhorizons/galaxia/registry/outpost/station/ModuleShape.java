@@ -44,29 +44,8 @@ public enum ModuleShape {
         StationTileCoord[] result = new StationTileCoord[offsets.length];
         int normalizedRotation = normalizeRotation(rotation);
         for (int i = 0; i < offsets.length; i++) {
-            int dx = offsets[i][0];
-            int dy = offsets[i][1];
-            int rotatedDx;
-            int rotatedDy;
-            switch (normalizedRotation) {
-                case 1 -> {
-                    rotatedDx = -dy;
-                    rotatedDy = dx;
-                }
-                case 2 -> {
-                    rotatedDx = -dx;
-                    rotatedDy = -dy;
-                }
-                case 3 -> {
-                    rotatedDx = dy;
-                    rotatedDy = -dx;
-                }
-                default -> {
-                    rotatedDx = dx;
-                    rotatedDy = dy;
-                }
-            }
-            result[i] = StationTileCoord.of(anchor.dx() + rotatedDx, anchor.dy() + rotatedDy);
+            RotatedOffset offset = rotatedOffset(offsets[i], normalizedRotation);
+            result[i] = StationTileCoord.of(anchor.dx() + offset.dx(), anchor.dy() + offset.dy());
         }
         return result;
     }
@@ -76,14 +55,26 @@ public enum ModuleShape {
     }
 
     public boolean fitsAt(StationTileCoord anchor, int rotation) {
-        for (StationTileCoord tile : tiles(anchor, rotation)) {
-            if (tile.dx() < StationTileCoord.MIN || tile.dx() > StationTileCoord.MAX
-                || tile.dy() < StationTileCoord.MIN
-                || tile.dy() > StationTileCoord.MAX) {
-                return false;
-            }
+        int normalizedRotation = normalizeRotation(rotation);
+        for (byte[] baseOffset : offsets) {
+            RotatedOffset offset = rotatedOffset(baseOffset, normalizedRotation);
+            int dx = anchor.dx() + offset.dx();
+            int dy = anchor.dy() + offset.dy();
+            if (dx < StationTileCoord.MIN || dx > StationTileCoord.MAX) return false;
+            if (dy < StationTileCoord.MIN || dy > StationTileCoord.MAX) return false;
         }
         return true;
+    }
+
+    private static RotatedOffset rotatedOffset(byte[] offset, int normalizedRotation) {
+        int dx = offset[0];
+        int dy = offset[1];
+        return switch (normalizedRotation) {
+            case 1 -> new RotatedOffset(-dy, dx);
+            case 2 -> new RotatedOffset(-dx, -dy);
+            case 3 -> new RotatedOffset(dy, -dx);
+            default -> new RotatedOffset(dx, dy);
+        };
     }
 
     public int textureGridWidth() {
@@ -123,6 +114,8 @@ public enum ModuleShape {
     public static int normalizeRotation(int rotation) {
         return Math.floorMod(rotation, 4);
     }
+
+    private record RotatedOffset(int dx, int dy) {}
 
     public record TextureTile(int column, int row) {}
 }

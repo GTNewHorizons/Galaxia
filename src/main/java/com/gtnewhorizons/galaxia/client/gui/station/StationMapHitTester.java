@@ -15,8 +15,7 @@ final class StationMapHitTester {
     private StationMapHitTester() {}
 
     static @Nullable StationTileCoord hitTestModuleFootprint(StationLayout layout, int localX, int localY,
-        int widgetWidth, int widgetHeight, int contentLeft, int contentRightPadding, int contentVerticalPadding,
-        int panX, int panY) {
+        StationMapFrame frame) {
         if (layout == null) return null;
         Set<ModuleInstance.ID> checked = new LinkedHashSet<>();
         for (PlacedTile placedTile : layout.snapshot()
@@ -26,19 +25,8 @@ final class StationMapHitTester {
                 .tileCount() <= 1 || !checked.add(module.id)) {
                 continue;
             }
-            if (ModuleFootprintProjection.contains(
-                module.shape(),
-                module.anchor(),
-                module.rotation(),
-                localX,
-                localY,
-                widgetWidth,
-                widgetHeight,
-                contentLeft,
-                contentRightPadding,
-                contentVerticalPadding,
-                panX,
-                panY)) {
+            if (ModuleFootprintProjection
+                .contains(module.shape(), module.anchor(), module.rotation(), localX, localY, frame)) {
                 return module.anchor();
             }
         }

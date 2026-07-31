@@ -2,22 +2,30 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
-record StationMapFrame(int widgetWidth, int widgetHeight, int contentLeft, int contentRightPadding,
+public record StationMapFrame(int widgetWidth, int widgetHeight, int contentLeft, int contentRightPadding,
     int contentVerticalPadding, int panX, int panY) {
 
-    int tileLocalX(StationTileCoord coord) {
+    public int tileLocalX(StationTileCoord coord) {
         return tileLocalX(coord.dx());
     }
 
-    int tileLocalY(StationTileCoord coord) {
+    public int tileLocalY(StationTileCoord coord) {
         return tileLocalY(coord.dy());
     }
 
-    int tileLocalX(int dx) {
+    public int tileLocalX(int dx) {
         return StationMapViewport.tileLeftX(dx, widgetWidth, contentLeft, contentRightPadding, panX);
     }
 
-    int tileLocalY(int dy) {
+    public int tileLocalY(int dy) {
         return StationMapViewport.tileTopY(dy, widgetHeight, contentVerticalPadding, panY);
+    }
+
+    public int connectorLocalX(StationTileCoord left) {
+        return StationMapViewport.connectorLeftX(left, widgetWidth, contentLeft, contentRightPadding, panX);
+    }
+
+    public int connectorLocalY(StationTileCoord top) {
+        return StationMapViewport.connectorTopY(top, widgetHeight, contentVerticalPadding, panY);
     }
 }

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.client.gui.station.StationMapFrame;
 import com.gtnewhorizons.galaxia.client.gui.station.StationMapViewport;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -15,6 +16,8 @@ import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class ModuleLayerRendererTest {
 
+    private static final StationMapFrame FRAME = new StationMapFrame(200, 200, 0, 0, 0, 0, 0);
+
     @Test
     void footprintTextureBoundsCoverConnectorGapsBetweenModuleTiles() {
         GalaxiaTestBootstrap.ensureFacilityModules();
@@ -25,8 +28,7 @@ final class ModuleLayerRendererTest {
             ModuleShape.L_2x2,
             ModuleTier.IV);
 
-        ModuleLayerRenderer.FootprintTextureBounds bounds = ModuleLayerRenderer
-            .footprintTextureBounds(module, 200, 200, 0, 0, 0, 0, 0);
+        ModuleLayerRenderer.FootprintTextureBounds bounds = ModuleLayerRenderer.footprintTextureBounds(module, FRAME);
 
         assertEquals(StationMapViewport.tileLeftX(0, 200, 0, 0, 0), bounds.x());
         assertEquals(StationMapViewport.tileTopY(0, 200, 0, 0), bounds.y());
@@ -45,8 +47,7 @@ final class ModuleLayerRendererTest {
             ModuleTier.IV);
         module.setRotation(1);
 
-        ModuleLayerRenderer.FootprintTextureBounds bounds = ModuleLayerRenderer
-            .footprintTextureBounds(module, 200, 200, 0, 0, 0, 0, 0);
+        ModuleLayerRenderer.FootprintTextureBounds bounds = ModuleLayerRenderer.footprintTextureBounds(module, FRAME);
 
         assertEquals(StationMapViewport.tileLeftX(-1, 200, 0, 0, 0), bounds.x());
         assertEquals(StationMapViewport.tileTopY(0, 200, 0, 0), bounds.y());
@@ -57,7 +58,7 @@ final class ModuleLayerRendererTest {
     @Test
     void footprintTextureBoundsCanBeComputedForPickerPreview() {
         ModuleLayerRenderer.FootprintTextureBounds bounds = ModuleLayerRenderer
-            .footprintTextureBounds(ModuleShape.L_2x2, StationTileCoord.of(0, 0), 1, 200, 200, 0, 0, 0, 0, 0);
+            .footprintTextureBounds(ModuleShape.L_2x2, StationTileCoord.of(0, 0), 1, FRAME);
 
         assertEquals(StationMapViewport.tileLeftX(-1, 200, 0, 0, 0), bounds.x());
         assertEquals(StationMapViewport.tileTopY(0, 200, 0, 0), bounds.y());

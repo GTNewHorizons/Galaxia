@@ -8,6 +8,7 @@ import net.minecraft.util.ResourceLocation;
 
 import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.client.gui.station.StationMapFrame;
 import com.gtnewhorizons.galaxia.client.gui.station.StationMapViewport;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.ConnectorTextureBatchRenderer.Quad;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.StationTextureRegistry.ConnectorKind;
@@ -21,8 +22,7 @@ public final class ConnectionLayerRenderer {
 
     private ConnectionLayerRenderer() {}
 
-    public static void draw(GuiContext ctx, Map<StationTileCoord, PlacedTile> tiles, int widgetWidth, int widgetHeight,
-        int contentLeft, int contentRightPadding, int contentVerticalPadding, int panX, int panY) {
+    public static void draw(GuiContext ctx, Map<StationTileCoord, PlacedTile> tiles, StationMapFrame frame) {
         if (tiles == null) return;
         int connW = StationMapViewport.connectorWidth();
         int connH = StationMapViewport.connectorHeight();
@@ -42,9 +42,8 @@ public final class ConnectionLayerRenderer {
             StationTileCoord right = StationTileCoord.of(coord.dx() + 1, coord.dy());
             PlacedTile rightTile = tiles.get(right);
             if (shouldDrawConnectorBetween(tile, rightTile)) {
-                int cx = StationMapViewport.connectorLeftX(coord, widgetWidth, contentLeft, contentRightPadding, panX);
-                int cy = StationMapViewport.tileTopY(coord, widgetHeight, contentVerticalPadding, panY)
-                    + (tileSize - connH) / 2;
+                int cx = frame.connectorLocalX(coord);
+                int cy = frame.tileLocalY(coord) + (tileSize - connH) / 2;
                 drawConnector(
                     cx,
                     cy,
@@ -58,9 +57,8 @@ public final class ConnectionLayerRenderer {
             StationTileCoord down = StationTileCoord.of(coord.dx(), coord.dy() + 1);
             PlacedTile downTile = tiles.get(down);
             if (shouldDrawConnectorBetween(tile, downTile)) {
-                int cx = StationMapViewport.tileLeftX(coord, widgetWidth, contentLeft, contentRightPadding, panX)
-                    + (tileSize - connW) / 2;
-                int cy = StationMapViewport.connectorTopY(coord, widgetHeight, contentVerticalPadding, panY);
+                int cx = frame.tileLocalX(coord) + (tileSize - connW) / 2;
+                int cy = frame.connectorLocalY(coord);
                 drawConnector(
                     cx,
                     cy,

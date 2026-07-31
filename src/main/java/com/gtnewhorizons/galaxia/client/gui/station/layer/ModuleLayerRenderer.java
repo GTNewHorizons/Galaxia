@@ -17,6 +17,7 @@ import com.cleanroommc.modularui.utils.GlStateManager;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.station.ModuleFootprintProjection;
+import com.gtnewhorizons.galaxia.client.gui.station.StationMapFrame;
 import com.gtnewhorizons.galaxia.client.gui.station.StationMapViewport;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -61,34 +62,14 @@ public final class ModuleLayerRenderer {
         }
     }
 
-    public static void drawFootprintTextures(Map<StationTileCoord, PlacedTile> tiles, int widgetWidth, int widgetHeight,
-        int contentLeft, int contentRightPadding, int contentVerticalPadding, int panX, int panY) {
+    public static void drawFootprintTextures(Map<StationTileCoord, PlacedTile> tiles, StationMapFrame frame) {
         Set<ModuleInstance.ID> drawn = new HashSet<>();
         for (PlacedTile tile : tiles.values()) {
             ModuleInstance module = tile == null ? null : tile.module();
             if (!shouldDrawFootprintTexture(module) || !drawn.add(module.id)) continue;
-            FootprintTextureBounds bounds = footprintTextureBounds(
-                module,
-                widgetWidth,
-                widgetHeight,
-                contentLeft,
-                contentRightPadding,
-                contentVerticalPadding,
-                panX,
-                panY);
+            FootprintTextureBounds bounds = footprintTextureBounds(module, frame);
             drawModuleTextureFootprint(bounds.x(), bounds.y(), bounds.width(), bounds.height(), module);
-            drawFootprintOverlaySegments(
-                module.shape(),
-                module.anchor(),
-                module.rotation(),
-                widgetWidth,
-                widgetHeight,
-                contentLeft,
-                contentRightPadding,
-                contentVerticalPadding,
-                panX,
-                panY,
-                tile.state());
+            drawFootprintOverlaySegments(module.shape(), module.anchor(), module.rotation(), frame, tile.state());
         }
     }
 
@@ -116,20 +97,9 @@ public final class ModuleLayerRenderer {
     }
 
     public static boolean drawPreviewFootprint(GuiContext ctx, FacilityModuleKind kind, ModuleShape footprint,
-        StationTileCoord anchor, int rotation, int widgetWidth, int widgetHeight, int contentLeft,
-        int contentRightPadding, int contentVerticalPadding, int panX, int panY) {
+        StationTileCoord anchor, int rotation, StationMapFrame frame) {
         if (kind == null || footprint == null || anchor == null) return false;
-        FootprintTextureBounds bounds = footprintTextureBounds(
-            footprint,
-            anchor,
-            rotation,
-            widgetWidth,
-            widgetHeight,
-            contentLeft,
-            contentRightPadding,
-            contentVerticalPadding,
-            panX,
-            panY);
+        FootprintTextureBounds bounds = footprintTextureBounds(footprint, anchor, rotation, frame);
         if (!drawModuleTextureFootprint(
             bounds.x(),
             bounds.y(),
@@ -143,17 +113,8 @@ public final class ModuleLayerRenderer {
             0.7f)) {
             return false;
         }
-        for (ModuleFootprintProjection.Segment segment : ModuleFootprintProjection.filledSegments(
-            footprint,
-            anchor,
-            rotation,
-            widgetWidth,
-            widgetHeight,
-            contentLeft,
-            contentRightPadding,
-            contentVerticalPadding,
-            panX,
-            panY)) {
+        for (ModuleFootprintProjection.Segment segment : ModuleFootprintProjection
+            .filledSegments(footprint, anchor, rotation, frame)) {
             Gui.drawRect(
                 segment.x(),
                 segment.y(),
@@ -189,24 +150,12 @@ public final class ModuleLayerRenderer {
         return new TextureRegion(u0, v0, (float) (column + 1) / width, (float) (row + 1) / height);
     }
 
-    static FootprintTextureBounds footprintTextureBounds(ModuleInstance module, int widgetWidth, int widgetHeight,
-        int contentLeft, int contentRightPadding, int contentVerticalPadding, int panX, int panY) {
-        return footprintTextureBounds(
-            module.shape(),
-            module.anchor(),
-            module.rotation(),
-            widgetWidth,
-            widgetHeight,
-            contentLeft,
-            contentRightPadding,
-            contentVerticalPadding,
-            panX,
-            panY);
+    static FootprintTextureBounds footprintTextureBounds(ModuleInstance module, StationMapFrame frame) {
+        return footprintTextureBounds(module.shape(), module.anchor(), module.rotation(), frame);
     }
 
     static FootprintTextureBounds footprintTextureBounds(ModuleShape shape, StationTileCoord anchor, int rotation,
-        int widgetWidth, int widgetHeight, int contentLeft, int contentRightPadding, int contentVerticalPadding,
-        int panX, int panY) {
+        StationMapFrame frame) {
         StationTileCoord[] tiles = shape.tiles(anchor, rotation);
         int minDx = Integer.MAX_VALUE;
         int minDy = Integer.MAX_VALUE;
@@ -218,8 +167,8 @@ public final class ModuleLayerRenderer {
             maxDx = Math.max(maxDx, tile.dx());
             maxDy = Math.max(maxDy, tile.dy());
         }
-        int x = StationMapViewport.tileLeftX(minDx, widgetWidth, contentLeft, contentRightPadding, panX);
-        int y = StationMapViewport.tileTopY(minDy, widgetHeight, contentVerticalPadding, panY);
+        int x = frame.tileLocalX(minDx);
+        int y = frame.tileLocalY(minDy);
         int width = (maxDx - minDx) * StationMapViewport.TILE_STEP + StationMapViewport.TILE_SIZE;
         int height = (maxDy - minDy) * StationMapViewport.TILE_STEP + StationMapViewport.TILE_SIZE;
         return new FootprintTextureBounds(x, y, width, height);
@@ -377,21 +326,11 @@ public final class ModuleLayerRenderer {
     }
 
     private static void drawFootprintOverlaySegments(ModuleShape shape, StationTileCoord anchor, int rotation,
-        int widgetWidth, int widgetHeight, int contentLeft, int contentRightPadding, int contentVerticalPadding,
-        int panX, int panY, StationTileState state) {
+        StationMapFrame frame, StationTileState state) {
         int color = stateOverlayColor(state);
         if (color == 0) return;
-        for (ModuleFootprintProjection.Segment segment : ModuleFootprintProjection.filledSegments(
-            shape,
-            anchor,
-            rotation,
-            widgetWidth,
-            widgetHeight,
-            contentLeft,
-            contentRightPadding,
-            contentVerticalPadding,
-            panX,
-            panY)) {
+        for (ModuleFootprintProjection.Segment segment : ModuleFootprintProjection
+            .filledSegments(shape, anchor, rotation, frame)) {
             Gui.drawRect(
                 segment.x(),
                 segment.y(),

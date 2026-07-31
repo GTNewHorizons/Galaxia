@@ -125,17 +125,8 @@ final class StationMapOverlayPainter {
             ModuleInstance module = target.module();
             if (module != null) {
                 segments.addAll(
-                    ModuleFootprintProjection.filledSegments(
-                        module.shape(),
-                        module.anchor(),
-                        module.rotation(),
-                        frame.widgetWidth(),
-                        frame.widgetHeight(),
-                        frame.contentLeft(),
-                        frame.contentRightPadding(),
-                        frame.contentVerticalPadding(),
-                        frame.panX(),
-                        frame.panY()));
+                    ModuleFootprintProjection
+                        .filledSegments(module.shape(), module.anchor(), module.rotation(), frame));
                 continue;
             }
             StationTileCoord tile = target.tile();
@@ -292,20 +283,9 @@ final class StationMapOverlayPainter {
         }
     }
 
-    static List<ModuleFootprintProjection.Segment> moduleOverlaySegments(ModuleInstance module, int widgetWidth,
-        int widgetHeight, int contentLeft, int contentRightPadding, int contentVerticalPadding, int panX, int panY) {
+    static List<ModuleFootprintProjection.Segment> moduleOverlaySegments(ModuleInstance module, StationMapFrame frame) {
         if (module == null) return List.of();
-        return ModuleFootprintProjection.outlineSegments(
-            module.shape(),
-            module.anchor(),
-            module.rotation(),
-            widgetWidth,
-            widgetHeight,
-            contentLeft,
-            contentRightPadding,
-            contentVerticalPadding,
-            panX,
-            panY);
+        return ModuleFootprintProjection.outlineSegments(module.shape(), module.anchor(), module.rotation(), frame);
     }
 
     static StationTileCoord alertBadgeCoord(ModuleInstance module, Map<StationTileCoord, PlacedTile> tiles) {
@@ -321,18 +301,14 @@ final class StationMapOverlayPainter {
         return best;
     }
 
+    static void drawDeconstructModuleOverlay(ModuleInstance module, boolean selected, StationMapFrame frame) {
+        int color = selected ? EnumColors.MAP_COLOR_STATION_PICKER_DECONSTRUCT_SELECTED.getColor()
+            : EnumColors.MAP_COLOR_STATION_PICKER_COMPATIBLE.getColor();
+        drawModuleOverlay(module, color, frame);
+    }
+
     private static void drawModuleOverlay(ModuleInstance module, int color, StationMapFrame frame) {
-        drawSegments(
-            moduleOverlaySegments(
-                module,
-                frame.widgetWidth(),
-                frame.widgetHeight(),
-                frame.contentLeft(),
-                frame.contentRightPadding(),
-                frame.contentVerticalPadding(),
-                frame.panX(),
-                frame.panY()),
-            color);
+        drawSegments(moduleOverlaySegments(module, frame), color);
     }
 
     private static void drawSegments(List<ModuleFootprintProjection.Segment> segments, int color) {
