@@ -22,7 +22,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledge
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
-import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 
 /**
  * Stateless asteroid-field discovery policy.
@@ -33,6 +32,11 @@ import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
  * knowledge owner is the only mutable store.
  */
 final class AsteroidFieldDiscoveryPolicy implements CelestialDiscoveryDomain {
+
+    private static final int LARGE_DISCOVERY_IMPORTANCE = 30;
+    private static final int MEDIUM_DISCOVERY_IMPORTANCE = 20;
+    private static final int SMALL_DISCOVERY_IMPORTANCE = 10;
+    private static final double MINIMUM_SCAN_RADIUS = 0.0;
 
     @Override
     public boolean ownsDiscoveryAnchor(@Nonnull CelestialObjectKey anchorKey) {
@@ -181,29 +185,20 @@ final class AsteroidFieldDiscoveryPolicy implements CelestialDiscoveryDomain {
 
     private static int importance(AsteroidFieldNode node) {
         return switch (node.sizeClass()) {
-            case LARGE -> 30;
-            case MEDIUM -> 20;
-            case SMALL -> 10;
+            case LARGE -> LARGE_DISCOVERY_IMPORTANCE;
+            case MEDIUM -> MEDIUM_DISCOVERY_IMPORTANCE;
+            case SMALL -> SMALL_DISCOVERY_IMPORTANCE;
         };
     }
 
     private static Predicate<AsteroidFieldNode> scopePredicate(CelestialObjectId beltId, AsteroidFieldProfile profile,
         CelestialObjectKey anchorKey, double radius) {
-        if (!Double.isFinite(radius) || radius < 0.0) {
+        if (!Double.isFinite(radius) || radius < MINIMUM_SCAN_RADIUS) {
             throw new IllegalArgumentException("scan radius must be finite and non-negative");
         }
         MinorCelestialBodyId anchorId = anchorKey.minorBodyId();
         AsteroidFieldNode anchor = AsteroidFieldResolver.placedNode(beltId, profile, anchorId.index());
-        OrbitalMechanics.OrbitalState beltState = new OrbitalMechanics.OrbitalState(1.0, 0.0, 0.0, 0.0);
-        OrbitalMechanics.OrbitalState center = AsteroidFieldOrbitResolver.resolveWorldState(profile, anchor, beltState);
-        double radiusSquared = radius * radius;
-        return node -> {
-            OrbitalMechanics.OrbitalState asteroidState = AsteroidFieldOrbitResolver
-                .resolveWorldState(profile, node, beltState);
-            double dx = asteroidState.x() - center.x();
-            double dy = asteroidState.y() - center.y();
-            return dx * dx + dy * dy <= radiusSquared;
-        };
+        return node -> AsteroidFieldOrbitResolver.separation(profile, anchor, node) <= radius;
     }
 
     private static Optional<AsteroidFieldProfile> profile(CelestialObjectId beltId) {

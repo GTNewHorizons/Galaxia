@@ -16,6 +16,17 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledge
 
 public final class AsteroidCelestialMaterializer {
 
+    private static final double LARGE_SPRITE_SIZE = 0.04;
+    private static final double MEDIUM_SPRITE_SIZE = 0.02;
+    private static final double SMALL_SPRITE_SIZE = 0.01;
+    private static final double LARGE_SPHERE_OF_INFLUENCE_RADIUS = 180.0;
+    private static final double MEDIUM_SPHERE_OF_INFLUENCE_RADIUS = 120.0;
+    private static final double SMALL_SPHERE_OF_INFLUENCE_RADIUS = 80.0;
+    private static final double ORBIT_SPEED = 0.00091;
+    private static final double STANDARD_GRAVITATIONAL_PARAMETER = 6.0e4;
+    private static final int TEMPERATURE = 41;
+    private static final double RADIATION = 0.52;
+
     private AsteroidCelestialMaterializer() {}
 
     public static Optional<CelestialObject> resolveMinorBody(@Nonnull CelestialObjectKey key,
@@ -66,14 +77,14 @@ public final class AsteroidCelestialMaterializer {
         double radius = node.orbitSlot()
             .radiusBetween(profile.innerOrbitalRadius(), profile.outerOrbitalRadius());
         double spriteSize = switch (node.sizeClass()) {
-            case LARGE -> 0.04;
-            case MEDIUM -> 0.02;
-            case SMALL -> 0.01;
+            case LARGE -> LARGE_SPRITE_SIZE;
+            case MEDIUM -> MEDIUM_SPRITE_SIZE;
+            case SMALL -> SMALL_SPRITE_SIZE;
         };
         double soiRadius = switch (node.sizeClass()) {
-            case LARGE -> 180.0;
-            case MEDIUM -> 120.0;
-            case SMALL -> 80.0;
+            case LARGE -> LARGE_SPHERE_OF_INFLUENCE_RADIUS;
+            case MEDIUM -> MEDIUM_SPHERE_OF_INFLUENCE_RADIUS;
+            case SMALL -> SMALL_SPHERE_OF_INFLUENCE_RADIUS;
         };
 
         return CelestialObject.builder()
@@ -83,19 +94,19 @@ public final class AsteroidCelestialMaterializer {
             .objectClass(CelestialObject.Class.ASTEROID)
             .circularOrbit(
                 radius,
-                0.00091,
+                ORBIT_SPEED,
                 Math.toRadians(
                     node.orbitSlot()
                         .angleOffsetDeg()))
             .texture(EnumTextures.ICON_MOON.get())
             .spriteSize(spriteSize)
             .properties(
-                b -> b.orbitalGravity(6.0e4, soiRadius)
+                b -> b.orbitalGravity(STANDARD_GRAVITATIONAL_PARAMETER, soiRadius)
                     .visitable(true)
                     .canCreateStation(false)
                     .canCreateOutpost(true)
-                    .temperature(41)
-                    .radiation(0.52)
+                    .temperature(TEMPERATURE)
+                    .radiation(RADIATION)
                     .oreProfile(
                         node.oreProfile()
                             .id())
