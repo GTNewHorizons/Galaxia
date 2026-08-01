@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 public final class SatelliteDataBufferStore {
@@ -22,17 +21,10 @@ public final class SatelliteDataBufferStore {
 
     public record Entry(CelestialObjectKey bodyKey, SatelliteDataKey key, long deciKb) {
 
-        public CelestialObjectId bodyId() {
-            return bodyKey.requireRegisteredBodyId();
-        }
     }
 
     public long pendingDeciKb(UUID teamId, CelestialObjectKey bodyKey, SatelliteDataKey key) {
         return amount(pendingDeciKb, teamId, bodyKey, key);
-    }
-
-    public long pendingDeciKb(UUID teamId, CelestialObjectId bodyId, SatelliteDataKey key) {
-        return pendingDeciKb(teamId, CelestialObjectKey.registered(bodyId), key);
     }
 
     /*
@@ -43,32 +35,16 @@ public final class SatelliteDataBufferStore {
         return pendingDeciKb(teamId, bodyKey, key) <= bufferLimitDeciKb(localCapacityKbps);
     }
 
-    public boolean canStart(UUID teamId, CelestialObjectId bodyId, SatelliteDataKey key, long localCapacityKbps) {
-        return canStart(teamId, CelestialObjectKey.registered(bodyId), key, localCapacityKbps);
-    }
-
     public void finishProduction(UUID teamId, CelestialObjectKey bodyKey, SatelliteDataKey key, long producedDeciKb) {
         add(pendingDeciKb, teamId, bodyKey, key, producedDeciKb);
-    }
-
-    public void finishProduction(UUID teamId, CelestialObjectId bodyId, SatelliteDataKey key, long producedDeciKb) {
-        finishProduction(teamId, CelestialObjectKey.registered(bodyId), key, producedDeciKb);
     }
 
     public long pendingDemandDeciKb(UUID teamId, CelestialObjectKey bodyKey, SatelliteDataKey key) {
         return amount(demandDeciKb, teamId, bodyKey, key);
     }
 
-    public long pendingDemandDeciKb(UUID teamId, CelestialObjectId bodyId, SatelliteDataKey key) {
-        return pendingDemandDeciKb(teamId, CelestialObjectKey.registered(bodyId), key);
-    }
-
     public void requestData(UUID teamId, CelestialObjectKey bodyKey, SatelliteDataKey key, long requestedDeciKb) {
         add(demandDeciKb, teamId, bodyKey, key, requestedDeciKb);
-    }
-
-    public void requestData(UUID teamId, CelestialObjectId bodyId, SatelliteDataKey key, long requestedDeciKb) {
-        requestData(teamId, CelestialObjectKey.registered(bodyId), key, requestedDeciKb);
     }
 
     public List<Entry> producedEntries(UUID teamId) {
@@ -89,23 +65,8 @@ public final class SatelliteDataBufferStore {
         return drain(demandDeciKb, destinationBodyKey, demandKey, drained, teamId);
     }
 
-    public long transfer(UUID teamId, CelestialObjectId sourceBodyId, SatelliteDataKey sourceKey,
-        CelestialObjectId destinationBodyId, SatelliteDataKey demandKey, long requestedDeciKb) {
-        return transfer(
-            teamId,
-            CelestialObjectKey.registered(sourceBodyId),
-            sourceKey,
-            CelestialObjectKey.registered(destinationBodyId),
-            demandKey,
-            requestedDeciKb);
-    }
-
     public long drain(UUID teamId, CelestialObjectKey bodyKey, SatelliteDataKey key, long requestedDeciKb) {
         return drain(pendingDeciKb, bodyKey, key, requestedDeciKb, teamId);
-    }
-
-    public long drain(UUID teamId, CelestialObjectId bodyId, SatelliteDataKey key, long requestedDeciKb) {
-        return drain(teamId, CelestialObjectKey.registered(bodyId), key, requestedDeciKb);
     }
 
     public void clear() {

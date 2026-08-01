@@ -22,6 +22,12 @@ public record RocketAssembly(RocketBlueprint blueprint, List<RocketStage> stages
             .sum();
     }
 
+    public double getTotalThrust() {
+        return stages.stream()
+            .mapToDouble(RocketStage::getTotalThrust)
+            .sum();
+    }
+
     public static RocketAssembly fromBlueprint(RocketBlueprint blueprint) {
         return RocketAnalyzer.analyze(blueprint);
     }

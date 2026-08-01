@@ -21,7 +21,6 @@ public class GalaxiaTeamData implements INetworkTeamData {
 
     @Getter
     private int teamColor = EnumColors.MAP_COLOR_TEAM_ACCENT.getColor();
-    private transient boolean dirty;
 
     private final EnumMap<TeamAction, TeamRole> permissions = new EnumMap<>(TeamAction.class);
 
@@ -92,13 +91,10 @@ public class GalaxiaTeamData implements INetworkTeamData {
     }
 
     @Override
-    public void markSyncedToClient() {
-        dirty = false;
-    }
+    public void markSyncedToClient() {}
 
     public void setTeamColor(int color) {
         this.teamColor = color;
-        dirty = true;
     }
 
     public TeamRole getRequiredRole(TeamAction action) {
@@ -107,6 +103,5 @@ public class GalaxiaTeamData implements INetworkTeamData {
 
     public void setRequiredRole(TeamAction action, TeamRole role) {
         permissions.put(action, role);
-        dirty = true;
     }
 }

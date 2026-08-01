@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -298,7 +299,7 @@ final class AssetModuleUpdatePacketTest {
     @Test
     void debugDataGeneratorConfigPayload_roundTrips() {
         ModuleDebugDataGenerator.Config config = ModuleDebugDataGenerator.Config
-            .consume(SatelliteDataType.PROSPECTING, 25L, 40, CelestialObjectId.EGORA);
+            .consume(SatelliteDataType.PROSPECTING, 25L, 40, CelestialObjectKey.registered(CelestialObjectId.EGORA));
 
         AssetModuleUpdatePacket decoded = roundTrip(
             AssetModuleUpdatePacket.debugDataGeneratorConfig(ASSET_ID, 0, MODULE_ID, config));

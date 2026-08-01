@@ -32,10 +32,10 @@ public final class SatelliteDiscoveryWorkerSource {
             }
             UUID teamId = CelestialAssetStore.getTeamId(satellite.assetId);
             if (teamId == null) continue;
-            OptionalLong revision = scopeRevision.apply(satellite.celestialObjectId);
+            OptionalLong revision = scopeRevision.apply(satellite.celestialObjectKey);
             if (revision.isEmpty()) continue;
             workerCounts.merge(
-                new WorkerKey(teamId, prospectingScope(satellite.celestialObjectId, revision.getAsLong())),
+                new WorkerKey(teamId, prospectingScope(satellite.celestialObjectKey, revision.getAsLong())),
                 1,
                 Integer::sum);
         }

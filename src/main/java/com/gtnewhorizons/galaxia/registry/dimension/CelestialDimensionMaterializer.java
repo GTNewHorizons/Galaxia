@@ -59,7 +59,7 @@ public final class CelestialDimensionMaterializer {
     public static DimensionDef materializeDefinition(@Nonnull CelestialObject body) {
         PlayableDimensionProfile profile = body.playableDimensionProfile();
         if (profile == null) {
-            throw new IllegalStateException("Cannot materialize non-playable celestial body: " + body.id());
+            throw new IllegalStateException("Cannot materialize non-playable celestial body: " + body.key());
         }
 
         DimensionEnum dimension = profile.dimension();

@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -15,13 +15,13 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldClientKnowledgeState;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldKnowledgeSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialResourceKnowledgeState;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.DiscoveryState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.CelestialResourceKnowledgeState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class StarmapAssetActionsTest {
@@ -33,7 +33,7 @@ final class StarmapAssetActionsTest {
 
     @AfterEach
     void clearClientKnowledge() {
-        AsteroidFieldClientKnowledgeState.clear();
+        CelestialKnowledgeClientState.clear();
     }
 
     @Test
@@ -47,7 +47,7 @@ final class StarmapAssetActionsTest {
                 CelestialObjectKey.minorBody(
                     new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN)))
             .orElseThrow();
-        setAsteroidDiscovery(asteroid, DiscoveryState.DISCOVERED);
+        setDiscovery(asteroid, DiscoveryState.DISCOVERED);
 
         controller.triggerAssetCreation(state, asteroid, CelestialAsset.Kind.AUTOMATED_STATION, false);
 
@@ -66,26 +66,30 @@ final class StarmapAssetActionsTest {
             new StarmapAssetActions.OrbitalAssetSupport(),
             new TestCallbacks());
         CelestialObject hiddenAsteroid = hiddenAsteroid();
-        setAsteroidDiscovery(hiddenAsteroid, DiscoveryState.HIDDEN);
+        setDiscovery(hiddenAsteroid, DiscoveryState.HIDDEN);
 
         controller.triggerAssetCreation(state, hiddenAsteroid, CelestialAsset.Kind.AUTOMATED_OUTPOST, false);
 
         assertNull(state.pendingAssetCreation);
     }
 
-    private static void setAsteroidDiscovery(CelestialObject asteroid, DiscoveryState detectionState) {
-        AsteroidFieldClientKnowledgeState.updateFields(
-            List.of(
-                new AsteroidFieldKnowledgeSnapshot(
-                    CelestialObjectId.FROZEN_BELT,
-                    List.of(
-                        new AsteroidFieldKnowledgeSnapshot.Entry(
-                            asteroid.id()
-                                .minorBodyId()
-                                .index(),
-                            detectionState,
-                            CelestialResourceKnowledgeState.UNKNOWN)),
-                    List.of())));
+    @Test
+    void registeredBodyUsesEffectiveDiscoveredDefaultWithoutExplicitSync() {
+        StarmapAssetActions.OrbitalAssetUiState state = new StarmapAssetActions.OrbitalAssetUiState();
+        StarmapAssetActions.OrbitalAssetActionController controller = new StarmapAssetActions.OrbitalAssetActionController(
+            new StarmapAssetActions.OrbitalAssetSupport(),
+            new TestCallbacks());
+        CelestialObject mars = CelestialRegistry.get(CelestialObjectId.MARS)
+            .orElseThrow();
+
+        controller.triggerAssetCreation(state, mars, CelestialAsset.Kind.AUTOMATED_OUTPOST, false);
+
+        assertNotNull(state.pendingAssetCreation);
+    }
+
+    private static void setDiscovery(CelestialObject body, DiscoveryState detectionState) {
+        CelestialKnowledgeClientState.apply(
+            Map.of(body.key(), CelestialKnowledgeFacts.of(detectionState, CelestialResourceKnowledgeState.UNKNOWN)));
     }
 
     private static CelestialObject hiddenAsteroid() {
@@ -96,7 +100,7 @@ final class StarmapAssetActionsTest {
             belt.properties()
                 .asteroidFieldProfile())
             .stream()
-            .filter(node -> AsteroidFieldResolver.initialDetectionState(node) == DiscoveryState.HIDDEN)
+            .filter(node -> node.initialDetectionState() == DiscoveryState.HIDDEN)
             .findFirst()
             .flatMap(node -> CelestialRegistry.get(CelestialObjectKey.minorBody(node.id())))
             .orElseThrow();

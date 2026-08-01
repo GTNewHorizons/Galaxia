@@ -146,6 +146,10 @@ tile.block_of_cinnabar.name=Block of Cinnabar
 tile.block_of_pyrite.name=Block of Pyrite
 tile.enchanted_block_of_cinnabar.name=Enchanted Block of Cinnabar
 tile.launchpad.name=Launchpad Casing
+tile.launchpad_framebox.name=Launchpad Framebox
+tile.launchpad_reinforcement.name=Launchpad Reinforcement
+tile.launchpad_sheeting.name=Launchpad Sheeting
+tile.launchpad_assembling_casing.name=Launchpad Assembling Casing
 tile.meteoric_iron_block.name=Meteoric Iron Block
 tile.raw_sulfur_block.name=Raw Sulfur Block
 tile.research_outpost_casing.name=Research Outpost Casing
@@ -265,6 +269,38 @@ galaxia.gui.orbital.search.placeholder=Enter name...
 galaxia.gui.orbital.click_mode.hierarchy=Hierarchy
 galaxia.gui.orbital.click_mode.follow=Follow
 galaxia.gui.orbital.click_mode.tooltip=Changes planet click mode between opening hierarchy and following the selected planet
+galaxia.gui.orbital.context_menu.manage_assets=Manage assets
+galaxia.gui.orbital.asset.create.unsupported_body=Cannot create assets on this celestial body
+galaxia.gui.orbital.pinned_info.label.name=Name
+galaxia.gui.orbital.pinned_info.label.type=Type
+galaxia.gui.orbital.pinned_info.label.landable=Landable
+galaxia.gui.orbital.pinned_info.label.dangers=Dangers
+galaxia.gui.orbital.pinned_info.label.surface=Surface
+galaxia.gui.orbital.pinned_info.label.ores=Ores
+galaxia.gui.orbital.pinned_info.label.scan=Scan
+galaxia.gui.orbital.pinned_info.value.yes=Yes
+galaxia.gui.orbital.pinned_info.value.no=No
+galaxia.gui.orbital.pinned_info.danger.none=None
+galaxia.gui.orbital.pinned_info.danger.radiation=Radiation
+galaxia.gui.orbital.pinned_info.danger.heat=Extreme heat
+galaxia.gui.orbital.pinned_info.danger.cold=Extreme cold
+galaxia.gui.orbital.pinned_info.danger.remote=Remote operations only
+galaxia.gui.orbital.pinned_info.surface.undefined=Unknown
+galaxia.gui.orbital.pinned_info.ore.unknown=Unknown
+galaxia.gui.orbital.pinned_info.ore.undefined=No ore data
+galaxia.gui.orbital.pinned_info.scan.pass.detection=Detection
+galaxia.gui.orbital.pinned_info.scan.pass.profile=Profiling
+galaxia.gui.orbital.pinned_info.scan.progress=%s: %d%%
+galaxia.gui.orbital.pinned_info.type.galaxy=Galaxy
+galaxia.gui.orbital.pinned_info.type.star=Star
+galaxia.gui.orbital.pinned_info.type.gas_giant=Gas Giant
+galaxia.gui.orbital.pinned_info.type.planet=Planet
+galaxia.gui.orbital.pinned_info.type.moon=Moon
+galaxia.gui.orbital.pinned_info.type.asteroid=Asteroid
+galaxia.gui.orbital.pinned_info.type.asteroid_belt=Asteroid Belt
+galaxia.gui.orbital.pinned_info.type.station=Station
+galaxia.gui.orbital.pinned_info.type.black_hole=Black Hole
+galaxia.gui.orbital.pinned_info.type.comet=Comet
 
 # Elements - GUI - "Rocket Silo"
 galaxia.gui.rocket_silo.title=Rocket Silo
@@ -402,13 +438,12 @@ death.attack.galaxia.noOxygen=%1$s ran out of oxygen
 death.attack.galaxia.radiation=%1$s died from radiation exposure
 
 # Elements - Other - "Schematic Labels"
-galaxia.item.schematic.label.name=Name: %s
-galaxia.item.schematic.label.tier=Tier: %d
-galaxia.item.schematic.label.modules=Modules: %d
-galaxia.item.schematic.label.height=Height: %dm
-galaxia.item.schematic.label.width=Width: %dm
-galaxia.item.schematic.label.weight=Weight: %dkg
-galaxia.item.schematic.label.thrust=Thrust: %dN
+galaxia.item.schematic.label.name=Designation: %s
+galaxia.item.schematic.label.stages=Stages: %d
+galaxia.item.schematic.label.height=Height: %d m
+galaxia.item.schematic.label.width=Diameter: %d m
+galaxia.item.schematic.label.weight=Lift Mass: %,d kg
+galaxia.item.schematic.label.thrust=Total Thrust: %,d kg
 
 ### Entities
 # Entities - "Rocket"
@@ -558,6 +593,10 @@ galaxia.asset_manager.satellites.confirm_delete=Confirm
 #### Satellites
 galaxia.satellite.kind.communication=Communication Satellites
 galaxia.satellite.kind.prospecting=Prospecting Satellites
+galaxia.satellite.action.add_communication=Add communication satellite
+galaxia.satellite.action.delete_communication=Delete communication satellites
+galaxia.satellite.action.add_prospecting=Add prospecting satellite
+galaxia.satellite.action.delete_prospecting=Delete prospecting satellites
 galaxia.satellite.tooltip.count=%s: %d
 
 #### Machine GUI
@@ -585,6 +624,28 @@ galaxia.gui.team_config.action.rename_asset=Rename Asset
 galaxia.gui.team_config.action.destroy_asset=Destroy Asset
 galaxia.gui.team_config.action.deconstruct_asset=Deconstruct Asset
 galaxia.gui.team_config.button=Team config
+
+# Silo GUI
+galaxia.rocket_editor.category.capsules=Capsules
+galaxia.rocket_editor.category.fuel_tanks=Fuel Tanks
+galaxia.rocket_editor.category.liquid_engines=Liquid Fuel Engines
+galaxia.rocket_editor.category.decouplers=Decouplers
+galaxia.rocket_editor.category.cabins=Cabins
+galaxia.rocket_editor.category.structural=Structural parts
+galaxia.rocket_editor.module=MODULE #%d
+galaxia.rocket_editor.name_placeholder=Rocket Name
+galaxia.rocket_editor.silo_not_found=Silo not found!
+galaxia.rocket_editor.clear_blueprint=Clear Blueprint
+galaxia.rocket_editor.save_schematic=Save Schematic
+galaxia.rocket_editor.return_modules=Return Modules
+galaxia.rocket_editor.order_modules=Order Modules
+galaxia.rocket_editor.order_modules_empty=Order Modules (empty)
+galaxia.rocket_editor.assembling=Assembling...
+galaxia.rocket_editor.ready_launch=Ready to Launch
+galaxia.rocket_editor.destination=Destination: %s
+galaxia.rocket_editor.click_cycle=Click to cycle
+galaxia.rocket_editor.enter_rocket=Enter Rocket
+galaxia.rocket_editor.enter_rocket_not_ready=Enter Rocket (not ready)
 
 # Team Info
 galaxia.gui.team_info.team=Team: %s

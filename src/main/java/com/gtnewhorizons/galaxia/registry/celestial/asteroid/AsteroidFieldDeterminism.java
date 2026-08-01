@@ -5,10 +5,23 @@ import com.gtnewhorizons.galaxia.registry.util.DeterministicHash;
 
 final class AsteroidFieldDeterminism {
 
+    private static final double FULL_CIRCLE_DEGREES = 360.0;
+    private static final double ZERO_DEGREES = 0.0;
+    private static final long FIELD_LAYOUT_SALT = 0x004C41594F55544CL;
+
     private final long baseSeed;
 
     private AsteroidFieldDeterminism(long baseSeed) {
         this.baseSeed = baseSeed;
+    }
+
+    static AsteroidFieldDeterminism forField(CelestialObjectId beltId, AsteroidFieldProfile profile) {
+        return new AsteroidFieldDeterminism(
+            DeterministicHash.mix(
+                beltId.name()
+                    .hashCode(),
+                profile.seedSalt(),
+                FIELD_LAYOUT_SALT));
     }
 
     static AsteroidFieldDeterminism forNode(CelestialObjectId beltId, AsteroidFieldProfile profile, int index) {
@@ -17,7 +30,6 @@ final class AsteroidFieldDeterminism {
                 beltId.name()
                     .hashCode(),
                 profile.seedSalt(),
-                profile.generationVersion(),
                 index));
     }
 
@@ -30,12 +42,12 @@ final class AsteroidFieldDeterminism {
     }
 
     double degrees(long... salts) {
-        return unit(salts) * 360.0;
+        return unit(salts) * FULL_CIRCLE_DEGREES;
     }
 
     static double normalizeDegrees(double value) {
-        double normalized = value % 360.0;
-        return normalized < 0.0 ? normalized + 360.0 : normalized;
+        double normalized = value % FULL_CIRCLE_DEGREES;
+        return normalized < ZERO_DEGREES ? normalized + FULL_CIRCLE_DEGREES : normalized;
     }
 
 }

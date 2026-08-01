@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 /**
@@ -36,27 +35,6 @@ public final class SatelliteDataTransferPlanner {
             bottleneckKbps = Math.max(0L, bottleneckKbps);
         }
 
-        public Transfer(UUID teamId, CelestialObjectId sourceBodyId, CelestialObjectId destinationBodyId,
-            SatelliteDataKey sourceKey, SatelliteDataKey demandKey, long deciKb, List<SatelliteNetworkGraph.Edge> path,
-            long bottleneckKbps) {
-            this(
-                teamId,
-                CelestialObjectKey.registered(sourceBodyId),
-                CelestialObjectKey.registered(destinationBodyId),
-                sourceKey,
-                demandKey,
-                deciKb,
-                path,
-                bottleneckKbps);
-        }
-
-        public CelestialObjectId sourceBodyId() {
-            return sourceBodyKey.requireRegisteredBodyId();
-        }
-
-        public CelestialObjectId destinationBodyId() {
-            return destinationBodyKey.requireRegisteredBodyId();
-        }
     }
 
     public record Plan(List<Transfer> transfers, Map<SatelliteNetworkGraph.Edge, Long> usedByEdge,

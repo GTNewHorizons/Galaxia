@@ -47,48 +47,63 @@ final class OrbitalSceneBodyPresentationTest {
     void asteroidBeltContainerHasNoSpriteOrInteractionTarget() {
         CelestialObject belt = asteroidBelt();
 
-        assertFalse(AsteroidStarmapScenePresentation.drawsBodySprite(belt));
-        assertFalse(AsteroidStarmapScenePresentation.registersBodyInteraction(belt));
+        assertTrue(AsteroidStarmapScenePresentation.isBeltContainer(belt));
     }
 
     @Test
     void asteroidBeltDrawsBandInsteadOfOrbitLine() {
         CelestialObject belt = asteroidBelt();
         CelestialObject planet = CelestialObject.builder()
-            .id(CelestialObjectId.MARS)
+            .key(CelestialObjectId.MARS)
             .name("Mars")
             .objectClass(CelestialObject.Class.PLANET)
             .build();
 
-        assertFalse(AsteroidStarmapScenePresentation.drawsOrbitLine(belt));
-        assertTrue(AsteroidStarmapScenePresentation.drawsBeltBand(belt));
-        assertTrue(AsteroidStarmapScenePresentation.drawsOrbitLine(planet));
-        assertFalse(AsteroidStarmapScenePresentation.drawsBeltBand(planet));
+        assertTrue(AsteroidStarmapScenePresentation.isBeltContainer(belt));
+        assertFalse(AsteroidStarmapScenePresentation.isBeltContainer(planet));
     }
 
     @Test
     void asteroidFieldMembersStillRenderAndAcceptInteraction() {
         CelestialObject asteroid = CelestialObject.builder()
-            .id(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0)))
+            .key(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0)))
             .name("Frozen Belt 1")
             .objectClass(CelestialObject.Class.ASTEROID)
             .build();
 
-        assertTrue(AsteroidStarmapScenePresentation.drawsBodySprite(asteroid));
-        assertTrue(AsteroidStarmapScenePresentation.registersBodyInteraction(asteroid));
+        assertFalse(AsteroidStarmapScenePresentation.isBeltContainer(asteroid));
+    }
+
+    @Test
+    void nonAsteroidBodiesAlwaysDrawTheirLabel() {
+        CelestialObject planet = CelestialRegistry.get(CelestialObjectId.MARS)
+            .orElseThrow();
+
+        assertTrue(AsteroidStarmapScenePresentation.drawsDefaultBodyLabel(planet));
+        assertTrue(AsteroidStarmapScenePresentation.drawsDefaultBodyLabel(asteroidBelt()));
+    }
+
+    @Test
+    void generatedAsteroidsDoNotDrawDefaultLabelThroughSharedPresentation() {
+        assertFalse(
+            AsteroidStarmapScenePresentation
+                .drawsDefaultBodyLabel(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.LARGE)));
     }
 
     @Test
     void defaultAsteroidLabelsAreLimitedToAuthoredAsteroids() {
         assertFalse(
-            AsteroidStarmapScenePresentation
-                .drawsDefaultBodyLabel(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.LARGE)));
+            CelestialClient.asteroidProjection(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.LARGE))
+                .map(AsteroidStarmapProjection::drawDefaultLabel)
+                .orElseThrow());
         assertFalse(
-            AsteroidStarmapScenePresentation
-                .drawsDefaultBodyLabel(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.MEDIUM)));
+            CelestialClient.asteroidProjection(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.MEDIUM))
+                .map(AsteroidStarmapProjection::drawDefaultLabel)
+                .orElseThrow());
         assertFalse(
-            AsteroidStarmapScenePresentation
-                .drawsDefaultBodyLabel(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.SMALL)));
+            CelestialClient.asteroidProjection(asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.SMALL))
+                .map(AsteroidStarmapProjection::drawDefaultLabel)
+                .orElseThrow());
     }
 
     @Test
@@ -150,7 +165,7 @@ final class OrbitalSceneBodyPresentationTest {
         assertEquals(
             CelestialObjectKey.registered(CelestialObjectId.MARS),
             OrbitalView.OrbitalMapWidget.satelliteNetworkBodyKey(planet));
-        assertEquals(asteroid.id(), OrbitalView.OrbitalMapWidget.satelliteNetworkBodyKey(asteroid));
+        assertEquals(asteroid.key(), OrbitalView.OrbitalMapWidget.satelliteNetworkBodyKey(asteroid));
     }
 
     @Test
@@ -168,18 +183,20 @@ final class OrbitalSceneBodyPresentationTest {
         CelestialClient.setShowHiddenAsteroidObjects(true);
         CelestialObject belt = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
             .orElseThrow();
-        return CelestialClient.getChildAsteroidProjections(belt)
+        return CelestialClient.getChildren(belt)
             .stream()
-            .filter(projection -> projection.nodeKind() == kind)
-            .filter(projection -> projection.sizeClass() == sizeClass)
+            .filter(
+                body -> CelestialClient.asteroidProjection(body)
+                    .filter(projection -> projection.nodeKind() == kind)
+                    .filter(projection -> projection.sizeClass() == sizeClass)
+                    .isPresent())
             .findFirst()
-            .map(AsteroidStarmapProjection::body)
             .orElseThrow();
     }
 
     private static CelestialObject asteroid(AsteroidNodeKind kind, AsteroidSizeClass sizeClass, double spriteSize) {
         return CelestialObject.builder()
-            .id(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 42)))
+            .key(CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 42)))
             .name(kind.name())
             .objectClass(CelestialObject.Class.ASTEROID)
             .spriteSize(spriteSize)
@@ -193,7 +210,7 @@ final class OrbitalSceneBodyPresentationTest {
 
     private static CelestialObject asteroidBelt() {
         return CelestialObject.builder()
-            .id(CelestialObjectId.FROZEN_BELT)
+            .key(CelestialObjectId.FROZEN_BELT)
             .name("Frozen Belt")
             .objectClass(CelestialObject.Class.ASTEROID_BELT)
             .properties(

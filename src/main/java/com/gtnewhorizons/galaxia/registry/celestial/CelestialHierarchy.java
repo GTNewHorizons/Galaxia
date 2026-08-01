@@ -31,13 +31,13 @@ public record CelestialHierarchy(Map<CelestialObjectKey, CelestialObject> bodies
         }
 
         public Builder add(@Nonnull CelestialObject body) {
-            bodiesById.put(body.id(), body);
-            if (body.parentId() != null) {
-                childrenByParentId.computeIfAbsent(body.parentId(), k -> new ArrayList<>())
+            bodiesById.put(body.key(), body);
+            if (body.parentKey() != null) {
+                childrenByParentId.computeIfAbsent(body.parentKey(), k -> new ArrayList<>())
                     .add(body);
             } else {
                 roots.add(body);
-                List<CelestialObject> childs = childrenByParentId.get(body.id());
+                List<CelestialObject> childs = childrenByParentId.get(body.key());
                 if (childs != null) {
                     for (CelestialObject childReg : childs) {
                         add(childReg);

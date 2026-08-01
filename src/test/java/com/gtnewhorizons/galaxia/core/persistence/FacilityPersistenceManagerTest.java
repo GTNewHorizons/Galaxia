@@ -48,6 +48,10 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
@@ -105,7 +109,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
 
@@ -122,7 +126,7 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
-    void celestialDiscoveryScansPersistWithoutAsteroidKnowledge(@TempDir Path tempDir) throws Exception {
+    void celestialDiscoveryScansSurviveSaveAndReload(@TempDir Path tempDir) throws Exception {
         UUID teamId = UUID.randomUUID();
         CelestialServerRuntime runtime = CelestialServerRuntime.create();
         CelestialDiscoveryScanSnapshot expected = new CelestialDiscoveryScanSnapshot(
@@ -139,7 +143,6 @@ final class FacilityPersistenceManagerTest {
             .restore(teamId, List.of(expected));
 
         new FacilityPersistenceManager(runtime).saveToSaveDirectory(tempDir.toFile());
-        Files.delete(tempDir.resolve("galaxiadata/_asteroids.json"));
 
         CelestialServerRuntime reloaded = CelestialServerRuntime.create();
         new FacilityPersistenceManager(reloaded).loadFromSaveDirectory(tempDir.toFile());
@@ -183,6 +186,27 @@ final class FacilityPersistenceManagerTest {
             List.of(),
             runtime.scans()
                 .snapshots(teamId));
+    }
+
+    @Test
+    void worldReloadDropsLogisticSignalsOfAssetsThatNoLongerExist(@TempDir Path tempDir) {
+        CelestialServerRuntime runtime = CelestialServerRuntime.create();
+        AutomatedFacility station = createStationWithFullLayout();
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        station.updateItems(resource, 3);
+        station.logisticsConfig.set(resource, new LogisticsResourceConfig(15, 64, true, false));
+        LogisticStore.updateSignalsForFacility(station);
+        assertFalse(
+            LogisticStore.allSignalsForScope(LogisticSignal.Scope.SYSTEM)
+                .isEmpty(),
+            "precondition: the station emits a signal");
+
+        new FacilityPersistenceManager(runtime).loadFromSaveDirectory(tempDir.toFile());
+
+        assertEquals(
+            Map.of(),
+            LogisticStore.allSignalsForScope(LogisticSignal.Scope.SYSTEM),
+            "signals of assets from the previous world must not survive the reload");
     }
 
     @Test
@@ -317,7 +341,7 @@ final class FacilityPersistenceManagerTest {
             CelestialDiscoveryCapability.PROSPECTING,
             CelestialDiscoveryScanSnapshot.Status.ACTIVE,
             progressKey,
-            CelestialDiscoveryStep.SIGNATURE,
+            CelestialDiscoveryStep.PROFILE,
             600);
         CelestialDiscoveryScanSnapshot completion = CelestialDiscoveryScanSnapshot.complete(
             teamId,
@@ -382,7 +406,7 @@ final class FacilityPersistenceManagerTest {
         CelestialAsset loaded = CelestialAssetStore.findAsset(asset.assetId);
         assertNotNull(loaded);
         assertEquals(teamId, CelestialAssetStore.getTeamId(asset.assetId));
-        assertEquals(key, loaded.celestialObjectId);
+        assertEquals(key, loaded.celestialObjectKey);
     }
 
     @Test
@@ -415,7 +439,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
 
@@ -445,7 +469,7 @@ final class FacilityPersistenceManagerTest {
 
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -510,7 +534,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -535,7 +559,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -559,7 +583,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -607,7 +631,7 @@ final class FacilityPersistenceManagerTest {
 
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -643,7 +667,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -696,7 +720,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -724,7 +748,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -756,7 +780,7 @@ final class FacilityPersistenceManagerTest {
 
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
 
@@ -773,7 +797,7 @@ final class FacilityPersistenceManagerTest {
 
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
 
@@ -886,7 +910,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.AssetJson json = new FacilityPersistenceManager.AssetJson();
         json.teamId = teamId.toString();
         json.assetId = CelestialAsset.ID.create();
-        json.celestialObjectKey = new FacilityPersistenceManager.CelestialObjectKeyJson();
+        json.celestialObjectKey = new CelestialObjectKeyJsonCodec.CelestialObjectKeyJson();
         json.celestialObjectKey.kind = "registered";
         json.celestialObjectKey.registeredBodyId = body.name();
         json.displayName = body + ":" + kind;
@@ -1050,7 +1074,7 @@ final class FacilityPersistenceManagerTest {
         // Decode
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -1127,7 +1151,7 @@ final class FacilityPersistenceManagerTest {
 
         AutomatedFacility malformedTier = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         assertThrows(IllegalStateException.class, () -> manager.decodeFacilityState(malformedTier, encoded));
@@ -1178,7 +1202,7 @@ final class FacilityPersistenceManagerTest {
         // Decode into fresh facility
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -1255,7 +1279,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -1456,7 +1480,7 @@ final class FacilityPersistenceManagerTest {
         // Decode into fresh facility
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -1560,7 +1584,7 @@ final class FacilityPersistenceManagerTest {
 
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -1616,7 +1640,7 @@ final class FacilityPersistenceManagerTest {
 
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -1775,7 +1799,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
-            station.celestialObjectId,
+            station.celestialObjectKey,
             station.kind,
             station.status());
         manager.decodeFacilityState(decoded, encoded);
@@ -2020,7 +2044,7 @@ final class FacilityPersistenceManagerTest {
         // Decode
         AutomatedFacility after = new AutomatedFacility(
             before.assetId,
-            before.celestialObjectId,
+            before.celestialObjectKey,
             before.kind,
             before.status());
         manager.decodeFacilityState(after, encoded);
@@ -2178,6 +2202,82 @@ final class FacilityPersistenceManagerTest {
             module.anchorOrNull()
                 .dy(),
             "Anchor dy should match tile coordinate");
+    }
+
+    @Test
+    void activeLogisticsTasksRoundTripRegisteredAndMinorBodyKeys(@TempDir Path tempDir) throws Exception {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager(CelestialServerRuntime.create());
+        UUID teamId = UUID.randomUUID();
+        CelestialObjectKey fromKey = CelestialObjectKey.registered(CelestialObjectId.MARS);
+        CelestialObjectKey toKey = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN));
+        CelestialAsset from = CelestialAsset
+            .create(fromKey, CelestialAsset.Kind.AUTOMATED_OUTPOST, Buildable.Status.OPERATIONAL);
+        CelestialAsset to = CelestialAsset
+            .create(toKey, CelestialAsset.Kind.AUTOMATED_OUTPOST, Buildable.Status.OPERATIONAL);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+
+        CelestialAssetStore.clear();
+        LogisticStore.clearDeliveries();
+        CelestialAssetStore.registerAsset(teamId, from);
+        CelestialAssetStore.registerAsset(teamId, to);
+        LogisticsDelivery.ID deliveryId = LogisticsDelivery.ID.create();
+        LogisticStore.addDelivery(
+            LogisticsDelivery.createWithTrajectory(
+                deliveryId,
+                from.assetId,
+                to.assetId,
+                resource,
+                7L,
+                42,
+                LogisticSignal.Scope.SYSTEM,
+                fromKey,
+                toKey,
+                12.5,
+                3.25));
+
+        manager.saveToSaveDirectory(tempDir.toFile());
+
+        JsonObject taskJson = PERSISTENCE_GSON.fromJson(
+            Files.readString(
+                tempDir.resolve("galaxiadata")
+                    .resolve("_tasks.json")),
+            com.google.gson.JsonArray.class)
+            .get(0)
+            .getAsJsonObject();
+        assertEquals(
+            "registered",
+            taskJson.getAsJsonObject("fromBodyId")
+                .get("kind")
+                .getAsString());
+        assertEquals(
+            "minor",
+            taskJson.getAsJsonObject("toBodyId")
+                .get("kind")
+                .getAsString());
+
+        CelestialAssetStore.clear();
+        LogisticStore.clearDeliveries();
+        CelestialAssetStore.registerAsset(teamId, from);
+        CelestialAssetStore.registerAsset(teamId, to);
+        manager.loadFromSaveDirectory(tempDir.toFile());
+
+        assertEquals(
+            1,
+            LogisticStore.activeDeliveries()
+                .size());
+        LogisticsDelivery loaded = LogisticStore.activeDeliveries()
+            .get(0);
+        assertEquals(deliveryId, loaded.deliveryId);
+        assertEquals(from.assetId, loaded.data.fromAssetId());
+        assertEquals(to.assetId, loaded.data.toAssetId());
+        assertEquals(fromKey, loaded.data.fromBodyKey());
+        assertEquals(toKey, loaded.data.toBodyKey());
+        assertEquals(7L, loaded.data.amount());
+        assertEquals(42, loaded.getRemainingTicks());
+        assertEquals(12.5, loaded.data.departureOrbitalTime());
+        assertEquals(3.25, loaded.data.tofOrbitalSeconds());
+        LogisticStore.clearDeliveries();
     }
 
     private static void assertLayoutEquals(StationLayout expected, StationLayout actual) {

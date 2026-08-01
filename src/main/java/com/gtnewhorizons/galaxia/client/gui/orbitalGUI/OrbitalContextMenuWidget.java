@@ -55,7 +55,6 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
     private final OrbitalView.OrbitalContextMenuState state;
     private final Callbacks callbacks;
     private String lastSignature = "";
-    private ParentWidget<?> menuRoot;
 
     OrbitalContextMenuWidget(OrbitalView.OrbitalContextMenuState state, Callbacks callbacks) {
         this.state = state;
@@ -81,7 +80,6 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
                 removeAll();
                 scheduleResize();
             }
-            menuRoot = null;
             lastSignature = "";
             setEnabled(false);
             size(0, 0);
@@ -113,7 +111,7 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
     private String buildSignature() {
         CelestialObject body = state.body();
         if (body == null) return "";
-        return body.id() + "|"
+        return body.key() + "|"
             + body.displayName()
             + '|'
             + state.x()
@@ -129,15 +127,12 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
 
     private void rebuildChildren() {
         removeAll();
-        menuRoot = null;
-
         CelestialObject body = state.body();
         ContextMenuLayout layout = getLayout(body, state.x(), state.y(), getArea().width, getArea().height);
         if (layout == null) return;
 
         ParentWidget<?> root = new ParentWidget<>().pos(layout.left(), layout.top())
             .size(layout.right() - layout.left(), layout.bottom() - layout.top());
-        menuRoot = root;
 
         PassiveBackgroundLayer backgroundLayer = new PassiveBackgroundLayer().pos(0, 0)
             .widthRel(1f)

@@ -13,14 +13,6 @@ public final class PlanetaryFeatureGenerator {
 
     private PlanetaryFeatureGenerator() {}
 
-    public static PlanetaryFeatureKey featureAt(long stationFeatureSalt, StationTileCoord tile, CelestialObject body) {
-        return firstFeature(featuresAt(stationFeatureSalt, tile, body));
-    }
-
-    public static PlanetaryFeatureKey featureAt(long stationFeatureSalt, int dx, int dy, CelestialObject body) {
-        return firstFeature(featuresAt(stationFeatureSalt, dx, dy, body));
-    }
-
     public static List<PlanetaryFeatureKey> featuresAt(long stationFeatureSalt, StationTileCoord tile,
         CelestialObject body) {
         if (tile == null || body == null) return NO_FEATURES;
@@ -54,10 +46,6 @@ public final class PlanetaryFeatureGenerator {
         return orderedFeatures(selected);
     }
 
-    private static PlanetaryFeatureKey firstFeature(List<PlanetaryFeatureKey> features) {
-        return features.isEmpty() ? null : features.get(0);
-    }
-
     private static List<PlanetaryFeatureKey> orderedFeatures(EnumMap<PlanetaryFeatureLayer, PlanetaryFeatureKey> map) {
         if (map.isEmpty()) return NO_FEATURES;
         List<PlanetaryFeatureKey> features = new java.util.ArrayList<>(map.size());
@@ -82,7 +70,4 @@ public final class PlanetaryFeatureGenerator {
         return value;
     }
 
-    private static double unitDouble(long value) {
-        return (value >>> 11) * 0x1.0p-53;
-    }
 }

@@ -79,15 +79,14 @@ public final class AutomatedFacility extends CelestialAsset {
     private final Set<ModuleInstance.ID> dirtyModuleIds = new HashSet<>();
     private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
-    private final Set<String> dirtyMinerVoidChanceOreKeys = new HashSet<>();
     private long ticks;
 
     public static final long MAX_ENERGY = 8_000_000L;
     public static final long BASE_ITEM_CAPACITY = 1000L;
     public static final int UPKEEP_INTERVAL_TICKS = 20 * 60;
 
-    public AutomatedFacility(CelestialAsset.ID assetId, CelestialObjectKey celestialBodyId, Kind kind, Status status) {
-        super(assetId, celestialBodyId, kind, status, null);
+    public AutomatedFacility(CelestialAsset.ID assetId, CelestialObjectKey celestialBodyKey, Kind kind, Status status) {
+        super(assetId, celestialBodyKey, kind, status, null);
         if (kind != Kind.AUTOMATED_OUTPOST && kind != Kind.AUTOMATED_STATION) {
             throw new IllegalArgumentException(
                 "AutomatedFacility kind must be AUTOMATED_OUTPOST or AUTOMATED_STATION, got: " + kind);
@@ -97,7 +96,7 @@ public final class AutomatedFacility extends CelestialAsset {
         this.layoutCache = new LayoutCacheBundle(layout);
         this.settingsGroupState = new FacilitySettingsGroupState();
         this.upkeepLedger = new UpkeepLedger();
-        this.stationFeatureSalt = createStationFeatureSalt(assetId, celestialBodyId);
+        this.stationFeatureSalt = createStationFeatureSalt(assetId, celestialBodyKey);
         this.energyStored = 0;
         this.ticks = 0;
     }
@@ -106,13 +105,13 @@ public final class AutomatedFacility extends CelestialAsset {
         this(assetId, CelestialObjectKey.registered(celestialBodyId), kind, status);
     }
 
-    private static long createStationFeatureSalt(CelestialAsset.ID assetId, CelestialObjectKey bodyId) {
+    private static long createStationFeatureSalt(CelestialAsset.ID assetId, CelestialObjectKey bodyKey) {
         long value = assetId == null || assetId.id() == null ? 0L
             : assetId.id()
                 .getMostSignificantBits()
                 ^ assetId.id()
                     .getLeastSignificantBits();
-        value ^= bodyId == null ? 0L : (stationFeatureBodySalt(bodyId) << 32);
+        value ^= bodyKey == null ? 0L : (stationFeatureBodySalt(bodyKey) << 32);
         value ^= 0xD1B54A32D192ED03L;
         value ^= value >>> 33;
         value *= 0xff51afd7ed558ccdL;
@@ -120,12 +119,12 @@ public final class AutomatedFacility extends CelestialAsset {
         return value;
     }
 
-    private static long stationFeatureBodySalt(CelestialObjectKey bodyId) {
-        if (bodyId.isRegistered()) return bodyId.registeredBodyId()
+    private static long stationFeatureBodySalt(CelestialObjectKey bodyKey) {
+        if (bodyKey.isRegistered()) return bodyKey.registeredBodyId()
             .ordinal();
-        return (((long) bodyId.minorBodyId()
+        return (((long) bodyKey.minorBodyId()
             .parentBodyId()
-            .ordinal()) << 32) ^ bodyId.minorBodyId()
+            .ordinal()) << 32) ^ bodyKey.minorBodyId()
                 .index();
     }
 
@@ -170,7 +169,7 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public List<PlanetaryFeatureKey> planetaryFeaturesAt(int dx, int dy) {
         if (kind != Kind.AUTOMATED_OUTPOST) return Collections.emptyList();
-        return GalaxiaCelestialAPI.get(planetaryAnchorBodyId)
+        return GalaxiaCelestialAPI.get(planetaryAnchorBodyKey)
             .map(body -> PlanetaryFeatureGenerator.featuresAt(stationFeatureSalt, dx, dy, body))
             .orElse(Collections.emptyList());
     }
@@ -337,14 +336,6 @@ public final class AutomatedFacility extends CelestialAsset {
             if (moduleId.equals(modules.get(i).id)) return i;
         }
         return -1;
-    }
-
-    private @Nullable ModuleInstance moduleAtAnchor(StationTileCoord coord) {
-        if (coord == null) return null;
-        for (ModuleInstance module : modules) {
-            if (coord.equals(module.anchorOrNull())) return module;
-        }
-        return null;
     }
 
     public void clearModules() {
@@ -696,10 +687,6 @@ public final class AutomatedFacility extends CelestialAsset {
                 .create(module.kind(), settings),
             this::markModuleDirty);
         markModuleDirty(module.id);
-    }
-
-    private void setPrivateMinerSettings(ModuleInstance module, MinerSettings settings) {
-        setPrivateModuleSettings(module, settings);
     }
 
     private void setPrivateModuleSettings(ModuleInstance module, ModuleSettings settings) {

@@ -15,6 +15,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -51,7 +52,11 @@ final class DebugDataGeneratorPersistenceTest {
         AutomatedFacility station = facility();
         ModuleDebugDataGenerator generator = addGenerator(station);
         generator.configure(
-            ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 25L, 40, CelestialObjectId.EGORA));
+            ModuleDebugDataGenerator.Config.consume(
+                SatelliteDataType.PROSPECTING,
+                25L,
+                40,
+                CelestialObjectKey.registered(CelestialObjectId.EGORA)));
         generator.advanceJob();
         generator.advanceJob();
         generator.consume(15L);
@@ -82,9 +87,9 @@ final class DebugDataGeneratorPersistenceTest {
             loaded.config()
                 .durationTicks());
         assertEquals(
-            CelestialObjectId.EGORA,
+            CelestialObjectKey.registered(CelestialObjectId.EGORA),
             loaded.config()
-                .originBodyId());
+                .originBodyKey());
         assertEquals(2, loaded.jobProgressTicks());
         assertEquals(15L, loaded.consumedDeciKb());
     }
@@ -145,8 +150,12 @@ final class DebugDataGeneratorPersistenceTest {
             loadedConsumerFacility.modules()
                 .get(0)
                 .component());
-        assertEquals(CelestialObjectId.EGORA, loadedProducer.detectedCounterpartBodyId());
-        assertEquals(CelestialObjectId.MARS, loadedConsumer.detectedCounterpartBodyId());
+        assertEquals(
+            CelestialObjectKey.registered(CelestialObjectId.EGORA),
+            loadedProducer.detectedCounterpartBodyKey());
+        assertEquals(
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            loadedConsumer.detectedCounterpartBodyKey());
     }
 
     private static AutomatedFacility facility() {

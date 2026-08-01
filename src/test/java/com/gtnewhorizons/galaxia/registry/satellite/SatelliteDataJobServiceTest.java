@@ -42,15 +42,16 @@ final class SatelliteDataJobServiceTest {
         producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
 
-        SatelliteDataJobService.tick(TEAM, List.of(facility), store, emptyNetwork());
+        SatelliteDataJobService.tickUsage(TEAM, List.of(facility), store, emptyNetwork());
 
         assertEquals(SatelliteBandwidthFormatter.kilobits(10L), consumer.consumedDeciKb());
         assertEquals(
             0L,
             store.pendingDeciKb(
                 TEAM,
-                CelestialObjectId.MARS,
-                SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, CelestialObjectId.MARS)));
+                CelestialObjectKey.registered(CelestialObjectId.MARS),
+                SatelliteDataKey
+                    .origin(SatelliteDataType.PROSPECTING, CelestialObjectKey.registered(CelestialObjectId.MARS))));
     }
 
     @Test
@@ -64,10 +65,11 @@ final class SatelliteDataJobServiceTest {
         ModuleDebugDataGenerator anyConsumer = addDebugModule(anyDestination);
         producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
         specificConsumer.configure(
-            ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, CelestialObjectId.MARS));
+            ModuleDebugDataGenerator.Config
+                .consume(SatelliteDataType.PROSPECTING, 10L, 1, CelestialObjectKey.registered(CelestialObjectId.MARS)));
         anyConsumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
 
-        SatelliteDataJobService.tick(
+        SatelliteDataJobService.tickUsage(
             TEAM,
             List.of(source, specificDestination, anyDestination),
             store,
@@ -87,14 +89,16 @@ final class SatelliteDataJobServiceTest {
         producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
         SatelliteNetworkGraph.Edge edge = new SatelliteNetworkGraph.Edge(
-            CelestialObjectId.MARS,
-            CelestialObjectId.EGORA);
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            CelestialObjectKey.registered(CelestialObjectId.EGORA));
 
-        Map<SatelliteNetworkGraph.Edge, Long> usedByEdge = SatelliteDataJobService.tick(
-            TEAM,
-            List.of(source, destination),
-            store,
-            network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD));
+        Map<SatelliteNetworkGraph.Edge, Long> usedByEdge = SatelliteDataJobService
+            .tickUsage(
+                TEAM,
+                List.of(source, destination),
+                store,
+                network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD))
+            .usedByEdge();
 
         assertEquals(10L, usedByEdge.get(edge));
         assertEquals(5L, consumer.consumedDeciKb());
@@ -106,12 +110,28 @@ final class SatelliteDataJobServiceTest {
         SatelliteDataKey research = SatelliteDataKey.any(SatelliteDataType.RESEARCH);
         SatelliteDataKey communication = SatelliteDataKey.any(SatelliteDataType.COMMUNICATION);
         SatelliteNetworkGraph.Edge sharedEdge = new SatelliteNetworkGraph.Edge(
-            CelestialObjectId.MARS,
-            CelestialObjectId.EGORA);
-        store.finishProduction(TEAM, CelestialObjectId.MARS, research, SatelliteBandwidthFormatter.kilobits(100L));
-        store.finishProduction(TEAM, CelestialObjectId.MARS, communication, SatelliteBandwidthFormatter.kilobits(100L));
-        store.requestData(TEAM, CelestialObjectId.EGORA, research, SatelliteBandwidthFormatter.kilobits(100L));
-        store.requestData(TEAM, CelestialObjectId.EGORA, communication, SatelliteBandwidthFormatter.kilobits(100L));
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            CelestialObjectKey.registered(CelestialObjectId.EGORA));
+        store.finishProduction(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            research,
+            SatelliteBandwidthFormatter.kilobits(100L));
+        store.finishProduction(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            communication,
+            SatelliteBandwidthFormatter.kilobits(100L));
+        store.requestData(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.EGORA),
+            research,
+            SatelliteBandwidthFormatter.kilobits(100L));
+        store.requestData(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.EGORA),
+            communication,
+            SatelliteBandwidthFormatter.kilobits(100L));
 
         SatelliteDataJobService.Usage usage = SatelliteDataJobService.tickEndpointsUsage(
             TEAM,
@@ -135,14 +155,14 @@ final class SatelliteDataJobServiceTest {
         producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
 
-        SatelliteDataJobService.tick(
+        SatelliteDataJobService.tickUsage(
             TEAM,
             List.of(source, destination),
             store,
             network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD));
 
-        assertEquals(CelestialObjectId.EGORA, producer.detectedCounterpartBodyId());
-        assertEquals(CelestialObjectId.MARS, consumer.detectedCounterpartBodyId());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.EGORA), producer.detectedCounterpartBodyKey());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.MARS), consumer.detectedCounterpartBodyKey());
     }
 
     @Test
@@ -155,10 +175,18 @@ final class SatelliteDataJobServiceTest {
         SatelliteDataKey key = SatelliteDataKey.any(SatelliteDataType.RESEARCH);
         producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.RESEARCH, 10L, 100));
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.RESEARCH, 400L, 1, null));
-        store.finishProduction(TEAM, CelestialObjectId.MARS, key, SatelliteBandwidthFormatter.kilobits(400L));
-        store.requestData(TEAM, CelestialObjectId.EGORA, key, SatelliteBandwidthFormatter.kilobits(400L));
+        store.finishProduction(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            key,
+            SatelliteBandwidthFormatter.kilobits(400L));
+        store.requestData(
+            TEAM,
+            CelestialObjectKey.registered(CelestialObjectId.EGORA),
+            key,
+            SatelliteBandwidthFormatter.kilobits(400L));
 
-        SatelliteDataJobService.tick(
+        SatelliteDataJobService.tickUsage(
             TEAM,
             List.of(source, destination),
             store,
@@ -166,7 +194,7 @@ final class SatelliteDataJobServiceTest {
 
         assertEquals(
             SatelliteBandwidthFormatter.kilobits(400L) - 5L,
-            store.pendingDeciKb(TEAM, CelestialObjectId.MARS, key));
+            store.pendingDeciKb(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), key));
         assertEquals(5L, consumer.consumedDeciKb());
     }
 
@@ -183,24 +211,24 @@ final class SatelliteDataJobServiceTest {
         endpoints.refreshFacility(TEAM, source);
         endpoints.refreshFacility(TEAM, destination);
 
-        SatelliteDataJobService.tickEndpoints(
+        SatelliteDataJobService.tickEndpointsUsage(
             TEAM,
             endpoints.endpoints(TEAM),
             store,
             network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD));
-        assertEquals(CelestialObjectId.EGORA, producer.detectedCounterpartBodyId());
+        assertEquals(CelestialObjectKey.registered(CelestialObjectId.EGORA), producer.detectedCounterpartBodyKey());
 
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
         endpoints.refreshFacility(TEAM, destination);
 
-        SatelliteDataJobService.tickEndpoints(
+        SatelliteDataJobService.tickEndpointsUsage(
             TEAM,
             endpoints.endpoints(TEAM),
             store,
             network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD));
 
-        assertNull(producer.detectedCounterpartBodyId());
-        assertNull(consumer.detectedCounterpartBodyId());
+        assertNull(producer.detectedCounterpartBodyKey());
+        assertNull(consumer.detectedCounterpartBodyKey());
     }
 
     @Test
@@ -214,11 +242,12 @@ final class SatelliteDataJobServiceTest {
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
         store.finishProduction(
             TEAM,
-            CelestialObjectId.MARS,
-            SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, CelestialObjectId.MARS),
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            SatelliteDataKey
+                .origin(SatelliteDataType.PROSPECTING, CelestialObjectKey.registered(CelestialObjectId.MARS)),
             SatelliteBandwidthFormatter.kilobits(11L));
 
-        SatelliteDataJobService.tick(
+        SatelliteDataJobService.tickUsage(
             TEAM,
             List.of(source, destination),
             store,
@@ -235,7 +264,7 @@ final class SatelliteDataJobServiceTest {
         ModuleDebugDataGenerator producer = addDebugModule(source);
         producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
 
-        SatelliteDataJobService.tick(
+        SatelliteDataJobService.tickUsage(
             TEAM,
             List.of(source),
             store,
@@ -246,8 +275,9 @@ final class SatelliteDataJobServiceTest {
             0L,
             store.pendingDeciKb(
                 TEAM,
-                CelestialObjectId.MARS,
-                SatelliteDataKey.origin(SatelliteDataType.PROSPECTING, CelestialObjectId.MARS)));
+                CelestialObjectKey.registered(CelestialObjectId.MARS),
+                SatelliteDataKey
+                    .origin(SatelliteDataType.PROSPECTING, CelestialObjectKey.registered(CelestialObjectId.MARS))));
     }
 
     @Test
@@ -257,7 +287,7 @@ final class SatelliteDataJobServiceTest {
 
         assertEquals(
             SatelliteDataKey.any(SatelliteDataType.COMMUNICATION),
-            producer.producedKey(CelestialObjectId.MARS));
+            producer.producedKey(CelestialObjectKey.registered(CelestialObjectId.MARS)));
     }
 
     private static AutomatedFacility facility(CelestialObjectId bodyId) {
@@ -295,13 +325,19 @@ final class SatelliteDataJobServiceTest {
             TEAM,
             0,
             List.of(node(first, 0.0D), node(second, 10.0D), node(third, 20.0D)),
-            List.of(new SatelliteNetworkGraph.Edge(first, second), new SatelliteNetworkGraph.Edge(first, third)),
+            List.of(
+                new SatelliteNetworkGraph.Edge(
+                    CelestialObjectKey.registered(first),
+                    CelestialObjectKey.registered(second)),
+                new SatelliteNetworkGraph.Edge(
+                    CelestialObjectKey.registered(first),
+                    CelestialObjectKey.registered(third))),
             Map.of(key(first), 10L, key(second), 10L, key(third), 10L),
             Map.of());
     }
 
     private static SatelliteNetworkGraph.Node node(CelestialObjectId id, double x) {
-        return new SatelliteNetworkGraph.Node(id, null, id.ordinal(), x, 0.0D, 1.0D);
+        return new SatelliteNetworkGraph.Node(CelestialObjectKey.registered(id), null, id.ordinal(), x, 0.0D, 1.0D);
     }
 
     private static SatelliteNetworkState network(CelestialObjectKey source, CelestialObjectKey destination) {

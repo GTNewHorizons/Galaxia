@@ -34,24 +34,24 @@
  * For more details, see https://docs.gradle.org/8.0.1/userguide/java_library_plugin.html#sec:java_library_configurations_graph
  */
 dependencies {
-    api("com.github.GTNewHorizons:StructureLib:1.4.38:dev")
-    api("com.github.GTNewHorizons:NotEnoughItems:2.8.103-GTNH:dev")
-    api("com.github.GTNewHorizons:GTNHLib:0.11.16:dev")
-    api("com.github.GTNewHorizons:ModularUI2:2.3.74-1.7.10:dev")
-    api("com.github.GTNewHorizons:waila:1.19.30:dev")
+    api("com.github.GTNewHorizons:StructureLib:1.4.42:dev")
+    api("com.github.GTNewHorizons:NotEnoughItems:2.8.117-GTNH:dev")
+    api("com.github.GTNewHorizons:GTNHLib:0.11.33:dev")
+    api("com.github.GTNewHorizons:ModularUI2:2.3.84-1.7.10:dev")
+    api("com.github.GTNewHorizons:waila:1.19.31:dev")
 
-    devOnlyNonPublishable("com.github.GTNewHorizons:Hodgepodge:2.7.162:dev")
+    devOnlyNonPublishable("com.github.GTNewHorizons:Hodgepodge:2.7.179:dev")
 
     compileOnly('com.github.GTNewHorizons:SC2:2.3.14:dev') {transitive=false}
     // Needed for NH ores and automation
-    devOnlyNonPublishable("com.github.GTNewHorizons:GT5-Unofficial:5.09.52.607:dev")
+    devOnlyNonPublishable("com.github.GTNewHorizons:GT5-Unofficial:5.09.54.64:dev")
     // GT5 currently resolves ChunkAPI 0.8.1, whose S26 bulk chunk packet mixins leave
     // the read/write packet formats out of sync in this dev runtime.
     devOnlyNonPublishable("com.falsepattern:chunkapi-mc1.7.10:0.8.2:dev")
-    runtimeOnlyNonPublishable('com.github.GTNewHorizons:Angelica:2.1.57:dev') { transitive = false }
-    // devOnlyNonPublishable(files("libs/supernova-0.1.0-dev.jar"))
+    runtimeOnlyNonPublishable('com.github.GTNewHorizons:Angelica:2.1.59:dev') { transitive = false }
+    devOnlyNonPublishable(files("libs/supernova-0.1.0-dev.jar"))
 
-    devOnlyNonPublishable('com.github.GTNewHorizons:BlockRenderer6343:1.4.14:dev'){transitive=false}
+    devOnlyNonPublishable('com.github.GTNewHorizons:BlockRenderer6343:1.4.20:dev'){transitive=false}
 
     // will only work if you have this installed, but i use it for recording
     // devOnlyNonPublishable(files("libs/freecam-1.0.7-dev.jar"))
@@ -62,7 +62,7 @@ dependencies {
     // For convenience
     //devOnlyNonPublishable('com.github.GTNewHorizons:worldedit-gtnh:v0.0.9')
 
-    runtimeOnlyNonPublishable("com.github.GTNewHorizons:DuraDisplay:1.4.2:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:DuraDisplay:1.4.4:dev")
     api("com.github.GTNewHorizons:Baubles-Expanded:2.2.21-GTNH:dev")
     implementation(deobfCurse('cofh-core-69162:2388751'))
 

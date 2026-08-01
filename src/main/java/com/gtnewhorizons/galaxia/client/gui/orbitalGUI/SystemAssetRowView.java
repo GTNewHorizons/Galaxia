@@ -13,7 +13,7 @@ public final class SystemAssetRowView {
 
     public final CelestialAsset.ID assetId;
     public final CelestialAsset.Kind kind;
-    public final CelestialObjectKey hostBodyId;
+    public final CelestialObjectKey hostBodyKey;
     public final String displayName;
     public final Buildable.Status status;
     public final boolean underConstruction;
@@ -26,7 +26,7 @@ public final class SystemAssetRowView {
     public SystemAssetRowView(CelestialAsset asset) {
         this.assetId = asset.assetId;
         this.kind = asset.kind;
-        this.hostBodyId = asset.celestialObjectId;
+        this.hostBodyKey = asset.celestialObjectKey;
         this.displayName = asset.displayName();
         this.status = asset.status();
         this.underConstruction = asset.isInConstruction();

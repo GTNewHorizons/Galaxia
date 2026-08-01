@@ -17,6 +17,8 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
@@ -26,11 +28,7 @@ public class OrbitalScene {
 
     private static final double[] ZERO_VIEW_ORIGIN = { 0.0, 0.0 };
 
-    static int visibleSatelliteMarkerCount(List<CelestialAsset> assetState) {
-        return visibleSatelliteMarkerAlphas(assetState).size();
-    }
-
-    private static EnumMap<SatelliteKind, Float> visibleSatelliteMarkerAlphas(List<CelestialAsset> assetState) {
+    static EnumMap<SatelliteKind, Float> visibleSatelliteMarkerAlphas(List<CelestialAsset> assetState) {
         EnumMap<SatelliteKind, Float> alphas = new EnumMap<>(SatelliteKind.class);
         if (assetState == null) return alphas;
         for (CelestialAsset asset : assetState) {
@@ -411,7 +409,6 @@ public class OrbitalScene {
         }
 
         private final Callbacks callbacks;
-        private final CelestialMarkerBase.CelestialMarkerContext markerContext = new CelestialMarkerBase.CelestialMarkerContext();
 
         OrbitalSceneFrameBuilder(Callbacks callbacks) {
             this.callbacks = callbacks;
@@ -437,16 +434,12 @@ public class OrbitalScene {
             if (state.body()
                 .objectClass() != CelestialObject.Class.GALAXY && state.bodyAlpha() > 0.01f
                 && state.renderBody()
-                && AsteroidStarmapScenePresentation.registersBodyInteraction(state.body())) {
+                && !AsteroidStarmapScenePresentation.isBeltContainer(state.body())) {
                 registerHitboxes(frame, state);
                 registerMarkers(frame, state);
             }
             if (state.drawLabel()) {
-                frame.addLabel(
-                    AsteroidStarmapScenePresentation.bodyLabel(state.body()),
-                    state.screenX(),
-                    state.labelY(),
-                    state.labelColor());
+                frame.addLabel(asteroidBodyLabel(state.body()), state.screenX(), state.labelY(), state.labelColor());
             }
             if (!callbacks.shouldTraverseChildren(body)) return;
             for (CelestialObject child : childrenInPresentationOrder(body)) {
@@ -461,7 +454,7 @@ public class OrbitalScene {
             if (children.size() < 2) return children;
             boolean hasAsteroid = false;
             for (CelestialObject child : children) {
-                if (child.objectClass() == CelestialObject.Class.ASTEROID) {
+                if (child.isAsteroid()) {
                     hasAsteroid = true;
                     break;
                 }
@@ -469,9 +462,8 @@ public class OrbitalScene {
             if (!hasAsteroid) return children;
             List<CelestialObject> sorted = new ArrayList<>(children);
             sorted.sort(
-                (left, right) -> Integer.compare(
-                    AsteroidStarmapScenePresentation.presentationPriority(right),
-                    AsteroidStarmapScenePresentation.presentationPriority(left)));
+                (left, right) -> Integer
+                    .compare(asteroidPresentationPriority(right), asteroidPresentationPriority(left)));
             return sorted;
         }
 
@@ -499,16 +491,14 @@ public class OrbitalScene {
         private void registerMarkers(OrbitalSceneFrame frame, ResolvedBodyDrawState state) {
             List<CelestialAsset> assetState = CelestialClient.getState(
                 state.body()
-                    .id());
-            CelestialMarkerBase.CelestialMarkerContext context = markerContext.set(state.body(), assetState);
-            List<CelestialMarkerBase.CelestialMarker> markers = CelestialMarkerBase.CelestialMarkerRegistry
-                .getMarkers(context);
+                    .key());
+            List<AssetMarker> markers = assetMarkers(assetState);
             int iconSize = Math.max(10, Math.min(15, Math.round(state.renderedRadius() * 0.95f)));
             int gap = 3;
             int startX = Math.round(state.screenX() + state.renderedRadius() + 6f);
             int topY = Math.round(state.screenY() - state.renderedRadius());
             for (int i = 0; i < markers.size(); i++) {
-                CelestialMarkerBase.CelestialMarker marker = markers.get(i);
+                AssetMarker marker = markers.get(i);
                 int markerX = startX + i * (iconSize + gap);
                 frame.addMarker(marker.texture(), markerX, topY, iconSize, state.bodyAlpha() * marker.alpha());
             }
@@ -531,14 +521,51 @@ public class OrbitalScene {
         }
     }
 
+    private record AssetMarker(ResourceLocation texture, float alpha) {}
+
+    private static List<AssetMarker> assetMarkers(List<CelestialAsset> assetState) {
+        if (assetState == null || assetState.isEmpty()) return List.of();
+        List<AssetMarker> markers = new ArrayList<>();
+        for (CelestialAsset asset : assetState) {
+            if (asset.kind == CelestialAsset.Kind.SATELLITE) continue;
+            ResourceLocation texture = CelestialMarkerBase.CelestialAssetIcons.get(asset.kind);
+            if (texture == null) continue;
+            float alpha = CelestialMarkerBase.assetMarkerAlpha(asset);
+            if (alpha <= 0.0f) continue;
+            markers.add(new AssetMarker(texture, alpha));
+        }
+        return markers;
+    }
+
+    private static String asteroidBodyLabel(CelestialObject body) {
+        if (CelestialClient.isAsteroidScanInProgress(body)) {
+            return CelestialClient.asteroidScanSnapshotByTarget(body)
+                .map(snapshot -> "??? " + scanProgressPercent(snapshot) + "%")
+                .orElse("???");
+        }
+        return body.displayName();
+    }
+
+    private static int scanProgressPercent(CelestialDiscoveryScanSnapshot snapshot) {
+        int duration = snapshot.step()
+            .durationTicks();
+        if (duration <= 0) return 0;
+        return Math.max(0, Math.min(99, Math.round(snapshot.elapsedTicks() * 100.0f / duration)));
+    }
+
+    private static int asteroidPresentationPriority(CelestialObject body) {
+        if (body == null || !body.isAsteroid()) return 1000;
+        return CelestialClient.asteroidProjection(body)
+            .map(AsteroidStarmapProjection::presentationPriority)
+            .orElse(0);
+    }
+
     static boolean shouldDeclutterBody(CelestialObject body, float screenX, float screenY, float interactionRadius,
         List<ScreenBodyBounds> screenBodies) {
-        if (body.objectClass() != CelestialObject.Class.ASTEROID) return false;
+        if (!body.isAsteroid()) return false;
         for (ScreenBodyBounds bounds : screenBodies) {
             if (bounds.body()
-                .objectClass() == CelestialObject.Class.ASTEROID
-                && AsteroidStarmapScenePresentation.presentationPriority(body)
-                    > AsteroidStarmapScenePresentation.presentationPriority(bounds.body())) {
+                .isAsteroid() && asteroidPresentationPriority(body) > asteroidPresentationPriority(bounds.body())) {
                 continue;
             }
             float minimumDistance = Math.max(6f, Math.min(interactionRadius, bounds.interactionRadius()));
@@ -583,7 +610,8 @@ public class OrbitalScene {
                 if (state.body()
                     .objectClass() == CelestialObject.Class.GALAXY || state.bodyAlpha() <= 0.01f
                     || !state.renderBody()
-                    || !AsteroidStarmapScenePresentation.drawsBodySprite(state.body())) continue;
+                    || !state.renderBody()
+                    || AsteroidStarmapScenePresentation.isBeltContainer(state.body())) continue;
                 ResourceLocation texture = callbacks.getRenderTexture(state.body());
                 if (texture != null && callbacks.getDisplaySpriteSize(state.body()) > 0.0001f) {
                     drawSprite(texture, state.screenX(), state.screenY(), state.renderedRadius(), state.bodyAlpha());
@@ -626,7 +654,7 @@ public class OrbitalScene {
                     || OrbitalMechanics.usesMinorBodyResolvedPosition(state.parent(), state.body())) continue;
                 ResolvedBodyDrawState parentState = frame.resolvedBodiesByBody.get(state.parent());
                 if (parentState == null) continue;
-                if (AsteroidStarmapScenePresentation.drawsBeltBand(state.body())) {
+                if (AsteroidStarmapScenePresentation.isBeltContainer(state.body())) {
                     AsteroidStarmapScenePresentation.drawBeltBand(
                         state.body()
                             .properties()
@@ -639,7 +667,7 @@ public class OrbitalScene {
                         callbacks::worldToScreenY);
                     continue;
                 }
-                if (!AsteroidStarmapScenePresentation.drawsOrbitLine(state.body())) continue;
+                if (AsteroidStarmapScenePresentation.isBeltContainer(state.body())) continue;
                 drawEllipse(
                     state.body()
                         .orbitalParams(),
@@ -751,9 +779,9 @@ public class OrbitalScene {
 
         private static boolean sameBody(CelestialObject left, CelestialObject right) {
             if (left == right) return true;
-            if (left == null || right == null || left.id() == null || right.id() == null) return false;
-            return left.id()
-                .equals(right.id());
+            if (left == null || right == null || left.key() == null || right.key() == null) return false;
+            return left.key()
+                .equals(right.key());
         }
 
         private void drawSprite(ResourceLocation tex, float x, float y, float radius, float alpha) {
@@ -825,23 +853,6 @@ public class OrbitalScene {
             GL11.glVertex2f(x + halfSize, y - halfSize);
             GL11.glVertex2f(x + halfSize, y + halfSize);
             GL11.glVertex2f(x - halfSize, y + halfSize);
-            GL11.glEnd();
-            GL11.glLineWidth(1f);
-            GlStateManager.color(1f, 1f, 1f, 1f);
-        }
-
-        private void drawCircleOutline(float x, float y, float radius, int color, float alpha, float lineWidth) {
-            GlStateManager.disableTexture2D();
-            float red = ((color >> 16) & 0xFF) / 255f;
-            float green = ((color >> 8) & 0xFF) / 255f;
-            float blue = (color & 0xFF) / 255f;
-            GlStateManager.color(red, green, blue, alpha);
-            GL11.glLineWidth(lineWidth);
-            GL11.glBegin(GL11.GL_LINE_LOOP);
-            for (int i = 0; i < 64; i++) {
-                double angle = i * Math.PI * 2.0 / 64.0;
-                GL11.glVertex2f(x + (float) Math.cos(angle) * radius, y + (float) Math.sin(angle) * radius);
-            }
             GL11.glEnd();
             GL11.glLineWidth(1f);
             GlStateManager.color(1f, 1f, 1f, 1f);

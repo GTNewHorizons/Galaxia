@@ -4,51 +4,104 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import javax.annotation.Nonnull;
+
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.CelestialResourceKnowledgeState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
 
 /**
- * Client-side read model for object knowledge synced from the server.
- *
- * Typed client providers feed this generic read model. The starmap can then ask
- * for discovery by key without knowing which domain system produced that state.
+ * Client-side read model for team knowledge synced from the server.
+ * <p>
+ * TLDR: one atomic {@code Key → CelestialKnowledgeFacts} snapshot, not a
+ * {@code Class<?> source} aggregation. {@link #discoveryView()} exposes only
+ * synced facts so A1 {@code CelestialRegistry.children(view)} stays the sole child
+ * owner; effective reads fall back to {@link CelestialRegistry#initialKnowledge}
+ * so permission and resource lookups agree with the server.
  */
 public final class CelestialKnowledgeClientState {
 
-    private static final Map<Class<?>, Map<CelestialObjectKey, DiscoveryState>> DISCOVERY_BY_SOURCE = new LinkedHashMap<>();
+    private static Map<CelestialObjectKey, CelestialKnowledgeFacts> facts = Map.of();
+    private static int revision;
 
     private CelestialKnowledgeClientState() {}
 
-    public static CelestialDiscoveryView discoveryView() {
-        return CelestialKnowledgeClientState::discoveryState;
+    /** Bumped whenever the synced facts change, so readers can cache derived views. */
+    public static int revision() {
+        return revision;
     }
 
-    public static void updateDiscoverySource(Class<?> source, Map<CelestialObjectKey, DiscoveryState> states) {
-        if (source == null) throw new IllegalArgumentException("source is required");
-        Map<CelestialObjectKey, DiscoveryState> copy = new LinkedHashMap<>();
-        if (states != null) {
-            states.forEach((key, state) -> {
-                if (key == null) throw new IllegalArgumentException("discovery key cannot be null");
-                if (state == null) throw new IllegalArgumentException("discovery state cannot be null");
-                copy.put(key, state);
-            });
+    public interface CelestialDiscoveryView {
+
+        Optional<DiscoveryState> discoveryState(@Nonnull CelestialObjectKey key);
+
+        /**
+         * Whether {@code key} is visible for map/GUI child lists.
+         * Uses synced discovery when present; otherwise falls back to {@code initialState}.
+         * <p>
+         * Client adapters may override this for temporary scan/sensor ghosts without
+         * falsifying {@link #discoveryState(CelestialObjectKey)}.
+         */
+        default boolean isVisible(@Nonnull CelestialObjectKey key, @Nonnull DiscoveryState initialState) {
+            DiscoveryState state = discoveryState(key).orElse(initialState);
+            return state == DiscoveryState.DISCOVERED;
         }
-        if (copy.isEmpty()) {
-            DISCOVERY_BY_SOURCE.remove(source);
-        } else {
-            DISCOVERY_BY_SOURCE.put(source, Map.copyOf(copy));
+
+        static CelestialDiscoveryView empty() {
+            return key -> Optional.empty();
         }
     }
 
-    public static Optional<DiscoveryState> discoveryState(CelestialObjectKey key) {
-        if (key == null) return Optional.empty();
-        return DISCOVERY_BY_SOURCE.values()
-            .stream()
-            .map(source -> source.get(key))
-            .filter(state -> state != null)
-            .findFirst();
+    public static void apply(Map<CelestialObjectKey, CelestialKnowledgeFacts> newFacts) {
+        revision++;
+        if (newFacts == null || newFacts.isEmpty()) {
+            facts = Map.of();
+            return;
+        }
+        Map<CelestialObjectKey, CelestialKnowledgeFacts> copy = new LinkedHashMap<>();
+        newFacts.forEach((key, value) -> {
+            if (key == null) throw new IllegalArgumentException("knowledge key cannot be null");
+            if (value == null) throw new IllegalArgumentException("knowledge facts cannot be null");
+            copy.put(key, value);
+        });
+        facts = Map.copyOf(copy);
     }
 
     public static void clear() {
-        DISCOVERY_BY_SOURCE.clear();
+        revision++;
+        facts = Map.of();
+    }
+
+    /** Synced-only discovery view; membership must not change from client defaults. */
+    public static CelestialDiscoveryView discoveryView() {
+        return CelestialKnowledgeClientState::syncedDiscoveryState;
+    }
+
+    private static Optional<DiscoveryState> syncedDiscoveryState(CelestialObjectKey key) {
+        if (key == null) return Optional.empty();
+        CelestialKnowledgeFacts synced = facts.get(key);
+        return synced == null ? Optional.empty() : Optional.of(synced.discoveryState());
+    }
+
+    /** Effective facts: synced override, else registry definition default; empty if unresolvable. */
+    public static Optional<CelestialKnowledgeFacts> facts(CelestialObjectKey key) {
+        if (key == null) return Optional.empty();
+        CelestialKnowledgeFacts synced = facts.get(key);
+        if (synced != null) return Optional.of(synced);
+        try {
+            return Optional.of(CelestialRegistry.initialKnowledge(key));
+        } catch (RuntimeException ex) {
+            return Optional.empty();
+        }
+    }
+
+    public static DiscoveryState effectiveDiscoveryState(CelestialObjectKey key) {
+        return facts(key).map(CelestialKnowledgeFacts::discoveryState)
+            .orElse(DiscoveryState.HIDDEN);
+    }
+
+    public static Optional<CelestialResourceKnowledgeState> resourceKnowledge(CelestialObjectKey key) {
+        return facts(key).map(CelestialKnowledgeFacts::resourceKnowledgeState);
     }
 }

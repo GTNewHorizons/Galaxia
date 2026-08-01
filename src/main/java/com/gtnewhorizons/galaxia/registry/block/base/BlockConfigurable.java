@@ -10,7 +10,6 @@ import net.minecraft.util.IIcon;
 
 public class BlockConfigurable extends Block {
 
-    private final String name;
     private final String textureName;
 
     private String harvestTool = "pickaxe";
@@ -26,7 +25,6 @@ public class BlockConfigurable extends Block {
         super(Material.rock);
         int last = name.lastIndexOf('/');
         String registryName = (last >= 0) ? name.substring(last + 1) : name;
-        this.name = registryName;
         this.textureName = name;
 
         setBlockName(registryName);

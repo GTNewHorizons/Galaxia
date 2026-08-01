@@ -23,9 +23,16 @@ final class SatelliteNetworkStateTest {
         Map<CelestialObjectKey, SatelliteNetworkState.Body> bodies = new HashMap<>();
         bodies.put(
             CelestialObjectKey.registered(CelestialObjectId.MARS),
-            new SatelliteNetworkState.Body(CelestialObjectId.MARS, -10L, 7L));
+            new SatelliteNetworkState.Body(CelestialObjectKey.registered(CelestialObjectId.MARS), -10L, 7L));
         List<SatelliteNetworkState.Link> links = new ArrayList<>();
-        links.add(new SatelliteNetworkState.Link(CelestialObjectId.MOON, CelestialObjectId.MARS, 20L, -5L, 3L, 8L));
+        links.add(
+            new SatelliteNetworkState.Link(
+                CelestialObjectKey.registered(CelestialObjectId.MOON),
+                CelestialObjectKey.registered(CelestialObjectId.MARS),
+                20L,
+                -5L,
+                3L,
+                8L));
 
         SatelliteNetworkState state = new SatelliteNetworkState(teamId, 3, bodies, links);
         bodies.clear();
@@ -33,9 +40,9 @@ final class SatelliteNetworkStateTest {
 
         assertEquals(teamId, state.teamId());
         assertEquals(3, state.revision());
-        assertEquals(0L, state.capacityKbps(CelestialObjectId.MARS));
-        assertEquals(7L, state.usedKbps(CelestialObjectId.MARS));
-        assertEquals(0L, state.capacityKbps(CelestialObjectId.EGORA));
+        assertEquals(0L, state.capacityKbps(CelestialObjectKey.registered(CelestialObjectId.MARS)));
+        assertEquals(7L, state.usedKbps(CelestialObjectKey.registered(CelestialObjectId.MARS)));
+        assertEquals(0L, state.capacityKbps(CelestialObjectKey.registered(CelestialObjectId.EGORA)));
         assertEquals(
             CelestialObjectKey.registered(CelestialObjectId.MARS),
             state.links()
@@ -70,12 +77,16 @@ final class SatelliteNetworkStateTest {
             8L,
             state.links()
                 .get(0)
-                .usedKbps(CelestialObjectId.MARS, CelestialObjectId.MOON));
+                .usedKbps(
+                    CelestialObjectKey.registered(CelestialObjectId.MARS),
+                    CelestialObjectKey.registered(CelestialObjectId.MOON)));
         assertEquals(
             3L,
             state.links()
                 .get(0)
-                .usedKbps(CelestialObjectId.MOON, CelestialObjectId.MARS));
+                .usedKbps(
+                    CelestialObjectKey.registered(CelestialObjectId.MOON),
+                    CelestialObjectKey.registered(CelestialObjectId.MARS)));
         assertThrows(
             UnsupportedOperationException.class,
             () -> state.links()

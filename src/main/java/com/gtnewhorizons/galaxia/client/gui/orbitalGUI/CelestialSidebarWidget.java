@@ -219,7 +219,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     }
 
     static boolean isMajorBodySearchResult(CelestialObject body) {
-        return body != null && body.id()
+        return body != null && body.key()
             .isRegistered();
     }
 
@@ -502,7 +502,6 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     private void drawSupplyDebugPanel(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
         int panelLeft = DEBUG_PANEL_PADDING;
         int panelRight = getArea().width - DEBUG_PANEL_PADDING;
-        int panelWidth = panelRight - panelLeft;
 
         // Panel background
         Gui.drawRect(
@@ -625,7 +624,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     private CelestialAsset.ID resolveSupplyDebugAssetId() {
         CelestialObject focused = map.getFocusedBody();
         if (focused == null) return null;
-        List<CelestialAsset> state = CelestialClient.getState(focused.id());
+        List<CelestialAsset> state = CelestialClient.getState(focused.key());
         for (CelestialAsset asset : state) {
             if (asset.status() != CelestialAsset.Status.OPERATIONAL) continue;
             if (asset.kind == CelestialAsset.Kind.AUTOMATED_OUTPOST

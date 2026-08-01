@@ -63,8 +63,6 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
     private static final int COL_NET = 208;
     private static final int COL_TRANSIT = 285;
     private static final int NAME_W = 180;
-    private static final int NET_W = 68;
-    private static final int TRANSIT_W = 52;
 
     private enum ViewScope {
         GALACTIC,
@@ -315,31 +313,31 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
             case GALACTIC:
                 return true;
             case SYSTEM:
-                return viewRoot.id()
-                    .equals(outpost.systemId);
+                return viewRoot.key()
+                    .equals(outpost.systemKey);
             case PLANETARY: {
                 CelestialObject viewAnchor = GalaxiaCelestialAPI.findPlanetaryAnchor(galaxyRoot, viewRoot);
-                CelestialObjectKey viewAnchorId = viewAnchor != null ? viewAnchor.id() : viewRoot.id();
-                return outpost.planetaryAnchorBodyId != null && outpost.planetaryAnchorBodyId.equals(viewAnchorId);
+                CelestialObjectKey viewAnchorKey = viewAnchor != null ? viewAnchor.key() : viewRoot.key();
+                return outpost.planetaryAnchorBodyKey != null && outpost.planetaryAnchorBodyKey.equals(viewAnchorKey);
             }
             default:
                 return false;
         }
     }
 
-    private boolean isBodyIdInScope(CelestialObjectKey bodyId, ViewScope scope, CelestialObject viewRoot) {
-        if (bodyId == null) return false;
+    private boolean isBodyIdInScope(CelestialObjectKey bodyKey, ViewScope scope, CelestialObject viewRoot) {
+        if (bodyKey == null) return false;
         switch (scope) {
             case GALACTIC:
                 return true;
             case SYSTEM: {
-                CelestialObject body = GalaxiaCelestialAPI.findBodyById(galaxyRoot, bodyId);
+                CelestialObject body = GalaxiaCelestialAPI.findBodyByKey(galaxyRoot, bodyKey);
                 if (body == null) return false;
                 CelestialObject star = GalaxiaCelestialAPI.findStar(galaxyRoot, body);
                 return star != null && star == viewRoot;
             }
             case PLANETARY: {
-                CelestialObject body = GalaxiaCelestialAPI.findBodyById(galaxyRoot, bodyId);
+                CelestialObject body = GalaxiaCelestialAPI.findBodyByKey(galaxyRoot, bodyKey);
                 if (body == null) return false;
                 CelestialObject anchor = GalaxiaCelestialAPI.findPlanetaryAnchor(galaxyRoot, body);
                 CelestialObject viewAnchor = GalaxiaCelestialAPI.findPlanetaryAnchor(galaxyRoot, viewRoot);
@@ -354,12 +352,12 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         Map<String, Long> signalData;
         switch (scope) {
             case SYSTEM:
-                signalData = CelestialClient.clientSignalsForSystem(viewRoot.id());
+                signalData = CelestialClient.clientSignalsForSystem(viewRoot.key());
                 break;
             case PLANETARY: {
                 CelestialObject anchor = GalaxiaCelestialAPI.findPlanetaryAnchor(galaxyRoot, viewRoot);
-                CelestialObjectKey anchorId = anchor != null ? anchor.id() : viewRoot.id();
-                signalData = CelestialClient.clientSignalsForPlanet(anchorId);
+                CelestialObjectKey anchorKey = anchor != null ? anchor.key() : viewRoot.key();
+                signalData = CelestialClient.clientSignalsForPlanet(anchorKey);
                 break;
             }
             default: // GALACTIC — placeholder, not yet implemented
@@ -375,8 +373,8 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         }
 
         for (LogisticsDelivery delivery : CelestialClient.clientDeliveries()) {
-            boolean fromInScope = isBodyIdInScope(delivery.data.fromBodyId(), scope, viewRoot);
-            boolean toInScope = isBodyIdInScope(delivery.data.toBodyId(), scope, viewRoot);
+            boolean fromInScope = isBodyIdInScope(delivery.data.fromBodyKey(), scope, viewRoot);
+            boolean toInScope = isBodyIdInScope(delivery.data.toBodyKey(), scope, viewRoot);
             if (!fromInScope && !toInScope) continue;
             acc.computeIfAbsent(delivery.data.resourceId(), k -> new long[] { 0L, 0L })[1] += delivery.data.amount();
         }

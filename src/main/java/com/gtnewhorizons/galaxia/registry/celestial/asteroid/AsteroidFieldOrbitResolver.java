@@ -23,11 +23,11 @@ public final class AsteroidFieldOrbitResolver implements MinorBodyOrbitResolver 
             .asteroidFieldProfile();
         if (profile == null) return null;
 
-        MinorCelestialBodyId minorId = child.id()
+        MinorCelestialBodyId minorId = child.key()
             .minorBodyId();
-        CelestialObjectId parentId = parent.id()
+        CelestialObjectId parentId = parent.key()
             .registeredBodyId();
-        AsteroidFieldNode node = AsteroidFieldResolver.resolveNode(parentId, profile, minorId.index());
+        AsteroidFieldNode node = AsteroidFieldResolver.placedNode(parentId, profile, minorId.index());
         return resolveWorldState(profile, node, parentState);
     }
 
@@ -51,6 +51,17 @@ public final class AsteroidFieldOrbitResolver implements MinorBodyOrbitResolver 
     public static double resolveRadius(AsteroidFieldProfile profile, AsteroidFieldNode node) {
         return node.orbitSlot()
             .radiusBetween(profile.innerOrbitalRadius(), profile.outerOrbitalRadius());
+    }
+
+    /** In-band separation between two nodes, ignoring the belt phase they share. */
+    public static double separation(AsteroidFieldProfile profile, AsteroidFieldNode first, AsteroidFieldNode second) {
+        double firstRadius = resolveRadius(profile, first);
+        double firstAngle = Math.toRadians(first.angleOffsetDeg());
+        double secondRadius = resolveRadius(profile, second);
+        double secondAngle = Math.toRadians(second.angleOffsetDeg());
+        double dx = Math.cos(firstAngle) * firstRadius - Math.cos(secondAngle) * secondRadius;
+        double dy = Math.sin(firstAngle) * firstRadius - Math.sin(secondAngle) * secondRadius;
+        return Math.sqrt(dx * dx + dy * dy);
     }
 
     private static double resolveAngularVelocity(OrbitalMechanics.OrbitalState state) {

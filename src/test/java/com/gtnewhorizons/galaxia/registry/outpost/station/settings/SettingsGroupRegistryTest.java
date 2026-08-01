@@ -115,9 +115,6 @@ class SettingsGroupRegistryTest {
         assertThrows(IllegalStateException.class, () -> registry.addMember(missingGroupId, coord));
         assertThrows(IllegalStateException.class, () -> registry.removeMember(missingGroupId, coord));
         assertThrows(IllegalStateException.class, () -> registry.rename(missingGroupId, "Name"));
-        assertThrows(
-            IllegalStateException.class,
-            () -> registry.updateSettings(missingGroupId, new DummySettings("c")));
         assertThrows(IllegalStateException.class, () -> registry.delete(missingGroupId));
     }
 

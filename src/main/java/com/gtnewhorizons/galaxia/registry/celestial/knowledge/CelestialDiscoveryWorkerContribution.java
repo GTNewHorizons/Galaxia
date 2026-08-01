@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import javax.annotation.Nonnull;
 
+/** One team's worker effort applied to a discovery scope during a tick. */
 public record CelestialDiscoveryWorkerContribution(@Nonnull UUID teamId, @Nonnull CelestialDiscoveryScanScope scope,
     @Nonnull CelestialDiscoveryCapability capability, int workerCount, double effectPerWorker) {
 

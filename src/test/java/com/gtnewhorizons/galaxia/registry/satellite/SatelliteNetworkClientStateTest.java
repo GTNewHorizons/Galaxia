@@ -34,7 +34,7 @@ final class SatelliteNetworkClientStateTest {
         assertEquals(
             10L,
             SatelliteNetworkClientState.current()
-                .capacityKbps(CelestialObjectId.MARS));
+                .capacityKbps(CelestialObjectKey.registered(CelestialObjectId.MARS)));
     }
 
     @Test
@@ -52,7 +52,7 @@ final class SatelliteNetworkClientStateTest {
         assertEquals(
             20L,
             SatelliteNetworkClientState.current()
-                .capacityKbps(CelestialObjectId.MARS));
+                .capacityKbps(CelestialObjectKey.registered(CelestialObjectId.MARS)));
     }
 
     @Test
@@ -68,7 +68,7 @@ final class SatelliteNetworkClientStateTest {
         assertEquals(
             0L,
             SatelliteNetworkClientState.current()
-                .capacityKbps(CelestialObjectId.MARS));
+                .capacityKbps(CelestialObjectKey.registered(CelestialObjectId.MARS)));
     }
 
     private static SatelliteNetworkState state(int revision, long capacityKbps) {
@@ -81,7 +81,10 @@ final class SatelliteNetworkClientStateTest {
             revision,
             Map.of(
                 CelestialObjectKey.registered(CelestialObjectId.MARS),
-                new SatelliteNetworkState.Body(CelestialObjectId.MARS, capacityKbps, 0L)),
+                new SatelliteNetworkState.Body(
+                    CelestialObjectKey.registered(CelestialObjectId.MARS),
+                    capacityKbps,
+                    0L)),
             java.util.List.of());
     }
 }
