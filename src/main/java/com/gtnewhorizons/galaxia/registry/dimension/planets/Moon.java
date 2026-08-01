@@ -105,8 +105,8 @@ public final class Moon {
                 .height(16)
                 .endFeature()
                 .feature(TerrainPreset.MOUNTAIN_RANGES)
-                .width(8)
-                .height(128)
+                .width(32)
+                .height(512)
                 .endFeature()
                 .build());
         builder.sky(true)
