@@ -49,7 +49,7 @@ dependencies {
     // the read/write packet formats out of sync in this dev runtime.
     devOnlyNonPublishable("com.falsepattern:chunkapi-mc1.7.10:0.8.2:dev")
     runtimeOnlyNonPublishable('com.github.GTNewHorizons:Angelica:2.1.59:dev') { transitive = false }
-    devOnlyNonPublishable(files("libs/supernova-0.1.0-dev.jar"))
+    // devOnlyNonPublishable(files("libs/supernova-0.1.0-dev.jar"))
 
     devOnlyNonPublishable('com.github.GTNewHorizons:BlockRenderer6343:1.4.20:dev'){transitive=false}
 
