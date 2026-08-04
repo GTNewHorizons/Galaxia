@@ -207,6 +207,8 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
         boolean isCave = false;
         int ceilingCaveTop = upperMantle ? UPPER_INTERMEDIARY_CAVES_TOP : LOWER_INTERMEDIARY_CAVES_TOP;
         int ceilingCaveBottom = upperMantle ? UPPER_INTERMEDIARY_CAVES_BOTTOM : LOWER_INTERMEDIARY_CAVES_BOTTOM;
+        int floorCaveTop = upperMantle ? LOWER_INTERMEDIARY_CAVES_TOP : Integer.MAX_VALUE;
+        int floorCaveBottom = upperMantle ? LOWER_INTERMEDIARY_CAVES_BOTTOM : Integer.MIN_VALUE;
 
         for (int localX = 0; localX < CHUNK_WIDTH; localX++) {
             for (int localZ = 0; localZ < CHUNK_WIDTH; localZ++) {
@@ -216,8 +218,11 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                 int maxY = minY + 16;
                 for (int y = minY; y < maxY; y++) {
                     if ((y < floorHeight || y > ceilingHeight)) {
-                        if (y < ceilingCaveTop && y > ceilingCaveBottom && ceilingCaves != null) {
-                            isCave = ceilingCaves.generateCave(localX, y - ceilingCaveBottom, localZ, ceilingCaveTop);
+                        if (ceilingCaves != null && y > ceilingCaveBottom) {
+                            isCave = ceilingCaves.generateCave(localX, y - ceilingCaveBottom, localZ, ceilingCaveTop - ceilingCaveBottom);
+                        }
+                        if (!isCave && floorCaves != null && y < floorCaveTop) {
+                            isCave = floorCaves.generateCave(localX, y - floorCaveBottom, localZ, floorCaveTop - floorCaveBottom);
                         }
                         if (!isCave) {
                             placeBlock(ebs, block, localX, y, localZ);
