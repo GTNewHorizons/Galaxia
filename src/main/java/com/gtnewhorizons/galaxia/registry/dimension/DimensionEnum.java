@@ -26,6 +26,9 @@ public enum DimensionEnum {
                 .feature(TerrainPreset.MOUNTAIN_RANGES)
                 .width(8)
                 .height(48)
+                .feature(TerrainPreset.MOUNTAIN_RANGES)
+                .width(1)
+                .height(48)
                 .endFeature()
                 .build(),
             TerrainConfiguration.builder()
@@ -36,20 +39,39 @@ public enum DimensionEnum {
                 .width(8)
                 .height(48)
                 .endFeature()
+                .feature(TerrainPreset.CANYONS)
+                .height(64)
+                .width(12)
+                .endFeature()
                 .build()
         ).setFillerBlock(new BlockMeta(PlanetBlocks.MOON_BRECCIA)),
         new MantleRules(
             TerrainConfiguration.builder()
                 .feature(TerrainPreset.BASE_HEIGHT)
-                .height(8)
+                .height(16)
+                .endFeature()
+                .feature(TerrainPreset.SHIELD_VOLCANOES)
+                .width(8)
+                .height(48)
+                .feature(TerrainPreset.CANYONS)
+                .height(64)
+                .width(12)
                 .endFeature()
                 .build(),
             TerrainConfiguration.builder()
                 .feature(TerrainPreset.BASE_HEIGHT)
                 .height(8)
                 .endFeature()
+                .feature(TerrainPreset.MOUNTAIN_RANGES)
+                .height(64)
+                .width(0.25)
+                .endFeature()
+                .feature(TerrainPreset.MOUNTAIN_RANGES)
+                .height(48)
+                .width(2)
+                .endFeature()
                 .build()
-        ).setFillerBlock(new BlockMeta(PlanetBlocks.MOON_MAGMA))),
+        ).setFillerBlock(new BlockMeta(PlanetBlocks.MOON_OBSIDIAN))),
     MARS(21, "Mars", "galaxia.dimension.mars"),
     FROZEN_BELT(22, "Frozen_Belt", "galaxia.dimension.frozen_belt"),
     TENEBRAE(23, "Tenebrae", "galaxia.dimension.tenebrae");
