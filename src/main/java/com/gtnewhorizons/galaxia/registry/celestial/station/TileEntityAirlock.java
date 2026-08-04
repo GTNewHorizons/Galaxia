@@ -21,10 +21,6 @@ import lombok.Getter;
 
 public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> {
 
-    public TileEntityAirlock() {
-        super();
-    }
-
     public enum AirlockState {
         CLOSED,
         OPEN,
@@ -50,8 +46,10 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
 
     public static final int INVALID = -1;
 
-    public int halfHeight = INVALID;
-    public int halfWidth = INVALID;
+    public int xMin = INVALID;
+    public int xMax = INVALID;
+    public int yMin = INVALID;
+    public int yMax = INVALID;
 
     public static final IStructureDefinition<TileEntityAirlock> STRUCTURE_DEFINITION = StructureDefinition
         .<TileEntityAirlock>builder()
@@ -61,7 +59,7 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
             StructureUtility.transpose(new String[][] {
                 { "CCCCC" },
                 { "CDDDC" },
-                { "CD~DC" },
+                { "~DDDC" },
                 { "CDDDC" },
                 { "CCCCC" },
             }))
@@ -103,10 +101,6 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
 
     public boolean isExternalConnection() {
         return stationControllers.size() < MAX_CONNECTIONS;
-    }
-
-    public boolean isInternalConnection() {
-        return !isExternalConnection();
     }
 
     public List<BlockPos> getStationControllers() {
@@ -152,34 +146,76 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
 
     @Override
     protected boolean checkStructure() {
-        int halfWidth = 0, halfHeight = 0;
+        // Cardinal step offsets in the local (X, Y) plane, ordered +X, -X, +Y, -Y so each pair is opposite.
+        final int[] stepX = { 1, -1, 0, 0 };
+        final int[] stepY = { 0, 0, 1, -1 };
 
-        // Find a corner
-        while (halfWidth < MAXIMUM_RADIUS) {
-            halfWidth += 1;
-            if (checkPiece(STRUCTURE_EDGE, halfWidth, 0, 0)) break;
+        // Probe outwards in all four directions to locate which side of the frame the controller sits on.
+        int[] distance = new int[4];
+        int flush = -1;
+        int flushCount = 0;
+        for (int d = 0; d < 4; d++) {
+            distance[d] = probeDirection(0, 0, stepX[d], stepY[d]);
+            if (distance[d] == INVALID) return false;
+            if (distance[d] == 0) {
+                flush = d;
+                flushCount++;
+            }
         }
 
-        while (halfHeight < MAXIMUM_RADIUS) {
-            halfHeight += 1;
-            if (checkPiece(STRUCTURE_EDGE, 0, halfHeight, 0)) break;
+        // The controller must sit on the casing frame, flush with exactly one side.
+        if (flushCount != 1) return false;
+
+        // The room extends away from the flush side; the far frame is one step behind it.
+        int main = flush ^ 1;
+        int mainExtent = distance[main];
+
+        // The perpendicular half-width, measured one cell into the room (must be symmetric -> controller is centered).
+        int perp = flush < 2 ? 2 : 0;
+        int extentHigh = probeDirection(stepX[main], stepY[main], stepX[perp], stepY[perp]);
+        int extentLow = probeDirection(stepX[main], stepY[main], stepX[perp + 1], stepY[perp + 1]);
+        if (extentHigh != extentLow || extentHigh < 1) {
+            return false;
         }
 
-        for (int x = -halfWidth; x <= halfWidth; x++) {
-            for (int y = -halfHeight; y <= halfHeight; y++) {
+        // Project the rectangle {0..mainExtent along main, -half..half along perp} onto the X/Y axes.
+        int extentX = extentHigh * Math.abs(stepX[perp]);
+        xMin = Math.min(0, mainExtent * stepX[main]) - extentX;
+        xMax = Math.max(0, mainExtent * stepX[main]) + extentX;
+
+        int extentY = extentHigh * Math.abs(stepY[perp]);
+        yMin = Math.min(0, mainExtent * stepY[main]) - extentY;
+        yMax = Math.max(0, mainExtent * stepY[main]) + extentY;
+
+        for (int x = xMin; x <= xMax; x++) {
+            for (int y = yMin; y <= yMax; y++) {
                 // Skip the controller itself
                 if (x == 0 && y == 0) continue;
 
-                boolean isEdge = (Math.abs(x) == halfWidth || Math.abs(y) == halfHeight);
+                boolean isEdge = (x == xMin || x == xMax || y == yMin || y == yMax);
                 String expected = isEdge ? STRUCTURE_EDGE : STRUCTURE_CENTER;
                 if (!checkPiece(expected, x, y, 0)) return false;
             }
         }
 
-        this.halfWidth = halfWidth;
-        this.halfHeight = halfHeight;
-
         return true;
+    }
+
+    /**
+     * Probes from a local offset (startX, startY), walking in the given direction (stepX, stepY), until a casing
+     * frame is found. Returns the distance to the frame, 0 if the very first cell is already outside the structure
+     * (edge), or {@link #INVALID} if the frame is missing or the probe exceeds {@link #MAXIMUM_RADIUS}.
+     */
+    private int probeDirection(int startX, int startY, int stepX, int stepY) {
+        for (int i = 1; i <= MAXIMUM_RADIUS; i++) {
+            int x = startX + stepX * i;
+            int y = startY + stepY * i;
+            if (checkPiece(STRUCTURE_EDGE, x, y, 0)) return i;
+            if (!checkPiece(STRUCTURE_CENTER, x, y, 0)) {
+                return i == 1 ? 0 : INVALID;
+            }
+        }
+        return INVALID;
     }
 
     @Override
@@ -190,8 +226,10 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
     @Override
     protected void onStructureDisformed() {
         closeDoor();
-        this.halfHeight = INVALID;
-        this.halfWidth = INVALID;
+        this.xMin = INVALID;
+        this.xMax = INVALID;
+        this.yMin = INVALID;
+        this.yMax = INVALID;
     }
 
     private void openDoor() {
@@ -232,11 +270,8 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
     private void setDoorState(boolean open) {
         state = open ? AirlockState.OPEN : AirlockState.CLOSED;
 
-        final int hw = halfWidth - 1;
-        final int hh = halfHeight - 1;
-
-        for (int x = -hw; x <= hw; x++) {
-            for (int y = -hh; y <= hh; y++) {
+        for (int x = xMin + 1; x <= xMax - 1; x++) {
+            for (int y = yMin + 1; y <= yMax - 1; y++) {
                 STRUCTURE_DEFINITION.iterate(
                     STRUCTURE_CENTER,
                     worldObj,

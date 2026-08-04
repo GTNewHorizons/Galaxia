@@ -14,13 +14,13 @@ import net.minecraftforge.common.util.ForgeDirection;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.PlacementHelper;
-import com.gtnewhorizons.galaxia.registry.block.base.BlockOpenable;
+import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
-public class BlockAirlockController extends BlockOpenable implements ITileEntityProvider {
+public class BlockAirlockController extends BlockUpdatable implements ITileEntityProvider {
 
     @SideOnly(Side.CLIENT)
     private IIcon frontIcon;

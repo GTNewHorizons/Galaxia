@@ -40,7 +40,9 @@ public abstract class BlockOpenable extends BlockUpdatable {
             y - Facing.offsetsYForSide[side],
             z - Facing.offsetsZForSide[side]);
 
-        return meta == META_CLOSED;
+        return side == 0 && this.minY > 0.0D
+            || (side == 1 && this.maxY < 1.0D || (side == 2 && this.minZ > 0.0D || (side == 3 && this.maxZ < 1.0D
+                || (side == 4 && this.minX > 0.0D || (side == 5 && this.maxX < 1.0D || meta == META_CLOSED)))));
     }
 
     @Override

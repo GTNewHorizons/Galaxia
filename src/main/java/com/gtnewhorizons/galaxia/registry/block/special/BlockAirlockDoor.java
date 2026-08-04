@@ -67,7 +67,7 @@ public class BlockAirlockDoor extends BlockOpenable {
 
                 Block b = world.getBlock(wx, wy, wz);
 
-                if (b == GalaxiaBlocksEnum.AIRLOCK_DOOR.get() || b == GalaxiaBlocksEnum.AIRLOCK_CASING.get()) {
+                if (b == GalaxiaBlocksEnum.AIRLOCK_DOOR.get()) {
                     visited.add(np);
                     floodBFS.enqueue(np);
                 } else if (b == GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get()) {
