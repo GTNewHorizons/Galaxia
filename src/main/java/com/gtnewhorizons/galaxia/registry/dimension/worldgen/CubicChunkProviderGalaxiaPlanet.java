@@ -55,7 +55,10 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
     private static final int CHUNK_AREA = 256;
     private static final int CHUNK_WIDTH = 16;
+    private static final int UPPER_MANTLE_CEILING = 0;
     private static final int UPPER_MANTLE_FLOOR = -128;
+    private static final int LOWER_MANTLE_CEILING = -128;
+    private static final int LOWER_MANTLE_FLOOR = -256;
     private final double[] ceilingHeightmap = new double[CHUNK_AREA];
     private final ImmutableBlockMeta[] ceilingSurfaceBlocks = new ImmutableBlockMeta[CHUNK_AREA];
     private final double[] floorHeightmap = new double[CHUNK_AREA];
@@ -133,9 +136,9 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
         if (cubeY >= 0) {
             generateCrust(cubeX, cubeY, cubeZ, data, ebs);
         } else if (cubeY >= -8) {
-            generateUpperMantle(cubeX, cubeY, cubeZ, ebs);
+            generateMantle(cubeX, cubeY, cubeZ, ebs, UPPER_MANTLE_CEILING, UPPER_MANTLE_FLOOR, true);
         } else {
-            generateLowerMantle(cubeX, cubeY, cubeZ, ebs);
+            generateMantle(cubeX, cubeY, cubeZ, ebs, LOWER_MANTLE_CEILING, LOWER_MANTLE_FLOOR, false);
         }
 
         drainDeferredWrites(cubeX, cubeY, cubeZ, cube);
@@ -149,19 +152,24 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
         }
     }
 
-    private void generateUpperMantle(int cubeX, int cubeY, int cubeZ, ExtendedBlockStorage ebs) {
+    private void generateMantle(int cubeX, int cubeY, int cubeZ, ExtendedBlockStorage ebs, int ceilingOffset, int floorOffset, boolean upperMantle) {
         ImmutableBlockMeta block;
         TerrainConfiguration ceiling;
         TerrainConfiguration floor;
 
-        MantleRules upperMantleRules = dimension.getUpperMantleRules();
-        if (upperMantleRules == null) {
+        MantleRules mantleRules;
+        if (upperMantle) {
+            mantleRules = dimension.getUpperMantleRules();
+        } else {
+            mantleRules = dimension.getLowerMantleRules();
+        }
+        if (mantleRules == null) {
             return;
         }
 
-        block = upperMantleRules.fillerBlock;
-        ceiling = upperMantleRules.getCeiling();
-        floor = upperMantleRules.getFloor();
+        block = mantleRules.fillerBlock;
+        ceiling = mantleRules.getCeiling();
+        floor = mantleRules.getFloor();
 
         Arrays.fill(floorHeightmap, 0);
         Arrays.fill(ceilingHeightmap, 0);
@@ -221,32 +229,14 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
         for (int localX = 0; localX < CHUNK_WIDTH; localX++) {
             for (int localZ = 0; localZ < CHUNK_WIDTH; localZ++) {
-                double floorHeight = floorHeightmap[localX + (localZ << 4)] + UPPER_MANTLE_FLOOR;
-                double ceilingHeight = -ceilingHeightmap[localX + (localZ << 4)];
+                double ceilingHeight = -ceilingHeightmap[localX + (localZ << 4)] + ceilingOffset;
+                double floorHeight = floorHeightmap[localX + (localZ << 4)] + floorOffset;
                 int minY = cubeY << 4;
                 int maxY = minY + 16;
                 for (int y = minY; y < maxY; y++) {
                     if (y < floorHeight || y > ceilingHeight) {
                         placeBlock(ebs, block, localX, y, localZ);
                     }
-                }
-            }
-        }
-    }
-
-    private void generateLowerMantle(int cubeX, int cubeY, int cubeZ, ExtendedBlockStorage ebs) {
-        ImmutableBlockMeta block = LOWER_MANTLE_PLACEHOLDER;
-        MantleRules lowerMantleRules = dimension.getLowerMantleRules();
-        if (lowerMantleRules != null) {
-            block = lowerMantleRules.fillerBlock;
-        }
-
-        for (int localX = 0; localX < CHUNK_WIDTH; localX++) {
-            for (int localZ = 0; localZ < CHUNK_WIDTH; localZ++) {
-                int minY = cubeY << 4;
-                int maxY = minY + 16;
-                for (int y = minY; y < maxY; y++) {
-                    placeBlock(ebs, block, localX, y, localZ);
                 }
             }
         }
