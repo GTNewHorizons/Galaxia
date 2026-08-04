@@ -8,6 +8,8 @@ import java.util.Random;
 import javax.annotation.ParametersAreNonnullByDefault;
 
 import com.gtnewhorizon.gtnhlib.hash.Fnv1a64;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle.MantleCache;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle.MantleCacheData;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle.MantleRules;
 import net.minecraft.block.Block;
 import net.minecraft.entity.EnumCreatureType;
@@ -53,23 +55,17 @@ import lombok.Getter;
 @ParametersAreNonnullByDefault
 public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, GalaxiaPlanetGenerator {
 
-    private static final int CHUNK_AREA = 256;
     private static final int CHUNK_WIDTH = 16;
     private static final int UPPER_MANTLE_CEILING = 0;
     private static final int UPPER_MANTLE_FLOOR = -128;
     private static final int LOWER_MANTLE_CEILING = -128;
     private static final int LOWER_MANTLE_FLOOR = -256;
-    private final double[] ceilingHeightmap = new double[CHUNK_AREA];
-    private final ImmutableBlockMeta[] ceilingSurfaceBlocks = new ImmutableBlockMeta[CHUNK_AREA];
-    private final double[] floorHeightmap = new double[CHUNK_AREA];
-    private final ImmutableBlockMeta[] floorSurfaceBlocks = new ImmutableBlockMeta[CHUNK_AREA];
-    private final double[] defaultRelevance = new double[CHUNK_AREA];
-    private final NoiseGeneratorOctaves terrainNoise;
+    private final MantleCache upperMantleCache;
+    private final MantleCache lowerMantleCache;
 
     private static final DefaultBlockPalette DEFAULT_PALETTE = new DefaultBlockPalette();
 
     private static final ImmutableBlockMeta AIR = new BlockMeta(Blocks.air);
-    private static final ImmutableBlockMeta LOWER_MANTLE_PLACEHOLDER = new BlockMeta(Blocks.coal_block);
 
     @Getter
     private final DimensionEnum dimension;
@@ -91,8 +87,8 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
         this.rand = new StdLCG(world.getSeed());
         this.crackNoise1 = new NormalizedSampler(new ScaledSampler(new OctavesSampler(rand, 2), 0.05));
         this.crackNoise2 = new NormalizedSampler(new ScaledSampler(new OctavesSampler(rand, 2), 0.05));
-        this.terrainNoise = new NoiseGeneratorOctaves(new StdLCG(world.getSeed()), 4);
-        Arrays.fill(defaultRelevance, 1);
+        this.upperMantleCache = new MantleCache(world, rand, dimension);
+        this.lowerMantleCache = new MantleCache(world, rand, dimension);
     }
 
     @Override
@@ -170,62 +166,16 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
         block = mantleRules.fillerBlock;
         ceiling = mantleRules.getCeiling();
         floor = mantleRules.getFloor();
-
-        Arrays.fill(floorHeightmap, 0);
-        Arrays.fill(ceilingHeightmap, 0);
-
-        int i = 0;
-        for (TerrainFeature f : ceiling.getMacroFeatures()) {
-            TerrainFeatureApplier.applyToHeightmap(
-                f,
-                ceilingHeightmap,
-                ceilingSurfaceBlocks,
-                cubeX,
-                cubeZ,
-                withSeed(cubeX, cubeZ, i++, 5),
-                defaultRelevance,
-                dimension,
-                terrainNoise);
+        double[] ceilingHeightmap;
+        double[] floorHeightmap;
+        MantleCacheData mantleCacheData;
+        if (upperMantle) {
+            mantleCacheData = upperMantleCache.getLocalData(cubeX, cubeZ, ceiling, floor);
+        } else {
+            mantleCacheData = lowerMantleCache.getLocalData(cubeX, cubeZ, ceiling, floor);
         }
-        i = 0;
-        for (TerrainFeature f : ceiling.getMesoFeatures()) {
-            TerrainFeatureApplier.applyToHeightmap(
-                f,
-                ceilingHeightmap,
-                ceilingSurfaceBlocks,
-                cubeX,
-                cubeZ,
-                withSeed(cubeX, cubeZ, i++, 10),
-                defaultRelevance,
-                dimension,
-                terrainNoise);
-        }
-        i = 0;
-        for (TerrainFeature f : floor.getMacroFeatures()) {
-            TerrainFeatureApplier.applyToHeightmap(
-                f,
-                floorHeightmap,
-                floorSurfaceBlocks,
-                cubeX,
-                cubeZ,
-                withSeed(cubeX, cubeZ, i++, 5),
-                defaultRelevance,
-                dimension,
-                terrainNoise);
-        }
-        i = 0;
-        for (TerrainFeature f : floor.getMesoFeatures()) {
-            TerrainFeatureApplier.applyToHeightmap(
-                f,
-                floorHeightmap,
-                floorSurfaceBlocks,
-                cubeX,
-                cubeZ,
-                withSeed(cubeX, cubeZ, i++, 10),
-                defaultRelevance,
-                dimension,
-                terrainNoise);
-        }
+        ceilingHeightmap = mantleCacheData.ceilingHeightmap();
+        floorHeightmap = mantleCacheData.floorHeightmap();
 
         for (int localX = 0; localX < CHUNK_WIDTH; localX++) {
             for (int localZ = 0; localZ < CHUNK_WIDTH; localZ++) {
