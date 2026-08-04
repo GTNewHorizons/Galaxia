@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle;
 
 import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
-import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import lombok.Getter;
 

@@ -12,7 +12,6 @@ public class TubeNoise {
     private static final byte TOTAL_BITSHIFT = CHUNK_BITSHIFT + ADDITIONAL_BITSHIFT;
     private static final short COORDINATE_BOUND = 2 << TOTAL_BITSHIFT;
     private static final short SHIFT_MARGIN = 2 << (TOTAL_BITSHIFT - 1);
-    private static final float VERTICAL_INCLINATION_MULTIPLIER = 0.5F;
     private static final short TUBE_COUNT = 128;
     private static final byte BASE_TUBE_HEIGHT = 16;
     private static final int TUBE_HEIGHT_VARIATION = ChunkProviderGalaxiaPlanet.HEIGHT_LIMIT >> 4;
@@ -23,6 +22,7 @@ public class TubeNoise {
     private final int[] xEndPoints = new int[TUBE_COUNT];
     private final int[] xStartPoints = new int[TUBE_COUNT];
     private final short[] deviationMargins = new short[TUBE_COUNT];
+    private final float verticalInclinationMultiplier;
 
     private boolean cached = false;
     private long seed;
@@ -31,10 +31,11 @@ public class TubeNoise {
     private int quadrantX;
     private int quadrantZ;
 
-    public TubeNoise() {
+    public TubeNoise(float verticalInclinationMultiplier) {
         for (int i = 0; i < linearFunctions.length; i++) {
             linearFunctions[i] = new LinearFunction3D();
         }
+        this.verticalInclinationMultiplier = verticalInclinationMultiplier;
     }
 
     public boolean isCached() {
@@ -80,11 +81,11 @@ public class TubeNoise {
             if (xRandom.nextBoolean()) {
                 zInclination = -zInclination;
             }
-            float xyInclination = xRandom.nextFloat() * VERTICAL_INCLINATION_MULTIPLIER;
+            float xyInclination = xRandom.nextFloat() * verticalInclinationMultiplier;
             if (xRandom.nextBoolean()) {
                 xyInclination = -xyInclination;
             }
-            float zyInclination = zRandom.nextFloat() * VERTICAL_INCLINATION_MULTIPLIER;
+            float zyInclination = zRandom.nextFloat() * verticalInclinationMultiplier;
             if (zRandom.nextBoolean()) {
                 zyInclination = -zyInclination;
             }

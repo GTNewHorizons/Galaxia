@@ -75,7 +75,7 @@ public enum DimensionEnum {
                 .endFeature()
                 .build()
         ).setFillerBlock(new BlockMeta(PlanetBlocks.MOON_OBSIDIAN)),
-        new CaveShapeTubes((byte) 16, (byte) 8, (short) 64),
+        new CaveShapeTubes((byte) 48, (byte) 16, (short) 192, 2.5F),
         new CaveShapeCracks(128)),
     MARS(21, "Mars", "galaxia.dimension.mars"),
     FROZEN_BELT(22, "Frozen_Belt", "galaxia.dimension.frozen_belt"),

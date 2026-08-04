@@ -11,6 +11,7 @@ public class CaveShapeTubes implements CaveShape {
     private static final int CHUNK_AREA = 256;
     private static final int CHUNK_WIDTH = 16;
     private static final double HORIZONTAL_CAVE_STRETCH = 0.1;
+    private static final float DEFAULT_VERTICAL_INCLINATION_MULTIPLIER = 0.5F;
 
     private static TubeNoise caveNoise;
     private static NoiseGeneratorOctaves sizeNoise;
@@ -24,10 +25,17 @@ public class CaveShapeTubes implements CaveShape {
     private final byte varyingTubeDiameter;
     private final short tubeLength;
 
+    private float verticalInclinationMultiplier;
+
     public CaveShapeTubes(byte baseTubeDiameter, byte varyingTubeDiameter, short tubeLength) {
+        this(baseTubeDiameter, varyingTubeDiameter, tubeLength, DEFAULT_VERTICAL_INCLINATION_MULTIPLIER);
+    }
+
+    public CaveShapeTubes(byte baseTubeDiameter, byte varyingTubeDiameter, short tubeLength, float verticalInclinationMultiplier) {
         this.baseTubeDiameter = baseTubeDiameter;
         this.varyingTubeDiameter = varyingTubeDiameter;
         this.tubeLength = tubeLength;
+        this.verticalInclinationMultiplier = verticalInclinationMultiplier;
     }
 
     @Override
@@ -35,7 +43,7 @@ public class CaveShapeTubes implements CaveShape {
         sizeNoise = new NoiseGeneratorOctaves(random, 4);
         horizontalDistortion = new NoiseGeneratorOctaves(random, 4);
         verticalDistortion = new NoiseGeneratorOctaves(random, 4);
-        caveNoise = new TubeNoise();
+        caveNoise = new TubeNoise(verticalInclinationMultiplier);
         caveNoise.setSeed(random);
     }
 
