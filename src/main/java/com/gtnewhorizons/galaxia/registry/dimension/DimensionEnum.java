@@ -2,6 +2,9 @@ package com.gtnewhorizons.galaxia.registry.dimension;
 
 import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
+import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
+import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeCracks;
+import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeTubes;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle.MantleRules;
@@ -71,7 +74,9 @@ public enum DimensionEnum {
                 .width(2)
                 .endFeature()
                 .build()
-        ).setFillerBlock(new BlockMeta(PlanetBlocks.MOON_OBSIDIAN))),
+        ).setFillerBlock(new BlockMeta(PlanetBlocks.MOON_OBSIDIAN)),
+        new CaveShapeTubes((byte) 16, (byte) 8, (short) 64),
+        new CaveShapeCracks(128)),
     MARS(21, "Mars", "galaxia.dimension.mars"),
     FROZEN_BELT(22, "Frozen_Belt", "galaxia.dimension.frozen_belt"),
     TENEBRAE(23, "Tenebrae", "galaxia.dimension.tenebrae");
@@ -81,17 +86,21 @@ public enum DimensionEnum {
     final String translationKey;
     final MantleRules upperMantleRules;
     final MantleRules lowerMantleRules;
+    final CaveShape upperIntermediaryCaves;
+    final CaveShape lowerIntermediaryCaves;
 
-    DimensionEnum(int id, String name, String translationKey, MantleRules upperMantleRules, MantleRules lowerMantleRules) {
+    DimensionEnum(int id, String name, String translationKey, MantleRules upperMantleRules, MantleRules lowerMantleRules, CaveShape upperIntermediaryCaves, CaveShape lowerIntermediaryCaves) {
         this.id = id;
         this.name = name;
         this.translationKey = translationKey;
         this.upperMantleRules = upperMantleRules;
         this.lowerMantleRules = lowerMantleRules;
+        this.upperIntermediaryCaves = upperIntermediaryCaves;
+        this.lowerIntermediaryCaves = lowerIntermediaryCaves;
     }
 
     DimensionEnum(int id, String name, String translationKey) {
-        this(id, name, translationKey, null, null);
+        this(id, name, translationKey, null, null, null, null);
     }
 
     public static DimensionEnum fromId(int id) {

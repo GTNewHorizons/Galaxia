@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -22,7 +21,6 @@ import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 
-import net.minecraft.world.gen.NoiseGeneratorOctaves;
 import org.jetbrains.annotations.Nullable;
 
 import com.cardinalstar.cubicchunks.api.ICube;
@@ -60,6 +58,10 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
     private static final int UPPER_MANTLE_FLOOR = -128;
     private static final int LOWER_MANTLE_CEILING = -128;
     private static final int LOWER_MANTLE_FLOOR = -256;
+    private static final int UPPER_INTERMEDIARY_CAVES_TOP = 64;
+    private static final int UPPER_INTERMEDIARY_CAVES_BOTTOM = -64;
+    private static final int LOWER_INTERMEDIARY_CAVES_TOP = -64;
+    private static final int LOWER_INTERMEDIARY_CAVES_BOTTOM = -192;
     private final MantleCache upperMantleCache;
     private final MantleCache lowerMantleCache;
 
@@ -177,6 +179,35 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
         ceilingHeightmap = mantleCacheData.ceilingHeightmap();
         floorHeightmap = mantleCacheData.floorHeightmap();
 
+        CaveShape ceilingCaves;
+        CaveShape floorCaves;
+        if (upperMantle) {
+            ceilingCaves = dimension.getUpperIntermediaryCaves();
+            floorCaves = dimension.getLowerIntermediaryCaves();
+        } else {
+            ceilingCaves = dimension.getLowerIntermediaryCaves();
+            floorCaves = null;
+        }
+        if (ceilingCaves != null) {
+            if (!ceilingCaves.preparedCaveShape()) {
+                ceilingCaves.prepareCaveShape(rand);
+            }
+            if (!ceilingCaves.preparedCaveCache(cubeX, cubeZ)) {
+                ceilingCaves.prepareCaveCache(cubeX, cubeZ);
+            }
+        }
+        if (floorCaves != null) {
+            if (!floorCaves.preparedCaveShape()) {
+                floorCaves.prepareCaveShape(rand);
+            }
+            if (!floorCaves.preparedCaveCache(cubeX, cubeZ)) {
+                floorCaves.prepareCaveCache(cubeX, cubeZ);
+            }
+        }
+        boolean isCave = false;
+        int ceilingCaveTop = upperMantle ? UPPER_INTERMEDIARY_CAVES_TOP : LOWER_INTERMEDIARY_CAVES_TOP;
+        int ceilingCaveBottom = upperMantle ? UPPER_INTERMEDIARY_CAVES_BOTTOM : LOWER_INTERMEDIARY_CAVES_BOTTOM;
+
         for (int localX = 0; localX < CHUNK_WIDTH; localX++) {
             for (int localZ = 0; localZ < CHUNK_WIDTH; localZ++) {
                 double ceilingHeight = -ceilingHeightmap[localX + (localZ << 4)] + ceilingOffset;
@@ -184,8 +215,13 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                 int minY = cubeY << 4;
                 int maxY = minY + 16;
                 for (int y = minY; y < maxY; y++) {
-                    if (y < floorHeight || y > ceilingHeight) {
-                        placeBlock(ebs, block, localX, y, localZ);
+                    if ((y < floorHeight || y > ceilingHeight)) {
+                        if (y < ceilingCaveTop && y > ceilingCaveBottom && ceilingCaves != null) {
+                            isCave = ceilingCaves.generateCave(localX, y - ceilingCaveBottom, localZ, ceilingCaveTop);
+                        }
+                        if (!isCave) {
+                            placeBlock(ebs, block, localX, y, localZ);
+                        }
                     }
                 }
             }

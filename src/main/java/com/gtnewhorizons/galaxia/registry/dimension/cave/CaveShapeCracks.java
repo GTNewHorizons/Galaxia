@@ -7,18 +7,28 @@ import net.minecraft.world.gen.NoiseGeneratorOctaves;
 public class CaveShapeCracks implements CaveShape {
 
     private static final int CHUNK_WIDTH = 16;
-    private static final int HEIGHT_LIMIT = 256;
+    private static final int DEFAULT_HEIGHT = 256;
     private static final double HORIZONTAL_CAVE_STRETCH = 0.1;
     private static final double VERTICAL_CAVE_STRETCH = 0.1;
     private static final int CHUNK_AREA = 256;
 
-    private final double[][] caveCache = new double[CHUNK_AREA][HEIGHT_LIMIT];
+    private final double[][] caveCache;
+    private final int heightLimit;
 
     private static NoiseGeneratorOctaves caveNoise;
 
     private boolean preparedCaveCache = false;
     private int cacheX;
     private int cacheZ;
+
+    public CaveShapeCracks() {
+        this(DEFAULT_HEIGHT);
+    }
+
+    public CaveShapeCracks(int height) {
+        this.heightLimit = height;
+        caveCache = new double[CHUNK_AREA][height];
+    }
 
     @Override
     public void prepareCaveShape(Random random) {
@@ -48,10 +58,10 @@ public class CaveShapeCracks implements CaveShape {
             caveCache[i][0] = noise;
         }
         double[] verticalSlice = caveNoise.generateNoiseOctaves(
-            new double[HEIGHT_LIMIT],
+            new double[heightLimit],
             chunkZ,
             chunkX,
-            HEIGHT_LIMIT,
+            heightLimit,
             1,
             VERTICAL_CAVE_STRETCH,
             VERTICAL_CAVE_STRETCH,
@@ -80,7 +90,7 @@ public class CaveShapeCracks implements CaveShape {
 
     @Override
     public boolean generateCave(int localX, int localY, int localZ, int height) {
-        if (localY < 0 || localY >= HEIGHT_LIMIT) {
+        if (localY < 0 || localY >= heightLimit) {
             return false;
         }
         double localNoise = caveCache[localX + localZ * CHUNK_WIDTH][localY];
