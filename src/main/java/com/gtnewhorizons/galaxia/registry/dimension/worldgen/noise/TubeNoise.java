@@ -1,9 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise;
 
+import java.util.Random;
+
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.ChunkProviderGalaxiaPlanet;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.math.LinearFunction3D;
-
-import java.util.Random;
 
 /**
  * Terrain noise which calculates many tubes within a large region

@@ -1,5 +1,13 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle;
 
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Random;
+
+import net.minecraft.world.World;
+import net.minecraft.world.gen.NoiseGeneratorOctaves;
+
 import com.gtnewhorizon.gtnhlib.hash.Fnv1a64;
 import com.gtnewhorizon.gtnhlib.util.StdLCG;
 import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
@@ -7,13 +15,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainFeatureApplier;
-import net.minecraft.world.World;
-import net.minecraft.world.gen.NoiseGeneratorOctaves;
-
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
 
 public class MantleCache {
 
