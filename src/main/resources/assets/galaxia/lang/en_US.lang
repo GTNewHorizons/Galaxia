@@ -48,6 +48,7 @@ tile.moon_magma.name=Lunar Magma
 tile.moon_obsidian.name=Lunar Obsidian
 tile.moon_regolith.name=Lunar Regolith
 tile.moon_tektite.name=Lunar Tektite
+tile.moon_diorite.name=Lunar Diorite
 
 # Blocks - "Moon Decoration"
 tile.moon_andesite_bricks.name=Lunar Andesite Bricks

@@ -1,17 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_ANDESITE;
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_ANORTHOSITE;
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_BASALT;
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_GABBRO;
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_MAGMA;
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_OBSIDIAN;
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_REGOLITH;
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_TEKTITE;
-
-import net.minecraft.init.Blocks;
-import net.minecraft.world.biome.BiomeGenBase;
-
 import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
@@ -30,6 +18,10 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CrystalClus
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.FluidSpringFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.GeodeFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.StalactiteFeature;
+import net.minecraft.init.Blocks;
+import net.minecraft.world.biome.BiomeGenBase;
+
+import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.*;
 
 /**
  * The class holding all data related to the dimension Moon
@@ -207,7 +199,7 @@ public final class Moon {
      */
     protected static BiomeGenBase createLandBiome(String name, TerrainConfiguration terrainConfiguration) {
         BlockMeta andesite = new BlockMeta(MOON_ANDESITE);
-        BlockMeta anorthosite = new BlockMeta(MOON_ANORTHOSITE);
+        BlockMeta anorthosite = new BlockMeta(MOON_DIORITE);
 
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .height(0.1F, 0.11F)
@@ -227,8 +219,8 @@ public final class Moon {
             .undergroundFeature(
                 StalactiteFeature.builder()
                     .maxHeight(64)
-                    .stalactiteBlock(MOON_ANORTHOSITE)
-                    .condition((block, meta) -> block == MOON_ANORTHOSITE)
+                    .stalactiteBlock(MOON_DIORITE)
+                    .condition((block, meta) -> block == MOON_DIORITE)
                     .build())
             .undergroundFeature(
                 StalactiteFeature.builder()
@@ -239,21 +231,21 @@ public final class Moon {
             .undergroundFeature(
                 CrystalClusterFeature.builder()
                     .maxHeight(24)
-                    .condition((block, meta) -> block == MOON_ANORTHOSITE)
+                    .condition((block, meta) -> block == MOON_DIORITE)
                     .crystalBlock(GalaxiaBlocksEnum.BLOCK_OF_CINNABAR.get())
                     .build())
             .undergroundFeature(
                 FluidSpringFeature.builder()
                     .maxHeight(64)
                     .fluid(PlanetBlocks.LIQUID_MERCURY.getBlock())
-                    .condition((block, meta) -> block == MOON_ANDESITE || block == MOON_ANORTHOSITE)
+                    .condition((block, meta) -> block == MOON_ANDESITE || block == MOON_DIORITE)
                     .build())
             .undergroundFeature(
                 GeodeFeature.builder()
                     .rarity(32)
                     .minHeight(16)
                     .maxHeight(96)
-                    .condition((block, meta) -> block == MOON_ANORTHOSITE || block == MOON_ANDESITE)
+                    .condition((block, meta) -> block == MOON_DIORITE || block == MOON_ANDESITE)
                     .shell(Blocks.glass)
                     .crystal(Blocks.stained_glass)
                     .build())

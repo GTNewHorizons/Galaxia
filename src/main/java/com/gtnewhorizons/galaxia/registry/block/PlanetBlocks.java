@@ -1,12 +1,11 @@
 package com.gtnewhorizons.galaxia.registry.block;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.material.Material;
-import net.minecraftforge.fluids.Fluid;
-
 import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlockBuilder;
 import com.gtnewhorizons.galaxia.registry.block.planet.fluid.FluidFiniteBuilder;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
+import net.minecraft.block.Block;
+import net.minecraft.block.material.Material;
+import net.minecraftforge.fluids.Fluid;
 
 public final class PlanetBlocks {
 
@@ -68,6 +67,12 @@ public final class PlanetBlocks {
             .hardness(2.0F)
             .harvest(1)
             .build();
+
+    public static final Block MOON_DIORITE = PlanetBlockBuilder.create("moon/moon_diorite")
+        .dropSelf()
+        .hardness(2.0F)
+        .harvest(1)
+        .build();
 
     /*
      * MARS blocks
