@@ -1,9 +1,12 @@
 package com.gtnewhorizons.galaxia.registry.dimension.cave;
 
-import java.util.Random;
-
 import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
+import java.util.Random;
+
+/**
+ * Cave generator for continuous networks of cracks
+ */
 public class CaveShapeCracks implements CaveShape {
 
     private static final int CHUNK_WIDTH = 16;
@@ -21,10 +24,17 @@ public class CaveShapeCracks implements CaveShape {
     private int cacheX;
     private int cacheZ;
 
+    /**
+     * Simple constructor for a generator with 256 blocks in height range
+     */
     public CaveShapeCracks() {
         this(DEFAULT_HEIGHT);
     }
 
+    /**
+     * Specific constructor with configurable height range for the generator
+     * @param height Amount of vertical space for the generator to use
+     */
     public CaveShapeCracks(int height) {
         this.heightLimit = height;
         caveCache = new double[CHUNK_AREA][height];
@@ -89,7 +99,7 @@ public class CaveShapeCracks implements CaveShape {
     }
 
     @Override
-    public boolean generateCave(int localX, int localY, int localZ, int height) {
+    public boolean isInCave(int localX, int localY, int localZ, int height) {
         if (localY < 0 || localY >= heightLimit) {
             return false;
         }

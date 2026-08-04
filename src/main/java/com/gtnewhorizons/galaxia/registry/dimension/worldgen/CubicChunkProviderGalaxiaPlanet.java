@@ -1,28 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import com.gtnewhorizon.gtnhlib.hash.Fnv1a64;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle.MantleCache;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle.MantleCacheData;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle.MantleRules;
-import net.minecraft.block.Block;
-import net.minecraft.entity.EnumCreatureType;
-import net.minecraft.init.Blocks;
-import net.minecraft.util.MathHelper;
-import net.minecraft.world.ChunkPosition;
-import net.minecraft.world.World;
-import net.minecraft.world.biome.BiomeGenBase;
-import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
-import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
-
-import org.jetbrains.annotations.Nullable;
-
 import com.cardinalstar.cubicchunks.api.ICube;
 import com.cardinalstar.cubicchunks.api.util.Box;
 import com.cardinalstar.cubicchunks.api.worldgen.GenerationResult;
@@ -33,6 +10,7 @@ import com.cardinalstar.cubicchunks.server.chunkio.ICubeLoader;
 import com.cardinalstar.cubicchunks.util.HashMap3D;
 import com.cardinalstar.cubicchunks.world.api.ICubeProviderServer.Requirement;
 import com.cardinalstar.cubicchunks.world.cube.Cube;
+import com.gtnewhorizon.gtnhlib.hash.Fnv1a64;
 import com.gtnewhorizon.gtnhlib.util.StdLCG;
 import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
 import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
@@ -43,12 +21,30 @@ import com.gtnewhorizons.galaxia.registry.dimension.biome.DefaultBlockPalette;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.SurfaceFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.UndergroundFeature;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle.MantleCache;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle.MantleCacheData;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle.MantleRules;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NoiseSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NormalizedSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.OctavesSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.ScaledSampler;
-
 import lombok.Getter;
+import net.minecraft.block.Block;
+import net.minecraft.entity.EnumCreatureType;
+import net.minecraft.init.Blocks;
+import net.minecraft.util.MathHelper;
+import net.minecraft.world.ChunkPosition;
+import net.minecraft.world.World;
+import net.minecraft.world.biome.BiomeGenBase;
+import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
+import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
+import org.jetbrains.annotations.Nullable;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 @ParametersAreNonnullByDefault
 public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, GalaxiaPlanetGenerator {
@@ -219,10 +215,10 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                 for (int y = minY; y < maxY; y++) {
                     if ((y < floorHeight || y > ceilingHeight)) {
                         if (ceilingCaves != null && y > ceilingCaveBottom) {
-                            isCave = ceilingCaves.generateCave(localX, y - ceilingCaveBottom, localZ, ceilingCaveTop - ceilingCaveBottom);
+                            isCave = ceilingCaves.isInCave(localX, y - ceilingCaveBottom, localZ, ceilingCaveTop - ceilingCaveBottom);
                         }
                         if (!isCave && floorCaves != null && y < floorCaveTop) {
-                            isCave = floorCaves.generateCave(localX, y - floorCaveBottom, localZ, floorCaveTop - floorCaveBottom);
+                            isCave = floorCaves.isInCave(localX, y - floorCaveBottom, localZ, floorCaveTop - floorCaveBottom);
                         }
                         if (!isCave) {
                             placeBlock(ebs, block, localX, y, localZ);
@@ -333,11 +329,11 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                         }
                     }
                     boolean isCave = false;
-                    if (crustCaves != null && isTerrain && crustCaves.generateCave(localX, y, localZ, terrainHeight)) {
+                    if (crustCaves != null && isTerrain && crustCaves.isInCave(localX, y, localZ, terrainHeight)) {
                         isCave = true;
                     }
                     if (!isCave && intermediateCaves != null && y < UPPER_INTERMEDIARY_CAVES_TOP) {
-                        isCave = intermediateCaves.generateCave(localX, y - UPPER_INTERMEDIARY_CAVES_BOTTOM, localZ, UPPER_INTERMEDIARY_CAVES_TOP - UPPER_INTERMEDIARY_CAVES_BOTTOM);
+                        isCave = intermediateCaves.isInCave(localX, y - UPPER_INTERMEDIARY_CAVES_BOTTOM, localZ, UPPER_INTERMEDIARY_CAVES_TOP - UPPER_INTERMEDIARY_CAVES_BOTTOM);
                     }
                     if (isCave) {
                         block = AIR;
