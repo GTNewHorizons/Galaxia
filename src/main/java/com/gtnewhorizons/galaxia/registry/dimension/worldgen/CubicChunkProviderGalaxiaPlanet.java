@@ -1,11 +1,13 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
+import com.gtnewhorizon.gtnhlib.hash.Fnv1a64;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle.MantleRules;
 import net.minecraft.block.Block;
 import net.minecraft.entity.EnumCreatureType;
@@ -18,6 +20,7 @@ import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 
+import net.minecraft.world.gen.NoiseGeneratorOctaves;
 import org.jetbrains.annotations.Nullable;
 
 import com.cardinalstar.cubicchunks.api.ICube;
@@ -52,11 +55,17 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
     private static final int CHUNK_AREA = 256;
     private static final int CHUNK_WIDTH = 16;
+    private static final int UPPER_MANTLE_FLOOR = -128;
+    private final double[] ceilingHeightmap = new double[CHUNK_AREA];
+    private final ImmutableBlockMeta[] ceilingSurfaceBlocks = new ImmutableBlockMeta[CHUNK_AREA];
+    private final double[] floorHeightmap = new double[CHUNK_AREA];
+    private final ImmutableBlockMeta[] floorSurfaceBlocks = new ImmutableBlockMeta[CHUNK_AREA];
+    private final double[] defaultRelevance = new double[CHUNK_AREA];
+    private final NoiseGeneratorOctaves terrainNoise;
 
     private static final DefaultBlockPalette DEFAULT_PALETTE = new DefaultBlockPalette();
 
     private static final ImmutableBlockMeta AIR = new BlockMeta(Blocks.air);
-    private static final ImmutableBlockMeta UPPER_MANTLE_PLACEHOLDER = new BlockMeta(Blocks.brick_block);
     private static final ImmutableBlockMeta LOWER_MANTLE_PLACEHOLDER = new BlockMeta(Blocks.coal_block);
 
     @Getter
@@ -79,6 +88,8 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
         this.rand = new StdLCG(world.getSeed());
         this.crackNoise1 = new NormalizedSampler(new ScaledSampler(new OctavesSampler(rand, 2), 0.05));
         this.crackNoise2 = new NormalizedSampler(new ScaledSampler(new OctavesSampler(rand, 2), 0.05));
+        this.terrainNoise = new NoiseGeneratorOctaves(new StdLCG(world.getSeed()), 4);
+        Arrays.fill(defaultRelevance, 1);
     }
 
     @Override
@@ -139,18 +150,85 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
     }
 
     private void generateUpperMantle(int cubeX, int cubeY, int cubeZ, ExtendedBlockStorage ebs) {
-        ImmutableBlockMeta block = UPPER_MANTLE_PLACEHOLDER;
+        ImmutableBlockMeta block;
+        TerrainConfiguration ceiling;
+        TerrainConfiguration floor;
+
         MantleRules upperMantleRules = dimension.getUpperMantleRules();
-        if (upperMantleRules != null) {
-            block = upperMantleRules.fillerBlock;
+        if (upperMantleRules == null) {
+            return;
+        }
+
+        block = upperMantleRules.fillerBlock;
+        ceiling = upperMantleRules.getCeiling();
+        floor = upperMantleRules.getFloor();
+
+        Arrays.fill(floorHeightmap, 0);
+        Arrays.fill(ceilingHeightmap, 0);
+
+        int i = 0;
+        for (TerrainFeature f : ceiling.getMacroFeatures()) {
+            TerrainFeatureApplier.applyToHeightmap(
+                f,
+                ceilingHeightmap,
+                ceilingSurfaceBlocks,
+                cubeX,
+                cubeZ,
+                withSeed(cubeX, cubeZ, i++, 5),
+                defaultRelevance,
+                dimension,
+                terrainNoise);
+        }
+        i = 0;
+        for (TerrainFeature f : ceiling.getMesoFeatures()) {
+            TerrainFeatureApplier.applyToHeightmap(
+                f,
+                ceilingHeightmap,
+                ceilingSurfaceBlocks,
+                cubeX,
+                cubeZ,
+                withSeed(cubeX, cubeZ, i++, 10),
+                defaultRelevance,
+                dimension,
+                terrainNoise);
+        }
+        i = 0;
+        for (TerrainFeature f : floor.getMacroFeatures()) {
+            TerrainFeatureApplier.applyToHeightmap(
+                f,
+                floorHeightmap,
+                floorSurfaceBlocks,
+                cubeX,
+                cubeZ,
+                withSeed(cubeX, cubeZ, i++, 5),
+                defaultRelevance,
+                dimension,
+                terrainNoise);
+        }
+        i = 0;
+        for (TerrainFeature f : floor.getMesoFeatures()) {
+            TerrainFeatureApplier.applyToHeightmap(
+                f,
+                floorHeightmap,
+                floorSurfaceBlocks,
+                cubeX,
+                cubeZ,
+                withSeed(cubeX, cubeZ, i++, 10),
+                defaultRelevance,
+                dimension,
+                terrainNoise);
         }
 
         for (int localX = 0; localX < CHUNK_WIDTH; localX++) {
             for (int localZ = 0; localZ < CHUNK_WIDTH; localZ++) {
+                double floorHeight = floorHeightmap[localX + (localZ << 4)] + UPPER_MANTLE_FLOOR;
+                double ceilingHeight = -ceilingHeightmap[localX + (localZ << 4)];
                 int minY = cubeY << 4;
                 int maxY = minY + 16;
                 for (int y = minY; y < maxY; y++) {
-                    placeBlock(ebs, block, localX, y, localZ);
+                    if (y < floorHeight || y > ceilingHeight) {
+                        placeBlock(ebs, block, localX, y, localZ);
+                    }
                 }
             }
         }
@@ -363,6 +441,18 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
             loader.getCube(pos.x(), pos.y(), pos.z(), Requirement.GENERATE)
                 .markPopulated(Cube.POP_ALL);
         }
+    }
+
+    private Random withSeed(int chunkX, int chunkZ, int index, int nonce) {
+        long seed = Fnv1a64.initialState();
+        seed = Fnv1a64.hashStep(seed, worldObj.getSeed());
+        seed = Fnv1a64.hashStep(seed, chunkX);
+        seed = Fnv1a64.hashStep(seed, chunkZ);
+        seed = Fnv1a64.hashStep(seed, index);
+        seed = Fnv1a64.hashStep(seed, nonce);
+
+        rand.setSeed(seed);
+        return rand;
     }
 
     @Override

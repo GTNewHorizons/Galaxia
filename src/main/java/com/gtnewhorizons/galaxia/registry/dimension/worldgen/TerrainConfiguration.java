@@ -25,7 +25,7 @@ public final class TerrainConfiguration {
     private final TerrainFeature[] microFeatures;
 
     /**
-     * Constructor to initalize terrain feature lists
+     * Constructor to initialize terrain feature lists
      */
     private TerrainConfiguration(List<TerrainFeature> features) {
         this.allFeatures = features.toArray(new TerrainFeature[0]);

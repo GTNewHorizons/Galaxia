@@ -2,6 +2,8 @@ package com.gtnewhorizons.galaxia.registry.dimension;
 
 import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle.MantleRules;
 import lombok.Getter;
 
@@ -16,8 +18,38 @@ public enum DimensionEnum {
     OVERWORLD(0, "Overworld", "galaxia.dimension.overworld"),
     OVERWORLD_ORBIT(-19, "Overworld_Orbit_Stations", "galaxia.dimension.overworld_orbit"),
     MOON(20, "Moon", "galaxia.dimension.moon",
-        new MantleRules().setFillerBlock(new BlockMeta(PlanetBlocks.MOON_BRECCIA)),
-        new MantleRules().setFillerBlock(new BlockMeta(PlanetBlocks.MOON_MAGMA))),
+        new MantleRules(
+            TerrainConfiguration.builder()
+                .feature(TerrainPreset.BASE_HEIGHT)
+                .height(16)
+                .endFeature()
+                .feature(TerrainPreset.MOUNTAIN_RANGES)
+                .width(8)
+                .height(48)
+                .endFeature()
+                .build(),
+            TerrainConfiguration.builder()
+                .feature(TerrainPreset.BASE_HEIGHT)
+                .height(16)
+                .endFeature()
+                .feature(TerrainPreset.SHIELD_VOLCANOES)
+                .width(8)
+                .height(48)
+                .endFeature()
+                .build()
+        ).setFillerBlock(new BlockMeta(PlanetBlocks.MOON_BRECCIA)),
+        new MantleRules(
+            TerrainConfiguration.builder()
+                .feature(TerrainPreset.BASE_HEIGHT)
+                .height(8)
+                .endFeature()
+                .build(),
+            TerrainConfiguration.builder()
+                .feature(TerrainPreset.BASE_HEIGHT)
+                .height(8)
+                .endFeature()
+                .build()
+        ).setFillerBlock(new BlockMeta(PlanetBlocks.MOON_MAGMA))),
     MARS(21, "Mars", "galaxia.dimension.mars"),
     FROZEN_BELT(22, "Frozen_Belt", "galaxia.dimension.frozen_belt"),
     TENEBRAE(23, "Tenebrae", "galaxia.dimension.tenebrae");
