@@ -1,8 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.dimension.cave;
 
-import net.minecraft.world.gen.NoiseGeneratorOctaves;
-
 import java.util.Random;
+
+import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
 /**
  * Cave generator for continuous networks of cracks

@@ -1,9 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.dimension.cave;
 
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.TubeNoise;
+import java.util.Random;
+
 import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
-import java.util.Random;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.TubeNoise;
 
 /**
  * Cave generator for long tubes
