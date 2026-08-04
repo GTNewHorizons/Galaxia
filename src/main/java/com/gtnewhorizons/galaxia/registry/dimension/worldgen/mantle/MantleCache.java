@@ -73,7 +73,7 @@ public class MantleCache {
                     ceilingSurfaceBlocks,
                     cubeX,
                     cubeZ,
-                    withSeed(cubeX, cubeZ, i++, 5),
+                    withSeed(cubeX, cubeZ, i++),
                     DEFAULT_RELEVANCE,
                     dimension,
                     terrainNoise);
@@ -86,7 +86,7 @@ public class MantleCache {
                     ceilingSurfaceBlocks,
                     cubeX,
                     cubeZ,
-                    withSeed(cubeX, cubeZ, i++, 10),
+                    withSeed(cubeX, cubeZ, i++),
                     DEFAULT_RELEVANCE,
                     dimension,
                     terrainNoise);
@@ -101,7 +101,7 @@ public class MantleCache {
                     floorSurfaceBlocks,
                     cubeX,
                     cubeZ,
-                    withSeed(cubeX, cubeZ, i++, 5),
+                    withSeed(cubeX, cubeZ, i++),
                     DEFAULT_RELEVANCE,
                     dimension,
                     terrainNoise);
@@ -114,7 +114,7 @@ public class MantleCache {
                     floorSurfaceBlocks,
                     cubeX,
                     cubeZ,
-                    withSeed(cubeX, cubeZ, i++, 10),
+                    withSeed(cubeX, cubeZ, i++),
                     DEFAULT_RELEVANCE,
                     dimension,
                     terrainNoise);
@@ -126,13 +126,12 @@ public class MantleCache {
             return this.cubeX == cubeX && this.cubeZ == cubeZ;
         }
 
-        private Random withSeed(int chunkX, int chunkZ, int index, int nonce) {
+        private Random withSeed(int chunkX, int chunkZ, int index) {
             long seed = Fnv1a64.initialState();
             seed = Fnv1a64.hashStep(seed, world.getSeed());
             seed = Fnv1a64.hashStep(seed, chunkX);
             seed = Fnv1a64.hashStep(seed, chunkZ);
             seed = Fnv1a64.hashStep(seed, index);
-            seed = Fnv1a64.hashStep(seed, nonce);
 
             random.setSeed(seed);
             return random;
