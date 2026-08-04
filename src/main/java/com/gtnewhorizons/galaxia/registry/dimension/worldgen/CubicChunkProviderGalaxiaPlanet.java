@@ -236,7 +236,16 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
     }
 
     private void generateCrust(int cubeX, int cubeY, int cubeZ, HeightOracle.ChunkData data, ExtendedBlockStorage ebs) {
-        CaveShape caveShape = null;
+        CaveShape crustCaves = null;
+        CaveShape intermediateCaves = dimension.getUpperIntermediaryCaves();
+        if (intermediateCaves != null) {
+            if (!intermediateCaves.preparedCaveShape()) {
+                intermediateCaves.prepareCaveShape(rand);
+            }
+            if (!intermediateCaves.preparedCaveCache(cubeX, cubeZ)) {
+                intermediateCaves.prepareCaveCache(cubeX, cubeZ);
+            }
+        }
 
         for (int localX = 0; localX < CHUNK_WIDTH; localX++) {
             for (int localZ = 0; localZ < CHUNK_WIDTH; localZ++) {
@@ -247,19 +256,19 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                 if (localBiome instanceof BiomeGenSpace spaceBiome) {
                     palette = spaceBiome;
 
-                    if (caveShape == null || !caveShape.equals(spaceBiome.getCaveShape())) {
-                        caveShape = spaceBiome.getCaveShape();
+                    if (crustCaves == null || !crustCaves.equals(spaceBiome.getCaveShape())) {
+                        crustCaves = spaceBiome.getCaveShape();
                     }
                 }
 
                 int terrainHeight = Math.max(1, (int) data.heightmap[localX + (localZ << 4)]);
 
-                if (caveShape != null) {
-                    if (!caveShape.preparedCaveShape()) {
-                        caveShape.prepareCaveShape(rand);
+                if (crustCaves != null) {
+                    if (!crustCaves.preparedCaveShape()) {
+                        crustCaves.prepareCaveShape(rand);
                     }
-                    if (!caveShape.preparedCaveCache(cubeX, cubeZ)) {
-                        caveShape.prepareCaveCache(cubeX, cubeZ);
+                    if (!crustCaves.preparedCaveCache(cubeX, cubeZ)) {
+                        crustCaves.prepareCaveCache(cubeX, cubeZ);
                     }
                 }
 
@@ -323,8 +332,14 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                             }
                         }
                     }
-
-                    if (caveShape != null && isTerrain && caveShape.generateCave(localX, y, localZ, terrainHeight)) {
+                    boolean isCave = false;
+                    if (crustCaves != null && isTerrain && crustCaves.generateCave(localX, y, localZ, terrainHeight)) {
+                        isCave = true;
+                    }
+                    if (!isCave && intermediateCaves != null && y < UPPER_INTERMEDIARY_CAVES_TOP) {
+                        isCave = intermediateCaves.generateCave(localX, y - UPPER_INTERMEDIARY_CAVES_BOTTOM, localZ, UPPER_INTERMEDIARY_CAVES_TOP - UPPER_INTERMEDIARY_CAVES_BOTTOM);
+                    }
+                    if (isCave) {
                         block = AIR;
                     }
 
