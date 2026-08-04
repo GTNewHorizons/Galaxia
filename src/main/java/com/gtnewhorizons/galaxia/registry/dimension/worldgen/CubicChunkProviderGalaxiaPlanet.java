@@ -226,6 +226,8 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                         }
                         if (!isCave) {
                             placeBlock(ebs, block, localX, y, localZ);
+                        } else {
+                            isCave = false;
                         }
                     }
                 }
