@@ -30,15 +30,17 @@ public class CaveShapeTubes implements CaveShape {
 
     /**
      * Simple constructor with a default vertical inclination of 0.5
-     * @param baseTubeDiameter Minimum diameter for all tubes
+     *
+     * @param baseTubeDiameter    Minimum diameter for all tubes
      * @param varyingTubeDiameter Varying additional size for each tube
-     * @param tubeLength Maximum tube length
+     * @param tubeLength          Maximum tube length
      */
     public CaveShapeTubes(byte baseTubeDiameter, byte varyingTubeDiameter, short tubeLength) {
         this(baseTubeDiameter, varyingTubeDiameter, tubeLength, DEFAULT_VERTICAL_INCLINATION_MULTIPLIER);
     }
 
-    public CaveShapeTubes(byte baseTubeDiameter, byte varyingTubeDiameter, short tubeLength, float verticalInclinationMultiplier) {
+    public CaveShapeTubes(byte baseTubeDiameter, byte varyingTubeDiameter, short tubeLength,
+        float verticalInclinationMultiplier) {
         this.baseTubeDiameter = baseTubeDiameter;
         this.varyingTubeDiameter = varyingTubeDiameter;
         this.tubeLength = tubeLength;

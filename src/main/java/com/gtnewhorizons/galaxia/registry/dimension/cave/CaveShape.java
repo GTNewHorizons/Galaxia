@@ -9,18 +9,21 @@ public interface CaveShape {
 
     /**
      * Provides important data to set up noise objects
+     * 
      * @param random Randomizer for noise
      */
     void prepareCaveShape(Random random);
 
     /**
      * Checks if the cave shape is ready for use
+     * 
      * @return Status of readiness
      */
     boolean preparedCaveShape();
 
     /**
      * Prepares a cache to prevent duplicate calculations
+     * 
      * @param chunkX x coordinate of the current chunk
      * @param chunkZ z coordinate of the current chunk
      */
@@ -28,6 +31,7 @@ public interface CaveShape {
 
     /**
      * Checks if a cache is available for a given chunk
+     * 
      * @param chunkX x coordinate of the current chunk
      * @param chunkZ z coordinate of the current chunk
      * @return Status of availability
@@ -36,6 +40,7 @@ public interface CaveShape {
 
     /**
      * Checks if a specific block is within a cave
+     * 
      * @param localX x coordinate within the chunk
      * @param localY y coordinate within the chunk
      * @param localZ z coordinate within the chunk

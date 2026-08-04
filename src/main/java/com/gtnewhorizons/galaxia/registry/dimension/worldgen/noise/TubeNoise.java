@@ -36,6 +36,7 @@ public class TubeNoise {
 
     /**
      * Creates the tube noise and sets up the linear functions
+     *
      * @param verticalInclinationMultiplier Inclination multiplier to determine tube steepness
      */
     public TubeNoise(float verticalInclinationMultiplier) {
@@ -55,9 +56,10 @@ public class TubeNoise {
 
     /**
      * Checks if a specific block is intersecting with any of the tubes
-     * @param x Global x coordinate of the block
-     * @param y Global y coordinate of the block
-     * @param z Global z coordinate of the block
+     *
+     * @param x                Global x coordinate of the block
+     * @param y                Global y coordinate of the block
+     * @param z                Global z coordinate of the block
      * @param diameterModifier Diameter modifier of the tubes at the given coordinates
      * @return Whether the block is intersecting any of the tubes
      */
@@ -79,6 +81,7 @@ public class TubeNoise {
 
     /**
      * Checks if the current tube cache is outside the currently generated chunk
+     *
      * @param chunkX x coordinate of the current chunk
      * @param chunkZ z coordinate of the current chunk
      * @return Whether the cache is in a different chunk

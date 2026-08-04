@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Random;
 
 public class MantleCache {
+
     private static final int CACHE_LIMIT = 32;
     private static final int CHUNK_AREA = 256;
     private static final double[] DEFAULT_RELEVANCE = new double[CHUNK_AREA];
@@ -35,7 +36,8 @@ public class MantleCache {
         Arrays.fill(DEFAULT_RELEVANCE, 1);
     }
 
-    public MantleCacheData getLocalData(int cubeX, int cubeZ, TerrainConfiguration ceiling, TerrainConfiguration floor) {
+    public MantleCacheData getLocalData(int cubeX, int cubeZ, TerrainConfiguration ceiling,
+        TerrainConfiguration floor) {
         for (CacheEntry entry : cacheEntries) {
             if (entry.isCorrectCache(cubeX, cubeZ)) {
                 return entry.exportData;
@@ -50,6 +52,7 @@ public class MantleCache {
     }
 
     public static final class CacheEntry {
+
         private final int cubeX;
         private final int cubeZ;
         private final World world;
@@ -57,7 +60,8 @@ public class MantleCache {
 
         private final MantleCacheData exportData;
 
-        public CacheEntry(int cubeX, int cubeZ, TerrainConfiguration ceiling, TerrainConfiguration floor, World world, Random random, DimensionEnum dimension, NoiseGeneratorOctaves terrainNoise) {
+        public CacheEntry(int cubeX, int cubeZ, TerrainConfiguration ceiling, TerrainConfiguration floor, World world,
+            Random random, DimensionEnum dimension, NoiseGeneratorOctaves terrainNoise) {
             this.cubeX = cubeX;
             this.cubeZ = cubeZ;
             this.world = world;
@@ -119,7 +123,11 @@ public class MantleCache {
                     dimension,
                     terrainNoise);
             }
-            exportData = new MantleCacheData(ceilingHeightmap, floorHeightmap, ceilingSurfaceBlocks, floorSurfaceBlocks);
+            exportData = new MantleCacheData(
+                ceilingHeightmap,
+                floorHeightmap,
+                ceilingSurfaceBlocks,
+                floorSurfaceBlocks);
         }
 
         public boolean isCorrectCache(int cubeX, int cubeZ) {

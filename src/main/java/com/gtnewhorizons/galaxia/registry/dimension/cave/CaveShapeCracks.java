@@ -33,6 +33,7 @@ public class CaveShapeCracks implements CaveShape {
 
     /**
      * Specific constructor with configurable height range for the generator
+     *
      * @param height Amount of vertical space for the generator to use
      */
     public CaveShapeCracks(int height) {

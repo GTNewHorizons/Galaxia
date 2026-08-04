@@ -146,7 +146,8 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
         }
     }
 
-    private void generateMantle(int cubeX, int cubeY, int cubeZ, ExtendedBlockStorage ebs, int ceilingOffset, int floorOffset, boolean upperMantle) {
+    private void generateMantle(int cubeX, int cubeY, int cubeZ, ExtendedBlockStorage ebs, int ceilingOffset,
+        int floorOffset, boolean upperMantle) {
         ImmutableBlockMeta block;
         TerrainConfiguration ceiling;
         TerrainConfiguration floor;
@@ -215,10 +216,12 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                 for (int y = minY; y < maxY; y++) {
                     if ((y < floorHeight || y > ceilingHeight)) {
                         if (ceilingCaves != null && y > ceilingCaveBottom) {
-                            isCave = ceilingCaves.isInCave(localX, y - ceilingCaveBottom, localZ, ceilingCaveTop - ceilingCaveBottom);
+                            isCave = ceilingCaves
+                                .isInCave(localX, y - ceilingCaveBottom, localZ, ceilingCaveTop - ceilingCaveBottom);
                         }
                         if (!isCave && floorCaves != null && y < floorCaveTop) {
-                            isCave = floorCaves.isInCave(localX, y - floorCaveBottom, localZ, floorCaveTop - floorCaveBottom);
+                            isCave = floorCaves
+                                .isInCave(localX, y - floorCaveBottom, localZ, floorCaveTop - floorCaveBottom);
                         }
                         if (!isCave) {
                             placeBlock(ebs, block, localX, y, localZ);
@@ -333,7 +336,11 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                         isCave = true;
                     }
                     if (!isCave && intermediateCaves != null && y < UPPER_INTERMEDIARY_CAVES_TOP) {
-                        isCave = intermediateCaves.isInCave(localX, y - UPPER_INTERMEDIARY_CAVES_BOTTOM, localZ, UPPER_INTERMEDIARY_CAVES_TOP - UPPER_INTERMEDIARY_CAVES_BOTTOM);
+                        isCave = intermediateCaves.isInCave(
+                            localX,
+                            y - UPPER_INTERMEDIARY_CAVES_BOTTOM,
+                            localZ,
+                            UPPER_INTERMEDIARY_CAVES_TOP - UPPER_INTERMEDIARY_CAVES_BOTTOM);
                     }
                     if (isCave) {
                         block = AIR;

@@ -1,8 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
-import net.minecraft.init.Blocks;
-import net.minecraft.world.biome.BiomeGenBase;
-
 import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
@@ -13,6 +10,8 @@ import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeCracks;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
+import net.minecraft.init.Blocks;
+import net.minecraft.world.biome.BiomeGenBase;
 
 /**
  * The class holding all data related to the dimension Mars
@@ -39,8 +38,7 @@ public final class Mars {
                 .width(2)
                 .endFeature()
                 .build(),
-            marsCaves
-        );
+            marsCaves);
         BiomeGenBase dunes = createBiome(
             "Mars Dunes",
             TerrainConfiguration.builder()
@@ -56,8 +54,7 @@ public final class Mars {
                 .width(2)
                 .endFeature()
                 .build(),
-            marsCaves
-        );
+            marsCaves);
         BiomeGenBase slopes = createBiome(
             "Mars Slopes",
             TerrainConfiguration.builder()
@@ -69,8 +66,7 @@ public final class Mars {
                 .width(2)
                 .endFeature()
                 .build(),
-            null
-        );
+            null);
         BiomeGenBase hills = createBiome(
             "Mars Hills",
             TerrainConfiguration.builder()
@@ -82,8 +78,7 @@ public final class Mars {
                 .width(4)
                 .endFeature()
                 .build(),
-            null
-        );
+            null);
         BiomeGenBase mountains = createBiome(
             "Mars Mountains",
             TerrainConfiguration.builder()
@@ -95,8 +90,7 @@ public final class Mars {
                 .width(6)
                 .endFeature()
                 .build(),
-            null
-        );
+            null);
         BiomeGenBase supermountains = createBiome(
             "Mars Supermountains",
             TerrainConfiguration.builder()
@@ -108,8 +102,7 @@ public final class Mars {
                 .width(12)
                 .endFeature()
                 .build(),
-            null
-        );
+            null);
         builder.sky(true)
             .fog(0.15f, 0.1f, 0.3f)
             // Layer 0
