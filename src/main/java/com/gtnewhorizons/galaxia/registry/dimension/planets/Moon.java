@@ -1,5 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
+import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.*;
+
+import net.minecraft.init.Blocks;
+import net.minecraft.world.biome.BiomeGenBase;
+
 import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
@@ -19,10 +24,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CrystalClus
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.FluidSpringFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.GeodeFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.StalactiteFeature;
-import net.minecraft.init.Blocks;
-import net.minecraft.world.biome.BiomeGenBase;
-
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.*;
 
 /**
  * The class holding all data related to the dimension Moon

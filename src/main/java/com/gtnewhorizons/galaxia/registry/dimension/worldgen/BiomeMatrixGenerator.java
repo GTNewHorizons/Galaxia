@@ -1,8 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
-import net.minecraft.world.biome.BiomeGenBase;
-
 import java.util.HashMap;
+
+import net.minecraft.world.biome.BiomeGenBase;
 
 public class BiomeMatrixGenerator {
 
