@@ -1,13 +1,13 @@
 package com.gtnewhorizons.galaxia.registry.dimension.provider;
 
-import java.util.function.Supplier;
-
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.BiomeMatrixGenerator;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraftforge.client.IRenderHandler;
 
-import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import java.util.function.Supplier;
 
 /**
  * A builder class to generate a world provider with configuration
@@ -101,6 +101,11 @@ public class WorldProviderBuilder {
      */
     public WorldProviderBuilder biome(BiomeGenBase biome, int x, int z) {
         provider.addBiome(biome, x, z);
+        return this;
+    }
+
+    public WorldProviderBuilder biomeMatrix(BiomeMatrixGenerator biomeMatrixGenerator) {
+        provider.addBiomeMatrix(biomeMatrixGenerator);
         return this;
     }
 

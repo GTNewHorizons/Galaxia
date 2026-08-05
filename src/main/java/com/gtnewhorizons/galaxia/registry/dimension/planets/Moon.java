@@ -1,10 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.*;
-
-import net.minecraft.init.Blocks;
-import net.minecraft.world.biome.BiomeGenBase;
-
 import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
@@ -16,6 +11,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeCracks;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeTubes;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.BiomeMatrixGenerator;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CraterFeature;
@@ -23,6 +19,10 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CrystalClus
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.FluidSpringFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.GeodeFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.StalactiteFeature;
+import net.minecraft.init.Blocks;
+import net.minecraft.world.biome.BiomeGenBase;
+
+import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.*;
 
 /**
  * The class holding all data related to the dimension Moon
@@ -106,42 +106,23 @@ public final class Moon {
             .fog(0, 0, 0)
             .skyColor(0, 0, 0.001f)
             .avgGround(80)
-            // Inner volcanic biomes
-            .biome(smallVolcanoes, 1, 1)
-            .biome(bigVolcanoes, 1, 2)
-            .biome(bigVolcanoes, 2, 1)
-            .biome(smallVolcanoes, 2, 2)
-            // Border
-            .biome(border, 0, 0)
-            .biome(border, 1, 0)
-            .biome(border, 2, 0)
-            .biome(border, 3, 0)
-            .biome(border, 0, 1)
-            .biome(border, 3, 1)
-            .biome(border, 0, 2)
-            .biome(border, 3, 2)
-            .biome(border, 0, 3)
-            .biome(border, 1, 3)
-            .biome(border, 2, 3)
-            .biome(border, 3, 3)
-            // Hills
-            .biome(hills, 4, 0)
-            .biome(hills, 5, 0)
-            .biome(hills, 6, 0)
-            .biome(hills, 7, 0)
-            .biome(hills, 4, 1)
-            .biome(hills, 7, 1)
-            .biome(hills, 4, 2)
-            .biome(hills, 7, 2)
-            .biome(hills, 4, 3)
-            .biome(hills, 5, 3)
-            .biome(hills, 6, 3)
-            .biome(hills, 7, 3)
-            // Mountains
-            .biome(mountains, 5, 1)
-            .biome(mountains, 5, 2)
-            .biome(mountains, 6, 1)
-            .biome(mountains, 6, 2)
+            // Biome matrix
+            .biomeMatrix(
+                new BiomeMatrixGenerator(
+                    new String[] {
+                        "hHhHhH",
+                        "Hbbbbh",
+                        "hbVvbH",
+                        "HbvVbh",
+                        "hbbbbH",
+                        "HhHhHh"
+                    })
+                    .addBiomeEntry('h', hills)
+                    .addBiomeEntry('H', mountains)
+                    .addBiomeEntry('b', border)
+                    .addBiomeEntry('v', smallVolcanoes)
+                    .addBiomeEntry('V', bigVolcanoes)
+            )
             // Finish
             .name(DimensionEnum.MOON)
             .build();

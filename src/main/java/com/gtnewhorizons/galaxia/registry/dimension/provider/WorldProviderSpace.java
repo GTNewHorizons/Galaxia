@@ -1,10 +1,14 @@
 package com.gtnewhorizons.galaxia.registry.dimension.provider;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
+import com.cardinalstar.cubicchunks.api.worldgen.IWorldGenerator;
+import com.cardinalstar.cubicchunks.world.ICubicWorldProvider;
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.BiomeMatrixGenerator;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.ChunkProviderGalaxiaPlanet;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.CubicChunkProviderGalaxiaPlanet;
+import cpw.mods.fml.common.Optional;
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.ChunkCoordinates;
@@ -14,18 +18,12 @@ import net.minecraft.world.WorldProvider;
 import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraftforge.client.IRenderHandler;
-
 import org.jetbrains.annotations.Nullable;
 
-import com.cardinalstar.cubicchunks.api.worldgen.IWorldGenerator;
-import com.cardinalstar.cubicchunks.world.ICubicWorldProvider;
-import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.ChunkProviderGalaxiaPlanet;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.CubicChunkProviderGalaxiaPlanet;
-
-import cpw.mods.fml.common.Optional;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * An abstract version of the WorldProvider to be used on Galaxia Planets
@@ -157,6 +155,10 @@ public class WorldProviderSpace extends WorldProvider implements ICubicWorldProv
             biomes = biggerMatrix;
         }
         biomes[x][z] = biome;
+    }
+
+    public void addBiomeMatrix(BiomeMatrixGenerator biomeMatrixGenerator) {
+        biomes = biomeMatrixGenerator.createBiomeMatrix();
     }
 
     /**
