@@ -36,7 +36,7 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
     /**
      * Controller is now on the BOTTOM layer of the structure.
      */
-    public static final int CONTROLLER_OFFSET_X = 2;
+    public static final int CONTROLLER_OFFSET_X = 0;
     public static final int CONTROLLER_OFFSET_Y = 2;
     public static final int CONTROLLER_OFFSET_Z = 0;
 
