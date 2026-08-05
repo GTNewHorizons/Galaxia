@@ -108,21 +108,12 @@ public final class Moon {
             .avgGround(80)
             // Biome matrix
             .biomeMatrix(
-                new BiomeMatrixGenerator(
-                    new String[] {
-                        "hHhHhH",
-                        "Hbbbbh",
-                        "hbVvbH",
-                        "HbvVbh",
-                        "hbbbbH",
-                        "HhHhHh"
-                    })
+                new BiomeMatrixGenerator(new String[] { "hHhHhH", "Hbbbbh", "hbVvbH", "HbvVbh", "hbbbbH", "HhHhHh" })
                     .addBiomeEntry('h', hills)
                     .addBiomeEntry('H', mountains)
                     .addBiomeEntry('b', border)
                     .addBiomeEntry('v', smallVolcanoes)
-                    .addBiomeEntry('V', bigVolcanoes)
-            )
+                    .addBiomeEntry('V', bigVolcanoes))
             // Finish
             .name(DimensionEnum.MOON)
             .build();

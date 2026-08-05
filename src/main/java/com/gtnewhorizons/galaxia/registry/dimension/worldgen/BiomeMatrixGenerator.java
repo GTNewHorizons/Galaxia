@@ -5,6 +5,7 @@ import net.minecraft.world.biome.BiomeGenBase;
 import java.util.HashMap;
 
 public class BiomeMatrixGenerator {
+
     private final String[] characterMatrix;
     private final HashMap<Character, BiomeGenBase> biomeEntries = new HashMap<>();
 
