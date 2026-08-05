@@ -4,8 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.block.Block;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.AxisAlignedBB;
 import net.minecraftforge.common.util.Constants;
+import net.minecraftforge.common.util.ForgeDirection;
 
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
@@ -41,16 +44,24 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
     public static final int CONTROLLER_OFFSET_Z = 0;
 
     public static final int MAXIMUM_RADIUS = 8;
+    public static final int INVALID = -1;
+
     public static final String STRUCTURE_PIECE_MAIN = "main";
     public static final String STRUCTURE_EDGE = "edge";
     public static final String STRUCTURE_CENTER = "center";
 
-    public static final int INVALID = -1;
+    // A sprinting player covers ~2.8 blocks per interval, so the offset must exceed that to guarantee detection.
+    private static final int PROXIMITY_CHECK_INTERVAL = 10;
+    private static final int PROXIMITY_CLOSE_COOLDOWN = 40;
+    private static final double PROXIMITY_OFFSET = 3.0;
 
-    public int xMin = INVALID;
-    public int xMax = INVALID;
-    public int yMin = INVALID;
-    public int yMax = INVALID;
+    private AxisAlignedBB doorwayAABB;
+    private int proximityCheckTimer = 0;
+
+    private int xMin = INVALID;
+    private int xMax = INVALID;
+    private int yMin = INVALID;
+    private int yMax = INVALID;
 
     public static final IStructureDefinition<TileEntityAirlock> STRUCTURE_DEFINITION = StructureDefinition
         .<TileEntityAirlock>builder()
@@ -132,6 +143,71 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
                 setDoorState(false);
             }
         }
+    }
+
+    @Override
+    public void updateEntity() {
+        super.updateEntity();
+        if (worldObj == null || worldObj.isRemote || !structureValid) return;
+
+        if (proximityCheckTimer > 0) {
+            proximityCheckTimer--;
+            return;
+        }
+        proximityCheckTimer = PROXIMITY_CHECK_INTERVAL;
+
+        boolean playerNear = !worldObj.getEntitiesWithinAABB(EntityPlayer.class, doorwayAABB)
+            .isEmpty();
+        if (playerNear != isOpen()) {
+            setDoorState(playerNear);
+            if (isOpen()) proximityCheckTimer = PROXIMITY_CLOSE_COOLDOWN;
+        }
+    }
+
+    /**
+     * Box covering every door block of the structure in world space, expanded by {@link #PROXIMITY_OFFSET} in front of
+     * and behind the wall so that players approaching from either side are detected.
+     */
+    private AxisAlignedBB computeDoorwayAABB() {
+        if (xMin == INVALID || xMax == INVALID || yMin == INVALID || yMax == INVALID) return null;
+
+        double[] bounds = { Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE, -Double.MAX_VALUE, -Double.MAX_VALUE,
+            -Double.MAX_VALUE };
+        for (int x = xMin + 1; x <= xMax - 1; x++) {
+            for (int y = yMin + 1; y <= yMax - 1; y++) {
+                STRUCTURE_DEFINITION.iterate(
+                    STRUCTURE_CENTER,
+                    worldObj,
+                    currentFacing,
+                    xCoord,
+                    yCoord,
+                    zCoord,
+                    x,
+                    y,
+                    0,
+                    (_, w, ox, oy, oz, _, _, _) -> {
+                        if (w.getBlock(ox, oy, oz) instanceof BlockOpenable) {
+                            bounds[0] = Math.min(bounds[0], ox);
+                            bounds[1] = Math.min(bounds[1], oy);
+                            bounds[2] = Math.min(bounds[2], oz);
+                            bounds[3] = Math.max(bounds[3], ox + 1.0);
+                            bounds[4] = Math.max(bounds[4], oy + 1.0);
+                            bounds[5] = Math.max(bounds[5], oz + 1.0);
+                        }
+                        return true;
+                    });
+            }
+        }
+        if (bounds[0] == Double.MAX_VALUE) return null;
+
+        // Expand only along the wall's depth axis (the door slab's thin axis), i.e. in front of and behind the door.
+        // The magnitude is used since the depth direction may have negative offsets.
+        ForgeDirection depth = currentFacing.getRelativeBackInWorld();
+        return AxisAlignedBB.getBoundingBox(bounds[0], bounds[1], bounds[2], bounds[3], bounds[4], bounds[5])
+            .expand(
+                Math.abs(depth.offsetX) * PROXIMITY_OFFSET,
+                Math.abs(depth.offsetY) * PROXIMITY_OFFSET,
+                Math.abs(depth.offsetZ) * PROXIMITY_OFFSET);
     }
 
     public boolean trackStationController(BlockPos pos) {
@@ -230,11 +306,13 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
     @Override
     protected void onStructureFormed() {
         setDoorState(false);
+        this.doorwayAABB = computeDoorwayAABB();
     }
 
     @Override
     protected void onStructureDisformed() {
         setDoorState(false);
+        this.doorwayAABB = null;
         this.xMin = INVALID;
         this.xMax = INVALID;
         this.yMin = INVALID;
