@@ -113,11 +113,11 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
         switch (state) {
             case CLOSED -> {
                 state = AirlockState.OPEN;
-                openDoor();
+                setDoorState(true);
             }
             case OPEN -> {
                 state = AirlockState.CLOSED;
-                closeDoor();
+                setDoorState(false);
             }
         }
     }
@@ -217,24 +217,16 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
 
     @Override
     protected void onStructureFormed() {
-        closeDoor();
+        setDoorState(false);
     }
 
     @Override
     protected void onStructureDisformed() {
-        closeDoor();
+        setDoorState(false);
         this.xMin = INVALID;
         this.xMax = INVALID;
         this.yMin = INVALID;
         this.yMax = INVALID;
-    }
-
-    private void openDoor() {
-        setDoorState(true);
-    }
-
-    private void closeDoor() {
-        setDoorState(false);
     }
 
     @Override
