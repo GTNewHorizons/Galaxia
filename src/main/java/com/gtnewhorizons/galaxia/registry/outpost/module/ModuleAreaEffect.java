@@ -35,8 +35,7 @@ public final class ModuleAreaEffect {
     public void collectAffectedTiles(ModuleInstance source, Consumer<StationTileCoord> consumer) {
         Objects.requireNonNull(consumer, "consumer");
         if (source == null || !source.enabled() || source.anchorOrNull() == null) return;
-        StationTileCoord[] sourceTiles = source.shape()
-            .tiles(source.anchor());
+        StationTileCoord[] sourceTiles = source.tiles();
         for (StationTileCoord sourceTile : sourceTiles) {
             for (int dx = -radius; dx <= radius; dx++) {
                 for (int dy = -radius; dy <= radius; dy++) {
@@ -60,10 +59,8 @@ public final class ModuleAreaEffect {
     private boolean affects(ModuleInstance source, ModuleInstance target) {
         if (source == null || target == null || source.id.equals(target.id) || !source.enabled()) return false;
         if (source.anchorOrNull() == null || target.anchorOrNull() == null) return false;
-        StationTileCoord[] sourceTiles = source.shape()
-            .tiles(source.anchor());
-        for (StationTileCoord targetTile : target.shape()
-            .tiles(target.anchor())) {
+        StationTileCoord[] sourceTiles = source.tiles();
+        for (StationTileCoord targetTile : target.tiles()) {
             if (contains(sourceTiles, targetTile)) continue;
             for (StationTileCoord sourceTile : sourceTiles) {
                 if (Math.abs(targetTile.dx() - sourceTile.dx()) <= radius
