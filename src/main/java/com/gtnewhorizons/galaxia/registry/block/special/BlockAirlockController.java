@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.block.special;
 
+import gregtech.common.tileentities.machines.multi.MTEPyrolyseOven;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.renderer.texture.IIconRegister;
@@ -49,7 +50,7 @@ public class BlockAirlockController extends BlockUpdatable implements ITileEntit
     @Override
     @SideOnly(Side.CLIENT)
     public IIcon getIcon(int side, int meta) {
-        return side == 2 || side == 3 ? frontIcon : sideIcon;
+        return side == 2 || side == 3 ? closedOverlay : sideIcon;
     }
 
     @Override
@@ -62,7 +63,7 @@ public class BlockAirlockController extends BlockUpdatable implements ITileEntit
 
             if (side == facing.ordinal() || side == facing.getOpposite()
                 .ordinal()) {
-                return airlock.isOpen() ? closedOverlay : frontIcon;
+                return !airlock.isOpen() ? closedOverlay : frontIcon;
             }
         }
 

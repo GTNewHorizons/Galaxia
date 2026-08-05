@@ -120,9 +120,6 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
                 closeDoor();
             }
         }
-
-        markDirty();
-        worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
     }
 
     public boolean trackStationController(BlockPos pos) {
@@ -295,6 +292,10 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
 
         notifyDirtySeal();
         this.markDirty();
+
+        if (this.worldObj != null && !this.worldObj.isRemote) {
+            this.worldObj.markBlockForUpdate(this.xCoord, this.yCoord, this.zCoord);
+        }
     }
 
     private void notifyDirtySeal() {
