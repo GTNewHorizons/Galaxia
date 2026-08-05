@@ -110,8 +110,7 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
     public static MiningFeatureEffects featureMiningEffects(@Nonnull ModuleInstance module,
         @Nonnull AutomatedFacility outpost) {
         Map<PlanetaryFeatureKey, Integer> counts = new LinkedHashMap<>();
-        for (var tile : module.shape()
-            .tiles(module.anchor())) {
+        for (var tile : module.tiles()) {
             for (PlanetaryFeatureKey feature : outpost.planetaryFeaturesAt(tile)) {
                 counts.merge(feature, 1, Integer::sum);
             }
