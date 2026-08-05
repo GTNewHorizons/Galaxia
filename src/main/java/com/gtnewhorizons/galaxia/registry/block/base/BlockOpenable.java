@@ -33,27 +33,27 @@ public abstract class BlockOpenable extends BlockUpdatable {
     }
 
     @Override
-    public boolean shouldSideBeRendered(IBlockAccess world, int x, int y, int z, int side) {
-        // TODO: This is a complete hack
-        int meta = world.getBlockMetadata(
+    public final boolean shouldSideBeRendered(IBlockAccess world, int x, int y, int z, int side) {
+        if (isOpen(
+            world,
             x - Facing.offsetsXForSide[side],
             y - Facing.offsetsYForSide[side],
-            z - Facing.offsetsZForSide[side]);
+            z - Facing.offsetsZForSide[side])) {
+            return false;
+        }
 
-        return side == 0 && this.minY > 0.0D
-            || (side == 1 && this.maxY < 1.0D || (side == 2 && this.minZ > 0.0D || (side == 3 && this.maxZ < 1.0D
-                || (side == 4 && this.minX > 0.0D || (side == 5 && this.maxX < 1.0D || meta == META_CLOSED)))));
+        return super.shouldSideBeRendered(world, x, y, z, side);
     }
 
     @Override
     public final AxisAlignedBB getCollisionBoundingBoxFromPool(World world, int x, int y, int z) {
-        int meta = world.getBlockMetadata(x, y, z);
-
-        if (meta == META_OPEN) {
+        if (isOpen(world, x, y, z)) {
             return null;
         }
 
-        return AxisAlignedBB.getBoundingBox(x, y, z, x + 1, y + 1, z + 1);
+        setBlockBoundsBasedOnState(world, x, y, z);
+        return AxisAlignedBB
+            .getBoundingBox(x + this.minX, y + this.minY, z + this.minZ, x + this.maxX, y + this.maxY, z + this.maxZ);
     }
 
     @Override
@@ -73,9 +73,7 @@ public abstract class BlockOpenable extends BlockUpdatable {
 
     @Override
     public final MovingObjectPosition collisionRayTrace(World world, int x, int y, int z, Vec3 start, Vec3 end) {
-        int meta = world.getBlockMetadata(x, y, z);
-
-        if (meta == META_OPEN) {
+        if (isOpen(world, x, y, z)) {
             return null;
         }
 

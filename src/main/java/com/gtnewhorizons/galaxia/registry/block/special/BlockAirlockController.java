@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.block.special;
 
-import gregtech.common.tileentities.machines.multi.MTEPyrolyseOven;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.renderer.texture.IIconRegister;
@@ -24,7 +23,7 @@ import cpw.mods.fml.relauncher.SideOnly;
 public class BlockAirlockController extends BlockUpdatable implements ITileEntityProvider {
 
     @SideOnly(Side.CLIENT)
-    private IIcon frontIcon;
+    private IIcon openOverlay;
 
     @SideOnly(Side.CLIENT)
     private IIcon sideIcon;
@@ -42,7 +41,7 @@ public class BlockAirlockController extends BlockUpdatable implements ITileEntit
     @Override
     @SideOnly(Side.CLIENT)
     public void registerBlockIcons(IIconRegister reg) {
-        this.frontIcon = reg.registerIcon("galaxia:machine/airlock_controller");
+        this.openOverlay = reg.registerIcon("galaxia:machine/airlock_controller");
         this.sideIcon = reg.registerIcon("galaxia:machine/airlock_casing");
         this.closedOverlay = reg.registerIcon("galaxia:machine/airlock_controller_closed");
     }
@@ -63,7 +62,8 @@ public class BlockAirlockController extends BlockUpdatable implements ITileEntit
 
             if (side == facing.ordinal() || side == facing.getOpposite()
                 .ordinal()) {
-                return !airlock.isOpen() ? closedOverlay : frontIcon;
+                if (!airlock.isStructureValid()) return openOverlay;
+                return !airlock.isOpen() ? closedOverlay : openOverlay;
             }
         }
 

@@ -16,6 +16,7 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockOpenable;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockDoor;
 
 import lombok.Getter;
 
@@ -67,7 +68,18 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
         .addShape(STRUCTURE_EDGE, new String[][] { { "C" } })
         .addShape(STRUCTURE_CENTER, new String[][] { { "D" } })
         .addElement('C', GalaxiaStructureUtility.ofBlock(GalaxiaBlocksEnum.AIRLOCK_CASING.get(), 0))
-        .addElement('D', GalaxiaStructureUtility.ofBlockAnyMeta(GalaxiaBlocksEnum.AIRLOCK_DOOR.get()))
+        .addElement(
+            'D',
+            GalaxiaStructureUtility.ofBlockWithMeta(
+                GalaxiaBlocksEnum.AIRLOCK_DOOR.get(),
+                (t, meta) -> BlockAirlockDoor.getOrientation(meta) == BlockAirlockDoor.orientationForAxis(
+                    t.getCurrentFacing()
+                        .getRelativeBackInWorld()),
+                t -> BlockAirlockDoor.encodeMeta(
+                    false,
+                    BlockAirlockDoor.orientationForAxis(
+                        t.getCurrentFacing()
+                            .getRelativeBackInWorld()))))
         .build();
 
     @Override
