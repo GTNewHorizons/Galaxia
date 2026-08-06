@@ -8,6 +8,7 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import net.minecraft.block.Block;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
@@ -64,7 +65,11 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
             mtePlug.setGraph(graph);
         }
 
-        return graph != null;
+        if (graph != null) {
+            GalaxiaAPI.causeMachineUpdate(worldObj, xCoord, yCoord, zCoord);
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -98,6 +103,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
         stationPlugs.clear();
         sealed = false;
         markSealedDirty();
+        GalaxiaAPI.causeMachineUpdate(worldObj, xCoord, yCoord, zCoord);
     }
 
     public void markSealedDirty() {

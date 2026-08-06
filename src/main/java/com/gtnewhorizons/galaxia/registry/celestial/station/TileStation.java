@@ -210,8 +210,7 @@ public class TileStation extends TileStationBase<TileStation> {
     protected boolean attemptBoot() {
         if (controllerFlag == Role.MAIN) {
             initController();
-            super.attemptBoot();
-            return true;
+            return super.attemptBoot();
         }
 
         // Try secondary boot — find an existing controller graph via airlocks
@@ -231,14 +230,12 @@ public class TileStation extends TileStationBase<TileStation> {
         }
 
         if (controllerFlag == Role.SECONDARY) {
-            super.attemptBoot();
-            return false;
+            return super.attemptBoot();
         }
 
         controllerFlag = Role.MAIN;
         initController();
-        super.attemptBoot();
-        return true;
+        return super.attemptBoot();
     }
 
     private void initController() {

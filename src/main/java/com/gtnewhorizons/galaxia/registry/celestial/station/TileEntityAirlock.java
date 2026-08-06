@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.celestial.station;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
@@ -321,6 +322,7 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
     protected void onStructureFormed() {
         setDoorState(false);
         this.doorwayAABB = computeDoorwayAABB();
+        GalaxiaAPI.causeMachineUpdate(worldObj, xCoord, yCoord, zCoord);
     }
 
     @Override
