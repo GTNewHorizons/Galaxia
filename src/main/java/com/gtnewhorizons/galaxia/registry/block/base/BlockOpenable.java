@@ -28,8 +28,14 @@ public abstract class BlockOpenable extends BlockUpdatable {
     }
 
     @Override
-    public final int getLightOpacity() {
-        return 0;
+    public final int getLightOpacity(IBlockAccess world, int x, int y, int z) {
+        return isOpen(world, x, y, z) ? 0 : 255;
+    }
+
+    @Override
+    public final boolean getUseNeighborBrightness() {
+        // This propagates light updates correctly transitioning from opaque -> transparent
+        return true;
     }
 
     @Override
@@ -63,7 +69,6 @@ public abstract class BlockOpenable extends BlockUpdatable {
 
     public void setOpen(World world, int x, int y, int z, boolean open) {
         int meta = open ? META_OPEN : META_CLOSED;
-
         world.setBlockMetadataWithNotify(x, y, z, meta, 3);
     }
 

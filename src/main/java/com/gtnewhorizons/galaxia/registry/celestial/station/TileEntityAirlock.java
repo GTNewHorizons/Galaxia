@@ -372,12 +372,11 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
             }
         }
 
+        // No need to update lights, if it ever causes any problems try with
+        // worldObj.markBlockRangeForRenderUpdate( doorBounds[0], doorBounds[1], doorBounds[2], doorBounds[3],
+        // doorBounds[4], doorBounds[5]);
         notifyDirtySeal();
         this.markDirty();
-
-        if (this.worldObj != null && !this.worldObj.isRemote) {
-            this.worldObj.markBlockForUpdate(this.xCoord, this.yCoord, this.zCoord);
-        }
     }
 
     private void notifyDirtySeal() {
