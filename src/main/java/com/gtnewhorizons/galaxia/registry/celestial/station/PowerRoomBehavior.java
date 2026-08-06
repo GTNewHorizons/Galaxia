@@ -76,7 +76,7 @@ public class PowerRoomBehavior implements IStationBehaviorWithAttachments {
                 }
                 return false;
             }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
-            .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
+            .embedDefinition(TileEntityAirlock.STRUCTURE_EMBED, TileEntityAirlock.STRUCTURE_DEFINITION)
             .withSearchRadius(ConfigStructures.enclosed.searchRadius)
             .enclosed()
             .build();

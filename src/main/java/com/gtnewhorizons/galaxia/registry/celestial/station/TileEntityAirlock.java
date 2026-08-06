@@ -47,6 +47,7 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
     public static final int INVALID = -1;
 
     public static final String STRUCTURE_PIECE_MAIN = "main";
+    public static final String STRUCTURE_EMBED = "embed";
     public static final String STRUCTURE_EDGE = "edge";
     public static final String STRUCTURE_CENTER = "center";
 
@@ -78,9 +79,11 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
                 { "CCCCC" },
             }))
             // spotless:on
+        .addShape(STRUCTURE_EMBED, new String[][] { { "~CE" } })
         .addShape(STRUCTURE_EDGE, new String[][] { { "C" } })
         .addShape(STRUCTURE_CENTER, new String[][] { { "D" } })
         .addElement('C', GalaxiaStructureUtility.ofBlock(GalaxiaBlocksEnum.AIRLOCK_CASING.get(), 0))
+        .addElement('E', GalaxiaStructureUtility.ofBlockAnyMeta(GalaxiaBlocksEnum.AIRLOCK_DOOR.get()))
         .addElement(
             'D',
             GalaxiaStructureUtility.ofBlockWithMeta(
