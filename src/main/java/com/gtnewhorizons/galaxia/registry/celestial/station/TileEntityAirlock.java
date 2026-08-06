@@ -58,6 +58,8 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
     private AxisAlignedBB doorwayAABB;
     private int proximityCheckTimer = 0;
 
+    private boolean redstonePowered = false;
+
     private int xMin = INVALID;
     private int xMax = INVALID;
     private int yMin = INVALID;
@@ -132,6 +134,7 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
 
     public void toggleState() {
         if (!structureValid) return;
+        if (redstonePowered) return;
 
         switch (state) {
             case CLOSED -> {
@@ -149,6 +152,14 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
     public void updateEntity() {
         super.updateEntity();
         if (worldObj == null || worldObj.isRemote || !structureValid) return;
+
+        boolean powered = worldObj.isBlockIndirectlyGettingPowered(xCoord, yCoord, zCoord);
+        if (powered != redstonePowered) {
+            // Rising edge -> open and stay open while the signal is applied; falling edge -> close.
+            redstonePowered = powered;
+            setDoorState(powered);
+        }
+        if (redstonePowered) return;
 
         if (proximityCheckTimer > 0) {
             proximityCheckTimer--;
