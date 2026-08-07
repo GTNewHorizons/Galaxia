@@ -49,8 +49,8 @@ public final class Moon {
                 .height(32)
                 .endFeature()
                 .build());
-        BiomeGenBase smallVolcanoes = createOceanBiome(
-            "Moon Small Volcanoes",
+        BiomeGenBase volcanoes = createOceanBiome(
+            "Moon Volcanoes",
             TerrainConfiguration.builder()
                 .feature(TerrainPreset.BASE_HEIGHT)
                 .height(32)
@@ -59,18 +59,13 @@ public final class Moon {
                 .replacementBlock(MOON_MAGMA)
                 .width(2)
                 .height(32)
-                .endFeature()
-                .build());
-        BiomeGenBase bigVolcanoes = createOceanBiome(
-            "Moon Big Volcanoes",
-            TerrainConfiguration.builder()
-                .feature(TerrainPreset.BASE_HEIGHT)
-                .height(32)
+                .modifier(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.minimum, TerrainModifier.WEIRDNESS.lowerMiddle)
                 .endFeature()
                 .feature(TerrainPreset.SHIELD_VOLCANOES)
                 .replacementBlock(MOON_MAGMA)
                 .width(4)
                 .height(64)
+                .modifier(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.upperMiddle, TerrainModifier.WEIRDNESS.maximum)
                 .endFeature()
                 .build());
         BiomeGenBase highlands = createLandBiome(
@@ -106,11 +101,10 @@ public final class Moon {
             .avgGround(80)
             // Biome matrix
             .biomeMatrix(
-                new BiomeMatrixGenerator(new String[] { "HHHHHH", "HHHHHH", "HHbbHH", "HbvVbH", "HHbbHH", "HHHHHH" })
+                new BiomeMatrixGenerator(new String[] { "HHHHHH", "HHHHHH", "HHHbHH", "HHbVbH", "HHHbHH", "HHHHHH" })
                     .addBiomeEntry('H', highlands)
                     .addBiomeEntry('b', border)
-                    .addBiomeEntry('v', smallVolcanoes)
-                    .addBiomeEntry('V', bigVolcanoes))
+                    .addBiomeEntry('V', volcanoes))
             // Finish
             .name(DimensionEnum.MOON)
             .build();
