@@ -1,10 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.*;
-
-import net.minecraft.init.Blocks;
-import net.minecraft.world.biome.BiomeGenBase;
-
 import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
@@ -18,12 +13,17 @@ import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilde
 import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.BiomeMatrixGenerator;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainModifier;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CraterFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CrystalClusterFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.FluidSpringFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.GeodeFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.StalactiteFeature;
+import net.minecraft.init.Blocks;
+import net.minecraft.world.biome.BiomeGenBase;
+
+import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.*;
 
 /**
  * The class holding all data related to the dimension Moon
@@ -73,34 +73,31 @@ public final class Moon {
                 .height(64)
                 .endFeature()
                 .build());
-        BiomeGenBase hills = createLandBiome(
-            "Moon Hills",
-            TerrainConfiguration.builder()
-                .feature(TerrainPreset.BASE_HEIGHT)
-                .height(64)
-                .endFeature()
-                .feature(TerrainPreset.MOUNTAIN_RANGES)
-                .width(16)
-                .height(40)
-                .endFeature()
-                .feature(TerrainPreset.CANYONS)
-                .width(4)
-                .height(32)
-                .endFeature()
-                .build());
-        BiomeGenBase mountains = createLandBiome(
-            "Moon Mountains",
+        BiomeGenBase highlands = createLandBiome(
+            "Moon Highlands",
             TerrainConfiguration.builder()
                 .feature(TerrainPreset.BASE_HEIGHT)
                 .height(64)
                 .endFeature()
                 .feature(TerrainPreset.MOUNTAIN_RANGES)
                 .width(3)
-                .height(16)
+                .height(24)
+                .modifier(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.lowerExtreme, TerrainModifier.WEIRDNESS.upperExtreme)
                 .endFeature()
                 .feature(TerrainPreset.MOUNTAIN_RANGES)
                 .width(32)
-                .height(512)
+                .height(192)
+                .modifier(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.minimum, TerrainModifier.WEIRDNESS.middle)
+                .endFeature()
+                .feature(TerrainPreset.CANYONS)
+                .width(4)
+                .height(32)
+                .modifier(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.middle, TerrainModifier.WEIRDNESS.maximum)
+                .endFeature()
+                .feature(TerrainPreset.MOUNTAIN_RANGES)
+                .width(0.5)
+                .height(-16)
+                .modifier(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.upperExtreme, TerrainModifier.WEIRDNESS.maximum)
                 .endFeature()
                 .build());
         builder.sky(true)
@@ -109,9 +106,8 @@ public final class Moon {
             .avgGround(80)
             // Biome matrix
             .biomeMatrix(
-                new BiomeMatrixGenerator(new String[] { "hHhHhH", "Hbbbbh", "hbVvbH", "HbvVbh", "hbbbbH", "HhHhHh" })
-                    .addBiomeEntry('h', hills)
-                    .addBiomeEntry('H', mountains)
+                new BiomeMatrixGenerator(new String[] { "HHHHHH", "HHHHHH", "HHbbHH", "HbvVbH", "HHbbHH", "HHHHHH" })
+                    .addBiomeEntry('H', highlands)
                     .addBiomeEntry('b', border)
                     .addBiomeEntry('v', smallVolcanoes)
                     .addBiomeEntry('V', bigVolcanoes))
