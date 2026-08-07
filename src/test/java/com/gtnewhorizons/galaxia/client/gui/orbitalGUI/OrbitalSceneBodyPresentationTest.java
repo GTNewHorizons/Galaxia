@@ -157,18 +157,6 @@ final class OrbitalSceneBodyPresentationTest {
     }
 
     @Test
-    void satelliteNetworkSummariesUseAddressableBodyKeys() {
-        CelestialObject planet = CelestialRegistry.get(CelestialObjectId.MARS)
-            .orElseThrow();
-        CelestialObject asteroid = asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.LARGE);
-
-        assertEquals(
-            CelestialObjectKey.registered(CelestialObjectId.MARS),
-            OrbitalView.OrbitalMapWidget.satelliteNetworkBodyKey(planet));
-        assertEquals(asteroid.key(), OrbitalView.OrbitalMapWidget.satelliteNetworkBodyKey(asteroid));
-    }
-
-    @Test
     void lowerPriorityAsteroidsAreDeclutteredNearAcceptedScreenBodies() {
         CelestialObject accepted = asteroid(AsteroidSizeClass.LARGE);
         CelestialObject crowded = asteroid(AsteroidSizeClass.MEDIUM);

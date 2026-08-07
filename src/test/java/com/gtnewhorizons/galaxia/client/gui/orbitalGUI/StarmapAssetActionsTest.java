@@ -41,7 +41,8 @@ final class StarmapAssetActionsTest {
         StarmapAssetActions.OrbitalAssetUiState state = new StarmapAssetActions.OrbitalAssetUiState();
         StarmapAssetActions.OrbitalAssetActionController controller = new StarmapAssetActions.OrbitalAssetActionController(
             new StarmapAssetActions.OrbitalAssetSupport(),
-            new TestCallbacks());
+            new TestCallbacks(),
+            new TestStarmapView());
         CelestialObject asteroid = CelestialRegistry
             .get(
                 CelestialObjectKey.minorBody(
@@ -64,7 +65,8 @@ final class StarmapAssetActionsTest {
         StarmapAssetActions.OrbitalAssetUiState state = new StarmapAssetActions.OrbitalAssetUiState();
         StarmapAssetActions.OrbitalAssetActionController controller = new StarmapAssetActions.OrbitalAssetActionController(
             new StarmapAssetActions.OrbitalAssetSupport(),
-            new TestCallbacks());
+            new TestCallbacks(),
+            new TestStarmapView());
         CelestialObject hiddenAsteroid = hiddenAsteroid();
         setDiscovery(hiddenAsteroid, DiscoveryState.HIDDEN);
 
@@ -78,7 +80,8 @@ final class StarmapAssetActionsTest {
         StarmapAssetActions.OrbitalAssetUiState state = new StarmapAssetActions.OrbitalAssetUiState();
         StarmapAssetActions.OrbitalAssetActionController controller = new StarmapAssetActions.OrbitalAssetActionController(
             new StarmapAssetActions.OrbitalAssetSupport(),
-            new TestCallbacks());
+            new TestCallbacks(),
+            new TestStarmapView());
         CelestialObject mars = CelestialRegistry.get(CelestialObjectId.MARS)
             .orElseThrow();
 
@@ -107,11 +110,6 @@ final class StarmapAssetActionsTest {
     }
 
     private static final class TestCallbacks implements StarmapAssetActions.OrbitalAssetActionController.Callbacks {
-
-        @Override
-        public boolean isCreativeBuildModeEnabled() {
-            return false;
-        }
 
         @Override
         public void showActionStatus(String message) {}
