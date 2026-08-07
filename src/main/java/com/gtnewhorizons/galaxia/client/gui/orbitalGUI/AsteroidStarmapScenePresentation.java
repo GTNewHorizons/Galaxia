@@ -67,7 +67,7 @@ final class AsteroidStarmapScenePresentation {
         GlStateManager.disableTexture2D();
         GlStateManager.enableBlend();
         GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        int color = withAlpha(BELT_BAND_COLOR, alpha);
+        int color = StarmapColor.withAlpha(BELT_BAND_COLOR, alpha);
         GlStateManager.color(
             ((color >> 16) & 0xFF) / 255f,
             ((color >> 8) & 0xFF) / 255f,
@@ -110,8 +110,4 @@ final class AsteroidStarmapScenePresentation {
         GlStateManager.color(1f, 1f, 1f, 1f);
     }
 
-    private static int withAlpha(int color, float alpha) {
-        int value = Math.max(0, Math.min(255, (int) (((color >> 24) & 0xFF) * alpha)));
-        return (color & 0x00FFFFFF) | (value << 24);
-    }
 }

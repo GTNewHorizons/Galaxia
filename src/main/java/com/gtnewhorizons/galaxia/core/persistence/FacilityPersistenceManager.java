@@ -531,6 +531,7 @@ public final class FacilityPersistenceManager {
             mj.enabled = m.enabled();
             mj.groupId = m.groupId();
             mj.shape = PacketUtil.enumOrdinal(m.shape());
+            mj.rotation = (byte) m.rotation();
             mj.parallel = m.component() instanceof IParallelModule pm ? pm.getParallel() : 1;
             mj.moduleOperation = encodeModuleOperation(m.kind(), m.operationOrNull());
             JsonObject moduleData = new JsonObject();
@@ -715,6 +716,7 @@ public final class FacilityPersistenceManager {
                     throw new IllegalStateException(
                         "[PERSIST] Failed to create module " + kind + " (id=" + moduleId + "): component is null");
                 }
+                module.setRotation(mj.rotation);
                 LOG.info(
                     "[PERSIST] LOAD DECODE: module {} kind={} shape={} tier={} status={} anchor=({},{})",
                     module.id,
@@ -1186,6 +1188,7 @@ public final class FacilityPersistenceManager {
         boolean enabled;
         short groupId;
         byte shape;
+        byte rotation;
         byte parallel;
         JsonElement data;
         Map<String, Long> consumedResources;

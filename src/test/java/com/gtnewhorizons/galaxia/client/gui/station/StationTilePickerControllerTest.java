@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -114,5 +115,47 @@ final class StationTilePickerControllerTest {
         assertTrue(controller.rotateSelectionFootprint());
         assertTrue(controller.rotateSelectionFootprint());
         assertEquals(0, controller.footprintRotation());
+    }
+
+    @Test
+    void selectedTargetKeepsRotationWhenCurrentFootprintRotates() {
+        StationTileCoord first = StationTileCoord.of(1, 0);
+        StationTileCoord second = StationTileCoord.of(2, 0);
+        StationTilePickerController controller = new StationTilePickerController();
+        controller.start("Build", "Confirm", coord -> true, coord -> coord, selected -> {});
+        controller.setSelectionFootprint(ModuleShape.L_2x2, true);
+
+        assertTrue(controller.toggle(first));
+        assertEquals(0, controller.selectedTargetRotation(first));
+
+        assertTrue(controller.rotateSelectionFootprint());
+        assertEquals(1, controller.footprintRotation());
+        assertEquals(0, controller.selectedTargetRotation(first));
+
+        assertTrue(controller.toggle(second));
+        assertEquals(1, controller.selectedTargetRotation(second));
+    }
+
+    @Test
+    void confirmCanReturnSelectedTargetsWithTheirRotations() {
+        StationTileCoord first = StationTileCoord.of(1, 0);
+        StationTileCoord second = StationTileCoord.of(2, 0);
+        List<ModulePlacement> confirmed = new ArrayList<>();
+        StationTilePickerController controller = new StationTilePickerController();
+        controller.startWithPlacements(
+            "Build",
+            "Confirm",
+            (coord, selected) -> true,
+            coord -> coord,
+            confirmed::addAll,
+            targets -> targets);
+        controller.setSelectionFootprint(ModuleShape.L_2x2, true);
+
+        controller.toggle(first);
+        controller.rotateSelectionFootprint();
+        controller.toggle(second);
+        controller.confirm();
+
+        assertEquals(List.of(new ModulePlacement(first, 0), new ModulePlacement(second, 1)), confirmed);
     }
 }

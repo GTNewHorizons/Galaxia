@@ -150,51 +150,51 @@ final class ModuleBuildPickerModelTest {
     }
 
     @Test
-    void twoByTwoAnchorFollowsSelectedRotation() {
+    void twoByTwoAnchorStaysOnClickedTileWhenRotated() {
         StationTileCoord tile = StationTileCoord.of(5, 5);
 
         assertEquals(
             StationTileCoord.of(5, 5),
             ModuleBuildPickerModel.anchorForRotation(tile, ModuleShape.QUAD_2x2, 0));
         assertEquals(
-            StationTileCoord.of(4, 5),
+            StationTileCoord.of(5, 5),
             ModuleBuildPickerModel.anchorForRotation(tile, ModuleShape.QUAD_2x2, 1));
         assertEquals(
-            StationTileCoord.of(4, 5),
+            StationTileCoord.of(5, 5),
             ModuleBuildPickerModel.anchorForRotation(tile, ModuleShape.QUAD_2x2, 5));
         assertEquals(
-            StationTileCoord.of(4, 4),
+            StationTileCoord.of(5, 5),
             ModuleBuildPickerModel.anchorForRotation(tile, ModuleShape.QUAD_2x2, 2));
         assertEquals(
-            StationTileCoord.of(5, 4),
+            StationTileCoord.of(5, 5),
             ModuleBuildPickerModel.anchorForRotation(tile, ModuleShape.QUAD_2x2, 3));
     }
 
     @Test
-    void twoByTwoClickTileFollowsSelectedAnchorRotation() {
+    void twoByTwoClickTileStaysOnAnchorWhenRotated() {
         StationTileCoord anchor = StationTileCoord.of(5, 5);
 
         assertEquals(
             StationTileCoord.of(5, 5),
             ModuleBuildPickerModel.tileForAnchorRotation(anchor, ModuleShape.QUAD_2x2, 0));
         assertEquals(
-            StationTileCoord.of(6, 5),
+            StationTileCoord.of(5, 5),
             ModuleBuildPickerModel.tileForAnchorRotation(anchor, ModuleShape.QUAD_2x2, 1));
         assertEquals(
-            StationTileCoord.of(6, 6),
+            StationTileCoord.of(5, 5),
             ModuleBuildPickerModel.tileForAnchorRotation(anchor, ModuleShape.QUAD_2x2, 2));
         assertEquals(
-            StationTileCoord.of(5, 6),
+            StationTileCoord.of(5, 5),
             ModuleBuildPickerModel.tileForAnchorRotation(anchor, ModuleShape.QUAD_2x2, 3));
     }
 
     @Test
-    void twoByTwoAnchorReturnsNullWhenRotationWouldLeaveMap() {
+    void twoByTwoAnchorDoesNotMoveAtMapEdgeWhenRotated() {
         StationTileCoord tile = StationTileCoord.of(StationTileCoord.MIN, StationTileCoord.MIN);
 
-        assertNull(ModuleBuildPickerModel.anchorForRotation(tile, ModuleShape.QUAD_2x2, 1));
-        assertNull(ModuleBuildPickerModel.anchorForRotation(tile, ModuleShape.QUAD_2x2, 2));
-        assertNull(ModuleBuildPickerModel.anchorForRotation(tile, ModuleShape.QUAD_2x2, 3));
+        assertEquals(tile, ModuleBuildPickerModel.anchorForRotation(tile, ModuleShape.QUAD_2x2, 1));
+        assertEquals(tile, ModuleBuildPickerModel.anchorForRotation(tile, ModuleShape.QUAD_2x2, 2));
+        assertEquals(tile, ModuleBuildPickerModel.anchorForRotation(tile, ModuleShape.QUAD_2x2, 3));
     }
 
     @Test

@@ -989,8 +989,7 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private ModuleFeatureModifiers computeFeatureModifiers(ModuleInstance module) {
         Map<PlanetaryFeatureKey, Integer> counts = new LinkedHashMap<>();
-        StationTileCoord[] tiles = module.shape()
-            .tiles(module.anchor());
+        StationTileCoord[] tiles = module.tiles();
         for (StationTileCoord tile : tiles) {
             for (PlanetaryFeatureKey feature : planetaryFeaturesAt(tile)) {
                 counts.merge(feature, 1, Integer::sum);

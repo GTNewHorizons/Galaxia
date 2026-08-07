@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -27,6 +28,17 @@ final class ModuleBuildPickerModel {
 
     static boolean isCompatibleTarget(AutomatedFacility facility, FacilityModuleKind kind, ModuleShape shape,
         ModuleTier tier, StationTileCoord coord, Collection<StationTileCoord> pendingTargets) {
+        return isCompatibleTarget(facility, kind, shape, tier, coord, pendingTargets, 0);
+    }
+
+    static boolean isCompatibleTarget(AutomatedFacility facility, FacilityModuleKind kind, ModuleShape shape,
+        ModuleTier tier, StationTileCoord coord, Collection<StationTileCoord> pendingTargets, int rotation) {
+        return isCompatibleTarget(facility, kind, shape, tier, coord, pendingTargets, null, rotation);
+    }
+
+    static boolean isCompatibleTarget(AutomatedFacility facility, FacilityModuleKind kind, ModuleShape shape,
+        ModuleTier tier, StationTileCoord coord, Collection<StationTileCoord> pendingTargets,
+        Map<StationTileCoord, Integer> pendingRotations, int rotation) {
         if (facility == null || kind == null || shape == null || tier == null || coord == null) return false;
         if (!kind.isAllowedOn(facility.kind) || !kind.allowedTiers()
             .contains(tier)) {
@@ -37,11 +49,21 @@ final class ModuleBuildPickerModel {
         if (shape == ModuleShape.SINGLE) {
             return isCompatibleSingleTarget(facility, coord, pendingTargets);
         }
-        return isCompatibleFootprintTarget(facility, coord, shape, pendingTargets);
+        return isCompatibleFootprintTarget(facility, coord, shape, pendingTargets, pendingRotations, rotation);
     }
 
     static List<StationTileCoord> connectedTargets(AutomatedFacility facility, Collection<StationTileCoord> targets,
         ModuleShape shape) {
+        return connectedTargets(facility, targets, shape, 0);
+    }
+
+    static List<StationTileCoord> connectedTargets(AutomatedFacility facility, Collection<StationTileCoord> targets,
+        ModuleShape shape, int rotation) {
+        return connectedTargets(facility, targets, shape, null, rotation);
+    }
+
+    static List<StationTileCoord> connectedTargets(AutomatedFacility facility, Collection<StationTileCoord> targets,
+        ModuleShape shape, Map<StationTileCoord, Integer> rotations, int rotation) {
         if (facility == null || targets == null
             || targets.isEmpty()
             || shape == null
@@ -56,8 +78,9 @@ final class ModuleBuildPickerModel {
             changed = false;
             for (StationTileCoord target : selected) {
                 if (target == null || connected.contains(target)) continue;
-                if (hasBuiltOrthogonalNeighbour(facility, target, shape)
-                    || hasPendingOrthogonalNeighbour(connected, target, shape)) {
+                int targetRotation = rotationFor(rotations, target, rotation);
+                if (hasBuiltOrthogonalNeighbour(facility, target, shape, targetRotation)
+                    || hasPendingOrthogonalNeighbour(connected, target, shape, rotations, rotation, targetRotation)) {
                     connected.add(target);
                     changed = true;
                 }
@@ -76,35 +99,11 @@ final class ModuleBuildPickerModel {
     }
 
     static StationTileCoord anchorForRotation(StationTileCoord tile, ModuleShape shape, int rotation) {
-        if (tile == null || shape != ModuleShape.QUAD_2x2) return tile;
-        int normalizedRotation = Math.floorMod(rotation, 4);
-        int anchorDx = tile.dx() - switch (normalizedRotation) {
-            case 1, 2 -> 1;
-            default -> 0;
-        };
-        int anchorDy = tile.dy() - switch (normalizedRotation) {
-            case 2, 3 -> 1;
-            default -> 0;
-        };
-        if (anchorDx < StationTileCoord.MIN || anchorDx > StationTileCoord.MAX) return null;
-        if (anchorDy < StationTileCoord.MIN || anchorDy > StationTileCoord.MAX) return null;
-        return StationTileCoord.of(anchorDx, anchorDy);
+        return tile;
     }
 
     static StationTileCoord tileForAnchorRotation(StationTileCoord anchor, ModuleShape shape, int rotation) {
-        if (anchor == null || shape != ModuleShape.QUAD_2x2) return anchor;
-        int normalizedRotation = Math.floorMod(rotation, 4);
-        int tileDx = anchor.dx() + switch (normalizedRotation) {
-            case 1, 2 -> 1;
-            default -> 0;
-        };
-        int tileDy = anchor.dy() + switch (normalizedRotation) {
-            case 2, 3 -> 1;
-            default -> 0;
-        };
-        if (tileDx < StationTileCoord.MIN || tileDx > StationTileCoord.MAX) return null;
-        if (tileDy < StationTileCoord.MIN || tileDy > StationTileCoord.MAX) return null;
-        return StationTileCoord.of(tileDx, tileDy);
+        return anchor;
     }
 
     private static boolean isCompatibleSingleTarget(AutomatedFacility facility, StationTileCoord coord,
@@ -125,17 +124,20 @@ final class ModuleBuildPickerModel {
     }
 
     private static boolean isCompatibleFootprintTarget(AutomatedFacility facility, StationTileCoord coord,
-        ModuleShape shape, Collection<StationTileCoord> pendingTargets) {
-        if (!shape.fitsAt(coord)) return false;
-        StationTileCoord[] footprint = shape.tiles(coord);
+        ModuleShape shape, Collection<StationTileCoord> pendingTargets, Map<StationTileCoord, Integer> pendingRotations,
+        int rotation) {
+        if (!shape.fitsAt(coord, rotation)) return false;
+        StationTileCoord[] footprint = shape.tiles(coord, rotation);
         for (StationTileCoord tile : footprint) {
             if (facility.stationLayout()
                 .isOccupied(tile)) return false;
-            if (pendingTargets != null && overlapsPendingFootprint(pendingTargets, shape, tile)) return false;
+            if (pendingTargets != null
+                && overlapsPendingFootprint(pendingTargets, shape, tile, pendingRotations, rotation)) return false;
         }
-        if (ModuleFootprint.validate(facility.stationLayout(), coord, shape) == ShapeValidation.OK) return true;
+        if (ModuleFootprint.validate(facility.stationLayout(), coord, shape, rotation) == ShapeValidation.OK)
+            return true;
         if (pendingTargets == null) return false;
-        return hasPendingOrthogonalNeighbour(pendingTargets, coord, shape);
+        return hasPendingOrthogonalNeighbour(pendingTargets, coord, shape, pendingRotations, rotation, rotation);
     }
 
     private static boolean hasPendingOrthogonalNeighbour(Collection<StationTileCoord> pendingTargets,
@@ -147,17 +149,25 @@ final class ModuleBuildPickerModel {
     }
 
     private static boolean hasPendingOrthogonalNeighbour(Collection<StationTileCoord> pendingTargets,
-        StationTileCoord coord, ModuleShape shape) {
-        for (StationTileCoord tile : shape.tiles(coord)) {
-            if (hasPendingOrthogonalNeighbour(pendingTargets, shape, tile)) return true;
+        StationTileCoord coord, ModuleShape shape, int rotation) {
+        return hasPendingOrthogonalNeighbour(pendingTargets, coord, shape, null, rotation, rotation);
+    }
+
+    private static boolean hasPendingOrthogonalNeighbour(Collection<StationTileCoord> pendingTargets,
+        StationTileCoord coord, ModuleShape shape, Map<StationTileCoord, Integer> pendingRotations,
+        int fallbackRotation, int coordRotation) {
+        for (StationTileCoord tile : shape.tiles(coord, coordRotation)) {
+            if (hasPendingOrthogonalNeighbour(pendingTargets, shape, tile, pendingRotations, fallbackRotation))
+                return true;
         }
         return false;
     }
 
     private static boolean hasPendingOrthogonalNeighbour(Collection<StationTileCoord> pendingTargets, ModuleShape shape,
-        StationTileCoord tile) {
+        StationTileCoord tile, Map<StationTileCoord, Integer> pendingRotations, int fallbackRotation) {
         for (StationTileCoord pending : pendingTargets) {
-            for (StationTileCoord pendingTile : shape.tiles(pending)) {
+            int pendingRotation = rotationFor(pendingRotations, pending, fallbackRotation);
+            for (StationTileCoord pendingTile : shape.tiles(pending, pendingRotation)) {
                 if (tile.isOrthogonallyAdjacent(pendingTile)) return true;
             }
         }
@@ -165,9 +175,10 @@ final class ModuleBuildPickerModel {
     }
 
     private static boolean overlapsPendingFootprint(Collection<StationTileCoord> pendingTargets, ModuleShape shape,
-        StationTileCoord tile) {
+        StationTileCoord tile, Map<StationTileCoord, Integer> pendingRotations, int fallbackRotation) {
         for (StationTileCoord pending : pendingTargets) {
-            for (StationTileCoord pendingTile : shape.tiles(pending)) {
+            int pendingRotation = rotationFor(pendingRotations, pending, fallbackRotation);
+            for (StationTileCoord pendingTile : shape.tiles(pending, pendingRotation)) {
                 if (tile.equals(pendingTile)) return true;
             }
         }
@@ -175,8 +186,8 @@ final class ModuleBuildPickerModel {
     }
 
     private static boolean hasBuiltOrthogonalNeighbour(AutomatedFacility facility, StationTileCoord coord,
-        ModuleShape shape) {
-        for (StationTileCoord tile : shape.tiles(coord)) {
+        ModuleShape shape, int rotation) {
+        for (StationTileCoord tile : shape.tiles(coord, rotation)) {
             if (hasBuiltOrthogonalNeighbour(facility, tile)) return true;
         }
         return false;
@@ -193,5 +204,11 @@ final class ModuleBuildPickerModel {
         if (dy < StationTileCoord.MIN || dy > StationTileCoord.MAX) return false;
         return facility.stationLayout()
             .isOccupied(StationTileCoord.of(dx, dy));
+    }
+
+    private static int rotationFor(Map<StationTileCoord, Integer> rotations, StationTileCoord target,
+        int fallbackRotation) {
+        if (rotations == null || target == null) return ModuleShape.normalizeRotation(fallbackRotation);
+        return ModuleShape.normalizeRotation(rotations.getOrDefault(target, fallbackRotation));
     }
 }

@@ -98,10 +98,20 @@ public final class StationLayout {
         tiles.forEach(action);
     }
 
+    public boolean deconstruct(StationTileCoord anyTile) {
+        PlacedTile tile = tiles.get(anyTile);
+        if (tile == null || tile.module() == null) return false;
+        ModuleInstance module = tile.module();
+        for (StationTileCoord coord : module.tiles()) {
+            tiles.remove(coord);
+        }
+        version++;
+        return true;
+    }
+
     public void place(ModuleInstance module) {
         StationTileState state = StationTileState.fromModuleStatus(module.status());
-        StationTileCoord[] footprint = module.shape()
-            .tiles(module.anchor());
+        StationTileCoord[] footprint = module.tiles();
         // Validate no overlap with a different module (silent overwrite is data corruption)
         for (StationTileCoord coord : footprint) {
             PlacedTile existing = tiles.get(coord);

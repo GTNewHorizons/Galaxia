@@ -726,6 +726,7 @@ public final class AssetSyncPacket implements IMessage {
         PacketUtil.writeEnum(buf, module.status());
         PacketUtil.writeEnum(buf, module.tier());
         PacketUtil.writeEnum(buf, module.shape());
+        buf.writeByte(module.rotation());
         PacketUtil.writeEnum(buf, module.priorityOverride());
         buf.writeBoolean(module.enabled());
         buf.writeShort(module.groupId());
@@ -767,6 +768,7 @@ public final class AssetSyncPacket implements IMessage {
         Buildable.Status status = PacketUtil.readEnum(buf, Buildable.Status.class);
         ModuleTier tier = PacketUtil.readEnum(buf, ModuleTier.class);
         ModuleShape shape = PacketUtil.readEnum(buf, ModuleShape.class);
+        int rotation = buf.readByte();
         ModulePriority modulePriority = PacketUtil.readEnum(buf, ModulePriority.class);
         boolean enabled = buf.readBoolean();
         short groupId = buf.readShort();
@@ -774,6 +776,7 @@ public final class AssetSyncPacket implements IMessage {
         StationTileCoord anchor = buf.readBoolean() ? PacketUtil.readStationTileCoord(buf) : null;
 
         ModuleInstance module = FacilityModuleRegistry.create(id, kind, anchor, shape, tier);
+        module.setRotation(rotation);
         module.setPriorityOverride(modulePriority);
         module.setEnabled(enabled);
         module.setGroupId(groupId);

@@ -33,10 +33,14 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 final class StarmapServerActionsTest {
 
@@ -83,7 +87,13 @@ final class StarmapServerActionsTest {
         StationTileCoord coord = StationTileCoord.of(1, 0);
 
         com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket packet = com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket
-            .create(facility.assetId, FacilityModuleKind.STORAGE, ModuleShape.SINGLE, ModuleTier.HV, true, coord);
+            .create(
+                facility.assetId,
+                FacilityModuleKind.STORAGE,
+                ModuleShape.SINGLE,
+                ModuleTier.HV,
+                true,
+                ModulePlacement.at(coord));
 
         AssetSyncPacket result = packet.apply(TEAM, true);
 
@@ -105,12 +115,22 @@ final class StarmapServerActionsTest {
 
         assertThrows(
             IllegalArgumentException.class,
-            () -> AssetBuildModulePacket
-                .create(assetId, null, ModuleShape.SINGLE, ModuleTier.HV, true, StationTileCoord.of(1, 0)));
+            () -> AssetBuildModulePacket.create(
+                assetId,
+                null,
+                ModuleShape.SINGLE,
+                ModuleTier.HV,
+                true,
+                ModulePlacement.at(StationTileCoord.of(1, 0))));
         assertThrows(
             IllegalArgumentException.class,
-            () -> AssetBuildModulePacket
-                .create(assetId, FacilityModuleKind.STORAGE, null, ModuleTier.HV, true, StationTileCoord.of(1, 0)));
+            () -> AssetBuildModulePacket.create(
+                assetId,
+                FacilityModuleKind.STORAGE,
+                null,
+                ModuleTier.HV,
+                true,
+                ModulePlacement.at(StationTileCoord.of(1, 0))));
         assertThrows(
             IllegalArgumentException.class,
             () -> AssetBuildModulePacket.create(
@@ -119,7 +139,7 @@ final class StarmapServerActionsTest {
                 ModuleShape.SINGLE,
                 null,
                 true,
-                StationTileCoord.of(1, 0)));
+                ModulePlacement.at(StationTileCoord.of(1, 0))));
     }
 
     @Test
@@ -138,7 +158,7 @@ final class StarmapServerActionsTest {
             FacilityModuleKind.MINER.defaultShape(),
             FacilityModuleKind.MINER.defaultTier(),
             true,
-            coord);
+            ModulePlacement.at(coord));
 
         AssetSyncPacket result = packet.apply(TEAM, true);
 
@@ -159,6 +179,92 @@ final class StarmapServerActionsTest {
     }
 
     @Test
+    void buildModuleAppliesRequestedFootprintRotation() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
+        StationTileCoord anchor = StationTileCoord.of(2, 0);
+
+        AssetBuildModulePacket packet = AssetBuildModulePacket.createManyWithSpec(
+            facility.assetId,
+            FacilityModuleKind.MINER,
+            FacilityModuleKind.MINER.defaultShape(),
+            FacilityModuleKind.MINER.defaultTier(),
+            null,
+            MinerFocusTier.NONE,
+            (short) 0,
+            true,
+            List.of(new ModulePlacement(anchor, 1)));
+
+        AssetSyncPacket result = packet.apply(TEAM, true);
+
+        assertNotNull(result, "rotated miner build must sync the new footprint");
+        ModuleInstance module = facility.modules()
+            .get(0);
+        assertEquals(1, module.rotation());
+        assertTrue(
+            facility.stationLayout()
+                .isOccupied(StationTileCoord.of(1, 0)));
+        assertNull(
+            facility.stationLayout()
+                .get(StationTileCoord.of(3, 0)));
+    }
+
+    @Test
+    void buildModulesApplyRotationPerTarget() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
+        StationTileCoord first = StationTileCoord.of(1, 0);
+        StationTileCoord second = StationTileCoord.of(4, 0);
+
+        AssetBuildModulePacket packet = AssetBuildModulePacket.createManyWithSpec(
+            facility.assetId,
+            FacilityModuleKind.MACERATOR,
+            FacilityModuleKind.MACERATOR.defaultShape(),
+            FacilityModuleKind.MACERATOR.defaultTier(),
+            null,
+            MinerFocusTier.NONE,
+            (short) 0,
+            true,
+            List.of(new ModulePlacement(first, 0), new ModulePlacement(second, 1)));
+        ByteBuf encoded = Unpooled.buffer();
+        packet.toBytes(encoded);
+        AssetBuildModulePacket decoded = new AssetBuildModulePacket();
+        decoded.fromBytes(encoded);
+
+        AssetSyncPacket result = decoded.apply(TEAM, true);
+
+        assertNotNull(result, "batch build must sync modules with their individual rotations");
+        assertEquals(
+            2,
+            facility.modules()
+                .size());
+        assertEquals(
+            0,
+            facility.modules()
+                .get(0)
+                .rotation());
+        assertEquals(
+            1,
+            facility.modules()
+                .get(1)
+                .rotation());
+        assertTrue(
+            facility.stationLayout()
+                .isOccupied(StationTileCoord.of(1, 1)));
+        assertTrue(
+            facility.stationLayout()
+                .isOccupied(StationTileCoord.of(3, 1)));
+    }
+
+    @Test
     void buildModuleRejectsShapeThatDoesNotMatchModuleKind() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
@@ -173,7 +279,7 @@ final class StarmapServerActionsTest {
             ModuleShape.SINGLE,
             FacilityModuleKind.MINER.defaultTier(),
             true,
-            StationTileCoord.of(1, 0));
+            ModulePlacement.at(StationTileCoord.of(1, 0)));
 
         AssetSyncPacket result = packet.apply(TEAM, true);
 
@@ -201,7 +307,7 @@ final class StarmapServerActionsTest {
                 ModuleShape.SINGLE,
                 ModuleTier.HV,
                 true,
-                List.of(first, second));
+                List.of(ModulePlacement.at(first), ModulePlacement.at(second)));
 
         AssetSyncPacket result = packet.apply(TEAM, true);
 
@@ -240,7 +346,7 @@ final class StarmapServerActionsTest {
                 ModuleShape.SINGLE,
                 ModuleTier.HV,
                 true,
-                List.of(first, chained));
+                List.of(ModulePlacement.at(first), ModulePlacement.at(chained)));
 
         AssetSyncPacket result = packet.apply(TEAM, true);
 
@@ -277,7 +383,7 @@ final class StarmapServerActionsTest {
                 ModuleShape.SINGLE,
                 ModuleTier.HV,
                 true,
-                List.of(StationTileCoord.of(1, 0), StationTileCoord.of(5, 5)));
+                List.of(ModulePlacement.at(StationTileCoord.of(1, 0)), ModulePlacement.at(StationTileCoord.of(5, 5))));
 
         AssetSyncPacket result = packet.apply(TEAM, true);
 
@@ -309,7 +415,7 @@ final class StarmapServerActionsTest {
             MinerFocusTier.II,
             group.id(),
             true,
-            List.of(StationTileCoord.of(1, 0)));
+            List.of(ModulePlacement.at(StationTileCoord.of(1, 0))));
 
         AssetSyncPacket result = packet.apply(TEAM, true);
 
@@ -339,8 +445,12 @@ final class StarmapServerActionsTest {
         facility.addModule(source);
         facility.setMinerOreBlacklisted(source, "ore:iron", true);
 
-        AssetBuildModulePacket packet = AssetBuildModulePacket
-            .copyFromModule(facility.assetId, 0, source.id, true, List.of(StationTileCoord.of(1, 0)));
+        AssetBuildModulePacket packet = AssetBuildModulePacket.copyFromModule(
+            facility.assetId,
+            0,
+            source.id,
+            true,
+            List.of(ModulePlacement.at(StationTileCoord.of(1, 0))));
 
         AssetSyncPacket result = packet.apply(TEAM, true);
 

@@ -277,23 +277,8 @@ final class OrbitalTransferClientStateTest {
         return new InterplanetaryTransferSystem.OrbitalTransferRenderer.Callbacks() {
 
             @Override
-            public float worldToScreenX(double worldX) {
-                return (float) worldX;
-            }
-
-            @Override
-            public float worldToScreenY(double worldY) {
-                return (float) worldY;
-            }
-
-            @Override
             public double[] getWorldPosition(CelestialObject body) {
                 return null;
-            }
-
-            @Override
-            public double getServerOrbitalTime() {
-                return 0.0;
             }
 
             @Override

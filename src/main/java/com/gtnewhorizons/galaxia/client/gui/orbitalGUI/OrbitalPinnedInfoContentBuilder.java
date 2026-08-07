@@ -246,10 +246,6 @@ public final class OrbitalPinnedInfoContentBuilder {
 
             CelestialObject getPinnedInfoBody();
 
-            int getViewportWidth();
-
-            int getViewportHeight();
-
             void buildSignatureInto(StringBuilder buf, CelestialObject body, int width, int height);
 
             List<PinnedInfoRow> buildRows(CelestialObject body);
@@ -265,12 +261,14 @@ public final class OrbitalPinnedInfoContentBuilder {
         private static final int INLINE_ICON_SIZE = 12;
         private static final int INLINE_ICON_GAP = 1;
         private final Callbacks callbacks;
+        private final StarmapViewContext view;
         private final StringBuilder sigBuf = new StringBuilder(256);
         private String lastSignature = "";
         private List<PinnedInfoRow> cachedRows = List.of();
 
-        OrbitalPinnedInfoWidget(Callbacks callbacks) {
+        OrbitalPinnedInfoWidget(Callbacks callbacks, StarmapViewContext view) {
             this.callbacks = callbacks;
+            this.view = view;
             setEnabled(false);
             size(0, 0);
         }
@@ -291,7 +289,7 @@ public final class OrbitalPinnedInfoContentBuilder {
                 return;
             }
             setEnabled(true);
-            callbacks.buildSignatureInto(sigBuf, body, callbacks.getViewportWidth(), callbacks.getViewportHeight());
+            callbacks.buildSignatureInto(sigBuf, body, view.viewportWidth(), view.viewportHeight());
             if (!lastSignature.contentEquals(sigBuf)) {
                 cachedRows = callbacks.buildRows(body);
                 rebuildChildren(body, cachedRows);
@@ -313,8 +311,8 @@ public final class OrbitalPinnedInfoContentBuilder {
         private void rebuildChildren(CelestialObject body, List<PinnedInfoRow> rows) {
             removeAll();
             Minecraft mc = Minecraft.getMinecraft();
-            int viewportWidth = callbacks.getViewportWidth();
-            int viewportHeight = callbacks.getViewportHeight();
+            int viewportWidth = view.viewportWidth();
+            int viewportHeight = view.viewportHeight();
             int contentWidth = getContentWidth(mc, rows, viewportWidth);
             int boxWidth = contentWidth + PANEL_PADDING * 2;
             // Pre-compute row heights once to avoid double wrapValue calls
