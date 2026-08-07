@@ -42,7 +42,7 @@ public final class Moon {
             "Moon Ocean Edge",
             TerrainConfiguration.builder()
                 .feature(TerrainPreset.BASE_HEIGHT)
-                .height(50)
+                .height(16)
                 .endFeature()
                 .feature(TerrainPreset.MOUNTAIN_RANGES)
                 .width(4)
@@ -53,26 +53,26 @@ public final class Moon {
             "Moon Volcanoes",
             TerrainConfiguration.builder()
                 .feature(TerrainPreset.BASE_HEIGHT)
-                .height(32)
+                .height(8)
                 .endFeature()
                 .feature(TerrainPreset.SHIELD_VOLCANOES)
                 .replacementBlock(MOON_MAGMA)
                 .width(2)
                 .height(32)
-                .modifier(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.minimum, TerrainModifier.WEIRDNESS.lowerMiddle)
+                .modifier(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.minimum, TerrainModifier.WEIRDNESS.middle)
                 .endFeature()
                 .feature(TerrainPreset.SHIELD_VOLCANOES)
                 .replacementBlock(MOON_MAGMA)
                 .width(4)
                 .height(64)
-                .modifier(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.upperMiddle, TerrainModifier.WEIRDNESS.maximum)
+                .modifier(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.middle, TerrainModifier.WEIRDNESS.maximum)
                 .endFeature()
                 .build());
         BiomeGenBase highlands = createLandBiome(
             "Moon Highlands",
             TerrainConfiguration.builder()
                 .feature(TerrainPreset.BASE_HEIGHT)
-                .height(64)
+                .height(32)
                 .endFeature()
                 .feature(TerrainPreset.MOUNTAIN_RANGES)
                 .width(3)
@@ -240,7 +240,7 @@ public final class Moon {
                     .condition((block, meta) -> block == MOON_REGOLITH || block == MOON_BASALT)
                     .build())
             .terrain(terrainConfiguration)
-            .ocean(MOON_OBSIDIAN, MOON_BASALT, 56, MOON_OBSIDIAN, 1)
+            .ocean(MOON_OBSIDIAN, MOON_BASALT, 80, MOON_OBSIDIAN, 1)
             .oceanCracks(0.3F, MOON_MAGMA, 4)
             .surfaceThickness(4)
             .build();
