@@ -19,7 +19,6 @@ import com.gtnewhorizons.galaxia.compat.gt.StationHatchElement;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.compat.structure.IExtendedStructureElement;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
-import com.gtnewhorizons.galaxia.core.network.StationGraphSyncHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
@@ -127,7 +126,8 @@ public class RoomBehavior implements IStationBehaviorWithAttachments {
             EnumChatFormatting color = sealed ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;
             return label + ": " + color + status + EnumChatFormatting.RESET;
         })).pos(10, yOffset), new TextWidget<>(IKey.dynamic(() -> {
-            var snap = StationGraphSyncHandler.getSnapshot();
+            var snap = station.getActiveGraphSyncHandler()
+                .getSnapshot();
             if (snap.fluidAttachmentCount() == 0) {
                 return StatCollector.translateToLocal("galaxia.gui.station_controller.no_fluid_tanks");
             }

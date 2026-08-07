@@ -12,7 +12,9 @@ import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
+import com.cleanroommc.modularui.factory.GuiFactories;
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.PlacementHelper;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
@@ -95,9 +97,22 @@ public class BlockAirlockController extends BlockUpdatable implements ITileEntit
     public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer player, int side, float hitX,
         float hitY, float hitZ) {
         if (world.isRemote) return true;
-        return toggleDoor(world, x, y, z);
+        TileEntity te = world.getTileEntity(x, y, z);
+        if (!(te instanceof TileEntityAirlock)) return false;
+
+        if (ConfigStructures.airlock.openOnNormalClick && !player.isSneaking()) {
+            toggleDoor(world, x, y, z);
+        } else {
+            GuiFactories.tileEntity()
+                .open(player, x, y, z);
+        }
+
+        return true;
     }
 
+    /**
+     * Manual toggle entry point used by {@link BlockAirlockDoor#searchAndOpenDoor}.
+     */
     public boolean toggleDoor(World world, int x, int y, int z) {
         TileEntity te = world.getTileEntity(x, y, z);
         if (te instanceof TileEntityAirlock) {

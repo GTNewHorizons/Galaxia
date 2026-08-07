@@ -8,7 +8,6 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import net.minecraft.block.Block;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
@@ -17,6 +16,7 @@ import net.minecraftforge.common.util.Constants;
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.gt.MTEStationPlug;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
@@ -198,6 +198,17 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
         }
     }
 
+    /**
+     * Whether this room's own structure forms a closed volume. Open structures
+     * (e.g. docks) are open to space by definition and can never be sealed.
+     */
+    public boolean isEnclosedStructure() {
+        if (getStructureDefinition() instanceof ArbitraryShapeDefinition<?>def) {
+            return def.isEnclosed();
+        }
+        return true;
+    }
+
     private void recomputeNetworkSeal() {
         Set<TileStationBase<?>> component = new ObjectOpenHashSet<>();
         Deque<TileStationBase<?>> queue = new ArrayDeque<>();
@@ -208,6 +219,10 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
 
         while (!queue.isEmpty()) {
             TileStationBase<?> room = queue.poll();
+
+            if (!room.isEnclosedStructure()) {
+                breached = true;
+            }
 
             for (BlockPos airlockPos : room.airlocks) {
                 TileEntityAirlock airlock = airlockPos.getTE(worldObj);

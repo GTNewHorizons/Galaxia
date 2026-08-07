@@ -54,9 +54,14 @@ public class TileStation extends TileStationBase<TileStation> {
 
     public static final long BASE_EUT_PER_BLOCK = 8;
 
+    @Getter
     private IStationBehavior behavior = GalaxiaBehaviors.ROOM.get();
 
     private StationGraphSyncHandler activeGraphSyncHandler;
+
+    public StationGraphSyncHandler getActiveGraphSyncHandler() {
+        return activeGraphSyncHandler;
+    }
 
     public void clearActiveGraphSyncHandler(StationGraphSyncHandler handler) {
         if (activeGraphSyncHandler == handler) {
@@ -104,6 +109,10 @@ public class TileStation extends TileStationBase<TileStation> {
 
     public boolean isOxygenated() {
         return isSealed() && oxygenLevel >= 100;
+    }
+
+    public double getOxygenLevel() {
+        return oxygenLevel;
     }
 
     public void addOxygenator(int x, int y, int z) {
@@ -343,6 +352,11 @@ public class TileStation extends TileStationBase<TileStation> {
 
     public boolean isMainController() {
         return graph != null && graph.getController() == this;
+    }
+
+    /** True when this station booted as its own graph's main controller, false for absorbed secondaries. */
+    public boolean isPrimary() {
+        return controllerFlag == Role.MAIN;
     }
 
     public StationGraph getGraph() {

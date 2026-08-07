@@ -111,7 +111,7 @@ public class GalaxiaStructureUtility {
         if (block == null || validMeta == null || placeMeta == null) {
             throw new IllegalArgumentException();
         }
-        return new IExtendedStructureElement<T>() {
+        return new IExtendedStructureElement<>() {
 
             @Override
             public Block getValidBlock() {
