@@ -1,17 +1,19 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
+import java.util.Arrays;
+import java.util.Random;
+
+import net.minecraft.world.gen.NoiseGeneratorOctaves;
+
 import com.gtnewhorizon.gtnhlib.util.StdLCG;
 import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
-import net.minecraft.world.gen.NoiseGeneratorOctaves;
-
-import java.util.Arrays;
-import java.util.Random;
 
 /**
  * Class to deal with actual application of different feature types
  */
 public final class TerrainFeatureApplier {
+
     private static final double[] NO_MODIFIER = defaultModifier();
 
     // TODO improve formulas for all features
@@ -70,8 +72,17 @@ public final class TerrainFeatureApplier {
                 applyBaseHeight(heightMap, height, terrainRelevance);
                 break;
             case SHIELD_VOLCANOES:
-                applyShieldVolcanoes(heightMap, height, width, chunkX, chunkZ, terrainRelevance, surfaceReplacementMap,
-                    replacementBlock, noise, modifierEntry);
+                applyShieldVolcanoes(
+                    heightMap,
+                    height,
+                    width,
+                    chunkX,
+                    chunkZ,
+                    terrainRelevance,
+                    surfaceReplacementMap,
+                    replacementBlock,
+                    noise,
+                    modifierEntry);
                 break;
             case MULTI_RING_BASINS:
             case PLATEAUS_AND_ESCARPMENTS:
@@ -323,12 +334,16 @@ public final class TerrainFeatureApplier {
         return noise;
     }
 
-    private static double[] assignModifierValues(TerrainModifierEntry modifierEntry, int chunkX, int chunkZ, NoiseGeneratorOctaves noise) {
+    private static double[] assignModifierValues(TerrainModifierEntry modifierEntry, int chunkX, int chunkZ,
+        NoiseGeneratorOctaves noise) {
         double[] valueArray = new double[256];
         if (modifierEntry == null) {
             valueArray = NO_MODIFIER;
         } else if (modifierEntry.modifier() == TerrainModifier.WEIRDNESS) {
-            valueArray = getWeirdnessMultiplier(generateWeirdness(chunkX, chunkZ, noise), modifierEntry.lowerRange(), modifierEntry.upperRange());
+            valueArray = getWeirdnessMultiplier(
+                generateWeirdness(chunkX, chunkZ, noise),
+                modifierEntry.lowerRange(),
+                modifierEntry.upperRange());
         }
         return valueArray;
     }

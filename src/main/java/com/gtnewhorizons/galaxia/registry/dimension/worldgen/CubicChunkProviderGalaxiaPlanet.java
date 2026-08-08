@@ -1,5 +1,24 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+
+import net.minecraft.block.Block;
+import net.minecraft.entity.EnumCreatureType;
+import net.minecraft.init.Blocks;
+import net.minecraft.util.MathHelper;
+import net.minecraft.world.ChunkPosition;
+import net.minecraft.world.World;
+import net.minecraft.world.biome.BiomeGenBase;
+import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
+import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
+
+import org.jetbrains.annotations.Nullable;
+
 import com.cardinalstar.cubicchunks.api.ICube;
 import com.cardinalstar.cubicchunks.api.util.Box;
 import com.cardinalstar.cubicchunks.api.worldgen.GenerationResult;
@@ -29,23 +48,8 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NoiseSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NormalizedSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.OctavesSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.ScaledSampler;
-import lombok.Getter;
-import net.minecraft.block.Block;
-import net.minecraft.entity.EnumCreatureType;
-import net.minecraft.init.Blocks;
-import net.minecraft.util.MathHelper;
-import net.minecraft.world.ChunkPosition;
-import net.minecraft.world.World;
-import net.minecraft.world.biome.BiomeGenBase;
-import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
-import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
-import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import lombok.Getter;
 
 @ParametersAreNonnullByDefault
 public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, GalaxiaPlanetGenerator {
@@ -261,7 +265,8 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                     if (crustCaves == null || !crustCaves.equals(spaceBiome.getCaveShape())) {
                         crustCaves = spaceBiome.getCaveShape();
                     }
-                    if (terrain3d == null && biome3d != null || biome3d == null && terrain3d != null || biome3d != null && !biome3d.equals(terrain3d)) {
+                    if (terrain3d == null && biome3d != null || biome3d == null && terrain3d != null
+                        || biome3d != null && !biome3d.equals(terrain3d)) {
                         terrain3d = biome3d;
                     }
                 }
@@ -301,7 +306,8 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
                     if (y >= terrainHeight && y - terrainHeight < terrain3dHeight) {
                         if (terrain3d.isSolid(localX, y - terrainHeight, localZ)) {
-                            block = palette.getFillerBlocks().getStrataBlock(y);
+                            block = palette.getFillerBlocks()
+                                .getStrataBlock(y);
                         } else {
                             block = AIR;
                             isTerrain = false;
@@ -315,7 +321,8 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                             block = y >= palette.getSnowHeight() ? palette.getSnowBlock() : palette.getTopBlock();
                         }
                     } else {
-                        block = palette.getFillerBlocks().getStrataBlock(y);
+                        block = palette.getFillerBlocks()
+                            .getStrataBlock(y);
                     }
 
                     int oceanHeight = palette.getOceanHeight();

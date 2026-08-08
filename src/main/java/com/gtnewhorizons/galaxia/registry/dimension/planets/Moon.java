@@ -1,5 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
+import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.*;
+
+import net.minecraft.init.Blocks;
+import net.minecraft.world.biome.BiomeGenBase;
+
 import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
@@ -21,10 +26,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CrystalClus
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.FluidSpringFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.GeodeFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.StalactiteFeature;
-import net.minecraft.init.Blocks;
-import net.minecraft.world.biome.BiomeGenBase;
-
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.*;
 
 /**
  * The class holding all data related to the dimension Moon
@@ -60,13 +61,19 @@ public final class Moon {
                 .replacementBlock(MOON_MAGMA)
                 .width(2)
                 .height(32)
-                .modifier(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.minimum, TerrainModifier.WEIRDNESS.middle)
+                .modifier(
+                    TerrainModifier.WEIRDNESS,
+                    TerrainModifier.WEIRDNESS.minimum,
+                    TerrainModifier.WEIRDNESS.middle)
                 .endFeature()
                 .feature(TerrainPreset.SHIELD_VOLCANOES)
                 .replacementBlock(MOON_MAGMA)
                 .width(4)
                 .height(64)
-                .modifier(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.middle, TerrainModifier.WEIRDNESS.maximum)
+                .modifier(
+                    TerrainModifier.WEIRDNESS,
+                    TerrainModifier.WEIRDNESS.middle,
+                    TerrainModifier.WEIRDNESS.maximum)
                 .endFeature()
                 .build());
         BiomeGenBase highlands = createLandBiome(
@@ -78,22 +85,34 @@ public final class Moon {
                 .feature(TerrainPreset.MOUNTAIN_RANGES)
                 .width(3)
                 .height(24)
-                .modifier(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.lowerExtreme, TerrainModifier.WEIRDNESS.upperExtreme)
+                .modifier(
+                    TerrainModifier.WEIRDNESS,
+                    TerrainModifier.WEIRDNESS.lowerExtreme,
+                    TerrainModifier.WEIRDNESS.upperExtreme)
                 .endFeature()
                 .feature(TerrainPreset.MOUNTAIN_RANGES)
                 .width(32)
                 .height(192)
-                .modifier(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.minimum, TerrainModifier.WEIRDNESS.middle)
+                .modifier(
+                    TerrainModifier.WEIRDNESS,
+                    TerrainModifier.WEIRDNESS.minimum,
+                    TerrainModifier.WEIRDNESS.middle)
                 .endFeature()
                 .feature(TerrainPreset.CANYONS)
                 .width(4)
                 .height(32)
-                .modifier(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.middle, TerrainModifier.WEIRDNESS.maximum)
+                .modifier(
+                    TerrainModifier.WEIRDNESS,
+                    TerrainModifier.WEIRDNESS.middle,
+                    TerrainModifier.WEIRDNESS.maximum)
                 .endFeature()
                 .feature(TerrainPreset.MOUNTAIN_RANGES)
                 .width(0.5)
                 .height(-16)
-                .modifier(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.upperExtreme, TerrainModifier.WEIRDNESS.maximum)
+                .modifier(
+                    TerrainModifier.WEIRDNESS,
+                    TerrainModifier.WEIRDNESS.upperExtreme,
+                    TerrainModifier.WEIRDNESS.maximum)
                 .endFeature()
                 .build());
         builder.sky(true)

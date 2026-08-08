@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.dimension.worldgen.details;
 import java.util.Random;
 
 public class FloatingPancake implements Terrain3d {
+
     private static final int CHUNK_AREA = 256;
 
     private final int[] pancakeThickness = new int[256];
