@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.dimension.worldgen.details;
 import java.util.Random;
 
 public interface Terrain3d {
+
     void prepareFunctions(Random random);
 
     boolean preparedFunctions();

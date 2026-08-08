@@ -1,15 +1,17 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
-import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
-import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
-import lombok.Getter;
-import net.minecraft.block.Block;
-import net.minecraft.init.Blocks;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import net.minecraft.block.Block;
+import net.minecraft.init.Blocks;
+
+import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
+import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
+
+import lombok.Getter;
 
 /**
  * Class to hold config info on terrain features
@@ -177,7 +179,13 @@ public final class TerrainConfiguration {
             double finalHeight = (height > 0 ? height : 1) * scaleMultiplier;
             double finalWidth = (width > 0 ? width : 1) * scaleMultiplier;
 
-            TerrainFeature feature = new TerrainFeature(preset, finalHeight, finalWidth, custom, replacementBlock, modifierEntry);
+            TerrainFeature feature = new TerrainFeature(
+                preset,
+                finalHeight,
+                finalWidth,
+                custom,
+                replacementBlock,
+                modifierEntry);
 
             parent.features.add(feature);
             return parent;
