@@ -194,8 +194,6 @@ public final class StarmapAssetActions {
 
         interface Callbacks {
 
-            boolean isCreativeBuildModeEnabled();
-
             void showActionStatus(String message);
 
             void beginRenameInput(String currentText);
@@ -210,10 +208,12 @@ public final class StarmapAssetActions {
 
         private final OrbitalAssetSupport assetSupport;
         private final Callbacks callbacks;
+        private final StarmapViewContext view;
 
-        OrbitalAssetActionController(OrbitalAssetSupport assetSupport, Callbacks callbacks) {
+        OrbitalAssetActionController(OrbitalAssetSupport assetSupport, Callbacks callbacks, StarmapViewContext view) {
             this.assetSupport = assetSupport;
             this.callbacks = callbacks;
+            this.view = view;
         }
 
         void openAssetActions(OrbitalAssetUiState state, CelestialObject body) {
@@ -250,7 +250,7 @@ public final class StarmapAssetActions {
                 callbacks.showActionStatus("Stations must be placed with a controller block");
                 return;
             }
-            if (callbacks.isCreativeBuildModeEnabled()) {
+            if (view.creativeBuildMode()) {
                 CelestialAsset asset = CelestialAsset.create(body.key(), kind, true);
                 asset.setDisplayName(displayName);
                 if (CelestialClient.registerAsset(body.key(), asset)) {
@@ -287,7 +287,7 @@ public final class StarmapAssetActions {
 
         void confirmPendingAssetCreation(OrbitalAssetUiState state) {
             if (state.pendingAssetCreation == null) return;
-            if (callbacks.isCreativeBuildModeEnabled()) {
+            if (view.creativeBuildMode()) {
                 CelestialAsset asset = CelestialAsset
                     .create(state.pendingAssetCreation.celestialObjectKey(), state.pendingAssetCreation.kind(), true);
                 asset.setDisplayName(state.pendingAssetCreation.displayName());
@@ -359,7 +359,7 @@ public final class StarmapAssetActions {
 
         void openStationManagement(OrbitalAssetUiState state, CelestialAsset asset) {
             if (asset == null || !assetSupport.isManageableStationAsset(asset)) return;
-            StationManagementScreen.open(asset.assetId, callbacks.isCreativeBuildModeEnabled());
+            StationManagementScreen.open(asset.assetId, view.creativeBuildMode());
         }
 
         void openPendingConstructionCancellation(OrbitalAssetUiState state, CelestialAsset asset) {
@@ -387,7 +387,7 @@ public final class StarmapAssetActions {
                 openPendingResourceTransfer(state, state.assetActionsBody, asset);
                 return;
             }
-            if (callbacks.isCreativeBuildModeEnabled()) {
+            if (view.creativeBuildMode()) {
                 cancelConstruction(asset);
                 return;
             }
@@ -524,14 +524,6 @@ public final class StarmapAssetActions {
 
         interface Callbacks {
 
-            int getViewportWidth();
-
-            int getViewportHeight();
-
-            boolean isCreativeBuildModeEnabled();
-
-            boolean isGT5AutomationAvailable();
-
             boolean canCreateBaseStation(CelestialObject body);
 
             boolean canCreateAutomatedStation(CelestialObject body);
@@ -655,6 +647,7 @@ public final class StarmapAssetActions {
 
         private final OrbitalAssetUiState state;
         private final Callbacks callbacks;
+        private final StarmapViewContext view;
 
         private int structureVersion = 0;
         private int contentVersion = 0;
@@ -671,9 +664,10 @@ public final class StarmapAssetActions {
         private AssetManagementTab currentTab = AssetManagementTab.ASSETS;
         private final List<TextFieldWidget> modalTextFields = new ArrayList<>();
 
-        StarmapAssetActionsWidget(OrbitalAssetUiState state, Callbacks callbacks) {
+        StarmapAssetActionsWidget(OrbitalAssetUiState state, Callbacks callbacks, StarmapViewContext view) {
             this.state = state;
             this.callbacks = callbacks;
+            this.view = view;
             setEnabled(false);
             size(0, 0);
             background(
@@ -734,7 +728,7 @@ public final class StarmapAssetActions {
             }
 
             setEnabled(true);
-            size(callbacks.getViewportWidth(), callbacks.getViewportHeight());
+            size(view.viewportWidth(), view.viewportHeight());
 
             if (shouldShowPanel()) {
                 int assetListSignature = computeAssetListSignature(state.assetActionsBody);
@@ -887,7 +881,7 @@ public final class StarmapAssetActions {
                     callbacks.canCreateAutomatedFacility(body),
                     () -> callbacks.triggerAssetCreation(body, CelestialAsset.Kind.AUTOMATED_OUTPOST, false))
                         .pos(CREATE_BUTTON_LEFT + CREATE_BUTTON_GAP * 2, CREATE_BUTTON_TOP));
-            if (!callbacks.isGT5AutomationAvailable()) {
+            if (!view.gt5AutomationAvailable()) {
                 modal.child(
                     createBodyText("GT5U required for automated assets", EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
                         .pos(CREATE_BUTTON_LEFT + CREATE_BUTTON_GAP * 3 + PANEL_CONTEXT_TEXT_GAP, 36));
@@ -1310,7 +1304,7 @@ public final class StarmapAssetActions {
                     StarmapActionGlyph.DESTROY,
                     // TODO: Localize
                     "Destroy",
-                    asset.kind == CelestialAsset.Kind.STATION ? callbacks.isCreativeBuildModeEnabled() : true,
+                    asset.kind == CelestialAsset.Kind.STATION ? view.creativeBuildMode() : true,
                     () -> callbacks.openPendingAssetDestruction(asset)).pos(buttonX, ROW_ICON_Y));
             return row;
         }

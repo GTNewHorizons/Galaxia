@@ -5,8 +5,13 @@ public final class ModuleFootprint {
     private ModuleFootprint() {}
 
     public static ShapeValidation validate(StationLayout layout, StationTileCoord anchor, ModuleShape shape) {
-        if (!shape.fitsAt(anchor)) return ShapeValidation.OUT_OF_BOUNDS;
-        StationTileCoord[] tiles = shape.tiles(anchor);
+        return validate(layout, anchor, shape, 0);
+    }
+
+    public static ShapeValidation validate(StationLayout layout, StationTileCoord anchor, ModuleShape shape,
+        int rotation) {
+        if (!shape.fitsAt(anchor, rotation)) return ShapeValidation.OUT_OF_BOUNDS;
+        StationTileCoord[] tiles = shape.tiles(anchor, rotation);
         boolean hasAdjacent = false;
         for (StationTileCoord tile : tiles) {
             if (layout.isOccupied(tile)) return ShapeValidation.OVERLAP;
