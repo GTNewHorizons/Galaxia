@@ -319,7 +319,6 @@ public class AirlockScreenWidget extends ParentWidget<AirlockScreenWidget> {
         private Widget<?> controllerBadge() {
             return new Widget<>().size(BADGE_SIZE)
                 .background(
-                    new ItemDrawable(GalaxiaBlocksEnum.STATION_CONTROLLER.get()),
                     new DynamicDrawable(
                         () -> new Rectangle().color(
                             room.primary()
