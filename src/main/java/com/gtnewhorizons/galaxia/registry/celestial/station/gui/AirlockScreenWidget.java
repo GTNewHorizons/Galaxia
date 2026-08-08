@@ -21,7 +21,6 @@ import com.cleanroommc.modularui.widget.sizer.Unit;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizons.galaxia.client.EnumColors;
-import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.celestial.station.GalaxiaBehaviors;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 

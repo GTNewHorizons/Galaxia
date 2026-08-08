@@ -516,8 +516,6 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
     @Override
     public void invalidate() {
         super.invalidate();
-        if (isChunkUnloading) {
-            setDoorState(false);
-        }
+        setDoorState(false);
     }
 }
