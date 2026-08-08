@@ -1,17 +1,16 @@
 package com.gtnewhorizons.galaxia.registry.dimension.biome;
 
-import java.util.List;
-
-import net.minecraft.world.biome.BiomeGenBase;
-
 import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationFunction;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.details.Terrain3d;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.SurfaceFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.UndergroundFeature;
-
 import lombok.Getter;
+import net.minecraft.world.biome.BiomeGenBase;
+
+import java.util.List;
 
 /**
  * The class holding all generation fields for Biome generation
@@ -36,6 +35,7 @@ public class BiomeGenSpace extends BiomeGenBase implements BiomeBlockPalette {
     private final int oceanCrackComplexity;
     private final StratificationFunction fillerBlocks;
     private final CaveShape caveShape;
+    private final Terrain3d terrain3d;
 
     /**
      * Creates a biome generator and configures it based on the provided builder
@@ -62,6 +62,7 @@ public class BiomeGenSpace extends BiomeGenBase implements BiomeBlockPalette {
         this.oceanSurface = b.oceanSurface;
         this.seabed = b.seabed;
         this.caveShape = b.caveShape;
+        this.terrain3d = b.terrain3d;
 
         this.spawnableCaveCreatureList = b.mobsCave;
         this.spawnableCreatureList = b.mobsGeneral;

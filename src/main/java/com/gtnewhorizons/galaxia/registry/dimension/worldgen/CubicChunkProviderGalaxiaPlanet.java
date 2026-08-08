@@ -1,24 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import net.minecraft.block.Block;
-import net.minecraft.entity.EnumCreatureType;
-import net.minecraft.init.Blocks;
-import net.minecraft.util.MathHelper;
-import net.minecraft.world.ChunkPosition;
-import net.minecraft.world.World;
-import net.minecraft.world.biome.BiomeGenBase;
-import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
-import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
-
-import org.jetbrains.annotations.Nullable;
-
 import com.cardinalstar.cubicchunks.api.ICube;
 import com.cardinalstar.cubicchunks.api.util.Box;
 import com.cardinalstar.cubicchunks.api.worldgen.GenerationResult;
@@ -38,6 +19,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeBlockPalette;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenSpace;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.DefaultBlockPalette;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.details.Terrain3d;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.SurfaceFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.UndergroundFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle.MantleCache;
@@ -47,8 +29,23 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NoiseSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NormalizedSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.OctavesSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.ScaledSampler;
-
 import lombok.Getter;
+import net.minecraft.block.Block;
+import net.minecraft.entity.EnumCreatureType;
+import net.minecraft.init.Blocks;
+import net.minecraft.util.MathHelper;
+import net.minecraft.world.ChunkPosition;
+import net.minecraft.world.World;
+import net.minecraft.world.biome.BiomeGenBase;
+import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
+import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
+import org.jetbrains.annotations.Nullable;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 @ParametersAreNonnullByDefault
 public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, GalaxiaPlanetGenerator {
@@ -240,6 +237,7 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
     private void generateCrust(int cubeX, int cubeY, int cubeZ, HeightOracle.ChunkData data, ExtendedBlockStorage ebs) {
         CaveShape crustCaves = null;
+        Terrain3d terrain3d = null;
         CaveShape intermediateCaves = dimension.getUpperIntermediaryCaves();
         if (intermediateCaves != null) {
             if (!intermediateCaves.preparedCaveShape()) {
@@ -258,9 +256,13 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
                 if (localBiome instanceof BiomeGenSpace spaceBiome) {
                     palette = spaceBiome;
+                    Terrain3d biome3d = spaceBiome.getTerrain3d();
 
                     if (crustCaves == null || !crustCaves.equals(spaceBiome.getCaveShape())) {
                         crustCaves = spaceBiome.getCaveShape();
+                    }
+                    if (terrain3d == null && biome3d != null || biome3d == null && terrain3d != null || biome3d != null && !biome3d.equals(terrain3d)) {
+                        terrain3d = biome3d;
                     }
                 }
 
@@ -275,7 +277,18 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                     }
                 }
 
-                int genHeight = Math.max(palette.getOceanHeight(), terrainHeight);
+                int terrain3dHeight = 0;
+                if (terrain3d != null) {
+                    if (!terrain3d.preparedFunctions()) {
+                        terrain3d.prepareFunctions(rand);
+                    }
+                    if (!terrain3d.preparedTerrainCache(cubeX, cubeZ)) {
+                        terrain3d.prepareTerrainCache(cubeX, cubeZ);
+                    }
+                    terrain3dHeight = terrain3d.getHeight(localX, localZ);
+                }
+
+                int genHeight = Math.max(palette.getOceanHeight(), terrainHeight + terrain3dHeight);
 
                 int minY = cubeY << 4;
                 int maxY = Math.min(minY + 16, genHeight);
@@ -286,7 +299,14 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
                     ImmutableBlockMeta block;
 
-                    if (y >= terrainHeight - palette.getSurfaceThickness()) {
+                    if (y >= terrainHeight && y - terrainHeight < terrain3dHeight) {
+                        if (terrain3d.isSolid(localX, y - terrainHeight, localZ)) {
+                            block = palette.getFillerBlocks().getStrataBlock(y);
+                        } else {
+                            block = AIR;
+                            isTerrain = false;
+                        }
+                    } else if (y >= terrainHeight + terrain3dHeight - palette.getSurfaceThickness()) {
                         ImmutableBlockMeta replacementBlock = data.surfaceBlocks[localX + (localZ << 4)];
 
                         if (replacementBlock != null) {
@@ -295,8 +315,7 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                             block = y >= palette.getSnowHeight() ? palette.getSnowBlock() : palette.getTopBlock();
                         }
                     } else {
-                        block = palette.getFillerBlocks()
-                            .getStrataBlock(y);
+                        block = palette.getFillerBlocks().getStrataBlock(y);
                     }
 
                     int oceanHeight = palette.getOceanHeight();

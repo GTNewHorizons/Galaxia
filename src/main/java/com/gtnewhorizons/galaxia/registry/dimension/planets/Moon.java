@@ -15,6 +15,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.BiomeMatrixGenerato
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainModifier;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.details.FloatingPancake;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CraterFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CrystalClusterFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.FluidSpringFeature;
@@ -233,6 +234,7 @@ public final class Moon {
                 return basalt;
             })
             .caveShape(new CaveShapeTubes((byte) 16, (byte) 4, (short) 100))
+            .terrain3d(new FloatingPancake())
             .surfaceFeature(
                 CraterFeature.builder()
                     .rarity(64)
