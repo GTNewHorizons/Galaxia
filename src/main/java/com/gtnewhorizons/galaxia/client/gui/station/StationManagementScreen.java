@@ -232,14 +232,21 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         ModuleShape shape = copySource == null ? request.shape() : copySource.shape();
         ModuleTier tier = copySource == null ? request.tier() : copySource.tier();
         if (kind == null || shape == null || tier == null) return;
-        controller.startTileMode(
+        controller.startTileModeWithPlacements(
             copySource == null ? StationEditModeController.Mode.MASS_BUILD : StationEditModeController.Mode.COPY_MODULE,
             (copySource == null ? "Build " : "Copy ") + kind.getDisplayName(),
             "Confirm",
-            (coord, selected) -> ModuleBuildPickerModel
-                .isCompatibleTarget(facility, kind, shape, tier, coord, selected),
+            (coord, selected) -> ModuleBuildPickerModel.isCompatibleTarget(
+                facility,
+                kind,
+                shape,
+                tier,
+                coord,
+                selected,
+                controller.selectedTargetRotations(),
+                controller.footprintRotation()),
             coord -> coord,
-            targets -> {
+            placements -> {
                 boolean sent;
                 if (copySource != null) {
                     sent = com.gtnewhorizons.galaxia.client.CelestialClient.copyModule(
@@ -247,7 +254,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                         request.copySourceModuleIndex(),
                         request.copySourceModuleId(),
                         request.creativeBuildMode(),
-                        targets);
+                        placements);
                 } else {
                     sent = com.gtnewhorizons.galaxia.client.CelestialClient.createModules(
                         assetId,
@@ -258,12 +265,17 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                         request.minerFocusTier(),
                         request.settingsGroupId(),
                         request.creativeBuildMode(),
-                        targets);
+                        placements);
                 }
                 if (!sent) StationNotificationHelper.showFailure("Module build request failed");
             },
-            targets -> ModuleBuildPickerModel.connectedTargets(facility, targets, shape));
-        controller.setSelectionFootprint(shape, shape == ModuleShape.QUAD_2x2);
+            targets -> ModuleBuildPickerModel.connectedTargets(
+                facility,
+                targets,
+                shape,
+                controller.selectedTargetRotations(),
+                controller.footprintRotation()));
+        controller.setSelectionFootprint(shape, shape != ModuleShape.SINGLE);
         controller.setPreviewModuleKind(kind);
     }
 

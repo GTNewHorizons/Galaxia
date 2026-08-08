@@ -710,13 +710,7 @@ public final class InterplanetaryTransferSystem {
 
         public interface Callbacks {
 
-            float worldToScreenX(double worldX);
-
-            float worldToScreenY(double worldY);
-
             double[] getWorldPosition(CelestialObject body);
-
-            double getServerOrbitalTime();
 
             boolean isBodyRendered(CelestialObject body);
         }
@@ -727,16 +721,18 @@ public final class InterplanetaryTransferSystem {
         private static final float PACKAGE_SPRITE_SIZE = 12.0f;
 
         private final Callbacks callbacks;
+        private final StarmapViewContext view;
         private final MutableTransferPoint transferPoint = new MutableTransferPoint();
 
-        public OrbitalTransferRenderer(Callbacks callbacks) {
+        public OrbitalTransferRenderer(Callbacks callbacks, StarmapViewContext view) {
             this.callbacks = callbacks;
+            this.view = view;
         }
 
         void drawTransferPaths(OrbitalTransferState state, CelestialObject visibleSystem, double currentTime,
             float alpha) {
             if (alpha <= 0.01f) return;
-            state.pruneFinishedTransfers(currentTime, callbacks.getServerOrbitalTime());
+            state.pruneFinishedTransfers(currentTime, view.serverOrbitalTime());
             List<InterplanetaryTransferJob> visibleTransfers = state.transfersForSystem(visibleSystem);
             if (visibleTransfers.isEmpty()) return;
             GlStateManager.disableTexture2D();
@@ -763,7 +759,7 @@ public final class InterplanetaryTransferSystem {
                 if (!shouldRenderTransferForEndpointVisibility(transfer, callbacks)) continue;
                 drawTransferDot(
                     transfer,
-                    effectiveTransferTime(transfer, currentTime, callbacks.getServerOrbitalTime()),
+                    effectiveTransferTime(transfer, currentTime, view.serverOrbitalTime()),
                     alpha);
             }
             GlStateManager.color(1f, 1f, 1f, 1f);
@@ -777,14 +773,12 @@ public final class InterplanetaryTransferSystem {
             GlStateManager.enableBlend();
             GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 
-            int color = withAlpha(PREVIEW_PATH_COLOR, alpha);
-            applyColor(color);
+            int color = StarmapColor.withAlpha(PREVIEW_PATH_COLOR, alpha);
+            StarmapColor.apply(color);
             GL11.glLineWidth(1.8f);
             GL11.glBegin(GL11.GL_LINE_STRIP);
             for (int i = 0; i < state.previewPointCount(); i++) {
-                GL11.glVertex2f(
-                    callbacks.worldToScreenX(state.previewX(i)),
-                    callbacks.worldToScreenY(state.previewY(i)));
+                GL11.glVertex2f(view.worldToScreenX(state.previewX(i)), view.worldToScreenY(state.previewY(i)));
             }
             GL11.glEnd();
             GL11.glLineWidth(1f);
@@ -799,12 +793,12 @@ public final class InterplanetaryTransferSystem {
             for (int i = visibleTransfers.size() - 1; i >= 0; i--) {
                 InterplanetaryTransferJob transfer = visibleTransfers.get(i);
                 if (!shouldRenderTransferForEndpointVisibility(transfer, callbacks)) continue;
-                double effectiveTime = effectiveTransferTime(transfer, currentTime, callbacks.getServerOrbitalTime());
+                double effectiveTime = effectiveTransferTime(transfer, currentTime, view.serverOrbitalTime());
                 if (!writeCurrentTransferPoint(transfer, effectiveTime, transferPoint) || !transferPoint.valid()) {
                     continue;
                 }
-                float sx = callbacks.worldToScreenX(transferPoint.worldX());
-                float sy = callbacks.worldToScreenY(transferPoint.worldY());
+                float sx = view.worldToScreenX(transferPoint.worldX());
+                float sy = view.worldToScreenY(transferPoint.worldY());
                 float dx = mouseX - sx;
                 float dy = mouseY - sy;
                 if (dx * dx + dy * dy <= DOT_HIT_RADIUS * DOT_HIT_RADIUS) return transfer;
@@ -823,14 +817,14 @@ public final class InterplanetaryTransferSystem {
 
         private void drawTransferPath(InterplanetaryTransferJob transfer, float alpha) {
             if (transfer.trajectoryPointCount() <= 0) return;
-            int color = withAlpha(PATH_COLOR, alpha);
-            applyColor(color);
+            int color = StarmapColor.withAlpha(PATH_COLOR, alpha);
+            StarmapColor.apply(color);
             GL11.glLineWidth(1.8f);
             GL11.glBegin(GL11.GL_LINE_STRIP);
             for (int i = 0; i < transfer.trajectoryPointCount(); i++) {
                 GL11.glVertex2f(
-                    callbacks.worldToScreenX(transfer.trajectoryXs()[i]),
-                    callbacks.worldToScreenY(transfer.trajectoryYs()[i]));
+                    view.worldToScreenX(transfer.trajectoryXs()[i]),
+                    view.worldToScreenY(transfer.trajectoryYs()[i]));
             }
             GL11.glEnd();
             GL11.glLineWidth(1f);
@@ -838,23 +832,11 @@ public final class InterplanetaryTransferSystem {
 
         private void drawTransferDot(InterplanetaryTransferJob transfer, double currentTime, float alpha) {
             if (!writeCurrentTransferPoint(transfer, currentTime, transferPoint) || !transferPoint.valid()) return;
-            float sx = callbacks.worldToScreenX(transferPoint.worldX());
-            float sy = callbacks.worldToScreenY(transferPoint.worldY());
+            float sx = view.worldToScreenX(transferPoint.worldX());
+            float sy = view.worldToScreenY(transferPoint.worldY());
             TransferPackageIcons.drawCentered(transfer.packageKind(), sx, sy, PACKAGE_SPRITE_SIZE, alpha);
         }
 
-        private void applyColor(int color) {
-            float r = ((color >> 16) & 0xFF) / 255f;
-            float g = ((color >> 8) & 0xFF) / 255f;
-            float b = (color & 0xFF) / 255f;
-            float a = ((color >> 24) & 0xFF) / 255f;
-            GlStateManager.color(r, g, b, a);
-        }
-
-        private int withAlpha(int color, float alpha) {
-            int a = Math.max(0, Math.min(255, (int) (((color >> 24) & 0xFF) * alpha)));
-            return (color & 0x00FFFFFF) | (a << 24);
-        }
     }
 
     // -----------------------------------------------------------------------
@@ -1072,10 +1054,6 @@ public final class InterplanetaryTransferSystem {
 
         public interface Callbacks {
 
-            int getViewportWidth();
-
-            int getViewportHeight();
-
             void closeTransferSimulator();
 
             void beginTransferPick(TransferPickMode pickMode);
@@ -1087,8 +1065,6 @@ public final class InterplanetaryTransferSystem {
             void dispatchTransfer();
 
             void runLambertStressTest();
-
-            double getTimeScale();
         }
 
         private static final int PANEL_LEFT = 28;
@@ -1103,6 +1079,7 @@ public final class InterplanetaryTransferSystem {
 
         private final OrbitalTransferSimulatorState state;
         private final Callbacks callbacks;
+        private final StarmapViewContext view;
         private final TextFieldWidget maxDvField;
         private int panelLeft = PANEL_LEFT;
         private int panelTop = PANEL_TOP;
@@ -1126,9 +1103,11 @@ public final class InterplanetaryTransferSystem {
         private boolean lastHasPreview = false;
         private double lastTimeScale = -1;
 
-        OrbitalTransferSimulatorWidget(OrbitalTransferSimulatorState state, Callbacks callbacks) {
+        OrbitalTransferSimulatorWidget(OrbitalTransferSimulatorState state, Callbacks callbacks,
+            StarmapViewContext view) {
             this.state = state;
             this.callbacks = callbacks;
+            this.view = view;
             this.maxDvField = createInputField("Max dV");
             maxDvField.setText(String.valueOf(state.maxDv()));
             this.sliderValue = new DoubleValue(state.sliderDv());
@@ -1162,7 +1141,7 @@ public final class InterplanetaryTransferSystem {
                 return;
             }
             setEnabled(true);
-            size(callbacks.getViewportWidth(), callbacks.getViewportHeight());
+            size(view.viewportWidth(), view.viewportHeight());
             if (state.version() != lastVersion) {
                 rebuildChildren();
                 lastVersion = state.version();
@@ -1192,7 +1171,7 @@ public final class InterplanetaryTransferSystem {
                 lastPreviewTof = -1; // force update
             }
 
-            double currentTimeScale = callbacks.getTimeScale();
+            double currentTimeScale = view.timeScale();
 
             if (hasPreview) {
                 if (Math.abs(state.previewTof() - lastPreviewTof) > 1e-6
@@ -1515,16 +1494,6 @@ public final class InterplanetaryTransferSystem {
             int getTooltipMouseX();
 
             int getTooltipMouseY();
-
-            int getViewportWidth();
-
-            int getViewportHeight();
-
-            double getCurrentTime();
-
-            double getTimeScale();
-
-            double getServerOrbitalTime();
         }
 
         private static final int PANEL_WIDTH = 190;
@@ -1532,6 +1501,7 @@ public final class InterplanetaryTransferSystem {
         private static final int PADDING = 10;
 
         private final Callbacks callbacks;
+        private final StarmapViewContext view;
         private InterplanetaryTransferJob activeTransfer;
         private ParentWidget<?> rootPanel;
 
@@ -1543,8 +1513,9 @@ public final class InterplanetaryTransferSystem {
         private long lastProgress = -1;
         private long lastRemaining = -1;
 
-        public OrbitalTransferTooltipWidget(Callbacks callbacks) {
+        public OrbitalTransferTooltipWidget(Callbacks callbacks, StarmapViewContext view) {
             this.callbacks = callbacks;
+            this.view = view;
             setEnabled(false);
         }
 
@@ -1582,8 +1553,8 @@ public final class InterplanetaryTransferSystem {
             if (activeTransfer != null) {
                 double currentTime = effectiveTransferTime(
                     activeTransfer,
-                    callbacks.getCurrentTime(),
-                    callbacks.getServerOrbitalTime());
+                    view.currentTime(),
+                    view.serverOrbitalTime());
                 double pct = activeTransfer.progress(currentTime) * 100.0;
                 long currentProgress = Math.round(pct);
                 if (currentProgress != lastProgress) {
@@ -1591,7 +1562,7 @@ public final class InterplanetaryTransferSystem {
                     lastProgress = currentProgress;
                 }
 
-                double timeScale = Math.max(1e-6, effectiveTransferTimeScale(activeTransfer, callbacks.getTimeScale()));
+                double timeScale = Math.max(1e-6, effectiveTransferTimeScale(activeTransfer, view.timeScale()));
                 double remainingSec = Math.max(0.0, activeTransfer.arrivalTime() - currentTime) / timeScale;
                 long currentRemaining = Math.round(remainingSec * 10.0);
                 if (currentRemaining != lastRemaining) {
@@ -1648,8 +1619,8 @@ public final class InterplanetaryTransferSystem {
             if (rootPanel == null) return;
             int localMouseX = callbacks.getTooltipMouseX();
             int localMouseY = callbacks.getTooltipMouseY();
-            int viewportWidth = callbacks.getViewportWidth();
-            int viewportHeight = callbacks.getViewportHeight();
+            int viewportWidth = view.viewportWidth();
+            int viewportHeight = view.viewportHeight();
             int left = Math.max(8, localMouseX + 12);
             int top = Math.max(8, localMouseY - PANEL_HEIGHT / 2);
             if (left + PANEL_WIDTH > viewportWidth - 8) left = Math.max(8, localMouseX - 12 - PANEL_WIDTH);

@@ -40,6 +40,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
@@ -396,7 +397,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                 kind == FacilityModuleKind.MINER ? pendingMinerFocusTier : MinerFocusTier.NONE,
                 pendingSettingsGroupId,
                 pendingInstantBuild,
-                List.of(coord));
+                List.of(ModulePlacement.at(coord)));
             if (!sent) StationNotificationHelper.showFailure("Module build request failed");
             StationManagementScreen.open(assetId, pendingInstantBuild);
         } else {

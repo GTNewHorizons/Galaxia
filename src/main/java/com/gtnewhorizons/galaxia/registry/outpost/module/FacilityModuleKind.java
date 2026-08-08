@@ -121,6 +121,7 @@ public enum FacilityModuleKind {
     public ModuleShape defaultShape() {
         return switch (this) {
             case MINER -> ModuleShape.QUAD_2x2;
+            case MACERATOR -> ModuleShape.L_2x2;
             case GEOTHERMAL_GENERATOR -> ModuleShape.BLOCK_3x3;
             default -> ModuleShape.SINGLE;
         };
