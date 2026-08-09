@@ -11,7 +11,7 @@ import java.util.Arrays;
 public class ModifierHandler {
     private final NoiseGeneratorOctaves weirdnessNoise;
 
-    private double[] weirdnessCache;
+    private double[] weirdnessCache = defaultModifier();
     private int currentX;
     private int currentZ;
     private boolean cached = false;
@@ -49,19 +49,18 @@ public class ModifierHandler {
         currentZ = chunkZ;
         chunkX *= 16;
         chunkZ *= 16;
-        double[] noise = weirdnessNoise.generateNoiseOctaves(new double[256], chunkZ, chunkX, 16, 16, 0.02, 0.02, 0);
-        for (int i = 0; i < noise.length; i++) {
-            double localNoise = noise[i];
+        weirdnessCache = weirdnessNoise.generateNoiseOctaves(new double[256], chunkZ, chunkX, 16, 16, 0.02, 0.02, 0);
+        for (int i = 0; i < weirdnessCache.length; i++) {
+            double localNoise = weirdnessCache[i];
             localNoise /= 4;
             if (localNoise < -2) {
                 localNoise = -2;
             } else if (localNoise > 2) {
                 localNoise = 2;
             }
-            noise[i] = localNoise;
+            weirdnessCache[i] = localNoise;
         }
-        weirdnessCache = noise;
-        return noise;
+        return weirdnessCache;
     }
 
     private double[] getWeirdnessMultiplier(double[] weirdnessValues, double minimum, double maximum) {
