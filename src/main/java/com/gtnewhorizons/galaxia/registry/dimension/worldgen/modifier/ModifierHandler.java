@@ -32,17 +32,15 @@ public class ModifierHandler {
             return valueArray;
         }
         if (modifierEntry.modifier() == TerrainModifier.WEIRDNESS) {
-            valueArray = getWeirdnessMultiplier(
-                generateWeirdness(chunkX, chunkZ),
-                modifierEntry.lowerRange(),
-                modifierEntry.upperRange());
+            cacheWeirdness(chunkX, chunkZ);
+            cacheWeirdnessMultiplier(modifierEntry.lowerRange(), modifierEntry.upperRange());
         }
-        return valueArray;
+        return weirdnessCache;
     }
 
-    private double[] generateWeirdness(int chunkX, int chunkZ) {
+    private void cacheWeirdness(int chunkX, int chunkZ) {
         if (chunkX == currentX && chunkZ == currentZ && cached) {
-            return weirdnessCache;
+            return;
         }
         cached = true;
         currentX = chunkX;
@@ -60,21 +58,19 @@ public class ModifierHandler {
             }
             weirdnessCache[i] = localNoise;
         }
-        return weirdnessCache;
     }
 
-    private double[] getWeirdnessMultiplier(double[] weirdnessValues, double minimum, double maximum) {
+    private void cacheWeirdnessMultiplier(double minimum, double maximum) {
         double intervalLength = maximum - minimum;
         double halfLength = intervalLength / 2;
         double peakValue = minimum + halfLength;
         double diminishingFactor = 1 / halfLength;
-        for (int i = 0; i < weirdnessValues.length; i++) {
+        for (int i = 0; i < weirdnessCache.length; i++) {
             if (halfLength == 0) {
-                weirdnessValues[i] = 0;
+                weirdnessCache[i] = 0;
             } else {
-                weirdnessValues[i] = Math.max(0, 1 - diminishingFactor * Math.abs(peakValue - weirdnessValues[i]));
+                weirdnessCache[i] = Math.max(0, 1 - diminishingFactor * Math.abs(peakValue - weirdnessCache[i]));
             }
         }
-        return weirdnessValues;
     }
 }
