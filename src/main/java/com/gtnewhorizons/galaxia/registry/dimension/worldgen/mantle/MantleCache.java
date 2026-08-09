@@ -1,13 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle;
 
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
-
-import net.minecraft.world.World;
-import net.minecraft.world.gen.NoiseGeneratorOctaves;
-
 import com.gtnewhorizon.gtnhlib.hash.Fnv1a64;
 import com.gtnewhorizon.gtnhlib.util.StdLCG;
 import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
@@ -15,6 +7,14 @@ import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainFeatureApplier;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.ModifierHandler;
+import net.minecraft.world.World;
+import net.minecraft.world.gen.NoiseGeneratorOctaves;
+
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Random;
 
 public class MantleCache {
 
@@ -26,14 +26,16 @@ public class MantleCache {
     private final Random random;
     private final DimensionEnum dimension;
     private final NoiseGeneratorOctaves terrainNoise;
+    private final ModifierHandler modifierHandler;
 
     private final List<CacheEntry> cacheEntries = new LinkedList<>();
 
-    public MantleCache(World world, Random random, DimensionEnum dimension) {
+    public MantleCache(World world, Random random, DimensionEnum dimension, ModifierHandler modifierHandler) {
         this.world = world;
         this.random = random;
         this.dimension = dimension;
         this.terrainNoise = new NoiseGeneratorOctaves(new StdLCG(world.getSeed()), 4);
+        this.modifierHandler = modifierHandler;
         Arrays.fill(DEFAULT_RELEVANCE, 1);
     }
 
@@ -44,7 +46,7 @@ public class MantleCache {
                 return entry.exportData;
             }
         }
-        CacheEntry correctEntry = new CacheEntry(cubeX, cubeZ, ceiling, floor, world, random, dimension, terrainNoise);
+        CacheEntry correctEntry = new CacheEntry(cubeX, cubeZ, ceiling, floor, world, random, dimension, terrainNoise, modifierHandler);
         cacheEntries.add(correctEntry);
         while (cacheEntries.size() > CACHE_LIMIT) {
             cacheEntries.removeFirst();
@@ -62,7 +64,7 @@ public class MantleCache {
         private final MantleCacheData exportData;
 
         public CacheEntry(int cubeX, int cubeZ, TerrainConfiguration ceiling, TerrainConfiguration floor, World world,
-            Random random, DimensionEnum dimension, NoiseGeneratorOctaves terrainNoise) {
+            Random random, DimensionEnum dimension, NoiseGeneratorOctaves terrainNoise, ModifierHandler modifierHandler) {
             this.cubeX = cubeX;
             this.cubeZ = cubeZ;
             this.world = world;
@@ -81,7 +83,8 @@ public class MantleCache {
                     withSeed(cubeX, cubeZ, i++),
                     DEFAULT_RELEVANCE,
                     dimension,
-                    terrainNoise);
+                    terrainNoise,
+                    modifierHandler);
             }
             i = 0;
             for (TerrainFeature f : ceiling.getMesoFeatures()) {
@@ -94,7 +97,8 @@ public class MantleCache {
                     withSeed(cubeX, cubeZ, i++),
                     DEFAULT_RELEVANCE,
                     dimension,
-                    terrainNoise);
+                    terrainNoise,
+                    modifierHandler);
             }
             i = 0;
             double[] floorHeightmap = new double[CHUNK_AREA];
@@ -109,7 +113,8 @@ public class MantleCache {
                     withSeed(cubeX, cubeZ, i++),
                     DEFAULT_RELEVANCE,
                     dimension,
-                    terrainNoise);
+                    terrainNoise,
+                    modifierHandler);
             }
             i = 0;
             for (TerrainFeature f : floor.getMesoFeatures()) {
@@ -122,7 +127,8 @@ public class MantleCache {
                     withSeed(cubeX, cubeZ, i++),
                     DEFAULT_RELEVANCE,
                     dimension,
-                    terrainNoise);
+                    terrainNoise,
+                    modifierHandler);
             }
             exportData = new MantleCacheData(
                 ceilingHeightmap,

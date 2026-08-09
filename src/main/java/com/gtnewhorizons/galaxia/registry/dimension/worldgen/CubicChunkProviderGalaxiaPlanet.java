@@ -1,24 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import net.minecraft.block.Block;
-import net.minecraft.entity.EnumCreatureType;
-import net.minecraft.init.Blocks;
-import net.minecraft.util.MathHelper;
-import net.minecraft.world.ChunkPosition;
-import net.minecraft.world.World;
-import net.minecraft.world.biome.BiomeGenBase;
-import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
-import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
-
-import org.jetbrains.annotations.Nullable;
-
 import com.cardinalstar.cubicchunks.api.ICube;
 import com.cardinalstar.cubicchunks.api.util.Box;
 import com.cardinalstar.cubicchunks.api.worldgen.GenerationResult;
@@ -44,12 +25,28 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.Underground
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle.MantleCache;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle.MantleCacheData;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle.MantleRules;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.ModifierHandler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NoiseSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NormalizedSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.OctavesSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.ScaledSampler;
-
 import lombok.Getter;
+import net.minecraft.block.Block;
+import net.minecraft.entity.EnumCreatureType;
+import net.minecraft.init.Blocks;
+import net.minecraft.util.MathHelper;
+import net.minecraft.world.ChunkPosition;
+import net.minecraft.world.World;
+import net.minecraft.world.biome.BiomeGenBase;
+import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
+import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
+import org.jetbrains.annotations.Nullable;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 @ParametersAreNonnullByDefault
 public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, GalaxiaPlanetGenerator {
@@ -77,6 +74,7 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
     private final NoiseSampler crackNoise1, crackNoise2;
     @Getter
     private final HeightOracle heightOracle;
+    private final ModifierHandler modifierHandler;
 
     private final HashMap3D<ArrayList<DeferredWrite>> deferredWrites = new HashMap3D<>();
 
@@ -85,13 +83,14 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
     public CubicChunkProviderGalaxiaPlanet(World world, DimensionEnum dimension) {
         this.dimension = dimension;
         this.worldObj = world;
-        this.heightOracle = new HeightOracle(world, dimension, false);
+        this.modifierHandler = new ModifierHandler(world);
+        this.heightOracle = new HeightOracle(world, dimension, false, modifierHandler);
 
         this.rand = new StdLCG(world.getSeed());
         this.crackNoise1 = new NormalizedSampler(new ScaledSampler(new OctavesSampler(rand, 2), 0.05));
         this.crackNoise2 = new NormalizedSampler(new ScaledSampler(new OctavesSampler(rand, 2), 0.05));
-        this.upperMantleCache = new MantleCache(world, rand, dimension);
-        this.lowerMantleCache = new MantleCache(world, rand, dimension);
+        this.upperMantleCache = new MantleCache(world, rand, dimension, modifierHandler);
+        this.lowerMantleCache = new MantleCache(world, rand, dimension, modifierHandler);
     }
 
     @Override
@@ -288,7 +287,7 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                         terrain3d.prepareFunctions(rand);
                     }
                     if (!terrain3d.preparedTerrainCache(cubeX, cubeZ)) {
-                        terrain3d.prepareTerrainCache(cubeX, cubeZ);
+                        terrain3d.prepareTerrainCache(cubeX, cubeZ, modifierHandler);
                     }
                     terrain3dHeight = terrain3d.getHeight(localX, localZ);
                 }
