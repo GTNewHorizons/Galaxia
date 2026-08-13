@@ -9,11 +9,8 @@ import net.minecraft.util.StatCollector;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.drawable.DynamicDrawable;
-import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.cleanroommc.modularui.drawable.Rectangle;
-import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
-import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.Widget;
@@ -25,22 +22,25 @@ import com.gtnewhorizons.galaxia.registry.celestial.station.GalaxiaBehaviors;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 
 /**
- * GT-style "screen" that draws the airlock schematic on a black machine screen:
- * the two rooms flanking the central door. The whole drawing is green while the
- * structure is valid and red while it is not.
+ * HUD-style "screen" that draws the airlock schematic on a dark monitor: the two room wells flanking the central door
+ * node. The bezel and blueprint-blue corner brackets are inherited from {@link ScreenWidget}; the wells and the door
+ * are composed out of ordinary mui2 widgets (rooms in a {@link Flow} row, their stat rows as fixed-height children).
+ * Only the room badges are item art. While the structure is invalid the schematic is hidden and a single empty error
+ * panel is shown instead.
  */
-public class AirlockScreenWidget extends ParentWidget<AirlockScreenWidget> {
+public class AirlockScreenWidget extends ScreenWidget {
 
-    /** Inset of the room/door row from the screen edges. */
-    private static final int SCREEN_PAD = 4;
+    /** Inset of the room/door row from the screen edges (keeps the wells inside the bracket band). */
+    private static final int SCREEN_PAD = 6;
     /** Gap between the two rooms and the central door. */
     private static final int SECTION_GAP = 4;
     private static final int DOOR_WIDTH = 26;
-    /** Inner screen frame inset drawn inside the door block. */
-    private static final int DOOR_FRAME = 3;
-    private static final int DOOR_SEAM_TOP = 6;
-    private static final int DOOR_SEAM_WIDTH = 2;
-    private static final int DOOR_SEAM_BOTTOM = 12;
+    /** Inset of the door node interior from its bezel. */
+    private static final int DOOR_INSET = 1;
+    /** Center gap between the two door panes while closed. */
+    private static final int DOOR_SEAM = 2;
+    /** Center gap between the two door panes while open. */
+    private static final int DOOR_OPEN_GAP = 8;
     /** Gap between consecutive text/stat rows inside a room. */
     private static final int ROW_GAP = 4;
     private static final int TEXT_ROW_HEIGHT = 12;
@@ -48,19 +48,12 @@ public class AirlockScreenWidget extends ParentWidget<AirlockScreenWidget> {
     private static final int LABEL_ROW_HEIGHT = 10;
     private static final int PROTECTION_ROW_HEIGHT = 24;
     private static final int BADGE_SIZE = 10;
-    private static final int BADGE_ROW_TOP = 12;
-    private static final int BADGE_ROW_HEIGHT = 12;
     private static final int BADGE_GAP = 2;
     private static final int OXYGEN_ROW_HEIGHT = 20;
-    private static final int BAR_TOP = 10;
     private static final int BAR_HEIGHT = 4;
-    private static final int OXYGEN_PCT_TOP = 9;
-    /** Right inset of the role text so it never overlaps the controller badge. */
-    private static final int ROLE_TEXT_RIGHT = 20;
-    private static final int CONTROLLER_BADGE_TOP = 1;
-    /** Horizontal inset of the text/bar content from the room's accent border. */
+    /** Horizontal inset of the text/bar content from the room's border. */
     private static final int ROOM_PAD_X = 6;
-    /** Vertical inset of the content from the top/bottom of the room. */
+    /** Vertical inset of the content from the bottom of the room. */
     private static final int ROOM_PAD_Y = 4;
 
     // spotless:off
@@ -73,23 +66,32 @@ public class AirlockScreenWidget extends ParentWidget<AirlockScreenWidget> {
     // spotless:on
 
     private final BooleanSupplier doorOpen;
-    private final BooleanSupplier structureValid;
 
     public AirlockScreenWidget(RoomSync roomA, RoomSync roomB, BooleanSupplier doorOpen,
         BooleanSupplier structureValid) {
         this.doorOpen = doorOpen;
-        this.structureValid = structureValid;
+        // ScreenWidget's constructor supplies the bezel and the corner brackets.
 
-        background(new Rectangle().color(EnumColors.AIRLOCK_SCREEN_BG.getColor()));
+        // Schematic (rooms + door) only while the structure is valid.
+        child(
+            Flow.row()
+                .full()
+                .padding(SCREEN_PAD)
+                .childPadding(SECTION_GAP)
+                .child(room(roomA, "galaxia.gui.airlock_controller.room_a"))
+                .child(door())
+                .child(room(roomB, "galaxia.gui.airlock_controller.room_b"))
+                .setEnabledIf(w -> structureValid.getAsBoolean()));
 
-        Flow row = Flow.row()
-            .sizeRel(1f, 1f)
-            .padding(SCREEN_PAD)
-            .childPadding(SECTION_GAP)
-            .child(room(roomA, "galaxia.gui.airlock_controller.room_a"))
-            .child(door())
-            .child(room(roomB, "galaxia.gui.airlock_controller.room_b"));
-        child(row);
+        // Single empty recessed panel shown while the structure is invalid: nothing else is drawn.
+        child(
+            new Widget<>().full()
+                .margin(SCREEN_PAD)
+                .background(
+                    new Rectangle().color(EnumColors.AIRLOCK_ROOM_FILL.getColor()),
+                    new Rectangle().hollow(1)
+                        .color(EnumColors.AIRLOCK_ROOM_BORDER.getColor()))
+                .setEnabledIf(w -> !structureValid.getAsBoolean()));
     }
 
     private IWidget room(RoomSync sync, String nameKey) {
@@ -102,14 +104,14 @@ public class AirlockScreenWidget extends ParentWidget<AirlockScreenWidget> {
             .heightRel(1f);
     }
 
+    /** Blueprint-blue accent used for the oxygen fill and the closed door panes. */
     private int accent() {
-        return structureValid.getAsBoolean() ? EnumColors.MAP_COLOR_SIGNAL_POSITIVE.getColor()
-            : EnumColors.MAP_COLOR_SIGNAL_NEGATIVE.getColor();
+        return EnumColors.AIRLOCK_SCREEN_BRACKET.getColor();
     }
 
     /**
      * Per-room values synced through normal per-value sync handlers (one instance per airlock room slot). Every value
-     * describes the room itself
+     * describes the room itself.
      */
     public record RoomSync(BooleanSupplier present, IntSupplier attachments, IntSupplier volume,
         IntSupplier oxygenLevel, IntSupplier protection, IntSupplier role, BooleanSupplier primary) {}
@@ -121,14 +123,15 @@ public class AirlockScreenWidget extends ParentWidget<AirlockScreenWidget> {
         RoomWidget(RoomSync room, String nameKey) {
             this.room = room;
 
-            Rectangle accentBorder = new Rectangle().hollow(1);
             background(
                 new Rectangle().color(EnumColors.AIRLOCK_ROOM_FILL.getColor()),
-                new DynamicDrawable(() -> accentBorder.color(accent())));
+                new Rectangle().hollow(1)
+                    .color(EnumColors.AIRLOCK_ROOM_BORDER.getColor()));
 
+            // Stat rows flow down the well; rows that hide (no room / protection state) collapse so the rest stay put.
             Flow column = Flow.column()
-                .sizeRel(1f, 1f)
-                .padding(0, 0, ROOM_PAD_Y, ROOM_PAD_Y)
+                .full()
+                .padding(ROOM_PAD_X, ROOM_PAD_Y)
                 .childPadding(ROW_GAP)
                 .collapseDisabledChild(true);
 
@@ -144,66 +147,102 @@ public class AirlockScreenWidget extends ParentWidget<AirlockScreenWidget> {
             column.child(volumeRow());
             column.child(oxygenRow());
             child(column);
+
+            // Machined top hairline on the well, matching the panel header highlight.
+            child(
+                new Widget<>().fullWidth()
+                    .height(1)
+                    .background(new Rectangle().color(EnumColors.STATION_HEADER_HIGHLIGHT.getColor())));
         }
 
-        private ParentWidget<?> protectionRow() {
-            return new ParentWidget<>().left(0)
-                .right(0)
+        private IWidget roleRow() {
+            return Flow.row()
+                .fullWidth()
+                .height(TEXT_ROW_HEIGHT)
+                .child(
+                    new TextWidget<>(
+                        IKey.comp(
+                            IKey.lang("galaxia.gui.airlock_controller.room.role"),
+                            IKey.str(": "),
+                            IKey.dynamic(
+                                () -> StatCollector.translateToLocal(
+                                    GalaxiaBehaviors.byId(
+                                        room.role()
+                                            .getAsInt())
+                                        .get()
+                                        .getUnlocalizedName())))).height(TEXT_ROW_HEIGHT)
+                                            .expanded()
+                                            .textAlign(Alignment.TopLeft)
+                                            .color(EnumColors.MAP_COLOR_TEXT_BODY::getColor))
+                .child(controllerBadge())
+                .setEnabledIf(
+                    w -> room.present()
+                        .getAsBoolean());
+        }
+
+        private IWidget protectionRow() {
+            return Flow.column()
+                .fullWidth()
                 .height(PROTECTION_ROW_HEIGHT)
+                .crossAxisAlignment(Alignment.CrossAxis.START)
+                .childPadding(ROW_GAP)
+                .collapseDisabledChild(true)
                 .child(
                     textRow(
                         IKey.lang("galaxia.gui.airlock_controller.room.protection"),
-                        EnumColors.MAP_COLOR_TEXT_BODY::getColor).top(0)
-                            .height(LABEL_ROW_HEIGHT))
+                        EnumColors.MAP_COLOR_TEXT_BODY::getColor).height(LABEL_ROW_HEIGHT))
                 .child(
-                    Flow.row()
-                        .left(ROOM_PAD_X)
-                        .right(ROOM_PAD_X)
-                        .top(BADGE_ROW_TOP)
-                        .height(BADGE_ROW_HEIGHT)
-                        .childPadding(BADGE_GAP)
-                        .collapseDisabledChild(true)
-                        .child(
-                            badge(
-                                PROTECTION_RADIATION,
-                                GalaxiaItemList.RADIATION_PROTECTION.getItem(),
-                                "galaxia.gui.airlock_controller.room.protection.radiation"))
-                        .child(
-                            badge(
-                                PROTECTION_PRESSURE,
-                                GalaxiaItemList.PRESSURE_PROTECTION_HIGH.getItem(),
-                                "galaxia.gui.airlock_controller.room.protection.pressure"))
-                        .child(
-                            badge(
-                                PROTECTION_SPORES,
-                                GalaxiaItemList.SPORE_FILTER.getItem(),
-                                "galaxia.gui.airlock_controller.room.protection.spores"))
-                        .child(
-                            badge(
-                                PROTECTION_WITHER,
-                                GalaxiaItemList.WITHER_PROTECTION.getItem(),
-                                "galaxia.gui.airlock_controller.room.protection.wither"))
-                        .child(
-                            badge(
-                                PROTECTION_HEAT,
-                                GalaxiaItemList.THERMAL_PROTECTION_HOT.getItem(),
-                                "galaxia.gui.airlock_controller.room.protection.heat"))
-                        .child(
-                            badge(
-                                PROTECTION_COLD,
-                                GalaxiaItemList.THERMAL_PROTECTION_COLD.getItem(),
-                                "galaxia.gui.airlock_controller.room.protection.cold")))
+                    badgeRow().setEnabledIf(
+                        w -> room.protection()
+                            .getAsInt() != 0))
                 .child(
                     textRow(
                         IKey.lang("galaxia.gui.airlock_controller.room.protection.none"),
-                        EnumColors.MAP_COLOR_TEXT_MUTED::getColor).top(BADGE_ROW_TOP)
-                            .height(BADGE_ROW_HEIGHT)
+                        EnumColors.MAP_COLOR_TEXT_MUTED::getColor).height(LABEL_ROW_HEIGHT)
                             .setEnabledIf(
                                 w -> room.protection()
                                     .getAsInt() == 0))
                 .setEnabledIf(
                     w -> room.present()
                         .getAsBoolean());
+        }
+
+        private Flow badgeRow() {
+            return Flow.row()
+                .coverChildren()
+                .childPadding(BADGE_GAP)
+                .height(TEXT_ROW_HEIGHT)
+                .collapseDisabledChild(true)
+                .child(
+                    badge(
+                        PROTECTION_RADIATION,
+                        GalaxiaItemList.RADIATION_PROTECTION.getItem(),
+                        "galaxia.gui.airlock_controller.room.protection.radiation"))
+                .child(
+                    badge(
+                        PROTECTION_PRESSURE,
+                        GalaxiaItemList.PRESSURE_PROTECTION_HIGH.getItem(),
+                        "galaxia.gui.airlock_controller.room.protection.pressure"))
+                .child(
+                    badge(
+                        PROTECTION_SPORES,
+                        GalaxiaItemList.SPORE_FILTER.getItem(),
+                        "galaxia.gui.airlock_controller.room.protection.spores"))
+                .child(
+                    badge(
+                        PROTECTION_WITHER,
+                        GalaxiaItemList.WITHER_PROTECTION.getItem(),
+                        "galaxia.gui.airlock_controller.room.protection.wither"))
+                .child(
+                    badge(
+                        PROTECTION_HEAT,
+                        GalaxiaItemList.THERMAL_PROTECTION_HOT.getItem(),
+                        "galaxia.gui.airlock_controller.room.protection.heat"))
+                .child(
+                    badge(
+                        PROTECTION_COLD,
+                        GalaxiaItemList.THERMAL_PROTECTION_COLD.getItem(),
+                        "galaxia.gui.airlock_controller.room.protection.cold"));
         }
 
         private Widget<?> badge(int bit, Item item, String tooltipKey) {
@@ -215,41 +254,39 @@ public class AirlockScreenWidget extends ParentWidget<AirlockScreenWidget> {
                         .getAsInt() & bit) != 0);
         }
 
-        private ParentWidget<?> oxygenRow() {
-            return new ParentWidget<>().left(0)
-                .right(0)
-                .height(OXYGEN_ROW_HEIGHT)
+        private IWidget oxygenRow() {
+            return Flow.column()
+                .expanded()
+                .childPadding(2)
                 .child(
-                    textRow(
-                        IKey.lang("galaxia.gui.airlock_controller.room.oxygen"),
-                        EnumColors.MAP_COLOR_TEXT_BODY::getColor).top(0)
-                            .height(LABEL_ROW_HEIGHT))
+                    Flow.row()
+                        .fullWidth()
+                        .height(LABEL_ROW_HEIGHT)
+                        .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
+                        .child(
+                            IKey.lang("galaxia.gui.airlock_controller.room.oxygen")
+                                .color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
+                                .asWidget())
+                        .child(
+                            IKey.dynamic(
+                                () -> room.oxygenLevel()
+                                    .getAsInt() + "%")
+                                .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
+                                .asWidget()))
                 .child(
-                    new Widget<>().left(ROOM_PAD_X)
-                        .right(ROOM_PAD_X)
-                        .top(BAR_TOP)
+                    new ParentWidget<>().fullWidth()
                         .height(BAR_HEIGHT)
-                        .background(new Rectangle().color(EnumColors.AIRLOCK_ROOM_BAR_BG.getColor())))
-                .child(
-                    new Widget<>().left(ROOM_PAD_X)
-                        .top(BAR_TOP)
-                        .height(BAR_HEIGHT)
-                        .width(
-                            () -> (double) Math.clamp(
-                                room.oxygenLevel()
-                                    .getAsInt() / 100f,
-                                0,
-                                1),
-                            Unit.Measure.RELATIVE)
-                        .background(new DynamicDrawable(() -> new Rectangle().color(accent()))))
-                .child(
-                    textRow(
-                        IKey.dynamic(
-                            () -> room.oxygenLevel()
-                                .getAsInt() + "%"),
-                        EnumColors.MAP_COLOR_TEXT_TITLE::getColor).top(OXYGEN_PCT_TOP)
-                            .height(LABEL_ROW_HEIGHT)
-                            .textAlign(Alignment.TopCenter))
+                        .background(new Rectangle().color(EnumColors.AIRLOCK_ROOM_BAR_BG.getColor()))
+                        .child(
+                            new Widget<>().heightRel(1f)
+                                .width(
+                                    () -> Math.clamp(
+                                        room.oxygenLevel()
+                                            .getAsInt() / 100f,
+                                        0,
+                                        1),
+                                    Unit.Measure.RELATIVE)
+                                .background(new DynamicDrawable(() -> new Rectangle().color(accent())))))
                 .setEnabledIf(
                     w -> room.present()
                         .getAsBoolean());
@@ -283,32 +320,11 @@ public class AirlockScreenWidget extends ParentWidget<AirlockScreenWidget> {
                         .getAsBoolean());
         }
 
-        private ParentWidget<?> roleRow() {
-            return new ParentWidget<>().left(0)
-                .right(0)
+        private TextWidget<?> textRow(IKey key, IntSupplier color) {
+            return new TextWidget<>(key).fullWidth()
                 .height(TEXT_ROW_HEIGHT)
-                .child(
-                    new TextWidget<>(
-                        IKey.comp(
-                            IKey.lang("galaxia.gui.airlock_controller.room.role"),
-                            IKey.str(": "),
-                            IKey.dynamic(
-                                () -> StatCollector.translateToLocal(
-                                    GalaxiaBehaviors.byId(
-                                        room.role()
-                                            .getAsInt())
-                                        .get()
-                                        .getUnlocalizedName())))).left(ROOM_PAD_X)
-                                            .right(ROLE_TEXT_RIGHT)
-                                            .height(TEXT_ROW_HEIGHT)
-                                            .textAlign(Alignment.TopLeft)
-                                            .color(EnumColors.MAP_COLOR_TEXT_BODY::getColor))
-                .child(
-                    controllerBadge().right(ROOM_PAD_X)
-                        .top(CONTROLLER_BADGE_TOP))
-                .setEnabledIf(
-                    w -> room.present()
-                        .getAsBoolean());
+                .textAlign(Alignment.TopLeft)
+                .color(color);
         }
 
         /**
@@ -324,38 +340,48 @@ public class AirlockScreenWidget extends ParentWidget<AirlockScreenWidget> {
                                 .getAsBoolean() ? EnumColors.AIRLOCK_BADGE_PRIMARY.getColor()
                                     : EnumColors.AIRLOCK_BADGE_SECONDARY.getColor())));
         }
-
-        private TextWidget<?> textRow(IKey key, IntSupplier color) {
-            return new TextWidget<>(key).left(ROOM_PAD_X)
-                .right(ROOM_PAD_X)
-                .height(TEXT_ROW_HEIGHT)
-                .textAlign(Alignment.TopLeft)
-                .color(color);
-        }
     }
 
-    private class DoorWidget extends Widget<DoorWidget> {
+    /**
+     * Door node: a recessed well holding two sliding panes around a center seam. The panes are anchored to their side
+     * of the well and sized through a {@link Unit} supplier, so the open/closed state stays standard mui2 geometry. The
+     * open panes drop to the empty-bar tint so the state reads at a glance.
+     */
+    private class DoorWidget extends ParentWidget<DoorWidget> {
 
-        @Override
-        public void draw(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
-            int w = getArea().width;
-            int h = getArea().height;
-            boolean closed = !doorOpen.getAsBoolean();
-            int accent = accent();
-            int signalBad = EnumColors.MAP_COLOR_SIGNAL_NEGATIVE.getColor();
-            GuiDraw.drawRect(0, 0, w, h, closed ? accent : signalBad);
-            GuiDraw.drawRect(
-                DOOR_FRAME,
-                DOOR_FRAME,
-                w - 2 * DOOR_FRAME,
-                h - 2 * DOOR_FRAME,
-                EnumColors.AIRLOCK_SCREEN_BG.getColor());
-            GuiDraw.drawRect(
-                (float) (w - DOOR_SEAM_WIDTH) / 2,
-                DOOR_SEAM_TOP,
-                DOOR_SEAM_WIDTH,
-                h - DOOR_SEAM_BOTTOM,
-                closed ? accent : signalBad);
+        DoorWidget() {
+            background(
+                new Rectangle().color(EnumColors.AIRLOCK_ROOM_FILL.getColor()),
+                new Rectangle().hollow(1)
+                    .color(EnumColors.AIRLOCK_ROOM_BORDER.getColor()));
+            child(pane().left(DOOR_INSET));
+            child(pane().right(DOOR_INSET));
+        }
+
+        /** One sliding door pane, anchored to its side of the well; the width shrinks as the door opens. */
+        private Widget<?> pane() {
+            return new Widget<>().top(DOOR_INSET)
+                .bottom(DOOR_INSET)
+                .width(() -> paneSize(), Unit.Measure.PIXEL)
+                .background(
+                    new DynamicDrawable(
+                        () -> new Rectangle()
+                            .color(doorOpen.getAsBoolean() ? EnumColors.AIRLOCK_ROOM_BAR_BG.getColor() : accent())));
+        }
+
+        /** Interior width of the well, excluding the bezel on both sides. */
+        private int innerWidth() {
+            return DOOR_WIDTH - 2 * DOOR_INSET;
+        }
+
+        /** Center seam between the two panes: wider while the door is open. */
+        private int gap() {
+            return doorOpen.getAsBoolean() ? DOOR_OPEN_GAP : DOOR_SEAM;
+        }
+
+        /** Width of both door panes: the interior minus the seam, halved, symmetric around the center. */
+        private int paneSize() {
+            return Math.max(0, (innerWidth() - gap()) / 2);
         }
     }
 }
