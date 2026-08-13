@@ -159,6 +159,7 @@ public class AirlockScreenWidget extends ScreenWidget {
             return Flow.row()
                 .fullWidth()
                 .height(TEXT_ROW_HEIGHT)
+                .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
                 .child(
                     new TextWidget<>(
                         IKey.comp(
@@ -172,7 +173,7 @@ public class AirlockScreenWidget extends ScreenWidget {
                                         .get()
                                         .getUnlocalizedName())))).height(TEXT_ROW_HEIGHT)
                                             .expanded()
-                                            .textAlign(Alignment.TopLeft)
+                                            .textAlign(Alignment.CenterLeft)
                                             .color(EnumColors.MAP_COLOR_TEXT_BODY::getColor))
                 .child(controllerBadge())
                 .setEnabledIf(
@@ -323,7 +324,7 @@ public class AirlockScreenWidget extends ScreenWidget {
         private TextWidget<?> textRow(IKey key, IntSupplier color) {
             return new TextWidget<>(key).fullWidth()
                 .height(TEXT_ROW_HEIGHT)
-                .textAlign(Alignment.TopLeft)
+                .textAlign(Alignment.CenterLeft)
                 .color(color);
         }
 
