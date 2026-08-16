@@ -4,6 +4,7 @@
 /.vscode/
 /run/
 /build/
+/output/
 /tools/gui-preview/build/
 /tools/gui-preview/output/
 /eclipse/
