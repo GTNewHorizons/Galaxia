@@ -4,6 +4,8 @@
 /.vscode/
 /run/
 /build/
+/tools/gui-preview/build/
+/tools/gui-preview/output/
 /eclipse/
 .classpath
 .project
@@ -29,6 +31,7 @@ whitelist.json
 *.bat
 *.DS_Store
 !gradlew.bat
+!preview-gui.bat
 .factorypath
 addon.local.gradle
 addon.local.gradle.kts
@@ -38,3 +41,4 @@ layout.json
 /com
 /libs/freecam-1.0.7-dev.jar
 /.worktrees/
+/.codebase-memory/
