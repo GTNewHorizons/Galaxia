@@ -172,7 +172,7 @@ public class RocketEditorUI {
                                 return EnumTextures.SILO_PART_BACKGROUND_SELECTED.getImage();
                             return EnumTextures.SILO_PART_BACKGROUND.getImage();
                         }))
-                        .overlay(UITexture.fullImage(part.siloIconLocation()))
+                        .overlay(UITexture.fullImage(part.spriteLocation()))
                         .tooltip(t -> {
                             t.addLine(IKey.str(part.name()));
                             t.add(
