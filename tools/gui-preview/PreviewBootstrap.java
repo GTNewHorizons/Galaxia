@@ -56,15 +56,16 @@ final class PreviewBootstrap {
         Release release = loadRelease(repository.resolve(PROJECT_DIRECTORY).resolve("previewer.properties"));
         Path cache = cacheRoot().resolve("ModularUI2-Preview").resolve(release.version());
         Files.createDirectories(cache);
+        Path tool;
         try (FileChannel channel = FileChannel.open(
             cache.resolve("bootstrap.lock"),
             StandardOpenOption.CREATE,
             StandardOpenOption.WRITE);
             FileLock ignored = channel.lock()) {
             Path archive = prepareArchive(cache, release);
-            Path tool = prepareTool(cache, archive, release);
-            return launch(tool, repository, arguments);
+            tool = prepareTool(cache, archive, release);
         }
+        return launch(tool, repository, arguments);
     }
 
     private static Release loadRelease(Path manifest) {
