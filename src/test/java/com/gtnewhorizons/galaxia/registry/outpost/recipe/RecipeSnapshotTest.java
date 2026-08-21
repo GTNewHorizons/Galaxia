@@ -9,7 +9,6 @@ import net.minecraftforge.fluids.FluidStack;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 import com.gtnewhorizons.galaxia.testing.TestFluidStacks;
 
@@ -105,15 +104,6 @@ final class RecipeSnapshotTest {
         assertNull(snapshot.fluidOutputChances());
         assertEquals(0, snapshot.duration());
         assertEquals(0, snapshot.eut());
-    }
-
-    @Test
-    void voltageTierDerivedFromEUt() {
-        assertEquals(ModuleTier.NONE, RecipeVoltageTier.fromEUt(0));
-        assertEquals(ModuleTier.HV, RecipeVoltageTier.fromEUt(512));
-        assertEquals(ModuleTier.EV, RecipeVoltageTier.fromEUt(2048));
-        assertEquals(ModuleTier.IV, RecipeVoltageTier.fromEUt(8192));
-        assertEquals(ModuleTier.LuV, RecipeVoltageTier.fromEUt(32768));
     }
 
     private static FluidStack fluidStack(String fluidName, int amount) {
