@@ -12,18 +12,20 @@ import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
+import com.cleanroommc.modularui.factory.GuiFactories;
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.PlacementHelper;
-import com.gtnewhorizons.galaxia.registry.block.base.BlockOpenable;
+import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
-public class BlockAirlockController extends BlockOpenable implements ITileEntityProvider {
+public class BlockAirlockController extends BlockUpdatable implements ITileEntityProvider {
 
     @SideOnly(Side.CLIENT)
-    private IIcon frontIcon;
+    private IIcon openOverlay;
 
     @SideOnly(Side.CLIENT)
     private IIcon sideIcon;
@@ -41,7 +43,7 @@ public class BlockAirlockController extends BlockOpenable implements ITileEntity
     @Override
     @SideOnly(Side.CLIENT)
     public void registerBlockIcons(IIconRegister reg) {
-        this.frontIcon = reg.registerIcon("galaxia:machine/airlock_controller");
+        this.openOverlay = reg.registerIcon("galaxia:machine/airlock_controller");
         this.sideIcon = reg.registerIcon("galaxia:machine/airlock_casing");
         this.closedOverlay = reg.registerIcon("galaxia:machine/airlock_controller_closed");
     }
@@ -49,7 +51,7 @@ public class BlockAirlockController extends BlockOpenable implements ITileEntity
     @Override
     @SideOnly(Side.CLIENT)
     public IIcon getIcon(int side, int meta) {
-        return side == 2 || side == 3 ? frontIcon : sideIcon;
+        return side == 2 || side == 3 ? closedOverlay : sideIcon;
     }
 
     @Override
@@ -62,7 +64,8 @@ public class BlockAirlockController extends BlockOpenable implements ITileEntity
 
             if (side == facing.ordinal() || side == facing.getOpposite()
                 .ordinal()) {
-                return airlock.isOpen() ? closedOverlay : frontIcon;
+                if (!airlock.isStructureValid()) return openOverlay;
+                return !airlock.isOpen() ? closedOverlay : openOverlay;
             }
         }
 
@@ -94,9 +97,22 @@ public class BlockAirlockController extends BlockOpenable implements ITileEntity
     public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer player, int side, float hitX,
         float hitY, float hitZ) {
         if (world.isRemote) return true;
-        return toggleDoor(world, x, y, z);
+        TileEntity te = world.getTileEntity(x, y, z);
+        if (!(te instanceof TileEntityAirlock)) return false;
+
+        if (ConfigStructures.airlock.openOnNormalClick && !player.isSneaking()) {
+            toggleDoor(world, x, y, z);
+        } else {
+            GuiFactories.tileEntity()
+                .open(player, x, y, z);
+        }
+
+        return true;
     }
 
+    /**
+     * Manual toggle entry point used by {@link BlockAirlockDoor#searchAndOpenDoor}.
+     */
     public boolean toggleDoor(World world, int x, int y, int z) {
         TileEntity te = world.getTileEntity(x, y, z);
         if (te instanceof TileEntityAirlock) {

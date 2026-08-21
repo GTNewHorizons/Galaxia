@@ -77,7 +77,7 @@ public class DockBehavior implements IStationBehaviorWithAttachments {
                     }
                     return false;
                 }, GalaxiaBlocksEnum.HAMMER_CANNON.get(), 0))
-            .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
+            .embedDefinition(TileEntityAirlock.STRUCTURE_EMBED, TileEntityAirlock.STRUCTURE_DEFINITION)
             .withSearchRadius(ConfigStructures.open.searchRadius)
             .open()
             .build();

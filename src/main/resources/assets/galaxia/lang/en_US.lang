@@ -345,19 +345,18 @@ galaxia.gui.module_assembler.not_formed=Module Assembler not properly formed!
 galaxia.gui.station_controller.title=Station Controller
 galaxia.gui.station_controller.oxygen=Oxygen
 galaxia.gui.station_controller.structure=Structure
-
 galaxia.gui.station_controller.targets=Targets
-
 galaxia.gui.station_controller.refresh=Refresh
-
 galaxia.gui.station_controller.no_fluid_tanks=No fluid tanks
-
 galaxia.gui.station_controller.fluid_storage=Fluid Storage
 
 galaxia.gui.behavior=Behavior
 galaxia.gui.role=Role
 galaxia.gui.role.main=Main
 galaxia.gui.role.secondary=Secondary
+galaxia.behavior.room=Room
+galaxia.behavior.dock=Dock
+galaxia.behavior.power_room=Power Room
 
 # Elements - GUI - "Station Monitor"
 galaxia.gui.station_monitor.title=Station Monitor
@@ -464,6 +463,9 @@ galaxia.config.category.structures_open=Open
 galaxia.config.category.structures_open.tooltip=Settings for open structures (docks)
 galaxia.config.structures.open_radius=Search radius
 galaxia.config.structures.open_radius.tooltip=Search radius for structure boundaries
+galaxia.config.category.airlock=Airlock
+galaxia.config.structures.open_on_normal_click=Open on right click
+galaxia.config.structures.open_on_normal_click.tooltip=Open airlock with right click/shift+right click on the Airlock Controller
 
 # Config - "Player"
 galaxia.config.category.player=Player
@@ -600,19 +602,19 @@ galaxia.satellite.action.delete_prospecting=Delete prospecting satellites
 galaxia.satellite.tooltip.count=%s: %d
 
 #### Machine GUI
-# Oxygen Collector GUI
+# Machine GUI - Oxygen Collector GUI
 galaxia.gui.oxygen_collector.title=Oxygen Collector
 galaxia.gui.oxygen_collector.leaves_in_range=Leaves in range: %s
 
-# Oxygen Filler GUI
+# Machine GUI - Oxygen Filler GUI
 galaxia.gui.oxygen_filler.title=Oxygen Filler
 
-# Oxygen Pylon GUI
+# Machine GUI - Oxygen Pylon GUI
 galaxia.gui.oxygen_pylon.title=Oxygen Pylon
 galaxia.gui.oxygen_pylon.radius=Radius: %s
 galaxia.gui.oxygen_pylon.players_charged=Players Charged: %s
 
-# Team Permissions GUI
+# Machine GUI - Team Permissions GUI
 galaxia.gui.team_config.title=Team Configuration
 galaxia.gui.team_config.color=Team Color
 galaxia.gui.team_config.action.create_asset=Create Asset
@@ -625,7 +627,7 @@ galaxia.gui.team_config.action.destroy_asset=Destroy Asset
 galaxia.gui.team_config.action.deconstruct_asset=Deconstruct Asset
 galaxia.gui.team_config.button=Team config
 
-# Silo GUI
+# Machine GUI - Silo GUI
 galaxia.rocket_editor.category.capsules=Capsules
 galaxia.rocket_editor.category.fuel_tanks=Fuel Tanks
 galaxia.rocket_editor.category.liquid_engines=Liquid Fuel Engines
@@ -647,12 +649,54 @@ galaxia.rocket_editor.click_cycle=Click to cycle
 galaxia.rocket_editor.enter_rocket=Enter Rocket
 galaxia.rocket_editor.enter_rocket_not_ready=Enter Rocket (not ready)
 
-# Team Info
+# Machine GUI - Team Info
 galaxia.gui.team_info.team=Team: %s
 galaxia.gui.team_info.members=Members: %s
 
-# Common
+# Machine GUI - Common
 galaxia.gui.common.generating=Generating
 galaxia.gui.common.filling=Filling
 galaxia.gui.common.active=Active
 galaxia.gui.common.idle=Idle
+
+# Machine GUI - Airlock Controller
+galaxia.gui.airlock_controller.title=Airlock Controller
+galaxia.gui.airlock_controller.room_a=Room A
+galaxia.gui.airlock_controller.room_b=Room B
+galaxia.gui.airlock_controller.no_room=Not linked
+galaxia.gui.airlock_controller.room.protection=Protection
+galaxia.gui.airlock_controller.room.protection.none=None
+galaxia.gui.airlock_controller.room.protection.radiation=Radiation
+galaxia.gui.airlock_controller.room.protection.pressure=Pressure
+galaxia.gui.airlock_controller.room.protection.spores=Spores
+galaxia.gui.airlock_controller.room.protection.wither=Wither
+galaxia.gui.airlock_controller.room.protection.heat=Heat
+galaxia.gui.airlock_controller.room.protection.cold=Cold
+galaxia.gui.airlock_controller.room.oxygen=Oxygen
+galaxia.gui.airlock_controller.room.volume=Volume
+galaxia.gui.airlock_controller.room.attachments=Attachments
+galaxia.gui.airlock_controller.room.role=Role
+galaxia.gui.airlock_controller.on=On
+galaxia.gui.airlock_controller.off=Off
+galaxia.gui.airlock_controller.range=Range: %d-%d
+galaxia.gui.airlock_controller.toggle.proximity_opening=Proximity opening
+galaxia.gui.airlock_controller.toggle.proximity_opening.tooltip=Open the door automatically when a player approaches
+galaxia.gui.airlock_controller.toggle.proximity_auto_close=Proximity auto-close
+galaxia.gui.airlock_controller.toggle.proximity_auto_close.tooltip=Close the door automatically when the player leaves
+galaxia.gui.airlock_controller.toggle.redstone_control=Redstone control
+galaxia.gui.airlock_controller.toggle.redstone_control.tooltip=Open/Close with redstone 
+galaxia.gui.airlock_controller.toggle.manual_click=Manual click
+galaxia.gui.airlock_controller.toggle.manual_click.tooltip=Allow toggling the door by clicking it
+galaxia.gui.airlock_controller.toggle.auto_seal=Auto-seal on leak
+galaxia.gui.airlock_controller.toggle.auto_seal.tooltip=Automatically close the door when either room loses its seal
+galaxia.gui.airlock_controller.settings_button=Settings
+galaxia.gui.airlock_controller.settings_button.tooltip=Open airlock settings
+galaxia.gui.airlock_controller.refresh_button=Refresh
+galaxia.gui.airlock_controller.refresh_button.tooltip=Re-scan the airlock for newly linked rooms
+galaxia.gui.airlock_controller.settings.title=Airlock Settings
+galaxia.gui.airlock_controller.settings.check_interval=Check interval
+galaxia.gui.airlock_controller.settings.close_delay=Close delay
+galaxia.gui.airlock_controller.settings.proximity_range=Proximity range
+galaxia.gui.airlock_controller.settings.reset=Reset
+galaxia.gui.airlock_controller.settings.reset.tooltip=Restore all airlock settings to their defaults
+galaxia.gui.airlock_controller.settings.close.tooltip=Close settings

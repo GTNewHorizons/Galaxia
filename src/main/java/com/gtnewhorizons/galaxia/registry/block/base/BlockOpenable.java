@@ -28,30 +28,38 @@ public abstract class BlockOpenable extends BlockUpdatable {
     }
 
     @Override
-    public final int getLightOpacity() {
-        return 0;
+    public final int getLightOpacity(IBlockAccess world, int x, int y, int z) {
+        return isOpen(world, x, y, z) ? 0 : 255;
     }
 
     @Override
-    public boolean shouldSideBeRendered(IBlockAccess world, int x, int y, int z, int side) {
-        // TODO: This is a complete hack
-        int meta = world.getBlockMetadata(
+    public final boolean getUseNeighborBrightness() {
+        // This propagates light updates correctly transitioning from opaque -> transparent
+        return true;
+    }
+
+    @Override
+    public final boolean shouldSideBeRendered(IBlockAccess world, int x, int y, int z, int side) {
+        if (isOpen(
+            world,
             x - Facing.offsetsXForSide[side],
             y - Facing.offsetsYForSide[side],
-            z - Facing.offsetsZForSide[side]);
+            z - Facing.offsetsZForSide[side])) {
+            return false;
+        }
 
-        return meta == META_CLOSED;
+        return super.shouldSideBeRendered(world, x, y, z, side);
     }
 
     @Override
     public final AxisAlignedBB getCollisionBoundingBoxFromPool(World world, int x, int y, int z) {
-        int meta = world.getBlockMetadata(x, y, z);
-
-        if (meta == META_OPEN) {
+        if (isOpen(world, x, y, z)) {
             return null;
         }
 
-        return AxisAlignedBB.getBoundingBox(x, y, z, x + 1, y + 1, z + 1);
+        setBlockBoundsBasedOnState(world, x, y, z);
+        return AxisAlignedBB
+            .getBoundingBox(x + this.minX, y + this.minY, z + this.minZ, x + this.maxX, y + this.maxY, z + this.maxZ);
     }
 
     @Override
@@ -61,7 +69,6 @@ public abstract class BlockOpenable extends BlockUpdatable {
 
     public void setOpen(World world, int x, int y, int z, boolean open) {
         int meta = open ? META_OPEN : META_CLOSED;
-
         world.setBlockMetadataWithNotify(x, y, z, meta, 3);
     }
 
@@ -71,9 +78,7 @@ public abstract class BlockOpenable extends BlockUpdatable {
 
     @Override
     public final MovingObjectPosition collisionRayTrace(World world, int x, int y, int z, Vec3 start, Vec3 end) {
-        int meta = world.getBlockMetadata(x, y, z);
-
-        if (meta == META_OPEN) {
+        if (isOpen(world, x, y, z)) {
             return null;
         }
 
