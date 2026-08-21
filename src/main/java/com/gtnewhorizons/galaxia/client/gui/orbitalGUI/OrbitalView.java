@@ -2078,7 +2078,7 @@ public class OrbitalView {
             String summary = delivery.data.amount() + " x " + itemName;
             double departureDisplayTime = clock.toDisplayTime(delivery.data.departureOrbitalTime());
             double arrivalDisplayTime = clock
-                .toDisplayTime(delivery.data.departureOrbitalTime() + delivery.data.tofOrbitalSeconds());
+                .toDisplayTime(delivery.data.departureOrbitalTime() + delivery.data.tofOrbitalOsu());
             double displayedTof = Math.max(1e-6, arrivalDisplayTime - departureDisplayTime);
             OrbitalTransferPlanner.TransferRoute route = delivery.data.transferRoute();
             InterplanetaryTransferJob base = route != null && route.hasTrajectoryGeometry()

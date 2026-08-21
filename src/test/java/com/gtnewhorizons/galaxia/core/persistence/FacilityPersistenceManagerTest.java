@@ -2278,7 +2278,7 @@ final class FacilityPersistenceManagerTest {
         assertEquals(7L, loaded.data.amount());
         assertEquals(42, loaded.getRemainingTicks());
         assertEquals(12.5, loaded.data.departureOrbitalTime());
-        assertEquals(3.25, loaded.data.tofOrbitalSeconds());
+        assertEquals(3.25, loaded.data.tofOrbitalOsu());
         LogisticStore.clearDeliveries();
     }
 
