@@ -309,7 +309,7 @@ public final class FacilityPersistenceManager {
                             tj.fromBodyId == null ? null : CelestialObjectKeyJsonCodec.decode(tj.fromBodyId),
                             tj.toBodyId == null ? null : CelestialObjectKeyJsonCodec.decode(tj.toBodyId),
                             tj.departureOrbitalTime,
-                            tj.tofOrbitalSeconds));
+                            tj.tofOrbitalOsu));
                 }
             }
         } catch (IOException | JsonParseException e) {
@@ -332,7 +332,7 @@ public final class FacilityPersistenceManager {
             tj.fromBodyId = encodeCelestialObjectKey(delivery.data.fromBodyKey());
             tj.toBodyId = encodeCelestialObjectKey(delivery.data.toBodyKey());
             tj.departureOrbitalTime = delivery.data.departureOrbitalTime();
-            tj.tofOrbitalSeconds = delivery.data.tofOrbitalSeconds();
+            tj.tofOrbitalOsu = delivery.data.tofOrbitalOsu();
             list.add(tj);
         }
         writeJson(file, list);
@@ -1234,7 +1234,7 @@ public final class FacilityPersistenceManager {
         CelestialObjectKeyJson fromBodyId;
         CelestialObjectKeyJson toBodyId;
         double departureOrbitalTime;
-        double tofOrbitalSeconds;
+        double tofOrbitalOsu;
     }
 
     private static void writeRecipeSnapshot(JsonObject slotObj, RecipeSnapshot snapshot) {
