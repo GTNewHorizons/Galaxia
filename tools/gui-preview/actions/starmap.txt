@@ -1,0 +1,4 @@
+capture orbital-overview
+move 28 236
+click left
+capture mars-expanded

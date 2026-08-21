@@ -1,0 +1,3 @@
+capture recipe-input-default
+move-widget 0/16
+capture confirm-hovered

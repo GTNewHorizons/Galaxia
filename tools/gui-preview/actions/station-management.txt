@@ -1,0 +1,7 @@
+capture station-default
+move-widget 0/5/0
+click left
+capture station-inventory
+move-widget 0/5/2
+click left
+capture station-fluids
