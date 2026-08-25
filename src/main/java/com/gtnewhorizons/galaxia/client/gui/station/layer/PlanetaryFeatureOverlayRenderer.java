@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.client.gui.station.layer;
 
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -40,12 +39,7 @@ public final class PlanetaryFeatureOverlayRenderer {
     }
 
     private static List<PlanetaryFeatureDefinition> sortedDefinitions(Iterable<PlanetaryFeatureKey> features) {
-        List<PlanetaryFeatureDefinition> definitions = new ArrayList<>();
-        for (PlanetaryFeatureKey key : features) {
-            if (key == null) continue;
-            PlanetaryFeatureDefinition definition = PlanetaryFeatureRegistry.get(key);
-            if (definition != null) definitions.add(definition);
-        }
+        List<PlanetaryFeatureDefinition> definitions = PlanetaryFeatureRegistry.definitionsFor(features);
         definitions.sort(
             Comparator.comparingInt(
                 definition -> definition.layer()
