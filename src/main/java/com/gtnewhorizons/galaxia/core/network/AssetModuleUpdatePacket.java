@@ -676,65 +676,62 @@ public final class AssetModuleUpdatePacket implements IMessage {
         return rawPayload;
     }
 
-    public AssetSyncPacket apply(UUID teamId) {
+    public boolean apply(UUID teamId) {
         return apply(teamId, false);
     }
 
-    public AssetSyncPacket apply(UUID teamId, boolean debugActionAuthorized) {
+    public boolean apply(UUID teamId, boolean debugActionAuthorized) {
         return applyAuthorized(teamId, debugActionAuthorized);
     }
 
-    public AssetSyncPacket apply(UUID teamId, EntityPlayerMP player) {
-        if (player == null) return null;
+    public boolean apply(UUID teamId, EntityPlayerMP player) {
+        if (player == null) return false;
         return applyAuthorized(teamId, DebugActionAuthorization.isAuthorized(player));
     }
 
-    private AssetSyncPacket applyAuthorized(UUID teamId, boolean debugActionAuthorized) {
+    private boolean applyAuthorized(UUID teamId, boolean debugActionAuthorized) {
         CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
-        if (!(asset instanceof AutomatedFacility state)) return null;
-        if (!CelestialAssetStore.isOwnedBy(teamId, assetId)) return null;
-        if (type == ACTION_TYPE && action == null) return null;
-        if (type == CONFIG_TYPE && configAction == null) return null;
-        if (configAction == ConfigAction.SET_DEBUG_DATA_GENERATOR_CONFIG && !debugActionAuthorized) return null;
+        if (!(asset instanceof AutomatedFacility state)) return false;
+        if (!CelestialAssetStore.isOwnedBy(teamId, assetId)) return false;
+        if (type == ACTION_TYPE && action == null) return false;
+        if (type == CONFIG_TYPE && configAction == null) return false;
+        if (configAction == ConfigAction.SET_DEBUG_DATA_GENERATOR_CONFIG && !debugActionAuthorized) return false;
 
         var modules = state.modules();
         moduleIndex = state.moduleIndex(moduleId);
-        if (moduleIndex < 0 || moduleIndex >= modules.size()) return null;
+        if (moduleIndex < 0 || moduleIndex >= modules.size()) return false;
 
         ModuleInstance module = modules.get(moduleIndex);
-        if (!moduleId.equals(module.id)) return null;
+        if (!moduleId.equals(module.id)) return false;
 
         switch (type) {
             case ACTION_TYPE -> handleAction(this, state, module);
             case CONFIG_TYPE -> handleConfig(this, state, module, debugActionAuthorized);
             default -> {
-                return null;
+                return false;
             }
         }
 
         if (type == ACTION_TYPE && getAction() == Action.DESTROY) {
-            return AssetSyncPacket.moduleRemoved(assetId, moduleIndex, module.id)
-                .withSyncRevision(state.getSyncRevision());
+            return true;
         }
         if (type == CONFIG_TYPE && getConfigAction() == ConfigAction.SET_MINER_ORE_BLACKLISTED
             && module.groupId() != 0) {
-            return AssetSyncPacket.settingsGroupUpdated(
-                assetId,
-                state.settingsGroups()
-                    .require(module.groupId(), module.kind()))
-                .withSyncRevision(state.getSyncRevision());
+            return true;
         }
         if (type == CONFIG_TYPE && (getConfigAction() == ConfigAction.SET_SETTINGS_GROUP
             || getConfigAction() == ConfigAction.CREATE_SETTINGS_GROUP
             || getConfigAction() == ConfigAction.RENAME_SETTINGS_GROUP
             || getConfigAction() == ConfigAction.COPY_MODULE_SETTINGS
             || getConfigAction() == ConfigAction.PLAN_MODULE_UPGRADE_TARGETS)) {
-            return AssetSyncPacket.fullSync(state)
-                .withSyncRevision(state.getSyncRevision());
+            return true;
         }
         state.markModuleDirty(module.id);
-        return AssetSyncPacket.moduleUpdated(assetId, moduleIndex, module)
-            .withSyncRevision(state.getSyncRevision());
+        return true;
+    }
+
+    CelestialAsset.ID assetId() {
+        return assetId;
     }
 
     private static void handleAction(AssetModuleUpdatePacket packet, AutomatedFacility state, ModuleInstance module) {
@@ -1370,9 +1367,13 @@ public final class AssetModuleUpdatePacket implements IMessage {
         @Override
         public IMessage onMessage(AssetModuleUpdatePacket message, MessageContext ctx) {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
-            if (!GTTeamsCompat.hasPermission(player, TeamAction.MODIFY_MODULE)) return null;
-            UUID teamId = GTTeamsCompat.getTeam(player);
-            return message.apply(teamId, player);
+            if (player == null) return null;
+            ServerTickTaskQueue.schedule(() -> {
+                if (!GTTeamsCompat.hasPermission(player, TeamAction.MODIFY_MODULE)) return;
+                UUID teamId = GTTeamsCompat.getTeam(player);
+                if (message.apply(teamId, player)) AssetStateSync.SERVER.publishInteractive(message.assetId);
+            });
+            return null;
         }
     }
 }

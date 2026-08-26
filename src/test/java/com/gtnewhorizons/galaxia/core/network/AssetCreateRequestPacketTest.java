@@ -55,9 +55,9 @@ final class AssetCreateRequestPacketTest {
         AssetCreateRequestPacket request = AssetCreateRequestPacket
             .createSatellite(CelestialObjectId.MARS, SatelliteKind.COMMUNICATION, true);
 
-        AssetSyncPacket sync = request.apply(TEAM);
+        CelestialAsset created = request.apply(TEAM);
 
-        assertNotNull(sync);
+        assertNotNull(created);
         assertEquals(
             1,
             CelestialAssetStore.SERVER.satelliteCount(
@@ -88,11 +88,11 @@ final class AssetCreateRequestPacketTest {
     void asteroidCreateRequestAllowsOutpostsAndRejectsAutomatedStations() {
         CelestialObjectKey asteroidKey = detectedAsteroidKey();
 
-        AssetSyncPacket outpostSync = AssetCreateRequestPacket
+        CelestialAsset outpost = AssetCreateRequestPacket
             .createFacility(asteroidKey, "Asteroid Outpost", CelestialAsset.Kind.AUTOMATED_OUTPOST, true)
             .apply(TEAM);
 
-        assertNotNull(outpostSync);
+        assertNotNull(outpost);
         assertEquals(
             1,
             CelestialAssetStore.getAssetsOnBody(asteroidKey)
@@ -141,10 +141,11 @@ final class AssetCreateRequestPacketTest {
     void asteroidCreateRequestAllowsCommunicationSatellites() {
         CelestialObjectKey asteroidKey = detectedAsteroidKey();
 
-        AssetSyncPacket sync = AssetCreateRequestPacket.createSatellite(asteroidKey, SatelliteKind.COMMUNICATION, true)
+        CelestialAsset created = AssetCreateRequestPacket
+            .createSatellite(asteroidKey, SatelliteKind.COMMUNICATION, true)
             .apply(TEAM);
 
-        assertNotNull(sync);
+        assertNotNull(created);
         assertEquals(
             1,
             CelestialAssetStore.getAssetsOnBody(asteroidKey)
@@ -156,11 +157,11 @@ final class AssetCreateRequestPacketTest {
         CelestialObjectKey hiddenAsteroidKey = hiddenAsteroidKey();
         CelestialKnowledgeService.putFacts(TEAM, hiddenAsteroidKey, CelestialKnowledgeFacts.discoveredUnknown());
 
-        AssetSyncPacket outpostSync = AssetCreateRequestPacket
+        CelestialAsset outpost = AssetCreateRequestPacket
             .createFacility(hiddenAsteroidKey, "Detected Outpost", CelestialAsset.Kind.AUTOMATED_OUTPOST, true)
             .apply(TEAM);
 
-        assertNotNull(outpostSync);
+        assertNotNull(outpost);
         assertEquals(
             1,
             CelestialAssetStore.getAssetsOnBody(hiddenAsteroidKey)

@@ -156,36 +156,40 @@ public final class AssetBuildModulePacket implements IMessage {
         @Override
         public IMessage onMessage(AssetBuildModulePacket message, MessageContext ctx) {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
-            if (!GTTeamsCompat.hasPermission(player, TeamAction.BUILD_MODULE)) return null;
-            UUID teamId = GTTeamsCompat.getTeam(player);
-            return message.apply(teamId, player);
+            if (player == null) return null;
+            ServerTickTaskQueue.schedule(() -> {
+                if (!GTTeamsCompat.hasPermission(player, TeamAction.BUILD_MODULE)) return;
+                UUID teamId = GTTeamsCompat.getTeam(player);
+                if (message.apply(teamId, player)) AssetStateSync.SERVER.publishInteractive(message.assetId);
+            });
+            return null;
         }
     }
 
-    public AssetSyncPacket apply(UUID teamId, EntityPlayerMP player) {
-        if (player == null) return null;
+    public boolean apply(UUID teamId, EntityPlayerMP player) {
+        if (player == null) return false;
         return apply(teamId, DebugActionAuthorization.isAuthorized(player));
     }
 
-    public AssetSyncPacket apply(UUID teamId, boolean debugActionAuthorized) {
+    public boolean apply(UUID teamId, boolean debugActionAuthorized) {
         if (teamId == null || assetId == null) {
-            return null;
+            return false;
         }
 
         CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
-        if (asset == null) return null;
+        if (asset == null) return false;
 
         if (!CelestialAssetStore.isOwnedBy(teamId, assetId)) {
-            return null;
+            return false;
         }
 
         if (!(asset instanceof AutomatedFacility facility)) {
-            return null;
+            return false;
         }
 
         ModuleInstance copySource = resolveCopySource(facility);
         if (isCopyBuild() && copySource == null) {
-            return null;
+            return false;
         }
 
         FacilityModuleKind buildKind = copySource == null ? moduleKind : copySource.kind();
@@ -196,27 +200,27 @@ public final class AssetBuildModulePacket implements IMessage {
             : minerFocusTierFor(copySource);
 
         if (buildKind == null || buildShape == null || buildTier == null) {
-            return null;
+            return false;
         }
         if (buildKind.isDebugOnly() && !debugActionAuthorized) {
-            return null;
+            return false;
         }
         if (!buildKind.isAllowedOn(asset.kind)) {
-            return null;
+            return false;
         }
 
         if (!buildKind.allowedTiers()
             .contains(buildTier)) {
-            return null;
+            return false;
         }
         if (buildShape != buildKind.defaultShape()) {
-            return null;
+            return false;
         }
-        if (!validatePhysicalSpec(buildKind, buildTier, buildHammerVariant, buildMinerFocusTier)) return null;
-        if (!validateSettingsSpec(facility, buildKind, copySource)) return null;
+        if (!validatePhysicalSpec(buildKind, buildTier, buildHammerVariant, buildMinerFocusTier)) return false;
+        if (!validateSettingsSpec(facility, buildKind, copySource)) return false;
 
         if (targets.isEmpty() || !validateAllTargets(facility, buildKind, buildShape)) {
-            return null;
+            return false;
         }
 
         boolean shouldInstantBuild = instantBuild && debugActionAuthorized;
@@ -225,10 +229,10 @@ public final class AssetBuildModulePacket implements IMessage {
             int buildRotation = target.rotation();
             ModuleInstance module = buildKind.create(anchor, buildShape, buildTier);
             module.setRotation(buildRotation);
-            if (!applyPhysicalSpec(module, buildTier, buildHammerVariant, buildMinerFocusTier)) return null;
+            if (!applyPhysicalSpec(module, buildTier, buildHammerVariant, buildMinerFocusTier)) return false;
             boolean copyRuntimeSettings = copySource != null && FacilityModuleRegistry.get(buildKind)
                 .settingsGroups();
-            if (copyRuntimeSettings && !facility.canCopyModuleRuntimeSettings(copySource, module)) return null;
+            if (copyRuntimeSettings && !facility.canCopyModuleRuntimeSettings(copySource, module)) return false;
             if (shouldInstantBuild) module.completeConstruction();
 
             facility.addModule(module);
@@ -249,7 +253,11 @@ public final class AssetBuildModulePacket implements IMessage {
             }
         }
 
-        return AssetSyncPacket.fullSync(facility);
+        return true;
+    }
+
+    CelestialAsset.ID assetId() {
+        return assetId;
     }
 
     private boolean validateAllTargets(AutomatedFacility facility, FacilityModuleKind moduleKind, ModuleShape shape) {

@@ -84,14 +84,6 @@ public final class CelestialAssetStore {
         return SERVER.enableAssetInternal(assetId);
     }
 
-    public static boolean destroyAsset(CelestialAsset.ID assetId) {
-        return SERVER.destroyAssetInternal(assetId);
-    }
-
-    public static boolean cancelConstruction(CelestialAsset.ID assetId) {
-        return SERVER.cancelConstructionInternal(assetId);
-    }
-
     public static boolean startDeconstruction(CelestialAsset.ID assetId) {
         return SERVER.startDeconstructionInternal(assetId);
     }

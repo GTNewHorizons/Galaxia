@@ -1,10 +1,8 @@
 package com.gtnewhorizons.galaxia.handlers;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -16,7 +14,7 @@ import net.minecraft.server.MinecraftServer;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.AssetStateSync;
 import com.gtnewhorizons.galaxia.core.network.CelestialKnowledgeSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
@@ -104,27 +102,7 @@ public class CelestialEventHandler {
             UUID playerId = player.getUniqueID();
             final boolean toClear = TeamEventHandler.playersToClear.remove(playerId);
             if (toClear) {
-                Galaxia.GALAXIA_NETWORK.sendTo(AssetSyncPacket.clear(), player);
-                // Wait until next sync just to be sure this gets first, otherwise it could easily become a race
-                continue;
-            }
-            Map<CelestialObjectKey, Set<CelestialAsset>> teamAssets = CelestialAssetStore.getTeamAssets(playerTeam);
-            if (teamAssets == null) continue;
-            Set<CelestialAsset> aggregatedAssets = teamAssets.values()
-                .stream()
-                .flatMap(Set::stream)
-                .collect(Collectors.toSet());
-
-            List<AssetSyncPacket> playerOutpostPackets = new ArrayList<>();
-            for (CelestialAsset asset : aggregatedAssets) {
-                playerOutpostPackets.addAll(AssetSyncPacket.figureOutWhatToSend(asset, playerId));
-            }
-            // TODO: make aggregate packet for this
-            for (AssetSyncPacket pkt : playerOutpostPackets) {
-                Galaxia.GALAXIA_NETWORK.sendTo(pkt, player);
-            }
-            for (CelestialAsset asset : aggregatedAssets) {
-                asset.clean();
+                AssetStateSync.SERVER.resetRecipient(playerId);
             }
 
             List<LogisticsDelivery> relevantDeliveries = LogisticStore.activeDeliveries()
@@ -134,6 +112,7 @@ public class CelestialEventHandler {
 
             Galaxia.GALAXIA_NETWORK.sendTo(LogisticsSyncPacket.from(relevantDeliveries), player);
         }
+        AssetStateSync.SERVER.publishPeriodic();
     }
 
     private static void syncSatelliteNetworks(double orbitalTime) {

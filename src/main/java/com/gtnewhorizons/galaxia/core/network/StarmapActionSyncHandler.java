@@ -44,7 +44,6 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
     private static final int REQUEST_FILTER_UPDATE = 7;
     private static final int REQUEST_SATELLITE_MUTATION = 8;
 
-    private static final int RESPONSE_SYNC = 100;
     private static final int RESPONSE_ACTION_FAILED = 101;
 
     private static StarmapActionSyncHandler activeClientHandler;
@@ -191,11 +190,6 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
     @SideOnly(Side.CLIENT)
     public void readOnClient(int id, PacketBuffer buf) throws IOException {
         switch (id) {
-            case RESPONSE_SYNC -> {
-                AssetSyncPacket packet = new AssetSyncPacket();
-                packet.fromBytes(buf);
-                AssetSyncPacket.Handler.handleClientSync(packet);
-            }
             case RESPONSE_ACTION_FAILED -> {
                 StationNotificationHelper.showFailure(PacketUtil.readString(buf));
             }
@@ -206,6 +200,19 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
     public void readOnServer(int id, PacketBuffer buf) throws IOException {
         EntityPlayer player = getSyncManager().getPlayer();
         if (!(player instanceof EntityPlayerMP playerMp)) return;
+        PacketBuffer queued = new PacketBuffer(buf.copy());
+        ServerTickTaskQueue.schedule(() -> {
+            try {
+                handleOnServer(id, queued, playerMp);
+            } catch (IOException ex) {
+                Galaxia.LOG.warn("Rejected starmap action from {}", playerMp.getCommandSenderName(), ex);
+            } finally {
+                queued.release();
+            }
+        });
+    }
+
+    private void handleOnServer(int id, PacketBuffer buf, EntityPlayerMP playerMp) throws IOException {
         UUID teamId = GTTeamsCompat.getTeam(playerMp);
 
         switch (id) {
@@ -216,52 +223,55 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
                 }
                 AssetCreateRequestPacket packet = new AssetCreateRequestPacket();
                 packet.fromBytes(buf);
-                AssetSyncPacket sync;
+                CelestialAsset created;
                 try {
-                    sync = packet.apply(teamId);
+                    created = packet.apply(teamId);
                 } catch (IllegalArgumentException ex) {
                     syncFailure(ex.getMessage());
                     return;
                 }
-                if (sync == null) {
+                if (created == null) {
                     syncFailure("Asset creation failed");
                 } else {
-                    syncPacket(sync);
+                    AssetStateSync.SERVER.publishInteractive(created.assetId);
                 }
             }
             case REQUEST_UPDATE_ASSET -> {
                 AssetUpdatePacket packet = new AssetUpdatePacket();
                 packet.fromBytes(buf);
-                syncPacket(packet.apply(teamId, playerMp));
+                if (packet.apply(teamId, playerMp)) {
+                    if (!packet.removesAsset()) {
+                        AssetStateSync.SERVER.publishInteractive(packet.assetId());
+                    }
+                }
             }
             case REQUEST_BUILD_MODULE -> {
                 if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.BUILD_MODULE)) return;
                 AssetBuildModulePacket packet = new AssetBuildModulePacket();
                 packet.fromBytes(buf);
-                AssetSyncPacket sync = packet.apply(teamId, playerMp);
-                if (sync == null) {
+                if (!packet.apply(teamId, playerMp)) {
                     syncFailure("Module build failed");
                 } else {
-                    syncPacket(sync);
+                    AssetStateSync.SERVER.publishInteractive(packet.assetId());
                 }
             }
             case REQUEST_MODULE_UPDATE -> {
                 if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.MODIFY_MODULE)) return;
                 AssetModuleUpdatePacket packet = new AssetModuleUpdatePacket();
                 packet.fromBytes(buf);
-                syncPacket(packet.apply(teamId, playerMp));
+                if (packet.apply(teamId, playerMp)) AssetStateSync.SERVER.publishInteractive(packet.assetId());
             }
             case REQUEST_LOGISTICS_CONFIG -> {
                 if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.CONFIGURE_LOGISTICS)) return;
                 LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket();
                 packet.fromBytes(buf);
-                syncPacket(packet.apply(teamId));
+                if (packet.apply(teamId)) AssetStateSync.SERVER.publishInteractive(packet.assetId());
             }
             case REQUEST_FILTER_UPDATE -> {
                 if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.CONFIGURE_LOGISTICS)) return;
                 AssetFilterUpdatePacket packet = new AssetFilterUpdatePacket();
                 packet.fromBytes(buf);
-                syncPacket(packet.apply(teamId));
+                if (packet.apply(teamId)) AssetStateSync.SERVER.publishInteractive(packet.assetId());
             }
             case REQUEST_SATELLITE_MUTATION -> {
                 UUID debugTeamId = PacketUtil.readId(buf);
@@ -277,13 +287,17 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
                     return;
                 }
                 try {
-                    for (AssetSyncPacket packet : applySatelliteMutation(
+                    for (CelestialAsset.ID assetId : applySatelliteMutation(
                         debugTeamId,
                         bodyKey,
                         kind,
                         operation,
                         amount)) {
-                        Galaxia.GALAXIA_NETWORK.sendTo(packet, playerMp);
+                        if (CelestialAssetStore.SERVER.findAssetInternal(assetId) == null) {
+                            AssetStateSync.SERVER.publishRemoved(debugTeamId, assetId);
+                        } else {
+                            AssetStateSync.SERVER.publishInteractive(assetId);
+                        }
                     }
                 } catch (IllegalArgumentException ex) {
                     syncFailure(ex.getMessage());
@@ -292,44 +306,28 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
         }
     }
 
-    private void syncPacket(AssetSyncPacket packet) {
-        if (packet != null) syncToClient(RESPONSE_SYNC, packet::toBytes);
-    }
-
     private void syncFailure(String message) {
         syncToClient(RESPONSE_ACTION_FAILED, buf -> PacketUtil.writeString(buf, message));
     }
 
-    private static List<AssetSyncPacket> applySatelliteMutation(UUID teamId, CelestialObjectKey bodyKey,
+    private static List<CelestialAsset.ID> applySatelliteMutation(UUID teamId, CelestialObjectKey bodyKey,
         SatelliteKind kind, SatelliteMutationOperation operation, int amount) {
         return switch (operation) {
             case ADD -> {
                 if (amount <= 0) throw new IllegalArgumentException("Satellite ADD amount must be positive: " + amount);
-                List<AssetSyncPacket> packets = new ArrayList<>(amount);
+                List<CelestialAsset.ID> assetIds = new ArrayList<>(amount);
                 for (int i = 0; i < amount; i++) {
                     // The ADD/SET branch above already rejected anyone who is not a creative operator, so these
                     // satellites skip construction the same way SET's do.
-                    AssetSyncPacket packet = AssetCreateRequestPacket.createSatellite(bodyKey, kind, true)
+                    CelestialAsset asset = AssetCreateRequestPacket.createSatellite(bodyKey, kind, true)
                         .apply(teamId, true);
-                    if (packet != null) packets.add(packet);
+                    if (asset != null) assetIds.add(asset.assetId);
                 }
-                yield packets;
+                yield assetIds;
             }
-            case SET -> syncSatelliteMutations(
-                CelestialAssetStore.SERVER.setSatelliteCount(teamId, bodyKey, kind, amount));
-            case DELETE_AMOUNT -> syncSatelliteMutations(
-                CelestialAssetStore.SERVER.deleteSatelliteAmount(teamId, bodyKey, kind, amount));
-            case DELETE_ALL -> syncSatelliteMutations(
-                CelestialAssetStore.SERVER.deleteSatellites(teamId, bodyKey, kind));
+            case SET -> CelestialAssetStore.SERVER.setSatelliteCount(teamId, bodyKey, kind, amount);
+            case DELETE_AMOUNT -> CelestialAssetStore.SERVER.deleteSatelliteAmount(teamId, bodyKey, kind, amount);
+            case DELETE_ALL -> CelestialAssetStore.SERVER.deleteSatellites(teamId, bodyKey, kind);
         };
-    }
-
-    private static List<AssetSyncPacket> syncSatelliteMutations(List<CelestialAsset.ID> assetIds) {
-        List<AssetSyncPacket> packets = new ArrayList<>(assetIds.size());
-        for (CelestialAsset.ID assetId : assetIds) {
-            CelestialAsset asset = CelestialAssetStore.SERVER.findAssetInternal(assetId);
-            packets.add(asset == null ? AssetSyncPacket.assetRemoved(assetId) : AssetSyncPacket.fullSync(asset));
-        }
-        return packets;
     }
 }

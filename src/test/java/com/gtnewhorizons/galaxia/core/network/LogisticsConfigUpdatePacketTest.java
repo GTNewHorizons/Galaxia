@@ -58,10 +58,9 @@ final class LogisticsConfigUpdatePacketTest {
             resource,
             new LogisticsResourceConfig(12, 64, true, false));
 
-        AssetSyncPacket sync = packet.apply(TEAM);
+        boolean sync = packet.apply(TEAM);
 
-        assertEquals(1, facility.getSyncRevision());
-        assertEquals(1, sync.syncRevision());
+        assertEquals(1, facility.getStateRevision());
     }
 
     @Test
@@ -106,7 +105,7 @@ final class LogisticsConfigUpdatePacketTest {
         facility.setBound(resource, 5, true);
         facility.setUpkeepReserve(resource, 10L);
 
-        AssetSyncPacket sync = new LogisticsConfigUpdatePacket(
+        boolean applied = new LogisticsConfigUpdatePacket(
             facility.assetId,
             resource,
             facility.logisticsConfig.get(resource)
@@ -114,8 +113,8 @@ final class LogisticsConfigUpdatePacketTest {
             LogisticsConfigAccessMode.IMPORT_ONLY).apply(TEAM);
 
         LogisticSignal signal = logisticsSignalFor(facility, resource);
+        assertTrue(applied);
         assertEquals(-12L, signal.amount());
-        assertEquals(1, sync.syncRevision());
     }
 
     private static AutomatedFacility addFacilityToServer() {

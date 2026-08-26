@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.core.network;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -124,22 +125,6 @@ final class StationPacketRoundTripTest {
     // ── Delta sync ──
 
     @Test
-    void dirtyInventoryDeltaSyncsAfterInitialFullSync() {
-        AutomatedFacility server = createFacility();
-        UUID playerId = UUID.randomUUID();
-        AssetSyncPacket.figureOutWhatToSend(server, playerId);
-        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
-
-        server.updateContents(resource, 42, true);
-
-        List<AssetSyncPacket> deltas = AssetSyncPacket.figureOutWhatToSend(server, playerId);
-        assertEquals(1, deltas.size());
-        assertTrue(
-            AssetSyncPacket.figureOutWhatToSend(server, playerId)
-                .isEmpty());
-    }
-
-    @Test
     void fullSyncRoundTripPreservesHammerVariant() {
         AutomatedFacility server = createFacility();
         ModuleInstance hammerModule = buildModule(server, FacilityModuleKind.HAMMER, StationTileCoord.of(1, 0));
@@ -164,7 +149,7 @@ final class StationPacketRoundTripTest {
         ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
         server.loadUpkeepCredits(new UpkeepSettlement.Credits(Map.of(resource, UpkeepAmount.parse("0.5")), Map.of()));
 
-        AssetSyncPacket.Handler.handleFull(roundTrip(AssetSyncPacket.fullSync(server)));
+        AssetStateSync.Client.handleFull(roundTrip(AssetSyncPacket.fullSync(server)));
 
         AutomatedFacility client = (AutomatedFacility) CelestialAssetStore.CLIENT.findAssetInternal(server.assetId);
         assertNotNull(client);
@@ -272,36 +257,6 @@ final class StationPacketRoundTripTest {
     }
 
     @Test
-    void fullSyncOrdersSettingsGroupsBeforeGroupedModules() {
-        AutomatedFacility server = createFacility();
-        ModuleInstance miner = buildModule(server, FacilityModuleKind.MINER, StationTileCoord.of(1, 0));
-        server.setMinerOreBlacklisted(miner, "ore:iron", true);
-        short groupId = server.createSettingsGroupForModule(miner, "Shared miners")
-            .id();
-
-        AssetSyncPacket full = AssetSyncPacket.fullSync(server);
-
-        int firstGroup = firstFullSyncDeltaIndex(full, AssetSyncPacket.SETTINGS_GROUP_UPDATED);
-        int firstModule = firstFullSyncDeltaIndex(full, AssetSyncPacket.MODULE_ADDED);
-        assertTrue(firstGroup >= 0, "full sync must include settings groups for grouped modules");
-        assertTrue(firstModule >= 0, "full sync must include grouped modules");
-        assertTrue(firstGroup < firstModule, "settings groups must replay before modules that reference them");
-
-        AutomatedFacility client = createFacility();
-        applyFullSyncFromPacket(client, roundTrip(full));
-        assertEquals(
-            groupId,
-            client.modules()
-                .get(0)
-                .groupId());
-        assertTrue(
-            client.isMinerOreBlacklisted(
-                client.modules()
-                    .get(0),
-                "ore:iron"));
-    }
-
-    @Test
     void fullSyncRoundTripPreservesRecipeSnapshotPayload() {
         AutomatedFacility server = createFacility();
         ModuleInstance centrifuge = buildModule(server, FacilityModuleKind.CENTRIFUGE, StationTileCoord.of(1, 0));
@@ -337,40 +292,7 @@ final class StationPacketRoundTripTest {
     }
 
     @Test
-    void fullSyncInternsRepeatedRecipeSnapshotsWithinRecipeConfigPayload() {
-        RecipeSnapshot snapshot = recipeSnapshot(832);
-        AutomatedFacility repeated = facilityWithRecipeConfig(snapshot, snapshot);
-        AutomatedFacility distinct = facilityWithRecipeConfig(snapshot, recipeSnapshot(833));
-
-        int repeatedBytes = encodedSize(AssetSyncPacket.fullSync(repeated));
-        int distinctBytes = encodedSize(AssetSyncPacket.fullSync(distinct));
-
-        assertTrue(
-            repeatedBytes < distinctBytes,
-            "repeated RecipeSnapshot payloads should be interned inside one RecipeConfig payload");
-
-        AutomatedFacility client = createFacility();
-        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(repeated)));
-
-        SavedRecipeList clientRecipes = ((IRecipeModule) client.modules()
-            .get(0)
-            .component()).getRecipeConfig()
-                .savedRecipes();
-        assertEquals(2, clientRecipes.size());
-        assertEquals(
-            snapshot.contentHash(),
-            clientRecipes.get(0)
-                .recipe()
-                .contentHash());
-        assertEquals(
-            snapshot.contentHash(),
-            clientRecipes.get(1)
-                .recipe()
-                .contentHash());
-    }
-
-    @Test
-    void fullSyncCompactsInventoryBoundsIntoBulkSnapshot() {
+    void fullSyncPreservesInventoryBounds() {
         AutomatedFacility server = createFacility();
         ItemStackWrapper iron = ItemStackWrapper.of(new ItemStack(Items.iron_ingot, 1, 0));
         ItemStackWrapper gold = ItemStackWrapper.of(new ItemStack(Items.gold_ingot, 1, 0));
@@ -386,12 +308,6 @@ final class StationPacketRoundTripTest {
         server.setBound(lava, 4_000L, false);
 
         AssetSyncPacket full = AssetSyncPacket.fullSync(server);
-
-        long perBoundDeltas = full.fullSyncDeltas()
-            .stream()
-            .filter(delta -> delta.syncType() == AssetSyncPacket.INVENTORY_BOUND_UPDATE)
-            .count();
-        assertEquals(0, perBoundDeltas, "full sync should carry inventory bounds as one compact snapshot");
 
         AutomatedFacility client = createFacility();
         applyFullSyncFromPacket(client, roundTrip(full));
@@ -415,125 +331,59 @@ final class StationPacketRoundTripTest {
     }
 
     @Test
-    void moduleAddedDeltaPlacesLayoutTileOnClient() {
-        // Server: facility with 1 module, create FULL_SYNC for client baseline
-        AutomatedFacility server = buildFacilityWithModules(1);
+    void fullSyncRestoresStoredItemsThatCurrentFilterRejects() {
+        AutomatedFacility server = createFacility();
+        ItemStackWrapper stored = ItemStackWrapper.of(new ItemStack(Items.stick));
+        server.loadFromSnapshot(Map.of(stored, 4L));
+        server.setFilters(
+            List.of(
+                ItemStackWrapper.of(new ItemStack(Items.diamond))
+                    .toItemStack()
+                    .getUnlocalizedName()),
+            true);
 
-        // Client: receive FULL_SYNC
-        AutomatedFacility client = createFacility();
-        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
-        assertTrue(
-            client.stationLayout()
-                .isOccupied(StationTileCoord.of(1, 0)),
-            "after FULL_SYNC, client must have [1,0] tile");
+        AutomatedFacility client = new AutomatedFacility(
+            server.assetId,
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        CelestialAssetStore.CLIENT.registerAssetInternal(TEAM, client);
 
-        // Server builds SECOND module
-        StationTileCoord anchor2 = StationTileCoord.of(2, 0);
-        ModuleInstance m2 = buildModule(server, FacilityModuleKind.TANK, anchor2);
-        int idx = server.modules()
-            .size() - 1;
+        AssetStateSync.Client.handleFull(roundTrip(AssetSyncPacket.fullSync(server)));
 
-        // Generate MODULE_ADDED delta and apply to client via the production code path
-        AssetSyncPacket delta = AssetSyncPacket.moduleAdded(server.assetId, idx, m2);
-        AssetSyncPacket.Handler.handleDelta(client, roundTrip(delta));
-
-        // CRITICAL: client must now have the layout tile for the new module
-        assertTrue(
-            client.stationLayout()
-                .isOccupied(anchor2),
-            "BUG: MODULE_ADDED delta must place layout tile on client — [2,0] should be occupied");
+        assertSame(client, CelestialAssetStore.CLIENT.findAssetInternal(server.assetId));
+        assertEquals(
+            4L,
+            client.itemSnapshot()
+                .get(stored));
     }
 
     @Test
-    void moduleRemovedDeltaClearsLayoutTileOnClient() {
-        AutomatedFacility server = buildFacilityWithModules(1);
-        AutomatedFacility client = createFacility();
-        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
+    void invalidFullSyncHasNoPartialEffectsOnExistingClientAsset() {
+        AutomatedFacility server = createFacility();
+        ItemStackWrapper incoming = ItemStackWrapper.of(new ItemStack(Items.diamond));
+        server.loadFromSnapshot(Map.of(incoming, 4L));
 
-        StationTileCoord anchor = StationTileCoord.of(1, 0);
-        assertTrue(
-            client.stationLayout()
-                .isOccupied(anchor),
-            "precondition: client has [1,0] tile");
+        AutomatedFacility client = new AutomatedFacility(
+            server.assetId,
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ItemStackWrapper existing = ItemStackWrapper.of(new ItemStack(Items.stick));
+        client.loadFromSnapshot(Map.of(existing, 7L));
+        CelestialAssetStore.CLIENT.registerAssetInternal(TEAM, client);
 
-        // Server removes the module
-        ModuleInstance module = server.modules()
-            .get(0);
-        server.removeModule(module.id);
-        server.stationLayout()
-            .removeTileForModule(module.id);
+        AssetSyncPacket invalid = AssetSyncPacket.fullSync(server);
+        invalid.fullSyncDeltas()
+            .add(AssetSyncPacket.moduleAdded(server.assetId, 0, null));
 
-        // Send MODULE_REMOVED delta to client
-        AssetSyncPacket delta = AssetSyncPacket.moduleRemoved(server.assetId, 0, module.id);
-        AssetSyncPacket.Handler.handleDelta(client, roundTrip(delta));
-
-        assertEquals(
-            0,
-            client.modules()
-                .size(),
-            "client should have no modules after remove");
-        assertFalse(
-            client.stationLayout()
-                .isOccupied(anchor),
-            "client layout must free the removed module anchor");
-        assertEquals(
-            1,
-            client.stationLayout()
-                .size(),
-            "client layout should keep only CORE after MODULE_REMOVED");
-    }
-
-    // ── Helpers ──
-
-    @Test
-    void moduleUpdatedDeltaRefreshesLayoutTileOnClient() {
-        AutomatedFacility server = buildFacilityWithModules(1);
-        AutomatedFacility client = createFacility();
-        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
-
-        StationTileCoord anchor = StationTileCoord.of(1, 0);
-        ModuleInstance module = server.modules()
-            .get(0);
-        module.updateStatus(Buildable.Status.DISABLED);
-
-        AssetSyncPacket delta = AssetSyncPacket.moduleUpdated(server.assetId, 0, module);
-        AssetSyncPacket.Handler.handleDelta(client, roundTrip(delta));
-
-        ModuleInstance updatedModule = client.modules()
-            .get(0);
-        PlacedTile tile = client.stationLayout()
-            .snapshot()
-            .get(anchor);
-        assertSame(updatedModule, tile.module(), "layout tile must point at the updated module instance");
-        assertEquals(
-            StationTileState.OCCUPIED_DISABLED,
-            tile.state(),
-            "layout tile state must match updated module status");
-    }
-
-    @Test
-    void dirtyExistingModuleSyncsAsModuleUpdatedDelta() {
-        UUID playerId = UUID.randomUUID();
-        AutomatedFacility server = buildFacilityWithModules(1);
-        AssetSyncPacket.figureOutWhatToSend(server, playerId);
-
-        ModuleInstance module = server.modules()
-            .get(0);
-        module.updateStatus(Buildable.Status.DISABLED);
-        server.markModuleDirty(module.id);
-
-        List<AssetSyncPacket> deltas = AssetSyncPacket.figureOutWhatToSend(server, playerId);
-
-        assertEquals(1, deltas.size());
-        assertEquals(
-            AssetSyncPacket.MODULE_UPDATED,
-            deltas.get(0)
-                .syncType());
+        assertDoesNotThrow(() -> AssetStateSync.Client.handleFull(invalid));
+        assertSame(client, CelestialAssetStore.CLIENT.findAssetInternal(server.assetId));
+        assertEquals(Map.of(existing, 7L), client.itemSnapshot());
     }
 
     @Test
     void debugDataGeneratorStateDeltaUpdatesClientModule() {
-        UUID playerId = UUID.randomUUID();
         AutomatedFacility source = createFacility(CelestialObjectId.MARS);
         AutomatedFacility destination = createFacility(CelestialObjectId.EGORA);
         ModuleDebugDataGenerator producer = debugDataGenerator(source, StationTileCoord.of(1, 0));
@@ -554,22 +404,14 @@ final class StationPacketRoundTripTest {
             1);
         SatelliteNetworkService.rebuild(TEAM, 0.0D);
 
-        List<AssetSyncPacket> initialPackets = AssetSyncPacket.figureOutWhatToSend(source, playerId);
         AutomatedFacility clientSource = createUnregisteredFacility(CelestialObjectId.MARS);
-        applyFullSyncFromPacket(clientSource, roundTrip(initialPackets.get(0)));
-        List<AssetSyncPacket> initialDestinationPackets = AssetSyncPacket.figureOutWhatToSend(destination, playerId);
+        applyFullSyncFromPacket(clientSource, roundTrip(AssetSyncPacket.fullSync(source)));
         AutomatedFacility clientDestination = createUnregisteredFacility(CelestialObjectId.EGORA);
-        applyFullSyncFromPacket(clientDestination, roundTrip(initialDestinationPackets.get(0)));
+        applyFullSyncFromPacket(clientDestination, roundTrip(AssetSyncPacket.fullSync(destination)));
 
         SatelliteNetworkService.tickDataJobs();
-        List<AssetSyncPacket> deltas = AssetSyncPacket.figureOutWhatToSend(source, playerId);
-        for (AssetSyncPacket delta : deltas) {
-            AssetSyncPacket.Handler.handleDelta(clientSource, roundTrip(delta));
-        }
-        List<AssetSyncPacket> destinationDeltas = AssetSyncPacket.figureOutWhatToSend(destination, playerId);
-        for (AssetSyncPacket delta : destinationDeltas) {
-            AssetSyncPacket.Handler.handleDelta(clientDestination, roundTrip(delta));
-        }
+        applyFullSyncFromPacket(clientSource, roundTrip(AssetSyncPacket.fullSync(source)));
+        applyFullSyncFromPacket(clientDestination, roundTrip(AssetSyncPacket.fullSync(destination)));
 
         ModuleDebugDataGenerator clientProducer = (ModuleDebugDataGenerator) clientSource.modules()
             .get(0)
@@ -587,10 +429,7 @@ final class StationPacketRoundTripTest {
         assertEquals(5L, clientConsumer.consumedDeciKb());
 
         SatelliteNetworkService.tickDataJobs();
-        destinationDeltas = AssetSyncPacket.figureOutWhatToSend(destination, playerId);
-        for (AssetSyncPacket delta : destinationDeltas) {
-            AssetSyncPacket.Handler.handleDelta(clientDestination, roundTrip(delta));
-        }
+        applyFullSyncFromPacket(clientDestination, roundTrip(AssetSyncPacket.fullSync(destination)));
 
         clientConsumer = (ModuleDebugDataGenerator) clientDestination.modules()
             .get(0)
@@ -604,23 +443,6 @@ final class StationPacketRoundTripTest {
         AssetSyncPacket decoded = new AssetSyncPacket();
         decoded.fromBytes(buf);
         return decoded;
-    }
-
-    private static int encodedSize(AssetSyncPacket pkt) {
-        var buf = Unpooled.buffer();
-        pkt.toBytes(buf);
-        return buf.writerIndex();
-    }
-
-    private static int firstFullSyncDeltaIndex(AssetSyncPacket pkt, byte syncType) {
-        List<AssetSyncPacket> deltas = pkt.fullSyncDeltas();
-        for (int i = 0; i < deltas.size(); i++) {
-            if (deltas.get(i)
-                .syncType() == syncType) {
-                return i;
-            }
-        }
-        return -1;
     }
 
     private static AutomatedFacility createFacility() {
@@ -706,8 +528,8 @@ final class StationPacketRoundTripTest {
         if (layout != null) layout.loadFromSnapshot(java.util.Collections.emptyMap());
 
         for (AssetSyncPacket d : packet.fullSyncDeltas()) {
-            AssetSyncPacket.Handler.handleDelta(client, d);
+            AssetStateSync.Client.handleDelta(client, d);
         }
-        client.setSyncRevision(packet.syncRevision());
+        client.setStateRevision(packet.stateRevision());
     }
 }

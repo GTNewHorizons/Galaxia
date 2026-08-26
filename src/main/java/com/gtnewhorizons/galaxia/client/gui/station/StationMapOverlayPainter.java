@@ -19,6 +19,7 @@ import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.PlanetaryFeatureOverlayRenderer;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureDefinition;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
@@ -188,8 +189,8 @@ final class StationMapOverlayPainter {
             EnumColors.MAP_COLOR_STATION_TILE_BORDER_HOVERED.getColor());
     }
 
-    static void drawFeatureTooltip(AutomatedFacility facility, StationFeatureSurface featureSurface, int localMouseX,
-        int localMouseY, StationMapFrame frame, List<PlanetaryFeatureDefinition> hoveredFeatureDefinitions) {
+    static void drawFeatureTooltip(AutomatedFacility facility, int localMouseX, int localMouseY,
+        StationMapFrame frame) {
         StationMapViewport.TilePosition coord = StationMapViewport.tilePositionAt(
             localMouseX,
             localMouseY,
@@ -201,8 +202,8 @@ final class StationMapOverlayPainter {
             frame.panX(),
             frame.panY());
         if (coord == null) return;
-        List<PlanetaryFeatureDefinition> features = featureSurface
-            .hoverDefinitions(facility, coord, hoveredFeatureDefinitions);
+        List<PlanetaryFeatureDefinition> features = PlanetaryFeatureRegistry
+            .definitionsFor(facility.planetaryFeaturesAt(coord.dx(), coord.dy()));
         if (features.isEmpty()) return;
 
         FontRenderer fr = Minecraft.getMinecraft().fontRenderer;

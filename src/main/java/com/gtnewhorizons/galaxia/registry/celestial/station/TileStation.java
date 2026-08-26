@@ -25,6 +25,7 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.network.AssetStateSync;
 import com.gtnewhorizons.galaxia.core.network.StationGraphSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
@@ -600,7 +601,7 @@ public class TileStation extends TileStationBase<TileStation> {
                     if (isChunkUnloading) {
                         CelestialAssetStore.disableAsset(backingStation);
                     } else {
-                        CelestialAssetStore.destroyAsset(backingStation);
+                        AssetStateSync.SERVER.destroyAsset(backingStation);
                     }
                 }
             } else {

@@ -1,8 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.outpost.feature;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.gtnewhorizons.galaxia.registry.outpost.feature.types.MagmaPoolFeature;
@@ -75,6 +77,18 @@ public final class PlanetaryFeatureRegistry {
     public static PlanetaryFeatureDefinition get(PlanetaryFeatureKey key) {
         registerDefaults();
         return FEATURES.get(key);
+    }
+
+    public static List<PlanetaryFeatureDefinition> definitionsFor(Iterable<PlanetaryFeatureKey> keys) {
+        registerDefaults();
+        List<PlanetaryFeatureDefinition> definitions = new ArrayList<>();
+        if (keys == null) return definitions;
+        for (PlanetaryFeatureKey key : keys) {
+            if (key == null) continue;
+            PlanetaryFeatureDefinition definition = FEATURES.get(key);
+            if (definition != null) definitions.add(definition);
+        }
+        return definitions;
     }
 
     public static PlanetaryFeature feature(PlanetaryFeatureKey key) {

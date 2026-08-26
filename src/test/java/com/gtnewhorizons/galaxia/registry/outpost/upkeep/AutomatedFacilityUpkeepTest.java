@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.outpost.upkeep;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Map;
@@ -143,23 +144,20 @@ final class AutomatedFacilityUpkeepTest {
     }
 
     @Test
-    void upkeepBlockingAndRecoveryMarkModuleDirtyForSync() {
+    void upkeepBlockingAndRecoveryAdvanceStateRevision() {
         ModuleInstance module = moduleWithUpkeep(ModulePriority.NORMAL, "1");
         AutomatedFacility facility = facilityWithModules(module);
-        facility.drainDirtyModules();
+        int revisionBeforeBlocking = facility.getStateRevision();
 
         tickUpkeepMinute(facility);
 
-        List<ModuleInstance> blockedDirtyModules = facility.drainDirtyModules();
-        assertEquals(1, blockedDirtyModules.size());
-        assertEquals(module.id, blockedDirtyModules.get(0).id);
+        assertTrue(facility.getStateRevision() > revisionBeforeBlocking);
 
         facility.updateItems(UPKEEP_ITEM, 1);
+        int revisionBeforeRecovery = facility.getStateRevision();
         tickUpkeepMinute(facility);
 
-        List<ModuleInstance> recoveredDirtyModules = facility.drainDirtyModules();
-        assertEquals(1, recoveredDirtyModules.size());
-        assertEquals(module.id, recoveredDirtyModules.get(0).id);
+        assertTrue(facility.getStateRevision() > revisionBeforeRecovery);
     }
 
     private static void tickUpkeepMinute(AutomatedFacility facility) {

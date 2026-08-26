@@ -8,6 +8,7 @@ import net.minecraft.item.ItemStack;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IItemStorageHandler;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 
@@ -64,5 +65,10 @@ public class ItemAttachmentInventory<T> implements IDistributedInventory {
         ItemStack drained = handler
             .extractItem(attachment, item.toStack((int) Math.min(target, Integer.MAX_VALUE)), true);
         return drained != null ? drained.stackSize : 0;
+    }
+
+    @Override
+    public ResourceFilter<ItemStackWrapper> getItemFilter() {
+        return handler.getItemFilter(attachment);
     }
 }

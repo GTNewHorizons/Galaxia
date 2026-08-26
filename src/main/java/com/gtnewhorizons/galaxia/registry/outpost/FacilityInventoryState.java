@@ -8,7 +8,6 @@ final class FacilityInventoryState {
 
     private final Map<ItemStackWrapper, Long> amounts = new LinkedHashMap<>();
     private final Map<FluidKey, Long> fluidAmounts = new LinkedHashMap<>();
-    private final Map<InventoryKey, Long> dirtyDeltas = new LinkedHashMap<>();
 
     Map<ItemStackWrapper, Long> itemAmounts() {
         return amounts;
@@ -16,25 +15,6 @@ final class FacilityInventoryState {
 
     Map<FluidKey, Long> fluidAmounts() {
         return fluidAmounts;
-    }
-
-    boolean hasDirtyDeltas() {
-        return !dirtyDeltas.isEmpty();
-    }
-
-    Map<InventoryKey, Long> drainDirtyDeltas() {
-        Map<InventoryKey, Long> result = new LinkedHashMap<>(dirtyDeltas);
-        dirtyDeltas.clear();
-        return result;
-    }
-
-    void markDelta(InventoryKey item, long delta, Runnable syncRevisionBumper) {
-        if (item == null || delta == 0L) return;
-        dirtyDeltas.merge(item, delta, Long::sum);
-        if (dirtyDeltas.getOrDefault(item, 0L) == 0L) {
-            dirtyDeltas.remove(item);
-        }
-        syncRevisionBumper.run();
     }
 
     Map<ItemStackWrapper, Long> itemSnapshot() {
