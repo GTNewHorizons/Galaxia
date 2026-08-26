@@ -9,6 +9,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledge
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkClientState;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
+import cpw.mods.fml.common.gameevent.TickEvent;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
@@ -19,6 +20,7 @@ public final class ClientStateLifecycle {
     @SideOnly(Side.CLIENT)
     public static void clearAll() {
         CelestialClient.clearLocalState();
+        AssetStateSync.CLIENT.clear();
         CelestialAssetStore.CLIENT.clearInternal();
         CelestialKnowledgeClientState.clear();
         CelestialDiscoveryClientState.clear();
@@ -33,6 +35,11 @@ public final class ClientStateLifecycle {
             if (event.world.isRemote) {
                 clearAll();
             }
+        }
+
+        @SubscribeEvent
+        public void onClientTick(TickEvent.ClientTickEvent event) {
+            if (event.phase == TickEvent.Phase.END) AssetStateSync.CLIENT.tick();
         }
     }
 }

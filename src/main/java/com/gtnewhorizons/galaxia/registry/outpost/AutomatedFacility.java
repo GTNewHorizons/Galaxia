@@ -2,12 +2,9 @@ package com.gtnewhorizons.galaxia.registry.outpost;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
@@ -76,9 +73,6 @@ public final class AutomatedFacility extends CelestialAsset {
     private long featureModifiersStationFeatureSalt = Long.MIN_VALUE;
 
     private long energyStored;
-    private final Set<ModuleInstance.ID> dirtyModuleIds = new HashSet<>();
-    private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
-    private final Set<UUID> syncedPlayerIds = new HashSet<>();
     private long ticks;
 
     public static final long MAX_ENERGY = 8_000_000L;
@@ -149,9 +143,11 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void setStationFeatureSalt(long stationFeatureSalt) {
+        if (this.stationFeatureSalt == stationFeatureSalt) return;
         this.stationFeatureSalt = stationFeatureSalt;
         featureModifiersByModule.clear();
         featureModifiersStationFeatureSalt = Long.MIN_VALUE;
+        markStateChanged();
     }
 
     public PlanetaryFeatureKey planetaryFeatureAt(StationTileCoord tile) {
@@ -206,7 +202,10 @@ public final class AutomatedFacility extends CelestialAsset {
             throw new IllegalArgumentException("upkeep reserve must be >= 0");
         }
         LogisticsResourceConfig current = logisticsConfig.get(item);
-        logisticsConfig.set(item, current.withMinReserve((int) Math.min(Integer.MAX_VALUE, amount)));
+        LogisticsResourceConfig updated = current.withMinReserve((int) Math.min(Integer.MAX_VALUE, amount));
+        if (updated.equals(current)) return;
+        logisticsConfig.set(item, updated);
+        markStateChanged();
     }
 
     public long upkeepReserve(ItemStackWrapper item) {
@@ -227,17 +226,19 @@ public final class AutomatedFacility extends CelestialAsset {
             throw new IllegalArgumentException("item must not be null");
         }
         LogisticsResourceConfig current = logisticsConfig.get(item);
+        LogisticsResourceConfig updated;
         if (enabled) {
             long reserve = upkeepReserve(item);
             int minReserve = (int) Math.min(Integer.MAX_VALUE, reserve);
             int orderSize = current == LogisticsResourceConfig.DEFAULT ? 64 : current.orderSize();
-            logisticsConfig.set(item, new LogisticsResourceConfig(minReserve, orderSize, true, false));
+            updated = new LogisticsResourceConfig(minReserve, orderSize, true, false);
         } else {
-            logisticsConfig.set(
-                item,
-                current.withImportEnabled(false)
-                    .withSupplyEnabled(false));
+            updated = current.withImportEnabled(false)
+                .withSupplyEnabled(false);
         }
+        if (updated.equals(current)) return;
+        logisticsConfig.set(item, updated);
+        markStateChanged();
     }
 
     public boolean isUpkeepAutoOrderEnabled(ItemStackWrapper item) {
@@ -291,8 +292,7 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         modules.add(module);
         settingsGroupState.attachPrivateGroupIfSupported(module, this::markModuleDirty);
-        dirtyModuleIds.add(module.id);
-        bumpSyncRevision();
+        bumpStateRevision();
         LOG.debug(
             "[PERSIST] addModule: added {} id={} anchor=({},{}) shape={} status={} (total={})",
             module.kind(),
@@ -313,9 +313,7 @@ public final class AutomatedFacility extends CelestialAsset {
         ModuleInstance removed = modules.remove(index);
         if (removed != null) {
             settingsGroupState.detach(removed);
-            dirtyRemovedIds.add(removed.id);
-            dirtyModuleIds.remove(removed.id);
-            bumpSyncRevision();
+            bumpStateRevision();
             if (layout != null) layout.removeTileForModule(removed.id);
             layoutCache.applyMutation(MutationKind.DECONSTRUCT, removed.kind(), removed);
             markDirty();
@@ -639,7 +637,7 @@ public final class AutomatedFacility extends CelestialAsset {
         settingsGroupState.markMembersDirty(group, modules, this::markModuleDirty);
         if (group.members()
             .isEmpty()) {
-            bumpSyncRevision();
+            bumpStateRevision();
             markDirty();
         }
     }
@@ -764,50 +762,14 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void markModuleDirty(ModuleInstance.ID id) {
-        dirtyModuleIds.add(id);
-        bumpSyncRevision();
+        bumpStateRevision();
         markDirty();
     }
 
-    @Override
-    public boolean isDirty() {
-        return super.isDirty() || !dirtyModuleIds.isEmpty()
-            || !dirtyRemovedIds.isEmpty()
-            || inventoryState.hasDirtyDeltas();
-    }
-
-    @Override
-    public boolean needsFullSyncFor(UUID playerId) {
-        return !syncedPlayerIds.contains(playerId);
-    }
-
-    @Override
-    public void markSyncedFor(UUID playerId) {
-        syncedPlayerIds.add(playerId);
-    }
-
-    public List<ModuleInstance> drainDirtyModules() {
-        List<ModuleInstance> result = new ArrayList<>(dirtyModuleIds.size());
-        for (ModuleInstance.ID id : dirtyModuleIds) {
-            int idx = moduleIndex(id);
-            if (idx >= 0) result.add(modules.get(idx));
-        }
-        dirtyModuleIds.clear();
-        return result;
-    }
-
-    public Map<InventoryKey, Long> drainDirtyInventoryDeltas() {
-        return inventoryState.drainDirtyDeltas();
-    }
-
-    public List<ModuleInstance.ID> drainRemovedIds() {
-        List<ModuleInstance.ID> result = new ArrayList<>(dirtyRemovedIds);
-        dirtyRemovedIds.clear();
-        return result;
-    }
-
     private void markInventoryDelta(InventoryKey item, long delta) {
-        inventoryState.markDelta(item, delta, this::bumpSyncRevision);
+        if (item == null || delta == 0L) return;
+        bumpStateRevision();
+        markDirty();
     }
 
     public long getEnergyStored() {
@@ -815,7 +777,10 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void setEnergyStored(long energyStored) {
-        this.energyStored = Math.clamp(energyStored, 0, MAX_ENERGY);
+        long clamped = Math.clamp(energyStored, 0, MAX_ENERGY);
+        if (this.energyStored == clamped) return;
+        this.energyStored = clamped;
+        markStateChanged();
     }
 
     public void addEnergy(long delta) {
@@ -1177,11 +1142,11 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void addFilter(String key, boolean item) {
-        filterState.add(key, item, this::markDirty);
+        filterState.add(key, item, this::markStateChanged);
     }
 
     public void removeFilter(String key, boolean item) {
-        filterState.remove(key, item, this::markDirty);
+        filterState.remove(key, item, this::markStateChanged);
     }
 
     public Map<Boolean, List<String>> filtersSnapshot() {
@@ -1189,10 +1154,10 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void setFilters(List<String> filters, boolean item) {
-        filterState.set(filters, item, this::markDirty);
+        filterState.set(filters, item, this::markStateChanged);
     }
 
     public void clearFilters(boolean item) {
-        filterState.clear(item, this::markDirty);
+        filterState.clear(item, this::markStateChanged);
     }
 }

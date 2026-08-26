@@ -11,7 +11,6 @@ import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -110,50 +109,49 @@ public final class AssetFilterUpdatePacket implements IMessage {
         public IMessage onMessage(AssetFilterUpdatePacket message, MessageContext ctx) {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
             if (player == null) return null;
-            UUID teamId = GTTeamsCompat.getTeam(player);
-            if (!GTTeamsCompat.hasPermission(player, TeamAction.CONFIGURE_LOGISTICS)) return null;
-            return message.apply(teamId);
+            ServerTickTaskQueue.schedule(() -> {
+                UUID teamId = GTTeamsCompat.getTeam(player);
+                if (!GTTeamsCompat.hasPermission(player, TeamAction.CONFIGURE_LOGISTICS)) return;
+                if (message.apply(teamId)) AssetStateSync.SERVER.publishInteractive(message.assetId);
+            });
+            return null;
         }
     }
 
-    public AssetSyncPacket apply(UUID teamId) {
+    public boolean apply(UUID teamId) {
         if (teamId == null || assetId == null || action == null) {
-            return null;
+            return false;
         }
 
+        if (!CelestialAssetStore.isOwnedBy(teamId, assetId)) return false;
+
         CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
-        if (asset == null) return null;
+        if (asset == null) return false;
 
         if (!(asset instanceof AutomatedFacility facility)) {
-            return null;
+            return false;
         }
 
         return switch (action) {
             case ADD_FILTER -> {
-                if (filterKey == null) yield null;
+                if (filterKey == null) yield false;
                 facility.addFilter(filterKey, isItem);
-                yield AssetSyncPacket.filterUpdated(assetId, isItem, List.of(filterKey));
+                yield true;
             }
             case REMOVE_FILTER -> {
-                if (filterKey == null) yield null;
+                if (filterKey == null) yield false;
                 facility.removeFilter(filterKey, isItem);
-                ResourceFilter<?> filter = isItem ? facility.getItemFilter() : facility.getFluidFilter();
-                if (filter.isEmpty()) {
-                    yield AssetSyncPacket.filterRemoved(assetId, isItem);
-                } else {
-                    yield AssetSyncPacket.filterUpdated(assetId, isItem, filter.serialize());
-                }
+                yield true;
             }
             case SET_FILTER -> {
-                if (filterKeys == null) yield null;
+                if (filterKeys == null) yield false;
                 facility.setFilters(filterKeys, isItem);
-                ResourceFilter<?> filter = isItem ? facility.getItemFilter() : facility.getFluidFilter();
-                if (filter.isEmpty()) {
-                    yield AssetSyncPacket.filterRemoved(assetId, isItem);
-                } else {
-                    yield AssetSyncPacket.filterUpdated(assetId, isItem, filter.serialize());
-                }
+                yield true;
             }
         };
+    }
+
+    CelestialAsset.ID assetId() {
+        return assetId;
     }
 }

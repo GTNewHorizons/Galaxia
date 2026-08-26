@@ -1,13 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -46,14 +42,11 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     private Map<ItemStack, Long> constructionInventory;
     private String displayName;
 
-    private int syncRevision;
-    private final Set<UUID> syncedPlayerIds = new HashSet<>();
+    private int stateRevision;
     private boolean dirty = true;
 
     private final Map<ItemStackWrapper, InventoryBounds> itemBounds = new LinkedHashMap<>();
     private final Map<FluidKey, InventoryBounds> fluidBounds = new LinkedHashMap<>();
-
-    private final List<InventoryBoundDelta> dirtyInventoryBoundDeltas = new ArrayList<>();
 
     public final LogisticsConfiguration logisticsConfig;
 
@@ -124,7 +117,7 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         this.location = Location.ofKind(kind);
         this.requiredResources = defaultRequirements(kind);
         this.constructionInventory = constructionInventory == null ? Collections.emptyMap() : constructionInventory;
-        this.syncRevision = 0;
+        this.stateRevision = 0;
         this.logisticsConfig = new LogisticsConfiguration();
     }
 
@@ -211,8 +204,9 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
 
     @Override
     public void updateStatus(Status status) {
+        if (this.status == status) return;
         this.status = status;
-        markDirty();
+        markStateChanged();
     }
 
     public String displayName() {
@@ -220,7 +214,9 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     }
 
     public void setDisplayName(String displayName) {
+        if (Objects.equals(this.displayName, displayName)) return;
         this.displayName = displayName;
+        markStateChanged();
     }
 
     public boolean hasStoredConstructionResources() {
@@ -242,16 +238,21 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         return WarningPriority.NONE;
     }
 
-    public int getSyncRevision() {
-        return syncRevision;
+    public int getStateRevision() {
+        return stateRevision;
     }
 
-    public void setSyncRevision(int rev) {
-        this.syncRevision = Math.max(this.syncRevision, rev);
+    public void setStateRevision(int revision) {
+        this.stateRevision = Math.max(this.stateRevision, revision);
     }
 
-    public void bumpSyncRevision() {
-        syncRevision++;
+    public void bumpStateRevision() {
+        stateRevision++;
+        dirty = true;
+    }
+
+    protected void markStateChanged() {
+        bumpStateRevision();
     }
 
     public abstract void tick();
@@ -273,16 +274,7 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         return required;
     }
 
-    public boolean needsFullSyncFor(UUID playerId) {
-        return isDirty() || !syncedPlayerIds.contains(playerId) || !dirtyInventoryBoundDeltas.isEmpty();
-    }
-
-    public void markSyncedFor(UUID playerId) {
-        syncedPlayerIds.add(playerId);
-    }
-
     public void markDirty() {
-        syncedPlayerIds.clear();
         dirty = true;
     }
 
@@ -385,24 +377,7 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
 
     public void markInventoryBoundDelta(BoundKind kind, InventoryKey resource, boolean present, long amount) {
         if (kind == null || resource == null) return;
-        dirtyInventoryBoundDeltas.add(new InventoryBoundDelta(kind, resource, present, amount));
-        bumpSyncRevision();
-        markDirty();
-    }
-
-    public record InventoryBoundDelta(BoundKind kind, InventoryKey resource, boolean present, long amount) {
-
-        public String resourceKey() {
-            return resource instanceof ItemStackWrapper item ? item.toKey()
-                : ((FluidKey) resource).fluid()
-                    .getName();
-        }
-    }
-
-    public List<InventoryBoundDelta> drainDirtyInventoryBoundDeltas() {
-        List<InventoryBoundDelta> result = new ArrayList<>(dirtyInventoryBoundDeltas);
-        dirtyInventoryBoundDeltas.clear();
-        return result;
+        markStateChanged();
     }
 
     /// ----------------------------------------------------------------------------------

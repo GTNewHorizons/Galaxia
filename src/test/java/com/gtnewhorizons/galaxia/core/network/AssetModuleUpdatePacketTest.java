@@ -325,15 +325,15 @@ final class AssetModuleUpdatePacketTest {
         AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
             .debugDataGeneratorConfig(facility.assetId, 0, module.id, config);
 
-        assertNull(packet.apply(TEAM, false));
+        assertFalse(packet.apply(TEAM, false));
         assertEquals(
             SatelliteDataType.COMMUNICATION,
             generator.config()
                 .dataType());
 
-        AssetSyncPacket sync = packet.apply(TEAM, true);
+        boolean sync = packet.apply(TEAM, true);
 
-        assertNotNull(sync);
+        assertTrue(sync);
         assertEquals(
             SatelliteDataType.RESEARCH,
             generator.config()
@@ -897,25 +897,17 @@ final class AssetModuleUpdatePacketTest {
                 false,
                 false,
                 List.of(target.anchor())));
-        int revisionBefore = facility.getSyncRevision();
+        int revisionBefore = facility.getStateRevision();
 
-        AssetSyncPacket sync = packet.apply(TEAM);
+        boolean sync = packet.apply(TEAM);
 
         assertNotNull(target.operationOrNull());
-        assertNotNull(sync);
-        assertTrue(facility.getSyncRevision() > revisionBefore);
-        assertEquals(facility.getSyncRevision(), sync.syncRevision());
-        ModuleInstance syncedTarget = roundTrip(sync).fullSyncDeltas()
-            .stream()
-            .filter(delta -> delta.syncType() == AssetSyncPacket.MODULE_ADDED)
-            .map(AssetSyncPacket::moduleData)
-            .filter(module -> module.id.equals(target.id))
-            .findFirst()
-            .orElseThrow();
-        assertNotNull(syncedTarget.operationOrNull());
+        assertTrue(sync);
+        assertTrue(facility.getStateRevision() > revisionBefore);
+        assertNotNull(target.operationOrNull());
         assertEquals(
             ModuleTier.LuV,
-            syncedTarget.operationOrNull()
+            target.operationOrNull()
                 .plan()
                 .spec()
                 .targetTier());
@@ -1053,17 +1045,14 @@ final class AssetModuleUpdatePacketTest {
         AssetModuleUpdatePacket packet = roundTrip(
             AssetModuleUpdatePacket.renameModuleSettingsGroup(facility.assetId, 0, module.id, groupId, "New miners"));
 
-        AssetSyncPacket sync = packet.apply(TEAM);
+        boolean sync = packet.apply(TEAM);
 
         assertEquals(
             "New miners",
             facility.settingsGroups()
                 .require(groupId)
                 .displayName());
-        assertNotNull(sync);
-        assertFalse(
-            sync.fullSyncDeltas()
-                .isEmpty());
+        assertTrue(sync);
     }
 
     @Test

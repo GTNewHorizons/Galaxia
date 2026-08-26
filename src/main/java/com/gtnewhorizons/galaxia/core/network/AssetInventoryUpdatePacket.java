@@ -115,51 +115,54 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         @Override
         public IMessage onMessage(AssetInventoryUpdatePacket message, MessageContext ctx) {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
-            if (!GTTeamsCompat.hasPermission(player, TeamAction.MANAGE_INVENTORY)) return null;
-            UUID teamId = GTTeamsCompat.getTeam(player);
-            boolean creative = player.capabilities.isCreativeMode;
-            return message.apply(teamId, creative);
+            if (player == null) return null;
+            ServerTickTaskQueue.schedule(() -> {
+                if (!GTTeamsCompat.hasPermission(player, TeamAction.MANAGE_INVENTORY)) return;
+                UUID teamId = GTTeamsCompat.getTeam(player);
+                boolean creative = player.capabilities.isCreativeMode;
+                if (message.apply(teamId, creative)) AssetStateSync.SERVER.publishInteractive(message.assetId);
+            });
+            return null;
         }
     }
 
-    public AssetSyncPacket apply(UUID teamId, boolean creativePlayer) {
+    public boolean apply(UUID teamId, boolean creativePlayer) {
         CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
         if (asset == null || !CelestialAssetStore.isOwnedBy(teamId, assetId)) {
             LOG.warn("[Logistics] InventoryDelta: unknown or unauthorized assetId {}", assetId);
-            return null;
+            return false;
         }
 
         if (operation == Operation.SET_BOUND || operation == Operation.CLEAR_BOUND) {
             if (asset instanceof AutomatedFacility state) {
                 return applyBoundUpdate(state);
             }
-            return null;
+            return false;
         }
         if (delta > 0 && !creativePlayer) {
             LOG.warn("[Logistics] InventoryDelta rejected: positive delta {} requires creative mode.", delta);
-            return null;
+            return false;
         }
         if (creativeOnly && !creativePlayer) {
             LOG.warn("[Logistics] InventoryDelta rejected: player is not in creative mode.");
-            return null;
+            return false;
         }
         if (creativeOnly && delta <= 0) {
             LOG.warn("[Logistics] InventoryDelta rejected: invalid amount {}", delta);
-            return null;
+            return false;
         }
 
-        if (this.resource == null) return null;
+        if (this.resource == null) return false;
         final long applied = asset.updateContents(resource, delta) * (delta > 0 ? 1 : -1);
-        if (applied == 0L) return null;
+        if (applied == 0L) return false;
 
-        asset.bumpSyncRevision();
+        asset.bumpStateRevision();
         LOG.info("[Logistics] Inventory update: {} x {} on {}", applied, resource.toKey(), assetId);
-        return AssetSyncPacket.inventoryUpdate(assetId, resource, applied)
-            .withSyncRevision(asset.getSyncRevision());
+        return true;
     }
 
-    private AssetSyncPacket applyBoundUpdate(AutomatedFacility state) {
-        if (boundKind == null) return null;
+    private boolean applyBoundUpdate(AutomatedFacility state) {
+        if (boundKind == null) return false;
         if (operation == Operation.SET_BOUND) {
             final boolean low = boundKind == BoundKind.ITEM_LOWER || boundKind == BoundKind.FLUID_LOWER;
             if (!state.trySetBound(resource, delta, low)) {
@@ -169,7 +172,7 @@ public final class AssetInventoryUpdatePacket implements IMessage {
                     resource.toKey(),
                     delta,
                     assetId);
-                return null;
+                return false;
             }
 
             state.markInventoryBoundDelta(boundKind, resource, true, delta);
@@ -179,15 +182,13 @@ public final class AssetInventoryUpdatePacket implements IMessage {
                 resource.toKey(),
                 delta,
                 assetId);
-            return AssetSyncPacket.inventoryBoundUpdate(assetId, boundKind, resource, true, delta)
-                .withSyncRevision(state.getSyncRevision());
+            return true;
         } else if (operation == Operation.CLEAR_BOUND) {
             state.clearBound(resource);
 
             state.markInventoryBoundDelta(boundKind, resource, false, 0L);
             LOG.info("[Logistics] Inventory bound cleared: {} {} on outpost {}", boundKind, resource.toKey(), assetId);
-            return AssetSyncPacket.inventoryBoundUpdate(assetId, boundKind, resource, false, 0L)
-                .withSyncRevision(state.getSyncRevision());
+            return true;
 
         } else {
             throw new IllegalStateException("[Logistics] Received malformed bound update");
@@ -198,5 +199,9 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         DELTA,
         SET_BOUND,
         CLEAR_BOUND
+    }
+
+    CelestialAsset.ID assetId() {
+        return assetId;
     }
 }

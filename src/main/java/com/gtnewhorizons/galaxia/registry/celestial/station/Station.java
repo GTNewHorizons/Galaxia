@@ -41,8 +41,9 @@ public class Station extends CelestialAsset {
     }
 
     public void setController(BlockPos controller) {
+        if (java.util.Objects.equals(this.controller, controller)) return;
         this.controller = controller;
-        markDirty();
+        markStateChanged();
     }
 
     @Override

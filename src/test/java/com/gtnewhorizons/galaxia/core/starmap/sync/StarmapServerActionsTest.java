@@ -1,7 +1,7 @@
 package com.gtnewhorizons.galaxia.core.starmap.sync;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
-import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.AssetUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -68,9 +67,9 @@ final class StarmapServerActionsTest {
         AssetBuildModulePacket packet = new AssetBuildModulePacket();
         // Don't set assetId - will be null, should fail
 
-        AssetSyncPacket result = packet.apply(TEAM, false);
+        boolean result = packet.apply(TEAM, false);
 
-        assertNull(result);
+        assertFalse(result);
         assertTrue(
             CelestialAssetStore.SERVER.allAssetsInternal()
                 .isEmpty());
@@ -95,9 +94,9 @@ final class StarmapServerActionsTest {
                 true,
                 ModulePlacement.at(coord));
 
-        AssetSyncPacket result = packet.apply(TEAM, true);
+        boolean result = packet.apply(TEAM, true);
 
-        assertNotNull(result, "build must immediately echo sync data for the open GUI");
+        assertTrue(result, "valid build must be accepted");
         assertEquals(
             1,
             facility.modules()
@@ -160,9 +159,9 @@ final class StarmapServerActionsTest {
             true,
             ModulePlacement.at(coord));
 
-        AssetSyncPacket result = packet.apply(TEAM, true);
+        boolean result = packet.apply(TEAM, true);
 
-        assertNotNull(result, "miner build must sync the new 2x2 footprint");
+        assertTrue(result, "valid miner build must be accepted");
         assertEquals(
             1,
             facility.modules()
@@ -199,9 +198,9 @@ final class StarmapServerActionsTest {
             true,
             List.of(new ModulePlacement(anchor, 1)));
 
-        AssetSyncPacket result = packet.apply(TEAM, true);
+        boolean result = packet.apply(TEAM, true);
 
-        assertNotNull(result, "rotated miner build must sync the new footprint");
+        assertTrue(result, "valid rotated miner build must be accepted");
         ModuleInstance module = facility.modules()
             .get(0);
         assertEquals(1, module.rotation());
@@ -239,9 +238,9 @@ final class StarmapServerActionsTest {
         AssetBuildModulePacket decoded = new AssetBuildModulePacket();
         decoded.fromBytes(encoded);
 
-        AssetSyncPacket result = decoded.apply(TEAM, true);
+        boolean result = decoded.apply(TEAM, true);
 
-        assertNotNull(result, "batch build must sync modules with their individual rotations");
+        assertTrue(result, "valid batch build must be accepted");
         assertEquals(
             2,
             facility.modules()
@@ -281,9 +280,9 @@ final class StarmapServerActionsTest {
             true,
             ModulePlacement.at(StationTileCoord.of(1, 0)));
 
-        AssetSyncPacket result = packet.apply(TEAM, true);
+        boolean result = packet.apply(TEAM, true);
 
-        assertNull(result);
+        assertFalse(result);
         assertTrue(
             facility.modules()
                 .isEmpty());
@@ -309,9 +308,9 @@ final class StarmapServerActionsTest {
                 true,
                 List.of(ModulePlacement.at(first), ModulePlacement.at(second)));
 
-        AssetSyncPacket result = packet.apply(TEAM, true);
+        boolean result = packet.apply(TEAM, true);
 
-        assertNotNull(result, "batch build must immediately echo sync data for the open GUI");
+        assertTrue(result, "valid batch build must be accepted");
         assertEquals(
             2,
             facility.modules()
@@ -348,9 +347,9 @@ final class StarmapServerActionsTest {
                 true,
                 List.of(ModulePlacement.at(first), ModulePlacement.at(chained)));
 
-        AssetSyncPacket result = packet.apply(TEAM, true);
+        boolean result = packet.apply(TEAM, true);
 
-        assertNotNull(result, "batch build should allow targets adjacent to earlier targets in the same batch");
+        assertTrue(result, "batch build should allow targets adjacent to earlier targets in the same batch");
         assertEquals(
             2,
             facility.modules()
@@ -385,9 +384,9 @@ final class StarmapServerActionsTest {
                 true,
                 List.of(ModulePlacement.at(StationTileCoord.of(1, 0)), ModulePlacement.at(StationTileCoord.of(5, 5))));
 
-        AssetSyncPacket result = packet.apply(TEAM, true);
+        boolean result = packet.apply(TEAM, true);
 
-        assertNull(result);
+        assertFalse(result);
         assertTrue(
             facility.modules()
                 .isEmpty());
@@ -417,9 +416,9 @@ final class StarmapServerActionsTest {
             true,
             List.of(ModulePlacement.at(StationTileCoord.of(1, 0))));
 
-        AssetSyncPacket result = packet.apply(TEAM, true);
+        boolean result = packet.apply(TEAM, true);
 
-        assertNotNull(result, "target-spec build must sync the completed server mutation");
+        assertTrue(result, "valid target-spec build must be accepted");
         ModuleInstance built = facility.modules()
             .get(1);
         assertEquals(ModuleTier.LuV, built.tier());
@@ -452,9 +451,9 @@ final class StarmapServerActionsTest {
             true,
             List.of(ModulePlacement.at(StationTileCoord.of(1, 0))));
 
-        AssetSyncPacket result = packet.apply(TEAM, true);
+        boolean result = packet.apply(TEAM, true);
 
-        assertNotNull(result, "copy build must sync the new module");
+        assertTrue(result, "valid copy build must be accepted");
         ModuleInstance copied = facility.modules()
             .get(1);
         assertEquals(source.kind(), copied.kind());
@@ -472,9 +471,9 @@ final class StarmapServerActionsTest {
         AutomatedFacility facility = addFacilityToServer();
 
         AssetUpdatePacket packet = AssetUpdatePacket.rename(facility.assetId, "Renamed Station");
-        AssetSyncPacket result = packet.mutateNoChecks(TEAM, facility);
+        boolean result = packet.mutateNoChecks(TEAM, facility);
 
-        assertTrue(result != null);
+        assertTrue(result);
         assertEquals(
             "Renamed Station",
             CelestialAssetStore.SERVER.findAssetInternal(facility.assetId)
@@ -488,9 +487,9 @@ final class StarmapServerActionsTest {
 
         AssetUpdatePacket packet = AssetUpdatePacket
             .create(facility.assetId, AssetUpdatePacket.Action.START_DECONSTRUCTION);
-        AssetSyncPacket result = packet.mutateNoChecks(TEAM, facility);
+        boolean result = packet.mutateNoChecks(TEAM, facility);
 
-        assertTrue(result != null);
+        assertTrue(result);
         assertEquals(
             Buildable.Status.DECONSTRUCTION,
             CelestialAssetStore.SERVER.findAssetInternal(facility.assetId)
@@ -504,9 +503,9 @@ final class StarmapServerActionsTest {
 
         AssetUpdatePacket packet = AssetUpdatePacket
             .create(facility.assetId, AssetUpdatePacket.Action.CANCEL_CONSTRUCTION);
-        AssetSyncPacket result = packet.mutateNoChecks(TEAM, facility);
+        boolean result = packet.mutateNoChecks(TEAM, facility);
 
-        assertTrue(result != null);
+        assertTrue(result);
         assertNull(CelestialAssetStore.SERVER.findAssetInternal(facility.assetId));
     }
 
@@ -515,9 +514,9 @@ final class StarmapServerActionsTest {
         AutomatedFacility facility = addFacilityToServer();
 
         AssetUpdatePacket packet = AssetUpdatePacket.create(facility.assetId, AssetUpdatePacket.Action.DESTROY_ASSET);
-        AssetSyncPacket result = packet.mutateNoChecks(TEAM, facility);
+        boolean result = packet.mutateNoChecks(TEAM, facility);
 
-        assertTrue(result != null);
+        assertTrue(result);
         assertNull(CelestialAssetStore.SERVER.findAssetInternal(facility.assetId));
     }
 
@@ -526,10 +525,10 @@ final class StarmapServerActionsTest {
         AutomatedFacility facility = addFacilityToServer();
         ItemStackWrapper resource = testResource();
 
-        AssetSyncPacket result = AssetInventoryUpdatePacket.add(facility.assetId, resource, 32)
+        boolean result = AssetInventoryUpdatePacket.add(facility.assetId, resource, 32)
             .apply(TEAM, true);
 
-        assertNotNull(result);
+        assertTrue(result);
         assertEquals(32, facility.getItemAmount(resource));
         assertNull(CelestialAssetStore.CLIENT.findAssetInternal(facility.assetId));
     }
@@ -540,9 +539,9 @@ final class StarmapServerActionsTest {
         ItemStackWrapper resource = testResource();
         LogisticsResourceConfig config = new LogisticsResourceConfig(4, 16, true, false);
 
-        AssetSyncPacket result = new LogisticsConfigUpdatePacket(facility.assetId, resource, config).apply(TEAM);
+        boolean result = new LogisticsConfigUpdatePacket(facility.assetId, resource, config).apply(TEAM);
 
-        assertNotNull(result);
+        assertTrue(result);
         assertEquals(config, facility.logisticsConfig.get(resource));
         assertNull(CelestialAssetStore.CLIENT.findAssetInternal(facility.assetId));
     }

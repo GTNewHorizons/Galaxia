@@ -1,7 +1,7 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.util.UUID;
 
@@ -55,9 +55,9 @@ final class AssetInventoryUpdatePacketTest {
         AssetInventoryUpdatePacket packet = roundTripWithCreativeOnlyCleared(
             AssetInventoryUpdatePacket.add(facility.assetId, resource, 64));
 
-        AssetSyncPacket sync = packet.apply(TEAM, false);
+        boolean sync = packet.apply(TEAM, false);
 
-        assertNull(sync);
+        assertFalse(sync);
         assertEquals(0L, facility.getItemAmount(resource));
     }
 
@@ -67,10 +67,9 @@ final class AssetInventoryUpdatePacketTest {
         ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
         AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.add(facility.assetId, resource, 64);
 
-        AssetSyncPacket sync = packet.apply(TEAM, true);
+        boolean sync = packet.apply(TEAM, true);
 
-        assertEquals(1, facility.getSyncRevision());
-        assertEquals(1, sync.syncRevision());
+        assertEquals(1, facility.getStateRevision());
     }
 
     @Test
@@ -80,11 +79,10 @@ final class AssetInventoryUpdatePacketTest {
         facility.updateItems(resource, 32);
         AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.remove(facility.assetId, resource);
 
-        AssetSyncPacket sync = packet.apply(TEAM, false);
+        boolean sync = packet.apply(TEAM, false);
 
         assertEquals(0L, facility.getItemAmount(resource));
-        assertEquals(1, facility.getSyncRevision());
-        assertEquals(1, sync.syncRevision());
+        assertEquals(1, facility.getStateRevision());
     }
 
     @Test
@@ -94,14 +92,13 @@ final class AssetInventoryUpdatePacketTest {
         AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket
             .setBound(facility.assetId, BoundKind.ITEM_LOWER, resource, 48);
 
-        AssetSyncPacket sync = packet.apply(TEAM, false);
+        boolean sync = packet.apply(TEAM, false);
 
         assertEquals(
             48,
             facility.getBound(resource)
                 .lowOrDefault());
-        assertEquals(1, facility.getSyncRevision());
-        assertEquals(1, sync.syncRevision());
+        assertEquals(1, facility.getStateRevision());
     }
 
     @Test
@@ -112,9 +109,9 @@ final class AssetInventoryUpdatePacketTest {
         AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket
             .setBound(facility.assetId, BoundKind.ITEM_LOWER, resource, 442);
 
-        AssetSyncPacket sync = packet.apply(TEAM, false);
+        boolean sync = packet.apply(TEAM, false);
 
-        assertNull(sync);
+        assertFalse(sync);
         assertEquals(
             0L,
             facility.getBound(resource)
@@ -123,7 +120,7 @@ final class AssetInventoryUpdatePacketTest {
             320L,
             facility.getBound(resource)
                 .upperOrDefault());
-        assertEquals(0, facility.getSyncRevision());
+        assertEquals(0, facility.getStateRevision());
     }
 
     private static AutomatedFacility addFacilityToServer() {

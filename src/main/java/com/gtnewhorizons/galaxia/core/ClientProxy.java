@@ -50,7 +50,9 @@ public class ClientProxy extends CommonProxy {
         super.preInit(event);
         ConfigMain.RegisterGalaxiaConfig();
         ForgeBusRegister(new ItemKineticTether.ClientEventHandler());
-        ForgeBusRegister(new ClientStateLifecycle.EventHandler());
+        ClientStateLifecycle.EventHandler clientStateLifecycle = new ClientStateLifecycle.EventHandler();
+        ForgeBusRegister(clientStateLifecycle);
+        FMLBusRegister(clientStateLifecycle);
         FMLBusRegister(new KeyHandler());
     }
 
