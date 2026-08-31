@@ -29,16 +29,34 @@ public interface IRecipeModule extends IModuleComponent {
     void setRecipeConfig(@javax.annotation.Nullable RecipeConfig config);
 
     @Override
-    default ModuleSettings createPrivateSettings(ModuleInstance module) {
+    default ModuleSettings captureModuleSettings(ModuleInstance module) {
         return new RecipeModuleSettings(getRecipeConfig());
     }
 
     @Override
-    default void applySettings(ModuleInstance module, ModuleSettings settings) {
-        if (!(settings instanceof RecipeModuleSettings recipeSettings)) {
+    default void validateModuleSettings(ModuleInstance module, ModuleSettings settings) {
+        if (!(settings instanceof RecipeModuleSettings)) {
             throw new IllegalStateException("Recipe module received non-recipe settings for module " + module.id);
         }
-        recipeSettings.applyTo(module);
+    }
+
+    @Override
+    default void applyModuleSettings(ModuleInstance module, ModuleSettings settings) {
+        validateModuleSettings(module, settings);
+        RecipeModuleSettings recipeSettings = (RecipeModuleSettings) settings;
+        RecipeConfig shared = recipeSettings.config();
+        if (shared == null) {
+            setRecipeConfig(null);
+            return;
+        }
+        RecipeConfig current = getRecipeConfig();
+        setRecipeConfig(
+            new RecipeConfig(
+                shared.savedRecipes(),
+                shared.mode(),
+                shared.notDoablePolicy(),
+                current == null ? (byte) 0 : current.orderCursor(),
+                current == null ? (byte) 0 : current.orderRemaining()));
     }
 
     default int getNextSlot(Random random) {

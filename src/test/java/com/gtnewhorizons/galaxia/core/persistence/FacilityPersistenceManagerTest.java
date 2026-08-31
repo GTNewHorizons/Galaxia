@@ -32,6 +32,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.gtnewhorizons.galaxia.core.network.PacketUtil;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -47,6 +48,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscovery
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryStep;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
@@ -71,6 +73,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
@@ -80,6 +83,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
@@ -605,8 +609,14 @@ final class FacilityPersistenceManagerTest {
         ModuleInstance miner = station.modules()
             .get(1);
         station.setMinerOreBlacklisted(miner, "ore:iron", true);
-        short groupId = station.createSettingsGroupForModule(miner, "Shared miners")
-            .id();
+        FacilityCommand.Result created = station.applyCommand(
+            new FacilityCommand.CreateSettingsGroup(station.assetId, miner.id, "Shared miners"),
+            FacilityCommand.Authority.NONE);
+        assertEquals(FacilityCommand.Status.CHANGED, created.status());
+        SettingsGroup.ID groupId = station.moduleSettingsSnapshot()
+            .membership()
+            .get(miner.id);
+        assertNotNull(groupId);
 
         FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         JsonObject encodedState = PERSISTENCE_GSON.toJsonTree(encoded)
@@ -626,6 +636,15 @@ final class FacilityPersistenceManagerTest {
         }
         assertNotNull(encodedMinerData);
         assertFalse(encodedMinerData.has("localSettings"));
+        assertFalse(
+            java.util.stream.StreamSupport.stream(modules.spliterator(), false)
+                .map(JsonElement::getAsJsonObject)
+                .anyMatch(moduleJson -> moduleJson.has("groupId")));
+        assertEquals(
+            groupId.value(),
+            encodedState.getAsJsonObject("settingsMembership")
+                .get(miner.id.toString())
+                .getAsInt());
         assertTrue(encodedMinerData.has("focusOreKey"));
         assertTrue(
             encodedMinerData.get("focusOreKey")
@@ -640,17 +659,52 @@ final class FacilityPersistenceManagerTest {
 
         ModuleInstance decodedMiner = decoded.modules()
             .get(1);
-        assertEquals(groupId, decodedMiner.groupId());
+        assertEquals(
+            groupId,
+            decoded.moduleSettingsSnapshot()
+                .membership()
+                .get(decodedMiner.id));
         assertTrue(decoded.isMinerOreBlacklisted(decodedMiner, "ore:iron"));
         assertEquals(
             "Shared miners",
-            decoded.settingsGroups()
-                .require(groupId)
+            decoded.moduleSettingsSnapshot()
+                .groups()
+                .get(groupId)
                 .displayName());
+    }
+
+    @Test
+    void privateMinerSettingsAreKeyedByStableModuleId() {
+        AutomatedFacility station = createStationWithFullLayout();
+        ModuleInstance miner = station.modules()
+            .get(1);
+        station.setMinerOreBlacklisted(miner, "ore:copper", true);
+
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
+        JsonObject encodedState = PERSISTENCE_GSON.toJsonTree(encoded)
+            .getAsJsonObject();
+
         assertTrue(
-            decoded.settingsGroups()
-                .require(groupId)
-                .isJoinable());
+            encodedState.getAsJsonObject("privateModuleSettings")
+                .has(miner.id.toString()));
+        assertFalse(
+            encodedState.getAsJsonObject("settingsMembership")
+                .has(miner.id.toString()));
+
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectKey,
+            station.kind,
+            station.status());
+        FacilityJsonCodec.decode(decoded, encoded);
+        ModuleInstance decodedMiner = decoded.modules()
+            .get(1);
+
+        assertTrue(decoded.isMinerOreBlacklisted(decodedMiner, "ore:copper"));
+        assertNull(
+            decoded.moduleSettingsSnapshot()
+                .membership()
+                .get(decodedMiner.id));
     }
 
     @Test
@@ -1088,8 +1142,9 @@ final class FacilityPersistenceManagerTest {
 
     private static FacilityJsonCodec.FacilityStateJson malformedFacilityState() {
         FacilityJsonCodec.FacilityStateJson facility = new FacilityJsonCodec.FacilityStateJson();
-        facility.settingsGroupsNextId = 1;
         facility.settingsGroups = new ArrayList<>();
+        facility.privateModuleSettings = new LinkedHashMap<>();
+        facility.settingsMembership = new LinkedHashMap<>();
         facility.modules = new ArrayList<>();
         facility.buffer = new LinkedHashMap<>();
         facility.fluidBuffer = new LinkedHashMap<>();
@@ -1885,8 +1940,10 @@ final class FacilityPersistenceManagerTest {
         station.setBound(new FluidKey(TEST_FLUID_1, null), 11, true);
         station.setBound(new FluidKey(TEST_FLUID_2, null), 22, false);
         slots.add(new SavedRecipe(snapshot, true, 12L, (byte) 3, (byte) 4));
-        recipeModule.setRecipeConfig(
+        station.setRecipeConfig(
+            macerator,
             new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
+        station.restoreRecipeScheduleState(macerator, new RecipeScheduleState((byte) 0, (byte) 1));
 
         FacilityPersistenceManager.AssetJson aencoded = manager.encodeAsset(station);
         FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
@@ -1900,6 +1957,8 @@ final class FacilityPersistenceManagerTest {
             .orElseThrow();
         RecipeConfig decodedConfig = ((IRecipeModule) decodedMacerator.component()).getRecipeConfig();
         assertNotNull(decodedConfig);
+        assertEquals((byte) 0, decodedConfig.orderCursor());
+        assertEquals((byte) 1, decodedConfig.orderRemaining());
         SavedRecipe decodedSlot = decodedConfig.savedRecipes()
             .get(0);
         RecipeSnapshot decodedSnapshot = decodedSlot.recipe();
@@ -2082,8 +2141,9 @@ final class FacilityPersistenceManagerTest {
         // Simulate a save with a module that has an unresolvable kind (unknown enum value)
         FacilityJsonCodec.FacilityStateJson legacy = new FacilityJsonCodec.FacilityStateJson();
         legacy.energyStored = 0L;
-        legacy.settingsGroupsNextId = 1;
         legacy.settingsGroups = new ArrayList<>();
+        legacy.privateModuleSettings = new LinkedHashMap<>();
+        legacy.settingsMembership = new LinkedHashMap<>();
         legacy.modules = new ArrayList<>();
 
         // One valid HAMMER module

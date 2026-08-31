@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -29,6 +28,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -46,6 +46,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGe
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
@@ -55,6 +56,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
@@ -248,13 +250,10 @@ final class StationPacketRoundTripTest {
                 client.modules()
                     .get(0),
                 "ore:iron"));
-        assertFalse(
-            client.settingsGroups()
-                .require(
-                    client.modules()
-                        .get(0)
-                        .groupId())
-                .isJoinable());
+        assertTrue(
+            client.moduleSettingsSnapshot()
+                .membership()
+                .isEmpty());
     }
 
     @Test
@@ -262,29 +261,36 @@ final class StationPacketRoundTripTest {
         AutomatedFacility server = createFacility();
         ModuleInstance miner = buildModule(server, FacilityModuleKind.MINER, StationTileCoord.of(1, 0));
         server.setMinerOreBlacklisted(miner, "ore:iron", true);
-        short groupId = server.createSettingsGroupForModule(miner, "Shared miners")
-            .id();
+        FacilityCommand.Result created = server.applyCommand(
+            new FacilityCommand.CreateSettingsGroup(server.assetId, miner.id, "Shared miners"),
+            FacilityCommand.Authority.NONE);
+        assertEquals(FacilityCommand.Status.CHANGED, created.status());
+        SettingsGroup.ID groupId = server.moduleSettingsSnapshot()
+            .membership()
+            .get(miner.id);
+        assertNotNull(groupId);
 
         AutomatedFacility client = createFacility();
         applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
 
         ModuleInstance clientMiner = client.modules()
             .get(0);
-        assertEquals(groupId, clientMiner.groupId());
+        assertEquals(
+            groupId,
+            client.moduleSettingsSnapshot()
+                .membership()
+                .get(clientMiner.id));
         assertEquals(
             "Shared miners",
-            client.settingsGroups()
-                .require(groupId)
+            client.moduleSettingsSnapshot()
+                .groups()
+                .get(groupId)
                 .displayName());
-        assertTrue(
-            client.settingsGroups()
-                .require(groupId)
-                .isJoinable());
         assertTrue(client.isMinerOreBlacklisted(clientMiner, "ore:iron"));
     }
 
     @Test
-    void fullSyncRoundTripPreservesRecipeSnapshotPayload() {
+    void fullSyncRoundTripPreservesSharedRecipeBookAndModuleSchedule() {
         AutomatedFacility server = createFacility();
         ModuleInstance centrifuge = buildModule(server, FacilityModuleKind.CENTRIFUGE, StationTileCoord.of(1, 0));
         Item inputItem = Items.diamond;
@@ -300,22 +306,53 @@ final class StationPacketRoundTripTest {
             480);
         SavedRecipeList slots = new SavedRecipeList();
         slots.add(new SavedRecipe(snapshot, true, 0L, (byte) 1, (byte) 1));
-        ((IRecipeModule) centrifuge.component()).setRecipeConfig(
-            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
+        server.setRecipeConfig(
+            centrifuge,
+            new RecipeConfig(slots, RecipeSchedulerMode.ORDER, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
+        RecipeScheduleState expectedSchedule = new RecipeScheduleState((byte) 0, (byte) 3);
+        server.restoreRecipeScheduleState(centrifuge, expectedSchedule);
+        assertEquals(
+            FacilityCommand.Status.CHANGED,
+            server
+                .applyCommand(
+                    new FacilityCommand.CreateSettingsGroup(server.assetId, centrifuge.id, "Shared centrifuges"),
+                    FacilityCommand.Authority.NONE)
+                .status());
+        SettingsGroup.ID groupId = server.moduleSettingsSnapshot()
+            .membership()
+            .get(centrifuge.id);
 
-        AutomatedFacility client = createFacility();
-        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
+        AssetStateSync.Client sync = new AssetStateSync.Client(
+            assetId -> { throw new AssertionError("Unexpected full-state recovery request for " + assetId); });
+        for (AssetStateFramePacket frame : AssetStateSync.Server.frame(roundTrip(AssetSyncPacket.fullSync(server)))) {
+            sync.receive(frame);
+        }
+        AutomatedFacility client = (AutomatedFacility) CelestialAssetStore.CLIENT.findAssetInternal(server.assetId);
+        assertNotNull(client);
 
-        RecipeSnapshot clientSnapshot = ((IRecipeModule) client.modules()
+        ModuleInstance clientCentrifuge = client.modules()
+            .get(0);
+        assertEquals(
+            groupId,
+            client.moduleSettingsSnapshot()
+                .membership()
+                .get(clientCentrifuge.id));
+        RecipeConfig canonicalConfig = client.recipeConfig(clientCentrifuge);
+        RecipeConfig runtimeConfig = ((IRecipeModule) clientCentrifuge.component()).getRecipeConfig();
+        assertNotNull(runtimeConfig);
+        RecipeSnapshot clientSnapshot = canonicalConfig.savedRecipes()
             .get(0)
-            .component()).getRecipeConfig()
-                .savedRecipes()
-                .get(0)
-                .recipe();
+            .recipe();
+        assertEquals(RecipeSchedulerMode.ORDER, canonicalConfig.mode());
+        assertEquals((byte) 0, canonicalConfig.orderCursor());
+        assertEquals((byte) 0, canonicalConfig.orderRemaining());
+        assertEquals(canonicalConfig.savedRecipes(), runtimeConfig.savedRecipes());
         assertEquals(200, clientSnapshot.duration());
         assertEquals(480, clientSnapshot.eut());
         assertEquals(1, clientSnapshot.inputs().length);
         assertEquals(1, clientSnapshot.outputs().length);
+        assertEquals(expectedSchedule.orderCursor(), runtimeConfig.orderCursor());
+        assertEquals(expectedSchedule.orderRemaining(), runtimeConfig.orderRemaining());
     }
 
     @Test
@@ -583,8 +620,10 @@ final class StationPacketRoundTripTest {
         for (RecipeSnapshot snapshot : snapshots) {
             slots.add(new SavedRecipe(snapshot, true, 0L, (byte) 1, (byte) 1));
         }
-        ((IRecipeModule) module.component()).setRecipeConfig(
+        facility.setRecipeConfig(
+            module,
             new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
+        facility.restoreRecipeScheduleState(module, new RecipeScheduleState((byte) 0, (byte) 0));
         return facility;
     }
 
@@ -630,8 +669,6 @@ final class StationPacketRoundTripTest {
 
     private static void applyFullSyncFromPacket(AutomatedFacility client, AssetSyncPacket packet) {
         client.clearModules();
-        client.settingsGroups()
-            .clear();
         client.clear();
         client.logisticsConfig.clear();
         StationLayout layout = client.stationLayout();
@@ -640,6 +677,8 @@ final class StationPacketRoundTripTest {
         for (AssetSyncPacket d : packet.fullSyncDeltas()) {
             AssetStateSync.Client.handleDelta(client, d);
         }
+        client.restoreModuleSettings(packet.moduleSettingsSnapshot);
+        client.restoreRecipeScheduleStates(packet.recipeScheduleStates);
         client.setStateRevision(packet.stateRevision());
     }
 }

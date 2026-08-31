@@ -34,7 +34,6 @@ public class ModuleInstance implements Buildable {
     private ModuleTier tier;
     private ModulePriority priorityOverride = ModulePriority.NORMAL;
     private boolean enabled = true;
-    private short groupId = 0;
     private ModuleState state = ModuleState.IDLE;
     private BlockingReason blocking = BlockingReason.NONE;
     private ModuleOperationState operation;
@@ -189,14 +188,6 @@ public class ModuleInstance implements Buildable {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
-    }
-
-    public short groupId() {
-        return groupId;
-    }
-
-    public void setGroupId(short groupId) {
-        this.groupId = groupId;
     }
 
     public ModuleState state() {

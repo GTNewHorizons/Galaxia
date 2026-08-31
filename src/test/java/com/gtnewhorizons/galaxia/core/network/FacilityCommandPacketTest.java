@@ -39,6 +39,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGe
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
@@ -86,12 +87,26 @@ final class FacilityCommandPacketTest {
                 FacilityModuleKind.HAMMER,
                 ModuleShape.SINGLE,
                 new IModuleComponent.BuildPhysicalSpec.Hammer(ModuleTier.EV, HammerVariant.BASE),
-                (short) 7,
+                new SettingsGroup.ID(7),
                 true,
+                placements),
+            new FacilityCommand.BuildModules(
+                FACILITY_ID,
+                FacilityModuleKind.POWER,
+                ModuleShape.SINGLE,
+                new IModuleComponent.BuildPhysicalSpec.Tier(ModuleTier.HV),
+                null,
+                false,
                 placements),
             new FacilityCommand.CopyBuildModules(FACILITY_ID, MODULE_ID, false, placements),
             new FacilityCommand.RequestModuleDeconstruction(FACILITY_ID, MODULE_ID),
             new FacilityCommand.CancelModuleOperation(FACILITY_ID, MODULE_ID),
+            new FacilityCommand.CreateSettingsGroup(FACILITY_ID, MODULE_ID, "Shared miners"),
+            new FacilityCommand.RenameSettingsGroup(FACILITY_ID, new SettingsGroup.ID(7), "Priority miners"),
+            new FacilityCommand.JoinSettingsGroup(FACILITY_ID, MODULE_ID, new SettingsGroup.ID(7)),
+            new FacilityCommand.LeaveSettingsGroup(FACILITY_ID, MODULE_ID),
+            new FacilityCommand.CopyModuleSettings(FACILITY_ID, MODULE_ID, List.of(SECOND_MODULE_ID)),
+            new FacilityCommand.SetMinerOreBlacklisted(FACILITY_ID, MODULE_ID, "ore:iron", true),
             new FacilityCommand.SetHammerShootingConfig(
                 FACILITY_ID,
                 MODULE_ID,
@@ -195,6 +210,23 @@ final class FacilityCommandPacketTest {
         impossibleTargetCount.writeInt(257);
         malformed.add(impossibleTargetCount);
 
+        ByteBuf invalidSettingsGroupId = base(FacilityCommandPacket.OP_JOIN_SETTINGS_GROUP);
+        writeUuid(invalidSettingsGroupId, MODULE_ID.id());
+        invalidSettingsGroupId.writeInt(0);
+        malformed.add(invalidSettingsGroupId);
+
+        ByteBuf blankOreKey = base(FacilityCommandPacket.OP_SET_MINER_ORE_BLACKLISTED);
+        writeUuid(blankOreKey, MODULE_ID.id());
+        writeString(blankOreKey, " ");
+        blankOreKey.writeByte(1);
+        malformed.add(blankOreKey);
+
+        ByteBuf invalidBlacklistFlag = base(FacilityCommandPacket.OP_SET_MINER_ORE_BLACKLISTED);
+        writeUuid(invalidBlacklistFlag, MODULE_ID.id());
+        writeString(invalidBlacklistFlag, "ore:iron");
+        invalidBlacklistFlag.writeByte(2);
+        malformed.add(invalidBlacklistFlag);
+
         ByteBuf oversize = Unpooled.buffer(FacilityCommandPacket.MAX_PACKET_BYTES + 1);
         oversize.writeZero(FacilityCommandPacket.MAX_PACKET_BYTES + 1);
         malformed.add(oversize);
@@ -208,6 +240,12 @@ final class FacilityCommandPacketTest {
         ByteBuf trailing = valid.copy();
         trailing.writeByte(0);
         malformed.add(trailing);
+
+        ByteBuf blacklistTrailing = Unpooled.buffer();
+        new FacilityCommandPacket(new FacilityCommand.SetMinerOreBlacklisted(FACILITY_ID, MODULE_ID, "ore:iron", true))
+            .toBytes(blacklistTrailing);
+        blacklistTrailing.writeByte(0);
+        malformed.add(blacklistTrailing);
 
         for (ByteBuf raw : malformed) {
             FacilityCommandPacket packet = new FacilityCommandPacket();
@@ -224,6 +262,13 @@ final class FacilityCommandPacketTest {
             RuntimeException.class,
             () -> new FacilityCommandPacket(
                 new FacilityCommand.ReplaceFilters(FACILITY_ID, FacilityCommand.FilterKind.ITEM, List.of(tooLong)))
+                    .toBytes(destination));
+        assertEquals(0, destination.writerIndex());
+
+        assertThrows(
+            RuntimeException.class,
+            () -> new FacilityCommandPacket(
+                new FacilityCommand.SetMinerOreBlacklisted(FACILITY_ID, MODULE_ID, tooLong, true))
                     .toBytes(destination));
         assertEquals(0, destination.writerIndex());
 
@@ -260,7 +305,7 @@ final class FacilityCommandPacketTest {
         buf.writeByte(1);
         buf.writeByte(ModuleTier.EV.ordinal());
         buf.writeByte(HammerVariant.BASE.ordinal());
-        buf.writeShort(0);
+        buf.writeByte(0);
         buf.writeByte(0);
         return buf;
     }

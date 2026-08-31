@@ -17,6 +17,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
@@ -120,15 +121,15 @@ final class RecipeOrderCursorPersistenceTest {
             .place(macerator);
         station.addModule(macerator);
 
-        // Create RecipeConfig with ORDER mode, 3 slots, cursor=1, remaining=3
+        // Create shared RecipeConfig with ORDER mode and 3 slots
         RecipeConfig config = RecipeConfig.empty();
         // Config is in PRIORITY mode by default — change to ORDER
         config = new RecipeConfig(
             config.savedRecipes(),
             RecipeSchedulerMode.ORDER,
             NotDoablePolicy.SKIP,
-            (byte) 1,
-            (byte) 3);
+            (byte) 0,
+            (byte) 0);
 
         // Add 3 recipe slots
         SavedRecipe slot1 = new SavedRecipe(RecipeSnapshot.unresolved((byte) 1, 0, 42L), true, 0L, (byte) 5, (byte) 2);
@@ -141,8 +142,8 @@ final class RecipeOrderCursorPersistenceTest {
         config.savedRecipes()
             .add(slot3);
 
-        // Set config via IRecipeModule
-        ((IRecipeModule) macerator.component()).setRecipeConfig(config);
+        station.setRecipeConfig(macerator, config);
+        station.restoreRecipeScheduleState(macerator, new RecipeScheduleState((byte) 1, (byte) 3));
 
         return macerator;
     }

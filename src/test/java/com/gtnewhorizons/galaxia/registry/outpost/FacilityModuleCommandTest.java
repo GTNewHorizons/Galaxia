@@ -80,9 +80,7 @@ final class FacilityModuleCommandTest {
         Map<?, ?> layoutBefore = Map.copyOf(
             facility.stationLayout()
                 .snapshot());
-        Map<?, ?> settingsBefore = Map.copyOf(
-            facility.settingsGroups()
-                .groups());
+        FacilityModuleSettingsSnapshot settingsBefore = facility.moduleSettingsSnapshot();
         Map<?, ?> inventoryBefore = facility.itemSnapshot();
 
         FacilityCommand.Result result = facility.applyCommand(
@@ -102,10 +100,7 @@ final class FacilityModuleCommandTest {
             layoutBefore,
             facility.stationLayout()
                 .snapshot());
-        assertEquals(
-            settingsBefore,
-            facility.settingsGroups()
-                .groups());
+        assertEquals(settingsBefore, facility.moduleSettingsSnapshot());
         assertEquals(inventoryBefore, facility.itemSnapshot());
         assertEquals(revisionBefore, facility.getStateRevision());
         assertEquals(dirtyBefore, facility.isDirty());
@@ -123,9 +118,7 @@ final class FacilityModuleCommandTest {
         Map<?, ?> layoutBefore = Map.copyOf(
             facility.stationLayout()
                 .snapshot());
-        Map<?, ?> settingsBefore = Map.copyOf(
-            facility.settingsGroups()
-                .groups());
+        FacilityModuleSettingsSnapshot settingsBefore = facility.moduleSettingsSnapshot();
 
         FacilityCommand.Result result = facility.applyCommand(
             build(
@@ -144,10 +137,7 @@ final class FacilityModuleCommandTest {
             layoutBefore,
             facility.stationLayout()
                 .snapshot());
-        assertEquals(
-            settingsBefore,
-            facility.settingsGroups()
-                .groups());
+        assertEquals(settingsBefore, facility.moduleSettingsSnapshot());
         assertEquals(revisionBefore, facility.getStateRevision());
         assertEquals(dirtyBefore, facility.isDirty());
     }
@@ -161,7 +151,7 @@ final class FacilityModuleCommandTest {
             FacilityModuleKind.STORAGE,
             FacilityModuleKind.STORAGE.defaultShape(),
             new IModuleComponent.BuildPhysicalSpec.Miner(ModuleTier.HV, null),
-            (short) 0,
+            null,
             false,
             List.of(ModulePlacement.at(StationTileCoord.of(1, 0))));
 
@@ -218,7 +208,14 @@ final class FacilityModuleCommandTest {
         ModuleInstance source = FacilityModuleKind.MINER
             .create(StationTileCoord.of(5, 5), FacilityModuleKind.MINER.defaultShape(), ModuleTier.EV);
         facility.addModule(source);
-        SettingsGroup group = facility.createSettingsGroupForModule(source, "Shared miners");
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            facility.applyCommand(
+                new FacilityCommand.CreateSettingsGroup(facility.assetId, source.id, "Shared miners"),
+                FacilityCommand.Authority.NONE));
+        SettingsGroup.ID groupId = facility.moduleSettingsSnapshot()
+            .membership()
+            .get(source.id);
         int revisionBefore = facility.getStateRevision();
 
         FacilityCommand.Result result = facility.applyCommand(
@@ -227,7 +224,7 @@ final class FacilityModuleCommandTest {
                 FacilityModuleKind.MINER,
                 FacilityModuleKind.MINER.defaultShape(),
                 new IModuleComponent.BuildPhysicalSpec.Miner(ModuleTier.LuV, MinerFocusTier.II),
-                group.id(),
+                groupId,
                 true,
                 List.of(ModulePlacement.at(StationTileCoord.of(1, 0)))),
             DEBUG_AUTHORITY);
@@ -235,7 +232,11 @@ final class FacilityModuleCommandTest {
         assertSame(FacilityCommand.Result.CHANGED, result);
         ModuleInstance built = facility.modules()
             .get(1);
-        assertEquals(group.id(), built.groupId());
+        assertEquals(
+            groupId,
+            facility.moduleSettingsSnapshot()
+                .membership()
+                .get(built.id));
         assertEquals(ModuleTier.LuV, built.tier());
         assertEquals(MinerFocusTier.II, ((ModuleMiner) built.component()).focusTier());
         assertEquals(revisionBefore + 1, facility.getStateRevision());
@@ -323,7 +324,7 @@ final class FacilityModuleCommandTest {
             kind,
             kind.defaultShape(),
             physicalSpec(kind, tier),
-            (short) 0,
+            null,
             true,
             placements);
     }

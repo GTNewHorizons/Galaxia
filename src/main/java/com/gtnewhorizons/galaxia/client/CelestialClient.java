@@ -55,6 +55,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -139,14 +140,15 @@ public final class CelestialClient {
             kind.defaultTier(),
             null,
             MinerFocusTier.NONE,
-            (short) 0,
+            null,
             creativeBuildModeEnabled,
             placements);
     }
 
     public static boolean createModules(ID assetId, FacilityModuleKind kind, ModuleShape shape, ModuleTier tier,
-        @Nullable HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId,
-        boolean creativeBuildModeEnabled, List<ModulePlacement> placements) {
+        @Nullable HammerVariant hammerVariant, MinerFocusTier minerFocusTier,
+        @Nullable SettingsGroup.ID settingsGroupId, boolean creativeBuildModeEnabled,
+        List<ModulePlacement> placements) {
         AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null) return false;
         if (!kind.isAllowedOn(state.kind)) return false;
@@ -276,18 +278,18 @@ public final class CelestialClient {
     }
 
     public static void updateMinerOreBlacklisted(ID assetId, int moduleIndex, String oreKey, boolean blacklisted) {
-        sendModuleUpdate(
+        sendModuleCommand(
             assetId,
             moduleIndex,
-            module -> AssetModuleUpdatePacket
-                .minerOreBlacklisted(assetId, moduleIndex, module.id, oreKey, blacklisted));
+            module -> new FacilityCommand.SetMinerOreBlacklisted(assetId, module.id, oreKey, blacklisted));
     }
 
-    public static void updateModuleSettingsGroup(ID assetId, int moduleIndex, short groupId) {
-        sendModuleUpdate(
+    public static void updateModuleSettingsGroup(ID assetId, int moduleIndex, @Nullable SettingsGroup.ID groupId) {
+        sendModuleCommand(
             assetId,
             moduleIndex,
-            module -> AssetModuleUpdatePacket.moduleSettingsGroup(assetId, moduleIndex, module.id, groupId));
+            module -> groupId == null ? new FacilityCommand.LeaveSettingsGroup(assetId, module.id)
+                : new FacilityCommand.JoinSettingsGroup(assetId, module.id, groupId));
     }
 
     public static void createModuleSettingsGroup(ID assetId, int moduleIndex) {
@@ -295,18 +297,16 @@ public final class CelestialClient {
     }
 
     public static void createModuleSettingsGroup(ID assetId, int moduleIndex, String displayName) {
-        sendModuleUpdate(
+        sendModuleCommand(
             assetId,
             moduleIndex,
-            module -> AssetModuleUpdatePacket.createModuleSettingsGroup(assetId, moduleIndex, module.id, displayName));
+            module -> new FacilityCommand.CreateSettingsGroup(assetId, module.id, displayName));
     }
 
-    public static void renameModuleSettingsGroup(ID assetId, int moduleIndex, short groupId, String displayName) {
-        sendModuleUpdate(
-            assetId,
-            moduleIndex,
-            module -> AssetModuleUpdatePacket
-                .renameModuleSettingsGroup(assetId, moduleIndex, module.id, groupId, displayName));
+    public static void renameModuleSettingsGroup(ID assetId, SettingsGroup.ID groupId, String displayName) {
+        if (!(getByAssetId(assetId) instanceof AutomatedFacility)) return;
+        StarmapActionSyncHandler
+            .sendFacilityCommand(new FacilityCommand.RenameSettingsGroup(assetId, groupId, displayName));
     }
 
     public static void cancelModuleOperation(ID assetId, int moduleIndex) {
@@ -334,24 +334,18 @@ public final class CelestialClient {
         @Nullable HammerVariant variant, boolean reserveItems, boolean voidCompletionRefund,
         List<StationTileCoord> targetCoords) {
         AutomatedFacility facility = getByAssetId(assetId) instanceof AutomatedFacility af ? af : null;
-        if (facility == null || facility.stationLayout() == null || resolveModule(assetId, moduleIndex) == null) return;
-        Set<ModuleInstance.ID> targetIds = new LinkedHashSet<>();
-        for (StationTileCoord targetCoord : targetCoords) {
-            ModuleInstance target = facility.stationLayout()
-                .moduleAt(targetCoord);
-            if (target == null) return;
-            targetIds.add(target.id);
-        }
-        if (targetIds.isEmpty()) return;
+        if (facility == null || resolveModule(assetId, moduleIndex) == null) return;
+        List<ModuleInstance.ID> targetIds = resolveTargetModuleIds(facility, targetCoords);
+        if (targetIds == null) return;
         FacilityCommand command = variant != null
             ? new FacilityCommand.PlanHammerUpgrade(
                 assetId,
-                List.copyOf(targetIds),
+                targetIds,
                 variant,
                 tier,
                 reserveItems,
                 voidCompletionRefund)
-            : new FacilityCommand.PlanTierUpgrade(assetId, List.copyOf(targetIds), tier, reserveItems);
+            : new FacilityCommand.PlanTierUpgrade(assetId, targetIds, tier, reserveItems);
         StarmapActionSyncHandler.sendFacilityCommand(command);
     }
 
@@ -379,10 +373,13 @@ public final class CelestialClient {
     }
 
     public static void copyModuleSettings(ID assetId, int moduleIndex, List<StationTileCoord> targetCoords) {
-        sendModuleUpdate(
-            assetId,
-            moduleIndex,
-            module -> AssetModuleUpdatePacket.copyModuleSettings(assetId, moduleIndex, module.id, targetCoords));
+        AutomatedFacility facility = getByAssetId(assetId) instanceof AutomatedFacility af ? af : null;
+        ModuleInstance source = resolveModule(assetId, moduleIndex);
+        if (facility == null || source == null) return;
+        List<ModuleInstance.ID> targetIds = resolveTargetModuleIds(facility, targetCoords);
+        if (targetIds == null) return;
+        StarmapActionSyncHandler
+            .sendFacilityCommand(new FacilityCommand.CopyModuleSettings(assetId, source.id, targetIds));
     }
 
     public static void updateDebugDataGeneratorConfig(ID assetId, int moduleIndex,
@@ -416,6 +413,20 @@ public final class CelestialClient {
         var modules = state.modules();
         if (moduleIndex < 0 || moduleIndex >= modules.size()) return null;
         return modules.get(moduleIndex);
+    }
+
+    private static @Nullable List<ModuleInstance.ID> resolveTargetModuleIds(AutomatedFacility facility,
+        List<StationTileCoord> targetCoords) {
+        if (facility.stationLayout() == null || targetCoords == null) return null;
+        Set<ModuleInstance.ID> targetIds = new LinkedHashSet<>();
+        for (StationTileCoord targetCoord : targetCoords) {
+            if (targetCoord == null) return null;
+            ModuleInstance target = facility.stationLayout()
+                .moduleAt(targetCoord);
+            if (target == null) return null;
+            targetIds.add(target.id);
+        }
+        return targetIds.isEmpty() ? null : List.copyOf(targetIds);
     }
 
     public static void addInventory(CelestialAsset.ID assetId, ItemStackWrapper resource, long amount) {

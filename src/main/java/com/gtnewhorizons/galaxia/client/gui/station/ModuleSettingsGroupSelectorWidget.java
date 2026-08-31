@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
@@ -24,6 +25,7 @@ import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityModuleSettingsSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -65,7 +67,7 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
     private final BooleanSupplier openSupplier;
     private final int modalWidth;
     private GroupNameAction groupNameAction = GroupNameAction.NONE;
-    private short editingGroupId;
+    private SettingsGroup.ID editingGroupId;
     private String groupNameInput = "";
     private TextFieldWidget groupNameField;
     private final ItemStack renameIcon = new ItemStack(Items.feather);
@@ -216,7 +218,12 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
             beginCreateGroup();
             return;
         }
-        if (module.groupId() != option.groupId()) {
+        AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
+        SettingsGroup.ID currentGroupId = facility == null ? null
+            : facility.moduleSettingsSnapshot()
+                .membership()
+                .get(module.id);
+        if (!Objects.equals(currentGroupId, option.groupId())) {
             controller.closeSettingsGroupMenu();
             CelestialClient.updateModuleSettingsGroup(assetId, controller.moduleIndex(), option.groupId());
         }
@@ -255,7 +262,7 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
     }
 
     private boolean hasInlineGroupButtons(GroupOption option) {
-        return option.action() == GroupOptionAction.SELECT && option.groupId() != 0;
+        return option.action() == GroupOptionAction.SELECT && option.groupId() != null;
     }
 
     private String currentGroupButtonLabel() {
@@ -266,10 +273,13 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
     }
 
     private String currentGroupLabel(AutomatedFacility facility, ModuleInstance module) {
-        if (module.groupId() == 0) return "No Group";
-        SettingsGroup group = facility.settingsGroups()
-            .get(module.groupId());
-        if (group == null || !isVisibleJoinableGroup(group)) return "No Group";
+        FacilityModuleSettingsSnapshot snapshot = facility.moduleSettingsSnapshot();
+        SettingsGroup.ID groupId = snapshot.membership()
+            .get(module.id);
+        if (groupId == null) return "No Group";
+        SettingsGroup group = snapshot.groups()
+            .get(groupId);
+        if (group == null) return "No Group";
         return group.displayName();
     }
 
@@ -301,14 +311,14 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
 
     private void beginCreateGroup() {
         groupNameAction = GroupNameAction.CREATE;
-        editingGroupId = 0;
+        editingGroupId = null;
         groupNameInput = defaultNewGroupName();
         syncGroupNameField();
     }
 
     private void beginRenameGroup(int optionIndex) {
         GroupOption option = groupOptionAt(optionIndex);
-        if (option == null || option.groupId() == 0) return;
+        if (option == null || option.groupId() == null) return;
         groupNameAction = GroupNameAction.RENAME;
         editingGroupId = option.groupId();
         groupNameInput = option.label();
@@ -317,7 +327,7 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
 
     private void beginShowGroupMembers(int optionIndex) {
         GroupOption option = groupOptionAt(optionIndex);
-        if (option == null || option.groupId() == 0) return;
+        if (option == null || option.groupId() == null) return;
         groupNameAction = GroupNameAction.MEMBERS;
         editingGroupId = option.groupId();
         groupNameInput = "";
@@ -330,8 +340,8 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
         if (module == null || displayName.isEmpty()) return;
         if (groupNameAction == GroupNameAction.CREATE) {
             CelestialClient.createModuleSettingsGroup(assetId, controller.moduleIndex(), displayName);
-        } else if (groupNameAction == GroupNameAction.RENAME) {
-            CelestialClient.renameModuleSettingsGroup(assetId, controller.moduleIndex(), editingGroupId, displayName);
+        } else if (groupNameAction == GroupNameAction.RENAME && editingGroupId != null) {
+            CelestialClient.renameModuleSettingsGroup(assetId, editingGroupId, displayName);
         }
         cancelGroupNameEdit();
         controller.closeSettingsGroupMenu();
@@ -339,7 +349,7 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
 
     private void cancelGroupNameEdit() {
         groupNameAction = GroupNameAction.NONE;
-        editingGroupId = 0;
+        editingGroupId = null;
         groupNameInput = "";
         syncGroupNameField();
     }
@@ -406,13 +416,13 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
                 .settingsGroups())
             return List.of();
         List<GroupOption> options = new ArrayList<>();
-        options.add(new GroupOption("No Group", (short) 0, GroupOptionAction.SELECT));
-        options.add(new GroupOption("Create New Group", (short) 0, GroupOptionAction.CREATE));
-        facility.settingsGroups()
+        options.add(new GroupOption("No Group", null, GroupOptionAction.SELECT));
+        options.add(new GroupOption("Create New Group", null, GroupOptionAction.CREATE));
+        facility.moduleSettingsSnapshot()
             .groups()
             .values()
             .stream()
-            .filter(group -> group.kind() == kind && isVisibleJoinableGroup(group))
+            .filter(group -> group.kind() == kind)
             .sorted(Comparator.comparing(SettingsGroup::displayName, String.CASE_INSENSITIVE_ORDER))
             .forEach(group -> options.add(new GroupOption(group.displayName(), group.id(), GroupOptionAction.SELECT)));
         return options;
@@ -420,11 +430,6 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
 
     private FacilityModuleKind kind() {
         return kindSupplier.get();
-    }
-
-    private static boolean isVisibleJoinableGroup(SettingsGroup group) {
-        return group.isJoinable() && !(group.hasDefaultPrivateDisplayName() && group.members()
-            .size() == 1);
     }
 
     private void drawGroupOptionHint() {
@@ -455,8 +460,9 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
 
     private void drawGroupMembersOverlay() {
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
-        SettingsGroup group = facility == null ? null
-            : facility.settingsGroups()
+        FacilityModuleSettingsSnapshot snapshot = facility == null ? null : facility.moduleSettingsSnapshot();
+        SettingsGroup group = snapshot == null || editingGroupId == null ? null
+            : snapshot.groups()
                 .get(editingGroupId);
         String title = group == null ? "Group Modules"
             : Minecraft.getMinecraft().fontRenderer.trimStringToWidth(group.displayName(), GROUP_MODAL_WIDTH - 28);
@@ -471,13 +477,14 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
             return;
         }
         FacilityModuleKind kind = kind();
-        List<ModuleInstance> members = group.members()
+        List<ModuleInstance> members = facility.modules()
             .stream()
-            .map(
-                coord -> facility.stationLayout() == null ? null
-                    : facility.stationLayout()
-                        .moduleAt(coord))
-            .filter(module -> module != null && module.kind() == kind)
+            .filter(module -> module.kind() == kind)
+            .filter(
+                module -> Objects.equals(
+                    snapshot.membership()
+                        .get(module.id),
+                    editingGroupId))
             .sorted(
                 Comparator.comparingInt(
                     (ModuleInstance module) -> module.anchor()
@@ -601,5 +608,5 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
         MEMBERS
     }
 
-    private record GroupOption(String label, short groupId, GroupOptionAction action) {}
+    private record GroupOption(String label, SettingsGroup.ID groupId, GroupOptionAction action) {}
 }

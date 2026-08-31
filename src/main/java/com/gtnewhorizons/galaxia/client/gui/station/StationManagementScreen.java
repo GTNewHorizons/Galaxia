@@ -25,6 +25,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.relauncher.Side;
@@ -66,13 +67,14 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             kind.defaultTier(),
             null,
             MinerFocusTier.NONE,
-            (short) 0,
+            null,
             creativeBuildMode);
         open(assetId, creativeBuildMode);
     }
 
     static void openBuildPicker(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape, ModuleTier tier,
-        HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId, boolean creativeBuildMode) {
+        HammerVariant hammerVariant, MinerFocusTier minerFocusTier, @Nullable SettingsGroup.ID settingsGroupId,
+        boolean creativeBuildMode) {
         pendingBuildPickerRequest = BuildPickerRequest
             .create(assetId, kind, shape, tier, hammerVariant, minerFocusTier, settingsGroupId, creativeBuildMode);
         open(assetId, creativeBuildMode);
@@ -346,12 +348,13 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
     }
 
     private record BuildPickerRequest(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
-        ModuleTier tier, HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId,
-        int copySourceModuleIndex, ModuleInstance.ID copySourceModuleId, boolean creativeBuildMode) {
+        ModuleTier tier, HammerVariant hammerVariant, MinerFocusTier minerFocusTier,
+        @Nullable SettingsGroup.ID settingsGroupId, int copySourceModuleIndex, ModuleInstance.ID copySourceModuleId,
+        boolean creativeBuildMode) {
 
         static BuildPickerRequest create(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
-            ModuleTier tier, HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId,
-            boolean creativeBuildMode) {
+            ModuleTier tier, HammerVariant hammerVariant, MinerFocusTier minerFocusTier,
+            @Nullable SettingsGroup.ID settingsGroupId, boolean creativeBuildMode) {
             return new BuildPickerRequest(
                 assetId,
                 kind,
@@ -374,7 +377,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 null,
                 null,
                 MinerFocusTier.NONE,
-                (short) 0,
+                null,
                 sourceModuleIndex,
                 sourceModuleId,
                 creativeBuildMode);

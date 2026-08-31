@@ -26,12 +26,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
-import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
@@ -265,191 +263,16 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
-    void applyMinerBlacklistUpdatesOreState() {
-        AutomatedFacility facility = addMinerFacilityToServer();
-        ModuleInstance module = facility.modules()
-            .get(0);
-        AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
-            .minerOreBlacklisted(facility.assetId, 0, module.id, "ore:iron", true);
+    void legacySettingsActionsAreNotPartOfTheModuleUpdateWire() {
+        List<String> actionNames = java.util.Arrays.stream(AssetModuleUpdatePacket.ConfigAction.values())
+            .map(Enum::name)
+            .toList();
 
-        packet.apply(TEAM);
-
-        assertTrue(facility.isMinerOreBlacklisted(module, "ore:iron"));
-    }
-
-    @Test
-    void copyModuleSettingsPayload_roundTripsTargetTiles() {
-        AssetModuleUpdatePacket decoded = roundTrip(
-            AssetModuleUpdatePacket.copyModuleSettings(
-                ASSET_ID,
-                0,
-                MODULE_ID,
-                List.of(StationTileCoord.of(2, 0), StationTileCoord.of(3, -1))));
-
-        assertEquals(AssetModuleUpdatePacket.ConfigAction.COPY_MODULE_SETTINGS, decoded.getConfigAction());
-        assertEquals(
-            List.of(StationTileCoord.of(2, 0), StationTileCoord.of(3, -1)),
-            AssetModuleUpdatePacket.decodeTileCoordPayload(decoded.getRawPayload()));
-    }
-
-    @Test
-    void applyCopyModuleSettingsCopiesRuntimeConfigWithoutPhysicalFocusTier() {
-        AutomatedFacility facility = addTwoMinerFacilityToServer();
-        ModuleInstance source = facility.modules()
-            .get(0);
-        ModuleInstance target = facility.modules()
-            .get(1);
-        ModuleMiner sourceMiner = (ModuleMiner) source.component();
-        ModuleMiner targetMiner = (ModuleMiner) target.component();
-        sourceMiner.setFocus(MinerFocusTier.II, "ore:iron", 1200);
-        targetMiner.setFocus(MinerFocusTier.I, "ore:gold", 900);
-        facility.setMinerOreBlacklisted(source, "ore:copper", true);
-        facility.createSettingsGroupForModule(source, "Shared miners");
-
-        AssetModuleUpdatePacket packet = roundTrip(
-            AssetModuleUpdatePacket.copyModuleSettings(facility.assetId, 0, source.id, List.of(target.anchor())));
-
-        packet.apply(TEAM);
-
-        assertEquals(source.groupId(), target.groupId());
-        assertTrue(facility.isMinerOreBlacklisted(target, "ore:copper"));
-        assertEquals(MinerFocusTier.I, targetMiner.focusTier());
-        assertEquals("ore:iron", targetMiner.focusOreKeyOrNull());
-        assertEquals(0, targetMiner.focusAlignmentProgress());
-    }
-
-    @Test
-    void applyCopyModuleSettingsRejectsFocusedSourceForTargetWithoutFocusTier() {
-        AutomatedFacility facility = addTwoMinerFacilityToServer();
-        ModuleInstance source = facility.modules()
-            .get(0);
-        ModuleInstance target = facility.modules()
-            .get(1);
-        ModuleMiner sourceMiner = (ModuleMiner) source.component();
-        ModuleMiner targetMiner = (ModuleMiner) target.component();
-        sourceMiner.setFocus(MinerFocusTier.I, "ore:iron", 0);
-        targetMiner.setFocus(MinerFocusTier.NONE, null, 0);
-        short originalTargetGroupId = target.groupId();
-        AssetModuleUpdatePacket packet = roundTrip(
-            AssetModuleUpdatePacket.copyModuleSettings(facility.assetId, 0, source.id, List.of(target.anchor())));
-
-        assertThrows(IllegalStateException.class, () -> packet.apply(TEAM));
-        assertEquals(originalTargetGroupId, target.groupId());
-        assertEquals(MinerFocusTier.NONE, targetMiner.focusTier());
-        assertNull(targetMiner.focusOreKeyOrNull());
-    }
-
-    @Test
-    void applyCopyModuleSettingsCopiesRecipeConfig() {
-        org.junit.jupiter.api.Assumptions.assumeTrue(FacilityModuleKind.MACERATOR.isAvailable());
-        AutomatedFacility facility = addTwoModuleFacilityToServer(FacilityModuleKind.MACERATOR, ModuleTier.EV);
-        ModuleInstance source = facility.modules()
-            .get(0);
-        ModuleInstance target = facility.modules()
-            .get(1);
-        RecipeConfig config = RecipeConfig.empty();
-        SavedRecipe slot = new SavedRecipe(RecipeSnapshot.unresolved((byte) 1, 7, 42L), true, 0L, (byte) 3, (byte) 2);
-        config.savedRecipes()
-            .add(slot);
-        facility.setRecipeConfig(source, config);
-
-        AssetModuleUpdatePacket packet = roundTrip(
-            AssetModuleUpdatePacket.copyModuleSettings(facility.assetId, 0, source.id, List.of(target.anchor())));
-
-        packet.apply(TEAM);
-
-        RecipeConfig copied = ((IRecipeModule) target.component()).getRecipeConfig();
-        assertNotNull(copied);
-        assertEquals(config.mode(), copied.mode());
-        assertEquals(config.notDoablePolicy(), copied.notDoablePolicy());
-        assertEquals(
-            config.savedRecipes()
-                .size(),
-            copied.savedRecipes()
-                .size());
-        assertEquals(
-            slot.recipe()
-                .contentHash(),
-            copied.savedRecipes()
-                .get(0)
-                .recipe()
-                .contentHash());
-        assertEquals(
-            slot.priority(),
-            copied.savedRecipes()
-                .get(0)
-                .priority());
-        assertEquals(
-            slot.orderSize(),
-            copied.savedRecipes()
-                .get(0)
-                .orderSize());
-    }
-
-    @Test
-    void applyCreateModuleSettingsGroupCopiesCurrentMinerBlacklist() {
-        AutomatedFacility facility = addMinerFacilityToServer();
-        ModuleInstance module = facility.modules()
-            .get(0);
-        facility.setMinerOreBlacklisted(module, "ore:iron", true);
-        AssetModuleUpdatePacket packet = roundTrip(
-            AssetModuleUpdatePacket.createModuleSettingsGroup(facility.assetId, 0, module.id, "  Priority miners  "));
-
-        packet.apply(TEAM);
-
-        assertNotEquals(0, module.groupId());
-        assertEquals(
-            "Priority miners",
-            facility.settingsGroups()
-                .require(module.groupId())
-                .displayName());
-        assertEquals(
-            1,
-            facility.settingsGroups()
-                .groups()
-                .size());
-        assertTrue(facility.isMinerOreBlacklisted(module, "ore:iron"));
-    }
-
-    @Test
-    void applyRenameModuleSettingsGroupUpdatesJoinableGroup() {
-        AutomatedFacility facility = addMinerFacilityToServer();
-        ModuleInstance module = facility.modules()
-            .get(0);
-        short groupId = facility.createSettingsGroupForModule(module, "Old miners")
-            .id();
-        AssetModuleUpdatePacket packet = roundTrip(
-            AssetModuleUpdatePacket.renameModuleSettingsGroup(facility.assetId, 0, module.id, groupId, "New miners"));
-
-        boolean sync = packet.apply(TEAM);
-
-        assertEquals(
-            "New miners",
-            facility.settingsGroups()
-                .require(groupId)
-                .displayName());
-        assertTrue(sync);
-    }
-
-    @Test
-    void applyModuleSettingsGroupZeroLeavesGroupWithCopiedSettings() {
-        AutomatedFacility facility = addMinerFacilityToServer();
-        ModuleInstance module = facility.modules()
-            .get(0);
-        facility.setMinerOreBlacklisted(module, "ore:iron", true);
-        facility.createSettingsGroupForModule(module, null);
-        AssetModuleUpdatePacket packet = roundTrip(
-            AssetModuleUpdatePacket.moduleSettingsGroup(facility.assetId, 0, module.id, (short) 0));
-
-        packet.apply(TEAM);
-
-        assertNotEquals(0, module.groupId());
-        assertEquals(
-            1,
-            facility.settingsGroups()
-                .groups()
-                .size());
-        assertTrue(facility.isMinerOreBlacklisted(module, "ore:iron"));
+        assertFalse(actionNames.contains("SET_SETTINGS_GROUP"));
+        assertFalse(actionNames.contains("CREATE_SETTINGS_GROUP"));
+        assertFalse(actionNames.contains("RENAME_SETTINGS_GROUP"));
+        assertFalse(actionNames.contains("COPY_MODULE_SETTINGS"));
+        assertFalse(actionNames.contains("SET_MINER_ORE_BLACKLISTED"));
     }
 
     @Test
@@ -601,41 +424,6 @@ final class AssetModuleUpdatePacketTest {
             buildTicks,
             cost,
             false);
-    }
-
-    private static AutomatedFacility addMinerFacilityToServer() {
-        AutomatedFacility facility = new AutomatedFacility(
-            CelestialAsset.ID.create(),
-            CelestialObjectId.MARS,
-            CelestialAsset.Kind.AUTOMATED_STATION,
-            Buildable.Status.OPERATIONAL);
-        ModuleInstance module = FacilityModuleKind.MINER
-            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.EV);
-        facility.addModule(module);
-        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
-        return facility;
-    }
-
-    private static AutomatedFacility addTwoMinerFacilityToServer() {
-        return addTwoModuleFacilityToServer(FacilityModuleKind.MINER, ModuleTier.EV);
-    }
-
-    private static AutomatedFacility addTwoModuleFacilityToServer(FacilityModuleKind kind, ModuleTier tier) {
-        AutomatedFacility facility = new AutomatedFacility(
-            CelestialAsset.ID.create(),
-            CelestialObjectId.MARS,
-            CelestialAsset.Kind.AUTOMATED_STATION,
-            Buildable.Status.OPERATIONAL);
-        ModuleInstance source = kind.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, tier);
-        ModuleInstance target = kind.create(StationTileCoord.of(2, 0), ModuleShape.SINGLE, tier);
-        facility.addModule(source);
-        facility.addModule(target);
-        facility.stationLayout()
-            .place(source);
-        facility.stationLayout()
-            .place(target);
-        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
-        return facility;
     }
 
     private static AssetModuleUpdatePacket roundTrip(AssetModuleUpdatePacket packet) {

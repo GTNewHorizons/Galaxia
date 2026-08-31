@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.interfaces;
 
+import javax.annotation.Nullable;
+
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
@@ -14,6 +16,13 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSetting
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
 
 public interface IModuleComponent {
+
+    sealed interface SettingsCopySpec {
+
+        record None() implements SettingsCopySpec {}
+
+        record Miner(@Nullable String focusOreKey) implements SettingsCopySpec {}
+    }
 
     sealed interface BuildPhysicalSpec {
 
@@ -58,27 +67,29 @@ public interface IModuleComponent {
         return data.cooldownTicks();
     }
 
-    default ModuleSettings createPrivateSettings(ModuleInstance module) {
+    default ModuleSettings captureModuleSettings(ModuleInstance module) {
         throw unsupportedSettingsGroups(module);
     }
 
-    default ModuleSettings copySettings(ModuleInstance module, ModuleSettings settings) {
+    default void validateModuleSettings(ModuleInstance module, ModuleSettings settings) {
         if (settings == null) {
-            throw new IllegalArgumentException(getClass().getSimpleName() + " cannot copy null settings");
+            throw new IllegalArgumentException(getClass().getSimpleName() + " cannot accept null settings");
         }
-        return settings.copy();
     }
 
-    default void applySettings(ModuleInstance module, ModuleSettings settings) {
-        if (settings == null) {
-            throw new IllegalArgumentException(getClass().getSimpleName() + " cannot apply null settings");
-        }
-        settings.applyTo(module);
+    default void applyModuleSettings(ModuleInstance module, ModuleSettings settings) {
+        validateModuleSettings(module, settings);
     }
 
-    default void validateSettingsCopyTarget(ModuleInstance source, ModuleInstance target) {}
+    default SettingsCopySpec prepareSettingsCopy(ModuleInstance source, ModuleInstance target) {
+        return new SettingsCopySpec.None();
+    }
 
-    default void afterSettingsCopied(ModuleInstance source, ModuleInstance target) {}
+    default void applySettingsCopy(ModuleInstance target, SettingsCopySpec spec) {
+        if (!(spec instanceof SettingsCopySpec.None)) {
+            throw new IllegalArgumentException(getClass().getSimpleName() + " cannot apply settings copy " + spec);
+        }
+    }
 
     default FeatureContribution featureContribution(ModuleInstance module, PlanetaryFeatureKey feature,
         int coveredTiles, int totalTiles) {

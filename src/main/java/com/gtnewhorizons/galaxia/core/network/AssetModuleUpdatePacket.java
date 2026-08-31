@@ -1,10 +1,6 @@
 package com.gtnewhorizons.galaxia.core.network;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 
 import javax.annotation.Nullable;
@@ -24,17 +20,13 @@ import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
-import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
-import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -48,16 +40,12 @@ public final class AssetModuleUpdatePacket implements IMessage {
 
     private static final int MAX_RECIPE_PAYLOAD_BYTES = 4096;
     private static final int MAX_RECIPE_STACKS = 64;
-    private static final int MAX_TILE_PICKER_TARGETS = 256;
-    private static final int MAX_TILE_COORD_PAYLOAD_BYTES = Integer.BYTES + MAX_TILE_PICKER_TARGETS * Integer.BYTES * 2;
 
     private CelestialAsset.ID assetId;
     private int moduleIndex;
     private ModuleInstance.ID moduleId;
     private ConfigAction configAction;
-    private String stringPayload;
     private byte bytePayload;
-    private short shortPayload;
     private byte[] rawPayload;
 
     public AssetModuleUpdatePacket() {}
@@ -77,63 +65,6 @@ public final class AssetModuleUpdatePacket implements IMessage {
         AssetModuleUpdatePacket packet = config(assetId, moduleIndex, moduleId, action);
         packet.bytePayload = (byte) Objects.requireNonNull(payload, "payload")
             .ordinal();
-        return packet;
-    }
-
-    public static AssetModuleUpdatePacket minerOreBlacklisted(CelestialAsset.ID assetId, int moduleIndex,
-        ModuleInstance.ID moduleId, String oreKey, boolean blacklisted) {
-        AssetModuleUpdatePacket packet = config(assetId, moduleIndex, moduleId, ConfigAction.SET_MINER_ORE_BLACKLISTED);
-        packet.stringPayload = Objects.requireNonNull(oreKey, "oreKey");
-        packet.bytePayload = (byte) (blacklisted ? 1 : 0);
-        return packet;
-    }
-
-    public static AssetModuleUpdatePacket moduleSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
-        ModuleInstance.ID moduleId, short groupId) {
-        AssetModuleUpdatePacket packet = config(assetId, moduleIndex, moduleId, ConfigAction.SET_SETTINGS_GROUP);
-        packet.shortPayload = groupId;
-        return packet;
-    }
-
-    public static AssetModuleUpdatePacket createModuleSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
-        ModuleInstance.ID moduleId) {
-        return createModuleSettingsGroup(assetId, moduleIndex, moduleId, "");
-    }
-
-    public static AssetModuleUpdatePacket createModuleSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
-        ModuleInstance.ID moduleId, String displayName) {
-        AssetModuleUpdatePacket packet = config(assetId, moduleIndex, moduleId, ConfigAction.CREATE_SETTINGS_GROUP);
-        packet.stringPayload = displayName == null ? "" : displayName;
-        return packet;
-    }
-
-    public static AssetModuleUpdatePacket renameModuleSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
-        ModuleInstance.ID moduleId, short groupId, String displayName) {
-        AssetModuleUpdatePacket packet = config(assetId, moduleIndex, moduleId, ConfigAction.RENAME_SETTINGS_GROUP);
-        packet.shortPayload = groupId;
-        packet.stringPayload = Objects.requireNonNull(displayName, "displayName");
-        return packet;
-    }
-
-    public static AssetModuleUpdatePacket copyModuleSettings(CelestialAsset.ID assetId, int moduleIndex,
-        ModuleInstance.ID moduleId, List<StationTileCoord> targetCoords) {
-        Objects.requireNonNull(targetCoords, "targetCoords");
-        if (targetCoords.isEmpty()) {
-            throw new IllegalArgumentException("copy module settings target list must not be empty");
-        }
-        if (targetCoords.size() > MAX_TILE_PICKER_TARGETS) {
-            throw new IllegalArgumentException("too many copy module settings targets: " + targetCoords.size());
-        }
-        AssetModuleUpdatePacket packet = config(assetId, moduleIndex, moduleId, ConfigAction.COPY_MODULE_SETTINGS);
-        ByteBuf payload = Unpooled.buffer(Integer.BYTES + targetCoords.size() * Integer.BYTES * 2);
-        payload.writeInt(targetCoords.size());
-        for (StationTileCoord coord : targetCoords) {
-            Objects.requireNonNull(coord, "target coord");
-            payload.writeInt(coord.dx());
-            payload.writeInt(coord.dy());
-        }
-        packet.rawPayload = new byte[payload.writerIndex()];
-        payload.readBytes(packet.rawPayload);
         return packet;
     }
 
@@ -205,11 +136,6 @@ public final class AssetModuleUpdatePacket implements IMessage {
     }
 
     public enum ConfigAction {
-        SET_SETTINGS_GROUP,
-        CREATE_SETTINGS_GROUP,
-        RENAME_SETTINGS_GROUP,
-        COPY_MODULE_SETTINGS,
-        SET_MINER_ORE_BLACKLISTED,
         SET_RECIPE_SCHEDULER_MODE,
         ADD_RECIPE_SLOT,
         UPDATE_RECIPE_SLOT,
@@ -223,17 +149,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
         PacketUtil.writeId(buf, moduleId);
         PacketUtil.writeEnum(buf, configAction);
         switch (configAction) {
-            case SET_SETTINGS_GROUP -> buf.writeShort(shortPayload);
-            case CREATE_SETTINGS_GROUP -> PacketUtil.writeString(buf, stringPayload == null ? "" : stringPayload);
-            case RENAME_SETTINGS_GROUP -> {
-                buf.writeShort(shortPayload);
-                PacketUtil.writeString(buf, stringPayload);
-            }
-            case COPY_MODULE_SETTINGS, ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> writeRawPayload(buf);
-            case SET_MINER_ORE_BLACKLISTED -> {
-                PacketUtil.writeString(buf, stringPayload);
-                buf.writeByte(bytePayload);
-            }
+            case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> writeRawPayload(buf);
             case SET_RECIPE_SCHEDULER_MODE -> buf.writeByte(bytePayload);
         }
     }
@@ -245,23 +161,6 @@ public final class AssetModuleUpdatePacket implements IMessage {
         moduleId = PacketUtil.readModuleId(buf);
         configAction = PacketUtil.readEnum(buf, ConfigAction.class);
         switch (configAction) {
-            case SET_SETTINGS_GROUP -> shortPayload = buf.readShort();
-            case CREATE_SETTINGS_GROUP -> stringPayload = PacketUtil.readString(buf);
-            case RENAME_SETTINGS_GROUP -> {
-                shortPayload = buf.readShort();
-                stringPayload = PacketUtil.readString(buf);
-            }
-            case COPY_MODULE_SETTINGS -> {
-                rawPayload = readRawPayload(buf, MAX_TILE_COORD_PAYLOAD_BYTES, "tile coord");
-                decodeTileCoordPayload(rawPayload);
-            }
-            case SET_MINER_ORE_BLACKLISTED -> {
-                stringPayload = PacketUtil.readString(buf);
-                bytePayload = buf.readByte();
-                if (bytePayload != 0 && bytePayload != 1) {
-                    throw new IllegalStateException("invalid miner blacklist flag: " + bytePayload);
-                }
-            }
             case SET_RECIPE_SCHEDULER_MODE -> bytePayload = buf.readByte();
             case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> rawPayload = readRawPayload(
                 buf,
@@ -290,14 +189,6 @@ public final class AssetModuleUpdatePacket implements IMessage {
         return configAction;
     }
 
-    public String getStringPayload() {
-        return stringPayload;
-    }
-
-    public boolean getBooleanPayload() {
-        return bytePayload != 0;
-    }
-
     public byte[] getRawPayload() {
         return rawPayload;
     }
@@ -317,13 +208,6 @@ public final class AssetModuleUpdatePacket implements IMessage {
         if (!moduleId.equals(module.id)) return false;
 
         handleConfig(state, module);
-        if (configAction == ConfigAction.SET_MINER_ORE_BLACKLISTED && module.groupId() != 0) return true;
-        if (configAction == ConfigAction.SET_SETTINGS_GROUP || configAction == ConfigAction.CREATE_SETTINGS_GROUP
-            || configAction == ConfigAction.RENAME_SETTINGS_GROUP
-            || configAction == ConfigAction.COPY_MODULE_SETTINGS) {
-            return true;
-        }
-        state.markModuleDirty(module.id);
         return true;
     }
 
@@ -333,35 +217,8 @@ public final class AssetModuleUpdatePacket implements IMessage {
 
     private void handleConfig(AutomatedFacility state, ModuleInstance module) {
         switch (configAction) {
-            case SET_SETTINGS_GROUP -> state.assignSettingsGroup(module, shortPayload);
-            case CREATE_SETTINGS_GROUP -> state.createSettingsGroupForModule(
-                module,
-                stringPayload == null || stringPayload.isBlank() ? null : stringPayload);
-            case RENAME_SETTINGS_GROUP -> state.renameSettingsGroupForModule(module, shortPayload, stringPayload);
-            case COPY_MODULE_SETTINGS -> handleCopyModuleSettings(state, module);
-            case SET_MINER_ORE_BLACKLISTED -> handleMinerOreBlacklisted(state, module);
             case SET_RECIPE_SCHEDULER_MODE -> handleRecipeSchedulerMode(state, module);
             case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> handleRecipeSlot(state, module);
-        }
-    }
-
-    private void handleCopyModuleSettings(AutomatedFacility state, ModuleInstance source) {
-        if (!FacilityModuleRegistry.get(source.kind())
-            .settingsGroups()) {
-            throw new IllegalStateException("COPY_MODULE_SETTINGS sent to module without settings " + source.id);
-        }
-        StationLayout layout = state.stationLayout();
-        if (layout == null) {
-            throw new IllegalStateException("COPY_MODULE_SETTINGS requires a station layout for " + state.assetId);
-        }
-        Set<ModuleInstance.ID> copiedTargets = new HashSet<>();
-        for (StationTileCoord targetCoord : decodeTileCoordPayload(rawPayload)) {
-            ModuleInstance target = layout.moduleAt(targetCoord);
-            if (target == null) {
-                throw new IllegalStateException(
-                    "COPY_MODULE_SETTINGS target tile is empty: " + targetCoord.dx() + "," + targetCoord.dy());
-            }
-            if (copiedTargets.add(target.id)) state.copyModuleRuntimeSettings(source, target);
         }
     }
 
@@ -471,33 +328,6 @@ public final class AssetModuleUpdatePacket implements IMessage {
             }
             default -> false;
         };
-    }
-
-    private void handleMinerOreBlacklisted(AutomatedFacility state, ModuleInstance module) {
-        if (!(module.component() instanceof ModuleMiner)) {
-            throw new IllegalStateException("SET_MINER_ORE_BLACKLISTED sent to non-miner module " + module.id);
-        }
-        state.setMinerOreBlacklisted(module, stringPayload, getBooleanPayload());
-    }
-
-    static List<StationTileCoord> decodeTileCoordPayload(byte[] payload) {
-        if (payload == null || payload.length < Integer.BYTES || payload.length > MAX_TILE_COORD_PAYLOAD_BYTES) {
-            throw new IllegalArgumentException(
-                "invalid tile coord payload length: " + (payload == null ? 0 : payload.length));
-        }
-        ByteBuf buffer = Unpooled.wrappedBuffer(payload);
-        int count = buffer.readInt();
-        if (count <= 0 || count > MAX_TILE_PICKER_TARGETS) {
-            throw new IllegalArgumentException("invalid tile coord payload target count: " + count);
-        }
-        if (buffer.readableBytes() != count * Integer.BYTES * 2) {
-            throw new IllegalArgumentException("malformed tile coord payload for target count: " + count);
-        }
-        List<StationTileCoord> coordinates = new ArrayList<>(count);
-        for (int i = 0; i < count; i++) {
-            coordinates.add(StationTileCoord.of(buffer.readInt(), buffer.readInt()));
-        }
-        return coordinates;
     }
 
     private static void writeItemStacks(ByteBuf buf, ItemStack[] stacks) {

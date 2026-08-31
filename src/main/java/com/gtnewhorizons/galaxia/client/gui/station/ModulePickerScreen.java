@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 import javax.annotation.Nullable;
 
@@ -109,7 +110,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private static volatile ModuleTier pendingSelectedTier = ModuleTier.NONE;
     private static volatile HammerVariant pendingHammerVariant = HammerVariant.BASE;
     private static volatile MinerFocusTier pendingMinerFocusTier = MinerFocusTier.NONE;
-    private static volatile short pendingSettingsGroupId;
+    private static volatile @Nullable SettingsGroup.ID pendingSettingsGroupId;
     private static volatile boolean pendingInstantBuild;
     private static volatile boolean pendingMultipleBuild;
 
@@ -119,7 +120,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         pendingInstantBuild = instantBuild;
         pendingMultipleBuild = false;
         pendingSelectedKind = null;
-        pendingSettingsGroupId = 0;
+        pendingSettingsGroupId = null;
         FACTORY.openClient();
     }
 
@@ -317,7 +318,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                 createChoiceButton(
                     option::label,
                     () -> true,
-                    () -> pendingSettingsGroupId == option.groupId(),
+                    () -> Objects.equals(pendingSettingsGroupId, option.groupId()),
                     () -> pendingSettingsGroupId = option.groupId()).pos(x, y)
                         .size(SPEC_BUTTON_WIDTH + 24, SPEC_BUTTON_HEIGHT));
             x += SPEC_BUTTON_WIDTH + 24 + SPEC_BUTTON_GAP;
@@ -342,7 +343,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         pendingSelectedTier = kind.defaultTier();
         pendingHammerVariant = HammerVariant.BASE;
         pendingMinerFocusTier = MinerFocusTier.NONE;
-        pendingSettingsGroupId = 0;
+        pendingSettingsGroupId = null;
         normalizeSelectedTier(kind);
     }
 
@@ -469,14 +470,14 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
 
     private static List<GroupOption> groupOptions(AutomatedFacility facility, FacilityModuleKind kind) {
         FacilityModuleRegistry.Definition definition = FacilityModuleRegistry.get(kind);
-        if (definition == null || !definition.settingsGroups()) return List.of(new GroupOption("No Group", (short) 0));
+        if (definition == null || !definition.settingsGroups()) return List.of(new GroupOption("No Group", null));
         List<GroupOption> options = new ArrayList<>();
-        options.add(new GroupOption("No Group", (short) 0));
-        facility.settingsGroups()
+        options.add(new GroupOption("No Group", null));
+        facility.moduleSettingsSnapshot()
             .groups()
             .values()
             .stream()
-            .filter(group -> group.kind() == kind && group.isJoinable())
+            .filter(group -> group.kind() == kind)
             .sorted(Comparator.comparing(SettingsGroup::displayName, String.CASE_INSENSITIVE_ORDER))
             .limit(8)
             .forEach(group -> options.add(new GroupOption(group.displayName(), group.id())));
@@ -621,7 +622,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         pendingSelectedTier = ModuleTier.NONE;
         pendingHammerVariant = HammerVariant.BASE;
         pendingMinerFocusTier = MinerFocusTier.NONE;
-        pendingSettingsGroupId = 0;
+        pendingSettingsGroupId = null;
         pendingInstantBuild = false;
         pendingMultipleBuild = false;
     }
@@ -715,5 +716,5 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         }
     }
 
-    private record GroupOption(String label, short groupId) {}
+    private record GroupOption(String label, SettingsGroup.ID groupId) {}
 }

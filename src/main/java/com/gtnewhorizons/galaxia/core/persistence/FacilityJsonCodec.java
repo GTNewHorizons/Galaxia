@@ -31,6 +31,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityModuleSettingsSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
@@ -58,6 +59,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
@@ -85,17 +87,43 @@ final class FacilityJsonCodec {
     private FacilityJsonCodec() {}
 
     static FacilityStateJson encode(AutomatedFacility state) {
-        state.syncRecipeSettingsGroupsFromModules();
         FacilityStateJson out = new FacilityStateJson();
         out.energyStored = state.getEnergyStored();
         out.stationFeatureSalt = state.stationFeatureSalt();
         out.itemBounds = encodeBounds(state.getBounds(true));
         out.fluidBounds = encodeBounds(state.getBounds(false));
         out.filters = new LinkedHashMap<>(state.filtersSnapshot());
-        out.settingsGroupsNextId = state.settingsGroups()
-            .nextGroupId();
+        FacilityModuleSettingsSnapshot settingsSnapshot = state.moduleSettingsSnapshot();
         out.settingsGroups = new ArrayList<>();
-        sortedSettingsGroups(state).forEach(group -> out.settingsGroups.add(encodeSettingsGroup(group)));
+        settingsSnapshot.groups()
+            .values()
+            .stream()
+            .sorted(
+                Comparator.comparingInt(
+                    group -> group.id()
+                        .value()))
+            .forEach(group -> out.settingsGroups.add(encodeSettingsGroup(group)));
+        out.privateModuleSettings = new LinkedHashMap<>();
+        out.settingsMembership = new LinkedHashMap<>();
+        settingsSnapshot.membership()
+            .entrySet()
+            .stream()
+            .sorted(Map.Entry.comparingByKey(Comparator.comparing(ModuleInstance.ID::toString)))
+            .forEach(
+                entry -> out.settingsMembership.put(
+                    entry.getKey()
+                        .toString(),
+                    entry.getValue()
+                        .value()));
+        settingsSnapshot.privateSettings()
+            .entrySet()
+            .stream()
+            .sorted(Map.Entry.comparingByKey(Comparator.comparing(ModuleInstance.ID::toString)))
+            .forEach(
+                entry -> out.privateModuleSettings.put(
+                    entry.getKey()
+                        .toString(),
+                    encodeSettingsGroupSettings(entry.getValue())));
         out.modules = new ArrayList<>();
         int moduleCount = 0;
         for (ModuleInstance m : state.modules()) {
@@ -111,11 +139,18 @@ final class FacilityJsonCodec {
             mj.tier = PacketUtil.enumOrdinal(m.tier());
             mj.priorityOverride = PacketUtil.enumOrdinal(m.priorityOverride());
             mj.enabled = m.enabled();
-            mj.groupId = m.groupId();
             mj.shape = PacketUtil.enumOrdinal(m.shape());
             mj.rotation = (byte) m.rotation();
             mj.parallel = m.component() instanceof IParallelModule pm ? pm.getParallel() : 1;
             mj.moduleOperation = encodeModuleOperation(m.kind(), m.operationOrNull());
+            if (m.component() instanceof IRecipeModule) {
+                RecipeScheduleState scheduleState = state.recipeScheduleState(m);
+                if (scheduleState != null) {
+                    mj.recipeSchedule = new RecipeScheduleJson();
+                    mj.recipeSchedule.orderCursor = scheduleState.orderCursor();
+                    mj.recipeSchedule.orderRemaining = scheduleState.orderRemaining();
+                }
+            }
             JsonObject moduleData = new JsonObject();
             if (m.component() instanceof ModuleHammer hammer) {
                 moduleData.add("config", PURE_GSON.toJsonTree(hammer.config()));
@@ -161,12 +196,13 @@ final class FacilityJsonCodec {
                     "detectedCounterpartBodyKey",
                     detectedCounterpartBodyKey == null ? JsonNull.INSTANCE
                         : PURE_GSON.toJsonTree(CelestialObjectKeyJsonCodec.encode(detectedCounterpartBodyKey)));
-            } else if (m.component() instanceof IRecipeModule recipeModule) {
-                RecipeConfig rc = recipeModule.getRecipeConfig();
-                if (rc != null) {
-                    encodeRecipeConfig(moduleData, rc);
+            } else if (m.component() instanceof IRecipeModule recipeModule && !FacilityModuleRegistry.get(m.kind())
+                .settingsGroups()) {
+                    RecipeConfig rc = recipeModule.getRecipeConfig();
+                    if (rc != null) {
+                        encodeRecipeConfig(moduleData, rc);
+                    }
                 }
-            }
             mj.data = moduleData;
             mj.consumedResources = new LinkedHashMap<>();
             for (Map.Entry<ItemStack, Long> e : m.getConstructionInventory()
@@ -227,15 +263,6 @@ final class FacilityJsonCodec {
         return out;
     }
 
-    private static List<SettingsGroup> sortedSettingsGroups(AutomatedFacility state) {
-        return state.settingsGroups()
-            .groups()
-            .values()
-            .stream()
-            .sorted(Comparator.comparingInt(SettingsGroup::id))
-            .toList();
-    }
-
     static AutomatedFacility decode(CelestialAsset asset, FacilityStateJson json) {
         if (asset == null || json == null || asset.systemKey == null) return null;
         if (!(asset instanceof AutomatedFacility state)) return null;
@@ -244,25 +271,7 @@ final class FacilityJsonCodec {
         decodeBounds(state, json.itemBounds, true);
         decodeBounds(state, json.fluidBounds, false);
         decodeFilters(state, json.filters);
-        state.settingsGroups()
-            .clear();
-        state.settingsGroups()
-            .setNextGroupId(json.settingsGroupsNextId);
-        List<SettingsGroupJson> settingsGroups = Objects
-            .requireNonNull(json.settingsGroups, "[PERSIST] Facility missing settingsGroups");
-        for (SettingsGroupJson groupJson : settingsGroups) {
-            FacilityModuleKind groupKind = Objects.requireNonNull(
-                safeValueOf(FacilityModuleKind.class, groupJson.kind),
-                "[PERSIST] Settings group " + groupJson.id + " has invalid kind: " + groupJson.kind);
-            state.settingsGroups()
-                .restore(
-                    groupJson.id,
-                    groupKind,
-                    groupJson.displayName,
-                    groupJson.joinable,
-                    decodeSettingsGroupSettings(groupJson));
-        }
-
+        Map<ModuleInstance.ID, RecipeScheduleState> recipeScheduleStates = new LinkedHashMap<>();
         int moduleDecodedCount = 0;
         if (json.modules != null) {
             for (ModuleJson mj : json.modules) {
@@ -314,8 +323,6 @@ final class FacilityJsonCodec {
                     (module.anchorOrNull() != null ? (int) module.anchorOrNull()
                         .dy() : ModuleInstance.NULL_ANCHOR_LOG_VALUE));
                 JsonObject data = mj.data != null ? mj.data.getAsJsonObject() : null;
-                module.setGroupId(mj.groupId);
-
                 switch (kind) {
                     case HAMMER -> {
                         JsonObject hammerData = Objects.requireNonNull(data, "[PERSIST] Hammer module missing data");
@@ -345,10 +352,6 @@ final class FacilityJsonCodec {
                         if (!(module.component() instanceof ModuleMiner miner)) {
                             throw new IllegalStateException(
                                 "[PERSIST] Miner module " + moduleId + " has non-miner data");
-                        }
-                        if (module.groupId() == 0) {
-                            throw new IllegalStateException(
-                                "[PERSIST] Miner module " + moduleId + " malformed: has no settings group");
                         }
                         decodeMinerSettings(module, miner, data);
                     }
@@ -422,6 +425,13 @@ final class FacilityJsonCodec {
                     }
                 }
                 module.setOperation(decodeModuleOperation(mj.moduleOperation, module.id));
+                if (mj.recipeSchedule != null) {
+                    if (!(module.component() instanceof IRecipeModule)) {
+                        throw new IllegalStateException(
+                            "[PERSIST] Non-recipe module " + module.id + " has recipe schedule state");
+                    }
+                    recipeScheduleStates.put(module.id, decodeRecipeScheduleState(module.id, mj.recipeSchedule));
+                }
                 state.addModule(module);
                 moduleDecodedCount++;
             }
@@ -534,26 +544,8 @@ final class FacilityJsonCodec {
                 json.layoutTiles != null ? json.layoutTiles.size() : 0);
         }
 
-        for (ModuleInstance module : state.modules()) {
-            if (module.groupId() != 0) {
-                SettingsGroup group = state.settingsGroups()
-                    .require(module.groupId());
-                if (!group.members()
-                    .contains(module.anchor())) {
-                    state.settingsGroups()
-                        .addMember(module.groupId(), module.anchor());
-                }
-            }
-        }
-        for (SettingsGroup group : state.settingsGroups()
-            .groups()
-            .values()) {
-            if (group.members()
-                .isEmpty()) {
-                throw new IllegalStateException("[PERSIST] Settings group " + group.id() + " has no member modules");
-            }
-        }
-        state.applySettingsGroupsToModules();
+        state.restoreModuleSettings(decodeModuleSettings(state, json));
+        state.restoreRecipeScheduleStates(recipeScheduleStates);
 
         LOG.info(
             "[PERSIST] LOAD DECODE END: facility {} has {} module(s), layout has {} tile(s)",
@@ -670,8 +662,9 @@ final class FacilityJsonCodec {
         Map<String, BoundJson> itemBounds;
         Map<String, BoundJson> fluidBounds;
         Map<Boolean, List<String>> filters;
-        short settingsGroupsNextId;
         List<SettingsGroupJson> settingsGroups;
+        Map<String, JsonObject> privateModuleSettings;
+        Map<String, Integer> settingsMembership;
         List<ModuleJson> modules;
         Map<String, Long> buffer;
         Map<String, Long> fluidBuffer;
@@ -729,10 +722,9 @@ final class FacilityJsonCodec {
 
     static final class SettingsGroupJson {
 
-        short id;
+        int id;
         String kind;
         String displayName;
-        boolean joinable;
         JsonObject data;
     }
 
@@ -746,13 +738,28 @@ final class FacilityJsonCodec {
         byte tier;
         byte priorityOverride;
         boolean enabled;
-        short groupId;
         byte shape;
         byte rotation;
         byte parallel;
+        RecipeScheduleJson recipeSchedule;
         JsonElement data;
         Map<String, Long> consumedResources;
         ModuleOperationJson moduleOperation;
+    }
+
+    static final class RecipeScheduleJson {
+
+        byte orderCursor;
+        byte orderRemaining;
+    }
+
+    private static RecipeScheduleState decodeRecipeScheduleState(ModuleInstance.ID moduleId,
+        RecipeScheduleJson encoded) {
+        try {
+            return new RecipeScheduleState(encoded.orderCursor, encoded.orderRemaining);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalStateException("[PERSIST] Module " + moduleId + " has invalid recipe schedule state", ex);
+        }
     }
 
     static final class ModuleOperationJson {
@@ -1134,13 +1141,82 @@ final class FacilityJsonCodec {
 
     private static SettingsGroupJson encodeSettingsGroup(SettingsGroup group) {
         SettingsGroupJson json = new SettingsGroupJson();
-        json.id = group.id();
+        json.id = group.id()
+            .value();
         json.kind = group.kind()
             .name();
         json.displayName = group.displayName();
-        json.joinable = group.isJoinable();
         json.data = encodeSettingsGroupSettings(group.settings());
         return json;
+    }
+
+    private static FacilityModuleSettingsSnapshot decodeModuleSettings(AutomatedFacility state,
+        FacilityStateJson json) {
+        List<SettingsGroupJson> encodedGroups = Objects
+            .requireNonNull(json.settingsGroups, "[PERSIST] Facility missing settingsGroups");
+        Map<String, JsonObject> encodedPrivate = Objects
+            .requireNonNull(json.privateModuleSettings, "[PERSIST] Facility missing privateModuleSettings");
+        Map<String, Integer> encodedMembership = Objects
+            .requireNonNull(json.settingsMembership, "[PERSIST] Facility missing settingsMembership");
+        return new FacilityModuleSettingsSnapshot(
+            decodePrivateModuleSettings(state, encodedPrivate),
+            decodeSettingsGroups(encodedGroups),
+            decodeSettingsMembership(encodedMembership));
+    }
+
+    private static Map<SettingsGroup.ID, SettingsGroup> decodeSettingsGroups(List<SettingsGroupJson> encodedGroups) {
+        Map<SettingsGroup.ID, SettingsGroup> groups = new LinkedHashMap<>();
+        for (SettingsGroupJson groupJson : encodedGroups) {
+            SettingsGroup.ID id = new SettingsGroup.ID(groupJson.id);
+            FacilityModuleKind kind = Objects.requireNonNull(
+                safeValueOf(FacilityModuleKind.class, groupJson.kind),
+                "[PERSIST] Settings group " + id + " has invalid kind: " + groupJson.kind);
+            SettingsGroup group = new SettingsGroup(
+                id,
+                kind,
+                groupJson.displayName,
+                decodeSettings(kind, groupJson.data, "settings group " + id));
+            if (groups.put(id, group) != null) {
+                throw new IllegalStateException("[PERSIST] Duplicate settings group " + id);
+            }
+        }
+        return groups;
+    }
+
+    private static Map<ModuleInstance.ID, ModuleSettings> decodePrivateModuleSettings(AutomatedFacility state,
+        Map<String, JsonObject> encodedPrivate) {
+        Map<ModuleInstance.ID, ModuleSettings> privateSettings = new LinkedHashMap<>();
+        for (Map.Entry<String, JsonObject> entry : encodedPrivate.entrySet()) {
+            ModuleInstance.ID moduleId = ModuleInstance.ID.from(entry.getKey());
+            if (moduleId == null) throw new IllegalStateException("[PERSIST] Invalid private settings module ID");
+            int moduleIndex = state.moduleIndex(moduleId);
+            if (moduleIndex < 0) {
+                throw new IllegalStateException("[PERSIST] Private settings reference missing module " + moduleId);
+            }
+            FacilityModuleKind kind = state.modules()
+                .get(moduleIndex)
+                .kind();
+            if (privateSettings
+                .put(moduleId, decodeSettings(kind, entry.getValue(), "private settings for " + moduleId)) != null) {
+                throw new IllegalStateException("[PERSIST] Duplicate private settings for " + moduleId);
+            }
+        }
+        return privateSettings;
+    }
+
+    private static Map<ModuleInstance.ID, SettingsGroup.ID> decodeSettingsMembership(
+        Map<String, Integer> encodedMembership) {
+        Map<ModuleInstance.ID, SettingsGroup.ID> membership = new LinkedHashMap<>();
+        for (Map.Entry<String, Integer> entry : encodedMembership.entrySet()) {
+            ModuleInstance.ID moduleId = ModuleInstance.ID.from(entry.getKey());
+            if (moduleId == null || entry.getValue() == null) {
+                throw new IllegalStateException("[PERSIST] Invalid module settings membership: " + entry);
+            }
+            if (membership.put(moduleId, new SettingsGroup.ID(entry.getValue())) != null) {
+                throw new IllegalStateException("[PERSIST] Duplicate module settings membership for " + moduleId);
+            }
+        }
+        return membership;
     }
 
     private static JsonObject encodeSettingsGroupSettings(ModuleSettings settings) {
@@ -1160,34 +1236,28 @@ final class FacilityJsonCodec {
         throw new IllegalStateException("[PERSIST] Unsupported settings group payload " + settings);
     }
 
-    private static ModuleSettings decodeSettingsGroupSettings(SettingsGroupJson groupJson) {
-        JsonObject data = Objects
-            .requireNonNull(groupJson.data, "[PERSIST] Settings group " + groupJson.id + " missing data");
-        FacilityModuleKind kind = Objects.requireNonNull(
-            safeValueOf(FacilityModuleKind.class, groupJson.kind),
-            "[PERSIST] Settings group " + groupJson.id + " has invalid kind: " + groupJson.kind);
+    private static ModuleSettings decodeSettings(FacilityModuleKind kind, JsonObject encoded, String context) {
+        JsonObject data = Objects.requireNonNull(encoded, "[PERSIST] " + context + " missing data");
         if (kind == FacilityModuleKind.MINER) {
             if (data.entrySet()
                 .size() != 1 || !data.has("minerSettings")) {
-                throw new IllegalStateException(
-                    "[PERSIST] Miner settings group " + groupJson.id + " has malformed data");
+                throw new IllegalStateException("[PERSIST] " + context + " has malformed miner data");
             }
             JsonObject settingsData = data.getAsJsonObject("minerSettings");
             JsonElement keysElement = Objects.requireNonNull(
                 settingsData.get("blacklistedOreKeys"),
-                "[PERSIST] Miner settings group " + groupJson.id + " missing blacklistedOreKeys");
+                "[PERSIST] " + context + " missing blacklistedOreKeys");
             Type keySetType = new TypeToken<Set<String>>() {}.getType();
             Set<String> keys = Objects.requireNonNull(
                 PURE_GSON.fromJson(keysElement, keySetType),
-                "[PERSIST] Miner settings group " + groupJson.id + " has null blacklistedOreKeys");
+                "[PERSIST] " + context + " has null blacklistedOreKeys");
             return new MinerSettings(keys);
         }
         if (FacilityModuleRegistry.get(kind)
             .settingsGroups()) {
             if (data.entrySet()
                 .size() != 1 || !data.has("recipeSettings")) {
-                throw new IllegalStateException(
-                    "[PERSIST] Recipe settings group " + groupJson.id + " has malformed data");
+                throw new IllegalStateException("[PERSIST] " + context + " has malformed recipe data");
             }
             JsonObject recipeData = data.getAsJsonObject("recipeSettings");
             return new RecipeModuleSettings(recipeData.has("recipeMode") ? decodeRecipeConfig(recipeData) : null);

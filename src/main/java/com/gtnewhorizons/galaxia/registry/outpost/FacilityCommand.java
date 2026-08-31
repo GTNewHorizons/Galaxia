@@ -19,8 +19,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 
-public sealed interface FacilityCommand permits FacilityCommand.AdjustInventory,FacilityCommand.ClearInventoryResource,FacilityCommand.SetInventoryBound,FacilityCommand.ClearInventoryBound,FacilityCommand.ReplaceFilters,FacilityCommand.PutLogisticsConfig,FacilityCommand.RemoveLogisticsConfig,FacilityCommand.BuildModules,FacilityCommand.CopyBuildModules,FacilityCommand.RequestModuleDeconstruction,FacilityCommand.CancelModuleOperation,FacilityCommand.ModuleConfiguration,FacilityCommand.ModuleOperationRequest {
+public sealed interface FacilityCommand permits FacilityCommand.AdjustInventory,FacilityCommand.ClearInventoryResource,FacilityCommand.SetInventoryBound,FacilityCommand.ClearInventoryBound,FacilityCommand.ReplaceFilters,FacilityCommand.PutLogisticsConfig,FacilityCommand.RemoveLogisticsConfig,FacilityCommand.BuildModules,FacilityCommand.CopyBuildModules,FacilityCommand.RequestModuleDeconstruction,FacilityCommand.CancelModuleOperation,FacilityCommand.ModuleConfiguration,FacilityCommand.ModuleOperationRequest,FacilityCommand.ModuleSettingsCommand {
 
     CelestialAsset.ID facilityId();
 
@@ -49,8 +50,8 @@ public sealed interface FacilityCommand permits FacilityCommand.AdjustInventory,
     record RemoveLogisticsConfig(CelestialAsset.ID facilityId, InventoryKey resource) implements FacilityCommand {}
 
     record BuildModules(CelestialAsset.ID facilityId, FacilityModuleKind kind, ModuleShape shape,
-        IModuleComponent.BuildPhysicalSpec physicalSpec, short settingsGroupId, boolean instantBuild,
-        @Nullable List<ModulePlacement> placements) implements FacilityCommand {
+        IModuleComponent.BuildPhysicalSpec physicalSpec, @Nullable SettingsGroup.ID settingsGroupId,
+        boolean instantBuild, @Nullable List<ModulePlacement> placements) implements FacilityCommand {
 
         public BuildModules {
             placements = placements == null ? null : List.copyOf(placements);
@@ -69,6 +70,30 @@ public sealed interface FacilityCommand permits FacilityCommand.AdjustInventory,
         implements FacilityCommand {}
 
     record CancelModuleOperation(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId) implements FacilityCommand {}
+
+    record CreateSettingsGroup(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, String displayName)
+        implements ModuleSettingsCommand {}
+
+    record RenameSettingsGroup(CelestialAsset.ID facilityId, SettingsGroup.ID groupId, String displayName)
+        implements ModuleSettingsCommand {}
+
+    record JoinSettingsGroup(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, SettingsGroup.ID groupId)
+        implements ModuleSettingsCommand {}
+
+    record LeaveSettingsGroup(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId)
+        implements ModuleSettingsCommand {}
+
+    record CopyModuleSettings(CelestialAsset.ID facilityId, ModuleInstance.ID sourceModuleId,
+        List<ModuleInstance.ID> targetModuleIds) implements ModuleSettingsCommand {
+
+        public CopyModuleSettings {
+            targetModuleIds = targetModuleIds == null ? null : List.copyOf(targetModuleIds);
+        }
+
+    }
+
+    record SetMinerOreBlacklisted(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, String oreKey,
+        boolean blacklisted) implements ModuleSettingsCommand {}
 
     record SetHammerShootingConfig(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, AllowShootingConfig config)
         implements ModuleConfiguration {}
@@ -106,6 +131,10 @@ public sealed interface FacilityCommand permits FacilityCommand.AdjustInventory,
         FacilityCommand permits SetHammerShootingConfig,SetHammerRoutePriority,SetMinerFocusOre,ConfigureDebugDataGenerator {
 
         ModuleInstance.ID moduleId();
+    }
+
+    sealed interface ModuleSettingsCommand extends
+        FacilityCommand permits CreateSettingsGroup,RenameSettingsGroup,JoinSettingsGroup,LeaveSettingsGroup,CopyModuleSettings,SetMinerOreBlacklisted {
     }
 
     sealed interface ModuleOperationRequest

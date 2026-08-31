@@ -1,16 +1,16 @@
 package com.gtnewhorizons.galaxia.registry.outpost.station.settings;
 
+import java.util.Objects;
+
 import javax.annotation.Nullable;
 
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 
 public final class RecipeModuleSettings implements ModuleSettings {
 
-    private RecipeConfig config;
+    private final RecipeConfig config;
 
     public RecipeModuleSettings(@Nullable RecipeConfig config) {
         this.config = copyOptionalConfig(config);
@@ -18,32 +18,7 @@ public final class RecipeModuleSettings implements ModuleSettings {
 
     @Nullable
     public RecipeConfig config() {
-        return config;
-    }
-
-    public void setConfig(@Nullable RecipeConfig config) {
-        this.config = copyOptionalConfig(config);
-    }
-
-    @Override
-    public RecipeModuleSettings copy() {
-        return new RecipeModuleSettings(config);
-    }
-
-    @Override
-    public void applyTo(ModuleInstance instance) {
-        if (!(instance.component() instanceof IRecipeModule recipeModule)) {
-            throw new IllegalStateException("RecipeModuleSettings applied to non-recipe module " + instance.id);
-        }
-        recipeModule.setRecipeConfig(copyOptionalConfig(config));
-    }
-
-    @Override
-    public ModuleSettings from(ModuleInstance instance) {
-        if (!(instance.component() instanceof IRecipeModule recipeModule)) {
-            throw new IllegalStateException("RecipeModuleSettings read from non-recipe module " + instance.id);
-        }
-        return new RecipeModuleSettings(recipeModule.getRecipeConfig());
+        return copyOptionalConfig(config);
     }
 
     public static RecipeConfig copyConfig(@Nullable RecipeConfig source) {
@@ -58,11 +33,16 @@ public final class RecipeModuleSettings implements ModuleSettings {
         for (SavedRecipe recipe : source.savedRecipes()) {
             savedRecipes.add(recipe);
         }
-        return new RecipeConfig(
-            savedRecipes,
-            source.mode(),
-            source.notDoablePolicy(),
-            source.orderCursor(),
-            source.orderRemaining());
+        return new RecipeConfig(savedRecipes, source.mode(), source.notDoablePolicy(), (byte) 0, (byte) 0);
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        return other instanceof RecipeModuleSettings settings && Objects.equals(config, settings.config);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(config);
     }
 }

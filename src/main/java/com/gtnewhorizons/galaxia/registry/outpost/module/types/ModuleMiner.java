@@ -208,19 +208,19 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
     }
 
     @Override
-    public ModuleSettings createPrivateSettings(ModuleInstance module) {
+    public ModuleSettings captureModuleSettings(ModuleInstance module) {
         return new MinerSettings();
     }
 
     @Override
-    public void applySettings(ModuleInstance module, ModuleSettings settings) {
+    public void validateModuleSettings(ModuleInstance module, ModuleSettings settings) {
         if (!(settings instanceof MinerSettings)) {
             throw new IllegalStateException("MINER received non-miner settings for module " + module.id);
         }
     }
 
     @Override
-    public void validateSettingsCopyTarget(ModuleInstance source, ModuleInstance target) {
+    public SettingsCopySpec prepareSettingsCopy(ModuleInstance source, ModuleInstance target) {
         if (!(source.component() instanceof ModuleMiner sourceMiner)) {
             throw new IllegalStateException("Miner settings copy source is not a miner: " + source.id);
         }
@@ -232,17 +232,18 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
             throw new IllegalStateException(
                 "Miner settings copy target " + target.id + " has no focus tier for ore " + sourceFocusOreKey);
         }
+        return new SettingsCopySpec.Miner(sourceFocusOreKey);
     }
 
     @Override
-    public void afterSettingsCopied(ModuleInstance source, ModuleInstance target) {
-        if (!(source.component() instanceof ModuleMiner sourceMiner)) {
-            throw new IllegalStateException("Miner settings copy source is not a miner: " + source.id);
-        }
+    public void applySettingsCopy(ModuleInstance target, SettingsCopySpec spec) {
         if (!(target.component() instanceof ModuleMiner targetMiner)) {
             throw new IllegalStateException("Miner settings copy target is not a miner: " + target.id);
         }
-        targetMiner.setFocusOre(sourceMiner.focusOreKeyOrNull());
+        if (!(spec instanceof SettingsCopySpec.Miner minerSpec)) {
+            throw new IllegalArgumentException("Miner received invalid settings copy spec " + spec);
+        }
+        targetMiner.setFocusOre(minerSpec.focusOreKey());
     }
 
     public MinerFocusTier focusTier() {

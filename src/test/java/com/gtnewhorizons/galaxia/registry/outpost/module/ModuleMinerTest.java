@@ -2,10 +2,9 @@ package com.gtnewhorizons.galaxia.registry.outpost.module;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -19,6 +18,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityModuleSettingsSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureModuleContext;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.MiningFeatureEffects;
@@ -45,11 +46,16 @@ final class ModuleMinerTest {
         ModuleInstance miner = createMiner();
         facility.addModule(miner);
 
-        assertNotEquals(0, miner.groupId());
+        FacilityModuleSettingsSnapshot snapshot = facility.moduleSettingsSnapshot();
+        assertTrue(
+            snapshot.privateSettings()
+                .containsKey(miner.id));
         assertFalse(
-            facility.settingsGroups()
-                .require(miner.groupId())
-                .isJoinable());
+            snapshot.membership()
+                .containsKey(miner.id));
+        assertTrue(
+            snapshot.groups()
+                .isEmpty());
         assertFalse(facility.isMinerOreBlacklisted(miner, "ore:iron"));
 
         facility.setMinerOreBlacklisted(miner, "ore:iron", true);
@@ -98,15 +104,30 @@ final class ModuleMinerTest {
         facility.addModule(second);
         facility.setMinerOreBlacklisted(first, "ore:iron", true);
 
-        SettingsGroup group = facility.createSettingsGroupForModule(first, "Tin line");
-        facility.assignSettingsGroup(second, group.id());
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            facility.applyCommand(
+                new FacilityCommand.CreateSettingsGroup(facility.assetId, first.id, "Tin line"),
+                FacilityCommand.Authority.NONE));
+        SettingsGroup.ID groupId = facility.moduleSettingsSnapshot()
+            .membership()
+            .get(first.id);
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            facility.applyCommand(
+                new FacilityCommand.JoinSettingsGroup(facility.assetId, second.id, groupId),
+                FacilityCommand.Authority.NONE));
 
         assertTrue(facility.isMinerOreBlacklisted(second, "ore:iron"));
 
         facility.setMinerOreBlacklisted(second, "ore:copper", true);
         assertTrue(facility.isMinerOreBlacklisted(first, "ore:copper"));
 
-        facility.leaveSettingsGroup(second);
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            facility.applyCommand(
+                new FacilityCommand.LeaveSettingsGroup(facility.assetId, second.id),
+                FacilityCommand.Authority.NONE));
         facility.setMinerOreBlacklisted(first, "ore:gold", true);
 
         assertTrue(facility.isMinerOreBlacklisted(second, "ore:copper"));
@@ -114,123 +135,51 @@ final class ModuleMinerTest {
     }
 
     @Test
-    void noGroupKeepsExistingPrivateSettingsGroup() {
+    void leaveOnPrivateSettingsIsUnchanged() {
         AutomatedFacility facility = createFacility();
         ModuleInstance miner = createMiner();
         facility.addModule(miner);
-        short originalGroupId = miner.groupId();
+        FacilityModuleSettingsSnapshot before = facility.moduleSettingsSnapshot();
+        int revisionBefore = facility.getStateRevision();
 
-        facility.assignSettingsGroup(miner, (short) 0);
-        facility.assignSettingsGroup(miner, (short) 0);
+        FacilityCommand.Result result = facility.applyCommand(
+            new FacilityCommand.LeaveSettingsGroup(facility.assetId, miner.id),
+            FacilityCommand.Authority.NONE);
 
-        assertTrue(
-            facility.settingsGroups()
-                .groups()
-                .containsKey(originalGroupId));
-        assertTrue(
-            facility.settingsGroups()
-                .require(originalGroupId)
-                .members()
-                .contains(miner.anchor()));
-        assertFalse(
-            facility.settingsGroups()
-                .require(originalGroupId)
-                .isJoinable());
+        assertSame(FacilityCommand.Result.UNCHANGED, result);
+        assertEquals(before, facility.moduleSettingsSnapshot());
+        assertEquals(revisionBefore, facility.getStateRevision());
+    }
+
+    @Test
+    void renameGroupUsesStableGroupIdAndRejectsBlankName() {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance miner = createMiner();
+        facility.addModule(miner);
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            facility.applyCommand(
+                new FacilityCommand.CreateSettingsGroup(facility.assetId, miner.id, "Public miners"),
+                FacilityCommand.Authority.NONE));
+        SettingsGroup.ID groupId = facility.moduleSettingsSnapshot()
+            .membership()
+            .get(miner.id);
+
+        FacilityCommand.Result renamed = facility.applyCommand(
+            new FacilityCommand.RenameSettingsGroup(facility.assetId, groupId, "  Priority miners  "),
+            FacilityCommand.Authority.NONE);
+        FacilityCommand.Result rejected = facility.applyCommand(
+            new FacilityCommand.RenameSettingsGroup(facility.assetId, groupId, " "),
+            FacilityCommand.Authority.NONE);
+
+        assertSame(FacilityCommand.Result.CHANGED, renamed);
         assertEquals(
-            1,
-            facility.settingsGroups()
+            "Priority miners",
+            facility.moduleSettingsSnapshot()
                 .groups()
-                .size());
-    }
-
-    @Test
-    void noGroupOnSingletonPublicGroupPrivatizesInsteadOfCreatingNewGroup() {
-        AutomatedFacility facility = createFacility();
-        ModuleInstance miner = createMiner();
-        facility.addModule(miner);
-        SettingsGroup group = facility.settingsGroups()
-            .require(miner.groupId());
-        group.setJoinable(true);
-        short originalGroupId = miner.groupId();
-
-        facility.assignSettingsGroup(miner, (short) 0);
-
-        assertEquals(originalGroupId, miner.groupId());
-        assertFalse(group.isJoinable());
-        assertEquals(
-            1,
-            facility.settingsGroups()
-                .groups()
-                .size());
-    }
-
-    @Test
-    void createGroupPublishesCurrentPrivateSettingsGroup() {
-        AutomatedFacility facility = createFacility();
-        ModuleInstance miner = createMiner();
-        facility.addModule(miner);
-        short originalGroupId = miner.groupId();
-
-        SettingsGroup group = facility.createSettingsGroupForModule(miner, "Public miners");
-
-        assertTrue(group.isJoinable());
-        assertEquals(originalGroupId, group.id());
-        assertEquals("Public miners", group.displayName());
-        assertEquals(
-            1,
-            facility.settingsGroups()
-                .groups()
-                .size());
-    }
-
-    @Test
-    void renameSettingsGroupRequiresJoinableGroupOfSameKind() {
-        AutomatedFacility facility = createFacility();
-        ModuleInstance miner = createMiner();
-        facility.addModule(miner);
-
-        assertThrows(
-            IllegalStateException.class,
-            () -> facility.renameSettingsGroupForModule(miner, miner.groupId(), "Hidden miners"));
-
-        SettingsGroup group = facility.createSettingsGroupForModule(miner, "Public miners");
-        facility.renameSettingsGroupForModule(miner, group.id(), "  Priority miners  ");
-
-        assertEquals("Priority miners", group.displayName());
-    }
-
-    @Test
-    void renameSettingsGroupRejectsBlankName() {
-        AutomatedFacility facility = createFacility();
-        ModuleInstance miner = createMiner();
-        facility.addModule(miner);
-        SettingsGroup group = facility.createSettingsGroupForModule(miner, "Public miners");
-
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> facility.renameSettingsGroupForModule(miner, group.id(), " "));
-    }
-
-    @Test
-    void copySettingsFromPrivateGroupDoesNotJoinTargetToSourceGroup() {
-        AutomatedFacility facility = createFacility();
-        ModuleInstance source = createMiner(StationTileCoord.of(1, 0));
-        ModuleInstance target = createMiner(StationTileCoord.of(2, 0));
-        facility.addModule(source);
-        facility.addModule(target);
-        short sourceGroupId = source.groupId();
-        short targetGroupId = target.groupId();
-        facility.setMinerOreBlacklisted(source, "ore:iron", true);
-
-        facility.copyModuleRuntimeSettings(source, target);
-
-        assertEquals(sourceGroupId, source.groupId());
-        assertEquals(targetGroupId, target.groupId());
-        assertFalse(
-            facility.settingsGroups()
-                .require(target.groupId())
-                .isJoinable());
-        assertTrue(facility.isMinerOreBlacklisted(target, "ore:iron"));
+                .get(groupId)
+                .displayName());
+        assertEquals(FacilityCommand.Status.REJECTED, rejected.status());
     }
 
     @Test
@@ -245,20 +194,14 @@ final class ModuleMinerTest {
         sourceMiner.setFocus(MinerFocusTier.II, "ore:iron", 1200);
         targetMiner.setFocus(MinerFocusTier.NONE, null, 0);
 
-        assertFalse(facility.canCopyModuleRuntimeSettings(source, target));
-        assertThrows(IllegalStateException.class, () -> facility.copyModuleRuntimeSettings(source, target));
+        FacilityModuleSettingsSnapshot before = facility.moduleSettingsSnapshot();
+        FacilityCommand.Result result = facility.applyCommand(
+            new FacilityCommand.CopyModuleSettings(facility.assetId, source.id, List.of(target.id)),
+            FacilityCommand.Authority.NONE);
+
+        assertEquals(FacilityCommand.Status.REJECTED, result.status());
+        assertEquals(before, facility.moduleSettingsSnapshot());
         assertNull(targetMiner.focusOreKeyOrNull());
-    }
-
-    @Test
-    void privateSettingsGroupCannotBeJoinedDirectly() {
-        AutomatedFacility facility = createFacility();
-        ModuleInstance source = createMiner(StationTileCoord.of(1, 0));
-        ModuleInstance target = createMiner(StationTileCoord.of(2, 0));
-        facility.addModule(source);
-        facility.addModule(target);
-
-        assertThrows(IllegalStateException.class, () -> facility.assignSettingsGroup(target, source.groupId()));
     }
 
     @Test

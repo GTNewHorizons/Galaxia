@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -19,6 +20,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -57,8 +59,7 @@ final class StationItemInteractionModelTest {
         facility.addModule(first);
         facility.addModule(second);
         facility.setRecipeConfig(first, config(input, output));
-        SettingsGroup group = facility.createSettingsGroupForModule(first, "Dust line");
-        facility.assignSettingsGroup(second, group.id());
+        SettingsGroup.ID groupId = createSharedGroup(facility, first, second, "Dust line");
 
         List<StationItemInteractionModel.Entry> entries = StationItemInteractionModel.forItem(facility, resource);
         List<StationItemInteractionModel.Entry> consumers = entries.stream()
@@ -70,7 +71,7 @@ final class StationItemInteractionModelTest {
         StationItemInteractionModel.Entry consumer = consumers.get(0);
         assertEquals("Dust line", consumer.label());
         assertEquals(2, consumer.count());
-        assertEquals(group.id(), consumer.groupId());
+        assertEquals(groupId, consumer.groupId());
         assertNotNull(consumer.targetModuleId());
     }
 
@@ -85,8 +86,7 @@ final class StationItemInteractionModelTest {
         ModuleInstance second = createMachine(StationTileCoord.of(2, 0));
         facility.addModule(first);
         facility.addModule(second);
-        SettingsGroup group = facility.createSettingsGroupForModule(first, "Dust line");
-        facility.assignSettingsGroup(second, group.id());
+        createSharedGroup(facility, first, second, "Dust line");
 
         List<StationItemInteractionModel.Entry> entries = StationItemInteractionModel.forItem(facility, resource);
 
@@ -104,7 +104,7 @@ final class StationItemInteractionModelTest {
             .findFirst()
             .orElseThrow();
         assertEquals(2, upkeep.count());
-        assertEquals(0, upkeep.groupId());
+        assertNull(upkeep.groupId());
         assertTrue(
             upkeep.amountPerMinute()
                 .microUnitsPerMinute() > 0);
@@ -146,7 +146,7 @@ final class StationItemInteractionModelTest {
         assertEquals(1, upkeepEntries.size());
         StationItemInteractionModel.Entry upkeep = upkeepEntries.get(0);
         assertEquals(3, upkeep.count());
-        assertEquals(0, upkeep.groupId());
+        assertNull(upkeep.groupId());
         assertTrue(
             upkeep.amountPerMinute()
                 .microUnitsPerMinute() > 0);
@@ -158,6 +158,23 @@ final class StationItemInteractionModelTest {
             CelestialObjectId.PROXIMA_CENTAURI,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
+    }
+
+    private static SettingsGroup.ID createSharedGroup(AutomatedFacility facility, ModuleInstance first,
+        ModuleInstance second, String displayName) {
+        FacilityCommand.Result created = facility.applyCommand(
+            new FacilityCommand.CreateSettingsGroup(facility.assetId, first.id, displayName),
+            FacilityCommand.Authority.NONE);
+        assertEquals(FacilityCommand.Status.CHANGED, created.status());
+        SettingsGroup.ID groupId = facility.moduleSettingsSnapshot()
+            .membership()
+            .get(first.id);
+        assertNotNull(groupId);
+        FacilityCommand.Result joined = facility.applyCommand(
+            new FacilityCommand.JoinSettingsGroup(facility.assetId, second.id, groupId),
+            FacilityCommand.Authority.NONE);
+        assertEquals(FacilityCommand.Status.CHANGED, joined.status());
+        return groupId;
     }
 
     private static ModuleInstance createMachine(StationTileCoord anchor) {

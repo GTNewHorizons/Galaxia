@@ -1,7 +1,10 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collection;
 import java.util.List;
@@ -27,11 +30,14 @@ import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class FacilityCommandGatewayTest {
@@ -143,6 +149,66 @@ final class FacilityCommandGatewayTest {
     }
 
     @Test
+    void acceptedMinerBlacklistCommandsApplyInServerOrderAndIdenticalStateIsUnchanged() {
+        AutomatedFacility facility = facility();
+        ModuleInstance miner = addMiner(facility, 1);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
+        long initialRevision = facility.getStateRevision();
+        FacilityCommandGateway.Actor actor = actor(TEAM, TeamAction.MODIFY_MODULE);
+
+        FacilityCommand.Result blacklisted = gateway
+            .execute(actor, new FacilityCommand.SetMinerOreBlacklisted(facility.assetId, miner.id, "ore:iron", true));
+        FacilityCommand.Result allowed = gateway
+            .execute(actor, new FacilityCommand.SetMinerOreBlacklisted(facility.assetId, miner.id, "ore:iron", false));
+        FacilityCommand.Result repeated = gateway
+            .execute(actor, new FacilityCommand.SetMinerOreBlacklisted(facility.assetId, miner.id, "ore:iron", false));
+
+        assertEquals(FacilityCommand.Status.CHANGED, blacklisted.status());
+        assertEquals(FacilityCommand.Status.CHANGED, allowed.status());
+        assertEquals(FacilityCommand.Status.UNCHANGED, repeated.status());
+        assertFalse(facility.isMinerOreBlacklisted(miner, "ore:iron"));
+        assertEquals(initialRevision + 2, facility.getStateRevision());
+        assertEquals(2, transport.deliveryCount);
+    }
+
+    @Test
+    void minerBlacklistCommandPropagatesThroughSharedSettingsWithOneRevision() {
+        AutomatedFacility facility = facility();
+        ModuleInstance first = addMiner(facility, 1);
+        ModuleInstance second = addMiner(facility, 2);
+        assertEquals(
+            FacilityCommand.Status.CHANGED,
+            facility
+                .applyCommand(
+                    new FacilityCommand.CreateSettingsGroup(facility.assetId, first.id, "Shared miners"),
+                    FacilityCommand.Authority.NONE)
+                .status());
+        SettingsGroup.ID groupId = facility.moduleSettingsSnapshot()
+            .membership()
+            .get(first.id);
+        assertNotNull(groupId);
+        assertEquals(
+            FacilityCommand.Status.CHANGED,
+            facility
+                .applyCommand(
+                    new FacilityCommand.JoinSettingsGroup(facility.assetId, second.id, groupId),
+                    FacilityCommand.Authority.NONE)
+                .status());
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
+        long initialRevision = facility.getStateRevision();
+
+        FacilityCommand.Result result = gateway.execute(
+            actor(TEAM, TeamAction.MODIFY_MODULE),
+            new FacilityCommand.SetMinerOreBlacklisted(facility.assetId, first.id, "ore:copper", true));
+
+        assertEquals(FacilityCommand.Status.CHANGED, result.status());
+        assertTrue(facility.isMinerOreBlacklisted(first, "ore:copper"));
+        assertTrue(facility.isMinerOreBlacklisted(second, "ore:copper"));
+        assertEquals(initialRevision + 1, facility.getStateRevision());
+        assertEquals(1, transport.deliveryCount);
+    }
+
+    @Test
     void everyCommandCategoryRequiresItsMappedTeamAction() {
         AutomatedFacility facility = facility();
         CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
@@ -157,7 +223,7 @@ final class FacilityCommandGatewayTest {
                 FacilityModuleKind.POWER,
                 ModuleShape.SINGLE,
                 new IModuleComponent.BuildPhysicalSpec.Tier(ModuleTier.NONE),
-                (short) 0,
+                null,
                 false,
                 null));
         assertMapped(
@@ -168,6 +234,12 @@ final class FacilityCommandGatewayTest {
         List<FacilityCommand> moduleCommands = List.of(
             new FacilityCommand.RequestModuleDeconstruction(facility.assetId, missingModule),
             new FacilityCommand.CancelModuleOperation(facility.assetId, missingModule),
+            new FacilityCommand.CreateSettingsGroup(facility.assetId, missingModule, "Shared settings"),
+            new FacilityCommand.RenameSettingsGroup(facility.assetId, new SettingsGroup.ID(1), "Priority settings"),
+            new FacilityCommand.JoinSettingsGroup(facility.assetId, missingModule, new SettingsGroup.ID(1)),
+            new FacilityCommand.LeaveSettingsGroup(facility.assetId, missingModule),
+            new FacilityCommand.CopyModuleSettings(facility.assetId, missingModule, List.of(missingModule)),
+            new FacilityCommand.SetMinerOreBlacklisted(facility.assetId, missingModule, "ore:iron", true),
             new FacilityCommand.SetHammerShootingConfig(facility.assetId, missingModule, null),
             new FacilityCommand.SetHammerRoutePriority(facility.assetId, missingModule, null),
             new FacilityCommand.SetMinerFocusOre(facility.assetId, missingModule, "ore:iron"),
@@ -245,6 +317,17 @@ final class FacilityCommandGatewayTest {
             CelestialObjectId.MARS,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
+    }
+
+    private static ModuleInstance addMiner(AutomatedFacility facility, int x) {
+        ModuleInstance miner = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.MINER,
+            StationTileCoord.of(x, 0),
+            FacilityModuleKind.MINER.defaultShape(),
+            ModuleTier.EV);
+        facility.addModule(miner);
+        return miner;
     }
 
     private static final class RecordingTransport implements AssetStateSync.ServerTransport {

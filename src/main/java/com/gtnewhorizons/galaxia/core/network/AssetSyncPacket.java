@@ -1,11 +1,14 @@
 package com.gtnewhorizons.galaxia.core.network;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -24,6 +27,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityModuleSettingsSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
@@ -50,6 +54,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGe
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
@@ -81,7 +86,6 @@ final class AssetSyncPacket {
     public static final byte LOGISTICS_CONFIG_UPDATED = 6;
     public static final byte LAYOUT_TILE_UPDATED = 8;
     public static final byte ASSET_REMOVED = 10;
-    public static final byte SETTINGS_GROUP_UPDATED = 11;
     public static final byte FILTER_UPDATED = 13;
     public static final byte CLEAR = 15;
     public static final byte INVENTORY_BOUNDS_SNAPSHOT = 16;
@@ -89,6 +93,9 @@ final class AssetSyncPacket {
 
     private static final int MAX_OPERATION_MAP_ENTRIES = 256;
     private static final int MAX_INVENTORY_BOUND_SNAPSHOT_ENTRIES = 4096;
+    private static final int MAX_FACILITY_FLUID_SNAPSHOT_ENTRIES = 4096;
+    private static final int MAX_MODULE_SETTINGS_ENTRIES = 4096;
+    private static final int MAX_FLUID_NAME_BYTES = 0xFFFF;
     private static final int MAX_RECIPE_STACKS = 64;
     static final int MAX_FULL_SYNC_DELTAS = 65_536;
     private static final byte OPERATION_SPEC_TIER = 1;
@@ -113,9 +120,12 @@ final class AssetSyncPacket {
     long energyStored;
     long stationFeatureSalt;
     UpkeepSettlement.Credits upkeepCredits = UpkeepSettlement.Credits.empty();
+    Map<String, Long> facilityFluidSnapshot = Map.of();
     SatelliteKind satelliteKind;
 
     List<AssetSyncPacket> fullSyncDeltas;
+    FacilityModuleSettingsSnapshot moduleSettingsSnapshot;
+    Map<ModuleInstance.ID, RecipeScheduleState> recipeScheduleStates = Map.of();
 
     int moduleIndex;
     ModuleInstance moduleData;
@@ -132,12 +142,6 @@ final class AssetSyncPacket {
     ModuleInstance.ID tileModuleId;
 
     BlockPos stationControllerPos;
-
-    short settingsGroupId;
-    FacilityModuleKind settingsGroupKind;
-    String settingsGroupName;
-    boolean settingsGroupJoinable;
-    ModuleSettings settingsGroupSettings;
 
     boolean filterItem;
     List<String> filterItems;
@@ -207,6 +211,9 @@ final class AssetSyncPacket {
         pkt.energyStored = state.getEnergyStored();
         pkt.stationFeatureSalt = state.stationFeatureSalt();
         pkt.upkeepCredits = state.upkeepCredits();
+        pkt.facilityFluidSnapshot = state.fluidSnapshot();
+        pkt.moduleSettingsSnapshot = state.moduleSettingsSnapshot();
+        pkt.recipeScheduleStates = state.recipeScheduleStates();
         pkt.fullSyncDeltas = automatedFacilityDeltas(state);
 
         return pkt;
@@ -229,13 +236,6 @@ final class AssetSyncPacket {
 
     private static List<AssetSyncPacket> automatedFacilityDeltas(AutomatedFacility state) {
         List<AssetSyncPacket> deltas = new ArrayList<>();
-
-        state.settingsGroups()
-            .groups()
-            .values()
-            .stream()
-            .sorted(Comparator.comparingInt(SettingsGroup::id))
-            .forEach(group -> deltas.add(settingsGroupUpdated(state.assetId, group)));
 
         List<ModuleInstance> modules = state.modules();
         for (int i = 0; i < modules.size(); i++) {
@@ -343,24 +343,6 @@ final class AssetSyncPacket {
         return pkt;
     }
 
-    static AssetSyncPacket settingsGroupUpdated(CelestialAsset.ID assetId, SettingsGroup group) {
-        AssetSyncPacket pkt = new AssetSyncPacket();
-        pkt.assetId = assetId;
-        pkt.syncType = SETTINGS_GROUP_UPDATED;
-        pkt.settingsGroupId = group.id();
-        pkt.settingsGroupKind = group.kind();
-        pkt.settingsGroupName = group.displayName();
-        pkt.settingsGroupJoinable = group.isJoinable();
-        if (group.settings() instanceof MinerSettings settings) {
-            pkt.settingsGroupSettings = settings.copy();
-        } else if (group.settings() instanceof RecipeModuleSettings settings) {
-            pkt.settingsGroupSettings = settings.copy();
-        } else {
-            throw new IllegalStateException("Unsupported settings group payload " + group.settings());
-        }
-        return pkt;
-    }
-
     static AssetSyncPacket layoutTileUpdated(CelestialAsset.ID assetId, StationTileCoord coord, PlacedTile tile) {
         AssetSyncPacket pkt = new AssetSyncPacket();
         pkt.assetId = assetId;
@@ -418,6 +400,9 @@ final class AssetSyncPacket {
                         buf.writeLong(energyStored);
                         buf.writeLong(stationFeatureSalt);
                         writeUpkeepCredits(buf, upkeepCredits);
+                        writeFacilityFluidSnapshot(buf, facilityFluidSnapshot);
+                        writeFacilityModuleSettings(buf, moduleSettingsSnapshot, fullSyncDeltas);
+                        writeFacilityRecipeScheduleStates(buf, recipeScheduleStates);
 
                         buf.writeInt(fullSyncDeltas.size());
                         for (AssetSyncPacket d : fullSyncDeltas) {
@@ -477,6 +462,9 @@ final class AssetSyncPacket {
                         energyStored = buf.readLong();
                         stationFeatureSalt = buf.readLong();
                         upkeepCredits = readUpkeepCredits(buf);
+                        facilityFluidSnapshot = readFacilityFluidSnapshot(buf);
+                        moduleSettingsSnapshot = readFacilityModuleSettings(buf);
+                        recipeScheduleStates = readFacilityRecipeScheduleStates(buf);
 
                         int count = readFullSyncDeltaCount(buf);
                         fullSyncDeltas = new ArrayList<>(count);
@@ -509,6 +497,218 @@ final class AssetSyncPacket {
         return count;
     }
 
+    private static void writeFacilityFluidSnapshot(ByteBuf buf, Map<String, Long> snapshot) {
+        validateFacilityFluidSnapshot(snapshot);
+        PacketUtil.writeBoundedCount(
+            buf,
+            snapshot.size(),
+            "automated facility fluid snapshot entries",
+            MAX_FACILITY_FLUID_SNAPSHOT_ENTRIES);
+        for (Map.Entry<String, Long> entry : snapshot.entrySet()) {
+            PacketUtil.writeString(buf, entry.getKey());
+            buf.writeLong(entry.getValue());
+        }
+    }
+
+    private static Map<String, Long> readFacilityFluidSnapshot(ByteBuf buf) {
+        int count = PacketUtil
+            .readBoundedCount(buf, "automated facility fluid snapshot entries", MAX_FACILITY_FLUID_SNAPSHOT_ENTRIES);
+        Map<String, Long> snapshot = new LinkedHashMap<>();
+        for (int i = 0; i < count; i++) {
+            String fluidName = PacketUtil.readString(buf);
+            long amount = buf.readLong();
+            validateFacilityFluidEntry(fluidName, amount);
+            if (snapshot.put(fluidName, amount) != null) {
+                throw new IllegalStateException("Duplicate automated facility fluid: " + fluidName);
+            }
+        }
+        return snapshot;
+    }
+
+    private static void writeFacilityRecipeScheduleStates(ByteBuf buf,
+        Map<ModuleInstance.ID, RecipeScheduleState> scheduleStates) {
+        if (scheduleStates == null) throw new IllegalStateException("Missing facility recipe schedule states");
+        PacketUtil.validateBoundedCount(
+            scheduleStates.size(),
+            "facility recipe schedule states",
+            MAX_MODULE_SETTINGS_ENTRIES);
+        buf.writeInt(scheduleStates.size());
+        scheduleStates.entrySet()
+            .stream()
+            .sorted(Map.Entry.comparingByKey(Comparator.comparing(ModuleInstance.ID::toString)))
+            .forEach(entry -> {
+                PacketUtil.writeId(buf, entry.getKey());
+                buf.writeByte(
+                    entry.getValue()
+                        .orderCursor());
+                buf.writeByte(
+                    entry.getValue()
+                        .orderRemaining());
+            });
+    }
+
+    private static Map<ModuleInstance.ID, RecipeScheduleState> readFacilityRecipeScheduleStates(ByteBuf buf) {
+        int count = PacketUtil.readBoundedCount(buf, "facility recipe schedule states", MAX_MODULE_SETTINGS_ENTRIES);
+        Map<ModuleInstance.ID, RecipeScheduleState> scheduleStates = new LinkedHashMap<>();
+        for (int i = 0; i < count; i++) {
+            ModuleInstance.ID moduleId = PacketUtil.readModuleId(buf);
+            RecipeScheduleState scheduleState = new RecipeScheduleState(buf.readByte(), buf.readByte());
+            if (scheduleStates.put(moduleId, scheduleState) != null) {
+                throw new IllegalStateException("Duplicate facility recipe schedule state: " + moduleId);
+            }
+        }
+        return scheduleStates;
+    }
+
+    private static void writeFacilityModuleSettings(ByteBuf buf, FacilityModuleSettingsSnapshot snapshot,
+        List<AssetSyncPacket> deltas) {
+        if (snapshot == null) throw new IllegalStateException("Missing facility module settings snapshot");
+        Map<ModuleInstance.ID, FacilityModuleKind> kinds = new LinkedHashMap<>();
+        for (AssetSyncPacket delta : deltas) {
+            if (delta.syncType == MODULE_ADDED && delta.moduleData != null) {
+                kinds.put(delta.moduleData.id, delta.moduleData.kind());
+            }
+        }
+        PacketUtil.validateBoundedCount(
+            snapshot.privateSettings()
+                .size(),
+            "private module settings",
+            MAX_MODULE_SETTINGS_ENTRIES);
+        buf.writeInt(
+            snapshot.privateSettings()
+                .size());
+        snapshot.privateSettings()
+            .entrySet()
+            .stream()
+            .sorted(Map.Entry.comparingByKey(Comparator.comparing(ModuleInstance.ID::toString)))
+            .forEach(entry -> {
+                FacilityModuleKind kind = kinds.get(entry.getKey());
+                if (kind == null) throw new IllegalStateException("Missing module kind for settings " + entry.getKey());
+                PacketUtil.writeId(buf, entry.getKey());
+                PacketUtil.writeEnum(buf, kind);
+                writeSettingsGroupPayload(buf, kind, entry.getValue());
+            });
+
+        PacketUtil.validateBoundedCount(
+            snapshot.groups()
+                .size(),
+            "shared module settings groups",
+            MAX_MODULE_SETTINGS_ENTRIES);
+        buf.writeInt(
+            snapshot.groups()
+                .size());
+        snapshot.groups()
+            .values()
+            .stream()
+            .sorted(
+                Comparator.comparingInt(
+                    group -> group.id()
+                        .value()))
+            .forEach(group -> {
+                buf.writeInt(
+                    group.id()
+                        .value());
+                PacketUtil.writeEnum(buf, group.kind());
+                PacketUtil.writeString(buf, group.displayName());
+                writeSettingsGroupPayload(buf, group.kind(), group.settings());
+            });
+
+        PacketUtil.validateBoundedCount(
+            snapshot.membership()
+                .size(),
+            "module settings memberships",
+            MAX_MODULE_SETTINGS_ENTRIES);
+        buf.writeInt(
+            snapshot.membership()
+                .size());
+        snapshot.membership()
+            .entrySet()
+            .stream()
+            .sorted(Map.Entry.comparingByKey(Comparator.comparing(ModuleInstance.ID::toString)))
+            .forEach(entry -> {
+                PacketUtil.writeId(buf, entry.getKey());
+                buf.writeInt(
+                    entry.getValue()
+                        .value());
+            });
+    }
+
+    private static FacilityModuleSettingsSnapshot readFacilityModuleSettings(ByteBuf buf) {
+        return new FacilityModuleSettingsSnapshot(
+            readPrivateModuleSettings(buf),
+            readSharedModuleSettings(buf),
+            readModuleSettingsMembership(buf));
+    }
+
+    private static Map<ModuleInstance.ID, ModuleSettings> readPrivateModuleSettings(ByteBuf buf) {
+        int privateCount = PacketUtil.readBoundedCount(buf, "private module settings", MAX_MODULE_SETTINGS_ENTRIES);
+        Map<ModuleInstance.ID, ModuleSettings> privateSettings = new LinkedHashMap<>();
+        for (int i = 0; i < privateCount; i++) {
+            ModuleInstance.ID moduleId = PacketUtil.readModuleId(buf);
+            FacilityModuleKind kind = PacketUtil.readEnum(buf, FacilityModuleKind.class);
+            ModuleSettings settings = readSettingsGroupPayload(buf, kind, "module=" + moduleId);
+            if (privateSettings.put(moduleId, settings) != null) {
+                throw new IllegalStateException("Duplicate private module settings: " + moduleId);
+            }
+        }
+        return privateSettings;
+    }
+
+    private static Map<SettingsGroup.ID, SettingsGroup> readSharedModuleSettings(ByteBuf buf) {
+        int groupCount = PacketUtil.readBoundedCount(buf, "shared module settings groups", MAX_MODULE_SETTINGS_ENTRIES);
+        Map<SettingsGroup.ID, SettingsGroup> groups = new LinkedHashMap<>();
+        for (int i = 0; i < groupCount; i++) {
+            SettingsGroup.ID groupId = new SettingsGroup.ID(buf.readInt());
+            FacilityModuleKind kind = PacketUtil.readEnum(buf, FacilityModuleKind.class);
+            String displayName = PacketUtil.readString(buf);
+            SettingsGroup group = new SettingsGroup(
+                groupId,
+                kind,
+                displayName,
+                readSettingsGroupPayload(buf, kind, "settingsGroup=" + groupId));
+            if (groups.put(groupId, group) != null) {
+                throw new IllegalStateException("Duplicate module settings group: " + groupId);
+            }
+        }
+        return groups;
+    }
+
+    private static Map<ModuleInstance.ID, SettingsGroup.ID> readModuleSettingsMembership(ByteBuf buf) {
+        int membershipCount = PacketUtil
+            .readBoundedCount(buf, "module settings memberships", MAX_MODULE_SETTINGS_ENTRIES);
+        Map<ModuleInstance.ID, SettingsGroup.ID> membership = new LinkedHashMap<>();
+        for (int i = 0; i < membershipCount; i++) {
+            ModuleInstance.ID moduleId = PacketUtil.readModuleId(buf);
+            SettingsGroup.ID groupId = new SettingsGroup.ID(buf.readInt());
+            if (membership.put(moduleId, groupId) != null) {
+                throw new IllegalStateException("Duplicate module settings membership: " + moduleId);
+            }
+        }
+        return membership;
+    }
+
+    static void validateFacilityFluidSnapshot(Map<String, Long> snapshot) {
+        if (snapshot == null) throw new IllegalStateException("Missing automated facility fluid snapshot");
+        PacketUtil.validateBoundedCount(
+            snapshot.size(),
+            "automated facility fluid snapshot entries",
+            MAX_FACILITY_FLUID_SNAPSHOT_ENTRIES);
+        for (Map.Entry<String, Long> entry : snapshot.entrySet()) {
+            validateFacilityFluidEntry(entry.getKey(), entry.getValue());
+        }
+    }
+
+    private static void validateFacilityFluidEntry(String fluidName, Long amount) {
+        if (fluidName == null || fluidName.isBlank()
+            || fluidName.getBytes(StandardCharsets.UTF_8).length > MAX_FLUID_NAME_BYTES
+            || FluidKey.fromName(fluidName) == null) {
+            throw new IllegalStateException("Invalid automated facility fluid name: " + fluidName);
+        }
+        if (amount == null || amount <= 0L) {
+            throw new IllegalStateException("Invalid automated facility fluid amount: " + amount);
+        }
+    }
+
     private void writeDelta(ByteBuf buf) {
         switch (syncType) {
             case MODULE_ADDED -> {
@@ -530,13 +730,6 @@ final class AssetSyncPacket {
                 boolean hasModule = tileModuleId != null;
                 buf.writeBoolean(hasModule);
                 if (hasModule) PacketUtil.writeId(buf, tileModuleId);
-            }
-            case SETTINGS_GROUP_UPDATED -> {
-                buf.writeShort(settingsGroupId);
-                PacketUtil.writeEnum(buf, settingsGroupKind);
-                PacketUtil.writeString(buf, settingsGroupName);
-                buf.writeBoolean(settingsGroupJoinable);
-                writeSettingsGroupPayload(buf, settingsGroupKind, settingsGroupSettings);
             }
             case FILTER_UPDATED -> {
                 buf.writeBoolean(filterItem);
@@ -569,16 +762,6 @@ final class AssetSyncPacket {
                 tileState = PacketUtil.readEnum(buf, StationTileState.class);
                 tileModuleId = buf.readBoolean() ? PacketUtil.readModuleId(buf) : null;
             }
-            case SETTINGS_GROUP_UPDATED -> {
-                settingsGroupId = buf.readShort();
-                settingsGroupKind = PacketUtil.readEnum(buf, FacilityModuleKind.class);
-                settingsGroupName = PacketUtil.readString(buf);
-                settingsGroupJoinable = buf.readBoolean();
-                settingsGroupSettings = readSettingsGroupPayload(
-                    buf,
-                    settingsGroupKind,
-                    "settingsGroup=" + settingsGroupId);
-            }
             case FILTER_UPDATED -> {
                 filterItem = buf.readBoolean();
                 int count = buf.readShort();
@@ -600,7 +783,6 @@ final class AssetSyncPacket {
         buf.writeByte(module.rotation());
         PacketUtil.writeEnum(buf, module.priorityOverride());
         buf.writeBoolean(module.enabled());
-        buf.writeShort(module.groupId());
         buf.writeByte(module.component() instanceof IParallelModule pm ? pm.getParallel() : 1);
 
         StationTileCoord anchor = module.anchorOrNull();
@@ -625,9 +807,12 @@ final class AssetSyncPacket {
             case POWER, GEOTHERMAL_GENERATOR -> {}
             case STORAGE, TANK, BATTERY -> {}
             case DEBUG_DATA_GENERATOR -> writeDebugDataGenerator(buf, module);
-            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> writeRecipeConfig(
-                buf,
-                module);
+            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> {
+                if (!FacilityModuleRegistry.get(module.kind())
+                    .settingsGroups()) {
+                    writeRecipeConfig(buf, module);
+                }
+            }
             default -> {}
         }
         writeModuleOperation(buf, module.operationOrNull());
@@ -642,7 +827,6 @@ final class AssetSyncPacket {
         int rotation = buf.readByte();
         ModulePriority modulePriority = PacketUtil.readEnum(buf, ModulePriority.class);
         boolean enabled = buf.readBoolean();
-        short groupId = buf.readShort();
         byte parallel = buf.readByte();
         StationTileCoord anchor = buf.readBoolean() ? PacketUtil.readStationTileCoord(buf) : null;
 
@@ -650,7 +834,6 @@ final class AssetSyncPacket {
         module.setRotation(rotation);
         module.setPriorityOverride(modulePriority);
         module.setEnabled(enabled);
-        module.setGroupId(groupId);
 
         switch (kind) {
             case MINER -> {}
@@ -668,9 +851,12 @@ final class AssetSyncPacket {
             case POWER, GEOTHERMAL_GENERATOR -> {}
             case STORAGE, TANK, BATTERY -> {}
             case DEBUG_DATA_GENERATOR -> readDebugDataGenerator(buf, module);
-            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> readRecipeConfig(
-                buf,
-                module);
+            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> {
+                if (!FacilityModuleRegistry.get(kind)
+                    .settingsGroups()) {
+                    readRecipeConfig(buf, module);
+                }
+            }
             default -> {}
         }
 
@@ -951,6 +1137,11 @@ final class AssetSyncPacket {
     }
 
     private static void writeMinerSettingsPayload(ByteBuf buf, MinerSettings settings) {
+        PacketUtil.validateBoundedCount(
+            settings.blacklistedOreKeys()
+                .size(),
+            "miner blacklist",
+            MAX_MODULE_SETTINGS_ENTRIES);
         buf.writeInt(
             settings.blacklistedOreKeys()
                 .size());
@@ -961,15 +1152,14 @@ final class AssetSyncPacket {
 
     private static MinerSettings readMinerSettingsPayload(ByteBuf buf, String context) {
         int count = buf.readInt();
-        if (count < 0 || count > 4096) {
+        if (count < 0 || count > MAX_MODULE_SETTINGS_ENTRIES) {
             throw new IllegalStateException(
                 "Network decoded invalid miner blacklist count " + count + " for " + context);
         }
-        MinerSettings settings = new MinerSettings();
-        for (int i = 0; i < count; i++) {
-            settings.setOreBlacklisted(PacketUtil.readString(buf), true);
-        }
-        return settings;
+        Set<String> oreKeys = java.util.stream.IntStream.range(0, count)
+            .mapToObj(ignored -> PacketUtil.readString(buf))
+            .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+        return new MinerSettings(oreKeys);
     }
 
     private static void writeSettingsGroupPayload(ByteBuf buf, FacilityModuleKind kind, ModuleSettings settings) {
@@ -996,16 +1186,6 @@ final class AssetSyncPacket {
             return new RecipeModuleSettings(readRecipeConfigPayload(buf));
         }
         throw new IllegalStateException("Unsupported settings group kind " + kind + " for " + context);
-    }
-
-    static ModuleSettings copySettingsGroupPayload(ModuleSettings settings) {
-        if (settings instanceof MinerSettings minerSettings) {
-            return minerSettings.copy();
-        }
-        if (settings instanceof RecipeModuleSettings recipeSettings) {
-            return recipeSettings.copy();
-        }
-        throw new IllegalStateException("Unsupported settings group payload " + settings);
     }
 
     private static void writeLogisticsConfig(ByteBuf buf, LogisticsResourceConfig cfg) {

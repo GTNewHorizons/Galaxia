@@ -38,6 +38,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGe
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
@@ -73,6 +74,12 @@ public final class FacilityCommandPacket implements IMessage {
     static final int OP_PLAN_HAMMER_UPGRADE = 15;
     static final int OP_PLAN_TIER_UPGRADE = 16;
     static final int OP_PLAN_MINER_FOCUS_UPGRADE = 17;
+    static final int OP_CREATE_SETTINGS_GROUP = 18;
+    static final int OP_RENAME_SETTINGS_GROUP = 19;
+    static final int OP_JOIN_SETTINGS_GROUP = 20;
+    static final int OP_LEAVE_SETTINGS_GROUP = 21;
+    static final int OP_COPY_MODULE_SETTINGS = 22;
+    static final int OP_SET_MINER_ORE_BLACKLISTED = 23;
 
     private FacilityCommand command;
 
@@ -155,7 +162,7 @@ public final class FacilityCommandPacket implements IMessage {
             writeEnum(buf, build.kind());
             writeEnum(buf, build.shape());
             writeBuildPhysicalSpec(buf, build.physicalSpec());
-            buf.writeShort(build.settingsGroupId());
+            writeNullableSettingsGroupId(buf, build.settingsGroupId());
             writeBoolean(buf, build.instantBuild());
             writePlacements(buf, build.placements());
         } else if (command instanceof FacilityCommand.CopyBuildModules copy) {
@@ -166,6 +173,24 @@ public final class FacilityCommandPacket implements IMessage {
             writeModuleId(buf, deconstruct.moduleId());
         } else if (command instanceof FacilityCommand.CancelModuleOperation cancel) {
             writeModuleId(buf, cancel.moduleId());
+        } else if (command instanceof FacilityCommand.CreateSettingsGroup createGroup) {
+            writeModuleId(buf, createGroup.moduleId());
+            writeString(buf, createGroup.displayName());
+        } else if (command instanceof FacilityCommand.RenameSettingsGroup renameGroup) {
+            writeSettingsGroupId(buf, renameGroup.groupId());
+            writeString(buf, renameGroup.displayName());
+        } else if (command instanceof FacilityCommand.JoinSettingsGroup joinGroup) {
+            writeModuleId(buf, joinGroup.moduleId());
+            writeSettingsGroupId(buf, joinGroup.groupId());
+        } else if (command instanceof FacilityCommand.LeaveSettingsGroup leaveGroup) {
+            writeModuleId(buf, leaveGroup.moduleId());
+        } else if (command instanceof FacilityCommand.CopyModuleSettings copySettings) {
+            writeModuleId(buf, copySettings.sourceModuleId());
+            writeTargetIds(buf, copySettings.targetModuleIds());
+        } else if (command instanceof FacilityCommand.SetMinerOreBlacklisted setBlacklist) {
+            writeModuleId(buf, setBlacklist.moduleId());
+            writeOreKey(buf, setBlacklist.oreKey());
+            writeBoolean(buf, setBlacklist.blacklisted());
         } else if (command instanceof FacilityCommand.SetHammerShootingConfig setConfig) {
             writeModuleId(buf, setConfig.moduleId());
             AllowShootingConfig config = require(setConfig.config(), "hammer shooting config");
@@ -235,6 +260,28 @@ public final class FacilityCommandPacket implements IMessage {
                 facilityId,
                 readModuleId(buf));
             case OP_CANCEL_MODULE_OPERATION -> new FacilityCommand.CancelModuleOperation(facilityId, readModuleId(buf));
+            case OP_CREATE_SETTINGS_GROUP -> new FacilityCommand.CreateSettingsGroup(
+                facilityId,
+                readModuleId(buf),
+                readString(buf));
+            case OP_RENAME_SETTINGS_GROUP -> new FacilityCommand.RenameSettingsGroup(
+                facilityId,
+                readSettingsGroupId(buf),
+                readString(buf));
+            case OP_JOIN_SETTINGS_GROUP -> new FacilityCommand.JoinSettingsGroup(
+                facilityId,
+                readModuleId(buf),
+                readSettingsGroupId(buf));
+            case OP_LEAVE_SETTINGS_GROUP -> new FacilityCommand.LeaveSettingsGroup(facilityId, readModuleId(buf));
+            case OP_COPY_MODULE_SETTINGS -> new FacilityCommand.CopyModuleSettings(
+                facilityId,
+                readModuleId(buf),
+                readTargetIds(buf));
+            case OP_SET_MINER_ORE_BLACKLISTED -> new FacilityCommand.SetMinerOreBlacklisted(
+                facilityId,
+                readModuleId(buf),
+                readOreKey(buf),
+                readBoolean(buf));
             case OP_SET_HAMMER_SHOOTING_CONFIG -> new FacilityCommand.SetHammerShootingConfig(
                 facilityId,
                 readModuleId(buf),
@@ -288,7 +335,7 @@ public final class FacilityCommandPacket implements IMessage {
         FacilityModuleKind kind = readEnum(buf, FacilityModuleKind.class);
         ModuleShape shape = readEnum(buf, ModuleShape.class);
         IModuleComponent.BuildPhysicalSpec physicalSpec = readBuildPhysicalSpec(buf);
-        short settingsGroupId = buf.readShort();
+        SettingsGroup.ID settingsGroupId = readNullableSettingsGroupId(buf);
         boolean instantBuild = readBoolean(buf);
         List<ModulePlacement> placements = readPlacements(buf);
         return new FacilityCommand.BuildModules(
@@ -313,6 +360,12 @@ public final class FacilityCommandPacket implements IMessage {
         if (command instanceof FacilityCommand.CopyBuildModules) return OP_COPY_BUILD_MODULES;
         if (command instanceof FacilityCommand.RequestModuleDeconstruction) return OP_REQUEST_MODULE_DECONSTRUCTION;
         if (command instanceof FacilityCommand.CancelModuleOperation) return OP_CANCEL_MODULE_OPERATION;
+        if (command instanceof FacilityCommand.CreateSettingsGroup) return OP_CREATE_SETTINGS_GROUP;
+        if (command instanceof FacilityCommand.RenameSettingsGroup) return OP_RENAME_SETTINGS_GROUP;
+        if (command instanceof FacilityCommand.JoinSettingsGroup) return OP_JOIN_SETTINGS_GROUP;
+        if (command instanceof FacilityCommand.LeaveSettingsGroup) return OP_LEAVE_SETTINGS_GROUP;
+        if (command instanceof FacilityCommand.CopyModuleSettings) return OP_COPY_MODULE_SETTINGS;
+        if (command instanceof FacilityCommand.SetMinerOreBlacklisted) return OP_SET_MINER_ORE_BLACKLISTED;
         if (command instanceof FacilityCommand.SetHammerShootingConfig) return OP_SET_HAMMER_SHOOTING_CONFIG;
         if (command instanceof FacilityCommand.SetHammerRoutePriority) return OP_SET_HAMMER_ROUTE_PRIORITY;
         if (command instanceof FacilityCommand.SetMinerFocusOre) return OP_SET_MINER_FOCUS_ORE;
@@ -552,6 +605,18 @@ public final class FacilityCommandPacket implements IMessage {
         return readBoolean(buf) ? readString(buf) : null;
     }
 
+    private static void writeOreKey(ByteBuf buf, String oreKey) {
+        String validated = require(oreKey, "miner ore key");
+        if (validated.isBlank()) throw malformed("Miner ore key must not be blank");
+        writeString(buf, validated);
+    }
+
+    private static String readOreKey(ByteBuf buf) {
+        String oreKey = readString(buf);
+        if (oreKey.isBlank()) throw malformed("Miner ore key must not be blank");
+        return oreKey;
+    }
+
     private static <T extends Enum<T>> void writeEnum(ByteBuf buf, T value) {
         PacketUtil.writeEnum(buf, require(value, "enum value"));
     }
@@ -648,6 +713,23 @@ public final class FacilityCommandPacket implements IMessage {
 
     private static ModuleInstance.ID readModuleId(ByteBuf buf) {
         return PacketUtil.readModuleId(buf);
+    }
+
+    private static void writeNullableSettingsGroupId(ByteBuf buf, SettingsGroup.ID id) {
+        writeBoolean(buf, id != null);
+        if (id != null) writeSettingsGroupId(buf, id);
+    }
+
+    private static SettingsGroup.ID readNullableSettingsGroupId(ByteBuf buf) {
+        return readBoolean(buf) ? readSettingsGroupId(buf) : null;
+    }
+
+    private static void writeSettingsGroupId(ByteBuf buf, SettingsGroup.ID id) {
+        buf.writeInt(require(id, "settings group ID").value());
+    }
+
+    private static SettingsGroup.ID readSettingsGroupId(ByteBuf buf) {
+        return new SettingsGroup.ID(buf.readInt());
     }
 
     private static void writeUuid(ByteBuf buf, UUID id) {

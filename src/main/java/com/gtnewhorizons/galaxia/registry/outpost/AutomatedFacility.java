@@ -45,6 +45,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperati
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
 import com.gtnewhorizons.galaxia.registry.outpost.station.CapacityCluster;
 import com.gtnewhorizons.galaxia.registry.outpost.station.LayoutCacheBundle;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
@@ -56,7 +57,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
-import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroupRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepLedger;
@@ -82,7 +82,7 @@ public final class AutomatedFacility extends CelestialAsset {
     private final List<ModuleInstance> modules;
     private final StationLayout layout;
     private final LayoutCacheBundle layoutCache;
-    private final FacilitySettingsGroupState settingsGroupState;
+    private final FacilityModuleSettings moduleSettings;
 
     private final UpkeepLedger upkeepLedger;
     private UpkeepSettlement.Credits upkeepCredits = UpkeepSettlement.Credits.empty();
@@ -111,7 +111,7 @@ public final class AutomatedFacility extends CelestialAsset {
         this.modules = new ArrayList<>();
         this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
         this.layoutCache = new LayoutCacheBundle(layout);
-        this.settingsGroupState = new FacilitySettingsGroupState();
+        this.moduleSettings = new FacilityModuleSettings();
         this.upkeepLedger = new UpkeepLedger();
         this.stationFeatureSalt = createStationFeatureSalt(assetId, celestialBodyKey);
         this.energyStored = 0;
@@ -157,8 +157,12 @@ public final class AutomatedFacility extends CelestialAsset {
         return layout;
     }
 
-    public SettingsGroupRegistry settingsGroups() {
-        return settingsGroupState.registry();
+    public FacilityModuleSettingsSnapshot moduleSettingsSnapshot() {
+        return moduleSettings.snapshot();
+    }
+
+    public void restoreModuleSettings(FacilityModuleSettingsSnapshot snapshot) {
+        moduleSettings.restore(snapshot, modules);
     }
 
     public long stationFeatureSalt() {
@@ -199,14 +203,6 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public List<FeatureContribution> featureContributions(ModuleInstance module) {
         return featureModifiers(module).contributions();
-    }
-
-    public void applySettingsGroupsToModules() {
-        settingsGroupState.applyGroupsToModules(modules);
-    }
-
-    public void syncRecipeSettingsGroupsFromModules() {
-        settingsGroupState.syncRecipeGroupsFromModules(modules);
     }
 
     public LayoutCacheBundle layoutCache() {
@@ -390,9 +386,80 @@ public final class AutomatedFacility extends CelestialAsset {
         if (command instanceof FacilityCommand.RemoveLogisticsConfig removeConfig) {
             return applyRemoveLogisticsConfig(removeConfig);
         }
+        if (command instanceof FacilityCommand.ModuleSettingsCommand settingsCommand) {
+            return applyModuleSettingsCommand(settingsCommand);
+        }
         FacilityCommand.Result moduleResult = applyModuleCommand(command, authority);
         return moduleResult != null ? moduleResult
             : FacilityCommand.Result.rejected(FacilityCommand.Rejection.MALFORMED_COMMAND);
+    }
+
+    private FacilityCommand.Result applyModuleSettingsCommand(FacilityCommand.ModuleSettingsCommand command) {
+        FacilityModuleSettings.Outcome outcome;
+        if (command instanceof FacilityCommand.RenameSettingsGroup rename) {
+            outcome = moduleSettings.renameGroup(rename.groupId(), rename.displayName());
+            return finishModuleSettingsCommand(outcome);
+        }
+        ModuleInstance.ID moduleId;
+        if (command instanceof FacilityCommand.CreateSettingsGroup create) moduleId = create.moduleId();
+        else if (command instanceof FacilityCommand.JoinSettingsGroup join) moduleId = join.moduleId();
+        else if (command instanceof FacilityCommand.LeaveSettingsGroup leave) moduleId = leave.moduleId();
+        else if (command instanceof FacilityCommand.CopyModuleSettings copy) moduleId = copy.sourceModuleId();
+        else if (command instanceof FacilityCommand.SetMinerOreBlacklisted setBlacklist)
+            moduleId = setBlacklist.moduleId();
+        else return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MALFORMED_COMMAND);
+        ModuleInstance module = moduleById(moduleId);
+        if (module == null) return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MODULE_NOT_FOUND);
+        if (command instanceof FacilityCommand.CreateSettingsGroup create) {
+            outcome = moduleSettings.createGroup(module, create.displayName());
+        } else if (command instanceof FacilityCommand.JoinSettingsGroup join) {
+            outcome = moduleSettings.joinGroup(module, join.groupId());
+        } else if (command instanceof FacilityCommand.LeaveSettingsGroup) {
+            outcome = moduleSettings.leaveGroup(module);
+        } else if (command instanceof FacilityCommand.CopyModuleSettings copy) {
+            if (copy.targetModuleIds() == null || copy.targetModuleIds()
+                .isEmpty()) {
+                return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_MODULE_TARGETS);
+            }
+            List<ModuleInstance> targets = new ArrayList<>(
+                copy.targetModuleIds()
+                    .size());
+            Set<ModuleInstance.ID> uniqueTargets = new HashSet<>();
+            for (ModuleInstance.ID targetId : copy.targetModuleIds()) {
+                if (targetId == null || !uniqueTargets.add(targetId)) {
+                    return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_MODULE_TARGETS);
+                }
+                ModuleInstance target = moduleById(targetId);
+                if (target == null) {
+                    return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MODULE_NOT_FOUND);
+                }
+                targets.add(target);
+            }
+            outcome = moduleSettings.copySettings(module, targets);
+        } else if (command instanceof FacilityCommand.SetMinerOreBlacklisted setBlacklist) {
+            try {
+                MinerSettings updated = minerSettings(module)
+                    .withOreBlacklisted(setBlacklist.oreKey(), setBlacklist.blacklisted());
+                outcome = moduleSettings.replaceEffectiveSettings(module, updated, modules);
+            } catch (IllegalArgumentException | IllegalStateException invalidSettings) {
+                return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_MODULE_CONFIG);
+            }
+        } else {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MALFORMED_COMMAND);
+        }
+        return finishModuleSettingsCommand(outcome);
+    }
+
+    private FacilityCommand.Result finishModuleSettingsCommand(FacilityModuleSettings.Outcome outcome) {
+        return switch (outcome.status()) {
+            case REJECTED -> FacilityCommand.Result.rejected(outcome.rejection());
+            case UNCHANGED -> FacilityCommand.Result.UNCHANGED;
+            case CHANGED -> {
+                bumpStateRevision();
+                markDirty();
+                yield FacilityCommand.Result.CHANGED;
+            }
+        };
     }
 
     private FacilityCommand.Result applyAdjustInventory(FacilityCommand.AdjustInventory command,
@@ -735,7 +802,7 @@ public final class AutomatedFacility extends CelestialAsset {
             source.shape(),
             source.component()
                 .buildPhysicalSpec(source),
-            (short) 0,
+            null,
             command.instantBuild(),
             command.placements());
         return applyModuleBuild(copiedBuild, source, authority);
@@ -764,8 +831,7 @@ public final class AutomatedFacility extends CelestialAsset {
         }
 
         List<ModuleInstance> prepared = new ArrayList<>(placements.size());
-        Map<ModuleInstance.ID, SettingsGroup> sharedSettingsGroups = new LinkedHashMap<>();
-        Map<ModuleInstance.ID, ModuleSettings> privateSettings = new LinkedHashMap<>();
+        Map<ModuleInstance.ID, FacilityModuleSettings.AttachmentPlan> settingsPlans = new LinkedHashMap<>();
         boolean shouldInstantBuild = command.instantBuild() && authority.debugAuthorized();
         for (ModulePlacement placement : placements) {
             ModuleInstance module;
@@ -777,23 +843,21 @@ public final class AutomatedFacility extends CelestialAsset {
                 return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_MODULE_SPEC);
             }
             module.setRotation(placement.rotation());
-            if (!prepareModuleSettings(
-                module,
-                copySource,
-                command.settingsGroupId(),
-                sharedSettingsGroups,
-                privateSettings)) {
-                return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_SETTINGS_GROUP);
+            if (moduleSettings.supports(module)) {
+                FacilityModuleSettings.AttachmentPlan settingsPlan = prepareModuleSettings(
+                    module,
+                    copySource,
+                    command.settingsGroupId());
+                if (settingsPlan == null) {
+                    return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_SETTINGS_GROUP);
+                }
+                settingsPlans.put(module.id, settingsPlan);
             }
             if (shouldInstantBuild) module.completeConstruction();
             prepared.add(module);
         }
-        if (!hasSettingsGroupCapacity(privateSettings.size())) {
-            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_SETTINGS_GROUP);
-        }
-
         for (ModuleInstance module : prepared) {
-            attachModuleWithoutRevision(module, sharedSettingsGroups.get(module.id), privateSettings.get(module.id));
+            attachModuleWithoutRevision(module, settingsPlans.get(module.id));
             layout.place(module);
             layoutCache.applyMutation(MutationKind.PLACE, module.kind(), module);
         }
@@ -819,63 +883,30 @@ public final class AutomatedFacility extends CelestialAsset {
         return null;
     }
 
-    private boolean validInitialSettingsGroup(FacilityModuleKind buildKind, short settingsGroupId,
+    private boolean validInitialSettingsGroup(FacilityModuleKind buildKind, @Nullable SettingsGroup.ID settingsGroupId,
         @Nullable ModuleInstance copySource) {
-        if (copySource != null || settingsGroupId == 0) return true;
+        if (copySource != null || settingsGroupId == null) return true;
         if (!FacilityModuleRegistry.get(buildKind)
             .settingsGroups()) return false;
-        return canJoinSettingsGroup(buildKind, settingsGroupId);
+        return moduleSettings.canJoin(buildKind, settingsGroupId);
     }
 
-    private boolean prepareModuleSettings(ModuleInstance target, @Nullable ModuleInstance copySource,
-        short settingsGroupId, Map<ModuleInstance.ID, SettingsGroup> sharedSettingsGroups,
-        Map<ModuleInstance.ID, ModuleSettings> privateSettings) {
-        if (!FacilityModuleRegistry.get(target.kind())
-            .settingsGroups()) return true;
+    private @Nullable FacilityModuleSettings.AttachmentPlan prepareModuleSettings(ModuleInstance target,
+        @Nullable ModuleInstance copySource, @Nullable SettingsGroup.ID settingsGroupId) {
         try {
-            if (copySource != null) {
-                SettingsGroup sourceGroup = validateModuleRuntimeSettingsCopy(copySource, target);
-                if (sourceGroup.isJoinable()) {
-                    FacilitySettingsGroupState.applySettingsToModule(sourceGroup.settings(), target);
-                    sharedSettingsGroups.put(target.id, sourceGroup);
-                } else {
-                    ModuleSettings copied = copySource.component()
-                        .copySettings(copySource, sourceGroup.settings());
-                    FacilitySettingsGroupState.applySettingsToModule(copied, target);
-                    privateSettings.put(target.id, copied);
-                }
-                copySource.component()
-                    .afterSettingsCopied(copySource, target);
-            } else if (settingsGroupId != 0) {
-                SettingsGroup group = settingsGroupState.registry()
-                    .require(settingsGroupId, target.kind());
-                FacilitySettingsGroupState.applySettingsToModule(group.settings(), target);
-                sharedSettingsGroups.put(target.id, group);
-            } else {
-                privateSettings.put(target.id, settingsGroupState.privateSettingsFor(target));
-            }
-            return true;
+            return moduleSettings.prepareAttachment(target, copySource, settingsGroupId);
         } catch (IllegalArgumentException | IllegalStateException invalidSettings) {
-            return false;
+            return null;
         }
     }
 
-    private boolean hasSettingsGroupCapacity(int requiredPrivateGroups) {
-        if (requiredPrivateGroups == 0) return true;
-        int nextGroupId = settingsGroupState.registry()
-            .nextGroupId();
-        return nextGroupId > 0 && nextGroupId + requiredPrivateGroups <= Short.MAX_VALUE;
-    }
-
-    private void attachModuleWithoutRevision(ModuleInstance module, @Nullable SettingsGroup sharedSettingsGroup,
-        @Nullable ModuleSettings privateModuleSettings) {
+    private void attachModuleWithoutRevision(ModuleInstance module,
+        @Nullable FacilityModuleSettings.AttachmentPlan settingsPlan) {
         modules.add(module);
         if (!FacilityModuleRegistry.get(module.kind())
             .settingsGroups()) return;
-        SettingsGroup group = sharedSettingsGroup != null ? sharedSettingsGroup
-            : settingsGroupState.registry()
-                .create(module.kind(), privateModuleSettings);
-        settingsGroupState.attachWithoutDirty(module, group);
+        if (settingsPlan == null) throw new IllegalStateException("Missing settings attachment for " + module.id);
+        moduleSettings.attach(settingsPlan);
     }
 
     private boolean validBuildTargets(FacilityModuleKind moduleKind, ModuleShape shape,
@@ -1055,7 +1086,7 @@ public final class AutomatedFacility extends CelestialAsset {
             return;
         }
         modules.add(module);
-        settingsGroupState.attachPrivateGroupIfSupported(module, this::markModuleDirty);
+        if (moduleSettings.supports(module)) moduleSettings.attachPrivate(module);
         bumpStateRevision();
         LOG.debug(
             "[PERSIST] addModule: added {} id={} anchor=({},{}) shape={} status={} (total={})",
@@ -1114,7 +1145,7 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private void finalizeModuleRemoval(ModuleInstance module) {
         if (!modules.remove(module)) return;
-        settingsGroupState.detach(module);
+        moduleSettings.remove(module.id);
         if (layout != null) layout.removeTileForModule(module.id);
         layoutCache.applyMutation(MutationKind.DECONSTRUCT, module.kind(), module);
         bumpStateRevision();
@@ -1132,6 +1163,7 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public void clearModules() {
         modules.clear();
+        moduleSettings.restore(new FacilityModuleSettingsSnapshot(Map.of(), Map.of(), Map.of()), modules);
         markDirty();
     }
 
@@ -1147,14 +1179,9 @@ public final class AutomatedFacility extends CelestialAsset {
         if (!(module.component() instanceof ModuleMiner)) {
             throw new IllegalStateException("Miner settings requested for non-miner module " + module.id);
         }
-        if (module.groupId() == 0) {
-            throw new IllegalStateException("Miner module " + module.id + " has no settings group");
-        }
-        SettingsGroup group = settingsGroupState.registry()
-            .require(module.groupId(), FacilityModuleKind.MINER);
-        if (!(group.settings() instanceof MinerSettings settings)) {
-            throw new IllegalStateException(
-                "Miner settings group " + module.groupId() + " has non-miner settings for module " + module.id);
+        ModuleSettings effective = moduleSettings.effectiveSettings(module.id);
+        if (!(effective instanceof MinerSettings settings)) {
+            throw new IllegalStateException("Miner module " + module.id + " has non-miner settings");
         }
         return settings;
     }
@@ -1164,13 +1191,8 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void setMinerOreBlacklisted(ModuleInstance module, String oreKey, boolean blacklisted) {
-        if (minerSettings(module).setOreBlacklisted(oreKey, blacklisted)) {
-            settingsGroupState.markMembersDirty(
-                settingsGroupState.registry()
-                    .require(module.groupId(), FacilityModuleKind.MINER),
-                modules,
-                this::markModuleDirty);
-        }
+        MinerSettings updated = minerSettings(module).withOreBlacklisted(oreKey, blacklisted);
+        finishModuleSettingsCommand(moduleSettings.replaceEffectiveSettings(module, updated, modules));
     }
 
     public RecipeConfig recipeConfig(ModuleInstance module) {
@@ -1182,14 +1204,9 @@ public final class AutomatedFacility extends CelestialAsset {
             RecipeConfig config = recipeModule.getRecipeConfig();
             return config != null ? config : RecipeConfig.empty();
         }
-        if (module.groupId() == 0) {
-            throw new IllegalStateException("Recipe module " + module.id + " has no settings group");
-        }
-        SettingsGroup group = settingsGroupState.registry()
-            .require(module.groupId(), module.kind());
-        if (!(group.settings() instanceof RecipeModuleSettings settings)) {
-            throw new IllegalStateException(
-                "Recipe settings group " + module.groupId() + " has non-recipe settings for module " + module.id);
+        ModuleSettings effective = moduleSettings.effectiveSettings(module.id);
+        if (!(effective instanceof RecipeModuleSettings settings)) {
+            throw new IllegalStateException("Recipe module " + module.id + " has non-recipe settings");
         }
         RecipeConfig config = settings.config();
         return config != null ? config : RecipeConfig.empty();
@@ -1206,63 +1223,76 @@ public final class AutomatedFacility extends CelestialAsset {
             markModuleDirty(module.id);
             return;
         }
-        if (module.groupId() == 0) {
-            settingsGroupState.attach(
-                module,
-                settingsGroupState.registry()
-                    .create(module.kind(), new RecipeModuleSettings(normalized)),
-                this::markModuleDirty);
+        finishModuleSettingsCommand(
+            moduleSettings.replaceEffectiveSettings(module, new RecipeModuleSettings(normalized), modules));
+    }
+
+    @Nullable
+    public RecipeScheduleState recipeScheduleState(ModuleInstance module) {
+        if (!(module.component() instanceof IRecipeModule recipeModule)) {
+            throw new IllegalStateException("Recipe schedule requested for non-recipe module " + module.id);
         }
-        SettingsGroup group = settingsGroupState.registry()
-            .require(module.groupId(), module.kind());
-        if (!(group.settings() instanceof RecipeModuleSettings settings)) {
-            throw new IllegalStateException(
-                "Recipe settings group " + module.groupId() + " has non-recipe settings for module " + module.id);
+        RecipeConfig config = recipeModule.getRecipeConfig();
+        return config == null ? null : new RecipeScheduleState(config.orderCursor(), config.orderRemaining());
+    }
+
+    public void restoreRecipeScheduleState(ModuleInstance module, @Nullable RecipeScheduleState scheduleState) {
+        if (!(module.component() instanceof IRecipeModule recipeModule)) {
+            throw new IllegalStateException("Recipe schedule restore requested for non-recipe module " + module.id);
         }
-        settings.setConfig(normalized);
-        settingsGroupState.applySettingsToGroup(group, modules);
-        settingsGroupState.markMembersDirty(group, modules, this::markModuleDirty);
+        RecipeConfig config = recipeModule.getRecipeConfig();
+        if (config == null) {
+            if (scheduleState != null) {
+                throw new IllegalStateException(
+                    "Recipe schedule restored for module without recipe config " + module.id);
+            }
+            return;
+        }
+        if (scheduleState == null) {
+            throw new IllegalStateException("Configured recipe module missing schedule state " + module.id);
+        }
+        recipeModule.setRecipeConfig(
+            new RecipeConfig(
+                config.savedRecipes(),
+                config.mode(),
+                config.notDoablePolicy(),
+                scheduleState.orderCursor(),
+                scheduleState.orderRemaining()));
+    }
+
+    public Map<ModuleInstance.ID, RecipeScheduleState> recipeScheduleStates() {
+        Map<ModuleInstance.ID, RecipeScheduleState> scheduleStates = new LinkedHashMap<>();
+        for (ModuleInstance module : modules) {
+            if (!(module.component() instanceof IRecipeModule)) continue;
+            RecipeScheduleState scheduleState = recipeScheduleState(module);
+            if (scheduleState != null) scheduleStates.put(module.id, scheduleState);
+        }
+        return Collections.unmodifiableMap(scheduleStates);
+    }
+
+    public void restoreRecipeScheduleStates(Map<ModuleInstance.ID, RecipeScheduleState> scheduleStates) {
+        if (scheduleStates == null) throw new IllegalStateException("Missing facility recipe schedule states");
+        Map<ModuleInstance.ID, RecipeScheduleState> remaining = new LinkedHashMap<>(scheduleStates);
+        for (ModuleInstance module : modules) {
+            if (module.component() instanceof IRecipeModule) {
+                restoreRecipeScheduleState(module, remaining.remove(module.id));
+            }
+        }
+        if (!remaining.isEmpty()) {
+            throw new IllegalStateException("Recipe schedule state references missing module " + remaining.keySet());
+        }
     }
 
     public boolean canCopyModuleRuntimeSettings(ModuleInstance source, ModuleInstance target) {
-        try {
-            validateModuleRuntimeSettingsCopy(source, target);
-            return true;
-        } catch (RuntimeException ignored) {
-            return false;
-        }
+        return moduleSettings.canCopySettings(source, target);
     }
 
     public void copyModuleRuntimeSettings(ModuleInstance source, ModuleInstance target) {
-        SettingsGroup sourceGroup = validateModuleRuntimeSettingsCopy(source, target);
-        if (sourceGroup.isJoinable()) {
-            assignSettingsGroup(target, sourceGroup.id());
-        } else {
-            setPrivateModuleSettings(
-                target,
-                source.component()
-                    .copySettings(source, sourceGroup.settings()));
+        FacilityModuleSettings.Outcome outcome = moduleSettings.copySettings(source, List.of(target));
+        if (outcome.status() == FacilityModuleSettings.Status.REJECTED) {
+            throw new IllegalStateException("Invalid module settings copy: " + outcome.rejection());
         }
-        source.component()
-            .afterSettingsCopied(source, target);
-        markModuleDirty(target.id);
-    }
-
-    private SettingsGroup validateModuleRuntimeSettingsCopy(ModuleInstance source, ModuleInstance target) {
-        FacilitySettingsGroupState.requireSupported(source);
-        FacilitySettingsGroupState.requireSupported(target);
-        if (source.kind() != target.kind()) {
-            throw new IllegalStateException(
-                "Module settings copy target kind mismatch: " + source.kind() + " -> " + target.kind());
-        }
-        if (source.id.equals(target.id)) {
-            throw new IllegalStateException("Module settings copy target must be different from source: " + source.id);
-        }
-        SettingsGroup sourceGroup = settingsGroupState.registry()
-            .require(source.groupId(), source.kind());
-        source.component()
-            .validateSettingsCopyTarget(source, target);
-        return sourceGroup;
+        finishModuleSettingsCommand(outcome);
     }
 
     public boolean tryReserveOperationMaterials(ModuleInstance module, Map<ItemStackWrapper, Long> materialCost) {
@@ -1402,115 +1432,6 @@ public final class AutomatedFacility extends CelestialAsset {
             markModuleDirty(module.id);
         }
         return true;
-    }
-
-    public SettingsGroup createSettingsGroupForModule(ModuleInstance module, String displayName) {
-        FacilitySettingsGroupState.requireSupported(module);
-        if (module.groupId() != 0) {
-            SettingsGroup current = settingsGroupState.registry()
-                .require(module.groupId(), module.kind());
-            if (current.members()
-                .size() == 1) {
-                if (displayName != null) {
-                    current.setDisplayName(displayName);
-                } else if (current.hasDefaultPrivateDisplayName()) {
-                    current.setDisplayName(current.defaultJoinableDisplayName());
-                }
-                current.setJoinable(true);
-                markModuleDirty(module.id);
-                return current;
-            }
-        }
-        ModuleSettings settings = settingsGroupState.copySettings(module);
-        settingsGroupState.detach(module);
-        SettingsGroup group = settingsGroupState.registry()
-            .create(module.kind(), displayName, true, settings);
-        settingsGroupState.attach(module, group, this::markModuleDirty);
-        return group;
-    }
-
-    public void renameSettingsGroupForModule(ModuleInstance module, short groupId, String displayName) {
-        if (module == null) {
-            throw new IllegalArgumentException("renameSettingsGroupForModule: module must not be null");
-        }
-        FacilitySettingsGroupState.requireSupported(module);
-        SettingsGroup group = settingsGroupState.registry()
-            .require(groupId, module.kind());
-        if (!group.isJoinable()) {
-            throw new IllegalStateException("Settings group " + groupId + " is private and cannot be renamed");
-        }
-        group.setDisplayName(displayName);
-        settingsGroupState.markMembersDirty(group, modules, this::markModuleDirty);
-        if (group.members()
-            .isEmpty()) {
-            bumpStateRevision();
-            markDirty();
-        }
-    }
-
-    public void assignSettingsGroup(ModuleInstance module, short groupId) {
-        FacilitySettingsGroupState.requireSupported(module);
-        if (module.groupId() == groupId) return;
-        if (groupId == 0) {
-            leaveSettingsGroup(module);
-            return;
-        }
-        SettingsGroup group = settingsGroupState.registry()
-            .require(groupId, module.kind());
-        if (!group.isJoinable()) {
-            throw new IllegalStateException("Settings group " + groupId + " is private and cannot be joined");
-        }
-        settingsGroupState.detach(module);
-        settingsGroupState.attach(module, group, this::markModuleDirty);
-    }
-
-    public boolean canJoinSettingsGroup(FacilityModuleKind kind, short groupId) {
-        if (kind == null || groupId <= 0) return false;
-        SettingsGroup group = settingsGroupState.registry()
-            .get(groupId);
-        return group != null && group.kind() == kind && group.isJoinable();
-    }
-
-    public void leaveSettingsGroup(ModuleInstance module) {
-        FacilitySettingsGroupState.requireSupported(module);
-        if (module.groupId() != 0) {
-            SettingsGroup current = settingsGroupState.registry()
-                .require(module.groupId(), module.kind());
-            if (current.members()
-                .size() == 1) {
-                current.setJoinable(false);
-                markModuleDirty(module.id);
-                return;
-            }
-        }
-        ModuleSettings settings = settingsGroupState.copySettings(module);
-        settingsGroupState.detach(module);
-        settingsGroupState.attach(
-            module,
-            settingsGroupState.registry()
-                .create(module.kind(), settings),
-            this::markModuleDirty);
-        markModuleDirty(module.id);
-    }
-
-    private void setPrivateModuleSettings(ModuleInstance module, ModuleSettings settings) {
-        if (module.groupId() != 0) {
-            SettingsGroup current = settingsGroupState.registry()
-                .require(module.groupId(), module.kind());
-            if (!current.isJoinable() && current.members()
-                .size() == 1) {
-                current.setSettings(settings);
-                FacilitySettingsGroupState.applySettingsToModule(settings, module);
-                markModuleDirty(module.id);
-                return;
-            }
-        }
-        settingsGroupState.detach(module);
-        settingsGroupState.attach(
-            module,
-            settingsGroupState.registry()
-                .create(module.kind(), settings),
-            this::markModuleDirty);
     }
 
     private ModuleOperationState requireWaitingOperation(ModuleInstance module) {

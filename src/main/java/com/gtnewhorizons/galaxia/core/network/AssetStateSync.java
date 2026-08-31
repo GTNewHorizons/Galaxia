@@ -33,7 +33,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
-import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 
 import io.netty.buffer.ByteBuf;
@@ -437,8 +436,6 @@ public final class AssetStateSync {
             state.setStationFeatureSalt(packet.stationFeatureSalt);
             state.loadUpkeepCredits(packet.upkeepCredits);
             state.clearModules();
-            state.settingsGroups()
-                .clear();
             state.clear();
             state.logisticsConfig.clear();
             StationLayout layout = state.stationLayout();
@@ -446,6 +443,8 @@ public final class AssetStateSync {
             for (AssetSyncPacket delta : packet.fullSyncDeltas) {
                 handleDelta(state, delta);
             }
+            state.restoreModuleSettings(packet.moduleSettingsSnapshot);
+            state.restoreRecipeScheduleStates(packet.recipeScheduleStates);
         }
 
         private static void validateSatelliteFullState(CelestialAsset asset, AssetSyncPacket packet) {
@@ -472,7 +471,6 @@ public final class AssetStateSync {
                     if (layout != null && module.anchorOrNull() != null) {
                         layout.place(module);
                     }
-                    syncModuleGroupMembership(state, module);
                 }
                 case AssetSyncPacket.INVENTORY_UPDATE -> {
                     if (packet.resource != null && asset instanceof IDistributedInventory inventory) {
@@ -509,19 +507,6 @@ public final class AssetStateSync {
                     StationLayout layout = state.stationLayout();
                     if (layout != null) layout.place(packet.tileCoord, new PlacedTile(module, packet.tileState));
                 }
-                case AssetSyncPacket.SETTINGS_GROUP_UPDATED -> {
-                    if (!(asset instanceof AutomatedFacility state)) {
-                        throw new IllegalStateException("Wrong delta packet target");
-                    }
-                    state.settingsGroups()
-                        .sync(
-                            packet.settingsGroupId,
-                            packet.settingsGroupKind,
-                            packet.settingsGroupName,
-                            packet.settingsGroupJoinable,
-                            AssetSyncPacket.copySettingsGroupPayload(packet.settingsGroupSettings));
-                    state.applySettingsGroupsToModules();
-                }
                 case AssetSyncPacket.FILTER_UPDATED -> {
                     if (asset instanceof AutomatedFacility af) af.setFilters(packet.filterItems, packet.filterItem);
                 }
@@ -536,21 +521,6 @@ public final class AssetStateSync {
                 if (module.id.equals(id)) return module;
             }
             return null;
-        }
-
-        private static void syncModuleGroupMembership(AutomatedFacility state, ModuleInstance module) {
-            if (module.groupId() == 0 || module.anchorOrNull() == null) return;
-            SettingsGroup group = state.settingsGroups()
-                .get(module.groupId());
-            if (group == null) {
-                throw new IllegalStateException(
-                    "Client received module " + module.id + " for missing settings group " + module.groupId());
-            }
-            if (!group.members()
-                .contains(module.anchorOrNull())) {
-                state.settingsGroups()
-                    .addMember(module.groupId(), module.anchor());
-            }
         }
 
         private void applyFull(AssetSyncPacket packet) {
