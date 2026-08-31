@@ -10,6 +10,7 @@ import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.StatCollector;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
@@ -32,7 +33,6 @@ import com.gtnewhorizons.galaxia.client.gui.station.recipe.RecipeInputScreen;
 import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeChance;
 import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeMapId;
 import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeMapLayout;
-import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
@@ -42,7 +42,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 
@@ -73,10 +72,17 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private static final int REMOVE_WIDTH = 38;
     private static final int PAGE_BUTTON_WIDTH = 28;
     private static final int MODE_BUTTON_WIDTH = 96;
+    private static final int POLICY_BUTTON_X = 280;
+    private static final int POLICY_BUTTON_Y = 47;
+    private static final int POLICY_BUTTON_WIDTH = 152;
+    private static final int POLICY_BUTTON_HEIGHT = 14;
     private static final int ADD_BUTTON_WIDTH = 52;
     private static final int COPY_SETTINGS_BUTTON_X = 236;
     private static final int COPY_SETTINGS_BUTTON_WIDTH = 116;
-    private static final int CLOSE_BUTTON_WIDTH = 54;
+    private static final int SAVE_BUTTON_X = 356;
+    private static final int SAVE_BUTTON_WIDTH = 36;
+    private static final int CLOSE_BUTTON_X = 396;
+    private static final int CLOSE_BUTTON_WIDTH = 36;
     private static final int RENAME_MODAL_WIDTH = 260;
     private static final int RENAME_MODAL_HEIGHT = 104;
     private static final int RENAME_MODAL_Y = 110;
@@ -109,24 +115,26 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private final ModuleConfigModalController controller;
     private final @Nullable StationEditModeController editModeController;
     private final ModuleSettingsGroupSelectorWidget settingsGroupSelector;
+    private final RecipeBookEditorModel editor;
     private int page;
-    private int boundsSlotIndex = -1;
+    private boolean boundsOpen;
     private @Nullable BoundTarget selectedBoundTarget;
     private String boundAmountInput = "";
     private @Nullable TextFieldWidget boundAmountField;
-    private int renameSlotIndex = -1;
-    private final RecipeRenameFormModel recipeRenameForm = new RecipeRenameFormModel();
+    private boolean renameOpen;
+    private String recipeNameInput = "";
     private @Nullable TextFieldWidget recipeNameField;
 
     RecipeConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller,
-        @Nullable StationEditModeController editModeController) {
+        @Nullable StationEditModeController editModeController, RecipeBookEditorModel editor) {
         this.assetId = assetId;
         this.controller = controller;
         this.editModeController = editModeController;
+        this.editor = editor;
         this.settingsGroupSelector = new ModuleSettingsGroupSelectorWidget(assetId, controller, () -> {
             ModuleInstance module = selectedModule();
             return module != null ? module.kind() : null;
-        }, this::isRecipeListOpen, WIDTH);
+        }, this::isRecipeListOpen, WIDTH, controller::close);
 
         for (int row = 0; row < ROWS_PER_PAGE; row++) {
             int rowY = ROW_TOP + row * ROW_HEIGHT;
@@ -203,7 +211,12 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
                 .pos(76, FOOTER_Y)
                 .size(MODE_BUTTON_WIDTH, BUTTON_HEIGHT));
         child(
-            ModuleConfigModalSupport.button(this::canConfigureRecipes, "Add", this::addRecipe)
+            ModuleConfigModalSupport
+                .button(this::canConfigureRecipes, this::notDoablePolicyLabel, this::cycleNotDoablePolicy)
+                .pos(POLICY_BUTTON_X, POLICY_BUTTON_Y)
+                .size(POLICY_BUTTON_WIDTH, POLICY_BUTTON_HEIGHT));
+        child(
+            ModuleConfigModalSupport.button(this::canAddRecipe, "Add", this::addRecipe)
                 .pos(178, FOOTER_Y)
                 .size(ADD_BUTTON_WIDTH, BUTTON_HEIGHT));
         child(
@@ -212,8 +225,16 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
                 .size(COPY_SETTINGS_BUTTON_WIDTH, BUTTON_HEIGHT));
         child(
             ModuleConfigModalSupport
+                .button(
+                    this::canConfigureRecipes,
+                    () -> StatCollector.translateToLocal("galaxia.gui.station.recipe.save"),
+                    this::save)
+                .pos(SAVE_BUTTON_X, FOOTER_Y)
+                .size(SAVE_BUTTON_WIDTH, BUTTON_HEIGHT));
+        child(
+            ModuleConfigModalSupport
                 .button(() -> controller.isRecipeConfigOpen() && !isBoundsOpen(), "Close", controller::close)
-                .pos(WIDTH - CLOSE_BUTTON_WIDTH - ModuleConfigModalSupport.PANEL_PADDING, FOOTER_Y)
+                .pos(CLOSE_BUTTON_X, FOOTER_Y)
                 .size(CLOSE_BUTTON_WIDTH, BUTTON_HEIGHT));
         child(
             settingsGroupSelector.pos(0, 0)
@@ -243,7 +264,6 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             return;
         }
 
-        RecipeConfig config = selectedConfig();
         int slotCount = slots().size();
         int color = canConfigureRecipes() ? EnumColors.MAP_COLOR_TEXT_BODY.getColor()
             : EnumColors.MAP_COLOR_TEXT_MUTED.getColor();
@@ -266,13 +286,6 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             drawSlotRow(row, slotIndex, slots.get(slotIndex), color);
         }
 
-        if (config == null && module != null) {
-            ModuleConfigModalSupport.drawLine(
-                "Config will be created when adding a recipe",
-                ModuleConfigModalSupport.PANEL_PADDING,
-                ROW_TOP + ROWS_PER_PAGE * ROW_HEIGHT + 2,
-                EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-        }
         drawRecipeRenameOverlay();
     }
 
@@ -339,6 +352,10 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         return isRecipeListOpen() && !isRecipeRenameOpen() && selectedRecipeModule() != null;
     }
 
+    private boolean canAddRecipe() {
+        return canConfigureRecipes() && editor.canAdd();
+    }
+
     private boolean canCopySettings() {
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         ModuleInstance module = selectedModule();
@@ -383,12 +400,13 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         if (slotIndex < 0 || slotIndex >= slots().size()) return;
         settingsGroupSelector.closeMenu();
         closeRecipeRename();
-        boundsSlotIndex = slotIndex;
+        if (!editor.select(slotIndex)) return;
+        boundsOpen = true;
         selectFirstBoundTarget();
     }
 
     private void closeBounds() {
-        boundsSlotIndex = -1;
+        boundsOpen = false;
         selectedBoundTarget = null;
         boundAmountInput = "";
     }
@@ -397,33 +415,13 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         int slotIndex = slotIndexForRow(rowIndex);
         if (slotIndex < 0 || slotAtRow(rowIndex) == null) return;
         settingsGroupSelector.closeMenu();
-        updateRenameAfterSlotRemoval(slotIndex);
-        updateBoundsAfterSlotRemoval(slotIndex);
-        CelestialClient.updateModuleRecipeSlot(
-            assetId,
-            controller.moduleIndex(),
-            AssetModuleUpdatePacket.ConfigAction.REMOVE_RECIPE_SLOT,
-            (byte) slotIndex,
-            null);
-        page = Math.min(page, maxPageAfterRemoval());
-    }
-
-    private void updateRenameAfterSlotRemoval(int removedSlotIndex) {
-        if (!isRecipeRenameOpen()) return;
-        if (renameSlotIndex == removedSlotIndex) {
+        boolean selectedOverlay = editor.selectedIndex() == slotIndex && (isRecipeRenameOpen() || isBoundsOpen());
+        if (!editor.remove(slotIndex)) return;
+        if (selectedOverlay) {
             closeRecipeRename();
-            return;
-        }
-        if (renameSlotIndex > removedSlotIndex) renameSlotIndex--;
-    }
-
-    private void updateBoundsAfterSlotRemoval(int removedSlotIndex) {
-        if (!isBoundsOpen()) return;
-        if (boundsSlotIndex == removedSlotIndex) {
             closeBounds();
-            return;
         }
-        if (boundsSlotIndex > removedSlotIndex) boundsSlotIndex--;
+        page = Math.min(page, maxPage());
     }
 
     private void updateSlot(int rowIndex, SavedRecipe slot) {
@@ -434,33 +432,21 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
 
     private void updateSlotIndex(int slotIndex, SavedRecipe slot) {
         if (slotIndex < 0) return;
-        updateLocalSlot(slotIndex, slot);
-        CelestialClient.updateModuleRecipeSlot(
-            assetId,
-            controller.moduleIndex(),
-            AssetModuleUpdatePacket.ConfigAction.UPDATE_RECIPE_SLOT,
-            (byte) slotIndex,
-            slot);
-    }
-
-    private void updateLocalSlot(int slotIndex, SavedRecipe slot) {
-        RecipeConfig config = selectedConfig();
-        if (config == null || slotIndex >= config.savedRecipes()
-            .size()) return;
-        config.savedRecipes()
-            .set(slotIndex, slot);
+        editor.update(slotIndex, slot);
     }
 
     private void cycleMode() {
-        IRecipeModule recipeModule = selectedRecipeModule();
-        if (recipeModule == null) return;
+        if (selectedRecipeModule() == null) return;
         settingsGroupSelector.closeMenu();
         closeRecipeRename();
-        CelestialClient.updateModuleConfig(
-            assetId,
-            controller.moduleIndex(),
-            AssetModuleUpdatePacket.ConfigAction.SET_RECIPE_SCHEDULER_MODE,
-            RecipeSlotUiModel.nextMode(recipeModule.getRecipeConfig()));
+        editor.cycleMode();
+    }
+
+    private void cycleNotDoablePolicy() {
+        if (selectedRecipeModule() == null) return;
+        settingsGroupSelector.closeMenu();
+        closeRecipeRename();
+        editor.cycleNotDoablePolicy();
     }
 
     private void addRecipe() {
@@ -468,7 +454,12 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         if (module == null) return;
         settingsGroupSelector.closeMenu();
         closeRecipeRename();
-        RecipeInputScreen.open(assetId, controller.moduleIndex(), module);
+        RecipeInputScreen.open(module, editor::add);
+    }
+
+    private void save() {
+        CelestialClient.replaceRecipeBook(assetId, editor.owner(), editor.replacement());
+        controller.close();
     }
 
     private void startCopySettingsPicker() {
@@ -478,6 +469,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         if (facility == null || source == null || editModeController == null || sourceModuleIndex < 0) return;
         settingsGroupSelector.closeMenu();
         closeRecipeRename();
+        CelestialClient.replaceRecipeBook(assetId, editor.owner(), editor.replacement());
         controller.close();
         editModeController.startTileMode(
             StationEditModeController.Mode.COPY_MODULE,
@@ -504,18 +496,17 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         return canConfigureRecipes() && (page + 1) * ROWS_PER_PAGE < slots().size();
     }
 
-    private int maxPageAfterRemoval() {
-        int remaining = Math.max(0, slots().size() - 1);
-        return remaining == 0 ? 0 : (remaining - 1) / ROWS_PER_PAGE;
+    private int maxPage() {
+        int size = slots().size();
+        return size == 0 ? 0 : (size - 1) / ROWS_PER_PAGE;
     }
 
     private boolean isBoundsOpen() {
-        return boundsSlotIndex >= 0 && boundsSlotIndex < slots().size();
+        return boundsOpen && editor.selectedRecipe() != null;
     }
 
     private @Nullable SavedRecipe boundsSlot() {
-        List<SavedRecipe> slots = slots();
-        return boundsSlotIndex >= 0 && boundsSlotIndex < slots.size() ? slots.get(boundsSlotIndex) : null;
+        return isBoundsOpen() ? editor.selectedRecipe() : null;
     }
 
     private TextFieldWidget createBoundAmountField() {
@@ -656,44 +647,39 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         SavedRecipe slot = slotAtRow(rowIndex);
         if (slotIndex < 0 || slot == null) return;
         settingsGroupSelector.closeMenu();
-        renameSlotIndex = slotIndex;
-        recipeRenameForm.open(slot);
+        if (!editor.select(slotIndex)) return;
+        renameOpen = true;
+        recipeNameInput = slot.displayName()
+            .isBlank() ? RecipeSlotUiModel.slotTitle(slot) : slot.displayName();
         syncRecipeNameFieldText();
         focusRecipeNameField();
     }
 
     private boolean isRecipeRenameOpen() {
-        return renameSlotIndex >= 0 && renameSlotIndex < slots().size();
+        return renameOpen && editor.selectedRecipe() != null;
     }
 
     private boolean canSaveRecipeName() {
-        recipeRenameForm.setInput(currentRecipeNameInput());
-        return isRecipeRenameOpen() && recipeRenameForm.canSave();
+        return isRecipeRenameOpen() && !currentRecipeNameInput().trim()
+            .isEmpty();
     }
 
     private void saveRecipeName() {
-        SavedRecipe slot = renameSlot();
-        if (slot == null) return;
-        recipeRenameForm.setInput(currentRecipeNameInput());
-        updateSlotIndex(renameSlotIndex, recipeRenameForm.save(slot));
+        if (!isRecipeRenameOpen()) return;
+        editor.rename(editor.selectedIndex(), currentRecipeNameInput());
         closeRecipeRename();
     }
 
     private void clearRecipeName() {
-        SavedRecipe slot = renameSlot();
-        if (slot == null) return;
-        updateSlotIndex(renameSlotIndex, recipeRenameForm.clear(slot));
+        if (!isRecipeRenameOpen()) return;
+        editor.rename(editor.selectedIndex(), "");
         closeRecipeRename();
     }
 
     private void closeRecipeRename() {
-        renameSlotIndex = -1;
-        recipeRenameForm.close();
+        renameOpen = false;
+        recipeNameInput = "";
         syncRecipeNameFieldText();
-    }
-
-    private @Nullable SavedRecipe renameSlot() {
-        return isRecipeRenameOpen() ? slots().get(renameSlotIndex) : null;
     }
 
     private TextFieldWidget createRecipeNameField() {
@@ -711,17 +697,18 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
                     EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
                     EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
             }))
-            .value(new StringValue.Dynamic(recipeRenameForm::input, recipeRenameForm::setInput))
+            .value(
+                new StringValue.Dynamic(() -> recipeNameInput, input -> recipeNameInput = input == null ? "" : input))
             .setFocusOnGuiOpen(false)
             .setEnabledIf(w -> isRecipeRenameOpen());
     }
 
     private String currentRecipeNameInput() {
-        return recipeNameField != null ? recipeNameField.getText() : recipeRenameForm.input();
+        return recipeNameField != null ? recipeNameField.getText() : recipeNameInput;
     }
 
     private void syncRecipeNameFieldText() {
-        if (recipeNameField != null) recipeNameField.setText(recipeRenameForm.input());
+        if (recipeNameField != null) recipeNameField.setText(recipeNameInput);
     }
 
     private void focusRecipeNameField() {
@@ -951,7 +938,17 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private String modeLabel() {
-        return RecipeSlotUiModel.modeLabel(selectedConfig());
+        return RecipeSlotUiModel.modeLabel(editor.mode());
+    }
+
+    private String notDoablePolicyLabel() {
+        String valueKey = switch (editor.notDoablePolicy()) {
+            case SKIP -> "galaxia.gui.station.recipe.not_doable_policy.skip";
+            case BACK_TO_BEGINNING -> "galaxia.gui.station.recipe.not_doable_policy.back_to_beginning";
+        };
+        return StatCollector.translateToLocalFormatted(
+            "galaxia.gui.station.recipe.not_doable_policy.label",
+            StatCollector.translateToLocal(valueKey));
     }
 
     private @Nullable SavedRecipe slotAtRow(int rowIndex) {
@@ -966,15 +963,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private List<SavedRecipe> slots() {
-        RecipeConfig config = selectedConfig();
-        return config == null ? List.of()
-            : config.savedRecipes()
-                .toList();
-    }
-
-    private @Nullable RecipeConfig selectedConfig() {
-        IRecipeModule recipeModule = selectedRecipeModule();
-        return recipeModule != null ? recipeModule.getRecipeConfig() : null;
+        return editor.recipes();
     }
 
     private @Nullable IRecipeModule selectedRecipeModule() {

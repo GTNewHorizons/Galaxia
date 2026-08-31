@@ -102,6 +102,7 @@ public final class FacilityCommandGateway {
         }
         if (command instanceof FacilityCommand.RequestModuleDeconstruction
             || command instanceof FacilityCommand.CancelModuleOperation
+            || command instanceof FacilityCommand.ReplaceRecipeBook
             || command instanceof FacilityCommand.ModuleConfiguration
             || command instanceof FacilityCommand.ModuleSettingsCommand
             || command instanceof FacilityCommand.ModuleOperationRequest) {

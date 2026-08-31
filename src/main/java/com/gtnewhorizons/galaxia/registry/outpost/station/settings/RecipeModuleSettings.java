@@ -2,47 +2,27 @@ package com.gtnewhorizons.galaxia.registry.outpost.station.settings;
 
 import java.util.Objects;
 
-import javax.annotation.Nullable;
-
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
 
 public final class RecipeModuleSettings implements ModuleSettings {
 
-    private final RecipeConfig config;
+    private final RecipeBook book;
 
-    public RecipeModuleSettings(@Nullable RecipeConfig config) {
-        this.config = copyOptionalConfig(config);
+    public RecipeModuleSettings(RecipeBook book) {
+        this.book = Objects.requireNonNull(book, "book");
     }
 
-    @Nullable
-    public RecipeConfig config() {
-        return copyOptionalConfig(config);
-    }
-
-    public static RecipeConfig copyConfig(@Nullable RecipeConfig source) {
-        if (source == null) return RecipeConfig.empty();
-        return copyOptionalConfig(source);
-    }
-
-    @Nullable
-    public static RecipeConfig copyOptionalConfig(@Nullable RecipeConfig source) {
-        if (source == null) return null;
-        SavedRecipeList savedRecipes = new SavedRecipeList();
-        for (SavedRecipe recipe : source.savedRecipes()) {
-            savedRecipes.add(recipe);
-        }
-        return new RecipeConfig(savedRecipes, source.mode(), source.notDoablePolicy(), (byte) 0, (byte) 0);
+    public RecipeBook book() {
+        return book;
     }
 
     @Override
     public boolean equals(Object other) {
-        return other instanceof RecipeModuleSettings settings && Objects.equals(config, settings.config);
+        return other instanceof RecipeModuleSettings settings && book.equals(settings.book);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(config);
+        return book.hashCode();
     }
 }

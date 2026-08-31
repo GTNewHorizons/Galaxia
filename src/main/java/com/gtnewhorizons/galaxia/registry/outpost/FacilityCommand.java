@@ -17,11 +17,13 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 
-public sealed interface FacilityCommand permits FacilityCommand.AdjustInventory,FacilityCommand.ClearInventoryResource,FacilityCommand.SetInventoryBound,FacilityCommand.ClearInventoryBound,FacilityCommand.ReplaceFilters,FacilityCommand.PutLogisticsConfig,FacilityCommand.RemoveLogisticsConfig,FacilityCommand.BuildModules,FacilityCommand.CopyBuildModules,FacilityCommand.RequestModuleDeconstruction,FacilityCommand.CancelModuleOperation,FacilityCommand.ModuleConfiguration,FacilityCommand.ModuleOperationRequest,FacilityCommand.ModuleSettingsCommand {
+public sealed interface FacilityCommand permits FacilityCommand.AdjustInventory,FacilityCommand.ClearInventoryResource,FacilityCommand.SetInventoryBound,FacilityCommand.ClearInventoryBound,FacilityCommand.ReplaceFilters,FacilityCommand.PutLogisticsConfig,FacilityCommand.RemoveLogisticsConfig,FacilityCommand.BuildModules,FacilityCommand.CopyBuildModules,FacilityCommand.RequestModuleDeconstruction,FacilityCommand.CancelModuleOperation,FacilityCommand.ReplaceRecipeBook,FacilityCommand.ModuleConfiguration,FacilityCommand.ModuleOperationRequest,FacilityCommand.ModuleSettingsCommand {
 
     CelestialAsset.ID facilityId();
 
@@ -70,6 +72,9 @@ public sealed interface FacilityCommand permits FacilityCommand.AdjustInventory,
         implements FacilityCommand {}
 
     record CancelModuleOperation(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId) implements FacilityCommand {}
+
+    record ReplaceRecipeBook(CelestialAsset.ID facilityId, RecipeBookOwner owner, RecipeBook replacement)
+        implements FacilityCommand {}
 
     record CreateSettingsGroup(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, String displayName)
         implements ModuleSettingsCommand {}
@@ -198,6 +203,8 @@ public sealed interface FacilityCommand permits FacilityCommand.AdjustInventory,
         INVALID_MODULE_TARGETS,
         INVALID_MODULE_COMPONENT,
         INVALID_MODULE_CONFIG,
+        INVALID_RECIPE_BOOK_OWNER,
+        INVALID_RECIPE_BOOK,
         INVALID_MODULE_UPGRADE,
         MODULE_OPERATION_ACTIVE,
         INSUFFICIENT_MODULE_MATERIALS,

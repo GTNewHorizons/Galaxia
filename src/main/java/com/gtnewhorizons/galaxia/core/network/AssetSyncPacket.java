@@ -10,15 +10,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidRegistry;
-import net.minecraftforge.fluids.FluidStack;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
@@ -38,7 +29,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
@@ -52,13 +42,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperati
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -78,8 +62,6 @@ import io.netty.buffer.ByteBuf;
 
 final class AssetSyncPacket {
 
-    private static final Logger LOG = LogManager.getLogger("Galaxia");
-
     public static final byte FULL_SYNC = 0;
     public static final byte MODULE_ADDED = 1;
     public static final byte INVENTORY_UPDATE = 4;
@@ -96,7 +78,6 @@ final class AssetSyncPacket {
     private static final int MAX_FACILITY_FLUID_SNAPSHOT_ENTRIES = 4096;
     private static final int MAX_MODULE_SETTINGS_ENTRIES = 4096;
     private static final int MAX_FLUID_NAME_BYTES = 0xFFFF;
-    private static final int MAX_RECIPE_STACKS = 64;
     static final int MAX_FULL_SYNC_DELTAS = 65_536;
     private static final byte OPERATION_SPEC_TIER = 1;
     private static final byte OPERATION_SPEC_HAMMER = 2;
@@ -807,12 +788,7 @@ final class AssetSyncPacket {
             case POWER, GEOTHERMAL_GENERATOR -> {}
             case STORAGE, TANK, BATTERY -> {}
             case DEBUG_DATA_GENERATOR -> writeDebugDataGenerator(buf, module);
-            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> {
-                if (!FacilityModuleRegistry.get(module.kind())
-                    .settingsGroups()) {
-                    writeRecipeConfig(buf, module);
-                }
-            }
+            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> {}
             default -> {}
         }
         writeModuleOperation(buf, module.operationOrNull());
@@ -851,12 +827,7 @@ final class AssetSyncPacket {
             case POWER, GEOTHERMAL_GENERATOR -> {}
             case STORAGE, TANK, BATTERY -> {}
             case DEBUG_DATA_GENERATOR -> readDebugDataGenerator(buf, module);
-            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> {
-                if (!FacilityModuleRegistry.get(kind)
-                    .settingsGroups()) {
-                    readRecipeConfig(buf, module);
-                }
-            }
+            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> {}
             default -> {}
         }
 
@@ -1005,137 +976,6 @@ final class AssetSyncPacket {
         return size;
     }
 
-    private static void writeRecipeSnapshot(ByteBuf buf, RecipeSnapshot snapshot) {
-        buf.writeInt(snapshot.duration());
-        buf.writeInt(snapshot.eut());
-        writeItemStacks(buf, snapshot.inputs());
-        writeItemStacks(buf, snapshot.outputs());
-        writeIntArray(buf, snapshot.outputChances());
-        writeFluidStacks(buf, snapshot.fluidInputs());
-        writeFluidStacks(buf, snapshot.fluidOutputs());
-        writeIntArray(buf, snapshot.fluidOutputChances());
-    }
-
-    private static RecipeSnapshot readRecipeSnapshot(ByteBuf buf, byte recipeMapOrdinal, int recipeIndex,
-        long contentHash) {
-        int duration = buf.readInt();
-        int eut = buf.readInt();
-        ItemStack[] inputs = readItemStacks(buf);
-        ItemStack[] outputs = readItemStacks(buf);
-        int[] outputChances = readIntArray(buf);
-        FluidStack[] fluidInputs = readFluidStacks(buf);
-        FluidStack[] fluidOutputs = readFluidStacks(buf);
-        int[] fluidOutputChances = readIntArray(buf);
-        return new RecipeSnapshot(
-            recipeMapOrdinal,
-            recipeIndex,
-            contentHash,
-            inputs,
-            outputs,
-            fluidInputs,
-            fluidOutputs,
-            outputChances,
-            fluidOutputChances,
-            duration,
-            eut);
-    }
-
-    private static void writeItemStacks(ByteBuf buf, ItemStack[] stacks) {
-        if (stacks == null) {
-            buf.writeInt(-1);
-            return;
-        }
-        buf.writeInt(stacks.length);
-        for (ItemStack stack : stacks) {
-            buf.writeBoolean(stack != null);
-            if (stack == null) continue;
-            buf.writeInt(Item.getIdFromItem(stack.getItem()));
-            buf.writeInt(stack.getItemDamage());
-            buf.writeInt(stack.stackSize);
-        }
-    }
-
-    private static ItemStack[] readItemStacks(ByteBuf buf) {
-        int len = readRecipeArrayLength(buf);
-        if (len == -1) return null;
-        ItemStack[] stacks = new ItemStack[len];
-        for (int i = 0; i < len; i++) {
-            if (!buf.readBoolean()) continue;
-            Item item = Item.getItemById(buf.readInt());
-            int damage = buf.readInt();
-            int size = buf.readInt();
-            stacks[i] = item != null ? new ItemStack(item, size, damage) : null;
-        }
-        return stacks;
-    }
-
-    private static void writeFluidStacks(ByteBuf buf, FluidStack[] stacks) {
-        if (stacks == null) {
-            buf.writeInt(-1);
-            return;
-        }
-        buf.writeInt(stacks.length);
-        for (FluidStack stack : stacks) {
-            buf.writeBoolean(stack != null);
-            if (stack == null) continue;
-            PacketUtil.writeString(buf, fluidName(stack));
-            buf.writeInt(stack.amount);
-        }
-    }
-
-    private static FluidStack[] readFluidStacks(ByteBuf buf) {
-        int len = readRecipeArrayLength(buf);
-        if (len == -1) return null;
-        FluidStack[] stacks = new FluidStack[len];
-        for (int i = 0; i < len; i++) {
-            if (!buf.readBoolean()) continue;
-            String fluidName = PacketUtil.readString(buf);
-            int amount = buf.readInt();
-            Fluid fluid = FluidRegistry.getFluid(fluidName);
-            if (fluid != null) stacks[i] = new FluidStack(fluid, amount);
-        }
-        return stacks;
-    }
-
-    private static void writeIntArray(ByteBuf buf, int[] values) {
-        if (values == null) {
-            buf.writeInt(-1);
-            return;
-        }
-        buf.writeInt(values.length);
-        for (int value : values) {
-            buf.writeInt(value);
-        }
-    }
-
-    private static int[] readIntArray(ByteBuf buf) {
-        int len = readRecipeArrayLength(buf);
-        if (len == -1) return null;
-        int[] values = new int[len];
-        for (int i = 0; i < len; i++) {
-            values[i] = buf.readInt();
-        }
-        return values;
-    }
-
-    private static int readRecipeArrayLength(ByteBuf buf) {
-        int len = buf.readInt();
-        if (len < -1 || len > MAX_RECIPE_STACKS) {
-            throw new IllegalStateException("Invalid recipe array length: " + len);
-        }
-        return len;
-    }
-
-    private static String fluidName(FluidStack stack) {
-        try {
-            Fluid fluid = stack.getFluid();
-            return fluid != null ? fluid.getName() : "";
-        } catch (RuntimeException e) {
-            LOG.warn("[Network] Failed to resolve fluid name for synced FluidStack {}", stack, e);
-            return "";
-        }
-    }
-
     private static void writeMinerSettingsPayload(ByteBuf buf, MinerSettings settings) {
         PacketUtil.validateBoundedCount(
             settings.blacklistedOreKeys()
@@ -1170,7 +1010,7 @@ final class AssetSyncPacket {
         }
         if (FacilityModuleRegistry.get(kind)
             .settingsGroups() && settings instanceof RecipeModuleSettings recipeSettings) {
-            writeRecipeConfigPayload(buf, recipeSettings.config());
+            RecipeBookWireCodec.writeBook(buf, recipeSettings.book());
             return;
         }
         throw new IllegalStateException("Unsupported settings group payload " + settings + " for kind " + kind);
@@ -1183,7 +1023,7 @@ final class AssetSyncPacket {
         }
         if (FacilityModuleRegistry.get(kind)
             .settingsGroups()) {
-            return new RecipeModuleSettings(readRecipeConfigPayload(buf));
+            return new RecipeModuleSettings(RecipeBookWireCodec.readBook(buf));
         }
         throw new IllegalStateException("Unsupported settings group kind " + kind + " for " + context);
     }
@@ -1267,14 +1107,6 @@ final class AssetSyncPacket {
         return bounds;
     }
 
-    private static void writeRecipeConfig(ByteBuf buf, ModuleInstance module) {
-        if (!(module.component() instanceof IRecipeModule recipeModule)) {
-            buf.writeBoolean(false);
-            return;
-        }
-        writeRecipeConfigPayload(buf, recipeModule.getRecipeConfig());
-    }
-
     private static void writeDebugDataGenerator(ByteBuf buf, ModuleInstance module) {
         ModuleDebugDataGenerator debugGenerator = (ModuleDebugDataGenerator) module.component();
         ModuleDebugDataGenerator.Config config = debugGenerator.config();
@@ -1310,116 +1142,6 @@ final class AssetSyncPacket {
             jobProgressTicks,
             consumedDeciKb,
             detectedCounterpartBodyKey);
-    }
-
-    private static void writeRecipeConfigPayload(ByteBuf buf, RecipeConfig config) {
-        if (config == null) {
-            buf.writeBoolean(false);
-            return;
-        }
-        buf.writeBoolean(true);
-        buf.writeByte(
-            config.mode()
-                .ordinal());
-        buf.writeByte(
-            config.notDoablePolicy()
-                .ordinal());
-        buf.writeByte(config.orderCursor());
-        buf.writeByte(config.orderRemaining());
-
-        List<SavedRecipe> slots = config.savedRecipes()
-            .toList();
-        Map<RecipeSnapshotRef, Integer> snapshotIndexes = new LinkedHashMap<>();
-        List<RecipeSnapshot> snapshots = new ArrayList<>();
-        for (SavedRecipe slot : slots) {
-            RecipeSnapshot snap = slot.recipe();
-            RecipeSnapshotRef ref = RecipeSnapshotRef.of(snap);
-            if (!snapshotIndexes.containsKey(ref)) {
-                snapshotIndexes.put(ref, snapshots.size());
-                snapshots.add(snap);
-            }
-        }
-        buf.writeByte(slots.size());
-        buf.writeByte(snapshots.size());
-        for (RecipeSnapshot snap : snapshots) {
-            buf.writeByte(snap.recipeMapOrdinal());
-            buf.writeInt(snap.recipeIndex());
-            buf.writeLong(snap.contentHash());
-            writeRecipeSnapshot(buf, snap);
-        }
-        for (SavedRecipe slot : slots) {
-            RecipeSnapshot snap = slot.recipe();
-            buf.writeByte(snapshotIndexes.get(RecipeSnapshotRef.of(snap)));
-            buf.writeBoolean(slot.enabled());
-            buf.writeLong(slot.requestAmount());
-            buf.writeByte(slot.priority());
-            buf.writeByte(slot.orderSize());
-            PacketUtil.writeString(buf, slot.displayName());
-        }
-    }
-
-    private static void readRecipeConfig(ByteBuf buf, ModuleInstance module) {
-        RecipeConfig config = readRecipeConfigPayload(buf);
-        if (config == null) return;
-        if (module.component() instanceof IRecipeModule recipeModule) {
-            recipeModule.setRecipeConfig(config);
-        }
-    }
-
-    private static RecipeConfig readRecipeConfigPayload(ByteBuf buf) {
-        if (!buf.readBoolean()) return null;
-        int modeOrd = Byte.toUnsignedInt(buf.readByte());
-        int policyOrd = Byte.toUnsignedInt(buf.readByte());
-        byte orderCursor = buf.readByte();
-        byte orderRemaining = buf.readByte();
-
-        RecipeSchedulerMode[] modes = RecipeSchedulerMode.values();
-        if (modeOrd >= modes.length) return null;
-        RecipeSchedulerMode mode = modes[modeOrd];
-
-        NotDoablePolicy[] policies = NotDoablePolicy.values();
-        if (policyOrd >= policies.length) return null;
-        NotDoablePolicy policy = policies[policyOrd];
-
-        int slotCount = Byte.toUnsignedInt(buf.readByte());
-        if (slotCount < 0 || slotCount > SavedRecipeList.MAX_SAVED_RECIPES) return null;
-
-        int snapshotCount = Byte.toUnsignedInt(buf.readByte());
-        if (snapshotCount < 0 || snapshotCount > SavedRecipeList.MAX_SAVED_RECIPES) return null;
-
-        List<RecipeSnapshot> snapshots = new ArrayList<>(snapshotCount);
-        for (int i = 0; i < snapshotCount; i++) {
-            byte mapOrdinal = buf.readByte();
-            int recipeIndex = buf.readInt();
-            long contentHash = buf.readLong();
-            snapshots.add(readRecipeSnapshot(buf, mapOrdinal, recipeIndex, contentHash));
-        }
-
-        RecipeConfig config = new RecipeConfig(new SavedRecipeList(), mode, policy, orderCursor, orderRemaining);
-
-        for (int i = 0; i < slotCount; i++) {
-            int snapshotIndex = Byte.toUnsignedInt(buf.readByte());
-            if (snapshotIndex >= snapshots.size()) return null;
-            RecipeSnapshot snapshot = snapshots.get(snapshotIndex);
-            boolean enabled = buf.readBoolean();
-            long requestAmount = buf.readLong();
-            byte priority = buf.readByte();
-            byte orderSize = buf.readByte();
-            String displayName = PacketUtil.readString(buf);
-
-            SavedRecipe slot = new SavedRecipe(snapshot, enabled, requestAmount, priority, orderSize, displayName);
-            config.savedRecipes()
-                .add(slot);
-        }
-
-        return config;
-    }
-
-    private record RecipeSnapshotRef(byte recipeMapOrdinal, int recipeIndex, long contentHash) {
-
-        private static RecipeSnapshotRef of(RecipeSnapshot snapshot) {
-            return new RecipeSnapshotRef(snapshot.recipeMapOrdinal(), snapshot.recipeIndex(), snapshot.contentHash());
-        }
     }
 
     AssetSyncPacket withPublishedRevision(long baseRevision, long revision) {

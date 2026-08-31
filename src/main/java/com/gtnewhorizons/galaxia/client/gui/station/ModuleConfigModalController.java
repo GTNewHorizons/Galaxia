@@ -5,6 +5,7 @@ import java.util.Objects;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
@@ -172,14 +173,17 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
 
     void openRecipeConfig(int moduleIndex) {
         ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
-        if (module == null || !(module.component() instanceof IRecipeModule)) return;
+        AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
+        if (facility == null || module == null || !(module.component() instanceof IRecipeModule)) return;
         if (closeIfSame(Kind.RECIPE_CONFIG, module.id)) return;
         overlayCoordinator.closeOthers(this);
         close();
         this.kind = Kind.RECIPE_CONFIG;
         this.moduleId = module.id;
 
-        RecipeConfigModalWidget widget = new RecipeConfigModalWidget(assetId, this, editModeController);
+        RecipeBookEditorModel editor = RecipeBookEditorModel
+            .edit(facility.recipeBookOwner(module), facility.recipeBook(module));
+        RecipeConfigModalWidget widget = new RecipeConfigModalWidget(assetId, this, editModeController, editor);
         widget.left(x)
             .top(y)
             .width(RecipeConfigModalWidget.WIDTH)
@@ -435,7 +439,10 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
             close();
             return;
         }
-        moduleId = module.id;
+        AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
+        int moduleIndex = facility == null ? -1 : facility.moduleIndex(module.id);
+        close();
+        if (moduleIndex >= 0) openRecipeConfig(moduleIndex);
     }
 
     private void retargetDebugDataGenerator(ModuleInstance module) {

@@ -66,6 +66,7 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
     private final Supplier<FacilityModuleKind> kindSupplier;
     private final BooleanSupplier openSupplier;
     private final int modalWidth;
+    private final Runnable ownerChangeSubmitted;
     private GroupNameAction groupNameAction = GroupNameAction.NONE;
     private SettingsGroup.ID editingGroupId;
     private String groupNameInput = "";
@@ -75,16 +76,18 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
 
     ModuleSettingsGroupSelectorWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller,
         FacilityModuleKind kind, BooleanSupplier openSupplier, int modalWidth) {
-        this(assetId, controller, () -> kind, openSupplier, modalWidth);
+        this(assetId, controller, () -> kind, openSupplier, modalWidth, () -> {});
     }
 
     ModuleSettingsGroupSelectorWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller,
-        Supplier<FacilityModuleKind> kindSupplier, BooleanSupplier openSupplier, int modalWidth) {
+        Supplier<FacilityModuleKind> kindSupplier, BooleanSupplier openSupplier, int modalWidth,
+        Runnable ownerChangeSubmitted) {
         this.assetId = assetId;
         this.controller = controller;
         this.kindSupplier = kindSupplier;
         this.openSupplier = openSupplier;
         this.modalWidth = modalWidth;
+        this.ownerChangeSubmitted = ownerChangeSubmitted;
 
         child(
             ModuleConfigModalSupport
@@ -226,6 +229,7 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
         if (!Objects.equals(currentGroupId, option.groupId())) {
             controller.closeSettingsGroupMenu();
             CelestialClient.updateModuleSettingsGroup(assetId, controller.moduleIndex(), option.groupId());
+            ownerChangeSubmitted.run();
         }
     }
 
@@ -338,6 +342,7 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
         ModuleInstance module = selectedModule();
         String displayName = currentGroupNameInput().trim();
         if (module == null || displayName.isEmpty()) return;
+        boolean ownerChanging = groupNameAction == GroupNameAction.CREATE;
         if (groupNameAction == GroupNameAction.CREATE) {
             CelestialClient.createModuleSettingsGroup(assetId, controller.moduleIndex(), displayName);
         } else if (groupNameAction == GroupNameAction.RENAME && editingGroupId != null) {
@@ -345,6 +350,7 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
         }
         cancelGroupNameEdit();
         controller.closeSettingsGroupMenu();
+        if (ownerChanging) ownerChangeSubmitted.run();
     }
 
     private void cancelGroupNameEdit() {

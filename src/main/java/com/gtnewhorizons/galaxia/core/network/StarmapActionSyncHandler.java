@@ -109,12 +109,6 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
     }
 
     @SideOnly(Side.CLIENT)
-    public static boolean sendModuleUpdate(AssetModuleUpdatePacket packet) {
-        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
-        return true;
-    }
-
-    @SideOnly(Side.CLIENT)
     public static boolean sendFacilityCommand(FacilityCommand command) {
         Galaxia.GALAXIA_NETWORK.sendToServer(new FacilityCommandPacket(command));
         return true;

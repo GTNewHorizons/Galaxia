@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.core.persistence;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -11,6 +10,10 @@ import java.util.Objects;
 import java.util.Set;
 
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.JsonToNBT;
+import net.minecraft.nbt.NBTBase;
+import net.minecraft.nbt.NBTException;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
@@ -58,12 +61,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGe
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -77,12 +79,27 @@ import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
 
-import sun.misc.Unsafe;
-
 final class FacilityJsonCodec {
 
     private static final Logger LOG = LogManager.getLogger(FacilityPersistenceManager.class);
     private static final Gson PURE_GSON = new GsonBuilder().create();
+    private static final Set<String> RECIPE_FIELDS = Set.of(
+        "recipeMapOrdinal",
+        "recipeIndex",
+        "contentHash",
+        "inputs",
+        "outputs",
+        "fluidInputs",
+        "fluidOutputs",
+        "outputChances",
+        "fluidOutputChances",
+        "duration",
+        "eut",
+        "enabled",
+        "requestAmount",
+        "priority",
+        "orderSize",
+        "displayName");
 
     private FacilityJsonCodec() {}
 
@@ -196,13 +213,7 @@ final class FacilityJsonCodec {
                     "detectedCounterpartBodyKey",
                     detectedCounterpartBodyKey == null ? JsonNull.INSTANCE
                         : PURE_GSON.toJsonTree(CelestialObjectKeyJsonCodec.encode(detectedCounterpartBodyKey)));
-            } else if (m.component() instanceof IRecipeModule recipeModule && !FacilityModuleRegistry.get(m.kind())
-                .settingsGroups()) {
-                    RecipeConfig rc = recipeModule.getRecipeConfig();
-                    if (rc != null) {
-                        encodeRecipeConfig(moduleData, rc);
-                    }
-                }
+            }
             mj.data = moduleData;
             mj.consumedResources = new LinkedHashMap<>();
             for (Map.Entry<ItemStack, Long> e : m.getConstructionInventory()
@@ -394,14 +405,7 @@ final class FacilityJsonCodec {
                     }
                     case POWER, GEOTHERMAL_GENERATOR -> {}
                     case STORAGE, TANK, BATTERY, MAINTENANCE_BAY -> {}
-                    case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> {
-                        if (data.has("recipeMode")) {
-                            RecipeConfig rc = decodeRecipeConfig(data);
-                            if (rc != null && module.component() instanceof IRecipeModule rm) {
-                                rm.setRecipeConfig(rc);
-                            }
-                        }
-                    }
+                    case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> {}
                 }
 
                 Buildable.Status moduleStatus = Objects.requireNonNull(
@@ -794,19 +798,6 @@ final class FacilityJsonCodec {
 
     private static RecipeSnapshot readRecipeSnapshot(JsonObject slotObj, byte recipeMapOrdinal, int recipeIndex,
         long contentHash) {
-        if (!slotObj.has("duration") && !slotObj.has("eut")
-            && !slotObj.has("inputs")
-            && !slotObj.has("outputs")
-            && !slotObj.has("outputChances")
-            && !slotObj.has("fluidInputs")
-            && !slotObj.has("fluidOutputs")
-            && !slotObj.has("fluidOutputChances")) {
-            return RecipeSnapshot.unresolved(recipeMapOrdinal, recipeIndex, contentHash);
-        }
-        int duration = slotObj.has("duration") ? slotObj.get("duration")
-            .getAsInt() : 0;
-        int eut = slotObj.has("eut") ? slotObj.get("eut")
-            .getAsInt() : 0;
         return new RecipeSnapshot(
             recipeMapOrdinal,
             recipeIndex,
@@ -817,42 +808,59 @@ final class FacilityJsonCodec {
             readFluidStacks(slotObj, "fluidOutputs"),
             readIntArray(slotObj, "outputChances"),
             readIntArray(slotObj, "fluidOutputChances"),
-            duration,
-            eut);
+            requireRecipeInt(slotObj, "duration"),
+            requireRecipeInt(slotObj, "eut"));
     }
 
     private static void writeItemStacks(JsonObject target, String key, ItemStack[] stacks) {
-        if (stacks == null) return;
+        if (stacks == null) {
+            target.add(key, JsonNull.INSTANCE);
+            return;
+        }
         com.google.gson.JsonArray array = new com.google.gson.JsonArray();
         for (ItemStack stack : stacks) {
             ItemStackWrapper wrapper = ItemStackWrapper.of(stack);
             if (wrapper == null) {
-                array.add(com.google.gson.JsonNull.INSTANCE);
-                continue;
+                throw new IllegalStateException("[PERSIST] Recipe " + key + " contains an invalid item stack");
             }
             JsonObject obj = new JsonObject();
             obj.addProperty("key", wrapper.toKey());
             obj.addProperty("amount", stack.stackSize);
+            writeRecipeTag(obj, stack.getTagCompound());
             array.add(obj);
         }
         target.add(key, array);
     }
 
     private static ItemStack[] readItemStacks(JsonObject source, String key) {
-        if (!source.has(key)) return null;
-        com.google.gson.JsonArray array = source.getAsJsonArray(key);
+        JsonElement encoded = source.get(key);
+        if (encoded == null) throw new IllegalStateException("Missing recipe field " + key);
+        if (encoded.isJsonNull()) return null;
+        if (!encoded.isJsonArray()) throw new IllegalStateException("Recipe field " + key + " must be an array");
+        com.google.gson.JsonArray array = encoded.getAsJsonArray();
         ItemStack[] stacks = new ItemStack[array.size()];
         for (int i = 0; i < array.size(); i++) {
             JsonElement element = array.get(i);
-            if (element == null || element.isJsonNull()) continue;
+            if (element == null || !element.isJsonObject()) {
+                throw new IllegalStateException("Recipe field " + key + " has an invalid item at index " + i);
+            }
             JsonObject obj = element.getAsJsonObject();
-            ItemStackWrapper wrapper = ItemStackWrapper.fromKey(
-                obj.get("key")
-                    .getAsString());
-            if (wrapper == null) continue;
-            int amount = obj.has("amount") ? obj.get("amount")
-                .getAsInt() : 1;
+            if (obj.entrySet()
+                .size() != 3 || !obj.has("key")
+                || !obj.has("amount")
+                || !obj.has("tag")) {
+                throw new IllegalStateException("Recipe field " + key + " has a malformed item at index " + i);
+            }
+            ItemStackWrapper wrapper = ItemStackWrapper.fromKey(requireRecipeString(obj, "key"));
+            if (wrapper == null) {
+                throw new IllegalStateException("Recipe field " + key + " has an unknown item at index " + i);
+            }
+            int amount = requireRecipeInt(obj, "amount");
+            if (amount <= 0) {
+                throw new IllegalStateException("Recipe field " + key + " has a non-positive amount at index " + i);
+            }
             stacks[i] = wrapper.toStack(amount);
+            stacks[i].setTagCompound(readRecipeTag(obj, "tag"));
         }
         return stacks;
     }
@@ -881,7 +889,10 @@ final class FacilityJsonCodec {
     }
 
     private static void writeIntArray(JsonObject target, String key, int[] values) {
-        if (values == null) return;
+        if (values == null) {
+            target.add(key, JsonNull.INSTANCE);
+            return;
+        }
         com.google.gson.JsonArray array = new com.google.gson.JsonArray();
         for (int value : values) {
             array.add(new com.google.gson.JsonPrimitive(value));
@@ -890,99 +901,103 @@ final class FacilityJsonCodec {
     }
 
     private static int[] readIntArray(JsonObject source, String key) {
-        if (!source.has(key)) return null;
-        com.google.gson.JsonArray array = source.getAsJsonArray(key);
+        JsonElement encoded = source.get(key);
+        if (encoded == null) throw new IllegalStateException("Missing recipe field " + key);
+        if (encoded.isJsonNull()) return null;
+        if (!encoded.isJsonArray()) throw new IllegalStateException("Recipe field " + key + " must be an array");
+        com.google.gson.JsonArray array = encoded.getAsJsonArray();
         int[] values = new int[array.size()];
         for (int i = 0; i < array.size(); i++) {
             JsonElement element = array.get(i);
-            values[i] = element != null && !element.isJsonNull() ? element.getAsInt() : 0;
+            if (element == null || element.isJsonNull()) {
+                throw new IllegalStateException("Recipe field " + key + " has a null value at index " + i);
+            }
+            values[i] = requireRecipeIntValue(element, key);
         }
         return values;
     }
 
     private static void writeFluidStacks(JsonObject target, String key, FluidStack[] stacks) {
-        if (stacks == null) return;
+        if (stacks == null) {
+            target.add(key, JsonNull.INSTANCE);
+            return;
+        }
         com.google.gson.JsonArray array = new com.google.gson.JsonArray();
         for (FluidStack stack : stacks) {
             String fluidName = fluidName(stack);
             if (fluidName == null) {
-                array.add(com.google.gson.JsonNull.INSTANCE);
-                continue;
+                throw new IllegalStateException("[PERSIST] Recipe " + key + " contains an invalid fluid stack");
             }
             JsonObject obj = new JsonObject();
             obj.addProperty("fluid", fluidName);
             obj.addProperty("amount", stack.amount);
+            writeRecipeTag(obj, stack.tag);
             array.add(obj);
         }
         target.add(key, array);
     }
 
     private static FluidStack[] readFluidStacks(JsonObject source, String key) {
-        if (!source.has(key)) return null;
-        com.google.gson.JsonArray array = source.getAsJsonArray(key);
+        JsonElement encoded = source.get(key);
+        if (encoded == null) throw new IllegalStateException("Missing recipe field " + key);
+        if (encoded.isJsonNull()) return null;
+        if (!encoded.isJsonArray()) throw new IllegalStateException("Recipe field " + key + " must be an array");
+        com.google.gson.JsonArray array = encoded.getAsJsonArray();
         FluidStack[] stacks = new FluidStack[array.size()];
         for (int i = 0; i < array.size(); i++) {
             JsonElement element = array.get(i);
-            if (element == null || element.isJsonNull()) continue;
+            if (element == null || !element.isJsonObject()) {
+                throw new IllegalStateException("Recipe field " + key + " has an invalid fluid at index " + i);
+            }
             JsonObject obj = element.getAsJsonObject();
-            Fluid fluid = resolveFluid(
-                obj.get("fluid")
-                    .getAsString());
-            if (fluid == null) continue;
-            int amount = obj.has("amount") ? obj.get("amount")
-                .getAsInt() : 0;
-            stacks[i] = createFluidStack(fluid, amount);
+            if (obj.entrySet()
+                .size() != 3 || !obj.has("fluid")
+                || !obj.has("amount")
+                || !obj.has("tag")) {
+                throw new IllegalStateException("Recipe field " + key + " has a malformed fluid at index " + i);
+            }
+            Fluid fluid = FluidRegistry.getFluid(requireRecipeString(obj, "fluid"));
+            if (fluid == null) {
+                throw new IllegalStateException("Recipe field " + key + " has an unknown fluid at index " + i);
+            }
+            int amount = requireRecipeInt(obj, "amount");
+            if (amount <= 0) {
+                throw new IllegalStateException("Recipe field " + key + " has a non-positive amount at index " + i);
+            }
+            stacks[i] = new FluidStack(fluid, amount);
+            stacks[i].tag = readRecipeTag(obj, "tag");
         }
         return stacks;
     }
 
     private static String fluidName(FluidStack stack) {
         if (stack == null) return null;
-        Fluid fluid = fluidType(stack);
+        Fluid fluid = stack.getFluid();
         return fluid != null ? fluid.getName() : null;
     }
 
-    private static Fluid resolveFluid(String name) {
-        try {
-            Fluid fluid = FluidRegistry.getFluid(name);
-            if (fluid != null) return fluid;
-        } catch (Throwable ignored) {}
-        return name != null && !name.isEmpty() ? new Fluid(name) : null;
-    }
-
-    private static FluidStack createFluidStack(Fluid fluid, int amount) {
-        try {
-            FluidStack stack = new FluidStack(fluid, amount);
-            if (fluidType(stack) != null) return stack;
-        } catch (Throwable ignored) {
-            // Fall through to the reflective path below.
-        }
-        try {
-            Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
-            unsafeField.setAccessible(true);
-            Unsafe unsafe = (Unsafe) unsafeField.get(null);
-            FluidStack stack = (FluidStack) unsafe.allocateInstance(FluidStack.class);
-            Field fluidField = FluidStack.class.getDeclaredField("fluid");
-            fluidField.setAccessible(true);
-            fluidField.set(stack, fluid);
-            stack.amount = amount;
-            return stack;
-        } catch (ReflectiveOperationException e) {
-            return null;
+    private static void writeRecipeTag(JsonObject target, NBTTagCompound tag) {
+        if (tag == null) {
+            target.add("tag", JsonNull.INSTANCE);
+        } else {
+            target.addProperty("tag", tag.toString());
         }
     }
 
-    private static Fluid fluidType(FluidStack stack) {
+    private static NBTTagCompound readRecipeTag(JsonObject source, String key) {
+        JsonElement encoded = source.get(key);
+        if (encoded == null) throw new IllegalStateException("Missing recipe field " + key);
+        if (encoded.isJsonNull()) return null;
+        if (!encoded.isJsonPrimitive() || !encoded.getAsJsonPrimitive()
+            .isString()) {
+            throw new IllegalStateException("Recipe field " + key + " must be an NBT string or null");
+        }
         try {
-            return stack.getFluid();
-        } catch (RuntimeException ignored) {
-            try {
-                Field field = FluidStack.class.getDeclaredField("fluid");
-                field.setAccessible(true);
-                return (Fluid) field.get(stack);
-            } catch (ReflectiveOperationException e) {
-                return null;
-            }
+            NBTBase parsed = JsonToNBT.func_150315_a(encoded.getAsString());
+            if (parsed instanceof NBTTagCompound compound) return compound;
+            throw new IllegalStateException("Recipe field " + key + " must contain a compound NBT tag");
+        } catch (NBTException ex) {
+            throw new IllegalStateException("Recipe field " + key + " has an invalid NBT tag", ex);
         }
     }
 
@@ -1227,9 +1242,7 @@ final class FacilityJsonCodec {
         }
         if (settings instanceof RecipeModuleSettings recipeSettings) {
             JsonObject recipeData = new JsonObject();
-            if (recipeSettings.config() != null) {
-                encodeRecipeConfig(recipeData, recipeSettings.config());
-            }
+            recipeData.add("recipeBook", encodeRecipeBook(recipeSettings.book()));
             data.add("recipeSettings", recipeData);
             return data;
         }
@@ -1260,53 +1273,56 @@ final class FacilityJsonCodec {
                 throw new IllegalStateException("[PERSIST] " + context + " has malformed recipe data");
             }
             JsonObject recipeData = data.getAsJsonObject("recipeSettings");
-            return new RecipeModuleSettings(recipeData.has("recipeMode") ? decodeRecipeConfig(recipeData) : null);
+            if (recipeData.entrySet()
+                .size() != 1 || !recipeData.has("recipeBook")) {
+                throw new IllegalStateException("[PERSIST] " + context + " has malformed recipe book data");
+            }
+            try {
+                return new RecipeModuleSettings(decodeRecipeBook(recipeData.get("recipeBook"), context));
+            } catch (IllegalStateException ex) {
+                throw ex;
+            } catch (RuntimeException ex) {
+                throw new IllegalStateException("[PERSIST] " + context + " has invalid recipe book", ex);
+            }
         }
         throw new IllegalStateException("[PERSIST] Unsupported settings group kind " + kind);
     }
 
-    private static void encodeRecipeConfig(JsonObject data, RecipeConfig rc) {
+    private static JsonObject encodeRecipeBook(RecipeBook book) {
+        JsonObject data = new JsonObject();
         data.addProperty(
-            "recipeMode",
-            rc.mode()
+            "mode",
+            book.mode()
                 .name());
         data.addProperty(
-            "recipeNotDoablePolicy",
-            rc.notDoablePolicy()
+            "notDoablePolicy",
+            book.notDoablePolicy()
                 .name());
-        data.addProperty("recipeOrderCursor", rc.orderCursor() & 0xFF);
-        data.addProperty("recipeOrderRemaining", rc.orderRemaining() & 0xFF);
-        com.google.gson.JsonArray slotsArray = new com.google.gson.JsonArray();
-        for (int i = 0; i < SavedRecipeList.MAX_SAVED_RECIPES; i++) {
-            SavedRecipe slot = rc.savedRecipes()
-                .getOrNull(i);
-            if (slot == null) continue;
-            com.google.gson.JsonObject slotObj = new com.google.gson.JsonObject();
-            slotObj.addProperty(
+        com.google.gson.JsonArray recipes = new com.google.gson.JsonArray();
+        for (SavedRecipe recipe : book.recipes()) {
+            JsonObject recipeData = new JsonObject();
+            recipeData.addProperty(
                 "recipeMapOrdinal",
-                slot.recipe()
+                recipe.recipe()
                     .recipeMapOrdinal() & 0xFF);
-            slotObj.addProperty(
+            recipeData.addProperty(
                 "recipeIndex",
-                slot.recipe()
+                recipe.recipe()
                     .recipeIndex());
-            slotObj.addProperty(
+            recipeData.addProperty(
                 "contentHash",
-                slot.recipe()
+                recipe.recipe()
                     .contentHash());
-            writeRecipeSnapshot(slotObj, slot.recipe());
-            slotObj.addProperty("enabled", slot.enabled());
-            slotObj.addProperty("requestAmount", slot.requestAmount());
-            slotObj.addProperty("priority", slot.priority() & 0xFF);
-            slotObj.addProperty("orderSize", slot.orderSize() & 0xFF);
-            if (slot.displayName() != null && !slot.displayName()
-                .isBlank()) {
-                slotObj.addProperty("displayName", slot.displayName());
-            }
-            slotObj.addProperty("slotIndex", i);
-            slotsArray.add(slotObj);
+            writeRecipeSnapshot(recipeData, recipe.recipe());
+            recipeData.addProperty("enabled", recipe.enabled());
+            recipeData.addProperty("requestAmount", recipe.requestAmount());
+            recipeData.addProperty("priority", recipe.priority() & 0xFF);
+            recipeData.addProperty("orderSize", recipe.orderSize() & 0xFF);
+            recipeData.addProperty("displayName", recipe.displayName());
+            recipes.add(recipeData);
         }
-        data.add("savedRecipes", slotsArray);
+        data.add("recipes", recipes);
+        return data;
     }
 
     private static void decodeMinerSettings(ModuleInstance module, ModuleMiner miner, JsonObject data) {
@@ -1334,54 +1350,137 @@ final class FacilityJsonCodec {
         miner.setFocus(focusTier, focusOreKey, focusAlignmentProgress);
     }
 
-    private static RecipeConfig decodeRecipeConfig(JsonObject data) {
-        try {
-            RecipeSchedulerMode mode = RecipeSchedulerMode.valueOf(
-                data.get("recipeMode")
-                    .getAsString());
-            NotDoablePolicy policy = NotDoablePolicy.valueOf(
-                data.get("recipeNotDoablePolicy")
-                    .getAsString());
-            byte orderCursor = data.get("recipeOrderCursor")
-                .getAsByte();
-            byte orderRemaining = data.get("recipeOrderRemaining")
-                .getAsByte();
-            SavedRecipeList slots = new SavedRecipeList();
-
-            if (data.has("savedRecipes")) {
-                com.google.gson.JsonArray slotsArray = data.getAsJsonArray("savedRecipes");
-                for (int i = 0; i < slotsArray.size(); i++) {
-                    JsonObject slotObj = slotsArray.get(i)
-                        .getAsJsonObject();
-                    byte recipeMapOrdinal = slotObj.get("recipeMapOrdinal")
-                        .getAsByte();
-                    int recipeIndex = slotObj.get("recipeIndex")
-                        .getAsInt();
-                    long contentHash = slotObj.get("contentHash")
-                        .getAsLong();
-                    boolean enabled = slotObj.get("enabled")
-                        .getAsBoolean();
-                    long requestAmount = slotObj.has("requestAmount") ? slotObj.get("requestAmount")
-                        .getAsLong() : 0L;
-                    byte priority = slotObj.get("priority")
-                        .getAsByte();
-                    byte orderSize = slotObj.get("orderSize")
-                        .getAsByte();
-                    RecipeSnapshot ref = readRecipeSnapshot(slotObj, recipeMapOrdinal, recipeIndex, contentHash);
-                    String displayName = slotObj.has("displayName") ? slotObj.get("displayName")
-                        .getAsString() : "";
-                    SavedRecipe slot = new SavedRecipe(ref, enabled, requestAmount, priority, orderSize, displayName);
-                    int slotIndex = slotObj.has("slotIndex") ? slotObj.get("slotIndex")
-                        .getAsInt() : i;
-                    slots.setOrAppend(slotIndex, slot);
-                }
-            }
-
-            return new RecipeConfig(slots, mode, policy, orderCursor, orderRemaining);
-        } catch (Exception e) {
-            LOG.warn("[PERSIST] Failed to decode RecipeConfig: {}", e.getMessage());
-            return null;
+    private static RecipeBook decodeRecipeBook(JsonElement encoded, String context) {
+        if (encoded == null || encoded.isJsonNull() || !encoded.isJsonObject()) {
+            throw new IllegalStateException("[PERSIST] " + context + " missing recipe book");
         }
+        JsonObject data = encoded.getAsJsonObject();
+        if (data.entrySet()
+            .size() != 3 || !data.has("mode")
+            || !data.has("notDoablePolicy")
+            || !data.has("recipes")
+            || !data.get("recipes")
+                .isJsonArray()) {
+            throw new IllegalStateException("[PERSIST] " + context + " has malformed recipe book");
+        }
+        RecipeSchedulerMode mode = requireEnum(
+            RecipeSchedulerMode.class,
+            data.get("mode")
+                .getAsString(),
+            "[PERSIST] " + context + " has invalid recipe mode");
+        NotDoablePolicy policy = requireEnum(
+            NotDoablePolicy.class,
+            data.get("notDoablePolicy")
+                .getAsString(),
+            "[PERSIST] " + context + " has invalid not-doable policy");
+        com.google.gson.JsonArray recipesData = data.getAsJsonArray("recipes");
+        if (recipesData.size() > RecipeBook.MAX_RECIPES) {
+            throw new IllegalStateException("[PERSIST] " + context + " exceeds the recipe book size limit");
+        }
+        List<SavedRecipe> recipes = new ArrayList<>(recipesData.size());
+        for (int i = 0; i < recipesData.size(); i++) {
+            JsonElement recipeElement = recipesData.get(i);
+            if (recipeElement == null || recipeElement.isJsonNull() || !recipeElement.isJsonObject()) {
+                throw new IllegalStateException("[PERSIST] " + context + " has malformed recipe at index " + i);
+            }
+            JsonObject recipeData = recipeElement.getAsJsonObject();
+            try {
+                if (recipeData.entrySet()
+                    .size() != RECIPE_FIELDS.size()
+                    || !recipeData.entrySet()
+                        .stream()
+                        .allMatch(entry -> RECIPE_FIELDS.contains(entry.getKey()))) {
+                    throw new IllegalArgumentException("recipe fields do not match the persistence contract");
+                }
+                int mapOrdinal = requireRecipeInt(recipeData, "recipeMapOrdinal");
+                int priority = requireRecipeInt(recipeData, "priority");
+                int orderSize = requireRecipeInt(recipeData, "orderSize");
+                if (mapOrdinal < 1 || mapOrdinal > 255) {
+                    throw new IllegalArgumentException("recipeMapOrdinal must be between 1 and 255");
+                }
+                if (priority < 0 || priority > Byte.MAX_VALUE) {
+                    throw new IllegalArgumentException("priority must be between 0 and " + Byte.MAX_VALUE);
+                }
+                if (orderSize < 1 || orderSize > Byte.MAX_VALUE) {
+                    throw new IllegalArgumentException("orderSize must be between 1 and " + Byte.MAX_VALUE);
+                }
+                RecipeSnapshot snapshot = readRecipeSnapshot(
+                    recipeData,
+                    (byte) mapOrdinal,
+                    requireRecipeInt(recipeData, "recipeIndex"),
+                    requireRecipeLong(recipeData, "contentHash"));
+                recipes.add(
+                    new SavedRecipe(
+                        snapshot,
+                        requireRecipeBoolean(recipeData, "enabled"),
+                        requireRecipeLong(recipeData, "requestAmount"),
+                        (byte) priority,
+                        (byte) orderSize,
+                        requireRecipeString(recipeData, "displayName")));
+            } catch (RuntimeException ex) {
+                throw new IllegalStateException("[PERSIST] " + context + " has invalid recipe at index " + i, ex);
+            }
+        }
+        try {
+            return new RecipeBook(recipes, mode, policy);
+        } catch (RuntimeException ex) {
+            throw new IllegalStateException("[PERSIST] " + context + " has invalid recipe book", ex);
+        }
+    }
+
+    private static int requireRecipeInt(JsonObject data, String key) {
+        return requireRecipeIntValue(requireRecipeField(data, key), key);
+    }
+
+    private static int requireRecipeIntValue(JsonElement value, String key) {
+        if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive()
+            .isNumber()) {
+            throw new IllegalStateException("Recipe field " + key + " must be an integer");
+        }
+        try {
+            return Integer.parseInt(value.getAsString());
+        } catch (NumberFormatException ex) {
+            throw new IllegalStateException("Recipe field " + key + " must be an integer", ex);
+        }
+    }
+
+    private static long requireRecipeLong(JsonObject data, String key) {
+        JsonElement value = requireRecipeField(data, key);
+        if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive()
+            .isNumber()) {
+            throw new IllegalStateException("Recipe field " + key + " must be an integer");
+        }
+        try {
+            return Long.parseLong(value.getAsString());
+        } catch (NumberFormatException ex) {
+            throw new IllegalStateException("Recipe field " + key + " must be an integer", ex);
+        }
+    }
+
+    private static boolean requireRecipeBoolean(JsonObject data, String key) {
+        JsonElement value = requireRecipeField(data, key);
+        if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive()
+            .isBoolean()) {
+            throw new IllegalStateException("Recipe field " + key + " must be a boolean");
+        }
+        return value.getAsBoolean();
+    }
+
+    private static String requireRecipeString(JsonObject data, String key) {
+        JsonElement value = requireRecipeField(data, key);
+        if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive()
+            .isString()) {
+            throw new IllegalStateException("Recipe field " + key + " must be a string");
+        }
+        return value.getAsString();
+    }
+
+    private static JsonElement requireRecipeField(JsonObject data, String key) {
+        JsonElement value = data.get(key);
+        if (value == null || value.isJsonNull()) {
+            throw new IllegalStateException("Missing recipe field " + key);
+        }
+        return value;
     }
 
     private static <T extends Enum<T>> T safeValueOf(Class<T> cls, String name) {

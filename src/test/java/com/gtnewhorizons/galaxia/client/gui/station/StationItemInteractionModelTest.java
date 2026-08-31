@@ -30,11 +30,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePanelAction;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
@@ -58,7 +57,14 @@ final class StationItemInteractionModelTest {
         ModuleInstance second = createMachine(StationTileCoord.of(2, 0));
         facility.addModule(first);
         facility.addModule(second);
-        facility.setRecipeConfig(first, config(input, output));
+        assertEquals(
+            FacilityCommand.Result.CHANGED,
+            facility.applyCommand(
+                new FacilityCommand.ReplaceRecipeBook(
+                    facility.assetId,
+                    facility.recipeBookOwner(first),
+                    recipeBook(input, output)),
+                FacilityCommand.Authority.NONE));
         SettingsGroup.ID groupId = createSharedGroup(facility, first, second, "Dust line");
 
         List<StationItemInteractionModel.Entry> entries = StationItemInteractionModel.forItem(facility, resource);
@@ -212,17 +218,15 @@ final class StationItemInteractionModelTest {
         return module;
     }
 
-    private static RecipeConfig config(ItemStack input, ItemStack output) {
-        SavedRecipeList recipes = new SavedRecipeList();
-        recipes.add(
-            new SavedRecipe(
-                RecipeSnapshot
-                    .resolved((byte) 0, 0, new ItemStack[] { input }, new ItemStack[] { output }, null, null, 100, 32),
-                true,
-                0L,
-                (byte) 0,
-                (byte) 1));
-        return new RecipeConfig(recipes, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0);
+    private static RecipeBook recipeBook(ItemStack input, ItemStack output) {
+        SavedRecipe recipe = new SavedRecipe(
+            RecipeSnapshot
+                .resolved((byte) 1, 0, new ItemStack[] { input }, new ItemStack[] { output }, null, null, 100, 32),
+            true,
+            0L,
+            (byte) 0,
+            (byte) 1);
+        return new RecipeBook(List.of(recipe), RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP);
     }
 
     private static ModuleInstance moduleWithUpkeep(FacilityModuleKind kind, StationTileCoord anchor, long itemAmount) {

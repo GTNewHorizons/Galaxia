@@ -80,6 +80,7 @@ public final class FacilityCommandPacket implements IMessage {
     static final int OP_LEAVE_SETTINGS_GROUP = 21;
     static final int OP_COPY_MODULE_SETTINGS = 22;
     static final int OP_SET_MINER_ORE_BLACKLISTED = 23;
+    static final int OP_REPLACE_RECIPE_BOOK = 24;
 
     private FacilityCommand command;
 
@@ -173,6 +174,9 @@ public final class FacilityCommandPacket implements IMessage {
             writeModuleId(buf, deconstruct.moduleId());
         } else if (command instanceof FacilityCommand.CancelModuleOperation cancel) {
             writeModuleId(buf, cancel.moduleId());
+        } else if (command instanceof FacilityCommand.ReplaceRecipeBook replaceBook) {
+            RecipeBookWireCodec.writeOwner(buf, replaceBook.owner());
+            RecipeBookWireCodec.writeBook(buf, replaceBook.replacement());
         } else if (command instanceof FacilityCommand.CreateSettingsGroup createGroup) {
             writeModuleId(buf, createGroup.moduleId());
             writeString(buf, createGroup.displayName());
@@ -260,6 +264,10 @@ public final class FacilityCommandPacket implements IMessage {
                 facilityId,
                 readModuleId(buf));
             case OP_CANCEL_MODULE_OPERATION -> new FacilityCommand.CancelModuleOperation(facilityId, readModuleId(buf));
+            case OP_REPLACE_RECIPE_BOOK -> new FacilityCommand.ReplaceRecipeBook(
+                facilityId,
+                RecipeBookWireCodec.readOwner(buf),
+                RecipeBookWireCodec.readBook(buf));
             case OP_CREATE_SETTINGS_GROUP -> new FacilityCommand.CreateSettingsGroup(
                 facilityId,
                 readModuleId(buf),
@@ -360,6 +368,7 @@ public final class FacilityCommandPacket implements IMessage {
         if (command instanceof FacilityCommand.CopyBuildModules) return OP_COPY_BUILD_MODULES;
         if (command instanceof FacilityCommand.RequestModuleDeconstruction) return OP_REQUEST_MODULE_DECONSTRUCTION;
         if (command instanceof FacilityCommand.CancelModuleOperation) return OP_CANCEL_MODULE_OPERATION;
+        if (command instanceof FacilityCommand.ReplaceRecipeBook) return OP_REPLACE_RECIPE_BOOK;
         if (command instanceof FacilityCommand.CreateSettingsGroup) return OP_CREATE_SETTINGS_GROUP;
         if (command instanceof FacilityCommand.RenameSettingsGroup) return OP_RENAME_SETTINGS_GROUP;
         if (command instanceof FacilityCommand.JoinSettingsGroup) return OP_JOIN_SETTINGS_GROUP;

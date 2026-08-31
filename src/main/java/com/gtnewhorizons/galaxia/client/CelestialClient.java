@@ -15,8 +15,6 @@ import javax.annotation.Nullable;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
-import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
-import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket.ConfigAction;
 import com.gtnewhorizons.galaxia.core.network.ClientStateLifecycle;
 import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
@@ -51,7 +49,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -249,21 +248,10 @@ public final class CelestialClient {
             module -> new FacilityCommand.PlanTierUpgrade(assetId, List.of(module.id), targetTier, reserveItems));
     }
 
-    public static <T extends Enum<T>> void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction,
-        T payload) {
-        sendModuleUpdate(
-            assetId,
-            moduleIndex,
-            module -> AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
-    }
-
-    public static void updateModuleRecipeSlot(ID assetId, int moduleIndex, ConfigAction configAction, byte slotIndex,
-        SavedRecipe slot) {
-        sendModuleUpdate(
-            assetId,
-            moduleIndex,
-            module -> AssetModuleUpdatePacket
-                .recipeSlotPayload(assetId, moduleIndex, module.id, configAction, slotIndex, slot));
+    public static void replaceRecipeBook(ID assetId, RecipeBookOwner owner, RecipeBook replacement) {
+        if (!(getByAssetId(assetId) instanceof AutomatedFacility)) return;
+        StarmapActionSyncHandler
+            .sendFacilityCommand(new FacilityCommand.ReplaceRecipeBook(assetId, owner, replacement));
     }
 
     public static void setInventoryBound(ID assetId, BoundKind kind, InventoryKey resource, long amount) {
@@ -396,15 +384,6 @@ public final class CelestialClient {
         if (module == null) return;
         FacilityCommand command = commandFactory.apply(module);
         if (command != null) StarmapActionSyncHandler.sendFacilityCommand(command);
-    }
-
-    private static void sendModuleUpdate(ID assetId, int moduleIndex,
-        Function<ModuleInstance, AssetModuleUpdatePacket> packetFactory) {
-        ModuleInstance module = resolveModule(assetId, moduleIndex);
-        if (module == null) return;
-        AssetModuleUpdatePacket packet = packetFactory.apply(module);
-        if (packet == null) return;
-        StarmapActionSyncHandler.sendModuleUpdate(packet);
     }
 
     private static @Nullable ModuleInstance resolveModule(ID assetId, int moduleIndex) {

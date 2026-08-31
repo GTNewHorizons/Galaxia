@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.compat.recipe;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -42,19 +43,14 @@ import com.cleanroommc.modularui.widgets.ProgressWidget;
 import com.cleanroommc.modularui.widgets.slot.FluidSlot;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
-import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.GuiCraftingRecipe;
@@ -76,9 +72,8 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
     private static final int FOOTER_H = 52;
     private static final int SLOT = 18;
 
-    static volatile @Nullable CelestialAsset.ID pendingAssetId;
-    static volatile int pendingModuleIndex = -1;
     static volatile @Nullable ModuleInstance pendingModule;
+    static volatile @Nullable Predicate<RecipeSnapshot> pendingOnConfirm;
     static volatile @Nullable GuiScreen pendingReturnScreen;
 
     private final ItemStackHandler[] itemInputs;
@@ -105,10 +100,9 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
     private @Nullable String statusDetailText;
     private int statusColor = c(EnumColors.MAP_COLOR_TEXT_MUTED);
 
-    public static void open(CelestialAsset.ID assetId, int moduleIndex, ModuleInstance module) {
-        pendingAssetId = assetId;
-        pendingModuleIndex = moduleIndex;
+    public static void open(ModuleInstance module, Predicate<RecipeSnapshot> onConfirm) {
         pendingModule = module;
+        pendingOnConfirm = onConfirm;
         pendingReturnScreen = Minecraft.getMinecraft().currentScreen;
         resetFactoryHolder();
         FACTORY.openClient();
@@ -316,30 +310,21 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
     }
 
     private void cancel() {
+        GuiScreen returnScreen = pendingReturnScreen;
+        pendingModule = null;
+        pendingOnConfirm = null;
+        pendingReturnScreen = null;
         Minecraft.getMinecraft()
-            .displayGuiScreen(pendingReturnScreen);
+            .displayGuiScreen(returnScreen);
     }
 
     private void confirm() {
         RecipeSnapshot snapshot = match.snapshot();
-        CelestialAsset.ID assetId = pendingAssetId;
         ModuleInstance module = pendingModule;
-        if (snapshot == null || assetId == null || module == null || !(module.component() instanceof IRecipeModule rm))
+        Predicate<RecipeSnapshot> onConfirm = pendingOnConfirm;
+        if (snapshot == null || module == null || !(module.component() instanceof IRecipeModule) || onConfirm == null)
             return;
-        int slotIndex = 0;
-        RecipeConfig cfg = rm.getRecipeConfig();
-        if (cfg != null) slotIndex = cfg.savedRecipes()
-            .size();
-        if (slotIndex < 0
-            || slotIndex >= com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList.MAX_SAVED_RECIPES) return;
-        SavedRecipe slot = new SavedRecipe(snapshot, true, 0L, (byte) 1, (byte) 1);
-        CelestialClient.updateModuleRecipeSlot(
-            assetId,
-            pendingModuleIndex,
-            AssetModuleUpdatePacket.ConfigAction.ADD_RECIPE_SLOT,
-            (byte) slotIndex,
-            slot);
-        cancel();
+        if (onConfirm.test(snapshot)) cancel();
     }
 
     private void clearGhosts() {

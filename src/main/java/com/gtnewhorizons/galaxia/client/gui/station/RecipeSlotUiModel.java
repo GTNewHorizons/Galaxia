@@ -6,7 +6,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
@@ -17,19 +16,8 @@ final class RecipeSlotUiModel {
 
     private RecipeSlotUiModel() {}
 
-    static String modeLabel(@Nullable RecipeConfig config) {
-        RecipeSchedulerMode mode = config != null ? config.mode()
-            : RecipeConfig.empty()
-                .mode();
+    static String modeLabel(RecipeSchedulerMode mode) {
         return "Mode: " + mode.name();
-    }
-
-    static RecipeSchedulerMode nextMode(@Nullable RecipeConfig config) {
-        RecipeSchedulerMode current = config != null ? config.mode()
-            : RecipeConfig.empty()
-                .mode();
-        RecipeSchedulerMode[] values = RecipeSchedulerMode.values();
-        return values[(current.ordinal() + 1) % values.length];
     }
 
     static String slotTitle(SavedRecipe slot) {

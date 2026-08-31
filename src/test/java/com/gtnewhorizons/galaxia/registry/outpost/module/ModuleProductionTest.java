@@ -50,35 +50,30 @@ final class ModuleProductionTest {
     void centrifugeConstruction() {
         ModuleCentrifuge m = new ModuleCentrifuge();
         assertEquals((byte) 1, m.getParallel());
-        assertNull(m.getRecipeConfig());
     }
 
     @Test
     void electrolyzerConstruction() {
         ModuleElectrolyzer m = new ModuleElectrolyzer();
         assertEquals((byte) 1, m.getParallel());
-        assertNull(m.getRecipeConfig());
     }
 
     @Test
     void chemicalReactorConstruction() {
         ModuleChemicalReactor m = new ModuleChemicalReactor();
         assertEquals((byte) 1, m.getParallel());
-        assertNull(m.getRecipeConfig());
     }
 
     @Test
     void assemblerConstruction() {
         ModuleAssembler m = new ModuleAssembler();
         assertEquals((byte) 1, m.getParallel());
-        assertNull(m.getRecipeConfig());
     }
 
     @Test
     void distilleryConstruction() {
         ModuleDistillery m = new ModuleDistillery();
         assertEquals((byte) 1, m.getParallel());
-        assertNull(m.getRecipeConfig());
     }
 
     // ---------- getRecipeMapName ----------

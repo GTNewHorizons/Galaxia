@@ -4,13 +4,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
-import com.gtnewhorizons.galaxia.testing.TestFluidStacks;
 
 final class RecipeSnapshotTest {
 
@@ -20,9 +20,9 @@ final class RecipeSnapshotTest {
     }
 
     @Test
-    void snapshotRetainsFluidInputsAndOutputs() {
-        FluidStack input = fluidStack("galaxia_test_input_fluid", 144);
-        FluidStack output = fluidStack("galaxia_test_output_fluid", 72);
+    void snapshotDeeplyProtectsFluidInputsAndOutputs() {
+        FluidStack input = new FluidStack(FluidRegistry.WATER, 144);
+        FluidStack output = new FluidStack(FluidRegistry.LAVA, 72);
 
         RecipeSnapshot snapshot = new RecipeSnapshot(
             (byte) 1,
@@ -35,8 +35,19 @@ final class RecipeSnapshotTest {
             200,
             512);
 
-        assertSame(input, snapshot.fluidInputs()[0]);
-        assertSame(output, snapshot.fluidOutputs()[0]);
+        input.amount = 999;
+        output.amount = 998;
+
+        FluidStack firstInputRead = snapshot.fluidInputs()[0];
+        FluidStack firstOutputRead = snapshot.fluidOutputs()[0];
+        assertNotSame(input, firstInputRead);
+        assertNotSame(output, firstOutputRead);
+        assertEquals(144, firstInputRead.amount);
+        assertEquals(72, firstOutputRead.amount);
+        firstInputRead.amount = 997;
+        firstOutputRead.amount = 996;
+        assertEquals(144, snapshot.fluidInputs()[0].amount);
+        assertEquals(72, snapshot.fluidOutputs()[0].amount);
         assertEquals(200, snapshot.duration());
         assertEquals(512, snapshot.eut());
     }
@@ -46,21 +57,21 @@ final class RecipeSnapshotTest {
         long base = RecipeSnapshot.computeContentHash(
             null,
             null,
-            new FluidStack[] { fluidStack("galaxia_test_hash_input_fluid", 144) },
+            new FluidStack[] { new FluidStack(FluidRegistry.WATER, 144) },
             null,
             100,
             512);
         long differentAmount = RecipeSnapshot.computeContentHash(
             null,
             null,
-            new FluidStack[] { fluidStack("galaxia_test_hash_input_fluid", 288) },
+            new FluidStack[] { new FluidStack(FluidRegistry.WATER, 288) },
             null,
             100,
             512);
         long differentFluid = RecipeSnapshot.computeContentHash(
             null,
             null,
-            new FluidStack[] { fluidStack("galaxia_test_hash_other_fluid", 144) },
+            new FluidStack[] { new FluidStack(FluidRegistry.LAVA, 144) },
             null,
             100,
             512);
@@ -83,7 +94,7 @@ final class RecipeSnapshotTest {
 
     @Test
     void contentHashIncludesFluidOutputChances() {
-        FluidStack[] outputs = { fluidStack("galaxia_test_hash_chanced_fluid", 144) };
+        FluidStack[] outputs = { new FluidStack(FluidRegistry.WATER, 144) };
 
         long base = RecipeSnapshot.computeContentHash(null, null, null, outputs, null, new int[] { 5000 }, 100, 512);
         long differentChance = RecipeSnapshot
@@ -106,7 +117,4 @@ final class RecipeSnapshotTest {
         assertEquals(0, snapshot.eut());
     }
 
-    private static FluidStack fluidStack(String fluidName, int amount) {
-        return TestFluidStacks.stack(fluidName, amount);
-    }
 }

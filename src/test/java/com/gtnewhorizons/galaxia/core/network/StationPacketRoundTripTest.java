@@ -35,7 +35,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
@@ -45,12 +44,12 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperati
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -293,6 +292,7 @@ final class StationPacketRoundTripTest {
     void fullSyncRoundTripPreservesSharedRecipeBookAndModuleSchedule() {
         AutomatedFacility server = createFacility();
         ModuleInstance centrifuge = buildModule(server, FacilityModuleKind.CENTRIFUGE, StationTileCoord.of(1, 0));
+        ModuleInstance secondCentrifuge = buildModule(server, FacilityModuleKind.CENTRIFUGE, StationTileCoord.of(2, 0));
         Item inputItem = Items.diamond;
         Item outputItem = Items.diamond;
         RecipeSnapshot snapshot = RecipeSnapshot.resolved(
@@ -304,13 +304,12 @@ final class StationPacketRoundTripTest {
             null,
             200,
             480);
-        SavedRecipeList slots = new SavedRecipeList();
-        slots.add(new SavedRecipe(snapshot, true, 0L, (byte) 1, (byte) 1));
-        server.setRecipeConfig(
-            centrifuge,
-            new RecipeConfig(slots, RecipeSchedulerMode.ORDER, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
-        RecipeScheduleState expectedSchedule = new RecipeScheduleState((byte) 0, (byte) 3);
-        server.restoreRecipeScheduleState(centrifuge, expectedSchedule);
+        RecipeBook expectedBook = new RecipeBook(
+            List.of(new SavedRecipe(snapshot, true, 0L, (byte) 1, (byte) 1)),
+            RecipeSchedulerMode.ORDER,
+            NotDoablePolicy.SKIP);
+        RecipeScheduleState expectedFirstSchedule = new RecipeScheduleState((byte) 0, (byte) 3);
+        RecipeScheduleState expectedSecondSchedule = new RecipeScheduleState((byte) 0, (byte) 5);
         assertEquals(
             FacilityCommand.Status.CHANGED,
             server
@@ -321,6 +320,21 @@ final class StationPacketRoundTripTest {
         SettingsGroup.ID groupId = server.moduleSettingsSnapshot()
             .membership()
             .get(centrifuge.id);
+        assertEquals(
+            FacilityCommand.Status.CHANGED,
+            server
+                .applyCommand(
+                    new FacilityCommand.JoinSettingsGroup(server.assetId, secondCentrifuge.id, groupId),
+                    FacilityCommand.Authority.NONE)
+                .status());
+        assertEquals(
+            FacilityCommand.Status.CHANGED,
+            server.applyCommand(
+                new FacilityCommand.ReplaceRecipeBook(server.assetId, new RecipeBookOwner.Group(groupId), expectedBook),
+                FacilityCommand.Authority.NONE)
+                .status());
+        server.restoreRecipeScheduleState(centrifuge, expectedFirstSchedule);
+        server.restoreRecipeScheduleState(secondCentrifuge, expectedSecondSchedule);
 
         AssetStateSync.Client sync = new AssetStateSync.Client(
             assetId -> { throw new AssertionError("Unexpected full-state recovery request for " + assetId); });
@@ -332,27 +346,30 @@ final class StationPacketRoundTripTest {
 
         ModuleInstance clientCentrifuge = client.modules()
             .get(0);
+        ModuleInstance clientSecondCentrifuge = client.modules()
+            .get(1);
         assertEquals(
             groupId,
             client.moduleSettingsSnapshot()
                 .membership()
                 .get(clientCentrifuge.id));
-        RecipeConfig canonicalConfig = client.recipeConfig(clientCentrifuge);
-        RecipeConfig runtimeConfig = ((IRecipeModule) clientCentrifuge.component()).getRecipeConfig();
-        assertNotNull(runtimeConfig);
-        RecipeSnapshot clientSnapshot = canonicalConfig.savedRecipes()
+        assertEquals(
+            groupId,
+            client.moduleSettingsSnapshot()
+                .membership()
+                .get(clientSecondCentrifuge.id));
+        RecipeBook clientBook = client.recipeBook(clientCentrifuge);
+        RecipeSnapshot clientSnapshot = clientBook.recipes()
             .get(0)
             .recipe();
-        assertEquals(RecipeSchedulerMode.ORDER, canonicalConfig.mode());
-        assertEquals((byte) 0, canonicalConfig.orderCursor());
-        assertEquals((byte) 0, canonicalConfig.orderRemaining());
-        assertEquals(canonicalConfig.savedRecipes(), runtimeConfig.savedRecipes());
+        assertEquals(expectedBook, clientBook);
+        assertSame(clientBook, client.recipeBook(clientSecondCentrifuge));
         assertEquals(200, clientSnapshot.duration());
         assertEquals(480, clientSnapshot.eut());
         assertEquals(1, clientSnapshot.inputs().length);
         assertEquals(1, clientSnapshot.outputs().length);
-        assertEquals(expectedSchedule.orderCursor(), runtimeConfig.orderCursor());
-        assertEquals(expectedSchedule.orderRemaining(), runtimeConfig.orderRemaining());
+        assertEquals(expectedFirstSchedule, client.recipeScheduleState(clientCentrifuge));
+        assertEquals(expectedSecondSchedule, client.recipeScheduleState(clientSecondCentrifuge));
     }
 
     @Test
@@ -611,20 +628,6 @@ final class StationPacketRoundTripTest {
             bodyId,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-    }
-
-    private static AutomatedFacility facilityWithRecipeConfig(RecipeSnapshot... snapshots) {
-        AutomatedFacility facility = createFacility();
-        ModuleInstance module = buildModule(facility, FacilityModuleKind.CENTRIFUGE, StationTileCoord.of(1, 0));
-        SavedRecipeList slots = new SavedRecipeList();
-        for (RecipeSnapshot snapshot : snapshots) {
-            slots.add(new SavedRecipe(snapshot, true, 0L, (byte) 1, (byte) 1));
-        }
-        facility.setRecipeConfig(
-            module,
-            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
-        facility.restoreRecipeScheduleState(module, new RecipeScheduleState((byte) 0, (byte) 0));
-        return facility;
     }
 
     private static RecipeSnapshot recipeSnapshot(int recipeIndex) {

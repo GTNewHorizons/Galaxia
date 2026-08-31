@@ -601,6 +601,12 @@ galaxia.satellite.action.delete_prospecting=Delete prospecting satellites
 galaxia.satellite.tooltip.count=%s: %d
 
 #### Machine GUI
+# Station Recipe GUI
+galaxia.gui.station.recipe.save=Save
+galaxia.gui.station.recipe.not_doable_policy.label=Blocked: %s
+galaxia.gui.station.recipe.not_doable_policy.skip=Skip
+galaxia.gui.station.recipe.not_doable_policy.back_to_beginning=Restart order
+
 # Oxygen Collector GUI
 galaxia.gui.oxygen_collector.title=Oxygen Collector
 galaxia.gui.oxygen_collector.leaves_in_range=Leaves in range: %s

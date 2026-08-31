@@ -23,7 +23,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -167,12 +166,11 @@ final class ModuleDetailTextRegistry {
 
     private static void appendRecipeText(Context context, Lines lines) {
         if (!(context.module()
-            .component() instanceof IRecipeModule recipeModule)) return;
-        RecipeConfig cfg = recipeModule.getRecipeConfig();
-        int slots = cfg == null ? 0
-            : cfg.savedRecipes()
-                .toList()
-                .size();
+            .component() instanceof IRecipeModule)) return;
+        int slots = context.facility()
+            .recipeBook(context.module())
+            .recipes()
+            .size();
         lines.sectionLine("Recipes: " + slots, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
     }
 

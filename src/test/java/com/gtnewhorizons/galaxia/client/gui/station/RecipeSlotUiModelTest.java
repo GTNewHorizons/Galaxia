@@ -6,7 +6,6 @@ import net.minecraftforge.fluids.FluidStack;
 
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
@@ -29,8 +28,8 @@ final class RecipeSlotUiModelTest {
     }
 
     @Test
-    void nextModeCyclesSchedulerMode() {
-        assertEquals(RecipeSchedulerMode.ORDER, RecipeSlotUiModel.nextMode(RecipeConfig.empty()));
+    void modeLabelPresentsTheDraftSchedulerMode() {
+        assertEquals("Mode: ORDER", RecipeSlotUiModel.modeLabel(RecipeSchedulerMode.ORDER));
     }
 
     @Test

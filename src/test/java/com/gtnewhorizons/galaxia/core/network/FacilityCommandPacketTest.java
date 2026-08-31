@@ -36,6 +36,12 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -67,6 +73,7 @@ final class FacilityCommandPacketTest {
         ItemStackWrapper item = ItemStackWrapper.of(new ItemStack(Items.stick));
         FluidKey fluid = new FluidKey(TEST_FLUID, null);
         List<ModulePlacement> placements = List.of(new ModulePlacement(new StationTileCoord((byte) 4, (byte) -3), 3));
+        RecipeBook recipeBook = recipeBook();
         List<FacilityCommand> commands = List.of(
             new FacilityCommand.AdjustInventory(FACILITY_ID, item, FacilityCommand.InventoryAdjustment.INSERT, 8L),
             new FacilityCommand.ClearInventoryResource(FACILITY_ID, fluid),
@@ -101,6 +108,11 @@ final class FacilityCommandPacketTest {
             new FacilityCommand.CopyBuildModules(FACILITY_ID, MODULE_ID, false, placements),
             new FacilityCommand.RequestModuleDeconstruction(FACILITY_ID, MODULE_ID),
             new FacilityCommand.CancelModuleOperation(FACILITY_ID, MODULE_ID),
+            new FacilityCommand.ReplaceRecipeBook(FACILITY_ID, new RecipeBookOwner.Private(MODULE_ID), recipeBook),
+            new FacilityCommand.ReplaceRecipeBook(
+                FACILITY_ID,
+                new RecipeBookOwner.Group(new SettingsGroup.ID(7)),
+                recipeBook),
             new FacilityCommand.CreateSettingsGroup(FACILITY_ID, MODULE_ID, "Shared miners"),
             new FacilityCommand.RenameSettingsGroup(FACILITY_ID, new SettingsGroup.ID(7), "Priority miners"),
             new FacilityCommand.JoinSettingsGroup(FACILITY_ID, MODULE_ID, new SettingsGroup.ID(7)),
@@ -227,6 +239,45 @@ final class FacilityCommandPacketTest {
         invalidBlacklistFlag.writeByte(2);
         malformed.add(invalidBlacklistFlag);
 
+        ByteBuf invalidBookOwner = base(FacilityCommandPacket.OP_REPLACE_RECIPE_BOOK);
+        invalidBookOwner.writeByte(255);
+        malformed.add(invalidBookOwner);
+
+        ByteBuf invalidPrivateOwner = base(FacilityCommandPacket.OP_REPLACE_RECIPE_BOOK);
+        invalidPrivateOwner.writeByte(0);
+        invalidPrivateOwner.writeZero(16);
+        malformed.add(invalidPrivateOwner);
+
+        ByteBuf invalidGroupOwner = base(FacilityCommandPacket.OP_REPLACE_RECIPE_BOOK);
+        invalidGroupOwner.writeByte(1);
+        invalidGroupOwner.writeInt(0);
+        malformed.add(invalidGroupOwner);
+
+        ByteBuf invalidBookLength = base(FacilityCommandPacket.OP_REPLACE_RECIPE_BOOK);
+        invalidBookLength.writeByte(0);
+        writeUuid(invalidBookLength, MODULE_ID.id());
+        invalidBookLength.writeInt(-1);
+        malformed.add(invalidBookLength);
+
+        ByteBuf invalidBookEnums = base(FacilityCommandPacket.OP_REPLACE_RECIPE_BOOK);
+        invalidBookEnums.writeByte(0);
+        writeUuid(invalidBookEnums, MODULE_ID.id());
+        invalidBookEnums.writeInt(6);
+        invalidBookEnums.writeByte(255);
+        invalidBookEnums.writeByte(NotDoablePolicy.SKIP.ordinal());
+        invalidBookEnums.writeInt(0);
+        malformed.add(invalidBookEnums);
+
+        ByteBuf trailingBookSlice = base(FacilityCommandPacket.OP_REPLACE_RECIPE_BOOK);
+        trailingBookSlice.writeByte(0);
+        writeUuid(trailingBookSlice, MODULE_ID.id());
+        trailingBookSlice.writeInt(7);
+        trailingBookSlice.writeByte(RecipeSchedulerMode.PRIORITY.ordinal());
+        trailingBookSlice.writeByte(NotDoablePolicy.SKIP.ordinal());
+        trailingBookSlice.writeInt(0);
+        trailingBookSlice.writeByte(0);
+        malformed.add(trailingBookSlice);
+
         ByteBuf oversize = Unpooled.buffer(FacilityCommandPacket.MAX_PACKET_BYTES + 1);
         oversize.writeZero(FacilityCommandPacket.MAX_PACKET_BYTES + 1);
         malformed.add(oversize);
@@ -324,5 +375,19 @@ final class FacilityCommandPacketTest {
     private static void writeUuid(ByteBuf buf, UUID id) {
         buf.writeLong(id.getMostSignificantBits());
         buf.writeLong(id.getLeastSignificantBits());
+    }
+
+    private static RecipeBook recipeBook() {
+        RecipeSnapshot snapshot = RecipeSnapshot.resolved(
+            (byte) 1,
+            3,
+            new ItemStack[] { new ItemStack(Items.stick, 2, 0) },
+            new ItemStack[] { new ItemStack(Items.diamond, 1, 0) },
+            null,
+            null,
+            100,
+            32);
+        SavedRecipe recipe = new SavedRecipe(snapshot, true, 8L, (byte) 2, (byte) 3, "Sticks");
+        return new RecipeBook(List.of(recipe), RecipeSchedulerMode.ORDER, NotDoablePolicy.BACK_TO_BEGINNING);
     }
 }

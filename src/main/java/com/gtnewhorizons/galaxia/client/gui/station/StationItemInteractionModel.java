@@ -19,7 +19,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
@@ -98,19 +97,17 @@ final class StationItemInteractionModel {
             boolean produces = module.component() instanceof ModuleMiner
                 && contains(ModuleMiner.possibleOutputs(module, facility), item);
             if (module.component() instanceof IRecipeModule) {
-                RecipeConfig config = facility.recipeConfig(module);
-                if (config != null) {
-                    for (SavedRecipe saved : config.savedRecipes()) {
-                        if (!saved.enabled()) continue;
-                        consumes |= contains(
-                            saved.recipe()
-                                .inputs(),
-                            item);
-                        produces |= contains(
-                            saved.recipe()
-                                .outputs(),
-                            item);
-                    }
+                for (SavedRecipe saved : facility.recipeBook(module)
+                    .recipes()) {
+                    if (!saved.enabled()) continue;
+                    consumes |= contains(
+                        saved.recipe()
+                            .inputs(),
+                        item);
+                    produces |= contains(
+                        saved.recipe()
+                            .outputs(),
+                        item);
                 }
             }
             if (consumes) aggregate(aggregated, facility, Section.MACHINES, Role.CONSUMES, module, null);

@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -16,9 +15,10 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
@@ -32,7 +32,7 @@ final class ModuleRecipeSettingsGroupTest {
     }
 
     @Test
-    void recipeSettingsGroupSharesAndCopiesConfigOnLeave() {
+    void recipeSettingsGroupSharesOneBookAndLeaveCopiesItsCurrentValue() {
         assumeTrue(FacilityModuleKind.MACERATOR.isAvailable());
         AutomatedFacility facility = createFacility();
         ModuleInstance first = createMachine(StationTileCoord.of(1, 0));
@@ -40,7 +40,7 @@ final class ModuleRecipeSettingsGroupTest {
         facility.addModule(first);
         facility.addModule(second);
 
-        facility.setRecipeConfig(first, config(RecipeSchedulerMode.ORDER));
+        replace(facility, new RecipeBookOwner.Private(first.id), book(RecipeSchedulerMode.ORDER));
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(
@@ -54,17 +54,17 @@ final class ModuleRecipeSettingsGroupTest {
             facility.applyCommand(
                 new FacilityCommand.JoinSettingsGroup(facility.assetId, second.id, groupId),
                 FacilityCommand.Authority.NONE));
+        RecipeBookOwner.Group groupOwner = new RecipeBookOwner.Group(groupId);
 
         assertEquals(
             RecipeSchedulerMode.ORDER,
-            recipeModule(second).getRecipeConfig()
+            facility.recipeBook(second)
                 .mode());
-
-        facility.setRecipeConfig(second, config(RecipeSchedulerMode.RANDOM));
-
+        replace(facility, groupOwner, book(RecipeSchedulerMode.RANDOM));
+        assertSame(facility.recipeBook(first), facility.recipeBook(second));
         assertEquals(
             RecipeSchedulerMode.RANDOM,
-            recipeModule(first).getRecipeConfig()
+            facility.recipeBook(first)
                 .mode());
 
         assertSame(
@@ -72,38 +72,52 @@ final class ModuleRecipeSettingsGroupTest {
             facility.applyCommand(
                 new FacilityCommand.LeaveSettingsGroup(facility.assetId, second.id),
                 FacilityCommand.Authority.NONE));
-        facility.setRecipeConfig(first, config(RecipeSchedulerMode.PRIORITY));
+        replace(facility, groupOwner, book(RecipeSchedulerMode.PRIORITY));
 
         assertEquals(
             RecipeSchedulerMode.PRIORITY,
-            recipeModule(first).getRecipeConfig()
+            facility.recipeBook(first)
                 .mode());
         assertEquals(
             RecipeSchedulerMode.RANDOM,
-            recipeModule(second).getRecipeConfig()
+            facility.recipeBook(second)
                 .mode());
     }
 
     @Test
-    void settingsCopyDoesNotCopyRecipeScheduleProgress() {
+    void settingsCopyReplacesTheBookAndResetsTargetScheduleProgress() {
         assumeTrue(FacilityModuleKind.MACERATOR.isAvailable());
         AutomatedFacility facility = createFacility();
         ModuleInstance source = createMachine(StationTileCoord.of(1, 0));
         ModuleInstance target = createMachine(StationTileCoord.of(2, 0));
         facility.addModule(source);
         facility.addModule(target);
-        facility.setRecipeConfig(source, config(RecipeSchedulerMode.ORDER));
-        recipeModule(target).setRecipeConfig(config(RecipeSchedulerMode.RANDOM, (byte) 4, (byte) 2));
+        replace(facility, new RecipeBookOwner.Private(source.id), book(RecipeSchedulerMode.ORDER));
+        replace(facility, new RecipeBookOwner.Private(target.id), book(RecipeSchedulerMode.RANDOM));
+        facility.restoreRecipeScheduleState(target, new RecipeScheduleState((byte) 4, (byte) 2));
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.CopyModuleSettings(facility.assetId, source.id, List.of(target.id)),
             FacilityCommand.Authority.NONE);
 
         assertSame(FacilityCommand.Result.CHANGED, result);
-        RecipeConfig copied = recipeModule(target).getRecipeConfig();
-        assertEquals(RecipeSchedulerMode.ORDER, copied.mode());
-        assertEquals(4, copied.orderCursor());
-        assertEquals(2, copied.orderRemaining());
+        assertEquals(
+            RecipeSchedulerMode.ORDER,
+            facility.recipeBook(target)
+                .mode());
+        assertEquals(RecipeScheduleState.RESET, facility.recipeScheduleState(target));
+    }
+
+    private static void replace(AutomatedFacility facility, RecipeBookOwner owner, RecipeBook book) {
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            facility.applyCommand(
+                new FacilityCommand.ReplaceRecipeBook(facility.assetId, owner, book),
+                FacilityCommand.Authority.NONE));
+    }
+
+    private static RecipeBook book(RecipeSchedulerMode mode) {
+        return new RecipeBook(List.of(), mode, NotDoablePolicy.SKIP);
     }
 
     private static AutomatedFacility createFacility() {
@@ -123,18 +137,5 @@ final class ModuleRecipeSettingsGroupTest {
             ModuleTier.HV);
         module.updateStatus(Buildable.Status.OPERATIONAL);
         return module;
-    }
-
-    private static IRecipeModule recipeModule(ModuleInstance module) {
-        assertNotNull(module.component());
-        return (IRecipeModule) module.component();
-    }
-
-    private static RecipeConfig config(RecipeSchedulerMode mode) {
-        return config(mode, (byte) 0, (byte) 0);
-    }
-
-    private static RecipeConfig config(RecipeSchedulerMode mode, byte orderCursor, byte orderRemaining) {
-        return new RecipeConfig(new SavedRecipeList(), mode, NotDoablePolicy.SKIP, orderCursor, orderRemaining);
     }
 }

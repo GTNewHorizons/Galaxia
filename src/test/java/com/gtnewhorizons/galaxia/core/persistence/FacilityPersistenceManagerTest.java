@@ -22,6 +22,8 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
@@ -58,7 +60,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
@@ -72,12 +73,12 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOpe
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -1902,7 +1903,7 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
-    void savedRecipesnapshotsRoundTripFluidStacksAndRecipeStats() throws Exception {
+    void recipeBookRoundTripsFluidStacksRecipeStatsAndSchedule() throws Exception {
         FacilityPersistenceManager manager = new FacilityPersistenceManager(CelestialServerRuntime.create());
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
@@ -1917,32 +1918,53 @@ final class FacilityPersistenceManagerTest {
             ModuleShape.SINGLE,
             ModuleTier.HV,
             StationTileCoord.of(2, 2));
-        IRecipeModule recipeModule = (IRecipeModule) macerator.component();
         FluidStack[] fluidInputs = { new FluidStack(TEST_FLUID_1, 144) };
         FluidStack[] fluidOutputs = { new FluidStack(TEST_FLUID_2, 72) };
+        ItemStack[] itemInputs = { new ItemStack(Items.iron_ingot, 2, 0) };
+        ItemStack[] itemOutputs = { new ItemStack(Items.diamond, 1, 0) };
+        NBTTagCompound itemTag = new NBTTagCompound();
+        itemTag.setString("materialGrade", "refined");
+        itemInputs[0].setTagCompound(itemTag);
+        NBTTagCompound fluidTag = new NBTTagCompound();
+        fluidTag.setInteger("temperature", 725);
+        fluidInputs[0].tag = fluidTag;
         int[] outputChances = { 5000 };
         int[] fluidOutputChances = { 7500 };
-        long contentHash = RecipeSnapshot
-            .computeContentHash(null, null, fluidInputs, fluidOutputs, outputChances, fluidOutputChances, 320, 480);
-        RecipeSnapshot snapshot = new RecipeSnapshot(
-            (byte) 1,
-            7,
-            contentHash,
-            null,
-            null,
+        long contentHash = RecipeSnapshot.computeContentHash(
+            itemInputs,
+            itemOutputs,
             fluidInputs,
             fluidOutputs,
             outputChances,
             fluidOutputChances,
             320,
             480);
-        SavedRecipeList slots = new SavedRecipeList();
+        RecipeSnapshot snapshot = new RecipeSnapshot(
+            (byte) 1,
+            7,
+            contentHash,
+            itemInputs,
+            itemOutputs,
+            fluidInputs,
+            fluidOutputs,
+            outputChances,
+            fluidOutputChances,
+            320,
+            480);
         station.setBound(new FluidKey(TEST_FLUID_1, null), 11, true);
         station.setBound(new FluidKey(TEST_FLUID_2, null), 22, false);
-        slots.add(new SavedRecipe(snapshot, true, 12L, (byte) 3, (byte) 4));
-        station.setRecipeConfig(
-            macerator,
-            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
+        RecipeBook expectedBook = new RecipeBook(
+            List.of(new SavedRecipe(snapshot, true, 12L, (byte) 3, (byte) 4, "Fluid recipe")),
+            RecipeSchedulerMode.PRIORITY,
+            NotDoablePolicy.SKIP);
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            station.applyCommand(
+                new FacilityCommand.ReplaceRecipeBook(
+                    station.assetId,
+                    new RecipeBookOwner.Private(macerator.id),
+                    expectedBook),
+                FacilityCommand.Authority.NONE));
         station.restoreRecipeScheduleState(macerator, new RecipeScheduleState((byte) 0, (byte) 1));
 
         FacilityPersistenceManager.AssetJson aencoded = manager.encodeAsset(station);
@@ -1955,11 +1977,10 @@ final class FacilityPersistenceManagerTest {
             .filter(m -> m.kind() == FacilityModuleKind.MACERATOR)
             .findFirst()
             .orElseThrow();
-        RecipeConfig decodedConfig = ((IRecipeModule) decodedMacerator.component()).getRecipeConfig();
-        assertNotNull(decodedConfig);
-        assertEquals((byte) 0, decodedConfig.orderCursor());
-        assertEquals((byte) 1, decodedConfig.orderRemaining());
-        SavedRecipe decodedSlot = decodedConfig.savedRecipes()
+        RecipeBook decodedBook = decoded.recipeBook(decodedMacerator);
+        assertEquals(expectedBook, decodedBook);
+        assertEquals(new RecipeScheduleState((byte) 0, (byte) 1), decoded.recipeScheduleState(decodedMacerator));
+        SavedRecipe decodedSlot = decodedBook.recipes()
             .get(0);
         RecipeSnapshot decodedSnapshot = decodedSlot.recipe();
         assertEquals(320, decodedSnapshot.duration());
@@ -1967,17 +1988,24 @@ final class FacilityPersistenceManagerTest {
         assertEquals(contentHash, decodedSnapshot.contentHash());
         assertEquals(5000, decodedSnapshot.outputChances()[0]);
         assertEquals(7500, decodedSnapshot.fluidOutputChances()[0]);
+        assertEquals(Items.iron_ingot, decodedSnapshot.inputs()[0].getItem());
+        assertEquals(2, decodedSnapshot.inputs()[0].stackSize);
+        assertEquals(itemTag, decodedSnapshot.inputs()[0].getTagCompound());
+        assertEquals(Items.diamond, decodedSnapshot.outputs()[0].getItem());
+        assertEquals(1, decodedSnapshot.outputs()[0].stackSize);
         assertEquals(
             new FluidKey(TEST_FLUID_1, null).fluid()
                 .getName(),
             fluidName(decodedSnapshot.fluidInputs()[0]));
         assertEquals(144, decodedSnapshot.fluidInputs()[0].amount);
+        assertEquals(fluidTag, decodedSnapshot.fluidInputs()[0].tag);
         assertEquals(
             new FluidKey(TEST_FLUID_2, null).fluid()
                 .getName(),
             fluidName(decodedSnapshot.fluidOutputs()[0]));
         assertEquals(72, decodedSnapshot.fluidOutputs()[0].amount);
         assertEquals(12L, decodedSlot.requestAmount());
+        assertEquals("Fluid recipe", decodedSlot.displayName());
         assertEquals(
             11,
             decoded.getBound(new FluidKey(TEST_FLUID_1, null))
@@ -1988,6 +2016,46 @@ final class FacilityPersistenceManagerTest {
                 .upperOrDefault());
         assertEquals(3, decodedSlot.priority());
         assertEquals(4, decodedSlot.orderSize());
+    }
+
+    @Test
+    void unknownRecipeFluidIsRejectedDuringPersistenceDecode() {
+        AutomatedFacility station = createStationWithSingleRecipe();
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
+        firstEncodedRecipe(encoded).getAsJsonArray("fluidInputs")
+            .get(0)
+            .getAsJsonObject()
+            .addProperty("fluid", "galaxia:unregistered_recipe_fluid");
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectKey,
+            station.kind,
+            station.status());
+
+        IllegalStateException failure = assertThrows(
+            IllegalStateException.class,
+            () -> FacilityJsonCodec.decode(decoded, encoded));
+        assertFailureChainContains(failure, "unknown fluid");
+    }
+
+    @Test
+    void malformedRecipeTagIsRejectedDuringPersistenceDecode() {
+        AutomatedFacility station = createStationWithSingleRecipe();
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
+        firstEncodedRecipe(encoded).getAsJsonArray("inputs")
+            .get(0)
+            .getAsJsonObject()
+            .addProperty("tag", "{unterminated");
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectKey,
+            station.kind,
+            station.status());
+
+        IllegalStateException failure = assertThrows(
+            IllegalStateException.class,
+            () -> FacilityJsonCodec.decode(decoded, encoded));
+        assertFailureChainContains(failure, "invalid NBT tag");
     }
 
     @Test
@@ -2050,6 +2118,60 @@ final class FacilityPersistenceManagerTest {
         assertNotNull(layout);
         layout.place(module);
         return module;
+    }
+
+    private static AutomatedFacility createStationWithSingleRecipe() {
+        AutomatedFacility station = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ModuleInstance macerator = createAndPlaceModule(
+            station,
+            FacilityModuleKind.MACERATOR,
+            Buildable.Status.OPERATIONAL,
+            ModuleShape.SINGLE,
+            ModuleTier.HV,
+            StationTileCoord.of(2, 2));
+        RecipeSnapshot snapshot = RecipeSnapshot.resolved(
+            (byte) 1,
+            7,
+            new ItemStack[] { new ItemStack(Items.iron_ingot) },
+            new ItemStack[] { new ItemStack(Items.diamond) },
+            new FluidStack[] { new FluidStack(TEST_FLUID_1, 144) },
+            null,
+            320,
+            480);
+        RecipeBook book = new RecipeBook(
+            List.of(new SavedRecipe(snapshot, true, 12L, (byte) 3, (byte) 4, "Fluid recipe")),
+            RecipeSchedulerMode.PRIORITY,
+            NotDoablePolicy.SKIP);
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            station.applyCommand(
+                new FacilityCommand.ReplaceRecipeBook(station.assetId, new RecipeBookOwner.Private(macerator.id), book),
+                FacilityCommand.Authority.NONE));
+        return station;
+    }
+
+    private static JsonObject firstEncodedRecipe(FacilityJsonCodec.FacilityStateJson encoded) {
+        return encoded.privateModuleSettings.values()
+            .iterator()
+            .next()
+            .getAsJsonObject("recipeSettings")
+            .getAsJsonObject("recipeBook")
+            .getAsJsonArray("recipes")
+            .get(0)
+            .getAsJsonObject();
+    }
+
+    private static void assertFailureChainContains(Throwable failure, String messagePart) {
+        Throwable matchingCause = failure;
+        while (matchingCause != null && (matchingCause.getMessage() == null || !matchingCause.getMessage()
+            .contains(messagePart))) {
+            matchingCause = matchingCause.getCause();
+        }
+        assertNotNull(matchingCause);
     }
 
     private static void assertLayoutTilesExist(AutomatedFacility facility, StationTileCoord coord, String label) {

@@ -15,9 +15,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryExchange;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduler;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 
@@ -27,20 +26,19 @@ public final class ProductionModuleHelper {
 
     private ProductionModuleHelper() {}
 
-    public static void execute(ModuleInstance instance, CelestialAsset asset, IRecipeModule recipeModule, Random random,
+    public static void execute(ModuleInstance instance, CelestialAsset asset, Random random,
         Map<RecipeSnapshot, ItemStackWrapper[]> inputWrapperCache,
         Map<RecipeSnapshot, ItemStackWrapper[]> outputWrapperCache) {
         if (!(asset instanceof AutomatedFacility outpost)) {
             throw new IllegalStateException("This method should only be called by AutomatedFacilities");
         }
-        RecipeConfig config = recipeModule.getRecipeConfig();
-        if (config == null) return;
+        RecipeBook book = outpost.recipeBook(instance);
+        RecipeScheduleState scheduleState = outpost.recipeScheduleState(instance);
+        RecipeBook.Selection selection = book.select(scheduleState, random)
+            .orElse(null);
+        if (selection == null) return;
 
-        int slotIdx = recipeModule.getNextSlot(random);
-        if (slotIdx < 0) return;
-
-        SavedRecipe slot = config.savedRecipes()
-            .get(slotIdx);
+        SavedRecipe slot = selection.recipe();
         RecipeSnapshot recipe = slot.recipe();
 
         ItemStack[] inputs = recipe.inputs();
@@ -54,35 +52,21 @@ public final class ProductionModuleHelper {
 
         Map<ItemStackWrapper, Long> requiredInputs = requiredInputs(inputWrappers, inputs);
         Map<FluidKey, Long> requiredFluidInputs = requiredFluidInputs(fluidInputs);
-        if (!allowsInputs(outpost, requiredInputs, requiredFluidInputs)) {
-            advanceScheduler(config, recipeModule);
-            return;
-        }
+        if (!allowsInputs(outpost, requiredInputs, requiredFluidInputs)) return;
 
         ItemStackWrapper[] outputWrappers = cachedWrappers(outputWrapperCache, recipe, outputs);
-        if (!matchesRequestAmount(outpost, slot, outputWrappers, fluidOutputs)) {
-            advanceScheduler(config, recipeModule);
-            return;
-        }
+        if (!matchesRequestAmount(outpost, slot, outputWrappers, fluidOutputs)) return;
         SelectedItemOutputs selectedItemOutputs = selectedOutputs(outputWrappers, outputs, outputChances, random);
         SelectedFluidOutputs selectedFluidOutputs = selectedFluidOutputs(fluidOutputs, fluidOutputChances, random);
-        if (!allowsOutputs(outpost, selectedItemOutputs, selectedFluidOutputs)) {
-            advanceScheduler(config, recipeModule);
-            return;
-        }
+        if (!allowsOutputs(outpost, selectedItemOutputs, selectedFluidOutputs)) return;
         InventoryExchange exchange = new InventoryExchange(
             requiredInputs,
             requiredFluidInputs,
             selectedItemOutputs.totals(),
             selectedFluidOutputs.totals());
-        if (!outpost.tryExchange(exchange)) {
-            advanceScheduler(config, recipeModule);
-            return;
-        }
+        if (!outpost.tryExchange(exchange)) return;
 
-        if (config.mode() == RecipeSchedulerMode.ORDER) {
-            recipeModule.setRecipeConfig(RecipeScheduler.advanceOrder(config));
-        }
+        outpost.installRecipeScheduleState(instance, book.advanceAfterSuccess(scheduleState, selection));
     }
 
     private static ItemStackWrapper[] cachedWrappers(Map<RecipeSnapshot, ItemStackWrapper[]> cache,
@@ -210,12 +194,6 @@ public final class ProductionModuleHelper {
 
     private static boolean shouldProduceOutput(int[] chances, int index, Random random) {
         return GTRecipeChance.shouldProduce(chances, index, random);
-    }
-
-    private static void advanceScheduler(RecipeConfig config, IRecipeModule recipeModule) {
-        if (config.mode() == RecipeSchedulerMode.ORDER) {
-            recipeModule.setRecipeConfig(RecipeScheduler.advanceOrder(config));
-        }
     }
 
     private static String fluidName(FluidStack stack) {
