@@ -4,99 +4,40 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 public final class SatelliteDataBufferStore {
 
-    /*
-     * Produced data and consumer demand are tracked separately because they are not a single inventory.
-     * A producer can overfill its local per-key buffer when a job completes, but new jobs only start while that
-     * produced-key buffer is under the local satellite capacity. Demand is the destination-side reservation that tells
-     * the transfer planner where compatible data can be sent next.
-     */
-    private final Map<UUID, Map<CelestialObjectKey, Map<SatelliteDataKey, Long>>> pendingDeciKb = new HashMap<>();
-    private final Map<UUID, Map<CelestialObjectKey, Map<SatelliteDataKey, Long>>> demandDeciKb = new HashMap<>();
+    private final Map<CelestialObjectKey, Map<SatelliteDataKey, Long>> pendingDeciKb = new HashMap<>();
 
     public record Entry(CelestialObjectKey bodyKey, SatelliteDataKey key, long deciKb) {
 
     }
 
-    public long pendingDeciKb(UUID teamId, CelestialObjectKey bodyKey, SatelliteDataKey key) {
-        return amount(pendingDeciKb, teamId, bodyKey, key);
+    public long pendingDeciKb(CelestialObjectKey bodyKey, SatelliteDataKey key) {
+        Map<SatelliteDataKey, Long> bodyBuffers = pendingDeciKb.get(bodyKey);
+        if (bodyBuffers == null) return 0L;
+        return bodyBuffers.getOrDefault(key, 0L);
     }
 
     /*
      * Starting a producer only checks the producer-side buffer for this exact output key. A finished job may push the
      * buffer over the limit; that overfill blocks the next job until transfers drain it.
      */
-    public boolean canStart(UUID teamId, CelestialObjectKey bodyKey, SatelliteDataKey key, long localCapacityKbps) {
-        return pendingDeciKb(teamId, bodyKey, key) <= bufferLimitDeciKb(localCapacityKbps);
+    public boolean canStart(CelestialObjectKey bodyKey, SatelliteDataKey key, long localCapacityKbps) {
+        return pendingDeciKb(bodyKey, key) <= bufferLimitDeciKb(localCapacityKbps);
     }
 
-    public void finishProduction(UUID teamId, CelestialObjectKey bodyKey, SatelliteDataKey key, long producedDeciKb) {
-        add(pendingDeciKb, teamId, bodyKey, key, producedDeciKb);
+    public void finishProduction(CelestialObjectKey bodyKey, SatelliteDataKey key, long producedDeciKb) {
+        if (bodyKey == null || key == null || producedDeciKb <= 0L) return;
+        pendingDeciKb.computeIfAbsent(bodyKey, ignored -> new HashMap<>())
+            .merge(key, producedDeciKb, SatelliteDataBufferStore::addSaturated);
     }
 
-    public long pendingDemandDeciKb(UUID teamId, CelestialObjectKey bodyKey, SatelliteDataKey key) {
-        return amount(demandDeciKb, teamId, bodyKey, key);
-    }
-
-    public void requestData(UUID teamId, CelestialObjectKey bodyKey, SatelliteDataKey key, long requestedDeciKb) {
-        add(demandDeciKb, teamId, bodyKey, key, requestedDeciKb);
-    }
-
-    public List<Entry> producedEntries(UUID teamId) {
-        return entries(pendingDeciKb, teamId);
-    }
-
-    public List<Entry> demandEntries(UUID teamId) {
-        return entries(demandDeciKb, teamId);
-    }
-
-    /*
-     * Transfer drains both sides together: source pending data and destination demand. If either side has less than the
-     * requested amount, the smaller side determines how much actually moved.
-     */
-    public long transfer(UUID teamId, CelestialObjectKey sourceBodyKey, SatelliteDataKey sourceKey,
-        CelestialObjectKey destinationBodyKey, SatelliteDataKey demandKey, long requestedDeciKb) {
-        long drained = drain(pendingDeciKb, sourceBodyKey, sourceKey, requestedDeciKb, teamId);
-        return drain(demandDeciKb, destinationBodyKey, demandKey, drained, teamId);
-    }
-
-    public long drain(UUID teamId, CelestialObjectKey bodyKey, SatelliteDataKey key, long requestedDeciKb) {
-        return drain(pendingDeciKb, bodyKey, key, requestedDeciKb, teamId);
-    }
-
-    public void clear() {
-        pendingDeciKb.clear();
-        demandDeciKb.clear();
-    }
-
-    private static void add(Map<UUID, Map<CelestialObjectKey, Map<SatelliteDataKey, Long>>> buffers, UUID teamId,
-        CelestialObjectKey bodyKey, SatelliteDataKey key, long deciKb) {
-        if (teamId == null || bodyKey == null || key == null || deciKb <= 0L) return;
-        buffers.computeIfAbsent(teamId, ignored -> new HashMap<>())
-            .computeIfAbsent(bodyKey, ignored -> new HashMap<>())
-            .merge(key, deciKb, SatelliteDataBufferStore::addSaturated);
-    }
-
-    private static long amount(Map<UUID, Map<CelestialObjectKey, Map<SatelliteDataKey, Long>>> buffers, UUID teamId,
-        CelestialObjectKey bodyKey, SatelliteDataKey key) {
-        Map<CelestialObjectKey, Map<SatelliteDataKey, Long>> teamBuffers = buffers.get(teamId);
-        if (teamBuffers == null) return 0L;
-        Map<SatelliteDataKey, Long> bodyBuffers = teamBuffers.get(bodyKey);
-        if (bodyBuffers == null) return 0L;
-        return bodyBuffers.getOrDefault(key, 0L);
-    }
-
-    private static List<Entry> entries(Map<UUID, Map<CelestialObjectKey, Map<SatelliteDataKey, Long>>> buffers,
-        UUID teamId) {
-        Map<CelestialObjectKey, Map<SatelliteDataKey, Long>> teamBuffers = buffers.get(teamId);
-        if (teamBuffers == null) return List.of();
+    public List<Entry> producedEntries() {
         List<Entry> entries = new ArrayList<>();
-        for (Map.Entry<CelestialObjectKey, Map<SatelliteDataKey, Long>> bodyEntry : teamBuffers.entrySet()) {
+        for (Map.Entry<CelestialObjectKey, Map<SatelliteDataKey, Long>> bodyEntry : pendingDeciKb.entrySet()) {
             for (Map.Entry<SatelliteDataKey, Long> keyEntry : bodyEntry.getValue()
                 .entrySet()) {
                 long amount = keyEntry.getValue();
@@ -106,12 +47,9 @@ public final class SatelliteDataBufferStore {
         return List.copyOf(entries);
     }
 
-    private static long drain(Map<UUID, Map<CelestialObjectKey, Map<SatelliteDataKey, Long>>> buffers,
-        CelestialObjectKey bodyKey, SatelliteDataKey key, long requestedDeciKb, UUID teamId) {
+    public long drain(CelestialObjectKey bodyKey, SatelliteDataKey key, long requestedDeciKb) {
         if (requestedDeciKb <= 0L) return 0L;
-        Map<CelestialObjectKey, Map<SatelliteDataKey, Long>> teamBuffers = buffers.get(teamId);
-        if (teamBuffers == null) return 0L;
-        Map<SatelliteDataKey, Long> bodyBuffers = teamBuffers.get(bodyKey);
+        Map<SatelliteDataKey, Long> bodyBuffers = pendingDeciKb.get(bodyKey);
         if (bodyBuffers == null) return 0L;
         long current = bodyBuffers.getOrDefault(key, 0L);
         long drained = Math.min(current, requestedDeciKb);
@@ -121,8 +59,7 @@ public final class SatelliteDataBufferStore {
         } else {
             bodyBuffers.remove(key);
         }
-        if (bodyBuffers.isEmpty()) teamBuffers.remove(bodyKey);
-        if (teamBuffers.isEmpty()) buffers.remove(teamId);
+        if (bodyBuffers.isEmpty()) pendingDeciKb.remove(bodyKey);
         return drained;
     }
 

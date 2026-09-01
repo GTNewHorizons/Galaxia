@@ -56,10 +56,16 @@ final class SatelliteNetworkServiceTest {
 
     @Test
     void rebuildStoresDerivedSnapshotAndKeepsRevisionWhenContentIsUnchanged() {
-        SatelliteNetworkState state = SatelliteNetworkService
-            .rebuild(TEAM, nodes(), capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L), Map.of());
-        SatelliteNetworkState unchanged = SatelliteNetworkService
-            .rebuild(TEAM, nodes(), capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L), Map.of());
+        SatelliteNetworkState state = SatelliteNetworkService.rebuild(
+            TEAM,
+            nodes(),
+            capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L),
+            new SatelliteDataBufferStore());
+        SatelliteNetworkState unchanged = SatelliteNetworkService.rebuild(
+            TEAM,
+            nodes(),
+            capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L),
+            new SatelliteDataBufferStore());
 
         assertSame(state, SatelliteNetworkService.current(TEAM));
         assertSame(state, unchanged);
@@ -78,11 +84,17 @@ final class SatelliteNetworkServiceTest {
 
     @Test
     void rebuildIncrementsRevisionWhenCapacityChanges() {
-        SatelliteNetworkState first = SatelliteNetworkService
-            .rebuild(TEAM, nodes(), capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L), Map.of());
+        SatelliteNetworkState first = SatelliteNetworkService.rebuild(
+            TEAM,
+            nodes(),
+            capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L),
+            new SatelliteDataBufferStore());
 
-        SatelliteNetworkState changed = SatelliteNetworkService
-            .rebuild(TEAM, nodes(), capacity(CelestialObjectId.MARS, 20L, CelestialObjectId.OVERWORLD, 10L), Map.of());
+        SatelliteNetworkState changed = SatelliteNetworkService.rebuild(
+            TEAM,
+            nodes(),
+            capacity(CelestialObjectId.MARS, 20L, CelestialObjectId.OVERWORLD, 10L),
+            new SatelliteDataBufferStore());
 
         assertEquals(first.revision() + 1, changed.revision());
         assertEquals(20L, changed.capacityKbps(CelestialObjectKey.registered(CelestialObjectId.MARS)));
@@ -93,15 +105,13 @@ final class SatelliteNetworkServiceTest {
         SatelliteDataBufferStore store = new SatelliteDataBufferStore();
         SatelliteDataKey prospecting = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
         store.finishProduction(
-            TEAM,
             CelestialObjectKey.registered(CelestialObjectId.MARS),
             prospecting,
             SatelliteBandwidthFormatter.kilobits(100L));
-        store.requestData(
-            TEAM,
-            CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
-            prospecting,
-            SatelliteBandwidthFormatter.kilobits(100L));
+        AutomatedFacility destination = facility(CelestialObjectId.OVERWORLD);
+        addDebugModule(destination)
+            .configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 100L, 1, null));
+        SatelliteNetworkService.refreshAssetEndpoints(TEAM, destination);
 
         SatelliteNetworkState state = SatelliteNetworkService
             .rebuild(TEAM, nodes(), capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L), store);
@@ -150,7 +160,6 @@ final class SatelliteNetworkServiceTest {
 
         SatelliteDataKey prospecting = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
         store.finishProduction(
-            TEAM,
             CelestialObjectKey.registered(CelestialObjectId.MARS),
             prospecting,
             SatelliteBandwidthFormatter.kilobits(25L));
@@ -357,8 +366,11 @@ final class SatelliteNetworkServiceTest {
 
     @Test
     void worldLoadClearsCachedSatelliteNetworkState(@TempDir Path tempDir) {
-        SatelliteNetworkService
-            .rebuild(TEAM, nodes(), capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L), Map.of());
+        SatelliteNetworkService.rebuild(
+            TEAM,
+            nodes(),
+            capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L),
+            new SatelliteDataBufferStore());
 
         new FacilityPersistenceManager(CelestialServerRuntime.create()).loadFromSaveDirectory(tempDir.toFile());
 

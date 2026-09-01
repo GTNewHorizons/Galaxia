@@ -42,13 +42,32 @@ final class SatelliteDataJobServiceTest {
         producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
 
-        SatelliteDataJobService.tickUsage(TEAM, List.of(facility), store, emptyNetwork());
+        tickUsage(TEAM, List.of(facility), store, emptyNetwork());
 
         assertEquals(SatelliteBandwidthFormatter.kilobits(10L), consumer.consumedDeciKb());
         assertEquals(
             0L,
             store.pendingDeciKb(
-                TEAM,
+                CelestialObjectKey.registered(CelestialObjectId.MARS),
+                SatelliteDataKey
+                    .origin(SatelliteDataType.PROSPECTING, CelestialObjectKey.registered(CelestialObjectId.MARS))));
+    }
+
+    @Test
+    void localConsumerAcceptsOnlyItsDemandAndBuffersTheRemainder() {
+        SatelliteDataBufferStore store = new SatelliteDataBufferStore();
+        AutomatedFacility facility = facility(CelestialObjectId.MARS);
+        ModuleDebugDataGenerator producer = addDebugModule(facility);
+        ModuleDebugDataGenerator consumer = addDebugModule(facility);
+        producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
+        consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 1L, 1, null));
+
+        tickUsage(TEAM, List.of(facility), store, emptyNetwork());
+
+        assertEquals(SatelliteBandwidthFormatter.kilobits(1L), consumer.consumedDeciKb());
+        assertEquals(
+            SatelliteBandwidthFormatter.kilobits(9L),
+            store.pendingDeciKb(
                 CelestialObjectKey.registered(CelestialObjectId.MARS),
                 SatelliteDataKey
                     .origin(SatelliteDataType.PROSPECTING, CelestialObjectKey.registered(CelestialObjectId.MARS))));
@@ -69,7 +88,7 @@ final class SatelliteDataJobServiceTest {
                 .consume(SatelliteDataType.PROSPECTING, 10L, 1, CelestialObjectKey.registered(CelestialObjectId.MARS)));
         anyConsumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
 
-        SatelliteDataJobService.tickUsage(
+        tickUsage(
             TEAM,
             List.of(source, specificDestination, anyDestination),
             store,
@@ -92,50 +111,90 @@ final class SatelliteDataJobServiceTest {
             CelestialObjectKey.registered(CelestialObjectId.MARS),
             CelestialObjectKey.registered(CelestialObjectId.EGORA));
 
-        Map<SatelliteNetworkGraph.Edge, Long> usedByEdge = SatelliteDataJobService
-            .tickUsage(
-                TEAM,
-                List.of(source, destination),
-                store,
-                network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD))
-            .usedByEdge();
+        Map<SatelliteNetworkGraph.Edge, Long> usedByEdge = tickUsage(
+            TEAM,
+            List.of(source, destination),
+            store,
+            network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD)).usedByEdge();
 
         assertEquals(10L, usedByEdge.get(edge));
         assertEquals(5L, consumer.consumedDeciKb());
     }
 
     @Test
+    void oneRemoteTransferIsCreditedToOnlyOneMatchingConsumer() {
+        SatelliteDataBufferStore store = new SatelliteDataBufferStore();
+        AutomatedFacility source = facility(CelestialObjectId.MARS);
+        AutomatedFacility destination = facility(CelestialObjectId.EGORA);
+        ModuleDebugDataGenerator producer = addDebugModule(source);
+        ModuleDebugDataGenerator firstConsumer = addDebugModule(destination);
+        ModuleDebugDataGenerator secondConsumer = addDebugModule(destination);
+        producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
+        firstConsumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
+        secondConsumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
+
+        tickUsage(
+            TEAM,
+            List.of(source, destination),
+            store,
+            network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD));
+
+        assertEquals(5L, firstConsumer.consumedDeciKb() + secondConsumer.consumedDeciKb());
+    }
+
+    @Test
+    void twoRemoteSourcesCannotEachSpendTheSameConcreteDemand() {
+        SatelliteDataBufferStore store = new SatelliteDataBufferStore();
+        AutomatedFacility firstSource = facility(CelestialObjectId.MARS);
+        AutomatedFacility secondSource = facility(CelestialObjectId.OVERWORLD);
+        AutomatedFacility destination = facility(CelestialObjectId.EGORA);
+        ModuleDebugDataGenerator firstProducer = addDebugModule(firstSource);
+        ModuleDebugDataGenerator secondProducer = addDebugModule(secondSource);
+        ModuleDebugDataGenerator consumer = addDebugModule(destination);
+        firstProducer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.RESEARCH, 10L, 1));
+        secondProducer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.RESEARCH, 10L, 1));
+        consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.RESEARCH, 10L, 1, null));
+
+        tickUsage(TEAM, List.of(firstSource, secondSource, destination), store, highBandwidthNetwork());
+
+        assertEquals(SatelliteBandwidthFormatter.kilobits(10L), consumer.consumedDeciKb());
+        assertEquals(
+            SatelliteBandwidthFormatter.kilobits(10L),
+            store.pendingDeciKb(
+                CelestialObjectKey.registered(CelestialObjectId.MARS),
+                SatelliteDataKey.any(SatelliteDataType.RESEARCH))
+                + store.pendingDeciKb(
+                    CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
+                    SatelliteDataKey.any(SatelliteDataType.RESEARCH)));
+    }
+
+    @Test
     void parallelQueuedTransfersOnSameLinkDoNotReportMoreThanLinkCapacity() {
         SatelliteDataBufferStore store = new SatelliteDataBufferStore();
+        AutomatedFacility source = facility(CelestialObjectId.MARS);
+        AutomatedFacility destination = facility(CelestialObjectId.EGORA);
         SatelliteDataKey research = SatelliteDataKey.any(SatelliteDataType.RESEARCH);
         SatelliteDataKey communication = SatelliteDataKey.any(SatelliteDataType.COMMUNICATION);
         SatelliteNetworkGraph.Edge sharedEdge = new SatelliteNetworkGraph.Edge(
             CelestialObjectKey.registered(CelestialObjectId.MARS),
             CelestialObjectKey.registered(CelestialObjectId.EGORA));
         store.finishProduction(
-            TEAM,
             CelestialObjectKey.registered(CelestialObjectId.MARS),
             research,
             SatelliteBandwidthFormatter.kilobits(100L));
         store.finishProduction(
-            TEAM,
             CelestialObjectKey.registered(CelestialObjectId.MARS),
             communication,
             SatelliteBandwidthFormatter.kilobits(100L));
-        store.requestData(
-            TEAM,
-            CelestialObjectKey.registered(CelestialObjectId.EGORA),
-            research,
-            SatelliteBandwidthFormatter.kilobits(100L));
-        store.requestData(
-            TEAM,
-            CelestialObjectKey.registered(CelestialObjectId.EGORA),
-            communication,
-            SatelliteBandwidthFormatter.kilobits(100L));
+        addDebugModule(source).configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.RESEARCH, 1L, 100));
+        addDebugModule(destination)
+            .configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.RESEARCH, 100L, 1, null));
+        addDebugModule(destination)
+            .configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.COMMUNICATION, 100L, 1, null));
 
-        SatelliteDataJobService.Usage usage = SatelliteDataJobService.tickEndpointsUsage(
+        SatelliteDataJobService.Usage usage = tickUsage(
             TEAM,
-            List.of(),
+            List.of(source, destination),
             store,
             network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD));
 
@@ -155,7 +214,7 @@ final class SatelliteDataJobServiceTest {
         producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
 
-        SatelliteDataJobService.tickUsage(
+        tickUsage(
             TEAM,
             List.of(source, destination),
             store,
@@ -176,17 +235,10 @@ final class SatelliteDataJobServiceTest {
         producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.RESEARCH, 10L, 100));
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.RESEARCH, 400L, 1, null));
         store.finishProduction(
-            TEAM,
             CelestialObjectKey.registered(CelestialObjectId.MARS),
             key,
             SatelliteBandwidthFormatter.kilobits(400L));
-        store.requestData(
-            TEAM,
-            CelestialObjectKey.registered(CelestialObjectId.EGORA),
-            key,
-            SatelliteBandwidthFormatter.kilobits(400L));
-
-        SatelliteDataJobService.tickUsage(
+        tickUsage(
             TEAM,
             List.of(source, destination),
             store,
@@ -194,7 +246,7 @@ final class SatelliteDataJobServiceTest {
 
         assertEquals(
             SatelliteBandwidthFormatter.kilobits(400L) - 5L,
-            store.pendingDeciKb(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), key));
+            store.pendingDeciKb(CelestialObjectKey.registered(CelestialObjectId.MARS), key));
         assertEquals(5L, consumer.consumedDeciKb());
     }
 
@@ -208,22 +260,22 @@ final class SatelliteDataJobServiceTest {
         ModuleDebugDataGenerator consumer = addDebugModule(destination);
         producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.COMMUNICATION, 10L, 1));
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.COMMUNICATION, 10L, 1, null));
-        endpoints.refreshFacility(TEAM, source);
-        endpoints.refreshFacility(TEAM, destination);
+        endpoints.refreshFacility(source);
+        endpoints.refreshFacility(destination);
 
         SatelliteDataJobService.tickEndpointsUsage(
             TEAM,
-            endpoints.endpoints(TEAM),
+            endpoints.endpoints(),
             store,
             network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD));
         assertEquals(CelestialObjectKey.registered(CelestialObjectId.EGORA), producer.detectedCounterpartBodyKey());
 
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
-        endpoints.refreshFacility(TEAM, destination);
+        endpoints.refreshFacility(destination);
 
         SatelliteDataJobService.tickEndpointsUsage(
             TEAM,
-            endpoints.endpoints(TEAM),
+            endpoints.endpoints(),
             store,
             network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD));
 
@@ -232,7 +284,7 @@ final class SatelliteDataJobServiceTest {
     }
 
     @Test
-    void producerWaitsWhenSourceBufferForProducedKeyIsOverLocalLimit() {
+    void producerWaitsWhileExistingOverCapacityBufferCanDrain() {
         SatelliteDataBufferStore store = new SatelliteDataBufferStore();
         AutomatedFacility source = facility(CelestialObjectId.MARS);
         AutomatedFacility destination = facility(CelestialObjectId.EGORA);
@@ -241,20 +293,19 @@ final class SatelliteDataJobServiceTest {
         producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
         consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 10L, 1, null));
         store.finishProduction(
-            TEAM,
             CelestialObjectKey.registered(CelestialObjectId.MARS),
             SatelliteDataKey
                 .origin(SatelliteDataType.PROSPECTING, CelestialObjectKey.registered(CelestialObjectId.MARS)),
             SatelliteBandwidthFormatter.kilobits(11L));
 
-        SatelliteDataJobService.tickUsage(
+        tickUsage(
             TEAM,
             List.of(source, destination),
             store,
             network(CelestialObjectId.MARS, CelestialObjectId.EGORA, CelestialObjectId.OVERWORLD));
 
         assertEquals(0, producer.jobProgressTicks());
-        assertEquals(0L, consumer.consumedDeciKb());
+        assertEquals(5L, consumer.consumedDeciKb());
     }
 
     @Test
@@ -264,7 +315,7 @@ final class SatelliteDataJobServiceTest {
         ModuleDebugDataGenerator producer = addDebugModule(source);
         producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.PROSPECTING, 10L, 1));
 
-        SatelliteDataJobService.tickUsage(
+        tickUsage(
             TEAM,
             List.of(source),
             store,
@@ -274,7 +325,6 @@ final class SatelliteDataJobServiceTest {
         assertEquals(
             0L,
             store.pendingDeciKb(
-                TEAM,
                 CelestialObjectKey.registered(CelestialObjectId.MARS),
                 SatelliteDataKey
                     .origin(SatelliteDataType.PROSPECTING, CelestialObjectKey.registered(CelestialObjectId.MARS))));
@@ -302,6 +352,13 @@ final class SatelliteDataJobServiceTest {
             Buildable.Status.OPERATIONAL);
     }
 
+    private static SatelliteDataJobService.Usage tickUsage(UUID teamId, List<AutomatedFacility> facilities,
+        SatelliteDataBufferStore store, SatelliteNetworkState networkState) {
+        SatelliteDataEndpointRegistry endpoints = new SatelliteDataEndpointRegistry();
+        for (AutomatedFacility facility : facilities) endpoints.refreshFacility(facility);
+        return SatelliteDataJobService.tickEndpointsUsage(teamId, endpoints.endpoints(), store, networkState);
+    }
+
     private static ModuleDebugDataGenerator addDebugModule(AutomatedFacility facility) {
         ModuleInstance module = FacilityModuleKind.DEBUG_DATA_GENERATOR.create(
             StationTileCoord.of(
@@ -317,6 +374,27 @@ final class SatelliteDataJobServiceTest {
 
     private static SatelliteNetworkState emptyNetwork() {
         return SatelliteNetworkCalculator.fromGraph(TEAM, 0, List.of(), List.of(), Map.of(), Map.of());
+    }
+
+    private static SatelliteNetworkState highBandwidthNetwork() {
+        return SatelliteNetworkCalculator.fromGraph(
+            TEAM,
+            0,
+            List.of(
+                node(CelestialObjectId.MARS, 0.0D),
+                node(CelestialObjectId.EGORA, 10.0D),
+                node(CelestialObjectId.OVERWORLD, 20.0D)),
+            List.of(
+                new SatelliteNetworkGraph.Edge(key(CelestialObjectId.MARS), key(CelestialObjectId.EGORA)),
+                new SatelliteNetworkGraph.Edge(key(CelestialObjectId.EGORA), key(CelestialObjectId.OVERWORLD))),
+            Map.of(
+                key(CelestialObjectId.MARS),
+                1000L,
+                key(CelestialObjectId.EGORA),
+                1000L,
+                key(CelestialObjectId.OVERWORLD),
+                1000L),
+            Map.of());
     }
 
     private static SatelliteNetworkState network(CelestialObjectId first, CelestialObjectId second,

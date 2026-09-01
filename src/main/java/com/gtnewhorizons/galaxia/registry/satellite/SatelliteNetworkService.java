@@ -30,16 +30,17 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 public final class SatelliteNetworkService {
 
     private static final int DATA_USAGE_VISIBLE_TICKS = 40;
-    private static final Map<UUID, SatelliteNetworkState> STATES = new HashMap<>();
-    private static final Map<UUID, Map<SatelliteNetworkGraph.Edge, ActiveDataUsage>> ACTIVE_DATA_USAGE = new HashMap<>();
-    private static final Map<UUID, Map<SatelliteNetworkGraph.DirectedEdge, ActiveDataUsage>> ACTIVE_DIRECTIONAL_DATA_USAGE = new HashMap<>();
-    private static final SatelliteDataBufferStore DATA_BUFFERS = new SatelliteDataBufferStore();
-    private static final SatelliteDataEndpointRegistry DATA_ENDPOINTS = new SatelliteDataEndpointRegistry();
+    private static final Map<UUID, TeamRuntime> RUNTIMES = new HashMap<>();
 
     private SatelliteNetworkService() {}
 
+    private static TeamRuntime runtime(UUID teamId) {
+        return RUNTIMES.computeIfAbsent(teamId, TeamRuntime::new);
+    }
+
     public static SatelliteNetworkState current(UUID teamId) {
-        return STATES.getOrDefault(teamId, SatelliteNetworkState.empty(teamId, 0));
+        TeamRuntime runtime = RUNTIMES.get(teamId);
+        return runtime == null ? SatelliteNetworkState.empty(teamId, 0) : runtime.state;
     }
 
     /*
@@ -53,22 +54,13 @@ public final class SatelliteNetworkService {
             long capacity = CelestialAssetStore.SERVER.satelliteBandwidth(teamId, node.bodyKey());
             if (capacity > 0L) capacityByBody.put(node.bodyKey(), capacity);
         }
-        return rebuild(teamId, nodes, capacityByBody, DATA_BUFFERS);
-    }
-
-    static SatelliteNetworkState rebuild(UUID teamId, List<SatelliteNetworkGraph.Node> nodes,
-        Map<CelestialObjectKey, Long> capacityByBody, Map<SatelliteNetworkGraph.Edge, Long> usedByEdge) {
-        SatelliteNetworkState previous = current(teamId);
-        SatelliteNetworkState next = SatelliteNetworkCalculator
-            .forTeam(teamId, previous.revision() + 1, nodes, capacityByBody, usedByEdge);
-        if (sameContent(previous, next)) return previous;
-        STATES.put(teamId, next);
-        return next;
+        return rebuild(teamId, nodes, capacityByBody, runtime(teamId).buffers);
     }
 
     static SatelliteNetworkState rebuild(UUID teamId, List<SatelliteNetworkGraph.Node> nodes,
         Map<CelestialObjectKey, Long> capacityByBody, SatelliteDataBufferStore bufferStore) {
         SatelliteNetworkState previous = current(teamId);
+        TeamRuntime runtime = runtime(teamId);
         List<SatelliteNetworkGraph.Node> activeNodes = activeNodes(nodes, capacityByBody);
         /*
          * Rebuild is deliberately two-phase. First derive the topology from satellite ownership and capacity; then use
@@ -77,13 +69,14 @@ public final class SatelliteNetworkService {
          */
         SatelliteNetworkState unloaded = SatelliteNetworkCalculator
             .forTeam(teamId, previous.revision() + 1, activeNodes, capacityByBody, Map.of());
-        clearActiveUsageIfTopologyChanged(teamId, previous, unloaded);
-        SatelliteDataTransferPlanner.Plan plan = SatelliteDataTransferPlanner.plan(teamId, unloaded, bufferStore);
+        clearActiveUsageIfTopologyChanged(runtime, previous, unloaded);
+        SatelliteDataTransferPlanner.Plan plan = SatelliteDataTransferPlanner
+            .plan(teamId, unloaded, bufferStore, runtime.endpoints.demands());
         // Planned transfers are real throughput; active usage keeps short visual pulses visible between rebuilds.
-        Map<SatelliteNetworkGraph.Edge, Long> usedByEdge = mergedUsage(plan.usedByEdge(), activeUsage(teamId));
+        Map<SatelliteNetworkGraph.Edge, Long> usedByEdge = mergedUsage(plan.usedByEdge(), activeUsage(runtime));
         Map<SatelliteNetworkGraph.DirectedEdge, Long> directedUsedByEdge = mergedUsage(
             plan.directedUsedByEdge(),
-            activeDirectionalUsage(teamId));
+            activeDirectionalUsage(runtime));
         SatelliteNetworkState next = SatelliteNetworkCalculator
             .fromGraph(
                 teamId,
@@ -97,26 +90,22 @@ public final class SatelliteNetworkService {
                 usedByEdge,
                 directedUsedByEdge,
                 plan.usedByBody())
-            .withPendingData(pendingData(teamId, bufferStore, plan.transfers()));
+            .withPendingData(pendingData(bufferStore, plan.transfers()));
         if (sameContent(previous, next)) return previous;
-        STATES.put(teamId, next);
+        runtime.state = next;
         return next;
     }
 
     public static void clear() {
-        STATES.clear();
-        ACTIVE_DATA_USAGE.clear();
-        ACTIVE_DIRECTIONAL_DATA_USAGE.clear();
-        DATA_BUFFERS.clear();
-        DATA_ENDPOINTS.clear();
+        RUNTIMES.clear();
     }
 
-    static SatelliteDataBufferStore dataBuffers() {
-        return DATA_BUFFERS;
+    static SatelliteDataBufferStore dataBuffers(UUID teamId) {
+        return runtime(teamId).buffers;
     }
 
     public static boolean canStartProcess(UUID teamId, CelestialObjectKey bodyKey, SatelliteDataKey outputKey) {
-        return DATA_BUFFERS.canStart(teamId, bodyKey, outputKey, current(teamId).capacityKbps(bodyKey));
+        return runtime(teamId).buffers.canStart(bodyKey, outputKey, current(teamId).capacityKbps(bodyKey));
     }
 
     /*
@@ -124,30 +113,26 @@ public final class SatelliteNetworkService {
      * rebuild packages it into the synced network snapshot.
      */
     public static void tickDataJobs() {
-        tickDataJobs(1);
-    }
-
-    static void tickDataJobs(int elapsedTicks) {
-        if (elapsedTicks < 0) throw new IllegalArgumentException("elapsedTicks must be non-negative");
-        for (int tick = 0; tick < elapsedTicks; tick++) {
-            tickDataJobsSingleTick();
-        }
+        tickDataJobsSingleTick();
     }
 
     private static void tickDataJobsSingleTick() {
         tickActiveUsage();
-        for (UUID teamId : DATA_ENDPOINTS.teamIds()) {
+        for (Map.Entry<UUID, TeamRuntime> entry : RUNTIMES.entrySet()) {
+            TeamRuntime runtime = entry.getValue();
+            if (runtime.endpoints.isEmpty()) continue;
             SatelliteDataJobService.Usage usage = SatelliteDataJobService
-                .tickEndpointsUsage(teamId, DATA_ENDPOINTS.endpoints(teamId), DATA_BUFFERS, current(teamId));
-            recordActiveUsage(teamId, usage);
+                .tickEndpointsUsage(entry.getKey(), runtime.endpoints.endpoints(), runtime.buffers, runtime.state);
+            recordActiveUsage(runtime, usage);
         }
     }
 
     public static void refreshAssetEndpoints(UUID teamId, CelestialAsset asset) {
+        if (teamId == null) return;
         if (asset instanceof AutomatedFacility facility) {
-            DATA_ENDPOINTS.refreshFacility(teamId, facility);
+            runtime(teamId).endpoints.refreshFacility(facility);
         } else if (asset != null) {
-            DATA_ENDPOINTS.unregisterAsset(asset.assetId);
+            unregisterAssetEndpoints(asset.assetId);
         }
     }
 
@@ -157,11 +142,11 @@ public final class SatelliteNetworkService {
     }
 
     public static void unregisterAssetEndpoints(CelestialAsset.ID assetId) {
-        DATA_ENDPOINTS.unregisterAsset(assetId);
+        for (TeamRuntime runtime : RUNTIMES.values()) runtime.endpoints.unregisterAsset(assetId);
     }
 
     public static void unregisterTeamEndpoints(UUID teamId) {
-        DATA_ENDPOINTS.unregisterTeam(teamId);
+        RUNTIMES.remove(teamId);
     }
 
     /*
@@ -169,7 +154,7 @@ public final class SatelliteNetworkService {
      * full pass to repopulate the endpoint registry from saved assets.
      */
     public static void rebuildDataEndpointsFromAssets() {
-        DATA_ENDPOINTS.clear();
+        for (TeamRuntime runtime : RUNTIMES.values()) runtime.endpoints.clear();
         for (CelestialAsset asset : CelestialAssetStore.allAssets()) {
             refreshAssetEndpoints(CelestialAssetStore.getTeamId(asset.assetId), asset);
         }
@@ -181,50 +166,36 @@ public final class SatelliteNetworkService {
      * small transfers can complete before the starmap ever receives a coloured link.
      */
     private static void tickActiveUsage() {
-        ACTIVE_DATA_USAGE.entrySet()
-            .removeIf(teamEntry -> {
-                teamEntry.getValue()
-                    .replaceAll((edge, usage) -> usage.tick());
-                teamEntry.getValue()
-                    .entrySet()
-                    .removeIf(
-                        edgeEntry -> edgeEntry.getValue()
-                            .expired());
-                return teamEntry.getValue()
-                    .isEmpty();
-            });
-        ACTIVE_DIRECTIONAL_DATA_USAGE.entrySet()
-            .removeIf(teamEntry -> {
-                teamEntry.getValue()
-                    .replaceAll((edge, usage) -> usage.tick());
-                teamEntry.getValue()
-                    .entrySet()
-                    .removeIf(
-                        edgeEntry -> edgeEntry.getValue()
-                            .expired());
-                return teamEntry.getValue()
-                    .isEmpty();
-            });
+        for (TeamRuntime runtime : RUNTIMES.values()) {
+            tickActiveUsage(runtime.activeUsage);
+            tickActiveUsage(runtime.activeDirectionalUsage);
+        }
+    }
+
+    private static <T> void tickActiveUsage(Map<T, ActiveDataUsage> usageByEdge) {
+        usageByEdge.replaceAll((edge, usage) -> usage.tick());
+        usageByEdge.entrySet()
+            .removeIf(
+                entry -> entry.getValue()
+                    .expired());
     }
 
     /*
      * Store both undirected and directed usage. Undirected usage colours the link; directed usage controls packet
      * direction on that same link.
      */
-    private static void recordActiveUsage(UUID teamId, SatelliteDataJobService.Usage usage) {
-        if (teamId == null || usage == null) return;
-        recordActiveUsage(teamId, usage.usedByEdge(), ACTIVE_DATA_USAGE);
-        recordActiveUsage(teamId, usage.directedUsedByEdge(), ACTIVE_DIRECTIONAL_DATA_USAGE);
+    private static void recordActiveUsage(TeamRuntime runtime, SatelliteDataJobService.Usage usage) {
+        if (usage == null) return;
+        recordActiveUsage(usage.usedByEdge(), runtime.activeUsage);
+        recordActiveUsage(usage.directedUsedByEdge(), runtime.activeDirectionalUsage);
     }
 
-    private static <T> void recordActiveUsage(UUID teamId, Map<T, Long> usedByEdge,
-        Map<UUID, Map<T, ActiveDataUsage>> activeUsage) {
-        if (teamId == null || usedByEdge == null || usedByEdge.isEmpty()) return;
-        Map<T, ActiveDataUsage> teamUsage = activeUsage.computeIfAbsent(teamId, ignored -> new HashMap<>());
+    private static <T> void recordActiveUsage(Map<T, Long> usedByEdge, Map<T, ActiveDataUsage> activeUsage) {
+        if (usedByEdge == null || usedByEdge.isEmpty()) return;
         for (Map.Entry<T, Long> entry : usedByEdge.entrySet()) {
             long usedKbps = entry.getValue() == null ? 0L : entry.getValue();
             if (usedKbps <= 0L) continue;
-            teamUsage.merge(
+            activeUsage.merge(
                 entry.getKey(),
                 new ActiveDataUsage(usedKbps, DATA_USAGE_VISIBLE_TICKS),
                 (left, right) -> new ActiveDataUsage(Math.max(left.usedKbps(), right.usedKbps()), right.ticksLeft()));
@@ -293,12 +264,12 @@ public final class SatelliteNetworkService {
      * If the edge set changes, old active-usage pulses would colour links that no longer exist. Drop them so topology
      * changes and link colours arrive as one atomic snapshot.
      */
-    private static void clearActiveUsageIfTopologyChanged(UUID teamId, SatelliteNetworkState previous,
+    private static void clearActiveUsageIfTopologyChanged(TeamRuntime runtime, SatelliteNetworkState previous,
         SatelliteNetworkState next) {
-        if (!ACTIVE_DATA_USAGE.containsKey(teamId) && !ACTIVE_DIRECTIONAL_DATA_USAGE.containsKey(teamId)) return;
+        if (runtime.activeUsage.isEmpty() && runtime.activeDirectionalUsage.isEmpty()) return;
         if (!edgeSet(previous).equals(edgeSet(next))) {
-            ACTIVE_DATA_USAGE.remove(teamId);
-            ACTIVE_DIRECTIONAL_DATA_USAGE.remove(teamId);
+            runtime.activeUsage.clear();
+            runtime.activeDirectionalUsage.clear();
         }
     }
 
@@ -314,9 +285,9 @@ public final class SatelliteNetworkService {
      * Pending data is a read model for clients/tooltips. It reports producer-side backlog and the destinations selected
      * by this tick's transfer plan; it does not mutate buffers.
      */
-    private static List<SatelliteNetworkState.PendingData> pendingData(UUID teamId,
-        SatelliteDataBufferStore bufferStore, List<SatelliteDataTransferPlanner.Transfer> transfers) {
-        return bufferStore.producedEntries(teamId)
+    private static List<SatelliteNetworkState.PendingData> pendingData(SatelliteDataBufferStore bufferStore,
+        List<SatelliteDataTransferPlanner.Transfer> transfers) {
+        return bufferStore.producedEntries()
             .stream()
             .map(
                 entry -> new SatelliteNetworkState.PendingData(
@@ -357,24 +328,18 @@ public final class SatelliteNetworkService {
         return keys;
     }
 
-    private static Map<SatelliteNetworkGraph.Edge, Long> activeUsage(UUID teamId) {
-        Map<SatelliteNetworkGraph.Edge, ActiveDataUsage> teamUsage = ACTIVE_DATA_USAGE.get(teamId);
-        if (teamUsage == null || teamUsage.isEmpty()) return Map.of();
-        Map<SatelliteNetworkGraph.Edge, Long> usage = new HashMap<>();
-        for (Map.Entry<SatelliteNetworkGraph.Edge, ActiveDataUsage> entry : teamUsage.entrySet()) {
-            usage.put(
-                entry.getKey(),
-                entry.getValue()
-                    .usedKbps());
-        }
-        return usage;
+    private static Map<SatelliteNetworkGraph.Edge, Long> activeUsage(TeamRuntime runtime) {
+        return activeUsage(runtime.activeUsage);
     }
 
-    private static Map<SatelliteNetworkGraph.DirectedEdge, Long> activeDirectionalUsage(UUID teamId) {
-        Map<SatelliteNetworkGraph.DirectedEdge, ActiveDataUsage> teamUsage = ACTIVE_DIRECTIONAL_DATA_USAGE.get(teamId);
-        if (teamUsage == null || teamUsage.isEmpty()) return Map.of();
-        Map<SatelliteNetworkGraph.DirectedEdge, Long> usage = new HashMap<>();
-        for (Map.Entry<SatelliteNetworkGraph.DirectedEdge, ActiveDataUsage> entry : teamUsage.entrySet()) {
+    private static Map<SatelliteNetworkGraph.DirectedEdge, Long> activeDirectionalUsage(TeamRuntime runtime) {
+        return activeUsage(runtime.activeDirectionalUsage);
+    }
+
+    private static <T> Map<T, Long> activeUsage(Map<T, ActiveDataUsage> activeUsage) {
+        if (activeUsage.isEmpty()) return Map.of();
+        Map<T, Long> usage = new HashMap<>();
+        for (Map.Entry<T, ActiveDataUsage> entry : activeUsage.entrySet()) {
             usage.put(
                 entry.getKey(),
                 entry.getValue()
@@ -405,6 +370,19 @@ public final class SatelliteNetworkService {
                 .equals(next.links())
             && previous.pendingData()
                 .equals(next.pendingData());
+    }
+
+    private static final class TeamRuntime {
+
+        private SatelliteNetworkState state;
+        private final Map<SatelliteNetworkGraph.Edge, ActiveDataUsage> activeUsage = new HashMap<>();
+        private final Map<SatelliteNetworkGraph.DirectedEdge, ActiveDataUsage> activeDirectionalUsage = new HashMap<>();
+        private final SatelliteDataBufferStore buffers = new SatelliteDataBufferStore();
+        private final SatelliteDataEndpointRegistry endpoints = new SatelliteDataEndpointRegistry();
+
+        private TeamRuntime(UUID teamId) {
+            state = SatelliteNetworkState.empty(teamId, 0);
+        }
     }
 
     private record ActiveDataUsage(long usedKbps, int ticksLeft) {

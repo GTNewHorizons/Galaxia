@@ -18,6 +18,14 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSlotRanges;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class GalaxiaSatelliteAPITest {
@@ -27,6 +35,7 @@ final class GalaxiaSatelliteAPITest {
     @BeforeAll
     static void bootstrapRegistry() {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
+        GalaxiaTestBootstrap.ensureFacilityModules();
     }
 
     @AfterEach
@@ -39,11 +48,10 @@ final class GalaxiaSatelliteAPITest {
         CelestialObjectKey mars = CelestialObjectKey.registered(CelestialObjectId.MARS);
         CelestialObjectKey overworld = CelestialObjectKey.registered(CelestialObjectId.OVERWORLD);
         SatelliteDataKey prospecting = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
-        SatelliteNetworkService.dataBuffers()
-            .finishProduction(TEAM, mars, prospecting, SatelliteBandwidthFormatter.kilobits(15L));
-        SatelliteNetworkService.dataBuffers()
-            .requestData(TEAM, overworld, prospecting, SatelliteBandwidthFormatter.kilobits(15L));
-        SatelliteNetworkService.rebuild(TEAM, nodes(), capacity(), SatelliteNetworkService.dataBuffers());
+        SatelliteDataBufferStore store = SatelliteNetworkService.dataBuffers(TEAM);
+        store.finishProduction(mars, prospecting, SatelliteBandwidthFormatter.kilobits(15L));
+        registerConsumer(overworld, SatelliteDataType.PROSPECTING, 15L);
+        SatelliteNetworkService.rebuild(TEAM, nodes(), capacity(), store);
         CelestialAssetStore.SERVER.setSatelliteCount(TEAM, mars, SatelliteKind.COMMUNICATION, 1);
         CelestialAssetStore.SERVER.setSatelliteCount(TEAM, mars, SatelliteKind.PROSPECTING, 2);
 
@@ -78,7 +86,7 @@ final class GalaxiaSatelliteAPITest {
     void processCanStartWhenBodyBufferIsWithinLocalCapacity() {
         CelestialObjectKey mars = CelestialObjectKey.registered(CelestialObjectId.MARS);
         SatelliteDataKey prospecting = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
-        SatelliteNetworkService.rebuild(TEAM, nodes(), capacity(), SatelliteNetworkService.dataBuffers());
+        SatelliteNetworkService.rebuild(TEAM, nodes(), capacity(), SatelliteNetworkService.dataBuffers(TEAM));
 
         assertTrue(GalaxiaSatelliteAPI.canStartProcess(TEAM, mars, prospecting));
     }
@@ -89,12 +97,11 @@ final class GalaxiaSatelliteAPITest {
             .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN));
         SatelliteDataKey prospecting = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
         SatelliteDataBufferStore store = new SatelliteDataBufferStore();
-        store.finishProduction(TEAM, asteroid, prospecting, SatelliteBandwidthFormatter.kilobits(15L));
-        store.requestData(
-            TEAM,
+        store.finishProduction(asteroid, prospecting, SatelliteBandwidthFormatter.kilobits(15L));
+        registerConsumer(
             CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
-            prospecting,
-            SatelliteBandwidthFormatter.kilobits(15L));
+            SatelliteDataType.PROSPECTING,
+            15L);
         SatelliteNetworkService.rebuild(
             TEAM,
             List.of(
@@ -130,5 +137,20 @@ final class GalaxiaSatelliteAPITest {
             10L,
             CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
             10L);
+    }
+
+    private static void registerConsumer(CelestialObjectKey bodyKey, SatelliteDataType type, long amountKb) {
+        AutomatedFacility facility = new AutomatedFacility(
+            com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID.create(),
+            bodyKey,
+            com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
+        ModuleInstance instance = FacilityModuleKind.DEBUG_DATA_GENERATOR
+            .create(StationTileCoord.of(0, 0), ModuleShape.SINGLE, ModuleTier.HV);
+        instance.updateStatus(Buildable.Status.OPERATIONAL);
+        facility.addModule(instance);
+        ((ModuleDebugDataGenerator) instance.component())
+            .configure(ModuleDebugDataGenerator.Config.consume(type, amountKb, 1, null));
+        SatelliteNetworkService.refreshAssetEndpoints(TEAM, facility);
     }
 }

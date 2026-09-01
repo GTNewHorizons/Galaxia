@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
 /**
  * Ticks data-producing and data-consuming debug modules.
@@ -31,17 +31,6 @@ public final class SatelliteDataJobService {
         }
     }
 
-    public static Usage tickUsage(UUID teamId, List<AutomatedFacility> facilities, SatelliteDataBufferStore store,
-        SatelliteNetworkState networkState) {
-        SatelliteDataEndpointRegistry endpoints = new SatelliteDataEndpointRegistry();
-        if (facilities != null) {
-            for (AutomatedFacility facility : facilities) {
-                endpoints.refreshFacility(teamId, facility);
-            }
-        }
-        return tickEndpointsUsage(teamId, endpoints.endpoints(teamId), store, networkState);
-    }
-
     /*
      * One service tick does three things in order: refresh debug module detection, advance producer jobs that are
      * allowed
@@ -52,41 +41,24 @@ public final class SatelliteDataJobService {
         if (teamId == null || endpoints == null || store == null || networkState == null) {
             return new Usage(Map.of(), Map.of());
         }
-        Map<SatelliteNetworkGraph.Edge, Long> usedByEdge = new HashMap<>();
-        Map<SatelliteNetworkGraph.DirectedEdge, Long> directedUsedByEdge = new HashMap<>();
         updateDetectedCounterparts(endpoints);
         for (SatelliteDataEndpointRegistry.Endpoint producer : endpoints) {
-            if (!producer.module()
-                .enabled()
-                || !producer.module()
-                    .isProducer())
-                continue;
+            if (!producer.produces()) continue;
             List<SatelliteDataEndpointRegistry.Endpoint> consumers = matchingConsumers(producer, endpoints);
             if (consumers.isEmpty()) {
-                producer.module()
-                    .clearJob();
+                producer.clearProduction();
                 continue;
             }
-            if (!hasLocalConsumer(producer, consumers) && !store.canStart(
-                teamId,
-                producer.bodyKey(),
-                producedKey(producer),
-                networkState.capacityKbps(producer.bodyKey()))) {
-                producer.module()
-                    .clearJob();
+            if (!store
+                .canStart(producer.bodyKey(), producer.producedKey(), networkState.capacityKbps(producer.bodyKey()))) {
+                producer.clearProduction();
                 continue;
             }
-            producer.module()
-                .advanceJob();
-            if (!producer.module()
-                .jobComplete()) continue;
+            if (!producer.advanceProduction()) continue;
 
-            completeProduction(teamId, producer, consumers, store);
+            completeProduction(producer, store);
         }
-        Usage transferUsage = transferQueuedData(teamId, endpoints, store, networkState);
-        mergeUsage(usedByEdge, transferUsage.usedByEdge());
-        mergeUsage(directedUsedByEdge, transferUsage.directedUsedByEdge());
-        return new Usage(usedByEdge, directedUsedByEdge);
+        return transferQueuedData(teamId, endpoints, store, networkState);
     }
 
     /*
@@ -99,11 +71,7 @@ public final class SatelliteDataJobService {
             updateDetectedCounterpart(endpoint, null);
         }
         for (SatelliteDataEndpointRegistry.Endpoint producer : endpoints) {
-            if (!producer.module()
-                .enabled()
-                || !producer.module()
-                    .isProducer())
-                continue;
+            if (!producer.produces()) continue;
             List<SatelliteDataEndpointRegistry.Endpoint> consumers = matchingConsumers(producer, endpoints);
             if (consumers.isEmpty()) continue;
             updateDetectedCounterpart(
@@ -116,50 +84,11 @@ public final class SatelliteDataJobService {
         }
     }
 
-    private static boolean hasLocalConsumer(SatelliteDataEndpointRegistry.Endpoint producer,
-        List<SatelliteDataEndpointRegistry.Endpoint> consumers) {
-        for (SatelliteDataEndpointRegistry.Endpoint consumer : consumers) {
-            if (consumer.bodyKey()
-                .equals(producer.bodyKey())) return true;
-        }
-        return false;
-    }
-
-    private static void completeProduction(UUID teamId, SatelliteDataEndpointRegistry.Endpoint producer,
-        List<SatelliteDataEndpointRegistry.Endpoint> consumers, SatelliteDataBufferStore store) {
-        long amount = producer.module()
-            .amountDeciKb();
-        SatelliteDataKey producedKey = producedKey(producer);
-        /*
-         * Same-body consumers bypass the satellite network entirely. The produced data is accepted locally and no
-         * bandwidth usage is reported, so colocated debug modules behave like a local machine chain instead of a
-         * network transfer.
-         */
-        for (SatelliteDataEndpointRegistry.Endpoint consumer : consumers) {
-            if (consumer.bodyKey()
-                .equals(producer.bodyKey())) {
-                consumeAndMarkDirty(consumer, amount);
-                producer.module()
-                    .clearJob();
-                return;
-            }
-        }
-
-        /*
-         * Remote consumers receive demand entries rather than being ticked directly here. The network service rebuild
-         * turns produced buffers plus demand buffers into one bandwidth-limited transfer plan for this team.
-         */
-        store.finishProduction(teamId, producer.bodyKey(), producedKey, amount);
-        for (SatelliteDataEndpointRegistry.Endpoint consumer : consumers) {
-            store.requestData(
-                teamId,
-                consumer.bodyKey(),
-                consumer.module()
-                    .demandKey(),
-                amount);
-        }
-        producer.module()
-            .clearJob();
+    private static void completeProduction(SatelliteDataEndpointRegistry.Endpoint producer,
+        SatelliteDataBufferStore store) {
+        long amount = producer.amountDeciKb();
+        store.finishProduction(producer.bodyKey(), producer.producedKey(), amount);
+        producer.clearProduction();
     }
 
     /*
@@ -169,40 +98,32 @@ public final class SatelliteDataJobService {
      */
     private static Usage transferQueuedData(UUID teamId, List<SatelliteDataEndpointRegistry.Endpoint> endpoints,
         SatelliteDataBufferStore store, SatelliteNetworkState networkState) {
-        SatelliteDataTransferPlanner.Plan plan = SatelliteDataTransferPlanner.plan(teamId, networkState, store);
+        List<SatelliteDataTransferPlanner.Demand> demands = endpoints.stream()
+            .filter(SatelliteDataEndpointRegistry.Endpoint::consumes)
+            .map(SatelliteDataEndpointRegistry.Endpoint::demand)
+            .toList();
+        Map<ModuleInstance.ID, SatelliteDataEndpointRegistry.Endpoint> sinks = new HashMap<>();
+        for (SatelliteDataEndpointRegistry.Endpoint endpoint : endpoints) sinks.put(endpoint.id(), endpoint);
+        SatelliteDataTransferPlanner.Plan plan = SatelliteDataTransferPlanner
+            .plan(teamId, networkState, store, demands);
         Map<SatelliteNetworkGraph.Edge, Long> usedByEdge = new HashMap<>();
         Map<SatelliteNetworkGraph.DirectedEdge, Long> directedUsedByEdge = new HashMap<>();
         for (SatelliteDataTransferPlanner.Transfer transfer : plan.transfers()) {
-            long delivered = store.transfer(
-                transfer.teamId(),
-                transfer.sourceBodyKey(),
-                transfer.sourceKey(),
-                transfer.destinationBodyKey(),
-                transfer.demandKey(),
-                transfer.deciKb());
-            if (delivered <= 0L) continue;
-            mergeTransferUsage(usedByEdge, directedUsedByEdge, transfer);
-            for (SatelliteDataEndpointRegistry.Endpoint consumer : endpoints) {
-                if (!consumer.module()
-                    .enabled()
-                    || !consumer.module()
-                        .isConsumer())
-                    continue;
-                if (!consumer.bodyKey()
-                    .equals(transfer.destinationBodyKey())) continue;
-                if (!consumer.module()
-                    .demandKey()
-                    .equals(transfer.demandKey())) continue;
-                consumeAndMarkDirty(consumer, delivered);
-            }
+            SatelliteDataEndpointRegistry.Endpoint sink = sinks.get(transfer.sinkId());
+            if (sink == null) continue;
+            long available = store.pendingDeciKb(transfer.sourceBodyKey(), transfer.sourceKey());
+            long accepted = sink.accept(transfer.demandKey(), Math.min(transfer.deciKb(), available));
+            long drained = store.drain(transfer.sourceBodyKey(), transfer.sourceKey(), accepted);
+            if (drained <= 0L) continue;
+            mergeTransferUsage(usedByEdge, directedUsedByEdge, transfer, drained);
         }
         return new Usage(usedByEdge, directedUsedByEdge);
     }
 
     private static void mergeTransferUsage(Map<SatelliteNetworkGraph.Edge, Long> usedByEdge,
         Map<SatelliteNetworkGraph.DirectedEdge, Long> directedUsedByEdge,
-        SatelliteDataTransferPlanner.Transfer transfer) {
-        long usedKbps = Math.min(transfer.bottleneckKbps(), Math.max(1L, transfer.deciKb() * TICKS_PER_SECOND / 10L));
+        SatelliteDataTransferPlanner.Transfer transfer, long deliveredDeciKb) {
+        long usedKbps = Math.min(transfer.bottleneckKbps(), Math.max(1L, deliveredDeciKb * TICKS_PER_SECOND / 10L));
         if (usedKbps <= 0L) return;
         for (SatelliteNetworkGraph.Edge edge : transfer.path()) {
             usedByEdge.merge(edge, usedKbps, SatelliteDataJobService::addSaturated);
@@ -213,13 +134,6 @@ public final class SatelliteDataJobService {
             transfer.destinationBodyKey(),
             transfer.path(),
             usedKbps);
-    }
-
-    private static <T> void mergeUsage(Map<T, Long> target, Map<T, Long> source) {
-        for (Map.Entry<T, Long> entry : source.entrySet()) {
-            long amount = entry.getValue() == null ? 0L : entry.getValue();
-            if (amount > 0L) target.merge(entry.getKey(), amount, SatelliteDataJobService::addSaturated);
-        }
     }
 
     private static long addSaturated(long left, long right) {
@@ -233,17 +147,12 @@ public final class SatelliteDataJobService {
      */
     private static List<SatelliteDataEndpointRegistry.Endpoint> matchingConsumers(
         SatelliteDataEndpointRegistry.Endpoint producer, List<SatelliteDataEndpointRegistry.Endpoint> endpoints) {
-        SatelliteDataKey producedKey = producedKey(producer);
+        SatelliteDataKey producedKey = producer.producedKey();
         List<SatelliteDataEndpointRegistry.Endpoint> exact = new ArrayList<>();
         List<SatelliteDataEndpointRegistry.Endpoint> any = new ArrayList<>();
         for (SatelliteDataEndpointRegistry.Endpoint endpoint : endpoints) {
-            if (!endpoint.module()
-                .enabled()
-                || !endpoint.module()
-                    .isConsumer())
-                continue;
-            SatelliteDataKey demandKey = endpoint.module()
-                .demandKey();
+            if (!endpoint.consumes()) continue;
+            SatelliteDataKey demandKey = endpoint.demandKey();
             if (!demandKey.matchesProduced(producedKey)) continue;
             if (demandKey.hasOrigin()) {
                 exact.add(endpoint);
@@ -256,26 +165,7 @@ public final class SatelliteDataJobService {
 
     private static void updateDetectedCounterpart(SatelliteDataEndpointRegistry.Endpoint endpoint,
         CelestialObjectKey bodyKey) {
-        if (java.util.Objects.equals(
-            endpoint.module()
-                .detectedCounterpartBodyKey(),
-            bodyKey)) return;
-        endpoint.module()
-            .updateDetectedCounterpart(bodyKey);
-        endpoint.facility()
-            .markDirty();
-    }
-
-    private static SatelliteDataKey producedKey(SatelliteDataEndpointRegistry.Endpoint producer) {
-        return producer.module()
-            .producedKey(producer.bodyKey());
-    }
-
-    private static void consumeAndMarkDirty(SatelliteDataEndpointRegistry.Endpoint consumer, long deciKb) {
-        if (deciKb <= 0L) return;
-        consumer.module()
-            .consume(deciKb);
-        consumer.facility()
-            .markDirty();
+        if (java.util.Objects.equals(endpoint.counterpartBodyKey(), bodyKey)) return;
+        endpoint.updateCounterpart(bodyKey);
     }
 }
