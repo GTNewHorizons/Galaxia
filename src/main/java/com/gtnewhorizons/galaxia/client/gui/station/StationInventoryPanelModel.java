@@ -2,13 +2,11 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -52,31 +50,27 @@ final class StationInventoryPanelModel {
         }
     }
 
-    static List<InventoryItemRow> inventoryRows(IDistributedInventory inventory) {
-        Map<ItemStackWrapper, Long> rows = new LinkedHashMap<>(inventory.aggregatedItems());
-        Set<ItemStackWrapper> upkeepItems = Set.of();
-        AutomatedFacility facility = null;
-        if (inventory instanceof AutomatedFacility af) {
-            facility = af;
-            UpkeepLedger.UpkeepSummary upkeepSummary = af.upkeepSummary();
-            upkeepItems = upkeepSummary.itemsPerMinute()
+    static List<InventoryItemRow> inventoryRows(Map<ItemStackWrapper, Long> amounts, AutomatedFacility facility) {
+        Set<ItemStackWrapper> upkeepItems = facility == null ? Set.of()
+            : facility.upkeepSummary()
+                .itemsPerMinute()
                 .keySet();
+        List<InventoryItemRow> sorted = new ArrayList<>(amounts.size() + upkeepItems.size());
+        for (Map.Entry<ItemStackWrapper, Long> entry : amounts.entrySet()) {
+            if (entry.getValue() <= 0L && !upkeepItems.contains(entry.getKey())) continue;
+            sorted.add(
+                new InventoryItemRow(
+                    entry.getKey(),
+                    entry.getValue(),
+                    facility == null ? 0L : facility.upkeepReserve(entry.getKey())));
+        }
+        if (facility != null) {
             for (ItemStackWrapper item : upkeepItems) {
-                rows.putIfAbsent(item, 0L);
+                if (!amounts.containsKey(item)) {
+                    sorted.add(new InventoryItemRow(item, 0L, facility.upkeepReserve(item)));
+                }
             }
         }
-        Set<ItemStackWrapper> visibleUpkeepItems = upkeepItems;
-        rows.entrySet()
-            .removeIf(row -> row.getValue() <= 0L && !visibleUpkeepItems.contains(row.getKey()));
-        AutomatedFacility facilityForRows = facility;
-        List<InventoryItemRow> sorted = rows.entrySet()
-            .stream()
-            .map(
-                row -> new InventoryItemRow(
-                    row.getKey(),
-                    row.getValue(),
-                    facilityForRows == null ? 0L : facilityForRows.upkeepReserve(row.getKey())))
-            .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         sorted.sort(
             Comparator.comparing(
                 row -> row.item()
@@ -86,10 +80,9 @@ final class StationInventoryPanelModel {
         return sorted;
     }
 
-    static List<FluidRow> fluidRows(IDistributedInventory distributed) {
+    static List<FluidRow> fluidRows(Map<FluidKey, Long> amounts) {
         List<FluidRow> result = new ArrayList<>();
-        for (Map.Entry<FluidKey, Long> e : distributed.aggregatedFluids()
-            .entrySet()) {
+        for (Map.Entry<FluidKey, Long> e : amounts.entrySet()) {
             if (e.getValue() > 0L) {
                 result.add(
                     new FluidRow(
@@ -114,7 +107,7 @@ final class StationInventoryPanelModel {
                 new UpkeepItemRow(
                     item,
                     entry.getValue(),
-                    facility.getItemAmount(item),
+                    facility.itemAmount(item),
                     facility.upkeepReserve(item),
                     facility.isUpkeepAutoOrderEnabled(item),
                     upkeepReserveStatus(facility, summary, item)));

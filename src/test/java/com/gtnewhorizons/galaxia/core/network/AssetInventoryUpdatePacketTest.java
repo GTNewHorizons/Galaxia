@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.UUID;
 
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
@@ -58,7 +60,7 @@ final class AssetInventoryUpdatePacketTest {
         boolean sync = packet.apply(TEAM, false);
 
         assertFalse(sync);
-        assertEquals(0L, facility.getItemAmount(resource));
+        assertEquals(0L, facility.itemAmount(resource));
     }
 
     @Test
@@ -76,13 +78,14 @@ final class AssetInventoryUpdatePacketTest {
     void removePacketRemovesAllMatchingInventory() {
         AutomatedFacility facility = addFacilityToServer();
         ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
-        facility.updateItems(resource, 32);
+        facility.insert(resource, 32);
+        int revisionBeforeRemoval = facility.getStateRevision();
         AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.remove(facility.assetId, resource);
 
         boolean sync = packet.apply(TEAM, false);
 
-        assertEquals(0L, facility.getItemAmount(resource));
-        assertEquals(1, facility.getStateRevision());
+        assertEquals(0L, facility.itemAmount(resource));
+        assertEquals(revisionBeforeRemoval + 1, facility.getStateRevision());
     }
 
     @Test
@@ -121,6 +124,49 @@ final class AssetInventoryUpdatePacketTest {
             facility.getBound(resource)
                 .upperOrDefault());
         assertEquals(0, facility.getStateRevision());
+    }
+
+    @Test
+    void nullBoundResourceIsRejectedWithoutChangingRevision() {
+        AutomatedFacility facility = addFacilityToServer();
+        int revisionBefore = facility.getStateRevision();
+        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket
+            .setBound(facility.assetId, BoundKind.ITEM_LOWER, null, 48L);
+
+        assertFalse(packet.apply(TEAM, false));
+        assertEquals(revisionBefore, facility.getStateRevision());
+        assertTrue(
+            facility.getBounds(true)
+                .isEmpty());
+    }
+
+    @Test
+    void boundPacketRejectsPhysicalStationWithoutChangingRevision() {
+        Station station = new Station(CelestialAsset.ID.create(), CelestialObjectId.MARS, Buildable.Status.OPERATIONAL);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, station);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);
+        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket
+            .setBound(station.assetId, BoundKind.ITEM_LOWER, resource, 48);
+
+        boolean sync = packet.apply(TEAM, false);
+
+        assertFalse(sync);
+        assertEquals(0, station.getStateRevision());
+    }
+
+    @Test
+    void reapplyingSameBoundDoesNotAdvanceRevisionOrRequestSync() {
+        AutomatedFacility facility = addFacilityToServer();
+        ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);
+        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket
+            .setBound(facility.assetId, BoundKind.ITEM_LOWER, resource, 48);
+        packet.apply(TEAM, false);
+        int revisionBefore = facility.getStateRevision();
+
+        boolean sync = packet.apply(TEAM, false);
+
+        assertFalse(sync);
+        assertEquals(revisionBefore, facility.getStateRevision());
     }
 
     private static AutomatedFacility addFacilityToServer() {

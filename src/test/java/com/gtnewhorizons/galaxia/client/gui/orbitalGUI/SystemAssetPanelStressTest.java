@@ -18,7 +18,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
@@ -260,11 +259,6 @@ final class SystemAssetPanelStressTest {
 
         @Override
         public void tick() {}
-
-        @Override
-        public long updateContents(InventoryKey item, long delta, boolean sync) {
-            return updateContents(item, delta);
-        }
 
         public String getInventoryName() {
             return "fake";

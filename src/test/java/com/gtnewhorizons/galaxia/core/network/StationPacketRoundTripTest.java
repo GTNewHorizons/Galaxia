@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -38,6 +39,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleDeconstructionOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
@@ -60,6 +62,7 @@ import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
 /**
@@ -180,6 +183,30 @@ final class StationPacketRoundTripTest {
                 .plan()
                 .spec()
                 .targetTier());
+    }
+
+    @Test
+    void fullSyncRoundTripPreservesPendingDeconstructionRefund() {
+        AutomatedFacility server = createFacility();
+        ModuleInstance module = buildModule(server, FacilityModuleKind.POWER, StationTileCoord.of(1, 0));
+        module.updateStatus(Buildable.Status.DECONSTRUCTION);
+        module.setOperation(ModuleOperationState.deconstructing(Map.of("minecraft:gold_ingot:0", 7L)));
+
+        AutomatedFacility client = createFacility();
+        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
+
+        ModuleInstance clientModule = client.modules()
+            .get(0);
+        assertEquals(Buildable.Status.DECONSTRUCTION, clientModule.status());
+        assertEquals(
+            7L,
+            clientModule.operationOrNull()
+                .refundBuffer()
+                .get("minecraft:gold_ingot:0"));
+        assertTrue(
+            clientModule.operationOrNull()
+                .plan()
+                .spec() instanceof ModuleDeconstructionOperation);
     }
 
     @Test
@@ -359,6 +386,51 @@ final class StationPacketRoundTripTest {
     }
 
     @Test
+    void fullSyncClearsFiltersMissingFromAuthoritativeState() {
+        AutomatedFacility server = createFacility();
+        AutomatedFacility client = new AutomatedFacility(
+            server.assetId,
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        client.setFilters(
+            List.of(
+                ItemStackWrapper.of(new ItemStack(Items.diamond))
+                    .toItemStack()
+                    .getUnlocalizedName()),
+            true);
+        client.setFilters(List.of(FluidRegistry.LAVA.getName()), false);
+        CelestialAssetStore.CLIENT.registerAssetInternal(TEAM, client);
+
+        assertTrue(AssetStateSync.Client.handleFull(roundTrip(AssetSyncPacket.fullSync(server))));
+
+        assertSame(client, CelestialAssetStore.CLIENT.findAssetInternal(server.assetId));
+        assertEquals(Map.of(), client.filtersSnapshot());
+    }
+
+    @Test
+    void malformedFacilityFluidPayloadsAreRejectedAtPacketBoundary() {
+        AutomatedFacility server = createFacility();
+        String water = FluidRegistry.WATER.getName();
+        List<List<Map.Entry<String, Long>>> malformedEntries = List.of(
+            List.of(Map.entry(" ", 1L)),
+            List.of(Map.entry("definitely_unregistered_galaxia_fluid", 1L)),
+            List.of(Map.entry(water, 1L), Map.entry(water, 2L)),
+            List.of(Map.entry(water, 0L)));
+
+        for (List<Map.Entry<String, Long>> entries : malformedEntries) {
+            assertThrows(
+                IllegalStateException.class,
+                () -> decodeFacilityPacketWithRawFluids(server, entries.size(), entries),
+                entries.toString());
+        }
+        assertThrows(
+            IllegalStateException.class,
+            () -> decodeFacilityPacketWithRawFluids(server, 4_097, List.of()),
+            "fluid entry count above the wire limit must be rejected");
+    }
+
+    @Test
     void invalidFullSyncHasNoPartialEffectsOnExistingClientAsset() {
         AutomatedFacility server = createFacility();
         ItemStackWrapper incoming = ItemStackWrapper.of(new ItemStack(Items.diamond));
@@ -445,6 +517,43 @@ final class StationPacketRoundTripTest {
         return decoded;
     }
 
+    private static AssetSyncPacket decodeFacilityPacketWithRawFluids(AutomatedFacility facility, int declaredCount,
+        List<Map.Entry<String, Long>> entries) {
+        AssetSyncPacket full = AssetSyncPacket.fullSync(facility);
+        ByteBuf buf = Unpooled.buffer();
+        try {
+            buf.writeByte(full.syncType);
+            buf.writeInt(full.stateRevision);
+            buf.writeLong(full.basePublishedRevision);
+            buf.writeLong(full.publishedRevision);
+            PacketUtil.writeId(buf, full.assetId);
+            PacketUtil.writeEnum(buf, full.assetKind);
+            PacketUtil.writeEnum(buf, full.assetStatus);
+            PacketUtil.writeString(buf, full.displayName == null ? "" : full.displayName);
+            buf.writeLong(full.teamId.getMostSignificantBits());
+            buf.writeLong(full.teamId.getLeastSignificantBits());
+            PacketUtil.writeCelestialObjectKey(buf, full.celestialBodyKey);
+            PacketUtil.writeCelestialObjectKey(buf, full.systemKey);
+            PacketUtil.writeCelestialObjectKey(buf, full.planetaryAnchorBodyKey);
+            buf.writeLong(full.energyStored);
+            buf.writeLong(full.stationFeatureSalt);
+            buf.writeInt(0);
+            buf.writeInt(0);
+            buf.writeInt(declaredCount);
+            for (Map.Entry<String, Long> entry : entries) {
+                PacketUtil.writeString(buf, entry.getKey());
+                buf.writeLong(entry.getValue());
+            }
+            buf.writeInt(0);
+
+            AssetSyncPacket decoded = new AssetSyncPacket();
+            decoded.fromBytes(buf);
+            return decoded;
+        } finally {
+            buf.release();
+        }
+    }
+
     private static AutomatedFacility createFacility() {
         return createFacility(CelestialObjectId.MARS);
     }
@@ -514,8 +623,9 @@ final class StationPacketRoundTripTest {
     }
 
     private static ModuleDebugDataGenerator debugDataGenerator(AutomatedFacility facility, StationTileCoord anchor) {
-        return (ModuleDebugDataGenerator) buildModule(facility, FacilityModuleKind.DEBUG_DATA_GENERATOR, anchor)
-            .component();
+        ModuleInstance module = buildModule(facility, FacilityModuleKind.DEBUG_DATA_GENERATOR, anchor);
+        module.completeConstruction();
+        return (ModuleDebugDataGenerator) module.component();
     }
 
     private static void applyFullSyncFromPacket(AutomatedFacility client, AssetSyncPacket packet) {

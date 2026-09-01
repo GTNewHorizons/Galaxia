@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import net.minecraft.util.StatCollector;
+
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
@@ -15,6 +17,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleDeconstructionOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
@@ -215,8 +218,10 @@ final class ModuleStatusTextRegistry {
             return "Target tier: " + tierSpec.targetTier()
                 .name();
         }
-        return "Target tier: " + spec.targetTier()
-            .name();
+        if (spec instanceof ModuleDeconstructionOperation) {
+            return StatCollector.translateToLocal("galaxia.module.operation.deconstruction_pending");
+        }
+        return "Operation pending";
     }
 
     private static String hammerDispatchStatusLine(HammerDispatchStatus.Status status) {

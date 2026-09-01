@@ -2,12 +2,16 @@ package com.gtnewhorizons.galaxia.registry.outpost;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
+
+import net.minecraft.item.ItemStack;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -30,7 +34,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleDeconstructionOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
@@ -54,10 +60,19 @@ import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
 
 public final class AutomatedFacility extends CelestialAsset {
 
+    public enum DeconstructionResult {
+        ACCEPTED,
+        NOT_FOUND,
+        ACTIVE_OPERATION,
+        INVALID_REFUND,
+        CAPACITY_EXCEEDED
+    }
+
     private static final Logger LOG = LogManager.getLogger(AutomatedFacility.class);
 
-    private final FacilityInventoryState inventoryState = new FacilityInventoryState();
-    private final FacilityFilterState filterState = new FacilityFilterState();
+    private final FacilityInventory inventory = new FacilityInventory();
+    private final Map<ItemStackWrapper, InventoryBounds> itemBounds = new LinkedHashMap<>();
+    private final Map<FluidKey, InventoryBounds> fluidBounds = new LinkedHashMap<>();
 
     private final List<ModuleInstance> modules;
     private final StationLayout layout;
@@ -65,7 +80,9 @@ public final class AutomatedFacility extends CelestialAsset {
     private final FacilitySettingsGroupState settingsGroupState;
 
     private final UpkeepLedger upkeepLedger;
-    private final FacilityUpkeepState upkeepState = new FacilityUpkeepState();
+    private UpkeepSettlement.Credits upkeepCredits = UpkeepSettlement.Credits.empty();
+    private boolean settlingUpkeep;
+    private boolean upkeepInventoryChanged;
 
     private long stationFeatureSalt;
     private final Map<ModuleInstance.ID, ModuleFeatureModifiers> featureModifiersByModule = new LinkedHashMap<>();
@@ -254,27 +271,154 @@ public final class AutomatedFacility extends CelestialAsset {
         return manualLowerBound;
     }
 
-    @Override
     public boolean isAboveLow(InventoryKey key, long amount) {
         return (resourceAmount(key) - amount) >= effectiveLowerBound(key);
     }
 
+    public boolean isBelowUpper(InventoryKey key) {
+        return resourceAmount(key) < getBound(key).upperOrDefault();
+    }
+
     private long resourceAmount(InventoryKey key) {
-        if (key instanceof ItemStackWrapper item) return getItemAmount(item);
-        if (key instanceof FluidKey fluid) return getFluidAmount(fluid);
-        return 0L;
+        return inventory.amount(key);
+    }
+
+    private <T extends InventoryKey> Map<T, InventoryBounds> boundsFor(T key) {
+        return key instanceof ItemStackWrapper ? (Map<T, InventoryBounds>) itemBounds
+            : (Map<T, InventoryBounds>) fluidBounds;
+    }
+
+    public boolean hasLowerBound(InventoryKey key) {
+        if (key == null) return false;
+        return getBound(key).hasLow();
+    }
+
+    public boolean hasUpperBound(InventoryKey key) {
+        if (key == null) return false;
+        return getBound(key).hasUpper();
+    }
+
+    public InventoryBounds getBound(InventoryKey key) {
+        if (key == null) return InventoryBounds.invalid();
+        return boundsFor(key).getOrDefault(key, InventoryBounds.invalid());
+    }
+
+    public void setBound(InventoryKey key, long low, long upper) {
+        if (key == null) return;
+        boundsFor(key).put(key, new InventoryBounds(low, upper));
+    }
+
+    public void setBound(InventoryKey key, long amount, boolean low) {
+        if (key == null) return;
+        InventoryBounds current = getBound(key);
+        InventoryBounds updated = low ? new InventoryBounds(amount, current.upper())
+            : new InventoryBounds(current.low(), amount);
+        boundsFor(key).put(key, updated);
+    }
+
+    public boolean trySetBound(InventoryKey key, long amount, boolean low) {
+        if (key == null) return false;
+        InventoryBounds current = getBound(key);
+        long nextLow = low ? amount : current.low();
+        long nextUpper = low ? current.upper() : amount;
+        boolean hasNextLow = low || current.hasLow();
+        boolean hasNextUpper = !low || current.hasUpper();
+        if (hasNextLow && hasNextUpper && nextLow > nextUpper) return false;
+        InventoryBounds updated = new InventoryBounds(nextLow, nextUpper);
+        if (updated.equals(current)) return false;
+        boundsFor(key).put(key, updated);
+        return true;
+    }
+
+    public boolean clearBound(InventoryKey key) {
+        if (key == null) return false;
+        return boundsFor(key).remove(key) != null;
+    }
+
+    public boolean clearBound(InventoryKey key, boolean low) {
+        if (key == null) return false;
+        Map<InventoryKey, InventoryBounds> bounds = boundsFor(key);
+        InventoryBounds current = bounds.get(key);
+        if (current == null || (low ? !current.hasLow() : !current.hasUpper())) return false;
+        if (low && current.hasUpper()) {
+            bounds.put(key, InventoryBounds.upperBound(current.upper()));
+        } else if (!low && current.hasLow()) {
+            bounds.put(key, InventoryBounds.lowBound(current.low()));
+        } else {
+            bounds.remove(key);
+        }
+        return true;
+    }
+
+    public <T extends InventoryKey> Map<T, InventoryBounds> getBounds(boolean items) {
+        Map<T, InventoryBounds> bounds = items ? (Map<T, InventoryBounds>) itemBounds
+            : (Map<T, InventoryBounds>) fluidBounds;
+        return Collections.unmodifiableMap(bounds);
+    }
+
+    public void markInventoryBoundDelta(BoundKind kind, InventoryKey resource, boolean present, long amount) {
+        if (kind == null || resource == null) return;
+        markStateChanged();
     }
 
     public UpkeepSettlement.Credits upkeepCredits() {
-        return upkeepState.credits();
+        return upkeepCredits;
     }
 
     public void loadUpkeepCredits(UpkeepSettlement.Credits upkeepCredits) {
-        upkeepState.loadCredits(upkeepCredits);
+        this.upkeepCredits = upkeepCredits == null ? UpkeepSettlement.Credits.empty() : upkeepCredits;
     }
 
     public UpkeepSettlement.Result settleUpkeep() {
-        return upkeepState.settle(upkeepSummary(), modules, this, this::markModuleDirty);
+        UpkeepLedger.UpkeepSummary summary = upkeepSummary();
+        UpkeepSettlement.Credits creditsBefore = upkeepCredits;
+        upkeepInventoryChanged = false;
+        settlingUpkeep = true;
+        UpkeepSettlement.Result result;
+        boolean settlementCalculated = false;
+        try {
+            result = UpkeepSettlement.settle(summary.moduleDemands(), creditsBefore, this);
+            settlementCalculated = true;
+        } finally {
+            settlingUpkeep = false;
+            if (!settlementCalculated && upkeepInventoryChanged) markStateChanged();
+        }
+        upkeepCredits = result.credits();
+
+        Set<ModuleInstance.ID> demanded = new HashSet<>();
+        for (UpkeepLedger.ModuleDemand demand : summary.moduleDemands()) {
+            demanded.add(demand.moduleId());
+        }
+        Set<ModuleInstance.ID> paid = result.paidModuleIds();
+        Set<ModuleInstance.ID> unpaid = new HashSet<>(result.unpaidModuleIds());
+        boolean moduleChanged = false;
+        for (ModuleInstance module : modules) {
+            if (unpaid.contains(module.id)) {
+                moduleChanged |= setModuleUpkeepBlocked(module);
+            } else if (paid.contains(module.id) || !demanded.contains(module.id)) {
+                moduleChanged |= clearModuleUpkeepBlocked(module);
+            }
+        }
+        if (upkeepInventoryChanged || !creditsBefore.equals(upkeepCredits) || moduleChanged) {
+            markStateChanged();
+        }
+        return result;
+    }
+
+    private static boolean setModuleUpkeepBlocked(ModuleInstance module) {
+        if (module.blocking() == BlockingReason.UPKEEP_SHORTAGE && module.state() == ModuleState.BLOCKED) return false;
+        module.setBlocking(BlockingReason.UPKEEP_SHORTAGE);
+        module.setState(ModuleState.BLOCKED);
+        return true;
+    }
+
+    private static boolean clearModuleUpkeepBlocked(ModuleInstance module) {
+        if (module.blocking() != BlockingReason.UPKEEP_SHORTAGE) return false;
+        module.setBlocking(BlockingReason.NONE);
+        if (module.state() == ModuleState.BLOCKED) {
+            module.setState(ModuleState.IDLE);
+        }
+        return true;
     }
 
     public List<ModuleInstance> modules() {
@@ -309,23 +453,53 @@ public final class AutomatedFacility extends CelestialAsset {
         SatelliteNetworkService.refreshFacilityEndpoints(this);
     }
 
-    public void removeModule(int index) {
-        ModuleInstance removed = modules.remove(index);
-        if (removed != null) {
-            settingsGroupState.detach(removed);
-            bumpStateRevision();
-            if (layout != null) layout.removeTileForModule(removed.id);
-            layoutCache.applyMutation(MutationKind.DECONSTRUCT, removed.kind(), removed);
-            markDirty();
+    public DeconstructionResult requestModuleDeconstruction(ModuleInstance.ID moduleId) {
+        int index = moduleIndex(moduleId);
+        if (index < 0) return DeconstructionResult.NOT_FOUND;
+        ModuleInstance module = modules.get(index);
+        if (module.operationOrNull() != null) return DeconstructionResult.ACTIVE_OPERATION;
+
+        DeconstructionRefund refund = deconstructionRefund(module);
+        if (refund == null) return DeconstructionResult.INVALID_REFUND;
+        if (module.kind() == FacilityModuleKind.STORAGE) {
+            long projectedCapacity = projectedItemCapacityAfterRemoving(module.id);
+            try {
+                if (Math.addExact(storedItemAmount(), refund.total()) > projectedCapacity) {
+                    return DeconstructionResult.CAPACITY_EXCEEDED;
+                }
+            } catch (ArithmeticException overflow) {
+                return DeconstructionResult.INVALID_REFUND;
+            }
+        }
+        if (refund.byKey()
+            .isEmpty()) {
+            finalizeModuleRemoval(module);
+            return DeconstructionResult.ACCEPTED;
+        }
+
+        module.updateStatus(Status.DECONSTRUCTION);
+        module.setOperation(ModuleOperationState.deconstructing(refund.byKey()));
+        FacilityInventory.ReturnItemsResult returned = inventory.returnItems(refund.byItem(), itemCapacity());
+        if (returned.completed()) {
+            finalizeModuleRemoval(module);
+        } else {
+            module.setOperation(
+                module.operationOrNull()
+                    .withRefundBuffer(toItemKeys(returned.remaining())));
+            markModuleDirty(module.id);
             SatelliteNetworkService.refreshFacilityEndpoints(this);
         }
+        return DeconstructionResult.ACCEPTED;
     }
 
-    public boolean removeModule(ModuleInstance.ID moduleId) {
-        int index = moduleIndex(moduleId);
-        if (index < 0) return false;
-        removeModule(index);
-        return true;
+    private void finalizeModuleRemoval(ModuleInstance module) {
+        if (!modules.remove(module)) return;
+        settingsGroupState.detach(module);
+        if (layout != null) layout.removeTileForModule(module.id);
+        layoutCache.applyMutation(MutationKind.DECONSTRUCT, module.kind(), module);
+        bumpStateRevision();
+        markDirty();
+        SatelliteNetworkService.refreshFacilityEndpoints(this);
     }
 
     public int moduleIndex(ModuleInstance.ID moduleId) {
@@ -474,23 +648,17 @@ public final class AutomatedFacility extends CelestialAsset {
     public boolean tryReserveOperationMaterials(ModuleInstance module, Map<ItemStackWrapper, Long> materialCost) {
         ModuleOperationState operation = requireWaitingOperation(module);
         Map<ItemStackWrapper, Long> requested = requireMaterialCost(materialCost);
-        for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
-            if (getItemAmount(material.getKey()) < material.getValue()) return false;
+        if (requested.isEmpty()) return true;
+        if (inventory.tryExchange(new InventoryExchange(requested, Map.of(), Map.of(), Map.of()), itemCapacity())
+            == FacilityInventory.ExchangeResult.REJECTED) {
+            return false;
         }
         Map<String, Long> deposited = new java.util.LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
-            long reserved = updateContents(material.getKey(), -material.getValue(), true);
-            if (reserved != material.getValue()) {
-                throw new IllegalStateException(
-                    "Operation material reservation became inconsistent for module " + module.id
-                        + ", item="
-                        + material.getKey()
-                            .toKey());
-            }
             deposited.merge(
                 material.getKey()
                     .toKey(),
-                reserved,
+                material.getValue(),
                 Long::sum);
         }
         module.setOperation(operation.withDepositedResources(mergeAmounts(operation.depositedResources(), deposited)));
@@ -501,23 +669,23 @@ public final class AutomatedFacility extends CelestialAsset {
     public boolean tryConsumeInventory(ItemStackWrapper item, long amount) {
         if (item == null) return false;
         if (amount <= 0L) return true;
-        if (getItemAmount(item) < amount) return false;
-        return updateContents(item, -amount, true) == amount;
+        if (itemAmount(item) < amount) return false;
+        return extract(item, amount) == amount;
     }
 
     public boolean tryConsumeFluid(FluidKey key, long amount) {
         if (key == null) return false;
         if (amount <= 0L) return true;
-        if (getFluidAmount(key) < amount) return false;
-        return updateContents(key, -amount, true) == amount;
+        if (fluidAmount(key) < amount) return false;
+        return extract(key, amount) == amount;
     }
 
     public boolean tryReserveAvailableOperationMaterials(ModuleInstance module,
         Map<ItemStackWrapper, Long> materialCost) {
         ModuleOperationState operation = requireWaitingOperation(module);
         Map<ItemStackWrapper, Long> requested = requireMaterialCost(materialCost);
+        Map<ItemStackWrapper, Long> reservedItems = new java.util.LinkedHashMap<>();
         Map<String, Long> deposited = new java.util.LinkedHashMap<>();
-        boolean changed = false;
         for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
             String itemKey = material.getKey()
                 .toKey();
@@ -525,18 +693,19 @@ public final class AutomatedFacility extends CelestialAsset {
                 .getOrDefault(itemKey, 0L);
             long remaining = material.getValue() - alreadyDeposited;
             if (remaining <= 0L) continue;
-            long available = getItemAmount(material.getKey());
+            long available = itemAmount(material.getKey());
             long reserved = Math.min(available, remaining);
             if (reserved <= 0L) continue;
-            long applied = updateContents(material.getKey(), -reserved, true);
-            if (applied <= 0L) {
-                throw new IllegalStateException(
-                    "Operation partial reservation became inconsistent for module " + module.id + ", item=" + itemKey);
-            }
-            deposited.merge(itemKey, applied, Long::sum);
-            changed = true;
+            reservedItems.put(material.getKey(), reserved);
+            deposited.merge(itemKey, reserved, Long::sum);
         }
-        if (changed) {
+        if (!reservedItems.isEmpty()) {
+            if (inventory
+                .tryExchange(new InventoryExchange(reservedItems, Map.of(), Map.of(), Map.of()), itemCapacity())
+                == FacilityInventory.ExchangeResult.REJECTED) {
+                throw new IllegalStateException(
+                    "Operation partial reservation became inconsistent for module " + module.id);
+            }
             module.setOperation(
                 operation.withDepositedResources(mergeAmounts(operation.depositedResources(), deposited)));
             markModuleDirty(module.id);
@@ -576,12 +745,16 @@ public final class AutomatedFacility extends CelestialAsset {
     public boolean flushModuleOperationRefund(ModuleInstance module) {
         ModuleOperationState operation = requireOperation(module);
         if (operation.phase() != ModuleOperationPhase.REFUNDING) return false;
+        if (operation.plan()
+            .spec() instanceof ModuleDeconstructionOperation) {
+            return flushDeconstructionRefund(module, operation);
+        }
         Map<String, Long> remaining = new java.util.LinkedHashMap<>();
         boolean changed = false;
         for (Map.Entry<String, Long> entry : operation.refundBuffer()
             .entrySet()) {
             ItemStackWrapper item = requireItemKey(entry.getKey(), module);
-            long accepted = updateContents(item, entry.getValue(), true);
+            long accepted = insert(item, entry.getValue());
             if (accepted > 0L) changed = true;
             long leftover = entry.getValue() - accepted;
             if (leftover > 0L) remaining.put(entry.getKey(), leftover);
@@ -595,6 +768,19 @@ public final class AutomatedFacility extends CelestialAsset {
             module.setOperation(operation.finishRefunding());
         }
         markModuleDirty(module.id);
+        return true;
+    }
+
+    private boolean flushDeconstructionRefund(ModuleInstance module, ModuleOperationState operation) {
+        Map<ItemStackWrapper, Long> requested = resolveRefundItems(module, operation.refundBuffer());
+        FacilityInventory.ReturnItemsResult returned = inventory.returnItems(requested, itemCapacity());
+        if (!returned.changed()) return false;
+        if (returned.completed()) {
+            finalizeModuleRemoval(module);
+        } else {
+            module.setOperation(operation.withRefundBuffer(toItemKeys(returned.remaining())));
+            markModuleDirty(module.id);
+        }
         return true;
     }
 
@@ -768,6 +954,10 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private void markInventoryDelta(InventoryKey item, long delta) {
         if (item == null || delta == 0L) return;
+        if (settlingUpkeep) {
+            upkeepInventoryChanged = true;
+            return;
+        }
         bumpStateRevision();
         markDirty();
     }
@@ -825,11 +1015,15 @@ public final class AutomatedFacility extends CelestialAsset {
         if (ticks % UPKEEP_INTERVAL_TICKS == 0L) {
             settleUpkeep();
         }
-        for (ModuleInstance module : modules) {
+        for (int i = 0; i < modules.size();) {
+            ModuleInstance module = modules.get(i);
             boolean moduleTickBlocked = tickModuleOperation(module);
-            if (!moduleTickBlocked && module.blocking() != BlockingReason.UPKEEP_SHORTAGE) {
+            if (i < modules.size() && modules.get(i) == module
+                && !moduleTickBlocked
+                && module.blocking() != BlockingReason.UPKEEP_SHORTAGE) {
                 module.tick(this);
             }
+            if (i < modules.size() && modules.get(i) == module) i++;
         }
 
         LogisticStore.updateSignalsForFacility(this);
@@ -1039,57 +1233,54 @@ public final class AutomatedFacility extends CelestialAsset {
             .buildTicks();
     }
 
-    @Override
-    public Map<ItemStackWrapper, Long> getItemAmounts() {
-        return inventoryState.itemAmounts();
+    public long itemAmount(ItemStackWrapper item) {
+        return inventory.amount(item);
     }
 
-    @Override
-    public Map<FluidKey, Long> getFluidAmounts() {
-        return inventoryState.fluidAmounts();
+    public long fluidAmount(FluidKey fluid) {
+        return inventory.amount(fluid);
     }
 
-    @Override
-    public long getFreeItemSpace(ItemStackWrapper item) {
-        return Long.MAX_VALUE;
+    public long storedItemAmount() {
+        return inventory.totalItems();
     }
 
-    @Override
-    public long getFreeFluidSpace(FluidKey fluid) {
-        return Long.MAX_VALUE;
+    public Map<FluidKey, Long> fluidAmounts() {
+        return inventory.fluidAmountsSnapshot();
     }
 
-    @Override
-    public ResourceFilter<ItemStackWrapper> getItemFilter() {
-        return filterState.itemFilter();
+    public boolean allowsInsertion(InventoryKey resource) {
+        return inventory.allowsInsertion(resource);
     }
 
-    @Override
-    public ResourceFilter<FluidKey> getFluidFilter() {
-        return filterState.fluidFilter();
+    public long insert(InventoryKey resource, long requested) {
+        long applied = inventory.insert(resource, requested, itemCapacity());
+        if (applied != 0L) markInventoryDelta(resource, applied);
+        return applied;
     }
 
-    public long updateContents(InventoryKey item, long delta, boolean sync) {
-        final long actual = item instanceof ItemStackWrapper ? updateItems((ItemStackWrapper) item, delta)
-            : updateFluids((FluidKey) item, delta);
-        if (actual != 0L && sync) markInventoryDelta(item, delta > 0 ? actual : -actual);
-        return actual;
+    public long extract(InventoryKey resource, long requested) {
+        long applied = inventory.extract(resource, requested);
+        if (applied != 0L) markInventoryDelta(resource, -applied);
+        return applied;
     }
 
-    public long usedItemInventoryCapacity() {
-        return totalItemsStored();
+    public boolean tryExchange(InventoryExchange exchange) {
+        FacilityInventory.ExchangeResult result = inventory.tryExchange(exchange, itemCapacity());
+        if (result == FacilityInventory.ExchangeResult.REJECTED) return false;
+        if (result == FacilityInventory.ExchangeResult.CHANGED) markStateChanged();
+        return true;
     }
 
-    public long remainingItemInventoryCapacity() {
-        return Math.max(0L, totalItemCapacity() - usedItemInventoryCapacity());
+    public long remainingItemCapacity() {
+        return Math.max(0L, itemCapacity() - storedItemAmount());
     }
 
     public boolean isItemInventoryFull() {
-        return remainingItemInventoryCapacity() <= 0L;
+        return remainingItemCapacity() <= 0L;
     }
 
-    @Override
-    public long totalItemCapacity() {
+    public long itemCapacity() {
         long capacity = BASE_ITEM_CAPACITY;
         for (CapacityCluster cluster : layoutCache.getCapacityClusters(FacilityModuleKind.STORAGE)) {
             capacity += cluster.effectiveCapacity();
@@ -1097,67 +1288,102 @@ public final class AutomatedFacility extends CelestialAsset {
         return capacity;
     }
 
-    public long usedFluidInventoryCapacity() {
-        return totalFluidStored();
+    private long projectedItemCapacityAfterRemoving(ModuleInstance.ID moduleId) {
+        long capacity = BASE_ITEM_CAPACITY;
+        for (CapacityCluster cluster : layoutCache.getCapacityClustersExcluding(FacilityModuleKind.STORAGE, moduleId)) {
+            capacity = Math.addExact(capacity, cluster.effectiveCapacity());
+        }
+        return capacity;
     }
 
-    public long remainingFluidInventoryCapacity() {
-        return Math.max(0L, totalFluidCapacity() - usedFluidInventoryCapacity());
+    private DeconstructionRefund deconstructionRefund(ModuleInstance module) {
+        Map<ItemStackWrapper, Long> byItem = new LinkedHashMap<>();
+        Map<String, Long> byKey = new LinkedHashMap<>();
+        long total = 0L;
+        try {
+            for (Map.Entry<ItemStack, Long> entry : module.getConstructionCost()
+                .entrySet()) {
+                if (entry.getKey() == null || entry.getValue() == null || entry.getValue() < 0L) return null;
+                if (entry.getValue() == 0L) continue;
+                ItemStackWrapper item = ItemStackWrapper.of(entry.getKey());
+                if (item == null) return null;
+                byItem.merge(item, entry.getValue(), Math::addExact);
+                byKey.merge(item.toKey(), entry.getValue(), Math::addExact);
+                total = Math.addExact(total, entry.getValue());
+            }
+        } catch (RuntimeException invalid) {
+            return null;
+        }
+        return new DeconstructionRefund(
+            Collections.unmodifiableMap(new LinkedHashMap<>(byItem)),
+            Collections.unmodifiableMap(new LinkedHashMap<>(byKey)),
+            total);
     }
 
-    public boolean isFluidInventoryFull() {
-        return remainingFluidInventoryCapacity() <= 0L;
+    private Map<ItemStackWrapper, Long> resolveRefundItems(ModuleInstance module, Map<String, Long> byKey) {
+        Map<ItemStackWrapper, Long> resolved = new LinkedHashMap<>();
+        for (Map.Entry<String, Long> entry : byKey.entrySet()) {
+            resolved.put(requireItemKey(entry.getKey(), module), entry.getValue());
+        }
+        return resolved;
     }
 
-    @Override
-    public long totalFluidCapacity() {
-        // TODO
-        return Long.MAX_VALUE;
+    private static Map<String, Long> toItemKeys(Map<ItemStackWrapper, Long> byItem) {
+        Map<String, Long> byKey = new LinkedHashMap<>();
+        for (Map.Entry<ItemStackWrapper, Long> entry : byItem.entrySet()) {
+            byKey.put(
+                entry.getKey()
+                    .toKey(),
+                entry.getValue());
+        }
+        return byKey;
     }
+
+    private record DeconstructionRefund(Map<ItemStackWrapper, Long> byItem, Map<String, Long> byKey, long total) {}
 
     /// ----------------------------------------------------------------------------------
     /// Persistence helpers
     /// ----------------------------------------------------------------------------------
 
     public Map<ItemStackWrapper, Long> itemSnapshot() {
-        return inventoryState.itemSnapshot();
+        return inventory.itemSnapshot();
     }
 
     public Map<String, Long> fluidSnapshot() {
-        return inventoryState.fluidSnapshot();
+        return inventory.fluidSnapshot();
     }
 
     public void loadFromSnapshot(Map<ItemStackWrapper, Long> snapshot) {
-        inventoryState.loadFromSnapshot(snapshot);
+        inventory.loadItemSnapshot(snapshot);
     }
 
     public void loadFluidSnapshot(Map<String, Long> snapshot) {
-        inventoryState.loadFluidSnapshot(snapshot);
+        inventory.loadFluidSnapshot(snapshot);
     }
 
-    @Override
     public void clear() {
-        super.clear();
-        inventoryState.clearAmounts();
+        itemBounds.clear();
+        fluidBounds.clear();
+        inventory.clear();
     }
 
     public void addFilter(String key, boolean item) {
-        filterState.add(key, item, this::markStateChanged);
+        if (inventory.addFilter(key, item)) markStateChanged();
     }
 
     public void removeFilter(String key, boolean item) {
-        filterState.remove(key, item, this::markStateChanged);
+        if (inventory.removeFilter(key, item)) markStateChanged();
     }
 
     public Map<Boolean, List<String>> filtersSnapshot() {
-        return filterState.snapshot();
+        return inventory.filtersSnapshot();
     }
 
     public void setFilters(List<String> filters, boolean item) {
-        filterState.set(filters, item, this::markStateChanged);
+        if (inventory.setFilters(filters, item)) markStateChanged();
     }
 
     public void clearFilters(boolean item) {
-        filterState.clear(item, this::markStateChanged);
+        if (inventory.clearFilters(item)) markStateChanged();
     }
 }

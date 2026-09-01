@@ -42,7 +42,7 @@ final class LogisticStoreTest {
         AutomatedFacility destination = facility();
         ItemStackWrapper filler = new ItemStackWrapper(Items.diamond, 0, null);
         ItemStackWrapper delivered = new ItemStackWrapper(Items.iron_ingot, 0, null);
-        destination.updateItems(filler, 998);
+        destination.insert(filler, 998);
         CelestialAssetStore.registerAsset(teamId, source);
         CelestialAssetStore.registerAsset(teamId, destination);
 
@@ -63,7 +63,7 @@ final class LogisticStoreTest {
             .get(0);
         LogisticStore.tickDeliveries();
 
-        assertEquals(2L, destination.getItemAmount(delivered));
+        assertEquals(2L, destination.itemAmount(delivered));
         assertEquals(
             1,
             LogisticStore.activeDeliveries()
@@ -74,10 +74,10 @@ final class LogisticStoreTest {
                 .get(0));
         assertEquals(3L, pending.data.amount());
 
-        destination.updateItems(filler, -3);
+        destination.extract(filler, 3);
         LogisticStore.tickDeliveries();
 
-        assertEquals(5L, destination.getItemAmount(delivered));
+        assertEquals(5L, destination.itemAmount(delivered));
         assertEquals(
             0,
             LogisticStore.activeDeliveries()
@@ -148,7 +148,7 @@ final class LogisticStoreTest {
     void upkeepAutoOrderUsesCoreImportConfigForRequest() {
         AutomatedFacility station = facility();
         ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
-        station.updateItems(resource, 3);
+        station.insert(resource, 3);
         station.setBound(resource, 5, true);
         station.setUpkeepReserve(resource, 10L);
         station.setUpkeepAutoOrder(resource, true);
@@ -163,7 +163,7 @@ final class LogisticStoreTest {
     void coreImportConfigEmitsRequestUpToConfiguredReserve() {
         AutomatedFacility station = facility();
         ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
-        station.updateItems(resource, 3);
+        station.insert(resource, 3);
         station.logisticsConfig.set(resource, new LogisticsResourceConfig(15, 64, true, false));
 
         LogisticStore.updateSignalsForFacility(station);

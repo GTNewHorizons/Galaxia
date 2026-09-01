@@ -242,17 +242,13 @@ public final class CelestialClient {
                 .recipeSlotPayload(assetId, moduleIndex, module.id, configAction, slotIndex, slot));
     }
 
-    public static void updateInventoryBound(ID assetId, int moduleIndex, ConfigAction configAction, BoundKind kind,
-        InventoryKey resource, long amount) {
-        updateInventoryBound(assetId, configAction, kind, resource, amount);
+    public static void setInventoryBound(ID assetId, BoundKind kind, InventoryKey resource, long amount) {
+        StarmapActionSyncHandler
+            .sendInventoryUpdate(AssetInventoryUpdatePacket.setBound(assetId, kind, resource, amount));
     }
 
-    public static void updateInventoryBound(ID assetId, ConfigAction configAction, BoundKind kind,
-        InventoryKey resource, long amount) {
-        AssetInventoryUpdatePacket packet = configAction == ConfigAction.CLEAR_INVENTORY_BOUND
-            ? AssetInventoryUpdatePacket.clearBound(assetId, kind, resource)
-            : AssetInventoryUpdatePacket.setBound(assetId, kind, resource, amount);
-        StarmapActionSyncHandler.sendInventoryUpdate(packet);
+    public static void clearInventoryBound(ID assetId, BoundKind kind, InventoryKey resource) {
+        StarmapActionSyncHandler.sendInventoryUpdate(AssetInventoryUpdatePacket.clearBound(assetId, kind, resource));
     }
 
     public static void updateMinerOreBlacklisted(ID assetId, int moduleIndex, String oreKey, boolean blacklisted) {

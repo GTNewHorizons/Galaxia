@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -285,6 +286,78 @@ final class LayoutCacheBundleTest {
         cache.applyMutation(MutationKind.DECONSTRUCT, FacilityModuleKind.STORAGE, c);
         List<CapacityCluster> clusters = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
         assertEquals(2, clusters.size());
+    }
+
+    @Test
+    void removeCenterOfPlusSplitsClusterFourWays() {
+        StationLayout layout = new StationLayout();
+        ModuleInstance center = makeStorage(2, 2);
+        layout.place(center);
+        layout.place(makeStorage(2, 1));
+        layout.place(makeStorage(3, 2));
+        layout.place(makeStorage(2, 3));
+        layout.place(makeStorage(1, 2));
+
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        assertEquals(
+            1,
+            cache.getCapacityClusters(FacilityModuleKind.STORAGE)
+                .size());
+
+        layout.removeTileForModule(center.id);
+        cache.applyMutation(MutationKind.DECONSTRUCT, FacilityModuleKind.STORAGE, center);
+
+        assertEquals(
+            4,
+            cache.getCapacityClusters(FacilityModuleKind.STORAGE)
+                .size());
+    }
+
+    @Test
+    void projectedOrdinaryRemovalMatchesActualCapacity() {
+        StationLayout layout = new StationLayout();
+        layout.place(makeStorage(1, 0));
+        ModuleInstance removed = makeStorage(2, 0);
+        layout.place(removed);
+
+        assertProjectionMatchesActualRemoval(layout, removed, 1);
+    }
+
+    @Test
+    void projectedBridgeRemovalMatchesActualCapacity() {
+        StationLayout layout = new StationLayout();
+        layout.place(makeStorage(1, 0));
+        ModuleInstance removed = makeStorage(2, 0);
+        layout.place(removed);
+        layout.place(makeStorage(3, 0));
+
+        assertProjectionMatchesActualRemoval(layout, removed, 2);
+    }
+
+    @Test
+    void projectedPlusRemovalMatchesActualCapacity() {
+        StationLayout layout = new StationLayout();
+        ModuleInstance removed = makeStorage(2, 2);
+        layout.place(removed);
+        layout.place(makeStorage(2, 1));
+        layout.place(makeStorage(3, 2));
+        layout.place(makeStorage(2, 3));
+        layout.place(makeStorage(1, 2));
+
+        assertProjectionMatchesActualRemoval(layout, removed, 4);
+    }
+
+    private static void assertProjectionMatchesActualRemoval(StationLayout layout, ModuleInstance removed,
+        int expectedClusterCount) {
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        List<CapacityCluster> projected = cache.getCapacityClustersExcluding(FacilityModuleKind.STORAGE, removed.id);
+
+        layout.removeTileForModule(removed.id);
+        cache.applyMutation(MutationKind.DECONSTRUCT, FacilityModuleKind.STORAGE, removed);
+        List<CapacityCluster> actual = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
+
+        assertEquals(expectedClusterCount, projected.size());
+        assertEquals(Set.copyOf(actual), Set.copyOf(projected));
     }
 
     @Test

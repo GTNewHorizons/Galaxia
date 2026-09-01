@@ -19,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import net.minecraft.init.Items;
 import net.minecraftforge.fluids.Fluid;
@@ -61,6 +62,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleDeconstructionOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
@@ -106,14 +108,14 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager manager = new FacilityPersistenceManager(runtime);
         AutomatedFacility station = createStationWithFullLayout();
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
             station.celestialObjectKey,
             station.kind,
             station.status());
 
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
         assertEquals(station.getEnergyStored(), decoded.getEnergyStored());
         assertEquals(
@@ -122,7 +124,7 @@ final class FacilityPersistenceManagerTest {
             decoded.modules()
                 .size());
         assertLayoutEquals(station.stationLayout(), decoded.stationLayout());
-        assertEquals(GSON.toJson(encoded), GSON.toJson(manager.encodeFacilityState(decoded)));
+        assertEquals(GSON.toJson(encoded), GSON.toJson(FacilityJsonCodec.encode(decoded)));
     }
 
     @Test
@@ -193,7 +195,7 @@ final class FacilityPersistenceManagerTest {
         CelestialServerRuntime runtime = CelestialServerRuntime.create();
         AutomatedFacility station = createStationWithFullLayout();
         ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
-        station.updateItems(resource, 3);
+        station.insert(resource, 3);
         station.logisticsConfig.set(resource, new LogisticsResourceConfig(15, 64, true, false));
         LogisticStore.updateSignalsForFacility(station);
         assertFalse(
@@ -298,7 +300,7 @@ final class FacilityPersistenceManagerTest {
         CelestialAssetStore.clear();
         CelestialAssetStore.registerAsset(teamId, station);
         FacilityPersistenceManager.AssetJson json = manager.encodeAsset(station);
-        json.facility = manager.encodeFacilityState(station);
+        json.facility = FacilityJsonCodec.encode(station);
 
         Path dataDir = tempDir.resolve("galaxiadata");
         Files.createDirectories(dataDir);
@@ -318,7 +320,7 @@ final class FacilityPersistenceManagerTest {
             loaded.modules()
                 .size());
         assertLayoutEquals(station.stationLayout(), loaded.stationLayout());
-        assertEquals(GSON.toJson(json.facility), GSON.toJson(manager.encodeFacilityState(loaded)));
+        assertEquals(GSON.toJson(json.facility), GSON.toJson(FacilityJsonCodec.encode(loaded)));
     }
 
     @Test
@@ -436,14 +438,14 @@ final class FacilityPersistenceManagerTest {
         AutomatedFacility station = createStationWithFullLayout();
         station.setStationFeatureSalt(0x5EED_1234_ABCDL);
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
             station.celestialObjectKey,
             station.kind,
             station.status());
 
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
         assertEquals(station.stationFeatureSalt(), decoded.stationFeatureSalt());
     }
@@ -460,7 +462,7 @@ final class FacilityPersistenceManagerTest {
             .setTier(ModuleTier.LuV);
         hammer.setVariant(HammerVariant.BIG);
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         assertEquals(
             "BIG",
             encoded.modules.get(0).data.getAsJsonObject()
@@ -472,7 +474,7 @@ final class FacilityPersistenceManagerTest {
             station.celestialObjectKey,
             station.kind,
             station.status());
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
         ModuleHammer decodedHammer = (ModuleHammer) decoded.modules()
             .get(0)
@@ -489,9 +491,9 @@ final class FacilityPersistenceManagerTest {
         station.setMinerOreBlacklisted(miner, "ore:iron", true);
 
         FacilityPersistenceManager.AssetJson encoded = manager.encodeAsset(station);
-        encoded.facility = manager.encodeFacilityState(station);
+        encoded.facility = FacilityJsonCodec.encode(station);
         AutomatedFacility decoded = (AutomatedFacility) manager.decodeAsset(encoded);
-        manager.decodeFacilityState(decoded, encoded.facility);
+        FacilityJsonCodec.decode(decoded, encoded.facility);
 
         assertTrue(
             decoded.isMinerOreBlacklisted(
@@ -510,9 +512,9 @@ final class FacilityPersistenceManagerTest {
         miner.setFocus(MinerFocusTier.III, "ore:iron", 1200);
 
         FacilityPersistenceManager.AssetJson encoded = manager.encodeAsset(station);
-        encoded.facility = manager.encodeFacilityState(station);
+        encoded.facility = FacilityJsonCodec.encode(station);
         AutomatedFacility decoded = (AutomatedFacility) manager.decodeAsset(encoded);
-        manager.decodeFacilityState(decoded, encoded.facility);
+        FacilityJsonCodec.decode(decoded, encoded.facility);
 
         ModuleMiner decodedMiner = (ModuleMiner) decoded.modules()
             .get(1)
@@ -531,13 +533,13 @@ final class FacilityPersistenceManagerTest {
             .component();
         hammer.setEnergyStored(234_567L);
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
             station.celestialObjectKey,
             station.kind,
             station.status());
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
         ModuleHammer decodedHammer = (ModuleHammer) decoded.modules()
             .get(0)
@@ -556,13 +558,13 @@ final class FacilityPersistenceManagerTest {
         hammer.markShotDispatched(module);
         hammer.markRouteProbeAttempted();
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
             station.celestialObjectKey,
             station.kind,
             station.status());
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
         ModuleHammer decodedHammer = (ModuleHammer) decoded.modules()
             .get(0)
@@ -580,13 +582,13 @@ final class FacilityPersistenceManagerTest {
             .component();
         miner.setFocus(MinerFocusTier.II, null, 1200);
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
             station.celestialObjectKey,
             station.kind,
             station.status());
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
         ModuleMiner decodedMiner = (ModuleMiner) decoded.modules()
             .get(1)
@@ -606,7 +608,7 @@ final class FacilityPersistenceManagerTest {
         short groupId = station.createSettingsGroupForModule(miner, "Shared miners")
             .id();
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         JsonObject encodedState = PERSISTENCE_GSON.toJsonTree(encoded)
             .getAsJsonObject();
         JsonObject encodedMinerData = null;
@@ -634,7 +636,7 @@ final class FacilityPersistenceManagerTest {
             station.celestialObjectKey,
             station.kind,
             station.status());
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
         ModuleInstance decodedMiner = decoded.modules()
             .get(1);
@@ -664,13 +666,13 @@ final class FacilityPersistenceManagerTest {
             .tickBuilding();
         hammer.setOperation(operation);
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
             station.celestialObjectKey,
             station.kind,
             station.status());
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
         ModuleOperationState decodedOperation = decoded.modules()
             .get(0)
@@ -701,6 +703,40 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
+    void pendingDeconstructionRefundRoundTripsThroughPersistence() {
+        AutomatedFacility station = createStationWithFullLayout();
+        ModuleInstance module = station.modules()
+            .get(2);
+        module.updateStatus(Buildable.Status.DECONSTRUCTION);
+        module.setOperation(ModuleOperationState.deconstructing(Map.of("minecraft:gold_ingot:0", 7L)));
+
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectKey,
+            station.kind,
+            station.status());
+        FacilityJsonCodec.decode(decoded, encoded);
+
+        ModuleInstance decodedModule = decoded.modules()
+            .get(2);
+        assertEquals(Buildable.Status.DECONSTRUCTION, decodedModule.status());
+        assertEquals(
+            ModuleOperationPhase.REFUNDING,
+            decodedModule.operationOrNull()
+                .phase());
+        assertTrue(
+            decodedModule.operationOrNull()
+                .plan()
+                .spec() instanceof ModuleDeconstructionOperation);
+        assertEquals(
+            7L,
+            decodedModule.operationOrNull()
+                .refundBuffer()
+                .get("minecraft:gold_ingot:0"));
+    }
+
+    @Test
     void moduleOperationRoundTripPreservesPlannedBuildTicks() {
         FacilityPersistenceManager manager = new FacilityPersistenceManager(CelestialServerRuntime.create());
         AutomatedFacility station = createStationWithFullLayout();
@@ -717,13 +753,13 @@ final class FacilityPersistenceManagerTest {
                 .beginBuilding()
                 .tickBuilding());
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
             station.celestialObjectKey,
             station.kind,
             station.status());
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
         ModuleOperationState decodedOperation = decoded.modules()
             .get(0)
@@ -745,13 +781,13 @@ final class FacilityPersistenceManagerTest {
             ModuleOperationState
                 .waiting(new ModuleOperationPlan(new ModuleTierOperation(ModuleTier.IV), 37, Map.of(), false)));
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
             station.celestialObjectKey,
             station.kind,
             station.status());
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
         ModuleOperationState decodedOperation = decoded.modules()
             .get(1)
@@ -775,7 +811,7 @@ final class FacilityPersistenceManagerTest {
             .get(0);
         hammer.setOperation(
             ModuleOperationState.waiting(hammerOperationPlan(hammer, ModuleTier.IV, HammerVariant.BASE, false, false)));
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         encoded.modules.get(0).moduleOperation.phase = "BROKEN";
 
         AutomatedFacility decoded = new AutomatedFacility(
@@ -784,14 +820,14 @@ final class FacilityPersistenceManagerTest {
             station.kind,
             station.status());
 
-        assertThrows(IllegalStateException.class, () -> manager.decodeFacilityState(decoded, encoded));
+        assertThrows(IllegalStateException.class, () -> FacilityJsonCodec.decode(decoded, encoded));
     }
 
     @Test
     void obsoleteMinerBlacklistDataCrashesOnLoad() {
         FacilityPersistenceManager manager = new FacilityPersistenceManager(CelestialServerRuntime.create());
         AutomatedFacility station = createStationWithFullLayout();
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         encoded.modules.get(1).data.getAsJsonObject()
             .addProperty("blacklistedItemKeys", "ore:iron");
 
@@ -801,7 +837,7 @@ final class FacilityPersistenceManagerTest {
             station.kind,
             station.status());
 
-        assertThrows(IllegalStateException.class, () -> manager.decodeFacilityState(decoded, encoded));
+        assertThrows(IllegalStateException.class, () -> FacilityJsonCodec.decode(decoded, encoded));
     }
 
     @Test
@@ -854,7 +890,7 @@ final class FacilityPersistenceManagerTest {
         CelestialAssetStore.clear();
         CelestialAssetStore.registerAsset(teamId, station);
         FacilityPersistenceManager.AssetJson json = manager.encodeAsset(station);
-        json.facility = manager.encodeFacilityState(station);
+        json.facility = FacilityJsonCodec.encode(station);
 
         Path dataDir = tempDir.resolve("galaxiadata");
         Files.createDirectories(dataDir);
@@ -882,9 +918,15 @@ final class FacilityPersistenceManagerTest {
             UUID.randomUUID(),
             CelestialAsset.Kind.AUTOMATED_STATION,
             CelestialObjectId.MARS);
-        json.filters = new LinkedHashMap<>();
-        json.filters.put(true, List.of("ore:iron", "ore:copper"));
-        json.filters.put(false, List.of("ore:tin"));
+        json.facility = FacilityJsonCodec.encode(
+            new AutomatedFacility(
+                json.assetId,
+                CelestialObjectId.MARS,
+                CelestialAsset.Kind.AUTOMATED_STATION,
+                Buildable.Status.OPERATIONAL));
+        json.facility.filters = new LinkedHashMap<>();
+        json.facility.filters.put(true, List.of("ore:iron", "ore:copper"));
+        json.facility.filters.put(false, List.of(FluidRegistry.WATER.getName()));
 
         Path dataDir = tempDir.resolve("galaxiadata");
         Files.createDirectories(dataDir);
@@ -900,7 +942,88 @@ final class FacilityPersistenceManagerTest {
             loaded.filtersSnapshot()
                 .get(true));
         assertEquals(
-            List.of("ore:tin"),
+            List.of(FluidRegistry.WATER.getName()),
+            loaded.filtersSnapshot()
+                .get(false));
+    }
+
+    @Test
+    void invalidPersistedInventoryStateRejectsFacilityBeforeRegistration(@TempDir Path tempDir) throws Exception {
+        ItemStackWrapper item = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        List<Consumer<FacilityJsonCodec.FacilityStateJson>> invalidStates = List.of(
+            state -> state.buffer = Map.of("galaxia.invalid_item", 1L),
+            state -> state.buffer = Map.of(item.toKey(), 0L),
+            state -> {
+                state.buffer = new LinkedHashMap<>();
+                state.buffer.put(item.toKey(), 1L);
+                state.buffer.put(item.toKey() + ":ignored", 1L);
+            },
+            state -> state.fluidBuffer = Map.of("galaxia.missing_fluid", 1L),
+            state -> state.fluidBuffer = Map.of(FluidRegistry.WATER.getName(), -1L),
+            state -> state.filters.put(true, null),
+            state -> {
+                List<String> entries = new ArrayList<>();
+                entries.add("item.valid");
+                entries.add(null);
+                state.filters.put(true, entries);
+            },
+            state -> state.filters.put(false, List.of("galaxia.missing_fluid")));
+
+        for (Consumer<FacilityJsonCodec.FacilityStateJson> invalidState : invalidStates) {
+            FacilityPersistenceManager.AssetJson json = facilityAssetJson();
+            invalidState.accept(json.facility);
+
+            writeAssetFile(tempDir, json);
+            CelestialAssetStore.clear();
+
+            IllegalStateException thrown = assertThrows(
+                IllegalStateException.class,
+                () -> new FacilityPersistenceManager(CelestialServerRuntime.create())
+                    .loadFromSaveDirectory(tempDir.toFile()));
+            assertTrue(
+                thrown.getMessage()
+                    .contains("[PERSIST]"));
+            assertNull(CelestialAssetStore.findAsset(json.assetId));
+        }
+    }
+
+    @Test
+    void inventoryFiltersAndOverCapacityItemsRoundTripThroughSaveFile(@TempDir Path tempDir) throws Exception {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager(CelestialServerRuntime.create());
+        UUID teamId = UUID.randomUUID();
+        AutomatedFacility station = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ItemStackWrapper item = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        FluidKey fluid = new FluidKey(FluidRegistry.WATER, null);
+        long storedItems = station.itemCapacity() + 1L;
+        String itemFilter = item.toItemStack()
+            .getUnlocalizedName();
+        String fluidFilter = fluid.fluid()
+            .getName();
+        station.loadFromSnapshot(Map.of(item, storedItems));
+        station.loadFluidSnapshot(Map.of(fluidFilter, 4096L));
+        station.setFilters(List.of(itemFilter), true);
+        station.setFilters(List.of(fluidFilter), false);
+
+        CelestialAssetStore.clear();
+        CelestialAssetStore.registerAsset(teamId, station);
+        manager.saveToSaveDirectory(tempDir.toFile());
+        CelestialAssetStore.clear();
+        manager.loadFromSaveDirectory(tempDir.toFile());
+
+        AutomatedFacility loaded = (AutomatedFacility) CelestialAssetStore.findAsset(station.assetId);
+        assertNotNull(loaded);
+        assertEquals(storedItems, loaded.itemAmount(item));
+        assertEquals(4096L, loaded.fluidAmount(fluid));
+        assertEquals(
+            List.of(itemFilter),
+            loaded.filtersSnapshot()
+                .get(true));
+        assertEquals(
+            List.of(fluidFilter),
             loaded.filtersSnapshot()
                 .get(false));
     }
@@ -923,6 +1046,26 @@ final class FacilityPersistenceManagerTest {
         return json;
     }
 
+    private static FacilityPersistenceManager.AssetJson facilityAssetJson() {
+        FacilityPersistenceManager.AssetJson json = assetJson(
+            UUID.randomUUID(),
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            CelestialObjectId.MARS);
+        json.facility = FacilityJsonCodec.encode(
+            new AutomatedFacility(
+                json.assetId,
+                CelestialObjectId.MARS,
+                CelestialAsset.Kind.AUTOMATED_STATION,
+                Buildable.Status.OPERATIONAL));
+        return json;
+    }
+
+    private static void writeAssetFile(Path tempDir, FacilityPersistenceManager.AssetJson json) throws Exception {
+        Path dataDir = tempDir.resolve("galaxiadata");
+        Files.createDirectories(dataDir);
+        Files.write(dataDir.resolve("_assets.json"), assetRegistryBytes(List.of(json)));
+    }
+
     private static CelestialDiscoveryScanSnapshot activeScan(UUID teamId, CelestialObjectId anchor) {
         return new CelestialDiscoveryScanSnapshot(
             teamId,
@@ -943,16 +1086,17 @@ final class FacilityPersistenceManagerTest {
             .getBytes(StandardCharsets.UTF_8);
     }
 
-    private static FacilityPersistenceManager.FacilityStateJson malformedFacilityState() {
-        FacilityPersistenceManager.FacilityStateJson facility = new FacilityPersistenceManager.FacilityStateJson();
+    private static FacilityJsonCodec.FacilityStateJson malformedFacilityState() {
+        FacilityJsonCodec.FacilityStateJson facility = new FacilityJsonCodec.FacilityStateJson();
         facility.settingsGroupsNextId = 1;
         facility.settingsGroups = new ArrayList<>();
         facility.modules = new ArrayList<>();
         facility.buffer = new LinkedHashMap<>();
         facility.fluidBuffer = new LinkedHashMap<>();
+        facility.filters = new LinkedHashMap<>();
         facility.layoutTiles = new ArrayList<>();
 
-        FacilityPersistenceManager.ModuleJson miner = new FacilityPersistenceManager.ModuleJson();
+        FacilityJsonCodec.ModuleJson miner = new FacilityJsonCodec.ModuleJson();
         miner.moduleId = ModuleInstance.ID.create()
             .toString();
         miner.kind = FacilityModuleKind.MINER.name();
@@ -1068,7 +1212,7 @@ final class FacilityPersistenceManagerTest {
         layout.place(block);
 
         // Encode
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         // Only 2 anchor tiles saved (not 2 + 4 + 9 = 15)
         assertEquals(2, encoded.layoutTiles.size());
         assertEquals(1, encoded.modules.get(0).rotation);
@@ -1079,7 +1223,7 @@ final class FacilityPersistenceManagerTest {
             station.celestialObjectKey,
             station.kind,
             station.status());
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
         StationLayout decodedLayout = decoded.stationLayout();
         assertNotNull(decodedLayout);
@@ -1157,7 +1301,7 @@ final class FacilityPersistenceManagerTest {
             station.celestialObjectKey,
             station.kind,
             station.status());
-        assertThrows(IllegalStateException.class, () -> manager.decodeFacilityState(malformedTier, encoded));
+        assertThrows(IllegalStateException.class, () -> FacilityJsonCodec.decode(malformedTier, encoded));
     }
 
     @Test
@@ -1190,7 +1334,7 @@ final class FacilityPersistenceManagerTest {
         layout.place(maintenance);
 
         // Encode
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
 
         // Verify 4 module entries and 4 anchor layout tiles
         assertEquals(4, encoded.modules.size());
@@ -1208,7 +1352,7 @@ final class FacilityPersistenceManagerTest {
             station.celestialObjectKey,
             station.kind,
             station.status());
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
         assertEquals(
             4,
@@ -1265,7 +1409,7 @@ final class FacilityPersistenceManagerTest {
             decodedLayout.moduleAt(StationTileCoord.of(-1, 4)));
 
         // Re-encode and verify JSON identity (byte-perfect round-trip)
-        assertEquals(GSON.toJson(encoded), GSON.toJson(manager.encodeFacilityState(decoded)));
+        assertEquals(GSON.toJson(encoded), GSON.toJson(FacilityJsonCodec.encode(decoded)));
     }
 
     @Test
@@ -1277,18 +1421,18 @@ final class FacilityPersistenceManagerTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         FluidKey bufferKey = new FluidKey(TEST_FLUID_1, null);
-        station.updateFluids(bufferKey, 4096);
+        station.insert(bufferKey, 4096);
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
             station.celestialObjectKey,
             station.kind,
             station.status());
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
-        assertEquals(4096, decoded.getFluidAmount(bufferKey));
-        assertEquals(GSON.toJson(encoded), GSON.toJson(manager.encodeFacilityState(decoded)));
+        assertEquals(4096, decoded.fluidAmount(bufferKey));
+        assertEquals(GSON.toJson(encoded), GSON.toJson(FacilityJsonCodec.encode(decoded)));
     }
 
     @Test
@@ -1412,7 +1556,7 @@ final class FacilityPersistenceManagerTest {
         assertNotNull(layout);
 
         // Encode to JSON
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
 
         // Dump JSON for inspection
         String encodedJson = FacilityPersistenceManagerTest.GSON.toJson(encoded);
@@ -1474,7 +1618,7 @@ final class FacilityPersistenceManagerTest {
                 .anyMatch(mj -> "DEBUG_DATA_GENERATOR".equals(mj.kind)));
 
         // Verify shape bytes â€” SINGLE has ordinal 0
-        for (FacilityPersistenceManager.ModuleJson mj : encoded.modules) {
+        for (FacilityJsonCodec.ModuleJson mj : encoded.modules) {
             int expectedShape = "GEOTHERMAL_GENERATOR".equals(mj.kind) ? ModuleShape.BLOCK_3x3.ordinal()
                 : ModuleShape.SINGLE.ordinal();
             assertEquals(expectedShape, mj.shape, "Unexpected shape for " + mj.kind);
@@ -1486,7 +1630,7 @@ final class FacilityPersistenceManagerTest {
             station.celestialObjectKey,
             station.kind,
             station.status());
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
         // --- ASSERTIONS ---
         // Use assertAll to collect ALL failures
@@ -1531,9 +1675,9 @@ final class FacilityPersistenceManagerTest {
             // JSON identity â€” byte-perfect round-trip
             () -> assertEquals(
                 encodedJson,
-                GSON.toJson(manager.encodeFacilityState(decoded)),
+                GSON.toJson(FacilityJsonCodec.encode(decoded)),
                 "JSON must be identical after round-trip"
-                    + dumpFullState("encoded", encoded, "re-encoded", manager.encodeFacilityState(decoded))));
+                    + dumpFullState("encoded", encoded, "re-encoded", FacilityJsonCodec.encode(decoded))));
     }
 
     @Test
@@ -1574,7 +1718,7 @@ final class FacilityPersistenceManagerTest {
         assertNotNull(layout);
 
         // Encode, dump, decode, and verify
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         String encodedJson = GSON.toJson(encoded);
         System.out.println("=== Encoded multi-shape FacilityStateJson ===");
         System.out.println(encodedJson);
@@ -1590,7 +1734,7 @@ final class FacilityPersistenceManagerTest {
             station.celestialObjectKey,
             station.kind,
             station.status());
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
         StationLayout decodedLayout = decoded.stationLayout();
         assertNotNull(decodedLayout);
@@ -1611,7 +1755,7 @@ final class FacilityPersistenceManagerTest {
             () -> assertTrue(decodedLayout.isOccupied(StationTileCoord.of(-6, -6)), "BLOCK child missing"),
             () -> assertEquals(
                 encodedJson,
-                GSON.toJson(manager.encodeFacilityState(decoded)),
+                GSON.toJson(FacilityJsonCodec.encode(decoded)),
                 "Multi-shape JSON must be identical after round-trip"));
     }
 
@@ -1636,7 +1780,7 @@ final class FacilityPersistenceManagerTest {
                 coord);
         }
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         String encodedJson = GSON.toJson(encoded);
         System.out.println("=== All kinds with shapes/anchors â€” " + encoded.modules.size() + " modules ===");
         System.out.println(encodedJson);
@@ -1646,7 +1790,7 @@ final class FacilityPersistenceManagerTest {
             station.celestialObjectKey,
             station.kind,
             station.status());
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
         // CRITICAL ASSERTION: Every module must have non-null anchor and shape after decode
         for (ModuleInstance m : decoded.modules()) {
@@ -1699,7 +1843,7 @@ final class FacilityPersistenceManagerTest {
         }
 
         // Verify JSON identity
-        assertEquals(encodedJson, GSON.toJson(manager.encodeFacilityState(decoded)));
+        assertEquals(encodedJson, GSON.toJson(FacilityJsonCodec.encode(decoded)));
     }
 
     @Test
@@ -1745,9 +1889,9 @@ final class FacilityPersistenceManagerTest {
             new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
 
         FacilityPersistenceManager.AssetJson aencoded = manager.encodeAsset(station);
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         AutomatedFacility decoded = (AutomatedFacility) manager.decodeAsset(aencoded);
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
         ModuleInstance decodedMacerator = decoded.modules()
             .stream()
@@ -1798,13 +1942,13 @@ final class FacilityPersistenceManagerTest {
         FluidKey coolant = new FluidKey(TEST_FLUID_1, null);
         station.loadUpkeepCredits(new UpkeepSettlement.Credits(Map.of(), Map.of(coolant, UpkeepAmount.parse("0.25"))));
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
             station.celestialObjectKey,
             station.kind,
             station.status());
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
         assertEquals(
             "0.25",
@@ -1829,9 +1973,9 @@ final class FacilityPersistenceManagerTest {
         station.setUpkeepAutoOrder(resource, true);
 
         FacilityPersistenceManager.AssetJson encoded = manager.encodeAsset(station);
-        encoded.facility = manager.encodeFacilityState(station);
+        encoded.facility = FacilityJsonCodec.encode(station);
         AutomatedFacility decoded = (AutomatedFacility) manager.decodeAsset(encoded);
-        manager.decodeFacilityState(decoded, encoded.facility);
+        FacilityJsonCodec.decode(decoded, encoded.facility);
 
         assertEquals(17L, decoded.upkeepReserve(resource));
         assertTrue(decoded.isUpkeepAutoOrderEnabled(resource));
@@ -1908,12 +2052,12 @@ final class FacilityPersistenceManagerTest {
             + m.status();
     }
 
-    private static String dumpFullState(String label1, FacilityPersistenceManager.FacilityStateJson s1, String label2,
-        FacilityPersistenceManager.FacilityStateJson s2) {
+    private static String dumpFullState(String label1, FacilityJsonCodec.FacilityStateJson s1, String label2,
+        FacilityJsonCodec.FacilityStateJson s2) {
         return "\n--- " + label1 + " ---\n" + GSON.toJson(s1) + "\n--- " + label2 + " ---\n" + GSON.toJson(s2);
     }
 
-    private static Byte findShapeByte(FacilityPersistenceManager.FacilityStateJson state, ModuleInstance module) {
+    private static Byte findShapeByte(FacilityJsonCodec.FacilityStateJson state, ModuleInstance module) {
         return state.modules.stream()
             .filter(
                 mj -> module.id.toString()
@@ -1936,14 +2080,14 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager manager = new FacilityPersistenceManager(CelestialServerRuntime.create());
 
         // Simulate a save with a module that has an unresolvable kind (unknown enum value)
-        FacilityPersistenceManager.FacilityStateJson legacy = new FacilityPersistenceManager.FacilityStateJson();
+        FacilityJsonCodec.FacilityStateJson legacy = new FacilityJsonCodec.FacilityStateJson();
         legacy.energyStored = 0L;
         legacy.settingsGroupsNextId = 1;
         legacy.settingsGroups = new ArrayList<>();
         legacy.modules = new ArrayList<>();
 
         // One valid HAMMER module
-        FacilityPersistenceManager.ModuleJson hammerMj = new FacilityPersistenceManager.ModuleJson();
+        FacilityJsonCodec.ModuleJson hammerMj = new FacilityJsonCodec.ModuleJson();
         hammerMj.moduleId = ModuleInstance.ID.create()
             .toString();
         hammerMj.kind = "HAMMER";
@@ -1955,7 +2099,7 @@ final class FacilityPersistenceManagerTest {
         legacy.modules.add(hammerMj);
 
         // Simulate an unresolvable kind
-        FacilityPersistenceManager.ModuleJson unknownMj = new FacilityPersistenceManager.ModuleJson();
+        FacilityJsonCodec.ModuleJson unknownMj = new FacilityJsonCodec.ModuleJson();
         unknownMj.moduleId = ModuleInstance.ID.create()
             .toString();
         unknownMj.kind = "UNKNOWN_MODULE_KIND";
@@ -1972,7 +2116,7 @@ final class FacilityPersistenceManagerTest {
         legacy.layoutTiles = new ArrayList<>();
 
         // Layout tile for HAMMER
-        FacilityPersistenceManager.StationTileJson hammerTj = new FacilityPersistenceManager.StationTileJson();
+        FacilityJsonCodec.StationTileJson hammerTj = new FacilityJsonCodec.StationTileJson();
         hammerTj.dx = 1;
         hammerTj.dy = 0;
         hammerTj.state = StationTileState.OCCUPIED_OPERATIONAL.name();
@@ -1980,7 +2124,7 @@ final class FacilityPersistenceManagerTest {
         legacy.layoutTiles.add(hammerTj);
 
         // Layout tile for the unknown module â€” should be SKIPPED (orphan tile)
-        FacilityPersistenceManager.StationTileJson orphanTj = new FacilityPersistenceManager.StationTileJson();
+        FacilityJsonCodec.StationTileJson orphanTj = new FacilityJsonCodec.StationTileJson();
         orphanTj.dx = 5;
         orphanTj.dy = 5;
         orphanTj.state = StationTileState.OCCUPIED_OPERATIONAL.name();
@@ -1993,7 +2137,7 @@ final class FacilityPersistenceManagerTest {
             CelestialObjectId.MARS,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        assertThrows(IllegalStateException.class, () -> manager.decodeFacilityState(decoded, legacy));
+        assertThrows(IllegalStateException.class, () -> FacilityJsonCodec.decode(decoded, legacy));
     }
 
     @Test
@@ -2033,7 +2177,7 @@ final class FacilityPersistenceManagerTest {
             .count();
 
         // Encode
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(before);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(before);
         String encodedJson = FacilityPersistenceManagerTest.GSON.toJson(encoded);
         System.out.println("=== Full Round-Trip JSON ===");
         System.out.println(encodedJson);
@@ -2049,7 +2193,7 @@ final class FacilityPersistenceManagerTest {
             before.celestialObjectKey,
             before.kind,
             before.status());
-        manager.decodeFacilityState(after, encoded);
+        FacilityJsonCodec.decode(after, encoded);
 
         // â”€â”€ HARD VALIDATION â”€â”€
         // 1. Module count must be equal
@@ -2132,7 +2276,7 @@ final class FacilityPersistenceManagerTest {
         assertEquals(beforeAnchorCount, afterAnchorCount, "Anchor count must be equal before/after");
 
         // 7. JSON byte-identical round-trip
-        String reEncoded = GSON.toJson(manager.encodeFacilityState(after));
+        String reEncoded = GSON.toJson(FacilityJsonCodec.encode(after));
         assertEquals(encodedJson, reEncoded, "JSON must be byte-identical after round-trip");
     }
 

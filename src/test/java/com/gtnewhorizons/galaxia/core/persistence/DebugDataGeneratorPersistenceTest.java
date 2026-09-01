@@ -61,9 +61,9 @@ final class DebugDataGeneratorPersistenceTest {
         generator.advanceJob();
         generator.consume(15L);
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         AutomatedFacility decoded = facility();
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
         ModuleDebugDataGenerator loaded = assertInstanceOf(
             ModuleDebugDataGenerator.class,
@@ -101,11 +101,11 @@ final class DebugDataGeneratorPersistenceTest {
         ModuleDebugDataGenerator generator = addGenerator(station);
         generator.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.RESEARCH, 25L, 40));
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
         encoded.modules.get(0).data.getAsJsonObject()
             .addProperty("enabled", false);
         AutomatedFacility decoded = facility();
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
         ModuleDebugDataGenerator loaded = assertInstanceOf(
             ModuleDebugDataGenerator.class,

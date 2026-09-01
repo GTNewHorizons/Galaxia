@@ -29,8 +29,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
-import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -417,18 +415,6 @@ public final class AssetModuleUpdatePacket implements IMessage {
         return pkt;
     }
 
-    public static AssetModuleUpdatePacket inventoryBoundPayload(CelestialAsset.ID assetId, int moduleIndex,
-        ModuleInstance.ID moduleId, ConfigAction action, BoundKind kind, InventoryKey resource, long amount) {
-        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, action);
-        io.netty.buffer.ByteBuf payloadBuf = io.netty.buffer.Unpooled.buffer();
-        PacketUtil.writeEnum(payloadBuf, kind);
-        PacketUtil.writeInventoryKey(payloadBuf, resource);
-        payloadBuf.writeLong(amount);
-        pkt.rawPayload = new byte[payloadBuf.writerIndex()];
-        payloadBuf.readBytes(pkt.rawPayload);
-        return pkt;
-    }
-
     public static AssetModuleUpdatePacket debugDataGeneratorConfig(CelestialAsset.ID assetId, int moduleIndex,
         ModuleInstance.ID moduleId, ModuleDebugDataGenerator.Config config) {
         AssetModuleUpdatePacket pkt = config(
@@ -478,8 +464,6 @@ public final class AssetModuleUpdatePacket implements IMessage {
         ADD_RECIPE_SLOT,
         UPDATE_RECIPE_SLOT,
         REMOVE_RECIPE_SLOT,
-        SET_INVENTORY_BOUND,
-        CLEAR_INVENTORY_BOUND,
         SET_DEBUG_DATA_GENERATOR_CONFIG
     }
 
@@ -535,7 +519,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
                         buf.writeInt(0);
                     }
                 }
-                case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT, SET_INVENTORY_BOUND, CLEAR_INVENTORY_BOUND, SET_DEBUG_DATA_GENERATOR_CONFIG -> {
+                case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT, SET_DEBUG_DATA_GENERATOR_CONFIG -> {
                     if (rawPayload != null) {
                         buf.writeInt(rawPayload.length);
                         buf.writeBytes(rawPayload);
@@ -628,7 +612,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
                 buf.readBytes(rawPayload);
                 decodeModuleUpgradeTargetsPayload(rawPayload);
             }
-            case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT, SET_INVENTORY_BOUND, CLEAR_INVENTORY_BOUND -> {
+            case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> {
                 int len = buf.readInt();
                 if (len <= 0 || len > MAX_RECIPE_PAYLOAD_BYTES || len > buf.readableBytes()) {
                     throw new IllegalArgumentException("invalid recipe payload length: " + len);
@@ -704,13 +688,17 @@ public final class AssetModuleUpdatePacket implements IMessage {
         ModuleInstance module = modules.get(moduleIndex);
         if (!moduleId.equals(module.id)) return false;
 
-        switch (type) {
+        boolean applied = switch (type) {
             case ACTION_TYPE -> handleAction(this, state, module);
-            case CONFIG_TYPE -> handleConfig(this, state, module, debugActionAuthorized);
-            default -> {
-                return false;
+            case CONFIG_TYPE -> {
+                handleConfig(this, state, module, debugActionAuthorized);
+                yield true;
             }
-        }
+            default -> {
+                yield false;
+            }
+        };
+        if (!applied) return false;
 
         if (type == ACTION_TYPE && getAction() == Action.DESTROY) {
             return true;
@@ -734,16 +722,22 @@ public final class AssetModuleUpdatePacket implements IMessage {
         return assetId;
     }
 
-    private static void handleAction(AssetModuleUpdatePacket packet, AutomatedFacility state, ModuleInstance module) {
-        switch (packet.getAction()) {
+    private static boolean handleAction(AssetModuleUpdatePacket packet, AutomatedFacility state,
+        ModuleInstance module) {
+        return switch (packet.getAction()) {
             case ENABLE -> {
                 if (module.status() == Buildable.Status.DISABLED) {
                     module.updateStatus(Buildable.Status.OPERATIONAL);
                 }
+                yield true;
             }
-            case DISABLE -> module.updateStatus(Buildable.Status.DISABLED);
-            case DESTROY -> state.removeModule(module.id);
-        }
+            case DISABLE -> {
+                module.updateStatus(Buildable.Status.DISABLED);
+                yield true;
+            }
+            case DESTROY -> state.requestModuleDeconstruction(module.id)
+                == AutomatedFacility.DeconstructionResult.ACCEPTED;
+        };
     }
 
     private static void handleConfig(AssetModuleUpdatePacket packet, AutomatedFacility state, ModuleInstance module,
@@ -821,7 +815,6 @@ public final class AssetModuleUpdatePacket implements IMessage {
             case PLAN_MODULE_UPGRADE_TARGETS -> handleModuleUpgradeTargets(packet, state, module, creative);
             case SET_RECIPE_SCHEDULER_MODE -> handleRecipeSchedulerMode(packet, state, module);
             case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> handleRecipeSlot(packet, state, module);
-            case SET_INVENTORY_BOUND, CLEAR_INVENTORY_BOUND -> handleInventoryBound(packet, state);
             case SET_DEBUG_DATA_GENERATOR_CONFIG -> handleDebugDataGeneratorConfig(packet, state, module);
         }
     }
@@ -1102,24 +1095,6 @@ public final class AssetModuleUpdatePacket implements IMessage {
         state.setRecipeConfig(
             module,
             new RecipeConfig(config.savedRecipes(), mode, config.notDoablePolicy(), (byte) 0, (byte) 0));
-    }
-
-    private static void handleInventoryBound(AssetModuleUpdatePacket packet, AutomatedFacility state) {
-        if (packet.rawPayload == null) throw new IllegalArgumentException("missing inventory bound payload");
-        io.netty.buffer.ByteBuf payloadBuf = io.netty.buffer.Unpooled.wrappedBuffer(packet.rawPayload);
-        BoundKind kind = PacketUtil.readEnum(payloadBuf, BoundKind.class);
-        InventoryKey key = PacketUtil.readInventoryKey(payloadBuf);
-        long amount = payloadBuf.readLong();
-        if (kind == null) throw new IllegalArgumentException("invalid inventory bound kind");
-        if (key == null) throw new IllegalArgumentException("unresolvable resource key");
-        boolean isLow = kind == BoundKind.ITEM_LOWER || kind == BoundKind.FLUID_LOWER;
-        if (packet.getConfigAction() == ConfigAction.SET_INVENTORY_BOUND) {
-            state.setBound(key, amount, isLow);
-            state.markInventoryBoundDelta(kind, key, true, amount);
-        } else {
-            state.clearBound(key, isLow);
-            state.markInventoryBoundDelta(kind, key, false, amount);
-        }
     }
 
     private static void handleDebugDataGeneratorConfig(AssetModuleUpdatePacket packet, AutomatedFacility state,

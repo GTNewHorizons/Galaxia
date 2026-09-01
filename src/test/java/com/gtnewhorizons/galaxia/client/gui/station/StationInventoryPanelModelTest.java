@@ -16,7 +16,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
@@ -71,11 +70,12 @@ final class StationInventoryPanelModelTest {
 
     @Test
     void inventoryRowsShowAllItems() {
-        IDistributedInventory distributed = distributed();
+        AutomatedFacility distributed = facility();
         ItemStackWrapper tracked = new ItemStackWrapper(Items.diamond, 0, null);
         setAmount(distributed, tracked, 5);
 
-        List<StationInventoryPanelModel.InventoryItemRow> rows = StationInventoryPanelModel.inventoryRows(distributed);
+        List<StationInventoryPanelModel.InventoryItemRow> rows = StationInventoryPanelModel
+            .inventoryRows(distributed.itemSnapshot(), distributed);
 
         assertEquals(1, rows.size());
         assertEquals(
@@ -94,23 +94,24 @@ final class StationInventoryPanelModelTest {
 
     @Test
     void inventoryRowsHideZeroStockItems() {
-        IDistributedInventory distributed = distributed();
+        AutomatedFacility distributed = facility();
         ItemStackWrapper tracked = new ItemStackWrapper(Items.diamond, 0, null);
         setAmount(distributed, tracked, 0);
 
         assertTrue(
-            StationInventoryPanelModel.inventoryRows(distributed)
+            StationInventoryPanelModel.inventoryRows(distributed.itemSnapshot(), distributed)
                 .isEmpty());
     }
 
     @Test
     void inventoryRowsIncludeCurrentUpkeepItemsWithoutStock() {
-        AutomatedFacility distributed = (AutomatedFacility) distributed();
+        AutomatedFacility distributed = facility();
         ItemStack upkeepStack = new ItemStack(new Item(), 1, 0);
         ItemStackWrapper tracked = ItemStackWrapper.of(upkeepStack);
         distributed.addModule(moduleWithUpkeep(upkeepStack, 1L));
 
-        List<StationInventoryPanelModel.InventoryItemRow> rows = StationInventoryPanelModel.inventoryRows(distributed);
+        List<StationInventoryPanelModel.InventoryItemRow> rows = StationInventoryPanelModel
+            .inventoryRows(distributed.itemSnapshot(), distributed);
 
         assertEquals(1, rows.size());
         assertEquals(
@@ -129,15 +130,16 @@ final class StationInventoryPanelModelTest {
 
     @Test
     void inventoryRowsExposeUpkeepReserveSeparatelyFromManualReserve() {
-        AutomatedFacility distributed = (AutomatedFacility) distributed();
+        AutomatedFacility distributed = facility();
         ItemStack upkeepStack = new ItemStack(new Item(), 1, 0);
         ItemStackWrapper tracked = ItemStackWrapper.of(upkeepStack);
         distributed.addModule(moduleWithUpkeep(upkeepStack, 1L));
-        distributed.updateItems(tracked, 7);
+        distributed.insert(tracked, 7);
         distributed.setBound(tracked, 54L, true);
         distributed.setUpkeepReserve(tracked, 13L);
 
-        List<StationInventoryPanelModel.InventoryItemRow> rows = StationInventoryPanelModel.inventoryRows(distributed);
+        List<StationInventoryPanelModel.InventoryItemRow> rows = StationInventoryPanelModel
+            .inventoryRows(distributed.itemSnapshot(), distributed);
 
         assertEquals(1, rows.size());
         StationInventoryPanelModel.InventoryItemRow row = rows.get(0);
@@ -148,7 +150,7 @@ final class StationInventoryPanelModelTest {
 
     @Test
     void upkeepReserveStatusWarnsWhenReserveCoversLessThanTenMinutes() {
-        AutomatedFacility distributed = (AutomatedFacility) distributed();
+        AutomatedFacility distributed = facility();
         ItemStack upkeepStack = new ItemStack(new Item(), 1, 0);
         ItemStackWrapper tracked = ItemStackWrapper.of(upkeepStack);
         distributed.addModule(moduleWithUpkeep(upkeepStack, 2L));
@@ -166,7 +168,7 @@ final class StationInventoryPanelModelTest {
 
     @Test
     void upkeepReserveStatusIsCriticalBelowThreeMinutes() {
-        AutomatedFacility distributed = (AutomatedFacility) distributed();
+        AutomatedFacility distributed = facility();
         ItemStack upkeepStack = new ItemStack(new Item(), 1, 0);
         ItemStackWrapper tracked = ItemStackWrapper.of(upkeepStack);
         distributed.addModule(moduleWithUpkeep(upkeepStack, 2L));
@@ -181,11 +183,11 @@ final class StationInventoryPanelModelTest {
 
     @Test
     void upkeepOverviewRowsExposeDemandStockReserveAndAutoOrder() {
-        AutomatedFacility distributed = (AutomatedFacility) distributed();
+        AutomatedFacility distributed = facility();
         ItemStack upkeepStack = new ItemStack(new Item(), 1, 0);
         ItemStackWrapper tracked = ItemStackWrapper.of(upkeepStack);
         distributed.addModule(moduleWithUpkeep(upkeepStack, 2L));
-        distributed.updateItems(tracked, 7);
+        distributed.insert(tracked, 7);
         distributed.setUpkeepReserve(tracked, 13L);
         distributed.setUpkeepAutoOrder(tracked, true);
 
@@ -207,13 +209,11 @@ final class StationInventoryPanelModelTest {
                 .level());
     }
 
-    private static void setAmount(IDistributedInventory distributed, ItemStackWrapper item, int amount) {
-        if (distributed instanceof AutomatedFacility af) {
-            af.updateItems(item, amount);
-        }
+    private static void setAmount(AutomatedFacility facility, ItemStackWrapper item, int amount) {
+        facility.insert(item, amount);
     }
 
-    private static IDistributedInventory distributed() {
+    private static AutomatedFacility facility() {
         return new AutomatedFacility(
             CelestialAsset.ID.create(),
             com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId.PROXIMA_CENTAURI,
@@ -250,11 +250,12 @@ final class StationInventoryPanelModelTest {
 
     @Test
     void fluidRowsShowStoredFluids() {
-        IDistributedInventory distributed = distributed();
+        AutomatedFacility distributed = facility();
         FluidKey water = new FluidKey(new Fluid("water"), null);
         addFluid(distributed, water, 1000);
 
-        List<StationInventoryPanelModel.FluidRow> rows = StationInventoryPanelModel.fluidRows(distributed);
+        List<StationInventoryPanelModel.FluidRow> rows = StationInventoryPanelModel
+            .fluidRows(distributed.fluidAmounts());
 
         assertEquals(1, rows.size());
         assertEquals(
@@ -265,19 +266,17 @@ final class StationInventoryPanelModelTest {
 
     @Test
     void fluidRowsHideZeroAmountFluids() {
-        IDistributedInventory distributed = distributed();
+        AutomatedFacility distributed = facility();
         FluidKey water = new FluidKey(new Fluid("water"), null);
         addFluid(distributed, water, 0);
 
         assertTrue(
-            StationInventoryPanelModel.fluidRows(distributed)
+            StationInventoryPanelModel.fluidRows(distributed.fluidAmounts())
                 .isEmpty());
     }
 
-    private static void addFluid(IDistributedInventory distributed, FluidKey fluid, int amount) {
-        if (distributed instanceof AutomatedFacility af) {
-            af.updateFluids(fluid, amount);
-        }
+    private static void addFluid(AutomatedFacility facility, FluidKey fluid, int amount) {
+        facility.insert(fluid, amount);
     }
 
     private static final class TestTieredModule extends TieredModuleComponent {

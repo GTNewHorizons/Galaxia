@@ -29,6 +29,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
@@ -458,7 +459,8 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
                 if (!isOutpostInScope(outpost, scope, viewRoot)) continue;
                 if (outpost == null) continue;
                 long stock = outpost instanceof Station station ? station.getCannonChestItems()
-                    .getOrDefault(item, 0L) : outpost.getItemAmount(item);
+                    .getOrDefault(item, 0L)
+                    : outpost instanceof AutomatedFacility facility ? facility.itemAmount(item) : 0L;
                 LogisticsResourceConfig cfg = outpost.logisticsConfig.get(item);
                 if (stock == 0 && cfg.minReserve() == 0 && !cfg.isImportEnabled() && !cfg.isSupplyEnabled()) continue;
                 long localNet = stock - cfg.minReserve();

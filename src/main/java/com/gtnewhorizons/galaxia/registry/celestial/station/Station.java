@@ -18,13 +18,12 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
-import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
-public class Station extends CelestialAsset {
+public class Station extends CelestialAsset implements IDistributedInventory {
 
     private BlockPos controller;
 
@@ -61,11 +60,6 @@ public class Station extends CelestialAsset {
                     .withSupplyEnabled(true)));
 
         LogisticStore.updateSignalsForFacility(this);
-    }
-
-    @Override
-    public long updateContents(InventoryKey item, long delta, boolean sync) {
-        return updateContents(item, delta);
     }
 
     @Override

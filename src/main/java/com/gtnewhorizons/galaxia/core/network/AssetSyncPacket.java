@@ -41,6 +41,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleDeconstructionOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
@@ -93,6 +94,7 @@ final class AssetSyncPacket {
     private static final byte OPERATION_SPEC_TIER = 1;
     private static final byte OPERATION_SPEC_HAMMER = 2;
     private static final byte OPERATION_SPEC_MINER_FOCUS = 3;
+    private static final byte OPERATION_SPEC_DECONSTRUCTION = 4;
 
     CelestialAsset.ID assetId;
     byte syncType;
@@ -722,6 +724,10 @@ final class AssetSyncPacket {
     }
 
     private static void writeOperationSpec(ByteBuf buf, IModuleOperation spec) {
+        if (spec instanceof ModuleDeconstructionOperation) {
+            buf.writeByte(OPERATION_SPEC_DECONSTRUCTION);
+            return;
+        }
         if (spec instanceof HammerModuleOperation hammerSpec) {
             buf.writeByte(OPERATION_SPEC_HAMMER);
             PacketUtil.writeEnum(buf, hammerSpec.targetTier());
@@ -748,15 +754,18 @@ final class AssetSyncPacket {
 
     private static IModuleOperation readOperationSpec(ByteBuf buf) {
         int type = buf.readUnsignedByte();
-        ModuleTier targetTier = PacketUtil.readEnum(buf, ModuleTier.class);
         return switch (type) {
-            case OPERATION_SPEC_HAMMER -> new HammerModuleOperation(targetTier, PacketUtil.readString(buf));
+            case OPERATION_SPEC_DECONSTRUCTION -> new ModuleDeconstructionOperation();
+            case OPERATION_SPEC_HAMMER -> new HammerModuleOperation(
+                PacketUtil.readEnum(buf, ModuleTier.class),
+                PacketUtil.readString(buf));
             case OPERATION_SPEC_MINER_FOCUS -> {
+                ModuleTier targetTier = PacketUtil.readEnum(buf, ModuleTier.class);
                 String focusTierKey = PacketUtil.readString(buf);
                 String focusOreKey = buf.readBoolean() ? PacketUtil.readString(buf) : null;
                 yield new MinerFocusOperation(targetTier, focusTierKey, focusOreKey);
             }
-            case OPERATION_SPEC_TIER -> new ModuleTierOperation(targetTier);
+            case OPERATION_SPEC_TIER -> new ModuleTierOperation(PacketUtil.readEnum(buf, ModuleTier.class));
             default -> throw new IllegalStateException("Unknown module operation spec type: " + type);
         };
     }

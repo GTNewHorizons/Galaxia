@@ -11,6 +11,7 @@ import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
@@ -132,6 +133,7 @@ public final class AssetInventoryUpdatePacket implements IMessage {
             LOG.warn("[Logistics] InventoryDelta: unknown or unauthorized assetId {}", assetId);
             return false;
         }
+        if (operation == null || resource == null) return false;
 
         if (operation == Operation.SET_BOUND || operation == Operation.CLEAR_BOUND) {
             if (asset instanceof AutomatedFacility state) {
@@ -153,11 +155,20 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         }
 
         if (this.resource == null) return false;
-        final long applied = asset.updateContents(resource, delta) * (delta > 0 ? 1 : -1);
+        long applied;
+        if (asset instanceof AutomatedFacility facility) {
+            long requested = delta == Long.MIN_VALUE ? Long.MAX_VALUE : Math.abs(delta);
+            applied = delta > 0L ? facility.insert(resource, requested) : facility.extract(resource, requested);
+        } else if (asset instanceof IDistributedInventory physicalInventory) {
+            applied = physicalInventory.updateContents(resource, delta);
+            if (applied != 0L) asset.bumpStateRevision();
+        } else {
+            return false;
+        }
         if (applied == 0L) return false;
 
-        asset.bumpStateRevision();
-        LOG.info("[Logistics] Inventory update: {} x {} on {}", applied, resource.toKey(), assetId);
+        long signedApplied = delta > 0L ? applied : -applied;
+        LOG.info("[Logistics] Inventory update: {} x {} on {}", signedApplied, resource.toKey(), assetId);
         return true;
     }
 
@@ -184,8 +195,8 @@ public final class AssetInventoryUpdatePacket implements IMessage {
                 assetId);
             return true;
         } else if (operation == Operation.CLEAR_BOUND) {
-            state.clearBound(resource);
-
+            final boolean low = boundKind == BoundKind.ITEM_LOWER || boundKind == BoundKind.FLUID_LOWER;
+            if (!state.clearBound(resource, low)) return false;
             state.markInventoryBoundDelta(boundKind, resource, false, 0L);
             LOG.info("[Logistics] Inventory bound cleared: {} {} on outpost {}", boundKind, resource.toKey(), assetId);
             return true;

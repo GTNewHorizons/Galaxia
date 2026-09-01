@@ -49,7 +49,7 @@ final class RecipeOrderCursorPersistenceTest {
         ModuleInstance macerator = createMaceratorWithOrderConfig(station);
 
         // Save
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
 
         // Load
         AutomatedFacility decoded = new AutomatedFacility(
@@ -57,7 +57,7 @@ final class RecipeOrderCursorPersistenceTest {
             CelestialObjectId.MARS,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityJsonCodec.decode(decoded, encoded);
 
         // Verify
         assertEquals(

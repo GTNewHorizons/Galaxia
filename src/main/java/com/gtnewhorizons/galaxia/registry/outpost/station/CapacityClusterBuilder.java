@@ -8,6 +8,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -24,6 +26,16 @@ public final class CapacityClusterBuilder {
      * @return list of clusters, each containing connected same-kind members and their total effective capacity
      */
     public static List<CapacityCluster> build(StationLayout layout, FacilityModuleKind kind) {
+        return build(layout, kind, null);
+    }
+
+    static List<CapacityCluster> buildExcluding(StationLayout layout, FacilityModuleKind kind,
+        ModuleInstance.ID excludedModuleId) {
+        return build(layout, kind, excludedModuleId);
+    }
+
+    private static List<CapacityCluster> build(StationLayout layout, FacilityModuleKind kind,
+        @Nullable ModuleInstance.ID excludedModuleId) {
         if (!kind.isCapacityModule()) {
             return Collections.emptyList();
         }
@@ -33,6 +45,7 @@ public final class CapacityClusterBuilder {
 
         layout.forEachAnchor((coord, module) -> {
             if (module.kind() != kind) return;
+            if (module.id.equals(excludedModuleId)) return;
             if (globalVisited.contains(coord)) return;
 
             // BFS to collect all connected members
@@ -55,6 +68,7 @@ public final class CapacityClusterBuilder {
                     StationTileCoord ncoord = StationTileCoord.of(ndx, ndy);
                     ModuleInstance neighborModule = layout.moduleAt(ncoord);
                     if (neighborModule == null || neighborModule.kind() != kind) continue;
+                    if (neighborModule.id.equals(excludedModuleId)) continue;
                     StationTileCoord nAnchor = neighborModule.anchor();
                     if (globalVisited.add(nAnchor)) {
                         members.add(nAnchor);
@@ -85,7 +99,7 @@ public final class CapacityClusterBuilder {
                             + " — capacity module was created without a component");
                 }
                 long baseCap = mi.baseCapacity();
-                int neighborCount = StationLayout.countOrthogonalNeighbors(layout, memberCoord, kind);
+                int neighborCount = StationLayout.countOrthogonalNeighbors(layout, memberCoord, kind, excludedModuleId);
                 totalEffective += Math.round(baseCap * (1.0 + 0.5 * neighborCount));
             }
 

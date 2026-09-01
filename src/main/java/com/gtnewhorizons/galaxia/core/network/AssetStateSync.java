@@ -26,6 +26,7 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
@@ -474,20 +475,23 @@ public final class AssetStateSync {
                     syncModuleGroupMembership(state, module);
                 }
                 case AssetSyncPacket.INVENTORY_UPDATE -> {
-                    if (packet.resource != null) {
-                        asset.updateContents(packet.resource, packet.inventoryDelta);
+                    if (packet.resource != null && asset instanceof IDistributedInventory inventory) {
+                        inventory.updateContents(packet.resource, packet.inventoryDelta);
                     }
                 }
                 case AssetSyncPacket.INVENTORY_BOUNDS_SNAPSHOT -> {
+                    if (!(asset instanceof AutomatedFacility state)) {
+                        throw new IllegalStateException("Wrong inventory bounds packet target");
+                    }
                     if (packet.inventoryBoundSnapshot != null) {
                         for (Map.Entry<InventoryKey, InventoryBounds> e : packet.inventoryBoundSnapshot.entrySet()) {
                             InventoryKey key = e.getKey();
                             InventoryBounds bounds = e.getValue();
                             if (bounds.hasLow()) {
-                                asset.setBound(key, bounds.low(), true);
+                                state.setBound(key, bounds.low(), true);
                             }
                             if (bounds.hasUpper()) {
-                                asset.setBound(key, bounds.upper(), false);
+                                state.setBound(key, bounds.upper(), false);
                             }
                         }
                     }

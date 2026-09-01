@@ -50,7 +50,7 @@ final class ProductionModuleHelperTest {
         Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.updateItems(inputResource, 105);
+        station.insert(inputResource, 105);
 
         ItemStack[] inputs = { new ItemStack(inputItem, 2, 0), new ItemStack(inputItem, 4, 0) };
         ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
@@ -68,8 +68,45 @@ final class ProductionModuleHelperTest {
 
         ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
 
-        assertEquals(105, station.getItemAmount(inputResource));
-        assertEquals(0, station.getItemAmount(outputResource));
+        assertEquals(105, station.itemAmount(inputResource));
+        assertEquals(0, station.itemAmount(outputResource));
+    }
+
+    @Test
+    void executeDoesNotConsumeInputWhenSelectedOutputIsRejectedByInsertionFilter() {
+        AutomatedFacility station = station();
+        ItemStackWrapper input = new ItemStackWrapper(Items.diamond, 0, null);
+        ItemStackWrapper output = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        station.insert(input, 1L);
+        station.addFilter(
+            new ItemStackWrapper(Items.gold_ingot, 0, null).toItemStack()
+                .getUnlocalizedName(),
+            true);
+        SavedRecipeList slots = new SavedRecipeList();
+        slots.add(
+            new SavedRecipe(
+                RecipeSnapshot.resolved(
+                    (byte) 1,
+                    0,
+                    new ItemStack[] { new ItemStack(Items.diamond) },
+                    new ItemStack[] { new ItemStack(Items.iron_ingot) },
+                    null,
+                    null,
+                    20,
+                    30),
+                true,
+                0L,
+                (byte) 1,
+                (byte) 1));
+        StubRecipeModule module = new StubRecipeModule(
+            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
+        int revisionBefore = station.getStateRevision();
+
+        ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
+
+        assertEquals(1L, station.itemAmount(input));
+        assertEquals(0L, station.itemAmount(output));
+        assertEquals(revisionBefore, station.getStateRevision());
     }
 
     @Test
@@ -79,8 +116,8 @@ final class ProductionModuleHelperTest {
         Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.updateItems(inputResource, 1);
-        station.updateItems(outputResource, 95);
+        station.insert(inputResource, 1);
+        station.insert(outputResource, 95);
 
         ItemStack[] inputs = { new ItemStack(inputItem, 1, 0) };
         ItemStack[] outputs = { new ItemStack(outputItem, 4, 0), new ItemStack(outputItem, 5, 0) };
@@ -95,11 +132,13 @@ final class ProductionModuleHelperTest {
                 (byte) 1));
         StubRecipeModule module = new StubRecipeModule(
             new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
+        int revisionBefore = station.getStateRevision();
 
         ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
 
-        assertEquals(0, station.getItemAmount(inputResource));
-        assertEquals(104, station.getItemAmount(outputResource));
+        assertEquals(0, station.itemAmount(inputResource));
+        assertEquals(104, station.itemAmount(outputResource));
+        assertEquals(revisionBefore + 1, station.getStateRevision());
     }
 
     @Test
@@ -109,8 +148,8 @@ final class ProductionModuleHelperTest {
         Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.updateItems(inputResource, 1);
-        station.updateItems(outputResource, 99);
+        station.insert(inputResource, 1);
+        station.insert(outputResource, 99);
 
         ItemStack[] inputs = { new ItemStack(inputItem, 1, 0) };
         ItemStack[] outputs = { new ItemStack(outputItem, 1, 0), new ItemStack(outputItem, 2, 0) };
@@ -128,8 +167,8 @@ final class ProductionModuleHelperTest {
 
         ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
 
-        assertEquals(0, station.getItemAmount(inputResource));
-        assertEquals(101, station.getItemAmount(outputResource));
+        assertEquals(0, station.itemAmount(inputResource));
+        assertEquals(101, station.itemAmount(outputResource));
     }
 
     @Test
@@ -140,7 +179,7 @@ final class ProductionModuleHelperTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         FluidKey inputKey = new FluidKey(TEST_FLUID_1, null);
-        station.updateFluids(inputKey, 1000);
+        station.insert(inputKey, 1000);
 
         FluidStack[] fluidInputs = { new FluidStack(TEST_FLUID_1, 144) };
         FluidStack[] fluidOutputs = { new FluidStack(TEST_FLUID_2, 72) };
@@ -161,8 +200,8 @@ final class ProductionModuleHelperTest {
 
         ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
 
-        assertEquals(856, station.getFluidAmount(new FluidKey(TEST_FLUID_1, null)));
-        assertEquals(72, station.getFluidAmount(new FluidKey(TEST_FLUID_2, null)));
+        assertEquals(856, station.fluidAmount(new FluidKey(TEST_FLUID_1, null)));
+        assertEquals(72, station.fluidAmount(new FluidKey(TEST_FLUID_2, null)));
     }
 
     @Test
@@ -176,7 +215,7 @@ final class ProductionModuleHelperTest {
         Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.updateItems(inputResource, 1);
+        station.insert(inputResource, 1);
 
         ItemStack[] inputs = { new ItemStack(inputItem, 1, 0), new ItemStack(inputItem, 1, 0) };
         ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
@@ -188,8 +227,8 @@ final class ProductionModuleHelperTest {
 
         ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
 
-        assertEquals(1, station.getItemAmount(inputResource));
-        assertEquals(0, station.getItemAmount(outputResource));
+        assertEquals(1, station.itemAmount(inputResource));
+        assertEquals(0, station.itemAmount(outputResource));
     }
 
     @Test
@@ -203,7 +242,7 @@ final class ProductionModuleHelperTest {
         Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.updateItems(inputResource, 64);
+        station.insert(inputResource, 64);
 
         ItemStack[] inputs = { new ItemStack(inputItem, 1, 0) };
         ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
@@ -216,8 +255,8 @@ final class ProductionModuleHelperTest {
 
         ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
 
-        assertEquals(64, station.getItemAmount(inputResource));
-        assertEquals(0, station.getItemAmount(outputResource));
+        assertEquals(64, station.itemAmount(inputResource));
+        assertEquals(0, station.itemAmount(outputResource));
     }
 
     @Test
@@ -231,7 +270,7 @@ final class ProductionModuleHelperTest {
         Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.updateItems(inputResource, 11);
+        station.insert(inputResource, 11);
         station.setBound(inputResource, 1, true);
         station.setUpkeepReserve(inputResource, 10L);
 
@@ -245,8 +284,8 @@ final class ProductionModuleHelperTest {
 
         ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
 
-        assertEquals(11, station.getItemAmount(inputResource));
-        assertEquals(0, station.getItemAmount(outputResource));
+        assertEquals(11, station.itemAmount(inputResource));
+        assertEquals(0, station.itemAmount(outputResource));
     }
 
     @Test
@@ -256,14 +295,14 @@ final class ProductionModuleHelperTest {
         Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.updateItems(inputResource, 1);
+        station.insert(inputResource, 1);
 
         StubRecipeModule module = itemOutputModule(inputItem, outputItem, 1);
 
         ProductionModuleHelper.execute(null, station, module, new FixedRandom(5000), new HashMap<>(), new HashMap<>());
 
-        assertEquals(0, station.getItemAmount(inputResource));
-        assertEquals(0, station.getItemAmount(outputResource));
+        assertEquals(0, station.itemAmount(inputResource));
+        assertEquals(0, station.itemAmount(outputResource));
     }
 
     @Test
@@ -274,8 +313,8 @@ final class ProductionModuleHelperTest {
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
 
         AutomatedFacility atGuard = station();
-        atGuard.updateItems(inputResource, 1);
-        atGuard.updateItems(outputResource, 1);
+        atGuard.insert(inputResource, 1);
+        atGuard.insert(outputResource, 1);
         atGuard.setBound(outputResource, 1, false);
         ProductionModuleHelper.execute(
             null,
@@ -285,11 +324,11 @@ final class ProductionModuleHelperTest {
             new HashMap<>(),
             new HashMap<>());
 
-        assertEquals(1, atGuard.getItemAmount(inputResource));
-        assertEquals(1, atGuard.getItemAmount(outputResource));
+        assertEquals(1, atGuard.itemAmount(inputResource));
+        assertEquals(1, atGuard.itemAmount(outputResource));
 
         AutomatedFacility belowGuard = station();
-        belowGuard.updateItems(inputResource, 1);
+        belowGuard.insert(inputResource, 1);
         belowGuard.setBound(outputResource, 1, false);
         ProductionModuleHelper.execute(
             null,
@@ -299,8 +338,8 @@ final class ProductionModuleHelperTest {
             new HashMap<>(),
             new HashMap<>());
 
-        assertEquals(0, belowGuard.getItemAmount(inputResource));
-        assertEquals(1, belowGuard.getItemAmount(outputResource));
+        assertEquals(0, belowGuard.itemAmount(inputResource));
+        assertEquals(1, belowGuard.itemAmount(outputResource));
     }
 
     @Test
@@ -309,9 +348,9 @@ final class ProductionModuleHelperTest {
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
 
         AutomatedFacility atGuard = station();
-        atGuard.updateItems(inputResource, 1);
+        atGuard.insert(inputResource, 1);
         FluidKey outputKey = new FluidKey(TEST_FLUID_1, null);
-        atGuard.updateFluids(outputKey, 72);
+        atGuard.insert(outputKey, 72);
         atGuard.setBound(outputKey, 72, false);
         ProductionModuleHelper.execute(
             null,
@@ -321,11 +360,11 @@ final class ProductionModuleHelperTest {
             new HashMap<>(),
             new HashMap<>());
 
-        assertEquals(1, atGuard.getItemAmount(inputResource));
-        assertEquals(72, atGuard.getFluidAmount(new FluidKey(TEST_FLUID_1, null)));
+        assertEquals(1, atGuard.itemAmount(inputResource));
+        assertEquals(72, atGuard.fluidAmount(new FluidKey(TEST_FLUID_1, null)));
 
         AutomatedFacility belowGuard = station();
-        belowGuard.updateItems(inputResource, 1);
+        belowGuard.insert(inputResource, 1);
         belowGuard.setBound(new FluidKey(TEST_FLUID_1, null), 72, false);
         ProductionModuleHelper.execute(
             null,
@@ -335,8 +374,8 @@ final class ProductionModuleHelperTest {
             new HashMap<>(),
             new HashMap<>());
 
-        assertEquals(0, belowGuard.getItemAmount(inputResource));
-        assertEquals(72, belowGuard.getFluidAmount(new FluidKey(TEST_FLUID_1, null)));
+        assertEquals(0, belowGuard.itemAmount(inputResource));
+        assertEquals(72, belowGuard.fluidAmount(new FluidKey(TEST_FLUID_1, null)));
     }
 
     @Test
@@ -348,8 +387,8 @@ final class ProductionModuleHelperTest {
         ItemStackWrapper fillerResource = new ItemStackWrapper(fillerItem, 0, null);
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.updateItems(fillerResource, 999);
-        station.updateItems(inputResource, 1);
+        station.insert(fillerResource, 999);
+        station.insert(inputResource, 1);
 
         ProductionModuleHelper.execute(
             null,
@@ -359,9 +398,9 @@ final class ProductionModuleHelperTest {
             new HashMap<>(),
             new HashMap<>());
 
-        assertEquals(999, station.getItemAmount(fillerResource));
-        assertEquals(1, station.getItemAmount(inputResource));
-        assertEquals(0, station.getItemAmount(outputResource));
+        assertEquals(999, station.itemAmount(fillerResource));
+        assertEquals(1, station.itemAmount(inputResource));
+        assertEquals(0, station.itemAmount(outputResource));
     }
 
     @Test
@@ -373,8 +412,8 @@ final class ProductionModuleHelperTest {
         ItemStackWrapper fillerResource = new ItemStackWrapper(fillerItem, 0, null);
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.updateItems(fillerResource, 999);
-        station.updateItems(inputResource, 1);
+        station.insert(fillerResource, 999);
+        station.insert(inputResource, 1);
 
         ProductionModuleHelper.execute(
             null,
@@ -384,9 +423,9 @@ final class ProductionModuleHelperTest {
             new HashMap<>(),
             new HashMap<>());
 
-        assertEquals(999, station.getItemAmount(fillerResource));
-        assertEquals(0, station.getItemAmount(inputResource));
-        assertEquals(1, station.getItemAmount(outputResource));
+        assertEquals(999, station.itemAmount(fillerResource));
+        assertEquals(0, station.itemAmount(inputResource));
+        assertEquals(1, station.itemAmount(outputResource));
     }
 
     private static AutomatedFacility station() {

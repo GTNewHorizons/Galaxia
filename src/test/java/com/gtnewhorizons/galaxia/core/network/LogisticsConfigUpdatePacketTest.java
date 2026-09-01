@@ -101,7 +101,7 @@ final class LogisticsConfigUpdatePacketTest {
     void importOnlyLogisticsUpdateRequestsEffectiveUpkeepLowerBound() {
         AutomatedFacility facility = addFacilityToServer();
         ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);
-        facility.updateItems(resource, 3);
+        facility.insert(resource, 3);
         facility.setBound(resource, 5, true);
         facility.setUpkeepReserve(resource, 10L);
 

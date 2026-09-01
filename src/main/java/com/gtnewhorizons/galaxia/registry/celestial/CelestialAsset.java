@@ -14,21 +14,15 @@ import net.minecraft.util.StatCollector;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
-import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
-import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
-import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
-import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsConfiguration;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
-public abstract class CelestialAsset implements Buildable, IDistributedInventory {
+public abstract class CelestialAsset implements Buildable {
 
     public final ID assetId;
     public final CelestialObjectKey celestialObjectKey;
@@ -45,15 +39,7 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     private int stateRevision;
     private boolean dirty = true;
 
-    private final Map<ItemStackWrapper, InventoryBounds> itemBounds = new LinkedHashMap<>();
-    private final Map<FluidKey, InventoryBounds> fluidBounds = new LinkedHashMap<>();
-
     public final LogisticsConfiguration logisticsConfig;
-
-    public static long getItemAmount(CelestialAsset asset, ItemStackWrapper resource) {
-        return asset.aggregatedItems()
-            .getOrDefault(resource, 0L);
-    }
 
     public static CelestialAsset create(CelestialObjectKey celestialObjectKey, Kind kind, boolean operational) {
         return create(celestialObjectKey, kind, operational ? Status.OPERATIONAL : Status.CONSTRUCTION_SITE);
@@ -284,109 +270,6 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
 
     public void clean() {
         dirty = false;
-    }
-
-    public abstract long updateContents(InventoryKey item, long delta, boolean sync);
-
-    /// ----------------------------------------------------------------------------------
-    /// Inventory Bounds
-    /// ----------------------------------------------------------------------------------
-
-    private <T extends InventoryKey> Map<T, InventoryBounds> getBoundsMap(T key) {
-        return key instanceof ItemStackWrapper ? (Map<T, InventoryBounds>) itemBounds
-            : (Map<T, InventoryBounds>) fluidBounds;
-    }
-
-    public boolean hasLowerBound(InventoryKey key) {
-        return getBound(key).hasLow();
-    }
-
-    public boolean hasUpperBound(InventoryKey key) {
-        return getBound(key).hasUpper();
-    }
-
-    public InventoryBounds getBound(InventoryKey key) {
-        return getBoundsMap(key).getOrDefault(key, InventoryBounds.invalid());
-    }
-
-    public void setBound(InventoryKey key, long low, long upper) {
-        getBoundsMap(key).put(key, new InventoryBounds(low, upper));
-    }
-
-    public void setBound(InventoryKey key, long amount, boolean low) {
-        InventoryBounds bound = getBoundsMap(key).computeIfAbsent(key, k -> InventoryBounds.invalid());
-        if (low) {
-            bound.setLow(amount);
-        } else {
-            bound.setUppper(amount);
-        }
-    }
-
-    public boolean trySetBound(InventoryKey key, long amount, boolean low) {
-        InventoryBounds current = getBound(key);
-        long nextLow = low ? amount : current.low();
-        long nextUpper = low ? current.upper() : amount;
-        boolean hasNextLow = low || current.hasLow();
-        boolean hasNextUpper = !low || current.hasUpper();
-        if (hasNextLow && hasNextUpper && nextLow > nextUpper) return false;
-        getBoundsMap(key).put(key, new InventoryBounds(nextLow, nextUpper));
-        return true;
-    }
-
-    public void clearBound(InventoryKey key) {
-        getBoundsMap(key).remove(key);
-    }
-
-    public void clearBound(InventoryKey key, boolean low) {
-        InventoryBounds bound = getBoundsMap(key).remove(key);
-        if (low) {
-            bound.removeLow();
-        } else {
-            bound.removeUpper();
-        }
-        if (!bound.isInvalid()) getBoundsMap(key).put(key, bound);
-    }
-
-    private <T extends InventoryKey> long getResourceAmount(T key) {
-        return key instanceof ItemStackWrapper ? getItemAmount((ItemStackWrapper) key) : getFluidAmount((FluidKey) key);
-    }
-
-    public boolean isBelowUpper(InventoryKey key) {
-        return getResourceAmount(key) < getBound(key).upperOrDefault();
-    }
-
-    public boolean isAboveLow(InventoryKey key) {
-        return getResourceAmount(key) >= getBound(key).lowOrDefault();
-    }
-
-    public boolean isAboveLow(InventoryKey key, long amount) {
-        return (getResourceAmount(key) - amount) >= getBound(key).lowOrDefault();
-    }
-
-    public boolean isInBounds(InventoryKey key) {
-        return getBound(key).inBounds(getResourceAmount(key));
-    }
-
-    /// ----------------------------------------------------------------------------------
-    /// Bound Snapshots & Loads (for persistence)
-    /// ----------------------------------------------------------------------------------
-
-    public <T extends InventoryKey> Map<T, InventoryBounds> getBounds(boolean items) {
-        return items ? (Map<T, InventoryBounds>) itemBounds : (Map<T, InventoryBounds>) fluidBounds;
-    }
-
-    public void markInventoryBoundDelta(BoundKind kind, InventoryKey resource, boolean present, long amount) {
-        if (kind == null || resource == null) return;
-        markStateChanged();
-    }
-
-    /// ----------------------------------------------------------------------------------
-    /// Clear all inventory state
-    /// ----------------------------------------------------------------------------------
-
-    public void clear() {
-        itemBounds.clear();
-        fluidBounds.clear();
     }
 
     @Override

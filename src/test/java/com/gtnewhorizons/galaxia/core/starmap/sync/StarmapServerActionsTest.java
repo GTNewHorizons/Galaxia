@@ -529,7 +529,7 @@ final class StarmapServerActionsTest {
             .apply(TEAM, true);
 
         assertTrue(result);
-        assertEquals(32, facility.getItemAmount(resource));
+        assertEquals(32, facility.itemAmount(resource));
         assertNull(CelestialAssetStore.CLIENT.findAssetInternal(facility.assetId));
     }
 

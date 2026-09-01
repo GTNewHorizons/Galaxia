@@ -14,6 +14,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -90,7 +91,14 @@ public final class LogisticStore {
                         ticked.data.toAssetId());
                     return;
                 }
-                long accepted = destination.updateContents(ticked.data.resourceId(), ticked.data.amount(), true);
+                long accepted;
+                if (destination instanceof AutomatedFacility facility) {
+                    accepted = facility.insert(ticked.data.resourceId(), ticked.data.amount());
+                } else if (destination instanceof IDistributedInventory physicalInventory) {
+                    accepted = physicalInventory.updateContents(ticked.data.resourceId(), ticked.data.amount());
+                } else {
+                    accepted = 0L;
+                }
                 long remaining = ticked.data.amount() - accepted;
                 if (remaining > 0L) {
                     ticked.setAmount(remaining);
@@ -109,7 +117,14 @@ public final class LogisticStore {
 
     public static void updateSignalsForFacility(CelestialAsset asset) {
         CelestialAsset.ID assetId = asset.assetId;
-        Map<ItemStackWrapper, Long> snapshot = asset.aggregatedItems();
+        Map<ItemStackWrapper, Long> snapshot;
+        if (asset instanceof AutomatedFacility facility) {
+            snapshot = facility.itemSnapshot();
+        } else if (asset instanceof IDistributedInventory physicalInventory) {
+            snapshot = physicalInventory.aggregatedItems();
+        } else {
+            snapshot = Map.of();
+        }
         Map<ItemStackWrapper, Long> cannonItems = null;
         if (asset instanceof Station station) {
             cannonItems = station.getCannonChestItems();

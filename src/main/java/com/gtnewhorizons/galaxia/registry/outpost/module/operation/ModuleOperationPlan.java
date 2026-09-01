@@ -26,8 +26,11 @@ public record ModuleOperationPlan(@Nonnull IModuleOperation spec, int buildTicks
         if (spec == null) {
             throw new IllegalArgumentException("spec must not be null");
         }
-        if (buildTicks <= 0) {
+        if (buildTicks <= 0 && !(spec instanceof ModuleDeconstructionOperation)) {
             throw new IllegalArgumentException("buildTicks must be > 0, got " + buildTicks);
+        }
+        if (buildTicks != 0 && spec instanceof ModuleDeconstructionOperation) {
+            throw new IllegalArgumentException("deconstruction buildTicks must be 0, got " + buildTicks);
         }
         if (completionRefundPercent < 0 || completionRefundPercent > 100) {
             throw new IllegalArgumentException(

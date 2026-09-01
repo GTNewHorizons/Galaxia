@@ -272,6 +272,26 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
+    void rejectedDeconstructionReturnsFalseAndPreservesModule() {
+        AutomatedFacility facility = addModuleFacilityToServer(FacilityModuleKind.STORAGE, ModuleTier.HV);
+        ModuleInstance module = facility.modules()
+            .get(0);
+        facility.stationLayout()
+            .place(module);
+        ItemStackWrapper filler = new ItemStackWrapper(Items.diamond, 0, null);
+        facility.insert(filler, AutomatedFacility.BASE_ITEM_CAPACITY + 1L);
+        int revisionBefore = facility.getStateRevision();
+        AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
+            .action(facility.assetId, 0, module.id, AssetModuleUpdatePacket.Action.DESTROY);
+
+        assertFalse(packet.apply(TEAM, false));
+        assertTrue(
+            facility.modules()
+                .contains(module));
+        assertEquals(revisionBefore, facility.getStateRevision());
+    }
+
+    @Test
     void nonRecipeActions_haveNullRawPayload() {
         AssetModuleUpdatePacket pkt = AssetModuleUpdatePacket
             .config(ASSET_ID, 0, MODULE_ID, AssetModuleUpdatePacket.ConfigAction.SET_TIER, (byte) 2);

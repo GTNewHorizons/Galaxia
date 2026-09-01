@@ -13,6 +13,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryExchange;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduler;
@@ -29,7 +30,6 @@ public final class ProductionModuleHelper {
     public static void execute(ModuleInstance instance, CelestialAsset asset, IRecipeModule recipeModule, Random random,
         Map<RecipeSnapshot, ItemStackWrapper[]> inputWrapperCache,
         Map<RecipeSnapshot, ItemStackWrapper[]> outputWrapperCache) {
-        // TODO: Make this work with the new inventory system
         if (!(asset instanceof AutomatedFacility outpost)) {
             throw new IllegalStateException("This method should only be called by AutomatedFacilities");
         }
@@ -54,8 +54,7 @@ public final class ProductionModuleHelper {
 
         Map<ItemStackWrapper, Long> requiredInputs = requiredInputs(inputWrappers, inputs);
         Map<FluidKey, Long> requiredFluidInputs = requiredFluidInputs(fluidInputs);
-        if (!hasRequiredInputs(outpost, requiredInputs, requiredFluidInputs)
-            || !allowsInputs(outpost, requiredInputs, requiredFluidInputs)) {
+        if (!allowsInputs(outpost, requiredInputs, requiredFluidInputs)) {
             advanceScheduler(config, recipeModule);
             return;
         }
@@ -71,33 +70,14 @@ public final class ProductionModuleHelper {
             advanceScheduler(config, recipeModule);
             return;
         }
-        if (!canFitSelectedItemOutputs(outpost, selectedItemOutputs.totals(), requiredInputs)) {
+        InventoryExchange exchange = new InventoryExchange(
+            requiredInputs,
+            requiredFluidInputs,
+            selectedItemOutputs.totals(),
+            selectedFluidOutputs.totals());
+        if (!outpost.tryExchange(exchange)) {
             advanceScheduler(config, recipeModule);
             return;
-        }
-
-        // Consume inputs
-        for (Map.Entry<ItemStackWrapper, Long> e : requiredInputs.entrySet()) {
-            outpost.updateContents(e.getKey(), -e.getValue(), true);
-        }
-
-        if (fluidInputs != null) {
-            for (FluidStack fluid : fluidInputs) {
-                outpost.updateContents(FluidKey.of(fluid), -fluid.amount, true);
-            }
-        }
-
-        // Produce outputs
-        for (Map.Entry<ItemStackWrapper, Long> e : selectedItemOutputs.totals()
-            .entrySet()) {
-            outpost.updateContents(e.getKey(), e.getValue(), true);
-        }
-
-        if (fluidOutputs != null) {
-            for (Map.Entry<FluidKey, Long> e : selectedFluidOutputs.totals()
-                .entrySet()) {
-                outpost.updateContents(e.getKey(), e.getValue(), true);
-            }
         }
 
         if (config.mode() == RecipeSchedulerMode.ORDER) {
@@ -140,33 +120,6 @@ public final class ProductionModuleHelper {
         return required.isEmpty() ? Map.of() : required;
     }
 
-    private static long totalAmount(Map<?, Long> amounts) {
-        long total = 0L;
-        for (long amount : amounts.values()) {
-            total += amount;
-        }
-        return total;
-    }
-
-    private static boolean hasRequiredInputs(AutomatedFacility outpost, Map<ItemStackWrapper, Long> itemInputs,
-        Map<FluidKey, Long> fluidInputs) {
-        for (Map.Entry<ItemStackWrapper, Long> entry : itemInputs.entrySet()) {
-            if (outpost.getItemAmount(entry.getKey()) < entry.getValue()) return false;
-        }
-        for (Map.Entry<FluidKey, Long> entry : fluidInputs.entrySet()) {
-            if (outpost.getFluidAmount(entry.getKey()) < entry.getValue()) return false;
-        }
-        return true;
-    }
-
-    private static boolean canFitSelectedItemOutputs(AutomatedFacility outpost, Map<ItemStackWrapper, Long> outputs,
-        Map<ItemStackWrapper, Long> inputs) {
-        long outputAmount = totalAmount(outputs);
-        if (outputAmount <= 0L) return true;
-        long freedByInputs = totalAmount(inputs);
-        return outpost.remainingItemInventoryCapacity() + freedByInputs >= outputAmount;
-    }
-
     private static boolean allowsInputs(AutomatedFacility automatedFacility, Map<ItemStackWrapper, Long> requiredInputs,
         Map<FluidKey, Long> requiredFluidInputs) {
         for (Map.Entry<ItemStackWrapper, Long> entry : requiredInputs.entrySet()) {
@@ -192,12 +145,12 @@ public final class ProductionModuleHelper {
         for (ItemStackWrapper output : outputWrappers) {
             if (output == null) continue;
             hasOutputs = true;
-            if (outpost.getItemAmount(output) < requestAmount) return true;
+            if (outpost.itemAmount(output) < requestAmount) return true;
         }
         if (fluidOutputs != null) {
             for (FluidStack stack : fluidOutputs) {
                 hasOutputs = true;
-                if (outpost.getFluidAmount(FluidKey.of(stack)) < requestAmount) return true;
+                if (outpost.fluidAmount(FluidKey.of(stack)) < requestAmount) return true;
             }
         }
         return !hasOutputs;

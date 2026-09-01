@@ -64,7 +64,7 @@ final class StationLayoutTest {
         layout.place(removedCoord, new PlacedTile(removed, StationTileState.OCCUPIED_OPERATIONAL));
         layout.place(retainedCoord, new PlacedTile(retained, StationTileState.OCCUPIED_OPERATIONAL));
 
-        assertTrue(station.removeModule(removed.id));
+        assertEquals(AutomatedFacility.DeconstructionResult.ACCEPTED, station.requestModuleDeconstruction(removed.id));
 
         assertFalse(layout.isOccupied(removedCoord));
         assertTrue(layout.isOccupied(retainedCoord));

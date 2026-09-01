@@ -3,7 +3,6 @@ package com.gtnewhorizons.galaxia.core.network;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
@@ -48,10 +47,9 @@ final class AssetFilterUpdatePacketTest {
         boolean accepted = packet.apply(OTHER_TEAM);
 
         assertFalse(accepted);
-        assertEquals(
-            List.of(),
-            facility.getItemFilter()
-                .serialize());
+        assertFalse(
+            facility.filtersSnapshot()
+                .containsKey(true));
         assertEquals(0, facility.getStateRevision());
     }
 

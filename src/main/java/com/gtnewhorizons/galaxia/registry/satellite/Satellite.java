@@ -4,7 +4,6 @@ import java.util.stream.Stream;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
 public final class Satellite extends CelestialAsset {
@@ -43,8 +42,4 @@ public final class Satellite extends CelestialAsset {
     @Override
     public void tick() {}
 
-    @Override
-    public long updateContents(InventoryKey item, long delta, boolean sync) {
-        return 0L;
-    }
 }

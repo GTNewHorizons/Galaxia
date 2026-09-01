@@ -79,6 +79,7 @@ public final class SatelliteDataEndpointRegistry {
     private static List<Endpoint> endpointsFor(UUID teamId, AutomatedFacility facility) {
         List<Endpoint> endpoints = new ArrayList<>();
         for (ModuleInstance module : facility.modules()) {
+            if (!module.isOperational() || !module.enabled()) continue;
             if (module.component() instanceof ModuleDebugDataGenerator debugModule) {
                 endpoints.add(new Endpoint(teamId, facility, module, facility.celestialObjectKey, debugModule));
             }

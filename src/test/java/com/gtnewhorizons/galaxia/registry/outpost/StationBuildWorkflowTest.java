@@ -105,8 +105,7 @@ final class StationBuildWorkflowTest {
         ModuleInstance module = buildModuleOnServer(facility, FacilityModuleKind.STORAGE, anchor);
 
         // Remove module (server-side flow)
-        facility.removeModule(module.id);
-        layout.removeTileForModule(module.id);
+        assertSame(AutomatedFacility.DeconstructionResult.ACCEPTED, facility.requestModuleDeconstruction(module.id));
 
         assertEquals(
             0,

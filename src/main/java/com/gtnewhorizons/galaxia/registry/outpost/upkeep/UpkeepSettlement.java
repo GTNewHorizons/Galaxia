@@ -104,8 +104,8 @@ public final class UpkeepSettlement {
     }
 
     private static long available(AutomatedFacility facility, InventoryKey key) {
-        if (key instanceof ItemStackWrapper item) return facility.getItemAmount(item);
-        return facility.getFluidAmount((FluidKey) key);
+        if (key instanceof ItemStackWrapper item) return facility.itemAmount(item);
+        return facility.fluidAmount((FluidKey) key);
     }
 
     private static boolean consume(AutomatedFacility facility, InventoryKey key, long amount) {

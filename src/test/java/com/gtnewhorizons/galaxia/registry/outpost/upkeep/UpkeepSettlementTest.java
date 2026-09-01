@@ -43,11 +43,11 @@ final class UpkeepSettlementTest {
                     first.moduleResults()
                         .get(0)
                         .moduleId()));
-        assertEquals(0L, facility.getItemAmount(GOLD));
+        assertEquals(0L, facility.itemAmount(GOLD));
         assertTrue(
             second.unpaidModuleIds()
                 .isEmpty());
-        assertEquals(0L, facility.getItemAmount(GOLD));
+        assertEquals(0L, facility.itemAmount(GOLD));
         assertEquals(
             "0.8",
             second.credits()
@@ -78,7 +78,7 @@ final class UpkeepSettlementTest {
             result.paidModuleIds()
                 .contains(low.moduleId()));
         assertEquals(List.of(normal.moduleId(), low.moduleId()), result.unpaidModuleIds());
-        assertEquals(0L, facility.getItemAmount(GOLD));
+        assertEquals(0L, facility.itemAmount(GOLD));
         assertEquals(
             "0.4",
             result.credits()
@@ -100,7 +100,7 @@ final class UpkeepSettlementTest {
             CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        facility.updateItems(GOLD, available);
+        facility.insert(GOLD, available);
         return facility;
     }
 }

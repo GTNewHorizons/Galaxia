@@ -25,7 +25,6 @@ import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
-import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -33,6 +32,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 
 final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPanelWidget>
@@ -227,18 +227,25 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             disablePanelContent();
             return;
         }
-        IDistributedInventory distributed = distributed();
-        if (distributed == null) {
+        CelestialAsset inventoryOwner = inventoryOwner();
+        if (inventoryOwner == null) {
             open = false;
             return;
         }
-        cachedItemAmounts = distributed.aggregatedItems();
-        cachedFluidAmounts = distributed.aggregatedFluids();
-        List<StationInventoryPanelModel.InventoryItemRow> itemRows = rows(distributed);
-        List<StationInventoryPanelModel.FluidRow> fluidRows = fluidRows(distributed);
-        AutomatedFacility af = af();
-        List<StationInventoryPanelModel.UpkeepItemRow> upkeepRows = af == null ? List.of()
-            : StationInventoryPanelModel.upkeepItemRows(af);
+        AutomatedFacility facility = inventoryOwner instanceof AutomatedFacility af ? af : null;
+        if (facility != null) {
+            cachedItemAmounts = facility.itemSnapshot();
+            cachedFluidAmounts = facility.fluidAmounts();
+        } else {
+            IDistributedInventory physicalInventory = (IDistributedInventory) inventoryOwner;
+            cachedItemAmounts = physicalInventory.aggregatedItems();
+            cachedFluidAmounts = physicalInventory.aggregatedFluids();
+        }
+        List<StationInventoryPanelModel.InventoryItemRow> itemRows = StationInventoryPanelModel
+            .inventoryRows(cachedItemAmounts, facility);
+        List<StationInventoryPanelModel.FluidRow> fluidRows = StationInventoryPanelModel.fluidRows(cachedFluidAmounts);
+        List<StationInventoryPanelModel.UpkeepItemRow> upkeepRows = facility == null ? List.of()
+            : StationInventoryPanelModel.upkeepItemRows(facility);
         refreshAmountInputs(itemRows, upkeepRows);
         String nextSignature = rowStructureSignature(itemRows, fluidRows, upkeepRows);
         if (!panelRoot.isEnabled() || !nextSignature.equals(rowStructureSignature)) {
@@ -838,16 +845,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         BoundKind kind = selectedBoundItem != null ? (low ? BoundKind.ITEM_LOWER : BoundKind.ITEM_UPPER)
             : (low ? BoundKind.FLUID_LOWER : BoundKind.FLUID_UPPER);
         InventoryKey resource = selectedBoundItem != null ? selectedBoundItem : selectedBoundFluid;
-        AutomatedFacility af = af();
-        if (af != null) {
-            if (!af.trySetBound(resource, amount, low)) return;
-        }
-        CelestialClient.updateInventoryBound(
-            assetId,
-            AssetModuleUpdatePacket.ConfigAction.SET_INVENTORY_BOUND,
-            kind,
-            resource,
-            amount);
+        CelestialClient.setInventoryBound(assetId, kind, resource, amount);
     }
 
     private void clearBound(boolean low) {
@@ -855,16 +853,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         BoundKind kind = selectedBoundItem != null ? (low ? BoundKind.ITEM_LOWER : BoundKind.ITEM_UPPER)
             : (low ? BoundKind.FLUID_LOWER : BoundKind.FLUID_UPPER);
         InventoryKey resource = selectedBoundItem != null ? selectedBoundItem : selectedBoundFluid;
-        AutomatedFacility af = af();
-        if (af != null) {
-            af.clearBound(resource, low);
-        }
-        CelestialClient.updateInventoryBound(
-            assetId,
-            AssetModuleUpdatePacket.ConfigAction.CLEAR_INVENTORY_BOUND,
-            kind,
-            resource,
-            0L);
+        CelestialClient.clearInventoryBound(assetId, kind, resource);
         if (low) {
             inputBoundAmount = "";
             if (inputBoundField != null) inputBoundField.setText("");
@@ -924,17 +913,9 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         return assetId != null && CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility af ? af : null;
     }
 
-    private @Nullable IDistributedInventory distributed() {
+    private @Nullable CelestialAsset inventoryOwner() {
         CelestialAsset asset = assetId != null ? CelestialClient.getByAssetId(assetId) : null;
-        return asset instanceof IDistributedInventory d ? d : null;
-    }
-
-    private List<StationInventoryPanelModel.InventoryItemRow> rows(IDistributedInventory distributed) {
-        return StationInventoryPanelModel.inventoryRows(distributed);
-    }
-
-    private List<StationInventoryPanelModel.FluidRow> fluidRows(IDistributedInventory distributed) {
-        return StationInventoryPanelModel.fluidRows(distributed);
+        return asset instanceof AutomatedFacility || asset instanceof IDistributedInventory ? asset : null;
     }
 
     private void refreshAmountInputs(List<StationInventoryPanelModel.InventoryItemRow> rows,
@@ -970,14 +951,17 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         AutomatedFacility af = af();
         if (af == null) return;
         boolean enabled = !af.isUpkeepAutoOrderEnabled(wrapper);
-        af.setUpkeepAutoOrder(wrapper, enabled);
-        if (assetId != null) {
-            CelestialClient.updateLogisticsConfig(
-                assetId,
-                wrapper,
-                af.logisticsConfig.get(wrapper),
-                LogisticsConfigAccessMode.IMPORT_ONLY);
+        LogisticsResourceConfig current = af.logisticsConfig.get(wrapper);
+        LogisticsResourceConfig updated;
+        if (enabled) {
+            int reserve = (int) Math.min(Integer.MAX_VALUE, af.upkeepReserve(wrapper));
+            int orderSize = current == LogisticsResourceConfig.DEFAULT ? 64 : current.orderSize();
+            updated = new LogisticsResourceConfig(reserve, orderSize, true, false);
+        } else {
+            updated = current.withImportEnabled(false)
+                .withSupplyEnabled(false);
         }
+        CelestialClient.updateLogisticsConfig(assetId, wrapper, updated, LogisticsConfigAccessMode.IMPORT_ONLY);
     }
 
     private void updateUpkeepReserveInput(ItemStackWrapper wrapper, String rowKey, String text) {
@@ -986,14 +970,12 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         AutomatedFacility af = af();
         if (af != null) {
             long amount = parseAmount(value);
-            af.setUpkeepReserve(wrapper, amount);
-            if (assetId != null) {
-                CelestialClient.updateLogisticsConfig(
-                    assetId,
-                    wrapper,
-                    af.logisticsConfig.get(wrapper),
-                    LogisticsConfigAccessMode.IMPORT_ONLY);
-            }
+            CelestialClient.updateLogisticsConfig(
+                assetId,
+                wrapper,
+                af.logisticsConfig.get(wrapper)
+                    .withMinReserve((int) Math.min(Integer.MAX_VALUE, amount)),
+                LogisticsConfigAccessMode.IMPORT_ONLY);
         }
     }
 

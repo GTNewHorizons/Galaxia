@@ -37,6 +37,11 @@ public final class ModuleOperationState {
         return new ModuleOperationState(plan, ModuleOperationPhase.WAITING_FOR_MATERIALS, 0, Map.of(), Map.of());
     }
 
+    public static ModuleOperationState deconstructing(@Nonnull Map<String, Long> refundBuffer) {
+        ModuleOperationPlan plan = new ModuleOperationPlan(new ModuleDeconstructionOperation(), 0, Map.of(), false);
+        return new ModuleOperationState(plan, ModuleOperationPhase.REFUNDING, 0, Map.of(), refundBuffer);
+    }
+
     public static ModuleOperationState restore(@Nonnull ModuleOperationPlan plan, @Nonnull ModuleOperationPhase phase,
         int elapsedBuildTicks, @Nonnull Map<String, Long> depositedResources, @Nonnull Map<String, Long> refundBuffer) {
         return new ModuleOperationState(plan, phase, elapsedBuildTicks, depositedResources, refundBuffer);
@@ -142,6 +147,12 @@ public final class ModuleOperationState {
     }
 
     private void validatePhaseDataConsistency() {
+        if (plan.spec() instanceof ModuleDeconstructionOperation
+            && (phase != ModuleOperationPhase.REFUNDING || elapsedBuildTicks != 0 || !depositedResources.isEmpty())) {
+            throw new IllegalStateException(
+                "Deconstruction operation requires REFUNDING phase, zero elapsed ticks, and empty deposits");
+        }
+
         if (phase == ModuleOperationPhase.WAITING_FOR_MATERIALS && elapsedBuildTicks != 0) {
             throw new IllegalStateException(
                 "WAITING_FOR_MATERIALS phase requires elapsedBuildTicks == 0, got " + elapsedBuildTicks);

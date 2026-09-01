@@ -78,7 +78,7 @@ final class HammerDispatchStatusTest {
         ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
         supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(32, 32, false, true));
         requester.logisticsConfig.set(resource, new LogisticsResourceConfig(64, 32, true, false));
-        supplier.updateItems(resource, 96);
+        supplier.insert(resource, 96);
         ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 1_000_000L);
         ModuleInstance hammerModule = hammerModule(hammer);
 
@@ -110,7 +110,7 @@ final class HammerDispatchStatusTest {
             requester.logisticsConfig.get(resource)
                 .withOrderSize(64)
                 .withImportEnabled(true));
-        supplier.updateItems(resource, 128);
+        supplier.insert(resource, 128);
         ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 1_000_000L);
 
         HammerDispatchPlanner.Result result = HammerDispatchPlanner
@@ -176,7 +176,7 @@ final class HammerDispatchStatusTest {
         ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
         supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
         requester.logisticsConfig.set(resource, new LogisticsResourceConfig(16, 64, true, false));
-        supplier.updateItems(resource, 128);
+        supplier.insert(resource, 128);
         ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BIG, 1_000_000L);
         ModuleInstance hammerModule = hammerModule(hammer);
 
@@ -194,7 +194,7 @@ final class HammerDispatchStatusTest {
         ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
         supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
         requester.logisticsConfig.set(resource, new LogisticsResourceConfig(122, 64, true, false));
-        supplier.updateItems(resource, 128);
+        supplier.insert(resource, 128);
         LogisticStore.addDelivery(
             LogisticsDelivery.createWithTrajectory(
                 supplier.assetId,
@@ -226,8 +226,8 @@ final class HammerDispatchStatusTest {
         supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
         fullRequester.logisticsConfig.set(resource, new LogisticsResourceConfig(128, 64, true, false));
         validRequester.logisticsConfig.set(resource, new LogisticsResourceConfig(128, 64, true, false));
-        supplier.updateItems(resource, 256);
-        fullRequester.updateItems(filler, fullRequester.totalItemCapacity());
+        supplier.insert(resource, 256);
+        fullRequester.insert(filler, fullRequester.itemCapacity());
         ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 1_000_000L);
 
         HammerDispatchPlanner.Result result = HammerDispatchPlanner

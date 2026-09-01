@@ -27,6 +27,7 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -288,10 +289,10 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
 
     private static long stockAmount(CelestialAsset asset, ItemStackWrapper wrapper) {
         if (asset instanceof AutomatedFacility af) {
-            return af.getItemAmount(wrapper);
+            return af.itemAmount(wrapper);
         }
-        return asset.aggregatedItems()
-            .getOrDefault(wrapper, 0L);
+        return asset instanceof IDistributedInventory physicalInventory ? physicalInventory.aggregatedItems()
+            .getOrDefault(wrapper, 0L) : 0L;
     }
 
     private TextFieldWidget amountField(int rowIndex, boolean reserve) {

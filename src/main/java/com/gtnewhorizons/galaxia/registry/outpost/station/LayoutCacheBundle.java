@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -71,23 +70,8 @@ public final class LayoutCacheBundle {
         invalidate(affectedBy(mutation, kind), mutation, kind);
     }
 
-    /**
-     * Module-aware mutation. For capacity modules, updates clusters incrementally
-     * instead of falling back to full rebuild.
-     */
     public void applyMutation(MutationKind mutation, FacilityModuleKind kind, ModuleInstance module) {
-        EnumSet<CacheKind> caches = affectedBy(mutation, kind);
-        if (caches.contains(CacheKind.CAPACITY_CLUSTERS) && layout != null) {
-            // Do incremental update before the dirty flag is processed
-            switch (mutation) {
-                case PLACE -> onCapacityModuleAdded(kind, module);
-                case DECONSTRUCT -> onCapacityModuleRemoved(kind, module);
-                case SET_TIER -> onCapacityModuleChanged(kind, module);
-                default -> capacityClustersDirty = true;
-            }
-            caches.remove(CacheKind.CAPACITY_CLUSTERS);
-        }
-        invalidate(caches, mutation, kind);
+        invalidate(affectedBy(mutation, kind), mutation, kind);
     }
 
     public int duplicateCount(FacilityModuleKind kind) {
@@ -104,6 +88,14 @@ public final class LayoutCacheBundle {
         return capacityClusters.getOrDefault(kind, Collections.emptyList());
     }
 
+    public List<CapacityCluster> getCapacityClustersExcluding(FacilityModuleKind kind,
+        ModuleInstance.ID excludedModuleId) {
+        if (layout == null) {
+            return Collections.emptyList();
+        }
+        return CapacityClusterBuilder.buildExcluding(layout, kind, excludedModuleId);
+    }
+
     private void rebuildCapacityClusters() {
         capacityClusters.clear();
         if (layout == null) {
@@ -116,186 +108,6 @@ public final class LayoutCacheBundle {
             }
         }
         capacityClustersDirty = false;
-    }
-
-    // ── Incremental capacity cluster updates ──
-
-    private void onCapacityModuleAdded(FacilityModuleKind kind, ModuleInstance module) {
-        if (capacityClustersDirty) {
-            rebuildCapacityClusters();
-        }
-        List<CapacityCluster> clusters = capacityClusters.computeIfAbsent(kind, k -> new ArrayList<>());
-        StationTileCoord anchor = module.anchor();
-
-        // Find all adjacent clusters (same-kind neighbors that already belong to clusters)
-        List<CapacityCluster> adjacentClusters = new ArrayList<>();
-        for (int i = 0; i < StationLayout.DX.length; i++) {
-            int ndx = anchor.dx() + StationLayout.DX[i];
-            int ndy = anchor.dy() + StationLayout.DY[i];
-            if (ndx < StationTileCoord.MIN || ndx > StationTileCoord.MAX
-                || ndy < StationTileCoord.MIN
-                || ndy > StationTileCoord.MAX) continue;
-            StationTileCoord ncoord = StationTileCoord.of(ndx, ndy);
-            ModuleInstance neighbor = layout.moduleAt(ncoord);
-            if (neighbor == null || neighbor.kind() != kind) continue;
-            for (CapacityCluster cluster : clusters) {
-                if (cluster.members()
-                    .contains(neighbor.anchor()) && !adjacentClusters.contains(cluster)) {
-                    adjacentClusters.add(cluster);
-                }
-            }
-        }
-
-        if (adjacentClusters.isEmpty()) {
-            // No adjacent clusters — create a new one
-            long cap = effectiveCapacityOf(module, layout);
-            Set<StationTileCoord> members = new LinkedHashSet<>();
-            members.add(anchor);
-            clusters.add(new CapacityCluster(kind, Collections.unmodifiableSet(members), cap));
-        } else if (adjacentClusters.size() == 1) {
-            // Add to existing cluster
-            CapacityCluster existing = adjacentClusters.get(0);
-            clusters.remove(existing);
-            CapacityCluster merged = addModuleToCluster(existing, module, layout);
-            clusters.add(merged);
-        } else {
-            // Merge multiple adjacent clusters + new module
-            clusters.removeAll(adjacentClusters);
-            Set<StationTileCoord> mergedMembers = new LinkedHashSet<>();
-            for (CapacityCluster c : adjacentClusters) {
-                mergedMembers.addAll(c.members());
-            }
-            mergedMembers.add(anchor);
-            long totalCap = 0;
-            for (StationTileCoord memberCoord : mergedMembers) {
-                ModuleInstance mi = layout.moduleAt(memberCoord);
-                if (mi != null) totalCap += effectiveCapacityOf(mi, layout);
-            }
-            clusters.add(new CapacityCluster(kind, Collections.unmodifiableSet(mergedMembers), totalCap));
-        }
-    }
-
-    private void onCapacityModuleRemoved(FacilityModuleKind kind, ModuleInstance module) {
-        if (capacityClustersDirty) {
-            rebuildCapacityClusters();
-        }
-        List<CapacityCluster> clusters = capacityClusters.get(kind);
-        if (clusters == null) return;
-        StationTileCoord anchor = module.anchor();
-
-        // Find the cluster containing this module
-        CapacityCluster containing = null;
-        for (CapacityCluster c : clusters) {
-            if (c.members()
-                .contains(anchor)) {
-                containing = c;
-                break;
-            }
-        }
-        if (containing == null) return;
-        clusters.remove(containing);
-
-        Set<StationTileCoord> remaining = new LinkedHashSet<>(containing.members());
-        remaining.remove(anchor);
-        if (remaining.isEmpty()) return;
-
-        // Check if the cluster split — BFS from one remaining member, see if all reached
-        Set<StationTileCoord> reachable = bfsReachable(
-            layout,
-            kind,
-            remaining.iterator()
-                .next(),
-            remaining);
-        Set<StationTileCoord> unreachable = new LinkedHashSet<>(remaining);
-        unreachable.removeAll(reachable);
-
-        // Create cluster for reachable part
-        long reachableCap = 0;
-        for (StationTileCoord c : reachable) {
-            ModuleInstance mi = layout.moduleAt(c);
-            if (mi != null) reachableCap += effectiveCapacityOf(mi, layout);
-        }
-        clusters.add(new CapacityCluster(kind, Collections.unmodifiableSet(reachable), reachableCap));
-
-        // Create cluster for unreachable part (if any)
-        if (!unreachable.isEmpty()) {
-            long unreachableCap = 0;
-            for (StationTileCoord c : unreachable) {
-                ModuleInstance mi = layout.moduleAt(c);
-                if (mi != null) unreachableCap += effectiveCapacityOf(mi, layout);
-            }
-            clusters.add(new CapacityCluster(kind, Collections.unmodifiableSet(unreachable), unreachableCap));
-        }
-    }
-
-    private void onCapacityModuleChanged(FacilityModuleKind kind, ModuleInstance module) {
-        if (capacityClustersDirty) {
-            rebuildCapacityClusters();
-            return;
-        }
-        List<CapacityCluster> clusters = capacityClusters.get(kind);
-        if (clusters == null) return;
-        StationTileCoord anchor = module.anchor();
-
-        // Replace the cluster with recalculated capacity
-        for (int i = 0; i < clusters.size(); i++) {
-            CapacityCluster c = clusters.get(i);
-            if (c.members()
-                .contains(anchor)) {
-                long totalCap = 0;
-                for (StationTileCoord memberCoord : c.members()) {
-                    ModuleInstance mi = layout.moduleAt(memberCoord);
-                    if (mi != null) totalCap += effectiveCapacityOf(mi, layout);
-                }
-                clusters.set(i, new CapacityCluster(kind, c.members(), totalCap));
-                return;
-            }
-        }
-    }
-
-    private static CapacityCluster addModuleToCluster(CapacityCluster cluster, ModuleInstance module,
-        StationLayout layout) {
-        Set<StationTileCoord> newMembers = new LinkedHashSet<>(cluster.members());
-        newMembers.add(module.anchor());
-        long totalCap = 0;
-        for (StationTileCoord c : newMembers) {
-            ModuleInstance mi = layout.moduleAt(c);
-            if (mi != null) totalCap += effectiveCapacityOf(mi, layout);
-        }
-        return new CapacityCluster(cluster.kind(), Collections.unmodifiableSet(newMembers), totalCap);
-    }
-
-    private static Set<StationTileCoord> bfsReachable(StationLayout layout, FacilityModuleKind kind,
-        StationTileCoord start, Set<StationTileCoord> candidates) {
-        Set<StationTileCoord> visited = new HashSet<>();
-        java.util.Deque<StationTileCoord> queue = new java.util.ArrayDeque<>();
-        queue.addLast(start);
-        visited.add(start);
-        while (!queue.isEmpty()) {
-            StationTileCoord current = queue.removeFirst();
-            for (int i = 0; i < StationLayout.DX.length; i++) {
-                int ndx = current.dx() + StationLayout.DX[i];
-                int ndy = current.dy() + StationLayout.DY[i];
-                if (ndx < StationTileCoord.MIN || ndx > StationTileCoord.MAX
-                    || ndy < StationTileCoord.MIN
-                    || ndy > StationTileCoord.MAX) continue;
-                StationTileCoord ncoord = StationTileCoord.of(ndx, ndy);
-                if (!candidates.contains(ncoord) || !visited.add(ncoord)) continue;
-                ModuleInstance neighbor = layout.moduleAt(ncoord);
-                if (neighbor != null && neighbor.kind() == kind) {
-                    queue.addLast(ncoord);
-                }
-            }
-        }
-        return visited;
-    }
-
-    private static long effectiveCapacityOf(ModuleInstance module, StationLayout layout) {
-        if (!module.kind()
-            .isCapacityModule()) return 0L;
-        long base = module.baseCapacity();
-        int neighbors = StationLayout.countOrthogonalNeighbors(layout, module.anchor(), module.kind());
-        return Math.round(base * (1.0 + 0.5 * neighbors));
     }
 
     // ── Maintenance coverage ──

@@ -195,7 +195,7 @@ final class CelestialAssetStoreRefactorTest {
         AutomatedFacility asset = (AutomatedFacility) createAsset(BODY_1);
         ItemStackWrapper resource = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
         store.registerAssetInternal(TEAM_A, asset);
-        asset.updateItems(resource, 10);
+        asset.insert(resource, 10);
         asset.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 1, false, true));
         LogisticStore.updateSignalsForFacility(asset);
         assertFalse(

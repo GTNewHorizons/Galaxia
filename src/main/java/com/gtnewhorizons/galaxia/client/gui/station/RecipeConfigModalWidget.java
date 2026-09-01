@@ -788,7 +788,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         if (target.resource() == BoundResource.ITEM) {
             ItemStackWrapper item = itemKey(target);
             if (item == null) return false;
-            long current = facility.getItemAmount(item);
+            long current = facility.itemAmount(item);
             long recipeAmount = target.side() == BoundSide.INPUT ? itemInputAmount(slot.recipe(), item)
                 : itemOutputAmount(slot.recipe(), item);
             return target.side() == BoundSide.INPUT ? current - recipeAmount < bound : current >= bound;
@@ -796,7 +796,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         FluidStack fluid = fluidStack(target);
         if (fluid == null) return false;
         FluidKey key = FluidKey.of(fluid);
-        long current = facility.getFluidAmount(key);
+        long current = facility.fluidAmount(key);
         long recipeAmount = target.side() == BoundSide.INPUT ? fluidInputAmount(slot.recipe(), key)
             : fluidOutputAmount(slot.recipe(), key);
         return target.side() == BoundSide.INPUT ? current - recipeAmount < bound : current >= bound;
@@ -807,34 +807,18 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         if (facility == null) return;
         BoundKind kind = boundKind(target);
-        boolean isLow = kind == BoundKind.ITEM_LOWER || kind == BoundKind.FLUID_LOWER;
         InventoryKey key = inventoryKey(target);
         if (key == null) return;
-        facility.setBound(key, amount, isLow);
-        CelestialClient.updateInventoryBound(
-            assetId,
-            controller.moduleIndex(),
-            AssetModuleUpdatePacket.ConfigAction.SET_INVENTORY_BOUND,
-            kind,
-            key,
-            amount);
+        CelestialClient.setInventoryBound(assetId, kind, key, amount);
     }
 
     private void clearBound(BoundTarget target) {
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         if (facility == null) return;
         BoundKind kind = boundKind(target);
-        boolean isLow = kind == BoundKind.ITEM_LOWER || kind == BoundKind.FLUID_LOWER;
         InventoryKey key = inventoryKey(target);
         if (key == null) return;
-        facility.clearBound(key, isLow);
-        CelestialClient.updateInventoryBound(
-            assetId,
-            controller.moduleIndex(),
-            AssetModuleUpdatePacket.ConfigAction.CLEAR_INVENTORY_BOUND,
-            kind,
-            key,
-            0L);
+        CelestialClient.clearInventoryBound(assetId, kind, key);
     }
 
     private @Nullable InventoryKey inventoryKey(BoundTarget target) {

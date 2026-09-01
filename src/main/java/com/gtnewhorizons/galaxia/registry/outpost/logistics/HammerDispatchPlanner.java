@@ -9,6 +9,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
@@ -91,8 +92,7 @@ public final class HammerDispatchPlanner {
             if (!supplierCfg.isSupplyEnabled()) continue;
 
             if (!(supplierEntry.getKey() instanceof ItemStackWrapper resource)) continue;
-            long availableSurplus = supplier.getItemAmount(resource)
-                - supplyReserveFor(supplier, resource, supplierCfg);
+            long availableSurplus = itemAmount(supplier, resource) - supplyReserveFor(supplier, resource, supplierCfg);
             if (availableSurplus <= 0L) {
                 sawSurplusBlocked = true;
                 continue;
@@ -106,7 +106,7 @@ public final class HammerDispatchPlanner {
                 LogisticsResourceConfig requesterCfg = requester.logisticsConfig.get(resource);
                 if (requesterCfg == null || !requesterCfg.isImportEnabled()) continue;
 
-                long requesterStock = CelestialAsset.getItemAmount(requester, resource);
+                long requesterStock = itemAmount(requester, resource);
                 long inboundInTransit = LogisticStore.inboundInTransitAmount(requester.assetId, resource);
                 long arrivedInbound = LogisticStore.arrivedInboundAmount(requester.assetId, resource);
                 long requestedAmount = Math
@@ -174,7 +174,7 @@ public final class HammerDispatchPlanner {
         }
 
         long supplierStock = supplier instanceof Station station ? station.getCannonChestItems()
-            .getOrDefault(resource, 0L) : supplier.getItemAmount(resource);
+            .getOrDefault(resource, 0L) : itemAmount(supplier, resource);
         long availableSurplus = supplierStock - supplyReserveFor(supplier, resource, supplierCfg);
         if (availableSurplus <= 0L) return Result.simple(HammerDispatchStatus.Code.NO_SURPLUS_AFTER_RESERVE, hammer);
 
@@ -183,7 +183,7 @@ public final class HammerDispatchPlanner {
             return Result.simple(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, hammer);
         }
 
-        long requesterStock = requester.getItemAmount(resource);
+        long requesterStock = itemAmount(requester, resource);
         long inboundInTransit = LogisticStore.inboundInTransitAmount(requester.assetId, resource);
         long arrivedInbound = LogisticStore.arrivedInboundAmount(requester.assetId, resource);
         long requestedAmount = Math
@@ -354,8 +354,16 @@ public final class HammerDispatchPlanner {
     }
 
     private static long destinationFreeItemCapacity(CelestialAsset requester) {
-        if (requester instanceof AutomatedFacility facility) return facility.remainingItemInventoryCapacity();
+        if (requester instanceof AutomatedFacility facility) return facility.remainingItemCapacity();
         return Long.MAX_VALUE;
+    }
+
+    private static long itemAmount(CelestialAsset asset, ItemStackWrapper resource) {
+        if (asset instanceof AutomatedFacility facility) return facility.itemAmount(resource);
+        if (asset instanceof IDistributedInventory physicalInventory) {
+            return physicalInventory.getItemAmount(resource);
+        }
+        return 0L;
     }
 
     private static Result evaluateCandidateFor(CelestialAsset supplier, CelestialAsset requester,

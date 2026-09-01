@@ -107,7 +107,7 @@ final class StationModuleAlertRegistryTest {
         AutomatedFacility facility = createFacility();
         ModuleInstance module = moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(1, 0), 1L);
         facility.addModule(module);
-        facility.updateItems(ItemStackWrapper.of(new ItemStack(Items.iron_ingot)), 1);
+        facility.insert(ItemStackWrapper.of(new ItemStack(Items.iron_ingot)), 1);
 
         List<StationModuleAlert> alerts = StationModuleAlertRegistry.alertsFor(facility, module);
 
@@ -123,7 +123,7 @@ final class StationModuleAlertRegistryTest {
         low.setPriorityOverride(ModulePriority.LOW);
         facility.addModule(high);
         facility.addModule(low);
-        facility.updateItems(ItemStackWrapper.of(new ItemStack(Items.iron_ingot)), 1);
+        facility.insert(ItemStackWrapper.of(new ItemStack(Items.iron_ingot)), 1);
 
         assertEquals(List.of(), StationModuleAlertRegistry.alertsFor(facility, high));
         List<StationModuleAlert> lowAlerts = StationModuleAlertRegistry.alertsFor(facility, low);
@@ -141,13 +141,13 @@ final class StationModuleAlertRegistryTest {
         ModuleInstance module = moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(1, 0), 1L);
         ItemStackWrapper upkeepItem = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
         facility.addModule(module);
-        facility.updateItems(upkeepItem, 1);
+        facility.insert(upkeepItem, 1);
 
         assertEquals(List.of(), StationModuleAlertRegistry.alertsFor(facility, module));
 
         tickUpkeepMinute(facility);
 
-        assertEquals(0L, facility.getItemAmount(upkeepItem));
+        assertEquals(0L, facility.itemAmount(upkeepItem));
     }
 
     private static AutomatedFacility createFacility() {

@@ -285,6 +285,7 @@ galaxia.gui.orbital.pinned_info.danger.radiation=Radiation
 galaxia.gui.orbital.pinned_info.danger.heat=Extreme heat
 galaxia.gui.orbital.pinned_info.danger.cold=Extreme cold
 galaxia.gui.orbital.pinned_info.danger.remote=Remote operations only
+galaxia.module.operation.deconstruction_pending=Deconstruction pending
 galaxia.gui.orbital.pinned_info.surface.undefined=Unknown
 galaxia.gui.orbital.pinned_info.ore.unknown=Unknown
 galaxia.gui.orbital.pinned_info.ore.undefined=No ore data
