@@ -54,6 +54,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 
 import cpw.mods.fml.relauncher.Side;
@@ -226,19 +227,12 @@ public final class CelestialClient {
             module -> new FacilityCommand.RequestModuleDeconstruction(assetId, module.id));
     }
 
-    public static void setHammerShootingConfig(ID assetId, int moduleIndex, AllowShootingConfig config) {
-        sendModuleCommand(
-            assetId,
-            moduleIndex,
-            module -> new FacilityCommand.SetHammerShootingConfig(assetId, module.id, config));
-    }
-
-    public static void setHammerRoutePriority(ID assetId, int moduleIndex,
+    public static void configureHammer(ID assetId, int moduleIndex, AllowShootingConfig config,
         OrbitalTransferPlanner.RoutePriority priority) {
         sendModuleCommand(
             assetId,
             moduleIndex,
-            module -> new FacilityCommand.SetHammerRoutePriority(assetId, module.id, priority));
+            module -> new FacilityCommand.ConfigureHammer(assetId, module.id, config, priority));
     }
 
     public static void planModuleTierUpgrade(ID assetId, int moduleIndex, ModuleTier targetTier, boolean reserveItems) {
@@ -265,19 +259,18 @@ public final class CelestialClient {
         StarmapActionSyncHandler.sendFacilityCommand(new FacilityCommand.ClearInventoryBound(assetId, kind, resource));
     }
 
-    public static void updateMinerOreBlacklisted(ID assetId, int moduleIndex, String oreKey, boolean blacklisted) {
+    public static void replaceMinerSettings(ID assetId, int moduleIndex, MinerSettings replacement) {
         sendModuleCommand(
             assetId,
             moduleIndex,
-            module -> new FacilityCommand.SetMinerOreBlacklisted(assetId, module.id, oreKey, blacklisted));
+            module -> new FacilityCommand.ReplaceMinerSettings(assetId, module.id, replacement));
     }
 
     public static void updateModuleSettingsGroup(ID assetId, int moduleIndex, @Nullable SettingsGroup.ID groupId) {
         sendModuleCommand(
             assetId,
             moduleIndex,
-            module -> groupId == null ? new FacilityCommand.LeaveSettingsGroup(assetId, module.id)
-                : new FacilityCommand.JoinSettingsGroup(assetId, module.id, groupId));
+            module -> new FacilityCommand.SetSettingsGroup(assetId, module.id, groupId));
     }
 
     public static void createModuleSettingsGroup(ID assetId, int moduleIndex) {

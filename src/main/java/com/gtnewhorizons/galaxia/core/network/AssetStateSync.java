@@ -358,11 +358,8 @@ public final class AssetStateSync {
             ByteBuf buffer = Unpooled.wrappedBuffer(encoded);
             try {
                 AssetSyncPacket packet = new AssetSyncPacket();
-                packet.fromBytes(buffer);
-                if (buffer.isReadable()) return null;
-                if (packet.syncType() == AssetSyncPacket.CLEAR) return framedAssetId == null ? packet : null;
-                return packet.assetId() != null && packet.assetId()
-                    .equals(framedAssetId) ? packet : null;
+                packet.fromBytes(buffer, framedAssetId);
+                return packet;
             } catch (RuntimeException ex) {
                 return null;
             } finally {

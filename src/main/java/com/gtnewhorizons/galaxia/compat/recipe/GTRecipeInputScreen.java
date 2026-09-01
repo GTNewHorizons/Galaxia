@@ -51,6 +51,7 @@ import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot.Resource;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.GuiCraftingRecipe;
@@ -301,8 +302,8 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
                 statusText = neiUsage(snapshot.eut());
                 statusDetailText = neiDuration(snapshot.duration());
                 statusColor = c(EnumColors.MAP_COLOR_SIDEBAR_CONFIRM_TEXT_ENABLED);
-                applyItemGhosts(snapshot.inputs(), itemInputs, ghostItemInputs);
-                applyItemGhosts(snapshot.outputs(), itemOutputs, ghostItemOutputs);
+                applyItemGhosts(snapshot.itemInputs(), itemInputs, ghostItemInputs);
+                applyItemGhosts(snapshot.itemOutputs(), itemOutputs, ghostItemOutputs);
                 applyFluidGhosts(snapshot.fluidInputs(), fluidInputs, ghostFluidInputs);
                 applyFluidGhosts(snapshot.fluidOutputs(), fluidOutputs, ghostFluidOutputs);
             }
@@ -334,26 +335,29 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
         for (FluidTank tank : ghostFluidOutputs) tank.drain(Integer.MAX_VALUE, true);
     }
 
-    private static void applyItemGhosts(ItemStack[] recipeStacks, ItemStackHandler[] hard, ItemStackHandler[] ghost) {
-        boolean[] consumed = consumeHardItems(recipeStacks, hard);
+    private static void applyItemGhosts(List<Resource> resources, ItemStackHandler[] hard, ItemStackHandler[] ghost) {
+        boolean[] consumed = consumeHardItems(resources, hard);
         for (int i = 0; i < ghost.length; i++) {
-            ItemStack recipe = recipeStacks != null && i < recipeStacks.length ? recipeStacks[i] : null;
+            ItemStack recipe = i < resources.size() ? resources.get(i)
+                .itemStack() : null;
             boolean alreadyProvided = i < consumed.length && consumed[i];
             if (recipe != null && hard[i].getStackInSlot(0) == null && !alreadyProvided) {
-                ItemStack copy = recipe.copy();
-                copy.stackSize = 1;
-                ghost[i].setStackInSlot(0, copy);
+                recipe.stackSize = 1;
+                ghost[i].setStackInSlot(0, recipe);
             }
         }
     }
 
-    private static boolean[] consumeHardItems(ItemStack[] recipeStacks, ItemStackHandler[] hard) {
-        boolean[] consumed = recipeStacks != null ? new boolean[recipeStacks.length] : new boolean[0];
+    private static boolean[] consumeHardItems(List<Resource> resources, ItemStackHandler[] hard) {
+        boolean[] consumed = new boolean[resources.size()];
         for (ItemStackHandler handler : hard) {
             ItemStack hardStack = handler.getStackInSlot(0);
-            if (hardStack == null || recipeStacks == null) continue;
-            for (int i = 0; i < recipeStacks.length; i++) {
-                if (!consumed[i] && itemMatches(hardStack, recipeStacks[i])) {
+            if (hardStack == null) continue;
+            for (int i = 0; i < resources.size(); i++) {
+                if (!consumed[i] && itemMatches(
+                    hardStack,
+                    resources.get(i)
+                        .itemStack())) {
                     consumed[i] = true;
                     break;
                 }
@@ -362,24 +366,28 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
         return consumed;
     }
 
-    private void applyFluidGhosts(FluidStack[] recipeStacks, FluidTank[] hard, FluidTank[] ghost) {
-        boolean[] consumed = consumeHardFluids(recipeStacks, hard);
+    private void applyFluidGhosts(List<Resource> resources, FluidTank[] hard, FluidTank[] ghost) {
+        boolean[] consumed = consumeHardFluids(resources, hard);
         for (int i = 0; i < ghost.length; i++) {
-            FluidStack recipe = recipeStacks != null && i < recipeStacks.length ? recipeStacks[i] : null;
+            FluidStack recipe = i < resources.size() ? resources.get(i)
+                .fluidStack() : null;
             boolean alreadyProvided = i < consumed.length && consumed[i];
             if (recipe != null && hard[i].getFluid() == null && !alreadyProvided) {
-                ghost[i].fill(copyFluid(recipe), true);
+                ghost[i].fill(recipe, true);
             }
         }
     }
 
-    private static boolean[] consumeHardFluids(FluidStack[] recipeStacks, FluidTank[] hard) {
-        boolean[] consumed = recipeStacks != null ? new boolean[recipeStacks.length] : new boolean[0];
+    private static boolean[] consumeHardFluids(List<Resource> resources, FluidTank[] hard) {
+        boolean[] consumed = new boolean[resources.size()];
         for (FluidTank tank : hard) {
             FluidStack hardStack = tank.getFluid();
-            if (hardStack == null || recipeStacks == null) continue;
-            for (int i = 0; i < recipeStacks.length; i++) {
-                if (!consumed[i] && fluidMatches(hardStack, recipeStacks[i])) {
+            if (hardStack == null) continue;
+            for (int i = 0; i < resources.size(); i++) {
+                if (!consumed[i] && fluidMatches(
+                    hardStack,
+                    resources.get(i)
+                        .fluidStack())) {
                     consumed[i] = true;
                     break;
                 }
@@ -429,16 +437,6 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
     private static boolean fluidMatches(FluidStack hard, FluidStack recipeStack) {
         String hardName = fluidName(hard);
         return hardName != null && hardName.equals(fluidName(recipeStack));
-    }
-
-    private static FluidStack copyFluid(FluidStack stack) {
-        if (stack == null) return null;
-        try {
-            return stack.copy();
-        } catch (RuntimeException e) {
-            Fluid fluid = fluidType(stack);
-            return fluid != null ? new FluidStack(fluid, stack.amount) : null;
-        }
     }
 
     private static String fluidName(FluidStack stack) {

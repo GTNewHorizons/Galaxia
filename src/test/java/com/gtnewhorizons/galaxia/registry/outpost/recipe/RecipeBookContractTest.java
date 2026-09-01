@@ -75,22 +75,12 @@ final class RecipeBookContractTest {
             .recipe();
         assertRecipeContents(firstRead);
 
-        ItemStack[] readInputs = firstRead.inputs();
-        ItemStack[] readOutputs = firstRead.outputs();
-        FluidStack[] readFluidInputs = firstRead.fluidInputs();
-        FluidStack[] readFluidOutputs = firstRead.fluidOutputs();
-        int[] readOutputChances = firstRead.outputChances();
-        int[] readFluidOutputChances = firstRead.fluidOutputChances();
-        readInputs[0].stackSize = 88;
-        readOutputs[0].stackSize = 87;
-        readFluidInputs[0].amount = 86;
-        readFluidOutputs[0].amount = 85;
-        readInputs[0] = new ItemStack(new Item(), 84, 0);
-        readOutputs[0] = new ItemStack(new Item(), 83, 0);
-        readFluidInputs[0] = new FluidStack(FluidRegistry.WATER, 82);
-        readFluidOutputs[0] = new FluidStack(FluidRegistry.LAVA, 81);
-        readOutputChances[0] = 3;
-        readFluidOutputChances[0] = 4;
+        firstRead.itemInputs()
+            .get(0)
+            .itemStack().stackSize = 88;
+        firstRead.fluidOutputs()
+            .get(0)
+            .fluidStack().amount = 85;
 
         RecipeSnapshot secondRead = book.recipes()
             .get(0)
@@ -99,6 +89,10 @@ final class RecipeBookContractTest {
         assertThrows(
             UnsupportedOperationException.class,
             () -> book.recipes()
+                .clear());
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> firstRead.itemInputs()
                 .clear());
     }
 
@@ -110,12 +104,10 @@ final class RecipeBookContractTest {
             validSnapshot.recipeMapOrdinal(),
             validSnapshot.recipeIndex(),
             validSnapshot.contentHash() + 1,
-            validSnapshot.inputs(),
-            validSnapshot.outputs(),
+            validSnapshot.itemInputs(),
+            validSnapshot.itemOutputs(),
             validSnapshot.fluidInputs(),
             validSnapshot.fluidOutputs(),
-            validSnapshot.outputChances(),
-            validSnapshot.fluidOutputChances(),
             validSnapshot.duration(),
             validSnapshot.eut());
 
@@ -150,12 +142,36 @@ final class RecipeBookContractTest {
     }
 
     private static void assertRecipeContents(RecipeSnapshot snapshot) {
-        assertEquals(2, snapshot.inputs()[0].stackSize);
-        assertEquals(3, snapshot.outputs()[0].stackSize);
-        assertEquals(144, snapshot.fluidInputs()[0].amount);
-        assertEquals(288, snapshot.fluidOutputs()[0].amount);
-        assertEquals(7500, snapshot.outputChances()[0]);
-        assertEquals(5000, snapshot.fluidOutputChances()[0]);
+        assertEquals(
+            2,
+            snapshot.itemInputs()
+                .get(0)
+                .amount());
+        assertEquals(
+            3,
+            snapshot.itemOutputs()
+                .get(0)
+                .amount());
+        assertEquals(
+            144,
+            snapshot.fluidInputs()
+                .get(0)
+                .amount());
+        assertEquals(
+            288,
+            snapshot.fluidOutputs()
+                .get(0)
+                .amount());
+        assertEquals(
+            7500,
+            snapshot.itemOutputs()
+                .get(0)
+                .effectiveChance());
+        assertEquals(
+            5000,
+            snapshot.fluidOutputs()
+                .get(0)
+                .effectiveChance());
     }
 
     private static SavedRecipe recipe(int index, String name) {

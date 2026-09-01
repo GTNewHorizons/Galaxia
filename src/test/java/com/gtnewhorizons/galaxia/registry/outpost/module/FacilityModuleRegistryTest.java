@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.outpost.module;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -52,6 +53,14 @@ final class FacilityModuleRegistryTest {
         assertEquals("BIG", ((HammerModuleOperation) plan.spec()).targetVariantKey());
         assertEquals(200, plan.buildTicks());
         assertFalse(plan.reserveItems());
+    }
+
+    @Test
+    void moduleCreationRejectsTierNotAllowedByKind() {
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> FacilityModuleRegistry
+                .create(ModuleInstance.ID.create(), FacilityModuleKind.POWER, null, ModuleShape.SINGLE, ModuleTier.HV));
     }
 
     @Test

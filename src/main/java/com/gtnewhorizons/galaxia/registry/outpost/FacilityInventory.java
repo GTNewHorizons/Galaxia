@@ -22,8 +22,8 @@ final class FacilityInventory {
         }
     }
 
-    private final Map<ItemStackWrapper, Long> itemAmounts = new LinkedHashMap<>();
-    private final Map<FluidKey, Long> fluidAmounts = new LinkedHashMap<>();
+    private final Map<InventoryKey, Long> amounts = new LinkedHashMap<>();
+    private final Map<InventoryKey, InventoryBounds> bounds = new LinkedHashMap<>();
     private final ResourceFilter<ItemStackWrapper> itemFilter = ResourceFilter.forItems();
     private final ResourceFilter<FluidKey> fluidFilter = ResourceFilter.forFluids();
 
@@ -39,14 +39,15 @@ final class FacilityInventory {
     long extract(InventoryKey resource, long requested) {
         requireNonNegative(requested, "extraction");
         if (resource == null || requested == 0L) return 0L;
-        if (resource instanceof ItemStackWrapper item) {
-            return extract(itemAmounts, item, requested);
-        }
-        return extract(fluidAmounts, (FluidKey) resource, requested);
+        return extract(amounts, resource, requested);
     }
 
     ExchangeResult tryExchange(InventoryExchange exchange, long itemCapacity) {
-        if (exchange == null || exchange.isEmpty()) return ExchangeResult.REJECTED;
+        if (exchange == null || exchange.inputs()
+            .isEmpty()
+            && exchange.outputs()
+                .isEmpty())
+            return ExchangeResult.REJECTED;
         if (!allowsOutputs(exchange)) return ExchangeResult.REJECTED;
 
         Set<InventoryKey> touched = touchedResources(exchange);
@@ -54,45 +55,49 @@ final class FacilityInventory {
         boolean changed = false;
         for (InventoryKey resource : touched) {
             long stored = amount(resource);
-            long input = exchange.inputAmount(resource);
+            long input = exchange.inputs()
+                .getOrDefault(resource, 0L);
             if (stored < input) return ExchangeResult.REJECTED;
             try {
-                long finalAmount = Math.addExact(stored - input, exchange.outputAmount(resource));
+                long finalAmount = Math.addExact(
+                    stored - input,
+                    exchange.outputs()
+                        .getOrDefault(resource, 0L));
                 finalAmounts.put(resource, finalAmount);
                 changed |= finalAmount != stored;
             } catch (ArithmeticException ignored) {
                 return ExchangeResult.REJECTED;
             }
         }
-        if (!exchange.itemOutputs()
-            .isEmpty() && !fitsItemCapacity(finalAmounts, itemCapacity)) {
+        if (exchange.outputs()
+            .keySet()
+            .stream()
+            .anyMatch(InventoryKey::isItem) && !fitsItemCapacity(finalAmounts, itemCapacity)) {
             return ExchangeResult.REJECTED;
         }
         if (!changed) return ExchangeResult.UNCHANGED;
 
         for (Map.Entry<InventoryKey, Long> entry : finalAmounts.entrySet()) {
-            setAmount(entry.getKey(), entry.getValue());
+            setAmount(amounts, entry.getKey(), entry.getValue());
         }
         return ExchangeResult.CHANGED;
     }
 
     ReturnItemsResult returnItems(Map<ItemStackWrapper, Long> requested, long itemCapacity) {
         if (requested == null) throw new IllegalArgumentException("Returned items must not be null");
-        Map<ItemStackWrapper, Long> validated = new LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, Long> entry : requested.entrySet()) {
             if (entry.getKey() == null || entry.getValue() == null || entry.getValue() <= 0L) {
                 throw new IllegalArgumentException("Returned items must contain positive amounts and non-null keys");
             }
-            validated.put(entry.getKey(), entry.getValue());
         }
 
         long available = availableItemCapacity(itemCapacity);
         Map<ItemStackWrapper, Long> accepted = new LinkedHashMap<>();
         Map<ItemStackWrapper, Long> remaining = new LinkedHashMap<>();
-        for (Map.Entry<ItemStackWrapper, Long> entry : validated.entrySet()) {
+        for (Map.Entry<ItemStackWrapper, Long> entry : requested.entrySet()) {
             long applied = Math.min(entry.getValue(), available);
             if (applied > 0L) {
-                long stored = itemAmounts.getOrDefault(entry.getKey(), 0L);
+                long stored = amounts.getOrDefault(entry.getKey(), 0L);
                 try {
                     Math.addExact(stored, applied);
                 } catch (ArithmeticException overflow) {
@@ -105,121 +110,96 @@ final class FacilityInventory {
             if (leftover > 0L) remaining.put(entry.getKey(), leftover);
         }
         for (Map.Entry<ItemStackWrapper, Long> entry : accepted.entrySet()) {
-            itemAmounts.merge(entry.getKey(), entry.getValue(), Math::addExact);
+            amounts.merge(entry.getKey(), entry.getValue(), Math::addExact);
         }
         return new ReturnItemsResult(Collections.unmodifiableMap(remaining), !accepted.isEmpty());
     }
 
     long amount(InventoryKey resource) {
-        if (resource instanceof ItemStackWrapper item) return itemAmounts.getOrDefault(item, 0L);
-        return fluidAmounts.getOrDefault((FluidKey) resource, 0L);
+        return amounts.getOrDefault(resource, 0L);
+    }
+
+    InventoryBounds bound(InventoryKey resource) {
+        if (resource == null) return InventoryBounds.invalid();
+        return bounds.getOrDefault(resource, InventoryBounds.invalid());
+    }
+
+    void setBound(InventoryKey resource, InventoryBounds bound) {
+        if (resource == null || bound == null) return;
+        if (bound.isInvalid()) bounds.remove(resource);
+        else bounds.put(resource, bound);
+    }
+
+    boolean clearBound(InventoryKey resource) {
+        return resource != null && bounds.remove(resource) != null;
+    }
+
+    Map<InventoryKey, InventoryBounds> boundsSnapshot() {
+        return Collections.unmodifiableMap(new LinkedHashMap<>(bounds));
+    }
+
+    void restoreBounds(Map<? extends InventoryKey, InventoryBounds> snapshot) {
+        if (snapshot == null) throw new IllegalArgumentException("Facility inventory bounds must not be null");
+        Map<InventoryKey, InventoryBounds> validated = new LinkedHashMap<>();
+        for (Map.Entry<? extends InventoryKey, InventoryBounds> entry : snapshot.entrySet()) {
+            if (entry.getKey() == null || entry.getValue() == null
+                || entry.getValue()
+                    .isInvalid()) {
+                throw new IllegalArgumentException("Facility inventory bounds must contain valid keys and bounds");
+            }
+            validated.put(entry.getKey(), entry.getValue());
+        }
+        bounds.clear();
+        bounds.putAll(validated);
     }
 
     long totalItems() {
-        return total(itemAmounts);
+        long total = 0L;
+        for (Map.Entry<InventoryKey, Long> entry : amounts.entrySet()) {
+            if (!entry.getKey()
+                .isItem()) continue;
+            if (Long.MAX_VALUE - total < entry.getValue()) return Long.MAX_VALUE;
+            total += entry.getValue();
+        }
+        return total;
     }
 
     Map<FluidKey, Long> fluidAmountsSnapshot() {
-        return Collections.unmodifiableMap(new LinkedHashMap<>(fluidAmounts));
-    }
-
-    void restoreSnapshot(Map<ItemStackWrapper, Long> items, Map<FluidKey, Long> fluids) {
-        Map<ItemStackWrapper, Long> validatedItems = validateItemAmounts(items);
-        Map<FluidKey, Long> validatedFluids = validateFluidAmounts(fluids);
-        itemAmounts.clear();
-        itemAmounts.putAll(validatedItems);
-        fluidAmounts.clear();
-        fluidAmounts.putAll(validatedFluids);
-    }
-
-    private static Map<FluidKey, Long> validateFluidAmounts(Map<FluidKey, Long> snapshot) {
-        if (snapshot == null) throw new IllegalArgumentException("Facility fluid snapshot must not be null");
-        Map<FluidKey, Long> validated = new LinkedHashMap<>();
-        for (Map.Entry<FluidKey, Long> entry : snapshot.entrySet()) {
-            FluidKey key = entry.getKey();
-            Long amount = entry.getValue();
-            if (key == null || key.fluid() == null) {
-                throw new IllegalArgumentException("Facility fluid snapshot contains an invalid fluid");
-            }
-            if (amount == null || amount <= 0L) {
-                throw new IllegalArgumentException(
-                    "Facility fluid snapshot amount must be positive for " + key.fluid()
-                        .getName() + ": " + amount);
-            }
-            if (validated.put(key, amount) != null) {
-                throw new IllegalArgumentException("Facility fluid snapshot contains duplicate fluid key " + key);
-            }
-        }
-        return validated;
-    }
-
-    Map<ItemStackWrapper, Long> itemSnapshot() {
-        return Collections.unmodifiableMap(new LinkedHashMap<>(itemAmounts));
-    }
-
-    Map<String, Long> fluidSnapshot() {
-        Map<String, Long> result = new LinkedHashMap<>();
-        for (Map.Entry<FluidKey, Long> entry : fluidAmounts.entrySet()) {
-            result.put(
-                entry.getKey()
-                    .fluid()
-                    .getName(),
-                entry.getValue());
-        }
+        Map<FluidKey, Long> result = new LinkedHashMap<>();
+        amounts.forEach((key, amount) -> { if (key instanceof FluidKey fluid) result.put(fluid, amount); });
         return Collections.unmodifiableMap(result);
     }
 
-    void loadItemSnapshot(Map<ItemStackWrapper, Long> snapshot) {
-        Map<ItemStackWrapper, Long> validated = validateItemAmounts(snapshot);
-        itemAmounts.clear();
-        itemAmounts.putAll(validated);
+    Map<InventoryKey, Long> amountsSnapshot() {
+        return Collections.unmodifiableMap(new LinkedHashMap<>(amounts));
     }
 
-    private static Map<ItemStackWrapper, Long> validateItemAmounts(Map<ItemStackWrapper, Long> snapshot) {
-        if (snapshot == null) throw new IllegalArgumentException("Facility item snapshot must not be null");
-        Map<ItemStackWrapper, Long> validated = new LinkedHashMap<>();
-        for (Map.Entry<ItemStackWrapper, Long> entry : snapshot.entrySet()) {
-            ItemStackWrapper key = entry.getKey();
+    void restoreSnapshot(Map<? extends InventoryKey, Long> snapshot) {
+        if (snapshot == null) throw new IllegalArgumentException("Facility inventory snapshot must not be null");
+        Map<InventoryKey, Long> validated = new LinkedHashMap<>();
+        for (Map.Entry<? extends InventoryKey, Long> entry : snapshot.entrySet()) {
+            InventoryKey key = entry.getKey();
             Long amount = entry.getValue();
-            if (key == null) throw new IllegalArgumentException("Facility item snapshot contains a null item");
-            if (amount == null || amount <= 0L) {
-                throw new IllegalArgumentException(
-                    "Facility item snapshot amount must be positive for " + key.toKey() + ": " + amount);
+            if (key == null || key instanceof FluidKey fluid && fluid.fluid() == null
+                || amount == null
+                || amount <= 0L) {
+                throw new IllegalArgumentException("Facility inventory snapshot must contain valid positive amounts");
             }
-            if (validated.put(key, amount) != null) {
-                throw new IllegalArgumentException("Facility item snapshot contains duplicate item " + key.toKey());
-            }
+            validated.put(key, amount);
         }
-        return validated;
+        amounts.clear();
+        amounts.putAll(validated);
     }
 
-    void loadFluidSnapshot(Map<String, Long> snapshot) {
-        if (snapshot == null) throw new IllegalArgumentException("Facility fluid snapshot must not be null");
-        Map<FluidKey, Long> validated = new LinkedHashMap<>();
-        for (Map.Entry<String, Long> entry : snapshot.entrySet()) {
-            String name = entry.getKey();
-            Long amount = entry.getValue();
-            if (name == null || name.isBlank()) {
-                throw new IllegalArgumentException("Facility fluid snapshot contains a null or blank fluid name");
-            }
-            if (amount == null || amount <= 0L) {
-                throw new IllegalArgumentException(
-                    "Facility fluid snapshot amount must be positive for " + name + ": " + amount);
-            }
-            FluidKey key = FluidKey.fromName(name);
-            if (key == null)
-                throw new IllegalArgumentException("Facility fluid snapshot contains unknown fluid " + name);
-            if (validated.put(key, amount) != null) {
-                throw new IllegalArgumentException("Facility fluid snapshot contains duplicate fluid " + name);
-            }
-        }
-        fluidAmounts.clear();
-        fluidAmounts.putAll(validated);
+    Map<ItemStackWrapper, Long> itemSnapshot() {
+        Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
+        amounts.forEach((key, amount) -> { if (key instanceof ItemStackWrapper item) result.put(item, amount); });
+        return Collections.unmodifiableMap(result);
     }
 
     void clear() {
-        itemAmounts.clear();
-        fluidAmounts.clear();
+        amounts.clear();
+        bounds.clear();
         itemFilter.clear();
         fluidFilter.clear();
     }
@@ -294,22 +274,25 @@ final class FacilityInventory {
         long available = availableItemCapacity(capacity);
         long applied = Math.min(requested, available);
         if (applied == 0L) return 0L;
-        itemAmounts.merge(item, applied, Math::addExact);
+        amounts.merge(item, applied, Math::addExact);
         return applied;
     }
 
     private long insertFluid(FluidKey fluid, long requested) {
-        long stored = fluidAmounts.getOrDefault(fluid, 0L);
+        long stored = amounts.getOrDefault(fluid, 0L);
         if (stored >= Long.MAX_VALUE) return 0L;
         long applied = Math.min(requested, Long.MAX_VALUE - stored);
         if (applied == 0L) return 0L;
-        fluidAmounts.put(fluid, stored + applied);
+        amounts.put(fluid, stored + applied);
         return applied;
     }
 
     private long availableItemCapacity(long capacity) {
         long available = Math.max(0L, capacity);
-        for (long stored : itemAmounts.values()) {
+        for (Map.Entry<InventoryKey, Long> entry : amounts.entrySet()) {
+            if (!entry.getKey()
+                .isItem()) continue;
+            long stored = entry.getValue();
             if (stored >= available) return 0L;
             available -= stored;
         }
@@ -322,67 +305,35 @@ final class FacilityInventory {
             : fluidFilter.test((FluidKey) resource);
     }
 
-    private static long total(Map<?, Long> amounts) {
-        long total = 0L;
-        for (long amount : amounts.values()) {
-            if (Long.MAX_VALUE - total < amount) return Long.MAX_VALUE;
-            total += amount;
-        }
-        return total;
-    }
-
     private boolean allowsOutputs(InventoryExchange exchange) {
-        for (ItemStackWrapper item : exchange.itemOutputs()
+        for (InventoryKey resource : exchange.outputs()
             .keySet()) {
-            if (!itemFilter.test(item)) return false;
-        }
-        for (FluidKey fluid : exchange.fluidOutputs()
-            .keySet()) {
-            if (!fluidFilter.test(fluid)) return false;
+            if (!allowsInsertion(resource)) return false;
         }
         return true;
     }
 
     private static Set<InventoryKey> touchedResources(InventoryExchange exchange) {
-        Set<InventoryKey> touched = new LinkedHashSet<>();
-        touched.addAll(
-            exchange.itemInputs()
+        Set<InventoryKey> touched = new LinkedHashSet<>(
+            exchange.inputs()
                 .keySet());
         touched.addAll(
-            exchange.fluidInputs()
-                .keySet());
-        touched.addAll(
-            exchange.itemOutputs()
-                .keySet());
-        touched.addAll(
-            exchange.fluidOutputs()
+            exchange.outputs()
                 .keySet());
         return touched;
     }
 
     private boolean fitsItemCapacity(Map<InventoryKey, Long> finalAmounts, long capacity) {
+        Map<InventoryKey, Long> projected = new LinkedHashMap<>(amounts);
+        projected.putAll(finalAmounts);
         long remaining = Math.max(0L, capacity);
-        Set<ItemStackWrapper> counted = new LinkedHashSet<>();
-        for (Map.Entry<ItemStackWrapper, Long> entry : itemAmounts.entrySet()) {
-            long amount = finalAmounts.getOrDefault(entry.getKey(), entry.getValue());
-            if (amount > remaining) return false;
-            remaining -= amount;
-            counted.add(entry.getKey());
-        }
-        for (Map.Entry<InventoryKey, Long> entry : finalAmounts.entrySet()) {
-            if (!(entry.getKey() instanceof ItemStackWrapper item) || counted.contains(item)) continue;
+        for (Map.Entry<InventoryKey, Long> entry : projected.entrySet()) {
+            if (!entry.getKey()
+                .isItem()) continue;
             if (entry.getValue() > remaining) return false;
             remaining -= entry.getValue();
         }
         return true;
-    }
-
-    private void setAmount(InventoryKey resource, long amount) {
-        if (resource instanceof ItemStackWrapper item) {
-            setAmount(itemAmounts, item, amount);
-        } else {
-            setAmount(fluidAmounts, (FluidKey) resource, amount);
-        }
     }
 
     private static <K> void setAmount(Map<K, Long> amounts, K key, long amount) {
@@ -405,4 +356,5 @@ final class FacilityInventory {
             throw new IllegalArgumentException("Facility inventory " + operation + " request must be non-negative");
         }
     }
+
 }

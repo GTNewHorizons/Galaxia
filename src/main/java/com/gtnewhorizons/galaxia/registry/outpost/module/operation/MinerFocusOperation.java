@@ -8,8 +8,8 @@ public record MinerFocusOperation(ModuleTier targetTier, String targetFocusTierK
     implements IModuleOperation {
 
     public MinerFocusOperation {
-        if (targetFocusTierKey == null) {
-            throw new IllegalArgumentException("targetFocusTierKey must not be null");
+        if (targetFocusTierKey == null || targetFocusTierKey.isBlank()) {
+            throw new IllegalArgumentException("targetFocusTierKey must not be null or blank");
         }
     }
 }

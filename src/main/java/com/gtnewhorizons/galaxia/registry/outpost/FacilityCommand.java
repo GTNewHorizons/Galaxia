@@ -21,25 +21,26 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 
-public sealed interface FacilityCommand permits FacilityCommand.AdjustInventory,FacilityCommand.ClearInventoryResource,FacilityCommand.SetInventoryBound,FacilityCommand.ClearInventoryBound,FacilityCommand.ReplaceFilters,FacilityCommand.PutLogisticsConfig,FacilityCommand.RemoveLogisticsConfig,FacilityCommand.BuildModules,FacilityCommand.CopyBuildModules,FacilityCommand.RequestModuleDeconstruction,FacilityCommand.CancelModuleOperation,FacilityCommand.ReplaceRecipeBook,FacilityCommand.ModuleConfiguration,FacilityCommand.ModuleOperationRequest,FacilityCommand.ModuleSettingsCommand {
+public sealed interface FacilityCommand permits FacilityCommand.BuildCommand,FacilityCommand.ModuleCommand,FacilityCommand.InventoryCommand,FacilityCommand.LogisticsCommand {
 
     CelestialAsset.ID facilityId();
 
     record AdjustInventory(CelestialAsset.ID facilityId, InventoryKey resource, InventoryAdjustment direction,
-        long amount) implements FacilityCommand {}
+        long amount) implements InventoryCommand {}
 
-    record ClearInventoryResource(CelestialAsset.ID facilityId, InventoryKey resource) implements FacilityCommand {}
+    record ClearInventoryResource(CelestialAsset.ID facilityId, InventoryKey resource) implements InventoryCommand {}
 
     record SetInventoryBound(CelestialAsset.ID facilityId, BoundKind kind, InventoryKey resource, long amount)
-        implements FacilityCommand {}
+        implements InventoryCommand {}
 
     record ClearInventoryBound(CelestialAsset.ID facilityId, BoundKind kind, InventoryKey resource)
-        implements FacilityCommand {}
+        implements InventoryCommand {}
 
     record ReplaceFilters(CelestialAsset.ID facilityId, FilterKind kind, @Nullable List<String> filterKeys)
-        implements FacilityCommand {
+        implements LogisticsCommand {
 
         public ReplaceFilters {
             filterKeys = filterKeys == null ? null : Collections.unmodifiableList(new ArrayList<>(filterKeys));
@@ -47,13 +48,13 @@ public sealed interface FacilityCommand permits FacilityCommand.AdjustInventory,
     }
 
     record PutLogisticsConfig(CelestialAsset.ID facilityId, InventoryKey resource, LogisticsResourceConfig config,
-        LogisticsConfigAccessMode accessMode) implements FacilityCommand {}
+        LogisticsConfigAccessMode accessMode) implements LogisticsCommand {}
 
-    record RemoveLogisticsConfig(CelestialAsset.ID facilityId, InventoryKey resource) implements FacilityCommand {}
+    record RemoveLogisticsConfig(CelestialAsset.ID facilityId, InventoryKey resource) implements LogisticsCommand {}
 
     record BuildModules(CelestialAsset.ID facilityId, FacilityModuleKind kind, ModuleShape shape,
         IModuleComponent.BuildPhysicalSpec physicalSpec, @Nullable SettingsGroup.ID settingsGroupId,
-        boolean instantBuild, @Nullable List<ModulePlacement> placements) implements FacilityCommand {
+        boolean instantBuild, @Nullable List<ModulePlacement> placements) implements BuildCommand {
 
         public BuildModules {
             placements = placements == null ? null : List.copyOf(placements);
@@ -61,7 +62,7 @@ public sealed interface FacilityCommand permits FacilityCommand.AdjustInventory,
     }
 
     record CopyBuildModules(CelestialAsset.ID facilityId, ModuleInstance.ID sourceModuleId, boolean instantBuild,
-        @Nullable List<ModulePlacement> placements) implements FacilityCommand {
+        @Nullable List<ModulePlacement> placements) implements BuildCommand {
 
         public CopyBuildModules {
             placements = placements == null ? null : List.copyOf(placements);
@@ -69,12 +70,12 @@ public sealed interface FacilityCommand permits FacilityCommand.AdjustInventory,
     }
 
     record RequestModuleDeconstruction(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId)
-        implements FacilityCommand {}
+        implements ModuleCommand {}
 
-    record CancelModuleOperation(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId) implements FacilityCommand {}
+    record CancelModuleOperation(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId) implements ModuleCommand {}
 
     record ReplaceRecipeBook(CelestialAsset.ID facilityId, RecipeBookOwner owner, RecipeBook replacement)
-        implements FacilityCommand {}
+        implements ModuleCommand {}
 
     record CreateSettingsGroup(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, String displayName)
         implements ModuleSettingsCommand {}
@@ -82,11 +83,8 @@ public sealed interface FacilityCommand permits FacilityCommand.AdjustInventory,
     record RenameSettingsGroup(CelestialAsset.ID facilityId, SettingsGroup.ID groupId, String displayName)
         implements ModuleSettingsCommand {}
 
-    record JoinSettingsGroup(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, SettingsGroup.ID groupId)
-        implements ModuleSettingsCommand {}
-
-    record LeaveSettingsGroup(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId)
-        implements ModuleSettingsCommand {}
+    record SetSettingsGroup(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId,
+        @Nullable SettingsGroup.ID groupId) implements ModuleSettingsCommand {}
 
     record CopyModuleSettings(CelestialAsset.ID facilityId, ModuleInstance.ID sourceModuleId,
         List<ModuleInstance.ID> targetModuleIds) implements ModuleSettingsCommand {
@@ -97,13 +95,10 @@ public sealed interface FacilityCommand permits FacilityCommand.AdjustInventory,
 
     }
 
-    record SetMinerOreBlacklisted(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, String oreKey,
-        boolean blacklisted) implements ModuleSettingsCommand {}
+    record ReplaceMinerSettings(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, MinerSettings replacement)
+        implements ModuleSettingsCommand {}
 
-    record SetHammerShootingConfig(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, AllowShootingConfig config)
-        implements ModuleConfiguration {}
-
-    record SetHammerRoutePriority(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId,
+    record ConfigureHammer(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, AllowShootingConfig config,
         OrbitalTransferPlanner.RoutePriority priority) implements ModuleConfiguration {}
 
     record SetMinerFocusOre(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, @Nullable String oreKey)
@@ -132,18 +127,33 @@ public sealed interface FacilityCommand permits FacilityCommand.AdjustInventory,
     record PlanMinerFocusUpgrade(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, ModuleTier targetModuleTier,
         MinerFocusTier targetFocusTier) implements ModuleOperationRequest {}
 
-    sealed interface ModuleConfiguration extends
-        FacilityCommand permits SetHammerShootingConfig,SetHammerRoutePriority,SetMinerFocusOre,ConfigureDebugDataGenerator {
+    sealed interface BuildCommand extends FacilityCommand permits BuildModules,CopyBuildModules {
+    }
+
+    sealed interface ModuleCommand extends
+        FacilityCommand permits RequestModuleDeconstruction,CancelModuleOperation,ReplaceRecipeBook,ModuleConfiguration,ModuleSettingsCommand,ModuleOperationRequest {
+    }
+
+    sealed interface InventoryCommand
+        extends FacilityCommand permits AdjustInventory,ClearInventoryResource,SetInventoryBound,ClearInventoryBound {
+    }
+
+    sealed interface LogisticsCommand
+        extends FacilityCommand permits ReplaceFilters,PutLogisticsConfig,RemoveLogisticsConfig {
+    }
+
+    sealed interface ModuleConfiguration
+        extends ModuleCommand permits ConfigureHammer,SetMinerFocusOre,ConfigureDebugDataGenerator {
 
         ModuleInstance.ID moduleId();
     }
 
     sealed interface ModuleSettingsCommand extends
-        FacilityCommand permits CreateSettingsGroup,RenameSettingsGroup,JoinSettingsGroup,LeaveSettingsGroup,CopyModuleSettings,SetMinerOreBlacklisted {
+        ModuleCommand permits CreateSettingsGroup,RenameSettingsGroup,SetSettingsGroup,CopyModuleSettings,ReplaceMinerSettings {
     }
 
     sealed interface ModuleOperationRequest
-        extends FacilityCommand permits PlanHammerUpgrade,PlanTierUpgrade,PlanMinerFocusUpgrade {
+        extends ModuleCommand permits PlanHammerUpgrade,PlanTierUpgrade,PlanMinerFocusUpgrade {
     }
 
     enum FilterKind {

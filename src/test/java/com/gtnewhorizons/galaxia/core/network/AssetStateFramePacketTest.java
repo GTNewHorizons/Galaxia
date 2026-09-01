@@ -3,28 +3,43 @@ package com.gtnewhorizons.galaxia.core.network;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
+
+import net.minecraft.init.Items;
+import net.minecraft.nbt.CompressedStreamTools;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraftforge.common.util.Constants.NBT;
+import net.minecraftforge.fluids.FluidRegistry;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.core.state.AssetState;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
 
 final class AssetStateFramePacketTest {
@@ -182,6 +197,121 @@ final class AssetStateFramePacketTest {
     }
 
     @Test
+    void logicalRemovalUsesTheFramedAssetIdentity() {
+        AutomatedFacility facility = facility();
+        CelestialAssetStore.CLIENT.registerAssetInternal(TEAM, facility);
+        ByteBuf logical = Unpooled.buffer();
+        logical.writeByte(AssetSyncPacket.ASSET_REMOVED);
+        logical.writeLong(1L);
+        byte[] payload = new byte[logical.readableBytes()];
+        logical.readBytes(payload);
+        RecordingClientTransport transport = new RecordingClientTransport();
+        AssetStateSync.Client client = new AssetStateSync.Client(transport);
+
+        for (AssetStateFramePacket frame : framesForPayload(facility.assetId, payload)) client.receive(frame);
+
+        assertNull(CelestialAssetStore.CLIENT.findAssetInternal(facility.assetId));
+        assertTrue(transport.fullRequests.isEmpty());
+    }
+
+    @Test
+    void logicalRemovalRejectsTrailingBytes() {
+        AutomatedFacility facility = facility();
+        CelestialAssetStore.CLIENT.registerAssetInternal(TEAM, facility);
+        ByteBuf logical = Unpooled.buffer();
+        logical.writeByte(AssetSyncPacket.ASSET_REMOVED);
+        logical.writeLong(1L);
+        logical.writeByte(0);
+        byte[] payload = new byte[logical.readableBytes()];
+        logical.readBytes(payload);
+        RecordingClientTransport transport = new RecordingClientTransport();
+        AssetStateSync.Client client = new AssetStateSync.Client(transport);
+
+        for (AssetStateFramePacket frame : framesForPayload(facility.assetId, payload)) client.receive(frame);
+
+        assertEquals(facility, CelestialAssetStore.CLIENT.findAssetInternal(facility.assetId));
+        assertEquals(List.of(facility.assetId), transport.fullRequests);
+    }
+
+    @Test
+    void emptyLogicalStateRequestsRecoveryWithoutMutation() {
+        CelestialAsset.ID assetId = CelestialAsset.ID.create();
+        ByteBuf logical = Unpooled.buffer();
+        logical.writeByte(AssetSyncPacket.STATE);
+        logical.writeLong(1L);
+        byte[] payload = new byte[logical.readableBytes()];
+        logical.readBytes(payload);
+        RecordingClientTransport transport = new RecordingClientTransport();
+        AssetStateSync.Client client = new AssetStateSync.Client(transport);
+
+        for (AssetStateFramePacket frame : framesForPayload(assetId, payload)) client.receive(frame);
+
+        assertNull(CelestialAssetStore.CLIENT.findAssetInternal(assetId));
+        assertEquals(List.of(assetId), transport.fullRequests);
+    }
+
+    @Test
+    void canonicalStateIdentityMustMatchTheFramedAssetIdentity() {
+        AutomatedFacility facility = facility();
+        CelestialAsset.ID differentFrameId = CelestialAsset.ID.create();
+        AssetStateFramePacket valid = AssetStateSync.Server.frame(
+            AssetSyncPacket.state(TEAM, facility)
+                .withPublishedRevision(1L))
+            .get(0);
+        RecordingClientTransport transport = new RecordingClientTransport();
+        AssetStateSync.Client client = new AssetStateSync.Client(transport);
+
+        for (AssetStateFramePacket frame : framesForPayload(differentFrameId, valid.payload())) client.receive(frame);
+
+        assertNull(CelestialAssetStore.CLIENT.findAssetInternal(facility.assetId));
+        assertNull(CelestialAssetStore.CLIENT.findAssetInternal(differentFrameId));
+        assertEquals(List.of(differentFrameId), transport.fullRequests);
+    }
+
+    @Test
+    void malformedCanonicalInventoryCannotPartiallyMutateAnExistingClientFacility() throws IOException {
+        AutomatedFacility authoritative = facility();
+        ItemStackWrapper incomingItem = new ItemStackWrapper(Items.diamond, 0, null);
+        FluidKey incomingFluid = new FluidKey(FluidRegistry.WATER, null);
+        authoritative.restoreInventory(Map.of(incomingItem, 4L, incomingFluid, 1_000L));
+
+        AutomatedFacility current = new AutomatedFacility(
+            authoritative.assetId,
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ItemStackWrapper existingItem = new ItemStackWrapper(Items.stick, 0, null);
+        FluidKey existingFluid = new FluidKey(FluidRegistry.LAVA, null);
+        Map<InventoryKey, Long> existingInventory = Map.of(existingItem, 7L, existingFluid, 500L);
+        current.restoreInventory(existingInventory);
+        CelestialAssetStore.CLIENT.registerAssetInternal(TEAM, current);
+
+        NBTTagCompound canonical = AssetState.encode(TEAM, authoritative);
+        NBTTagList inventory = canonical.getCompoundTag("facility")
+            .getTagList("inventory", NBT.TAG_COMPOUND);
+        NBTTagCompound invalidEntry = (NBTTagCompound) inventory.getCompoundTagAt(0)
+            .copy();
+        invalidEntry.setLong("amount", -1L);
+        inventory.appendTag(invalidEntry);
+
+        ByteBuf logical = Unpooled.buffer();
+        logical.writeByte(AssetSyncPacket.STATE);
+        logical.writeLong(2L);
+        CompressedStreamTools.write(canonical, new ByteBufOutputStream(logical));
+        AssetSyncPacket malformed = new AssetSyncPacket();
+        malformed.fromBytes(logical, authoritative.assetId);
+        RecordingClientTransport transport = new RecordingClientTransport();
+        AssetStateSync.Client client = new AssetStateSync.Client(transport);
+
+        for (AssetStateFramePacket frame : AssetStateSync.Server.frame(malformed)) client.receive(frame);
+
+        assertSame(current, CelestialAssetStore.CLIENT.findAssetInternal(current.assetId));
+        assertEquals(Map.of(existingItem, 7L), current.itemSnapshot());
+        assertEquals(Map.of(existingFluid, 500L), current.fluidAmounts());
+        assertEquals(List.of(current.assetId), transport.fullRequests);
+    }
+
+    @Test
     void logicalDecoderRejectsMalformedCanonicalNbtWithoutMutation() {
         AutomatedFacility facility = facility();
         AssetStateFramePacket valid = AssetStateSync.Server.frame(
@@ -189,7 +319,7 @@ final class AssetStateFramePacketTest {
                 .withPublishedRevision(1L))
             .get(0);
         byte[] payload = valid.payload();
-        payload[Byte.BYTES + Long.BYTES + 2 * Long.BYTES] = Byte.MAX_VALUE;
+        payload[Byte.BYTES + Long.BYTES] = Byte.MAX_VALUE;
         RecordingClientTransport transport = new RecordingClientTransport();
         AssetStateSync.Client client = new AssetStateSync.Client(transport);
 

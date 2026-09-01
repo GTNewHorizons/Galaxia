@@ -601,7 +601,7 @@ final class FacilityPersistenceManagerTest {
         AutomatedFacility station = createStationWithFullLayout();
         ModuleInstance miner = station.modules()
             .get(1);
-        station.setMinerOreBlacklisted(miner, "ore:iron", true);
+        setMinerOreBlacklisted(station, miner, "ore:iron", true);
 
         AutomatedFacility decoded = emptyReplacement(station);
         decoded = decodeFacility(decoded, facilityTag(station));
@@ -708,7 +708,7 @@ final class FacilityPersistenceManagerTest {
         AutomatedFacility station = createStationWithFullLayout();
         ModuleInstance miner = station.modules()
             .get(1);
-        station.setMinerOreBlacklisted(miner, "ore:iron", true);
+        setMinerOreBlacklisted(station, miner, "ore:iron", true);
         FacilityCommand.Result created = station.applyCommand(
             new FacilityCommand.CreateSettingsGroup(station.assetId, miner.id, "Shared miners"),
             FacilityCommand.Authority.NONE);
@@ -739,7 +739,7 @@ final class FacilityPersistenceManagerTest {
         AutomatedFacility station = createStationWithFullLayout();
         ModuleInstance miner = station.modules()
             .get(1);
-        station.setMinerOreBlacklisted(miner, "ore:copper", true);
+        setMinerOreBlacklisted(station, miner, "ore:copper", true);
 
         NBTTagCompound encoded = facilityTag(station);
 
@@ -945,7 +945,7 @@ final class FacilityPersistenceManagerTest {
         IllegalStateException thrown = assertThrows(
             IllegalStateException.class,
             () -> manager.loadFromSaveDirectory(tempDir.toFile()));
-        assertFailureChainContains(thrown, ".items");
+        assertFailureChainContains(thrown, ".inventory");
         assertNull(CelestialAssetStore.findAsset(CelestialAsset.ID.from(station.getString("id"))));
         assertNull(CelestialAssetStore.findAsset(CelestialAsset.ID.from(outpost.getString("id"))));
     }
@@ -1016,10 +1016,10 @@ final class FacilityPersistenceManagerTest {
     void invalidPersistedInventoryStateRejectsFacilityBeforeRegistration(@TempDir Path tempDir) throws Exception {
         List<Consumer<NBTTagCompound>> invalidStates = List.of(state -> {
             NBTTagCompound entry = itemEntry(new ItemStack(Items.iron_ingot), 0L);
-            NBTTagList items = new NBTTagList();
-            items.appendTag(entry);
-            state.setTag("items", items);
-        }, state -> state.removeTag("items"), state -> state.removeTag("itemFilters"));
+            NBTTagList inventory = new NBTTagList();
+            inventory.appendTag(entry);
+            state.setTag("inventory", inventory);
+        }, state -> state.removeTag("inventory"), state -> state.removeTag("itemFilters"));
 
         for (Consumer<NBTTagCompound> invalidState : invalidStates) {
             FacilityPersistenceManager manager = new FacilityPersistenceManager(CelestialServerRuntime.create());
@@ -1056,8 +1056,7 @@ final class FacilityPersistenceManagerTest {
             .getUnlocalizedName();
         String fluidFilter = fluid.fluid()
             .getName();
-        station.loadFromSnapshot(Map.of(item, storedItems));
-        station.loadFluidSnapshot(Map.of(fluidFilter, 4096L));
+        station.restoreInventory(Map.of(item, storedItems, fluid, 4096L));
         station.setFilters(List.of(itemFilter), true);
         station.setFilters(List.of(fluidFilter), false);
 
@@ -1135,7 +1134,7 @@ final class FacilityPersistenceManagerTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         NBTTagCompound facility = facilityTag(source);
-        facility.removeTag("items");
+        facility.removeTag("inventory");
         return facility;
     }
 
@@ -1781,19 +1780,9 @@ final class FacilityPersistenceManagerTest {
         fluidInputs[0].tag = fluidTag;
         int[] outputChances = { 5000 };
         int[] fluidOutputChances = { 7500 };
-        long contentHash = RecipeSnapshot.computeContentHash(
-            itemInputs,
-            itemOutputs,
-            fluidInputs,
-            fluidOutputs,
-            outputChances,
-            fluidOutputChances,
-            320,
-            480);
-        RecipeSnapshot snapshot = new RecipeSnapshot(
+        RecipeSnapshot snapshot = RecipeSnapshot.resolved(
             (byte) 1,
             7,
-            contentHash,
             itemInputs,
             itemOutputs,
             fluidInputs,
@@ -1802,6 +1791,7 @@ final class FacilityPersistenceManagerTest {
             fluidOutputChances,
             320,
             480);
+        long contentHash = snapshot.contentHash();
         station.setBound(new FluidKey(TEST_FLUID_1, null), 11, true);
         station.setBound(new FluidKey(TEST_FLUID_2, null), 22, false);
         RecipeBook expectedBook = new RecipeBook(
@@ -1836,24 +1826,44 @@ final class FacilityPersistenceManagerTest {
         assertEquals(320, decodedSnapshot.duration());
         assertEquals(480, decodedSnapshot.eut());
         assertEquals(contentHash, decodedSnapshot.contentHash());
-        assertEquals(5000, decodedSnapshot.outputChances()[0]);
-        assertEquals(7500, decodedSnapshot.fluidOutputChances()[0]);
-        assertEquals(Items.iron_ingot, decodedSnapshot.inputs()[0].getItem());
-        assertEquals(2, decodedSnapshot.inputs()[0].stackSize);
-        assertEquals(itemTag, decodedSnapshot.inputs()[0].getTagCompound());
-        assertEquals(Items.diamond, decodedSnapshot.outputs()[0].getItem());
-        assertEquals(1, decodedSnapshot.outputs()[0].stackSize);
+        assertEquals(
+            5000,
+            decodedSnapshot.itemOutputs()
+                .get(0)
+                .effectiveChance());
+        assertEquals(
+            7500,
+            decodedSnapshot.fluidOutputs()
+                .get(0)
+                .effectiveChance());
+        ItemStack decodedInput = decodedSnapshot.itemInputs()
+            .get(0)
+            .itemStack();
+        ItemStack decodedOutput = decodedSnapshot.itemOutputs()
+            .get(0)
+            .itemStack();
+        FluidStack decodedFluidInput = decodedSnapshot.fluidInputs()
+            .get(0)
+            .fluidStack();
+        FluidStack decodedFluidOutput = decodedSnapshot.fluidOutputs()
+            .get(0)
+            .fluidStack();
+        assertEquals(Items.iron_ingot, decodedInput.getItem());
+        assertEquals(2, decodedInput.stackSize);
+        assertEquals(itemTag, decodedInput.getTagCompound());
+        assertEquals(Items.diamond, decodedOutput.getItem());
+        assertEquals(1, decodedOutput.stackSize);
         assertEquals(
             new FluidKey(TEST_FLUID_1, null).fluid()
                 .getName(),
-            fluidName(decodedSnapshot.fluidInputs()[0]));
-        assertEquals(144, decodedSnapshot.fluidInputs()[0].amount);
-        assertEquals(fluidTag, decodedSnapshot.fluidInputs()[0].tag);
+            fluidName(decodedFluidInput));
+        assertEquals(144, decodedFluidInput.amount);
+        assertEquals(fluidTag, decodedFluidInput.tag);
         assertEquals(
             new FluidKey(TEST_FLUID_2, null).fluid()
                 .getName(),
-            fluidName(decodedSnapshot.fluidOutputs()[0]));
-        assertEquals(72, decodedSnapshot.fluidOutputs()[0].amount);
+            fluidName(decodedFluidOutput));
+        assertEquals(72, decodedFluidOutput.amount);
         assertEquals(12L, decodedSlot.requestAmount());
         assertEquals("Fluid recipe", decodedSlot.displayName());
         assertEquals(
@@ -1892,7 +1902,7 @@ final class FacilityPersistenceManagerTest {
     void malformedRecipeStackIsRejectedDuringPersistenceDecode() {
         AutomatedFacility station = createStationWithSingleRecipe();
         NBTTagCompound encoded = facilityTag(station);
-        firstEncodedRecipe(encoded).getTagList("inputs", 10)
+        firstEncodedRecipe(encoded).getTagList("itemInputs", 10)
             .getCompoundTagAt(0)
             .setString("stack", "wrong type");
         AutomatedFacility decoded = new AutomatedFacility(
@@ -2007,7 +2017,7 @@ final class FacilityPersistenceManagerTest {
             NBTTagCompound binding = modules.getCompoundTagAt(i)
                 .getCompoundTag("settingsBinding");
             NBTTagCompound settings = binding.getCompoundTag("settings");
-            if (!binding.getBoolean("shared") && "RECIPE".equals(settings.getString("type"))) {
+            if (!binding.getBoolean("shared") && settings.hasKey("book", 10)) {
                 return settings.getCompoundTag("book")
                     .getTagList("recipes", 10)
                     .getCompoundTagAt(0);
@@ -2302,6 +2312,17 @@ final class FacilityPersistenceManagerTest {
         assertEquals(12.5, loaded.data.departureOrbitalTime());
         assertEquals(3.25, loaded.data.tofOrbitalOsu());
         LogisticStore.clearDeliveries();
+    }
+
+    private static void setMinerOreBlacklisted(AutomatedFacility facility, ModuleInstance module, String oreKey,
+        boolean blacklisted) {
+        facility.applyCommand(
+            new FacilityCommand.ReplaceMinerSettings(
+                facility.assetId,
+                module.id,
+                facility.minerSettings(module)
+                    .withOreBlacklisted(oreKey, blacklisted)),
+            FacilityCommand.Authority.NONE);
     }
 
     private static void assertLayoutEquals(StationLayout expected, StationLayout actual) {

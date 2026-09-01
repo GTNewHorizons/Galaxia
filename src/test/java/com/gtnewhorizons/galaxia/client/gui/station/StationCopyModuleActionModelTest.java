@@ -29,7 +29,7 @@ final class StationCopyModuleActionModelTest {
     void resolveReturnsSelectedModuleIdentity() {
         AutomatedFacility facility = createFacility();
         ModuleInstance module = FacilityModuleKind.POWER
-            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.HV);
+            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.NONE);
         facility.addModule(module);
         facility.stationLayout()
             .place(module);

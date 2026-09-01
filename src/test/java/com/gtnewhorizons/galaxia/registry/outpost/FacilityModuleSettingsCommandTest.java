@@ -57,7 +57,7 @@ final class FacilityModuleSettingsCommandTest {
     void creatingGroupKeepsEffectiveSettingsAndBindsSource() {
         AutomatedFacility facility = facility();
         ModuleInstance source = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
-        facility.setMinerOreBlacklisted(source, "ore:iron", true);
+        setMinerOreBlacklisted(facility, source, "ore:iron", true);
         Set<String> expected = oreKeys(privateSettings(source));
 
         assertSame(
@@ -74,7 +74,7 @@ final class FacilityModuleSettingsCommandTest {
     void leavingGroupCopiesCurrentSettingsAndRemovesEmptyGroup() {
         AutomatedFacility facility = facility();
         ModuleInstance source = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
-        facility.setMinerOreBlacklisted(source, "ore:iron", true);
+        setMinerOreBlacklisted(facility, source, "ore:iron", true);
         facility.applyCommand(
             new FacilityCommand.CreateSettingsGroup(facility.assetId, source.id, "Shared miners"),
             FacilityCommand.Authority.NONE);
@@ -86,7 +86,7 @@ final class FacilityModuleSettingsCommandTest {
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(
-                new FacilityCommand.LeaveSettingsGroup(facility.assetId, source.id),
+                new FacilityCommand.SetSettingsGroup(facility.assetId, source.id, null),
                 FacilityCommand.Authority.NONE));
 
         assertEquals(expected, oreKeys(privateSettings(source)));
@@ -99,7 +99,7 @@ final class FacilityModuleSettingsCommandTest {
         ModuleInstance source = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
         ModuleInstance firstTarget = addMiner(facility, moduleId(2), StationTileCoord.of(4, 0));
         ModuleInstance secondTarget = addMiner(facility, moduleId(3), StationTileCoord.of(7, 0));
-        facility.setMinerOreBlacklisted(source, "ore:iron", true);
+        setMinerOreBlacklisted(facility, source, "ore:iron", true);
         facility.applyCommand(
             new FacilityCommand.CreateSettingsGroup(facility.assetId, source.id, "Source miners"),
             FacilityCommand.Authority.NONE);
@@ -109,7 +109,7 @@ final class FacilityModuleSettingsCommandTest {
         SettingsGroup.ID sourceGroupId = sharedGroupId(source);
         SettingsGroup.ID targetGroupId = sharedGroupId(firstTarget);
         facility.applyCommand(
-            new FacilityCommand.JoinSettingsGroup(facility.assetId, secondTarget.id, targetGroupId),
+            new FacilityCommand.SetSettingsGroup(facility.assetId, secondTarget.id, targetGroupId),
             FacilityCommand.Authority.NONE);
 
         assertSame(
@@ -131,11 +131,35 @@ final class FacilityModuleSettingsCommandTest {
     }
 
     @Test
+    void replacingMinerSettingsUpdatesTheEffectiveSharedSettings() {
+        AutomatedFacility facility = facility();
+        ModuleInstance first = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
+        ModuleInstance second = addMiner(facility, moduleId(2), StationTileCoord.of(4, 0));
+        facility.applyCommand(
+            new FacilityCommand.CreateSettingsGroup(facility.assetId, first.id, "Shared miners"),
+            FacilityCommand.Authority.NONE);
+        SettingsGroup.ID groupId = sharedGroupId(first);
+        facility.applyCommand(
+            new FacilityCommand.SetSettingsGroup(facility.assetId, second.id, groupId),
+            FacilityCommand.Authority.NONE);
+        MinerSettings replacement = new MinerSettings(Set.of("ore:copper", "ore:iron"));
+        FacilityCommand.ReplaceMinerSettings command = new FacilityCommand.ReplaceMinerSettings(
+            facility.assetId,
+            second.id,
+            replacement);
+
+        assertSame(FacilityCommand.Result.CHANGED, facility.applyCommand(command, FacilityCommand.Authority.NONE));
+        assertEquals(replacement, facility.minerSettings(first));
+        assertEquals(replacement, facility.minerSettings(second));
+        assertSame(FacilityCommand.Result.UNCHANGED, facility.applyCommand(command, FacilityCommand.Authority.NONE));
+    }
+
+    @Test
     void repeatedIdenticalCopyIsUnchanged() {
         AutomatedFacility facility = facility();
         ModuleInstance source = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
         ModuleInstance target = addMiner(facility, moduleId(2), StationTileCoord.of(4, 0));
-        facility.setMinerOreBlacklisted(source, "ore:iron", true);
+        setMinerOreBlacklisted(facility, source, "ore:iron", true);
         FacilityCommand.CopyModuleSettings command = new FacilityCommand.CopyModuleSettings(
             facility.assetId,
             source.id,
@@ -153,8 +177,8 @@ final class FacilityModuleSettingsCommandTest {
         ModuleInstance source = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
         ModuleInstance matching = addMiner(facility, moduleId(2), StationTileCoord.of(4, 0));
         ModuleInstance stale = addMiner(facility, moduleId(3), StationTileCoord.of(7, 0));
-        facility.setMinerOreBlacklisted(source, "ore:iron", true);
-        facility.setMinerOreBlacklisted(stale, "ore:copper", true);
+        setMinerOreBlacklisted(facility, source, "ore:iron", true);
+        setMinerOreBlacklisted(facility, stale, "ore:copper", true);
         facility.applyCommand(
             new FacilityCommand.CopyModuleSettings(facility.assetId, source.id, List.of(matching.id)),
             FacilityCommand.Authority.NONE);
@@ -222,8 +246,8 @@ final class FacilityModuleSettingsCommandTest {
         AutomatedFacility facility = facility();
         ModuleInstance source = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
         ModuleInstance target = addMiner(facility, moduleId(2), StationTileCoord.of(4, 0));
-        facility.setMinerOreBlacklisted(source, "ore:iron", true);
-        facility.setMinerOreBlacklisted(target, "ore:copper", true);
+        setMinerOreBlacklisted(facility, source, "ore:iron", true);
+        setMinerOreBlacklisted(facility, target, "ore:copper", true);
         ModuleInstance.SettingsBinding before = target.settingsBinding();
 
         FacilityCommand.Result result = facility.applyCommand(
@@ -232,6 +256,17 @@ final class FacilityModuleSettingsCommandTest {
 
         assertEquals(FacilityCommand.Status.REJECTED, result.status());
         assertEquals(before, target.settingsBinding());
+    }
+
+    private static void setMinerOreBlacklisted(AutomatedFacility facility, ModuleInstance module, String oreKey,
+        boolean blacklisted) {
+        facility.applyCommand(
+            new FacilityCommand.ReplaceMinerSettings(
+                facility.assetId,
+                module.id,
+                facility.minerSettings(module)
+                    .withOreBlacklisted(oreKey, blacklisted)),
+            FacilityCommand.Authority.NONE);
     }
 
     private static ModuleSettings privateSettings(ModuleInstance module) {

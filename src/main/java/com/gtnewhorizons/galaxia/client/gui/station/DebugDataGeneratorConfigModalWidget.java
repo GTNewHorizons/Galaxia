@@ -198,8 +198,6 @@ final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGe
     private void apply(ModuleDebugDataGenerator.Config config) {
         int moduleIndex = controller.moduleIndex();
         if (moduleIndex < 0) return;
-        ModuleDebugDataGenerator generator = module();
-        if (generator != null) generator.configure(config);
         CelestialClient.updateDebugDataGeneratorConfig(assetId, moduleIndex, config);
     }
 

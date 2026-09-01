@@ -56,7 +56,12 @@ final class RecipeIntentMatcherTest {
         assertEquals(GTRecipeMapId.DISTILLERY.ordinal(), Byte.toUnsignedInt(snapshot.recipeMapOrdinal()));
         assertEquals(320, snapshot.duration());
         assertEquals(480, snapshot.eut());
-        assertEquals("galaxia.intent.water", fluidName(snapshot.fluidOutputs()[0]));
+        assertEquals(
+            "galaxia.intent.water",
+            fluidName(
+                snapshot.fluidOutputs()
+                    .get(0)
+                    .fluidStack()));
     }
 
     @Test
@@ -131,7 +136,9 @@ final class RecipeIntentMatcherTest {
         assertEquals(
             5000,
             result.snapshot()
-                .outputChances()[0]);
+                .itemOutputs()
+                .get(0)
+                .effectiveChance());
     }
 
     @Test

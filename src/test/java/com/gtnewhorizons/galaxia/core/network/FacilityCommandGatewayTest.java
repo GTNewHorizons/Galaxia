@@ -39,6 +39,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
@@ -53,7 +54,7 @@ final class FacilityCommandGatewayTest {
 
     @BeforeAll
     static void initRegistries() {
-        GalaxiaTestBootstrap.ensureCelestialRegistry();
+        GalaxiaTestBootstrap.ensureFacilityModules();
     }
 
     @BeforeEach
@@ -156,12 +157,18 @@ final class FacilityCommandGatewayTest {
         CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
         FacilityCommandGateway.Actor actor = actor(TEAM, TeamAction.MODIFY_MODULE);
 
-        FacilityCommand.Result blacklisted = gateway
-            .execute(actor, new FacilityCommand.SetMinerOreBlacklisted(facility.assetId, miner.id, "ore:iron", true));
-        FacilityCommand.Result allowed = gateway
-            .execute(actor, new FacilityCommand.SetMinerOreBlacklisted(facility.assetId, miner.id, "ore:iron", false));
-        FacilityCommand.Result repeated = gateway
-            .execute(actor, new FacilityCommand.SetMinerOreBlacklisted(facility.assetId, miner.id, "ore:iron", false));
+        FacilityCommand.Result blacklisted = gateway.execute(
+            actor,
+            new FacilityCommand.ReplaceMinerSettings(
+                facility.assetId,
+                miner.id,
+                new MinerSettings(Set.of("ore:iron"))));
+        FacilityCommand.ReplaceMinerSettings allowAll = new FacilityCommand.ReplaceMinerSettings(
+            facility.assetId,
+            miner.id,
+            new MinerSettings());
+        FacilityCommand.Result allowed = gateway.execute(actor, allowAll);
+        FacilityCommand.Result repeated = gateway.execute(actor, allowAll);
 
         assertEquals(FacilityCommand.Status.CHANGED, blacklisted.status());
         assertEquals(FacilityCommand.Status.CHANGED, allowed.status());
@@ -188,14 +195,17 @@ final class FacilityCommandGatewayTest {
             FacilityCommand.Status.CHANGED,
             facility
                 .applyCommand(
-                    new FacilityCommand.JoinSettingsGroup(facility.assetId, second.id, groupId),
+                    new FacilityCommand.SetSettingsGroup(facility.assetId, second.id, groupId),
                     FacilityCommand.Authority.NONE)
                 .status());
         CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
 
         FacilityCommand.Result result = gateway.execute(
             actor(TEAM, TeamAction.MODIFY_MODULE),
-            new FacilityCommand.SetMinerOreBlacklisted(facility.assetId, first.id, "ore:copper", true));
+            new FacilityCommand.ReplaceMinerSettings(
+                facility.assetId,
+                first.id,
+                new MinerSettings(Set.of("ore:copper"))));
 
         assertEquals(FacilityCommand.Status.CHANGED, result.status());
         assertTrue(facility.isMinerOreBlacklisted(first, "ore:copper"));
@@ -231,16 +241,14 @@ final class FacilityCommandGatewayTest {
             new FacilityCommand.CancelModuleOperation(facility.assetId, missingModule),
             new FacilityCommand.CreateSettingsGroup(facility.assetId, missingModule, "Shared settings"),
             new FacilityCommand.RenameSettingsGroup(facility.assetId, new SettingsGroup.ID(1), "Priority settings"),
-            new FacilityCommand.JoinSettingsGroup(facility.assetId, missingModule, new SettingsGroup.ID(1)),
-            new FacilityCommand.LeaveSettingsGroup(facility.assetId, missingModule),
+            new FacilityCommand.SetSettingsGroup(facility.assetId, missingModule, new SettingsGroup.ID(1)),
             new FacilityCommand.CopyModuleSettings(facility.assetId, missingModule, List.of(missingModule)),
             new FacilityCommand.ReplaceRecipeBook(
                 facility.assetId,
                 new RecipeBookOwner.Private(missingModule),
                 RecipeBook.empty()),
-            new FacilityCommand.SetMinerOreBlacklisted(facility.assetId, missingModule, "ore:iron", true),
-            new FacilityCommand.SetHammerShootingConfig(facility.assetId, missingModule, null),
-            new FacilityCommand.SetHammerRoutePriority(facility.assetId, missingModule, null),
+            new FacilityCommand.ReplaceMinerSettings(facility.assetId, missingModule, new MinerSettings()),
+            new FacilityCommand.ConfigureHammer(facility.assetId, missingModule, null, null),
             new FacilityCommand.SetMinerFocusOre(facility.assetId, missingModule, "ore:iron"),
             new FacilityCommand.ConfigureDebugDataGenerator(facility.assetId, missingModule, null),
             new FacilityCommand.PlanHammerUpgrade(

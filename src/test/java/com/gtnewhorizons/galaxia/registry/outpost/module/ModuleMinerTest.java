@@ -51,14 +51,14 @@ final class ModuleMinerTest {
                 .isEmpty());
         assertFalse(facility.isMinerOreBlacklisted(miner, "ore:iron"));
 
-        facility.setMinerOreBlacklisted(miner, "ore:iron", true);
+        setMinerOreBlacklisted(facility, miner, "ore:iron", true);
         assertTrue(facility.isMinerOreBlacklisted(miner, "ore:iron"));
         assertTrue(
             facility.minerSettings(miner)
                 .blacklistedOreKeys()
                 .contains("ore:iron"));
 
-        facility.setMinerOreBlacklisted(miner, "ore:iron", false);
+        setMinerOreBlacklisted(facility, miner, "ore:iron", false);
         assertFalse(facility.isMinerOreBlacklisted(miner, "ore:iron"));
         assertFalse(
             facility.minerSettings(miner)
@@ -71,7 +71,7 @@ final class ModuleMinerTest {
         AutomatedFacility facility = createFacility();
         ModuleInstance miner = createMiner();
         facility.addModule(miner);
-        facility.setMinerOreBlacklisted(miner, "ore:iron", true);
+        setMinerOreBlacklisted(facility, miner, "ore:iron", true);
 
         assertTrue(ModuleMiner.shouldVoidOre(miner, facility, "ore:iron"));
         assertFalse(ModuleMiner.shouldVoidOre(miner, facility, "ore:copper"));
@@ -95,7 +95,7 @@ final class ModuleMinerTest {
         ModuleInstance second = createMiner(StationTileCoord.of(2, 0));
         facility.addModule(first);
         facility.addModule(second);
-        facility.setMinerOreBlacklisted(first, "ore:iron", true);
+        setMinerOreBlacklisted(facility, first, "ore:iron", true);
 
         assertSame(
             FacilityCommand.Result.CHANGED,
@@ -106,20 +106,20 @@ final class ModuleMinerTest {
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(
-                new FacilityCommand.JoinSettingsGroup(facility.assetId, second.id, groupId),
+                new FacilityCommand.SetSettingsGroup(facility.assetId, second.id, groupId),
                 FacilityCommand.Authority.NONE));
 
         assertTrue(facility.isMinerOreBlacklisted(second, "ore:iron"));
 
-        facility.setMinerOreBlacklisted(second, "ore:copper", true);
+        setMinerOreBlacklisted(facility, second, "ore:copper", true);
         assertTrue(facility.isMinerOreBlacklisted(first, "ore:copper"));
 
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(
-                new FacilityCommand.LeaveSettingsGroup(facility.assetId, second.id),
+                new FacilityCommand.SetSettingsGroup(facility.assetId, second.id, null),
                 FacilityCommand.Authority.NONE));
-        facility.setMinerOreBlacklisted(first, "ore:gold", true);
+        setMinerOreBlacklisted(facility, first, "ore:gold", true);
 
         assertTrue(facility.isMinerOreBlacklisted(second, "ore:copper"));
         assertFalse(facility.isMinerOreBlacklisted(second, "ore:gold"));
@@ -134,7 +134,7 @@ final class ModuleMinerTest {
         List<SettingsGroup> groupsBefore = facility.settingsGroups();
 
         FacilityCommand.Result result = facility.applyCommand(
-            new FacilityCommand.LeaveSettingsGroup(facility.assetId, miner.id),
+            new FacilityCommand.SetSettingsGroup(facility.assetId, miner.id, null),
             FacilityCommand.Authority.NONE);
 
         assertSame(FacilityCommand.Result.UNCHANGED, result);
@@ -292,6 +292,17 @@ final class ModuleMinerTest {
             CelestialObjectId.FROZEN_BELT,
             CelestialAsset.Kind.AUTOMATED_OUTPOST,
             Buildable.Status.OPERATIONAL);
+    }
+
+    private static void setMinerOreBlacklisted(AutomatedFacility facility, ModuleInstance module, String oreKey,
+        boolean blacklisted) {
+        facility.applyCommand(
+            new FacilityCommand.ReplaceMinerSettings(
+                facility.assetId,
+                module.id,
+                facility.minerSettings(module)
+                    .withOreBlacklisted(oreKey, blacklisted)),
+            FacilityCommand.Authority.NONE);
     }
 
     private static ModuleInstance createMiner() {

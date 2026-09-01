@@ -140,7 +140,7 @@ final class ModuleConfigModalControllerTest {
 
     @Test
     void debugDataGeneratorConfigModalCapturesHover() {
-        TestFacility test = facilityWith(FacilityModuleKind.DEBUG_DATA_GENERATOR, ModuleTier.EV);
+        TestFacility test = facilityWith(FacilityModuleKind.DEBUG_DATA_GENERATOR, ModuleTier.HV);
         ModuleConfigModalController controller = controllerFor(test.facility());
 
         DebugDataGeneratorConfigModalWidget widget = new DebugDataGeneratorConfigModalWidget(

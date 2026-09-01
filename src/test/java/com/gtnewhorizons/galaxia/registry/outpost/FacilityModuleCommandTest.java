@@ -187,7 +187,7 @@ final class FacilityModuleCommandTest {
         source.setTicks(17);
         source.setOperation(waitingOperation());
         facility.addModule(source);
-        facility.setMinerOreBlacklisted(source, "ore:iron", true);
+        setMinerOreBlacklisted(facility, source, "ore:iron", true);
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.CopyBuildModules(
@@ -311,6 +311,17 @@ final class FacilityModuleCommandTest {
         assertEquals(FacilityCommand.Rejection.MODULE_OPERATION_NOT_CANCELLABLE, notCancellable.rejection());
         assertSame(ModuleOperationPhase.CANCELLED, operation.phase());
         assertNull(untouched.operationOrNull());
+    }
+
+    private static void setMinerOreBlacklisted(AutomatedFacility facility, ModuleInstance module, String oreKey,
+        boolean blacklisted) {
+        facility.applyCommand(
+            new FacilityCommand.ReplaceMinerSettings(
+                facility.assetId,
+                module.id,
+                facility.minerSettings(module)
+                    .withOreBlacklisted(oreKey, blacklisted)),
+            FacilityCommand.Authority.NONE);
     }
 
     private static FacilityCommand.BuildModules build(AutomatedFacility facility, FacilityModuleKind kind,

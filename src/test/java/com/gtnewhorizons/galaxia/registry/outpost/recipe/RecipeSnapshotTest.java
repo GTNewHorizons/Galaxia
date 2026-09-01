@@ -1,9 +1,14 @@
 package com.gtnewhorizons.galaxia.registry.outpost.recipe;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
 
@@ -20,101 +25,120 @@ final class RecipeSnapshotTest {
     }
 
     @Test
-    void snapshotDeeplyProtectsFluidInputsAndOutputs() {
+    void snapshotResourcesProtectSourceAndProjectedFluidState() {
         FluidStack input = new FluidStack(FluidRegistry.WATER, 144);
-        FluidStack output = new FluidStack(FluidRegistry.LAVA, 72);
-
-        RecipeSnapshot snapshot = new RecipeSnapshot(
-            (byte) 1,
-            5,
-            123L,
-            null,
-            null,
-            new FluidStack[] { input },
-            new FluidStack[] { output },
-            200,
-            512);
+        NBTTagCompound tag = new NBTTagCompound();
+        tag.setString("state", "original");
+        input.tag = tag;
+        RecipeSnapshot snapshot = RecipeSnapshot
+            .resolved((byte) 1, 5, null, null, new FluidStack[] { input }, null, 200, 512);
 
         input.amount = 999;
-        output.amount = 998;
+        tag.setString("state", "changed");
+        FluidStack firstRead = snapshot.fluidInputs()
+            .get(0)
+            .fluidStack();
+        assertNotSame(input, firstRead);
+        assertEquals(144, firstRead.amount);
+        assertEquals("original", firstRead.tag.getString("state"));
 
-        FluidStack firstInputRead = snapshot.fluidInputs()[0];
-        FluidStack firstOutputRead = snapshot.fluidOutputs()[0];
-        assertNotSame(input, firstInputRead);
-        assertNotSame(output, firstOutputRead);
-        assertEquals(144, firstInputRead.amount);
-        assertEquals(72, firstOutputRead.amount);
-        firstInputRead.amount = 997;
-        firstOutputRead.amount = 996;
-        assertEquals(144, snapshot.fluidInputs()[0].amount);
-        assertEquals(72, snapshot.fluidOutputs()[0].amount);
-        assertEquals(200, snapshot.duration());
-        assertEquals(512, snapshot.eut());
+        firstRead.amount = 998;
+        firstRead.tag.setString("state", "changed again");
+        FluidStack secondRead = snapshot.fluidInputs()
+            .get(0)
+            .fluidStack();
+        assertEquals(144, secondRead.amount);
+        assertEquals("original", secondRead.tag.getString("state"));
     }
 
     @Test
     void contentHashIncludesFluidIdentityAndAmount() {
-        long base = RecipeSnapshot.computeContentHash(
-            null,
-            null,
-            new FluidStack[] { new FluidStack(FluidRegistry.WATER, 144) },
-            null,
-            100,
-            512);
-        long differentAmount = RecipeSnapshot.computeContentHash(
-            null,
-            null,
-            new FluidStack[] { new FluidStack(FluidRegistry.WATER, 288) },
-            null,
-            100,
-            512);
-        long differentFluid = RecipeSnapshot.computeContentHash(
-            null,
-            null,
-            new FluidStack[] { new FluidStack(FluidRegistry.LAVA, 144) },
-            null,
-            100,
-            512);
+        long base = resolvedFluidInput(FluidRegistry.WATER, 144).contentHash();
+        long differentAmount = resolvedFluidInput(FluidRegistry.WATER, 288).contentHash();
+        long differentFluid = resolvedFluidInput(FluidRegistry.LAVA, 144).contentHash();
 
+        assertEquals(104_268_737_199_554L, base);
         assertNotEquals(base, differentAmount);
         assertNotEquals(base, differentFluid);
     }
 
     @Test
-    void contentHashIncludesItemOutputChances() {
+    void contentHashIncludesItemAndFluidOutputChances() {
         Item outputItem = new Item();
-        ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
+        ItemStack[] itemOutputs = { new ItemStack(outputItem, 1, 0) };
+        FluidStack[] fluidOutputs = { new FluidStack(FluidRegistry.WATER, 144) };
 
-        long base = RecipeSnapshot.computeContentHash(null, outputs, null, null, new int[] { 5000 }, 100, 512);
-        long differentChance = RecipeSnapshot
-            .computeContentHash(null, outputs, null, null, new int[] { 7500 }, 100, 512);
+        RecipeSnapshot base = RecipeSnapshot.resolved(
+            (byte) 1,
+            0,
+            null,
+            itemOutputs,
+            null,
+            fluidOutputs,
+            new int[] { 5000 },
+            new int[] { 5000 },
+            100,
+            512);
+        RecipeSnapshot changed = RecipeSnapshot.resolved(
+            (byte) 1,
+            0,
+            null,
+            itemOutputs,
+            null,
+            fluidOutputs,
+            new int[] { 7500 },
+            new int[] { 7500 },
+            100,
+            512);
 
-        assertNotEquals(base, differentChance);
+        assertNotEquals(base.contentHash(), changed.contentHash());
     }
 
     @Test
-    void contentHashIncludesFluidOutputChances() {
-        FluidStack[] outputs = { new FluidStack(FluidRegistry.WATER, 144) };
+    void absentChanceRemainsDistinctFromExplicitGuaranteedChance() {
+        ItemStack[] outputs = { new ItemStack(new Item(), 1, 0) };
+        RecipeSnapshot absent = RecipeSnapshot.resolved((byte) 1, 0, null, outputs, null, null, 100, 512);
+        RecipeSnapshot explicit = RecipeSnapshot
+            .resolved((byte) 1, 0, null, outputs, null, null, new int[] { 10_000 }, 100, 512);
 
-        long base = RecipeSnapshot.computeContentHash(null, null, null, outputs, null, new int[] { 5000 }, 100, 512);
-        long differentChance = RecipeSnapshot
-            .computeContentHash(null, null, null, outputs, null, new int[] { 7500 }, 100, 512);
-
-        assertNotEquals(base, differentChance);
+        assertFalse(
+            absent.itemOutputs()
+                .get(0)
+                .hasChance());
+        assertTrue(
+            explicit.itemOutputs()
+                .get(0)
+                .hasChance());
+        assertEquals(
+            10_000,
+            absent.itemOutputs()
+                .get(0)
+                .effectiveChance());
+        assertNotEquals(absent.contentHash(), explicit.contentHash());
     }
 
     @Test
-    void unresolvedSnapshotHasNoResolvedStacksOrFluids() {
+    void unresolvedSnapshotHasNoResolvedResources() {
         RecipeSnapshot snapshot = RecipeSnapshot.unresolved((byte) 2, 9, 456L);
 
-        assertNull(snapshot.inputs());
-        assertNull(snapshot.outputs());
-        assertNull(snapshot.fluidInputs());
-        assertNull(snapshot.fluidOutputs());
-        assertNull(snapshot.outputChances());
-        assertNull(snapshot.fluidOutputChances());
+        assertTrue(
+            snapshot.itemInputs()
+                .isEmpty());
+        assertTrue(
+            snapshot.itemOutputs()
+                .isEmpty());
+        assertTrue(
+            snapshot.fluidInputs()
+                .isEmpty());
+        assertTrue(
+            snapshot.fluidOutputs()
+                .isEmpty());
         assertEquals(0, snapshot.duration());
         assertEquals(0, snapshot.eut());
     }
 
+    private static RecipeSnapshot resolvedFluidInput(net.minecraftforge.fluids.Fluid fluid, int amount) {
+        return RecipeSnapshot
+            .resolved((byte) 1, 0, null, null, new FluidStack[] { new FluidStack(fluid, amount) }, null, 100, 512);
+    }
 }

@@ -46,6 +46,11 @@ final class ModuleOperationDefinitionTest {
     }
 
     @Test
+    void minerFocusSpecRejectsBlankTierKey() {
+        assertThrows(IllegalArgumentException.class, () -> new MinerFocusOperation(ModuleTier.EV, " ", null));
+    }
+
+    @Test
     void planHasCorrectTimingAndRefund() {
         ModuleOperationPlan plan = new ModuleOperationPlan(
             new HammerModuleOperation(ModuleTier.IV, HammerVariant.BIG.name()),

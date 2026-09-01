@@ -401,6 +401,10 @@ public class FacilityModuleRegistry {
         if (tier == null) {
             throw new IllegalArgumentException("FacilityModuleRegistry: tier must not be null for kind " + kind);
         }
+        if (!kind.allowedTiers()
+            .contains(tier)) {
+            throw new IllegalArgumentException("FacilityModuleRegistry: tier " + tier + " is not supported by " + kind);
+        }
         ModuleInstance instance = new ModuleInstance(moduleId, def, anchor, shape, tier);
         instance.setComponent(createComponent(kind));
         return instance;

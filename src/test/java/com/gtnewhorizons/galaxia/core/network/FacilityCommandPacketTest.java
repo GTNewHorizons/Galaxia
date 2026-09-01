@@ -4,14 +4,23 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.nio.charset.StandardCharsets;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.CompressedStreamTools;
+import net.minecraft.nbt.NBTSizeTracker;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.nbt.NBTTagString;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidRegistry;
 
@@ -45,6 +54,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
@@ -70,8 +80,13 @@ final class FacilityCommandPacketTest {
 
     @Test
     void everyFacilityCommandVariantRoundTripsThroughItsTypedWirePayload() {
-        ItemStackWrapper item = ItemStackWrapper.of(new ItemStack(Items.stick));
-        FluidKey fluid = new FluidKey(TEST_FLUID, null);
+        ItemStack taggedStack = new ItemStack(Items.stick);
+        taggedStack.stackTagCompound = new NBTTagCompound();
+        taggedStack.stackTagCompound.setString("identity", "tagged-item");
+        ItemStackWrapper item = ItemStackWrapper.of(taggedStack);
+        NBTTagCompound fluidTag = new NBTTagCompound();
+        fluidTag.setString("identity", "tagged-fluid");
+        FluidKey fluid = new FluidKey(TEST_FLUID, fluidTag);
         List<ModulePlacement> placements = List.of(new ModulePlacement(new StationTileCoord((byte) 4, (byte) -3), 3));
         RecipeBook recipeBook = recipeBook();
         List<FacilityCommand> commands = List.of(
@@ -115,17 +130,17 @@ final class FacilityCommandPacketTest {
                 recipeBook),
             new FacilityCommand.CreateSettingsGroup(FACILITY_ID, MODULE_ID, "Shared miners"),
             new FacilityCommand.RenameSettingsGroup(FACILITY_ID, new SettingsGroup.ID(7), "Priority miners"),
-            new FacilityCommand.JoinSettingsGroup(FACILITY_ID, MODULE_ID, new SettingsGroup.ID(7)),
-            new FacilityCommand.LeaveSettingsGroup(FACILITY_ID, MODULE_ID),
+            new FacilityCommand.SetSettingsGroup(FACILITY_ID, MODULE_ID, new SettingsGroup.ID(7)),
+            new FacilityCommand.SetSettingsGroup(FACILITY_ID, MODULE_ID, null),
             new FacilityCommand.CopyModuleSettings(FACILITY_ID, MODULE_ID, List.of(SECOND_MODULE_ID)),
-            new FacilityCommand.SetMinerOreBlacklisted(FACILITY_ID, MODULE_ID, "ore:iron", true),
-            new FacilityCommand.SetHammerShootingConfig(
+            new FacilityCommand.ReplaceMinerSettings(
                 FACILITY_ID,
                 MODULE_ID,
-                new AllowShootingConfig(AllowShootingConfig.Mode.WHEN_DV_UNDER, 3.5)),
-            new FacilityCommand.SetHammerRoutePriority(
+                new MinerSettings(Set.of("ore:iron", "ore:copper"))),
+            new FacilityCommand.ConfigureHammer(
                 FACILITY_ID,
                 MODULE_ID,
+                new AllowShootingConfig(AllowShootingConfig.Mode.WHEN_DV_UNDER, 3.5),
                 OrbitalTransferPlanner.RoutePriority.PRIORITIZE_DV),
             new FacilityCommand.SetMinerFocusOre(FACILITY_ID, MODULE_ID, "ore:iron"),
             new FacilityCommand.ConfigureDebugDataGenerator(
@@ -161,147 +176,213 @@ final class FacilityCommandPacketTest {
     }
 
     @Test
-    void malformedWireInputsNeverProducePartialCommands() {
+    void malformedNbtEnvelopesNeverProducePartialCommands() throws Exception {
+        FacilityCommand command = new FacilityCommand.ClearInventoryResource(
+            FACILITY_ID,
+            ItemStackWrapper.of(new ItemStack(Items.stick)));
         List<ByteBuf> malformed = new ArrayList<>();
-        malformed.add(base(255));
 
-        ByteBuf invalidEnum = base(FacilityCommandPacket.OP_ADJUST_INVENTORY);
-        writeItemKey(invalidEnum, "minecraft:stick:0");
-        invalidEnum.writeByte(255);
-        invalidEnum.writeLong(1L);
-        malformed.add(invalidEnum);
+        NBTTagCompound unknown = envelope(command);
+        unknown.setString("type", "unknown");
+        malformed.add(wire(unknown));
 
-        ByteBuf invalidKeyType = base(FacilityCommandPacket.OP_CLEAR_INVENTORY_RESOURCE);
-        invalidKeyType.writeByte(2);
-        malformed.add(invalidKeyType);
+        NBTTagCompound extra = envelope(command);
+        extra.setByte("extra", (byte) 1);
+        malformed.add(wire(extra));
 
-        ByteBuf invalidKey = base(FacilityCommandPacket.OP_CLEAR_INVENTORY_RESOURCE);
-        writeItemKey(invalidKey, "missing:item:0");
-        malformed.add(invalidKey);
+        NBTTagCompound wrongDataType = envelope(command);
+        wrongDataType.setString("data", "wrong");
+        malformed.add(wire(wrongDataType));
 
-        ByteBuf malformedUtf8 = base(FacilityCommandPacket.OP_REPLACE_FILTERS);
-        malformedUtf8.writeByte(FacilityCommand.FilterKind.ITEM.ordinal());
-        malformedUtf8.writeInt(1);
-        malformedUtf8.writeShort(2);
-        malformedUtf8.writeByte(0xC3);
-        malformedUtf8.writeByte(0x28);
-        malformed.add(malformedUtf8);
+        NBTTagCompound invalidEnum = envelope(
+            new FacilityCommand.AdjustInventory(
+                FACILITY_ID,
+                ItemStackWrapper.of(new ItemStack(Items.stick)),
+                FacilityCommand.InventoryAdjustment.INSERT,
+                1L));
+        invalidEnum.getCompoundTag("data")
+            .setString("direction", "UNKNOWN");
+        malformed.add(wire(invalidEnum));
 
-        ByteBuf invalidBoolean = base(FacilityCommandPacket.OP_PLAN_TIER_UPGRADE);
-        invalidBoolean.writeInt(1);
-        writeUuid(invalidBoolean, MODULE_ID.id());
-        invalidBoolean.writeByte(ModuleTier.IV.ordinal());
-        invalidBoolean.writeByte(2);
-        malformed.add(invalidBoolean);
+        NBTTagCompound wrongBoundSubtype = envelope(
+            new FacilityCommand.SetInventoryBound(
+                FACILITY_ID,
+                BoundKind.ITEM_LOWER,
+                ItemStackWrapper.of(new ItemStack(Items.stick)),
+                1L));
+        wrongBoundSubtype.getCompoundTag("data")
+            .setString("kind", BoundKind.FLUID_LOWER.name());
+        malformed.add(wire(wrongBoundSubtype));
 
-        ByteBuf duplicateTargets = base(FacilityCommandPacket.OP_PLAN_TIER_UPGRADE);
-        duplicateTargets.writeInt(2);
-        writeUuid(duplicateTargets, MODULE_ID.id());
-        writeUuid(duplicateTargets, MODULE_ID.id());
-        duplicateTargets.writeByte(ModuleTier.IV.ordinal());
-        duplicateTargets.writeByte(0);
-        malformed.add(duplicateTargets);
+        NBTTagCompound duplicateTargets = envelope(
+            new FacilityCommand.PlanTierUpgrade(FACILITY_ID, List.of(MODULE_ID), ModuleTier.IV, false));
+        duplicateTargets.getCompoundTag("data")
+            .getTagList("targets", 8)
+            .appendTag(
+                new NBTTagString(
+                    MODULE_ID.id()
+                        .toString()));
+        malformed.add(wire(duplicateTargets));
 
-        ByteBuf badRotation = validBuildPrefix();
-        badRotation.writeInt(1);
-        badRotation.writeByte(0);
-        badRotation.writeByte(0);
-        badRotation.writeByte(4);
-        malformed.add(badRotation);
+        NBTTagCompound wrongTargetSubtype = envelope(
+            new FacilityCommand.PlanTierUpgrade(FACILITY_ID, List.of(MODULE_ID), ModuleTier.IV, false));
+        NBTTagList compounds = new NBTTagList();
+        compounds.appendTag(new NBTTagCompound());
+        wrongTargetSubtype.getCompoundTag("data")
+            .setTag("targets", compounds);
+        malformed.add(wire(wrongTargetSubtype));
 
-        ByteBuf impossibleFilterCount = base(FacilityCommandPacket.OP_REPLACE_FILTERS);
-        impossibleFilterCount.writeByte(FacilityCommand.FilterKind.ITEM.ordinal());
-        impossibleFilterCount.writeInt(257);
-        malformed.add(impossibleFilterCount);
+        NBTTagCompound invalidBoolean = envelope(
+            new FacilityCommand.PlanTierUpgrade(FACILITY_ID, List.of(MODULE_ID), ModuleTier.IV, false));
+        invalidBoolean.getCompoundTag("data")
+            .setByte("reserveItems", (byte) 2);
+        malformed.add(wire(invalidBoolean));
 
-        ByteBuf impossiblePlacementCount = validBuildPrefix();
-        impossiblePlacementCount.writeInt(257);
-        malformed.add(impossiblePlacementCount);
+        NBTTagCompound invalidGroup = envelope(
+            new FacilityCommand.SetSettingsGroup(FACILITY_ID, MODULE_ID, new SettingsGroup.ID(1)));
+        invalidGroup.getCompoundTag("data")
+            .setInteger("group", 0);
+        malformed.add(wire(invalidGroup));
 
-        ByteBuf impossibleTargetCount = base(FacilityCommandPacket.OP_PLAN_TIER_UPGRADE);
-        impossibleTargetCount.writeInt(257);
-        malformed.add(impossibleTargetCount);
+        NBTTagCompound blankOre = envelope(
+            new FacilityCommand.ReplaceMinerSettings(FACILITY_ID, MODULE_ID, new MinerSettings(Set.of("ore:iron"))));
+        NBTTagList blankBlacklist = new NBTTagList();
+        blankBlacklist.appendTag(new NBTTagString(" "));
+        blankOre.getCompoundTag("data")
+            .getCompoundTag("settings")
+            .setTag("blacklist", blankBlacklist);
+        malformed.add(wire(blankOre));
 
-        ByteBuf invalidSettingsGroupId = base(FacilityCommandPacket.OP_JOIN_SETTINGS_GROUP);
-        writeUuid(invalidSettingsGroupId, MODULE_ID.id());
-        invalidSettingsGroupId.writeInt(0);
-        malformed.add(invalidSettingsGroupId);
+        NBTTagCompound duplicateOre = envelope(
+            new FacilityCommand.ReplaceMinerSettings(FACILITY_ID, MODULE_ID, new MinerSettings(Set.of("ore:iron"))));
+        duplicateOre.getCompoundTag("data")
+            .getCompoundTag("settings")
+            .getTagList("blacklist", 8)
+            .appendTag(new NBTTagString("ore:iron"));
+        malformed.add(wire(duplicateOre));
 
-        ByteBuf blankOreKey = base(FacilityCommandPacket.OP_SET_MINER_ORE_BLACKLISTED);
-        writeUuid(blankOreKey, MODULE_ID.id());
-        writeString(blankOreKey, " ");
-        blankOreKey.writeByte(1);
-        malformed.add(blankOreKey);
+        NBTTagCompound invalidOwner = envelope(
+            new FacilityCommand.ReplaceRecipeBook(FACILITY_ID, new RecipeBookOwner.Private(MODULE_ID), recipeBook()));
+        invalidOwner.getCompoundTag("data")
+            .getCompoundTag("owner")
+            .setString("type", "unknown");
+        malformed.add(wire(invalidOwner));
 
-        ByteBuf invalidBlacklistFlag = base(FacilityCommandPacket.OP_SET_MINER_ORE_BLACKLISTED);
-        writeUuid(invalidBlacklistFlag, MODULE_ID.id());
-        writeString(invalidBlacklistFlag, "ore:iron");
-        invalidBlacklistFlag.writeByte(2);
-        malformed.add(invalidBlacklistFlag);
-
-        ByteBuf invalidBookOwner = base(FacilityCommandPacket.OP_REPLACE_RECIPE_BOOK);
-        invalidBookOwner.writeByte(255);
-        malformed.add(invalidBookOwner);
-
-        ByteBuf invalidPrivateOwner = base(FacilityCommandPacket.OP_REPLACE_RECIPE_BOOK);
-        invalidPrivateOwner.writeByte(0);
-        invalidPrivateOwner.writeZero(16);
-        malformed.add(invalidPrivateOwner);
-
-        ByteBuf invalidGroupOwner = base(FacilityCommandPacket.OP_REPLACE_RECIPE_BOOK);
-        invalidGroupOwner.writeByte(1);
-        invalidGroupOwner.writeInt(0);
-        malformed.add(invalidGroupOwner);
-
-        ByteBuf invalidBookLength = base(FacilityCommandPacket.OP_REPLACE_RECIPE_BOOK);
-        invalidBookLength.writeByte(0);
-        writeUuid(invalidBookLength, MODULE_ID.id());
-        invalidBookLength.writeInt(-1);
-        malformed.add(invalidBookLength);
-
-        ByteBuf invalidBookEnums = base(FacilityCommandPacket.OP_REPLACE_RECIPE_BOOK);
-        invalidBookEnums.writeByte(0);
-        writeUuid(invalidBookEnums, MODULE_ID.id());
-        invalidBookEnums.writeInt(6);
-        invalidBookEnums.writeByte(255);
-        invalidBookEnums.writeByte(NotDoablePolicy.SKIP.ordinal());
-        invalidBookEnums.writeInt(0);
-        malformed.add(invalidBookEnums);
-
-        ByteBuf trailingBookSlice = base(FacilityCommandPacket.OP_REPLACE_RECIPE_BOOK);
-        trailingBookSlice.writeByte(0);
-        writeUuid(trailingBookSlice, MODULE_ID.id());
-        trailingBookSlice.writeInt(7);
-        trailingBookSlice.writeByte(RecipeSchedulerMode.PRIORITY.ordinal());
-        trailingBookSlice.writeByte(NotDoablePolicy.SKIP.ordinal());
-        trailingBookSlice.writeInt(0);
-        trailingBookSlice.writeByte(0);
-        malformed.add(trailingBookSlice);
-
-        ByteBuf oversize = Unpooled.buffer(FacilityCommandPacket.MAX_PACKET_BYTES + 1);
-        oversize.writeZero(FacilityCommandPacket.MAX_PACKET_BYTES + 1);
-        malformed.add(oversize);
-
-        ByteBuf valid = Unpooled.buffer();
-        new FacilityCommandPacket(
-            new FacilityCommand.ClearInventoryResource(FACILITY_ID, ItemStackWrapper.of(new ItemStack(Items.stick))))
-                .toBytes(valid);
-        ByteBuf truncated = valid.copy(0, valid.readableBytes() - 1);
-        malformed.add(truncated);
+        ByteBuf valid = wire(envelope(command));
+        malformed.add(valid.copy(0, valid.readableBytes() - 1));
         ByteBuf trailing = valid.copy();
         trailing.writeByte(0);
         malformed.add(trailing);
+        ByteBuf compressedTrailing = valid.copy();
+        int payloadLength = compressedTrailing.getUnsignedShort(0);
+        compressedTrailing.setShort(0, payloadLength + 1);
+        compressedTrailing.writeByte(0);
+        malformed.add(compressedTrailing);
 
-        ByteBuf blacklistTrailing = Unpooled.buffer();
-        new FacilityCommandPacket(new FacilityCommand.SetMinerOreBlacklisted(FACILITY_ID, MODULE_ID, "ore:iron", true))
-            .toBytes(blacklistTrailing);
-        blacklistTrailing.writeByte(0);
-        malformed.add(blacklistTrailing);
+        ByteBuf exactMaximumBody = Unpooled.buffer(FacilityCommandPacket.MAX_MESSAGE_BODY_BYTES);
+        exactMaximumBody.writeShort(FacilityCommandPacket.MAX_COMPRESSED_NBT_BYTES);
+        exactMaximumBody.writeZero(FacilityCommandPacket.MAX_COMPRESSED_NBT_BYTES);
+        malformed.add(exactMaximumBody);
+        ByteBuf oversizedBody = Unpooled.buffer(FacilityCommandPacket.MAX_MESSAGE_BODY_BYTES + 1);
+        oversizedBody.writeZero(FacilityCommandPacket.MAX_MESSAGE_BODY_BYTES + 1);
+        malformed.add(oversizedBody);
 
-        for (ByteBuf raw : malformed) {
+        for (int i = 0; i < malformed.size(); i++) {
+            ByteBuf raw = malformed.get(i);
             FacilityCommandPacket packet = new FacilityCommandPacket();
             packet.fromBytes(raw);
-            assertNull(packet.command());
+            assertNull(packet.command(), "malformed case " + i);
+            assertFalse(raw.isReadable());
+        }
+    }
+
+    @Test
+    void unknownCommandDataFieldsDoNotInvalidateRequiredState() throws Exception {
+        FacilityCommand command = new FacilityCommand.ClearInventoryResource(
+            FACILITY_ID,
+            ItemStackWrapper.of(new ItemStack(Items.stick)));
+        NBTTagCompound encoded = envelope(command);
+        encoded.getCompoundTag("data")
+            .setString("ignored", "future field");
+        FacilityCommandPacket packet = new FacilityCommandPacket();
+
+        packet.fromBytes(wire(encoded));
+
+        assertEquals(command, packet.command());
+    }
+
+    @Test
+    void decoderRejectsNonCanonicalRecipeState() throws Exception {
+        NBTTagCompound oversizedArray = envelope(replaceRecipeBook(recipeBook()));
+        NBTTagCompound oversizedRecipe = firstRecipe(oversizedArray);
+        NBTTagList inputs = oversizedRecipe.getTagList("itemInputs", 10);
+        NBTTagCompound input = inputs.getCompoundTagAt(0);
+        while (inputs.tagCount() < 65) inputs.appendTag(input.copy());
+        oversizedRecipe.setLong(
+            "hash",
+            oversizedRecipeBook().recipes()
+                .get(0)
+                .recipe()
+                .contentHash());
+
+        NBTTagCompound oversizedName = envelope(replaceRecipeBook(recipeBook()));
+        firstRecipe(oversizedName).setString("displayName", "x".repeat(1025));
+
+        NBTTagCompound negativeEut = envelope(replaceRecipeBook(recipeBook()));
+        NBTTagCompound negativeEutRecipe = firstRecipe(negativeEut);
+        negativeEutRecipe.setInteger("eut", -1);
+        negativeEutRecipe.setLong(
+            "hash",
+            recipeBook(0, "Sticks").recipes()
+                .get(0)
+                .recipe()
+                .contentHash());
+
+        NBTTagCompound negativeMetadata = envelope(replaceRecipeBook(recipeBook()));
+        NBTTagCompound negativeMetadataRecipe = firstRecipe(negativeMetadata);
+        negativeMetadataRecipe.getTagList("itemInputs", 10)
+            .getCompoundTagAt(0)
+            .getCompoundTag("stack")
+            .setShort("Damage", (short) -1);
+        negativeMetadataRecipe.setLong(
+            "hash",
+            negativeMetadataRecipeBook().recipes()
+                .get(0)
+                .recipe()
+                .contentHash());
+
+        NBTTagCompound zeroOwner = envelope(replaceRecipeBook(recipeBook()));
+        zeroOwner.getCompoundTag("data")
+            .getCompoundTag("owner")
+            .setString("module", new UUID(0L, 0L).toString());
+
+        List<NBTTagCompound> malformedCases = List
+            .of(oversizedArray, oversizedName, negativeEut, negativeMetadata, zeroOwner);
+        for (int i = 0; i < malformedCases.size(); i++) {
+            FacilityCommandPacket packet = new FacilityCommandPacket();
+            packet.fromBytes(wire(malformedCases.get(i)));
+            assertTrue(packet.command() == null, "malformed recipe case " + i);
+        }
+    }
+
+    @Test
+    void encoderRejectsNonCanonicalRecipeStateBeforeWritingDestination() {
+        ByteBuf destination = Unpooled.buffer();
+        List<FacilityCommand> invalid = List.of(
+            replaceRecipeBook(oversizedRecipeBook()),
+            replaceRecipeBook(recipeBook(32, "x".repeat(1025))),
+            new FacilityCommand.ReplaceRecipeBook(
+                FACILITY_ID,
+                new RecipeBookOwner.Private(new ModuleInstance.ID(new UUID(0L, 0L))),
+                recipeBook()));
+
+        for (int i = 0; i < invalid.size(); i++) {
+            FacilityCommand command = invalid.get(i);
+            assertThrows(
+                RuntimeException.class,
+                () -> new FacilityCommandPacket(command).toBytes(destination),
+                "invalid recipe case " + i);
+            assertEquals(0, destination.writerIndex());
         }
     }
 
@@ -319,12 +400,24 @@ final class FacilityCommandPacketTest {
         assertThrows(
             RuntimeException.class,
             () -> new FacilityCommandPacket(
-                new FacilityCommand.SetMinerOreBlacklisted(FACILITY_ID, MODULE_ID, tooLong, true))
+                new FacilityCommand.ReplaceMinerSettings(FACILITY_ID, MODULE_ID, new MinerSettings(Set.of(tooLong))))
+                    .toBytes(destination));
+        assertEquals(0, destination.writerIndex());
+
+        Set<String> excessiveOres = new LinkedHashSet<>();
+        for (int i = 0; i < 257; i++) excessiveOres.add("ore:" + i);
+        assertThrows(
+            RuntimeException.class,
+            () -> new FacilityCommandPacket(
+                new FacilityCommand.ReplaceMinerSettings(FACILITY_ID, MODULE_ID, new MinerSettings(excessiveOres)))
                     .toBytes(destination));
         assertEquals(0, destination.writerIndex());
 
         List<String> excessiveFilterData = new ArrayList<>();
-        for (int i = 0; i < 33; i++) excessiveFilterData.add("x".repeat(1024));
+        for (int i = 0; i < 33; i++) {
+            String prefix = Integer.toString(i);
+            excessiveFilterData.add(prefix + "x".repeat(1024 - prefix.length()));
+        }
         assertThrows(
             RuntimeException.class,
             () -> new FacilityCommandPacket(
@@ -342,42 +435,29 @@ final class FacilityCommandPacketTest {
         assertEquals(0, destination.writerIndex());
     }
 
-    private static ByteBuf base(int opcode) {
-        ByteBuf buf = Unpooled.buffer();
-        buf.writeByte(opcode);
-        writeUuid(buf, FACILITY_ID.id());
-        return buf;
+    private static NBTTagCompound envelope(FacilityCommand command) throws Exception {
+        ByteBuf encoded = Unpooled.buffer();
+        new FacilityCommandPacket(command).toBytes(encoded);
+        int length = encoded.readUnsignedShort();
+        byte[] compressed = new byte[length];
+        encoded.readBytes(compressed);
+        return CompressedStreamTools
+            .func_152457_a(compressed, new NBTSizeTracker(FacilityCommandPacket.MAX_DECOMPRESSED_NBT_BYTES));
     }
 
-    private static ByteBuf validBuildPrefix() {
-        ByteBuf buf = base(FacilityCommandPacket.OP_BUILD_MODULES);
-        buf.writeByte(FacilityModuleKind.HAMMER.ordinal());
-        buf.writeByte(ModuleShape.SINGLE.ordinal());
-        buf.writeByte(1);
-        buf.writeByte(ModuleTier.EV.ordinal());
-        buf.writeByte(HammerVariant.BASE.ordinal());
-        buf.writeByte(0);
-        buf.writeByte(0);
-        return buf;
-    }
-
-    private static void writeItemKey(ByteBuf buf, String key) {
-        buf.writeByte(0);
-        writeString(buf, key);
-    }
-
-    private static void writeString(ByteBuf buf, String value) {
-        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
-        buf.writeShort(bytes.length);
-        buf.writeBytes(bytes);
-    }
-
-    private static void writeUuid(ByteBuf buf, UUID id) {
-        buf.writeLong(id.getMostSignificantBits());
-        buf.writeLong(id.getLeastSignificantBits());
+    private static ByteBuf wire(NBTTagCompound envelope) throws IOException {
+        byte[] compressed = CompressedStreamTools.compress(envelope);
+        ByteBuf encoded = Unpooled.buffer();
+        encoded.writeShort(compressed.length);
+        encoded.writeBytes(compressed);
+        return encoded;
     }
 
     private static RecipeBook recipeBook() {
+        return recipeBook(32, "Sticks");
+    }
+
+    private static RecipeBook recipeBook(int eut, String displayName) {
         RecipeSnapshot snapshot = RecipeSnapshot.resolved(
             (byte) 1,
             3,
@@ -386,8 +466,45 @@ final class FacilityCommandPacketTest {
             null,
             null,
             100,
+            eut);
+        SavedRecipe recipe = new SavedRecipe(snapshot, true, 8L, (byte) 2, (byte) 3, displayName);
+        return new RecipeBook(List.of(recipe), RecipeSchedulerMode.ORDER, NotDoablePolicy.BACK_TO_BEGINNING);
+    }
+
+    private static RecipeBook oversizedRecipeBook() {
+        ItemStack[] inputs = new ItemStack[65];
+        Arrays.setAll(inputs, ignored -> new ItemStack(Items.stick, 2, 0));
+        RecipeSnapshot snapshot = RecipeSnapshot
+            .resolved((byte) 1, 3, inputs, new ItemStack[] { new ItemStack(Items.diamond, 1, 0) }, null, null, 100, 32);
+        return book(snapshot);
+    }
+
+    private static RecipeBook negativeMetadataRecipeBook() {
+        RecipeSnapshot snapshot = RecipeSnapshot.resolved(
+            (byte) 1,
+            3,
+            new ItemStack[] { new ItemStack(Items.stick, 2, -1) },
+            new ItemStack[] { new ItemStack(Items.diamond, 1, 0) },
+            null,
+            null,
+            100,
             32);
+        return book(snapshot);
+    }
+
+    private static RecipeBook book(RecipeSnapshot snapshot) {
         SavedRecipe recipe = new SavedRecipe(snapshot, true, 8L, (byte) 2, (byte) 3, "Sticks");
         return new RecipeBook(List.of(recipe), RecipeSchedulerMode.ORDER, NotDoablePolicy.BACK_TO_BEGINNING);
+    }
+
+    private static FacilityCommand.ReplaceRecipeBook replaceRecipeBook(RecipeBook book) {
+        return new FacilityCommand.ReplaceRecipeBook(FACILITY_ID, new RecipeBookOwner.Private(MODULE_ID), book);
+    }
+
+    private static NBTTagCompound firstRecipe(NBTTagCompound envelope) {
+        return envelope.getCompoundTag("data")
+            .getCompoundTag("recipeBook")
+            .getTagList("recipes", 10)
+            .getCompoundTagAt(0);
     }
 }

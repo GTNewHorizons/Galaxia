@@ -238,21 +238,23 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
             case WHEN_DV_UNDER -> AllowShootingConfig.Mode.WHEN_TOF_UNDER;
             case WHEN_TOF_UNDER -> AllowShootingConfig.Mode.ALWAYS;
         };
-        CelestialClient.setHammerShootingConfig(
+        CelestialClient.configureHammer(
             assetId,
             controller.moduleIndex(),
             new AllowShootingConfig(
                 next,
                 hammer.config()
-                    .threshold()));
+                    .threshold()),
+            hammer.routePriority());
     }
 
     private void toggleRoutePriority() {
         ModuleHammer hammer = selectedHammer();
         if (hammer == null) return;
-        CelestialClient.setHammerRoutePriority(
+        CelestialClient.configureHammer(
             assetId,
             controller.moduleIndex(),
+            hammer.config(),
             hammer.routePriority()
                 .toggled());
     }
@@ -297,13 +299,14 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
     private void updateThreshold(double value) {
         ModuleHammer hammer = selectedHammer();
         if (hammer == null) return;
-        CelestialClient.setHammerShootingConfig(
+        CelestialClient.configureHammer(
             assetId,
             controller.moduleIndex(),
             new AllowShootingConfig(
                 hammer.config()
                     .mode(),
-                value));
+                value),
+            hammer.routePriority());
     }
 
     private String dispatchStatusLine(HammerDispatchStatus.Status status) {

@@ -18,6 +18,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot.Resource;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
@@ -99,13 +100,13 @@ final class StationItemInteractionModel {
                 for (SavedRecipe saved : facility.recipeBook(module)
                     .recipes()) {
                     if (!saved.enabled()) continue;
-                    consumes |= contains(
+                    consumes |= containsRecipeResource(
                         saved.recipe()
-                            .inputs(),
+                            .itemInputs(),
                         item);
-                    produces |= contains(
+                    produces |= containsRecipeResource(
                         saved.recipe()
-                            .outputs(),
+                            .itemOutputs(),
                         item);
                 }
             }
@@ -176,13 +177,8 @@ final class StationItemInteractionModel {
             .size() >= 2 ? group : null;
     }
 
-    private static boolean contains(ItemStack[] stacks, ItemStackWrapper item) {
-        if (stacks == null) return false;
-        for (ItemStack stack : stacks) {
-            if (stack != null && stack.getItem() != null && item.equals(ItemStackWrapper.of(stack))) {
-                return true;
-            }
-        }
+    private static boolean containsRecipeResource(List<Resource> resources, ItemStackWrapper item) {
+        for (Resource resource : resources) if (item.equals(resource.key())) return true;
         return false;
     }
 

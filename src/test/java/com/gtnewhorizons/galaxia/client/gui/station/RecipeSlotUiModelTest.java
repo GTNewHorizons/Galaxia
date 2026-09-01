@@ -2,12 +2,12 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import net.minecraftforge.fluids.FluidStack;
-
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot.Resource;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.testing.TestFluidStacks;
 
@@ -37,7 +37,7 @@ final class RecipeSlotUiModelTest {
         assertEquals("1000L", RecipeSlotUiModel.fluidSlotAmountText(fluidStackWithAmount(1000)));
     }
 
-    private static FluidStack fluidStackWithAmount(int amount) {
-        return TestFluidStacks.stack("galaxia.recipe_slot_test_fluid", amount);
+    private static Resource fluidStackWithAmount(int amount) {
+        return new Resource(FluidKey.of(TestFluidStacks.stack("galaxia.recipe_slot_test_fluid", amount)), amount);
     }
 }

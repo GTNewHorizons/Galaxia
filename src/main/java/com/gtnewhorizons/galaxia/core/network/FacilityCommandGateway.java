@@ -50,7 +50,9 @@ public final class FacilityCommandGateway {
         if (actor == null || command == null || command.facilityId() == null) {
             return rejected(command, FacilityCommand.Rejection.MALFORMED_COMMAND);
         }
-        if (!hasPermission(actor, command)) {
+        TeamAction requiredAction = requiredAction(command);
+        if (!actor.permissions()
+            .contains(requiredAction)) {
             return rejected(command, FacilityCommand.Rejection.NOT_AUTHORIZED);
         }
         AutomatedFacility facility = findOwnedFacility(actor.teamId(), command.facilityId());
@@ -90,35 +92,13 @@ public final class FacilityCommandGateway {
                 DebugActionAuthorization.isAuthorized(player)));
     }
 
-    private static boolean hasPermission(Actor actor, FacilityCommand command) {
-        TeamAction requiredAction = requiredAction(command);
-        return requiredAction != null && actor.permissions()
-            .contains(requiredAction);
-    }
-
     private static TeamAction requiredAction(FacilityCommand command) {
-        if (command instanceof FacilityCommand.BuildModules || command instanceof FacilityCommand.CopyBuildModules) {
-            return TeamAction.BUILD_MODULE;
-        }
-        if (command instanceof FacilityCommand.RequestModuleDeconstruction
-            || command instanceof FacilityCommand.CancelModuleOperation
-            || command instanceof FacilityCommand.ReplaceRecipeBook
-            || command instanceof FacilityCommand.ModuleConfiguration
-            || command instanceof FacilityCommand.ModuleSettingsCommand
-            || command instanceof FacilityCommand.ModuleOperationRequest) {
-            return TeamAction.MODIFY_MODULE;
-        }
-        if (command instanceof FacilityCommand.AdjustInventory
-            || command instanceof FacilityCommand.ClearInventoryResource
-            || command instanceof FacilityCommand.SetInventoryBound
-            || command instanceof FacilityCommand.ClearInventoryBound) {
-            return TeamAction.MANAGE_INVENTORY;
-        }
-        if (command instanceof FacilityCommand.ReplaceFilters || command instanceof FacilityCommand.PutLogisticsConfig
-            || command instanceof FacilityCommand.RemoveLogisticsConfig) {
-            return TeamAction.CONFIGURE_LOGISTICS;
-        }
-        return null;
+        return switch (command) {
+            case FacilityCommand.BuildCommand ignored -> TeamAction.BUILD_MODULE;
+            case FacilityCommand.ModuleCommand ignored -> TeamAction.MODIFY_MODULE;
+            case FacilityCommand.InventoryCommand ignored -> TeamAction.MANAGE_INVENTORY;
+            case FacilityCommand.LogisticsCommand ignored -> TeamAction.CONFIGURE_LOGISTICS;
+        };
     }
 
     private static FacilityCommand.Result rejected(FacilityCommand command, FacilityCommand.Rejection rejection) {

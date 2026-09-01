@@ -44,7 +44,7 @@ final class FacilityInventoryContractTest {
         AutomatedFacility facility = facility();
         ItemStackWrapper stored = ItemStackWrapper.of(new ItemStack(Items.stick));
         ItemStackWrapper accepted = ItemStackWrapper.of(new ItemStack(Items.diamond));
-        facility.loadFromSnapshot(Map.of(stored, 4L));
+        facility.restoreInventory(Map.of(stored, 4L));
         facility.addFilter(
             accepted.toItemStack()
                 .getUnlocalizedName(),
@@ -112,8 +112,7 @@ final class FacilityInventoryContractTest {
         long capacity = facility.itemCapacity();
         facility.insert(input, capacity);
 
-        assertTrue(
-            facility.tryExchange(new InventoryExchange(Map.of(input, 10L), Map.of(), Map.of(output, 10L), Map.of())));
+        assertTrue(facility.tryExchange(new InventoryExchange(Map.of(input, 10L), Map.of(output, 10L))));
 
         assertEquals(capacity - 10L, facility.itemAmount(input));
         assertEquals(10L, facility.itemAmount(output));
@@ -125,9 +124,7 @@ final class FacilityInventoryContractTest {
         ItemStackWrapper catalyst = ItemStackWrapper.of(new ItemStack(Items.diamond));
         facility.insert(catalyst, 1L);
 
-        assertTrue(
-            facility
-                .tryExchange(new InventoryExchange(Map.of(catalyst, 1L), Map.of(), Map.of(catalyst, 1L), Map.of())));
+        assertTrue(facility.tryExchange(new InventoryExchange(Map.of(catalyst, 1L), Map.of(catalyst, 1L))));
 
         assertEquals(1L, facility.itemAmount(catalyst));
     }
@@ -144,9 +141,7 @@ final class FacilityInventoryContractTest {
                 .getUnlocalizedName(),
             true);
 
-        assertFalse(
-            facility
-                .tryExchange(new InventoryExchange(Map.of(input, 4L), Map.of(), Map.of(blockedOutput, 2L), Map.of())));
+        assertFalse(facility.tryExchange(new InventoryExchange(Map.of(input, 4L), Map.of(blockedOutput, 2L))));
 
         assertEquals(4L, facility.itemAmount(input));
         assertEquals(0L, facility.itemAmount(blockedOutput));
@@ -157,7 +152,7 @@ final class FacilityInventoryContractTest {
         AutomatedFacility facility = facility();
         ItemStackWrapper first = ItemStackWrapper.of(new ItemStack(Items.diamond));
         ItemStackWrapper second = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
-        facility.loadFromSnapshot(Map.of(first, Long.MAX_VALUE, second, 1L));
+        facility.restoreInventory(Map.of(first, Long.MAX_VALUE, second, 1L));
 
         assertEquals(Long.MAX_VALUE, facility.storedItemAmount());
         assertEquals(0L, facility.remainingItemCapacity());
@@ -170,12 +165,12 @@ final class FacilityInventoryContractTest {
         AutomatedFacility facility = facility();
         ItemStackWrapper existing = ItemStackWrapper.of(new ItemStack(Items.diamond));
         ItemStackWrapper replacement = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
-        facility.loadFromSnapshot(Map.of(existing, 3L));
-        Map<ItemStackWrapper, Long> invalid = new LinkedHashMap<>();
+        facility.restoreInventory(Map.of(existing, 3L));
+        Map<InventoryKey, Long> invalid = new LinkedHashMap<>();
         invalid.put(replacement, 2L);
         invalid.put(null, 1L);
 
-        assertThrows(IllegalArgumentException.class, () -> facility.loadFromSnapshot(invalid));
+        assertThrows(IllegalArgumentException.class, () -> facility.restoreInventory(invalid));
 
         assertEquals(Map.of(existing, 3L), facility.itemSnapshot());
     }
@@ -184,16 +179,12 @@ final class FacilityInventoryContractTest {
     void rejectedFluidSnapshotLeavesExistingFluidsUntouched() {
         AutomatedFacility facility = facility();
         FluidKey existing = new FluidKey(FluidRegistry.WATER, null);
-        facility.loadFluidSnapshot(
-            Map.of(
-                existing.fluid()
-                    .getName(),
-                3L));
-        Map<String, Long> invalid = new LinkedHashMap<>();
-        invalid.put(FluidRegistry.LAVA.getName(), 2L);
-        invalid.put("galaxia.missing_fluid", 1L);
+        facility.restoreInventory(Map.of(existing, 3L));
+        Map<InventoryKey, Long> invalid = new LinkedHashMap<>();
+        invalid.put(new FluidKey(FluidRegistry.LAVA, null), 2L);
+        invalid.put(new FluidKey(null, null), 1L);
 
-        assertThrows(IllegalArgumentException.class, () -> facility.loadFluidSnapshot(invalid));
+        assertThrows(IllegalArgumentException.class, () -> facility.restoreInventory(invalid));
 
         assertEquals(3L, facility.fluidAmount(existing));
         assertEquals(0L, facility.fluidAmount(new FluidKey(FluidRegistry.LAVA, null)));
@@ -343,11 +334,7 @@ final class FacilityInventoryContractTest {
     void fluidInsertionAppliesOnlyTheRepresentableRemainder() {
         AutomatedFacility facility = facility();
         FluidKey fluid = new FluidKey(FluidRegistry.WATER, null);
-        facility.loadFluidSnapshot(
-            Map.of(
-                fluid.fluid()
-                    .getName(),
-                Long.MAX_VALUE - 5L));
+        facility.restoreInventory(Map.of(fluid, Long.MAX_VALUE - 5L));
 
         assertEquals(5L, facility.insert(fluid, 10L));
         assertEquals(Long.MAX_VALUE, facility.fluidAmount(fluid));
@@ -359,7 +346,7 @@ final class FacilityInventoryContractTest {
         AutomatedFacility facility = facility();
         ItemStackWrapper item = ItemStackWrapper.of(new ItemStack(Items.stick));
         long capacity = facility.itemCapacity();
-        facility.loadFromSnapshot(Map.of(item, capacity + 100L));
+        facility.restoreInventory(Map.of(item, capacity + 100L));
 
         assertEquals(0L, facility.insert(item, 1L));
         assertEquals(50L, facility.extract(item, 50L));

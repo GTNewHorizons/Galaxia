@@ -58,7 +58,7 @@ final class PlanetaryFeatureBehaviorTest {
             FacilityModuleKind.MINER,
             StationTileCoord.of(0, 0),
             ModuleShape.QUAD_2x2,
-            ModuleTier.HV);
+            ModuleTier.EV);
         MiningFeatureEffects.Builder builder = MiningFeatureEffects.builder();
 
         feature.applyMiningEffects(new FeatureMiningContext(module, feature.key(), 3, 4), builder);
@@ -77,7 +77,7 @@ final class PlanetaryFeatureBehaviorTest {
             FacilityModuleKind.MINER,
             StationTileCoord.of(0, 0),
             ModuleShape.QUAD_2x2,
-            ModuleTier.HV);
+            ModuleTier.EV);
         MiningFeatureEffects.Builder builder = MiningFeatureEffects.builder();
 
         feature.applyMiningEffects(new FeatureMiningContext(module, feature.key(), 3, 4), builder);

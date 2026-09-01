@@ -15,7 +15,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import io.netty.buffer.ByteBuf;
@@ -75,10 +74,6 @@ public final class PacketUtil {
         long mostSig = buf.readLong();
         long leastSig = buf.readLong();
         return new UUID(mostSig, leastSig);
-    }
-
-    static ModuleInstance.ID readModuleId(ByteBuf buf) {
-        return new ModuleInstance.ID(readId(buf));
     }
 
     static CelestialAsset.ID readAssetId(ByteBuf buf) {

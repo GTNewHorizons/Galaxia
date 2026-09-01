@@ -3,7 +3,6 @@ package com.gtnewhorizons.galaxia.registry.outpost.module;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
@@ -131,7 +130,7 @@ final class ProductionModuleHelperTest {
     }
 
     private static void execute(AutomatedFacility facility, ModuleInstance module, Random random) {
-        ProductionModuleHelper.execute(module, facility, random, new HashMap<>(), new HashMap<>());
+        ProductionModuleHelper.execute(module, facility, random);
     }
 
     private static ModuleInstance installBook(AutomatedFacility facility, RecipeBook book) {

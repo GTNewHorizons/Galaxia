@@ -99,17 +99,14 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
     @Override
     public boolean applyConfigurationTransition(ModuleInstance module,
         FacilityCommand.ModuleConfiguration configuration) {
-        if (configuration instanceof FacilityCommand.SetHammerShootingConfig setConfig) {
-            if (setConfig.config() == null) throw new IllegalArgumentException("Missing hammer shooting config");
-            if (setConfig.config()
-                .equals(config)) return false;
-            setConfig(setConfig.config());
-            return true;
-        }
-        if (configuration instanceof FacilityCommand.SetHammerRoutePriority setPriority) {
-            if (setPriority.priority() == null) throw new IllegalArgumentException("Missing hammer route priority");
-            if (setPriority.priority() == routePriority) return false;
-            setRoutePriority(setPriority.priority());
+        if (configuration instanceof FacilityCommand.ConfigureHammer configure) {
+            if (configure.config() == null || configure.priority() == null) {
+                throw new IllegalArgumentException("Missing hammer configuration");
+            }
+            if (configure.config()
+                .equals(config) && configure.priority() == routePriority) return false;
+            config = configure.config();
+            routePriority = configure.priority();
             return true;
         }
         return IParallelModule.super.applyConfigurationTransition(module, configuration);
@@ -185,10 +182,6 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
 
     public AllowShootingConfig config() {
         return config;
-    }
-
-    public void setConfig(@Nonnull AllowShootingConfig newConfig) {
-        this.config = newConfig;
     }
 
     public OrbitalTransferPlanner.RoutePriority routePriority() {
@@ -287,10 +280,6 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
 
     public int maxBatchSize() {
         return maxBatchSize;
-    }
-
-    public void setRoutePriority(@Nonnull OrbitalTransferPlanner.RoutePriority routePriority) {
-        this.routePriority = routePriority;
     }
 
     public void setVariant(@Nonnull HammerVariant variant) {

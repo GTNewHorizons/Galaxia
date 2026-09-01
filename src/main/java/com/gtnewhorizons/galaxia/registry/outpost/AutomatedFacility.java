@@ -77,8 +77,6 @@ public final class AutomatedFacility extends CelestialAsset {
     private static final Logger LOG = LogManager.getLogger(AutomatedFacility.class);
 
     private final FacilityInventory inventory = new FacilityInventory();
-    private final Map<ItemStackWrapper, InventoryBounds> itemBounds = new LinkedHashMap<>();
-    private final Map<FluidKey, InventoryBounds> fluidBounds = new LinkedHashMap<>();
 
     private final List<ModuleInstance> modules;
     private final StationLayout layout;
@@ -280,48 +278,34 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public boolean isAboveLow(InventoryKey key, long amount) {
-        return (resourceAmount(key) - amount) >= effectiveLowerBound(key);
+        return (inventory.amount(key) - amount) >= effectiveLowerBound(key);
     }
 
     public boolean isBelowUpper(InventoryKey key) {
-        return resourceAmount(key) < getBound(key).upperOrDefault();
-    }
-
-    private long resourceAmount(InventoryKey key) {
-        return inventory.amount(key);
-    }
-
-    private <T extends InventoryKey> Map<T, InventoryBounds> boundsFor(T key) {
-        return key instanceof ItemStackWrapper ? (Map<T, InventoryBounds>) itemBounds
-            : (Map<T, InventoryBounds>) fluidBounds;
+        return inventory.amount(key) < getBound(key).upperOrDefault();
     }
 
     public boolean hasLowerBound(InventoryKey key) {
-        if (key == null) return false;
-        return getBound(key).hasLow();
+        return key != null && getBound(key).hasLow();
     }
 
     public boolean hasUpperBound(InventoryKey key) {
-        if (key == null) return false;
-        return getBound(key).hasUpper();
+        return key != null && getBound(key).hasUpper();
     }
 
     public InventoryBounds getBound(InventoryKey key) {
-        if (key == null) return InventoryBounds.invalid();
-        return boundsFor(key).getOrDefault(key, InventoryBounds.invalid());
+        return inventory.bound(key);
     }
 
     public void setBound(InventoryKey key, long low, long upper) {
-        if (key == null) return;
-        boundsFor(key).put(key, new InventoryBounds(low, upper));
+        inventory.setBound(key, new InventoryBounds(low, upper));
     }
 
     public void setBound(InventoryKey key, long amount, boolean low) {
-        if (key == null) return;
         InventoryBounds current = getBound(key);
         InventoryBounds updated = low ? new InventoryBounds(amount, current.upper())
             : new InventoryBounds(current.low(), amount);
-        boundsFor(key).put(key, updated);
+        inventory.setBound(key, updated);
     }
 
     public boolean trySetBound(InventoryKey key, long amount, boolean low) {
@@ -334,34 +318,25 @@ public final class AutomatedFacility extends CelestialAsset {
         if (hasNextLow && hasNextUpper && nextLow > nextUpper) return false;
         InventoryBounds updated = new InventoryBounds(nextLow, nextUpper);
         if (updated.equals(current)) return false;
-        boundsFor(key).put(key, updated);
+        inventory.setBound(key, updated);
         return true;
     }
 
     public boolean clearBound(InventoryKey key) {
-        if (key == null) return false;
-        return boundsFor(key).remove(key) != null;
+        return inventory.clearBound(key);
     }
 
     public boolean clearBound(InventoryKey key, boolean low) {
-        if (key == null) return false;
-        Map<InventoryKey, InventoryBounds> bounds = boundsFor(key);
-        InventoryBounds current = bounds.get(key);
-        if (current == null || (low ? !current.hasLow() : !current.hasUpper())) return false;
+        InventoryBounds current = inventory.bound(key);
+        if (current.isInvalid() || (low ? !current.hasLow() : !current.hasUpper())) return false;
         if (low && current.hasUpper()) {
-            bounds.put(key, InventoryBounds.upperBound(current.upper()));
+            inventory.setBound(key, InventoryBounds.upperBound(current.upper()));
         } else if (!low && current.hasLow()) {
-            bounds.put(key, InventoryBounds.lowBound(current.low()));
+            inventory.setBound(key, InventoryBounds.lowBound(current.low()));
         } else {
-            bounds.remove(key);
+            inventory.clearBound(key);
         }
         return true;
-    }
-
-    public <T extends InventoryKey> Map<T, InventoryBounds> getBounds(boolean items) {
-        Map<T, InventoryBounds> bounds = items ? (Map<T, InventoryBounds>) itemBounds
-            : (Map<T, InventoryBounds>) fluidBounds;
-        return Collections.unmodifiableMap(bounds);
     }
 
     public FacilityCommand.Result applyCommand(FacilityCommand command, FacilityCommand.Authority authority) {
@@ -419,26 +394,21 @@ public final class AutomatedFacility extends CelestialAsset {
             }
             ModuleInstance.ID moduleId;
             if (command instanceof FacilityCommand.CreateSettingsGroup create) moduleId = create.moduleId();
-            else if (command instanceof FacilityCommand.JoinSettingsGroup join) moduleId = join.moduleId();
-            else if (command instanceof FacilityCommand.LeaveSettingsGroup leave) moduleId = leave.moduleId();
+            else if (command instanceof FacilityCommand.SetSettingsGroup setGroup) moduleId = setGroup.moduleId();
             else if (command instanceof FacilityCommand.CopyModuleSettings copy) moduleId = copy.sourceModuleId();
-            else if (command instanceof FacilityCommand.SetMinerOreBlacklisted setBlacklist)
-                moduleId = setBlacklist.moduleId();
+            else if (command instanceof FacilityCommand.ReplaceMinerSettings replace) moduleId = replace.moduleId();
             else return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MALFORMED_COMMAND);
             ModuleInstance module = moduleById(moduleId);
             if (module == null) return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MODULE_NOT_FOUND);
             if (command instanceof FacilityCommand.CreateSettingsGroup create) {
                 outcome = moduleSettings.createGroup(module, create.displayName());
-            } else if (command instanceof FacilityCommand.JoinSettingsGroup join) {
-                outcome = moduleSettings.joinGroup(module, join.groupId());
-            } else if (command instanceof FacilityCommand.LeaveSettingsGroup) {
-                outcome = moduleSettings.leaveGroup(module);
+            } else if (command instanceof FacilityCommand.SetSettingsGroup setGroup) {
+                outcome = setGroup.groupId() == null ? moduleSettings.leaveGroup(module)
+                    : moduleSettings.joinGroup(module, setGroup.groupId());
             } else if (command instanceof FacilityCommand.CopyModuleSettings copy) {
                 return applyCopyModuleSettings(module, copy);
-            } else if (command instanceof FacilityCommand.SetMinerOreBlacklisted setBlacklist) {
-                MinerSettings updated = minerSettings(module)
-                    .withOreBlacklisted(setBlacklist.oreKey(), setBlacklist.blacklisted());
-                outcome = moduleSettings.replaceEffectiveSettings(module, updated);
+            } else if (command instanceof FacilityCommand.ReplaceMinerSettings replace) {
+                outcome = moduleSettings.replaceEffectiveSettings(module, replace.replacement());
             } else {
                 return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MALFORMED_COMMAND);
             }
@@ -446,7 +416,7 @@ public final class AutomatedFacility extends CelestialAsset {
         } catch (IllegalArgumentException | IllegalStateException invalidSettings) {
             FacilityCommand.Rejection rejection = command instanceof FacilityCommand.CopyModuleSettings
                 ? FacilityCommand.Rejection.INVALID_MODULE_TARGETS
-                : command instanceof FacilityCommand.SetMinerOreBlacklisted
+                : command instanceof FacilityCommand.ReplaceMinerSettings
                     ? FacilityCommand.Rejection.INVALID_MODULE_CONFIG
                     : FacilityCommand.Rejection.INVALID_SETTINGS_GROUP;
             return FacilityCommand.Result.rejected(rejection);
@@ -697,9 +667,9 @@ public final class AutomatedFacility extends CelestialAsset {
                     aggregateCost.merge(material.getKey(), material.getValue(), Math::addExact);
                 }
             }
-            if (!aggregateCost.isEmpty() && inventory
-                .tryExchange(new InventoryExchange(aggregateCost, Map.of(), Map.of(), Map.of()), itemCapacity())
-                == FacilityInventory.ExchangeResult.REJECTED) {
+            if (!aggregateCost.isEmpty()
+                && inventory.tryExchange(new InventoryExchange(Map.copyOf(aggregateCost), Map.of()), itemCapacity())
+                    == FacilityInventory.ExchangeResult.REJECTED) {
                 return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INSUFFICIENT_MODULE_MATERIALS);
             }
         }
@@ -1231,11 +1201,6 @@ public final class AutomatedFacility extends CelestialAsset {
         return minerSettings(module).isOreBlacklisted(oreKey);
     }
 
-    public void setMinerOreBlacklisted(ModuleInstance module, String oreKey, boolean blacklisted) {
-        MinerSettings updated = minerSettings(module).withOreBlacklisted(oreKey, blacklisted);
-        finishModuleSettingsCommand(moduleSettings.replaceEffectiveSettings(module, updated));
-    }
-
     public RecipeBookOwner recipeBookOwner(ModuleInstance module) {
         requireRecipeModule(module, "Recipe-book owner requested");
         return moduleSettings.recipeBookOwner(module.id);
@@ -1319,7 +1284,7 @@ public final class AutomatedFacility extends CelestialAsset {
         ModuleOperationState operation = requireWaitingOperation(module);
         Map<ItemStackWrapper, Long> requested = requireMaterialCost(materialCost);
         if (requested.isEmpty()) return true;
-        if (inventory.tryExchange(new InventoryExchange(requested, Map.of(), Map.of(), Map.of()), itemCapacity())
+        if (inventory.tryExchange(new InventoryExchange(Map.copyOf(requested), Map.of()), itemCapacity())
             == FacilityInventory.ExchangeResult.REJECTED) {
             return false;
         }
@@ -1370,8 +1335,7 @@ public final class AutomatedFacility extends CelestialAsset {
             deposited.merge(itemKey, reserved, Long::sum);
         }
         if (!reservedItems.isEmpty()) {
-            if (inventory
-                .tryExchange(new InventoryExchange(reservedItems, Map.of(), Map.of(), Map.of()), itemCapacity())
+            if (inventory.tryExchange(new InventoryExchange(Map.copyOf(reservedItems), Map.of()), itemCapacity())
                 == FacilityInventory.ExchangeResult.REJECTED) {
                 throw new IllegalStateException(
                     "Operation partial reservation became inconsistent for module " + module.id);
@@ -1796,6 +1760,10 @@ public final class AutomatedFacility extends CelestialAsset {
         return inventory.amount(fluid);
     }
 
+    public long amount(InventoryKey resource) {
+        return inventory.amount(resource);
+    }
+
     public long storedItemAmount() {
         return inventory.totalItems();
     }
@@ -1904,25 +1872,23 @@ public final class AutomatedFacility extends CelestialAsset {
         return inventory.itemSnapshot();
     }
 
-    public Map<String, Long> fluidSnapshot() {
-        return inventory.fluidSnapshot();
+    public Map<InventoryKey, Long> inventorySnapshot() {
+        return inventory.amountsSnapshot();
     }
 
-    public void loadFromSnapshot(Map<ItemStackWrapper, Long> snapshot) {
-        inventory.loadItemSnapshot(snapshot);
+    public Map<InventoryKey, InventoryBounds> boundsSnapshot() {
+        return inventory.boundsSnapshot();
     }
 
-    public void loadFluidSnapshot(Map<String, Long> snapshot) {
-        inventory.loadFluidSnapshot(snapshot);
+    public void restoreInventory(Map<? extends InventoryKey, Long> resources) {
+        inventory.restoreSnapshot(resources);
     }
 
-    public void restoreInventory(Map<ItemStackWrapper, Long> items, Map<FluidKey, Long> fluids) {
-        inventory.restoreSnapshot(items, fluids);
+    public void restoreBounds(Map<? extends InventoryKey, InventoryBounds> bounds) {
+        inventory.restoreBounds(bounds);
     }
 
     public void clear() {
-        itemBounds.clear();
-        fluidBounds.clear();
         inventory.clear();
     }
 

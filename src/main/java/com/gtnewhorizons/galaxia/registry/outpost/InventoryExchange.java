@@ -7,35 +7,18 @@ import java.util.Map;
 /**
  * One all-or-nothing change to an automated facility's inventory.
  */
-public record InventoryExchange(Map<ItemStackWrapper, Long> itemInputs, Map<FluidKey, Long> fluidInputs,
-    Map<ItemStackWrapper, Long> itemOutputs, Map<FluidKey, Long> fluidOutputs) {
+public record InventoryExchange(Map<InventoryKey, Long> inputs, Map<InventoryKey, Long> outputs) {
 
     public InventoryExchange {
-        itemInputs = immutableAmounts(itemInputs, "item inputs");
-        fluidInputs = immutableAmounts(fluidInputs, "fluid inputs");
-        itemOutputs = immutableAmounts(itemOutputs, "item outputs");
-        fluidOutputs = immutableAmounts(fluidOutputs, "fluid outputs");
+        inputs = immutableAmounts(inputs, "inputs");
+        outputs = immutableAmounts(outputs, "outputs");
     }
 
-    boolean isEmpty() {
-        return itemInputs.isEmpty() && fluidInputs.isEmpty() && itemOutputs.isEmpty() && fluidOutputs.isEmpty();
-    }
-
-    long inputAmount(InventoryKey resource) {
-        return resource instanceof ItemStackWrapper item ? itemInputs.getOrDefault(item, 0L)
-            : fluidInputs.getOrDefault((FluidKey) resource, 0L);
-    }
-
-    long outputAmount(InventoryKey resource) {
-        return resource instanceof ItemStackWrapper item ? itemOutputs.getOrDefault(item, 0L)
-            : fluidOutputs.getOrDefault((FluidKey) resource, 0L);
-    }
-
-    private static <K extends InventoryKey> Map<K, Long> immutableAmounts(Map<K, Long> amounts, String role) {
+    private static Map<InventoryKey, Long> immutableAmounts(Map<? extends InventoryKey, Long> amounts, String role) {
         if (amounts == null)
             throw new IllegalArgumentException("Facility inventory exchange " + role + " must not be null");
-        Map<K, Long> copy = new LinkedHashMap<>();
-        for (Map.Entry<K, Long> entry : amounts.entrySet()) {
+        Map<InventoryKey, Long> copy = new LinkedHashMap<>();
+        for (Map.Entry<? extends InventoryKey, Long> entry : amounts.entrySet()) {
             if (entry.getKey() == null || entry.getValue() == null) {
                 throw new IllegalArgumentException("Facility inventory exchange " + role + " must not contain nulls");
             }

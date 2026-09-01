@@ -69,14 +69,13 @@ final class AssetSyncPacket {
         validate();
         buf.writeByte(syncType);
         buf.writeLong(publishedRevision);
-        if (syncType != CLEAR) PacketUtil.writeId(buf, assetId);
         if (syncType == STATE) buf.writeBytes(statePayload);
     }
 
-    public void fromBytes(ByteBuf buf) {
+    public void fromBytes(ByteBuf buf, CelestialAsset.ID framedAssetId) {
         syncType = buf.readByte();
         publishedRevision = buf.readLong();
-        if (syncType != CLEAR) assetId = PacketUtil.readAssetId(buf);
+        assetId = framedAssetId;
         if (syncType == STATE) {
             statePayload = new byte[buf.readableBytes()];
             buf.readBytes(statePayload);
@@ -88,24 +87,20 @@ final class AssetSyncPacket {
     private void validate() {
         switch (syncType) {
             case STATE -> {
-                if (publishedRevision < 1L || assetId == null
-                    || statePayload == null
-                    || statePayload.length < 1
-                    || statePayload.length > AssetStateFramePacket.MAX_LOGICAL_UPDATE_BYTES) {
+                if (statePayload == null || statePayload.length < 1) {
                     throw new IllegalArgumentException("Invalid asset state publication");
                 }
             }
-            case ASSET_REMOVED -> {
-                if (publishedRevision < 1L || assetId == null) {
-                    throw new IllegalArgumentException("Invalid asset removal publication");
-                }
-            }
-            case CLEAR -> {
-                if (publishedRevision != 0L || assetId != null || statePayload != null) {
-                    throw new IllegalArgumentException("Invalid asset clear publication");
-                }
+            case ASSET_REMOVED, CLEAR -> {
+                if (statePayload != null) throw new IllegalArgumentException("Invalid asset publication payload");
             }
             default -> throw new IllegalArgumentException("Unknown asset update type " + syncType);
+        }
+        boolean clear = syncType == CLEAR;
+        boolean missingAssetId = assetId == null;
+        boolean zeroRevision = publishedRevision == 0L;
+        if (clear != missingAssetId || clear != zeroRevision || publishedRevision < 0L) {
+            throw new IllegalArgumentException("Invalid asset publication identity or revision");
         }
     }
 

@@ -1,20 +1,25 @@
 package com.gtnewhorizons.galaxia.core.network;
 
-import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.CodingErrorAction;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidRegistry;
+import net.minecraft.nbt.CompressedStreamTools;
+import net.minecraft.nbt.NBTSizeTracker;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.nbt.NBTTagString;
 
+import com.gtnewhorizons.galaxia.core.state.InventoryKeyState;
+import com.gtnewhorizons.galaxia.core.state.ModuleSettingsState;
+import com.gtnewhorizons.galaxia.core.state.NbtReader;
+import com.gtnewhorizons.galaxia.core.state.RecipeBookState;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
@@ -23,9 +28,7 @@ import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
-import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
-import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
@@ -35,9 +38,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
 
@@ -45,42 +50,21 @@ import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 
 public final class FacilityCommandPacket implements IMessage {
 
-    static final int MAX_PACKET_BYTES = 64 * 1024;
+    static final int MAX_MESSAGE_BODY_BYTES = 32_765;
+    static final int COMPRESSED_LENGTH_PREFIX_BYTES = 2;
+    static final int MAX_COMPRESSED_NBT_BYTES = MAX_MESSAGE_BODY_BYTES - COMPRESSED_LENGTH_PREFIX_BYTES;
+    static final long MAX_DECOMPRESSED_NBT_BYTES = 2L * 1024 * 1024;
     static final int MAX_STRING_BYTES = 1024;
     private static final int MAX_FILTERS = 256;
     private static final int MAX_FILTER_DATA_BYTES = 32 * 1024;
     private static final int MAX_PLACEMENTS = 256;
     private static final int MAX_TARGET_IDS = 256;
-
-    static final int OP_ADJUST_INVENTORY = 0;
-    static final int OP_CLEAR_INVENTORY_RESOURCE = 1;
-    static final int OP_SET_INVENTORY_BOUND = 2;
-    static final int OP_CLEAR_INVENTORY_BOUND = 3;
-    static final int OP_REPLACE_FILTERS = 4;
-    static final int OP_PUT_LOGISTICS_CONFIG = 5;
-    static final int OP_REMOVE_LOGISTICS_CONFIG = 6;
-    static final int OP_BUILD_MODULES = 7;
-    static final int OP_COPY_BUILD_MODULES = 8;
-    static final int OP_REQUEST_MODULE_DECONSTRUCTION = 9;
-    static final int OP_CANCEL_MODULE_OPERATION = 10;
-    static final int OP_SET_HAMMER_SHOOTING_CONFIG = 11;
-    static final int OP_SET_HAMMER_ROUTE_PRIORITY = 12;
-    static final int OP_SET_MINER_FOCUS_ORE = 13;
-    static final int OP_CONFIGURE_DEBUG_DATA_GENERATOR = 14;
-    static final int OP_PLAN_HAMMER_UPGRADE = 15;
-    static final int OP_PLAN_TIER_UPGRADE = 16;
-    static final int OP_PLAN_MINER_FOCUS_UPGRADE = 17;
-    static final int OP_CREATE_SETTINGS_GROUP = 18;
-    static final int OP_RENAME_SETTINGS_GROUP = 19;
-    static final int OP_JOIN_SETTINGS_GROUP = 20;
-    static final int OP_LEAVE_SETTINGS_GROUP = 21;
-    static final int OP_COPY_MODULE_SETTINGS = 22;
-    static final int OP_SET_MINER_ORE_BLACKLISTED = 23;
-    static final int OP_REPLACE_RECIPE_BOOK = 24;
+    private static final int MAX_MINER_ORES = 256;
+    private static final int MAX_MINER_ORE_DATA_BYTES = 32 * 1024;
+    private static final UUID ZERO_UUID = new UUID(0L, 0L);
 
     private FacilityCommand command;
 
@@ -92,31 +76,32 @@ public final class FacilityCommandPacket implements IMessage {
 
     @Override
     public void toBytes(ByteBuf destination) {
-        ByteBuf encoded = Unpooled.buffer();
-        try {
-            encode(encoded, command);
-            if (encoded.readableBytes() > MAX_PACKET_BYTES) {
-                throw malformed("Facility command packet exceeds 64 KiB");
-            }
-            destination.writeBytes(encoded);
-        } finally {
-            encoded.release();
+        byte[] payload = compress(encodeEnvelope(command));
+        if (payload.length == 0 || payload.length > MAX_COMPRESSED_NBT_BYTES) {
+            throw malformed("Facility command compressed NBT exceeds the Forge message body limit");
         }
+        destination.writeShort(payload.length);
+        destination.writeBytes(payload);
     }
 
     @Override
     public void fromBytes(ByteBuf source) {
         command = null;
         try {
-            if (source.readableBytes() > MAX_PACKET_BYTES) {
-                throw malformed("Facility command packet exceeds 64 KiB");
+            if (source == null || source.readableBytes() < COMPRESSED_LENGTH_PREFIX_BYTES
+                || source.readableBytes() > MAX_MESSAGE_BODY_BYTES) {
+                throw malformed("Invalid facility command message body size");
             }
-            FacilityCommand decoded = decode(source);
-            if (source.isReadable()) throw malformed("Trailing facility command bytes");
-            command = decoded;
+            int length = source.readUnsignedShort();
+            if (length < 1 || length > MAX_COMPRESSED_NBT_BYTES || source.readableBytes() != length) {
+                throw malformed("Invalid facility command compressed NBT length");
+            }
+            byte[] payload = new byte[length];
+            source.readBytes(payload);
+            command = decodeEnvelope(decompress(payload));
         } catch (RuntimeException malformedPacket) {
             command = null;
-            source.skipBytes(source.readableBytes());
+            if (source != null) source.skipBytes(source.readableBytes());
         }
     }
 
@@ -124,629 +109,576 @@ public final class FacilityCommandPacket implements IMessage {
         return command;
     }
 
-    private static void encode(ByteBuf buf, FacilityCommand command) {
-        if (command == null || command.facilityId() == null) throw malformed("Missing facility command");
-        int opcode = opcode(command);
-        buf.writeByte(opcode);
-        writeUuid(
-            buf,
-            command.facilityId()
-                .id());
-
-        if (command instanceof FacilityCommand.AdjustInventory adjust) {
-            writeInventoryKey(buf, adjust.resource());
-            writeEnum(buf, adjust.direction());
-            buf.writeLong(adjust.amount());
-        } else if (command instanceof FacilityCommand.ClearInventoryResource clear) {
-            writeInventoryKey(buf, clear.resource());
-        } else if (command instanceof FacilityCommand.SetInventoryBound setBound) {
-            writeEnum(buf, setBound.kind());
-            writeBoundInventoryKey(buf, setBound.kind(), setBound.resource());
-            buf.writeLong(setBound.amount());
-        } else if (command instanceof FacilityCommand.ClearInventoryBound clearBound) {
-            writeEnum(buf, clearBound.kind());
-            writeBoundInventoryKey(buf, clearBound.kind(), clearBound.resource());
-        } else if (command instanceof FacilityCommand.ReplaceFilters replaceFilters) {
-            writeEnum(buf, replaceFilters.kind());
-            writeFilters(buf, replaceFilters.filterKeys());
-        } else if (command instanceof FacilityCommand.PutLogisticsConfig putConfig) {
-            writeInventoryKey(buf, putConfig.resource());
-            LogisticsResourceConfig config = require(putConfig.config(), "logistics config");
-            buf.writeInt(config.minReserve());
-            buf.writeInt(config.orderSize());
-            writeBoolean(buf, config.isImportEnabled());
-            writeBoolean(buf, config.isSupplyEnabled());
-            writeEnum(buf, putConfig.accessMode());
-        } else if (command instanceof FacilityCommand.RemoveLogisticsConfig removeConfig) {
-            writeInventoryKey(buf, removeConfig.resource());
-        } else if (command instanceof FacilityCommand.BuildModules build) {
-            writeEnum(buf, build.kind());
-            writeEnum(buf, build.shape());
-            writeBuildPhysicalSpec(buf, build.physicalSpec());
-            writeNullableSettingsGroupId(buf, build.settingsGroupId());
-            writeBoolean(buf, build.instantBuild());
-            writePlacements(buf, build.placements());
-        } else if (command instanceof FacilityCommand.CopyBuildModules copy) {
-            writeModuleId(buf, copy.sourceModuleId());
-            writeBoolean(buf, copy.instantBuild());
-            writePlacements(buf, copy.placements());
-        } else if (command instanceof FacilityCommand.RequestModuleDeconstruction deconstruct) {
-            writeModuleId(buf, deconstruct.moduleId());
-        } else if (command instanceof FacilityCommand.CancelModuleOperation cancel) {
-            writeModuleId(buf, cancel.moduleId());
-        } else if (command instanceof FacilityCommand.ReplaceRecipeBook replaceBook) {
-            RecipeBookWireCodec.writeOwner(buf, replaceBook.owner());
-            RecipeBookWireCodec.writeBook(buf, replaceBook.replacement());
-        } else if (command instanceof FacilityCommand.CreateSettingsGroup createGroup) {
-            writeModuleId(buf, createGroup.moduleId());
-            writeString(buf, createGroup.displayName());
-        } else if (command instanceof FacilityCommand.RenameSettingsGroup renameGroup) {
-            writeSettingsGroupId(buf, renameGroup.groupId());
-            writeString(buf, renameGroup.displayName());
-        } else if (command instanceof FacilityCommand.JoinSettingsGroup joinGroup) {
-            writeModuleId(buf, joinGroup.moduleId());
-            writeSettingsGroupId(buf, joinGroup.groupId());
-        } else if (command instanceof FacilityCommand.LeaveSettingsGroup leaveGroup) {
-            writeModuleId(buf, leaveGroup.moduleId());
-        } else if (command instanceof FacilityCommand.CopyModuleSettings copySettings) {
-            writeModuleId(buf, copySettings.sourceModuleId());
-            writeTargetIds(buf, copySettings.targetModuleIds());
-        } else if (command instanceof FacilityCommand.SetMinerOreBlacklisted setBlacklist) {
-            writeModuleId(buf, setBlacklist.moduleId());
-            writeOreKey(buf, setBlacklist.oreKey());
-            writeBoolean(buf, setBlacklist.blacklisted());
-        } else if (command instanceof FacilityCommand.SetHammerShootingConfig setConfig) {
-            writeModuleId(buf, setConfig.moduleId());
-            AllowShootingConfig config = require(setConfig.config(), "hammer shooting config");
-            writeEnum(buf, config.mode());
-            buf.writeDouble(config.threshold());
-        } else if (command instanceof FacilityCommand.SetHammerRoutePriority setRoute) {
-            writeModuleId(buf, setRoute.moduleId());
-            writeEnum(buf, setRoute.priority());
-        } else if (command instanceof FacilityCommand.SetMinerFocusOre setOre) {
-            writeModuleId(buf, setOre.moduleId());
-            writeNullableString(buf, setOre.oreKey());
-        } else if (command instanceof FacilityCommand.ConfigureDebugDataGenerator configureDebug) {
-            writeModuleId(buf, configureDebug.moduleId());
-            writeDebugConfig(buf, configureDebug.config());
-        } else if (command instanceof FacilityCommand.PlanHammerUpgrade planHammer) {
-            writeTargetIds(buf, planHammer.targetModuleIds());
-            writeEnum(buf, planHammer.targetVariant());
-            writeEnum(buf, planHammer.targetTier());
-            writeBoolean(buf, planHammer.reserveItems());
-            writeBoolean(buf, planHammer.voidCompletionRefund());
-        } else if (command instanceof FacilityCommand.PlanTierUpgrade planTier) {
-            writeTargetIds(buf, planTier.targetModuleIds());
-            writeEnum(buf, planTier.targetTier());
-            writeBoolean(buf, planTier.reserveItems());
-        } else if (command instanceof FacilityCommand.PlanMinerFocusUpgrade planFocus) {
-            writeModuleId(buf, planFocus.moduleId());
-            writeEnum(buf, planFocus.targetModuleTier());
-            writeEnum(buf, planFocus.targetFocusTier());
-        } else {
-            throw malformed("Unsupported facility command");
-        }
+    private static NBTTagCompound encodeEnvelope(FacilityCommand command) {
+        require(command, "facility command");
+        NBTTagCompound data = new NBTTagCompound();
+        NBTTagCompound envelope = new NBTTagCompound();
+        envelope.setString("type", encodeCommand(command, data));
+        envelope.setString("facility", uuid(require(command.facilityId(), "facility ID").id(), "facility ID"));
+        envelope.setTag("data", data);
+        decodeEnvelope(envelope);
+        return envelope;
     }
 
-    private static FacilityCommand decode(ByteBuf buf) {
-        int opcode = buf.readUnsignedByte();
-        CelestialAsset.ID facilityId = new CelestialAsset.ID(readUuid(buf));
-        return switch (opcode) {
-            case OP_ADJUST_INVENTORY -> new FacilityCommand.AdjustInventory(
-                facilityId,
-                readInventoryKey(buf),
-                readEnum(buf, FacilityCommand.InventoryAdjustment.class),
-                buf.readLong());
-            case OP_CLEAR_INVENTORY_RESOURCE -> new FacilityCommand.ClearInventoryResource(
-                facilityId,
-                readInventoryKey(buf));
-            case OP_SET_INVENTORY_BOUND -> readSetInventoryBound(buf, facilityId);
-            case OP_CLEAR_INVENTORY_BOUND -> readClearInventoryBound(buf, facilityId);
-            case OP_REPLACE_FILTERS -> new FacilityCommand.ReplaceFilters(
-                facilityId,
-                readEnum(buf, FacilityCommand.FilterKind.class),
-                readFilters(buf));
-            case OP_PUT_LOGISTICS_CONFIG -> new FacilityCommand.PutLogisticsConfig(
-                facilityId,
-                readInventoryKey(buf),
-                new LogisticsResourceConfig(buf.readInt(), buf.readInt(), readBoolean(buf), readBoolean(buf)),
-                readEnum(buf, LogisticsConfigAccessMode.class));
-            case OP_REMOVE_LOGISTICS_CONFIG -> new FacilityCommand.RemoveLogisticsConfig(
-                facilityId,
-                readInventoryKey(buf));
-            case OP_BUILD_MODULES -> readBuildModules(buf, facilityId);
-            case OP_COPY_BUILD_MODULES -> new FacilityCommand.CopyBuildModules(
-                facilityId,
-                readModuleId(buf),
-                readBoolean(buf),
-                readPlacements(buf));
-            case OP_REQUEST_MODULE_DECONSTRUCTION -> new FacilityCommand.RequestModuleDeconstruction(
-                facilityId,
-                readModuleId(buf));
-            case OP_CANCEL_MODULE_OPERATION -> new FacilityCommand.CancelModuleOperation(facilityId, readModuleId(buf));
-            case OP_REPLACE_RECIPE_BOOK -> new FacilityCommand.ReplaceRecipeBook(
-                facilityId,
-                RecipeBookWireCodec.readOwner(buf),
-                RecipeBookWireCodec.readBook(buf));
-            case OP_CREATE_SETTINGS_GROUP -> new FacilityCommand.CreateSettingsGroup(
-                facilityId,
-                readModuleId(buf),
-                readString(buf));
-            case OP_RENAME_SETTINGS_GROUP -> new FacilityCommand.RenameSettingsGroup(
-                facilityId,
-                readSettingsGroupId(buf),
-                readString(buf));
-            case OP_JOIN_SETTINGS_GROUP -> new FacilityCommand.JoinSettingsGroup(
-                facilityId,
-                readModuleId(buf),
-                readSettingsGroupId(buf));
-            case OP_LEAVE_SETTINGS_GROUP -> new FacilityCommand.LeaveSettingsGroup(facilityId, readModuleId(buf));
-            case OP_COPY_MODULE_SETTINGS -> new FacilityCommand.CopyModuleSettings(
-                facilityId,
-                readModuleId(buf),
-                readTargetIds(buf));
-            case OP_SET_MINER_ORE_BLACKLISTED -> new FacilityCommand.SetMinerOreBlacklisted(
-                facilityId,
-                readModuleId(buf),
-                readOreKey(buf),
-                readBoolean(buf));
-            case OP_SET_HAMMER_SHOOTING_CONFIG -> new FacilityCommand.SetHammerShootingConfig(
-                facilityId,
-                readModuleId(buf),
-                new AllowShootingConfig(readEnum(buf, AllowShootingConfig.Mode.class), buf.readDouble()));
-            case OP_SET_HAMMER_ROUTE_PRIORITY -> new FacilityCommand.SetHammerRoutePriority(
-                facilityId,
-                readModuleId(buf),
-                readEnum(buf, OrbitalTransferPlanner.RoutePriority.class));
-            case OP_SET_MINER_FOCUS_ORE -> new FacilityCommand.SetMinerFocusOre(
-                facilityId,
-                readModuleId(buf),
-                readNullableString(buf));
-            case OP_CONFIGURE_DEBUG_DATA_GENERATOR -> new FacilityCommand.ConfigureDebugDataGenerator(
-                facilityId,
-                readModuleId(buf),
-                readDebugConfig(buf));
-            case OP_PLAN_HAMMER_UPGRADE -> new FacilityCommand.PlanHammerUpgrade(
-                facilityId,
-                readTargetIds(buf),
-                readEnum(buf, HammerVariant.class),
-                readEnum(buf, ModuleTier.class),
-                readBoolean(buf),
-                readBoolean(buf));
-            case OP_PLAN_TIER_UPGRADE -> new FacilityCommand.PlanTierUpgrade(
-                facilityId,
-                readTargetIds(buf),
-                readEnum(buf, ModuleTier.class),
-                readBoolean(buf));
-            case OP_PLAN_MINER_FOCUS_UPGRADE -> new FacilityCommand.PlanMinerFocusUpgrade(
-                facilityId,
-                readModuleId(buf),
-                readEnum(buf, ModuleTier.class),
-                readEnum(buf, MinerFocusTier.class));
-            default -> throw malformed("Unknown facility command opcode " + opcode);
+    private static FacilityCommand decodeEnvelope(NBTTagCompound envelope) {
+        if (!envelope.func_150296_c()
+            .equals(Set.of("type", "facility", "data"))) throw malformed("Unexpected facility command envelope fields");
+        NbtReader root = new NbtReader(envelope, "facilityCommand");
+        String type = root.string("type");
+        CelestialAsset.ID facility = new CelestialAsset.ID(parseUuid(root.string("facility"), "facility ID"));
+        NbtReader data = root.compound("data");
+        return switch (type) {
+            case "adjust_inventory" -> new FacilityCommand.AdjustInventory(
+                facility,
+                resource(data),
+                data.enumValue(FacilityCommand.InventoryAdjustment.class, "direction"),
+                data.longValue("amount"));
+            case "clear_inventory_resource" -> new FacilityCommand.ClearInventoryResource(facility, resource(data));
+            case "set_inventory_bound" -> readSetBound(facility, data, false);
+            case "clear_inventory_bound" -> readSetBound(facility, data, true);
+            case "replace_filters" -> new FacilityCommand.ReplaceFilters(
+                facility,
+                data.enumValue(FacilityCommand.FilterKind.class, "kind"),
+                filters(data));
+            case "put_logistics_config" -> new FacilityCommand.PutLogisticsConfig(
+                facility,
+                resource(data),
+                new LogisticsResourceConfig(
+                    data.integer("minReserve"),
+                    data.integer("orderSize"),
+                    data.bool("import"),
+                    data.bool("supply")),
+                data.enumValue(LogisticsConfigAccessMode.class, "access"));
+            case "remove_logistics_config" -> new FacilityCommand.RemoveLogisticsConfig(facility, resource(data));
+            case "build_modules" -> readBuild(facility, data);
+            case "copy_build_modules" -> new FacilityCommand.CopyBuildModules(
+                facility,
+                moduleId(data, "sourceModule"),
+                data.bool("instant"),
+                placements(data));
+            case "request_module_deconstruction" -> new FacilityCommand.RequestModuleDeconstruction(
+                facility,
+                moduleId(data, "module"));
+            case "cancel_module_operation" -> new FacilityCommand.CancelModuleOperation(
+                facility,
+                moduleId(data, "module"));
+            case "replace_recipe_book" -> new FacilityCommand.ReplaceRecipeBook(
+                facility,
+                owner(data.compound("owner")),
+                RecipeBookState.decode(
+                    data.compound("recipeBook")
+                        .tag()));
+            case "create_settings_group" -> new FacilityCommand.CreateSettingsGroup(
+                facility,
+                moduleId(data, "module"),
+                bounded(data, "name"));
+            case "rename_settings_group" -> new FacilityCommand.RenameSettingsGroup(
+                facility,
+                groupId(data, "group"),
+                bounded(data, "name"));
+            case "set_settings_group" -> new FacilityCommand.SetSettingsGroup(
+                facility,
+                moduleId(data, "module"),
+                data.bool("hasGroup") ? groupId(data, "group") : null);
+            case "copy_module_settings" -> new FacilityCommand.CopyModuleSettings(
+                facility,
+                moduleId(data, "sourceModule"),
+                targets(data));
+            case "replace_miner_settings" -> new FacilityCommand.ReplaceMinerSettings(
+                facility,
+                moduleId(data, "module"),
+                minerSettings(data));
+            case "configure_hammer" -> new FacilityCommand.ConfigureHammer(
+                facility,
+                moduleId(data, "module"),
+                new AllowShootingConfig(
+                    data.enumValue(AllowShootingConfig.Mode.class, "mode"),
+                    data.doubleValue("threshold")),
+                data.enumValue(OrbitalTransferPlanner.RoutePriority.class, "priority"));
+            case "set_miner_focus_ore" -> {
+                String ore = data.bool("hasOre") ? bounded(data, "ore") : null;
+                if (ore != null && ore.isBlank()) throw malformed("Miner ore key must not be blank");
+                yield new FacilityCommand.SetMinerFocusOre(facility, moduleId(data, "module"), ore);
+            }
+            case "configure_debug_data_generator" -> readDebug(facility, data);
+            case "plan_hammer_upgrade" -> new FacilityCommand.PlanHammerUpgrade(
+                facility,
+                targets(data),
+                data.enumValue(HammerVariant.class, "variant"),
+                data.enumValue(ModuleTier.class, "tier"),
+                data.bool("reserveItems"),
+                data.bool("voidRefund"));
+            case "plan_tier_upgrade" -> new FacilityCommand.PlanTierUpgrade(
+                facility,
+                targets(data),
+                data.enumValue(ModuleTier.class, "tier"),
+                data.bool("reserveItems"));
+            case "plan_miner_focus_upgrade" -> new FacilityCommand.PlanMinerFocusUpgrade(
+                facility,
+                moduleId(data, "module"),
+                data.enumValue(ModuleTier.class, "moduleTier"),
+                data.enumValue(MinerFocusTier.class, "focusTier"));
+            default -> throw malformed("Unknown facility command type " + type);
         };
     }
 
-    private static FacilityCommand.SetInventoryBound readSetInventoryBound(ByteBuf buf, CelestialAsset.ID facilityId) {
-        BoundKind kind = readEnum(buf, BoundKind.class);
-        InventoryKey resource = readBoundInventoryKey(buf, kind);
-        return new FacilityCommand.SetInventoryBound(facilityId, kind, resource, buf.readLong());
+    private static String encodeCommand(FacilityCommand command, NBTTagCompound data) {
+        return switch (command) {
+            case FacilityCommand.AdjustInventory value -> {
+                putResource(data, value.resource());
+                putEnum(data, "direction", value.direction());
+                data.setLong("amount", value.amount());
+                yield "adjust_inventory";
+            }
+            case FacilityCommand.ClearInventoryResource value -> {
+                putResource(data, value.resource());
+                yield "clear_inventory_resource";
+            }
+            case FacilityCommand.SetInventoryBound value -> {
+                putEnum(data, "kind", value.kind());
+                putResource(data, value.resource());
+                data.setLong("amount", value.amount());
+                yield "set_inventory_bound";
+            }
+            case FacilityCommand.ClearInventoryBound value -> {
+                putEnum(data, "kind", value.kind());
+                putResource(data, value.resource());
+                yield "clear_inventory_bound";
+            }
+            case FacilityCommand.ReplaceFilters value -> {
+                putEnum(data, "kind", value.kind());
+                NBTTagList filters = new NBTTagList();
+                for (String filter : require(value.filterKeys(), "filter list")) {
+                    filters.appendTag(new NBTTagString(require(filter, "filter")));
+                }
+                data.setTag("filters", filters);
+                yield "replace_filters";
+            }
+            case FacilityCommand.PutLogisticsConfig value -> {
+                putResource(data, value.resource());
+                LogisticsResourceConfig config = require(value.config(), "logistics config");
+                data.setInteger("minReserve", config.minReserve());
+                data.setInteger("orderSize", config.orderSize());
+                putBool(data, "import", config.isImportEnabled());
+                putBool(data, "supply", config.isSupplyEnabled());
+                putEnum(data, "access", value.accessMode());
+                yield "put_logistics_config";
+            }
+            case FacilityCommand.RemoveLogisticsConfig value -> {
+                putResource(data, value.resource());
+                yield "remove_logistics_config";
+            }
+            case FacilityCommand.BuildModules value -> {
+                putEnum(data, "kind", value.kind());
+                putEnum(data, "shape", value.shape());
+                data.setTag("physical", physical(value.physicalSpec()));
+                putNullableGroup(data, value.settingsGroupId());
+                putBool(data, "instant", value.instantBuild());
+                data.setTag("placements", placements(value.placements()));
+                yield "build_modules";
+            }
+            case FacilityCommand.CopyBuildModules value -> {
+                putModuleId(data, "sourceModule", value.sourceModuleId());
+                putBool(data, "instant", value.instantBuild());
+                data.setTag("placements", placements(value.placements()));
+                yield "copy_build_modules";
+            }
+            case FacilityCommand.RequestModuleDeconstruction value -> {
+                putModuleId(data, "module", value.moduleId());
+                yield "request_module_deconstruction";
+            }
+            case FacilityCommand.CancelModuleOperation value -> {
+                putModuleId(data, "module", value.moduleId());
+                yield "cancel_module_operation";
+            }
+            case FacilityCommand.ReplaceRecipeBook value -> {
+                data.setTag("owner", owner(value.owner()));
+                data.setTag("recipeBook", RecipeBookState.encode(value.replacement()));
+                yield "replace_recipe_book";
+            }
+            case FacilityCommand.CreateSettingsGroup value -> {
+                putModuleId(data, "module", value.moduleId());
+                putBounded(data, "name", value.displayName());
+                yield "create_settings_group";
+            }
+            case FacilityCommand.RenameSettingsGroup value -> {
+                putGroupId(data, "group", value.groupId());
+                putBounded(data, "name", value.displayName());
+                yield "rename_settings_group";
+            }
+            case FacilityCommand.SetSettingsGroup value -> {
+                putModuleId(data, "module", value.moduleId());
+                putNullableGroup(data, value.groupId());
+                yield "set_settings_group";
+            }
+            case FacilityCommand.CopyModuleSettings value -> {
+                putModuleId(data, "sourceModule", value.sourceModuleId());
+                data.setTag("targets", targets(value.targetModuleIds()));
+                yield "copy_module_settings";
+            }
+            case FacilityCommand.ReplaceMinerSettings value -> {
+                putModuleId(data, "module", value.moduleId());
+                data.setTag("settings", ModuleSettingsState.encode(value.replacement()));
+                yield "replace_miner_settings";
+            }
+            case FacilityCommand.ConfigureHammer value -> {
+                putModuleId(data, "module", value.moduleId());
+                AllowShootingConfig config = require(value.config(), "hammer shooting config");
+                putEnum(data, "mode", config.mode());
+                data.setDouble("threshold", config.threshold());
+                putEnum(data, "priority", value.priority());
+                yield "configure_hammer";
+            }
+            case FacilityCommand.SetMinerFocusOre value -> {
+                putModuleId(data, "module", value.moduleId());
+                putBool(data, "hasOre", value.oreKey() != null);
+                if (value.oreKey() != null) data.setString("ore", value.oreKey());
+                yield "set_miner_focus_ore";
+            }
+            case FacilityCommand.ConfigureDebugDataGenerator value -> {
+                putModuleId(data, "module", value.moduleId());
+                putDebug(data, value.config());
+                yield "configure_debug_data_generator";
+            }
+            case FacilityCommand.PlanHammerUpgrade value -> {
+                data.setTag("targets", targets(value.targetModuleIds()));
+                putEnum(data, "variant", value.targetVariant());
+                putEnum(data, "tier", value.targetTier());
+                putBool(data, "reserveItems", value.reserveItems());
+                putBool(data, "voidRefund", value.voidCompletionRefund());
+                yield "plan_hammer_upgrade";
+            }
+            case FacilityCommand.PlanTierUpgrade value -> {
+                data.setTag("targets", targets(value.targetModuleIds()));
+                putEnum(data, "tier", value.targetTier());
+                putBool(data, "reserveItems", value.reserveItems());
+                yield "plan_tier_upgrade";
+            }
+            case FacilityCommand.PlanMinerFocusUpgrade value -> {
+                putModuleId(data, "module", value.moduleId());
+                putEnum(data, "moduleTier", value.targetModuleTier());
+                putEnum(data, "focusTier", value.targetFocusTier());
+                yield "plan_miner_focus_upgrade";
+            }
+        };
     }
 
-    private static FacilityCommand.ClearInventoryBound readClearInventoryBound(ByteBuf buf,
-        CelestialAsset.ID facilityId) {
-        BoundKind kind = readEnum(buf, BoundKind.class);
-        return new FacilityCommand.ClearInventoryBound(facilityId, kind, readBoundInventoryKey(buf, kind));
+    private static FacilityCommand readSetBound(CelestialAsset.ID facility, NbtReader data, boolean clear) {
+        BoundKind kind = data.enumValue(BoundKind.class, "kind");
+        InventoryKey resource = resource(data);
+        boolean item = kind == BoundKind.ITEM_LOWER || kind == BoundKind.ITEM_UPPER;
+        if (item != resource.isItem()) throw malformed("Inventory key type does not match bound kind");
+        return clear ? new FacilityCommand.ClearInventoryBound(facility, kind, resource)
+            : new FacilityCommand.SetInventoryBound(facility, kind, resource, data.longValue("amount"));
     }
 
-    private static FacilityCommand.BuildModules readBuildModules(ByteBuf buf, CelestialAsset.ID facilityId) {
-        FacilityModuleKind kind = readEnum(buf, FacilityModuleKind.class);
-        ModuleShape shape = readEnum(buf, ModuleShape.class);
-        IModuleComponent.BuildPhysicalSpec physicalSpec = readBuildPhysicalSpec(buf);
-        SettingsGroup.ID settingsGroupId = readNullableSettingsGroupId(buf);
-        boolean instantBuild = readBoolean(buf);
-        List<ModulePlacement> placements = readPlacements(buf);
+    private static FacilityCommand.BuildModules readBuild(CelestialAsset.ID facility, NbtReader data) {
+        boolean hasGroup = data.bool("hasGroup");
         return new FacilityCommand.BuildModules(
-            facilityId,
-            kind,
-            shape,
-            physicalSpec,
-            settingsGroupId,
-            instantBuild,
-            placements);
+            facility,
+            data.enumValue(FacilityModuleKind.class, "kind"),
+            data.enumValue(ModuleShape.class, "shape"),
+            physical(data.compound("physical")),
+            hasGroup ? groupId(data, "group") : null,
+            data.bool("instant"),
+            placements(data));
     }
 
-    private static int opcode(FacilityCommand command) {
-        if (command instanceof FacilityCommand.AdjustInventory) return OP_ADJUST_INVENTORY;
-        if (command instanceof FacilityCommand.ClearInventoryResource) return OP_CLEAR_INVENTORY_RESOURCE;
-        if (command instanceof FacilityCommand.SetInventoryBound) return OP_SET_INVENTORY_BOUND;
-        if (command instanceof FacilityCommand.ClearInventoryBound) return OP_CLEAR_INVENTORY_BOUND;
-        if (command instanceof FacilityCommand.ReplaceFilters) return OP_REPLACE_FILTERS;
-        if (command instanceof FacilityCommand.PutLogisticsConfig) return OP_PUT_LOGISTICS_CONFIG;
-        if (command instanceof FacilityCommand.RemoveLogisticsConfig) return OP_REMOVE_LOGISTICS_CONFIG;
-        if (command instanceof FacilityCommand.BuildModules) return OP_BUILD_MODULES;
-        if (command instanceof FacilityCommand.CopyBuildModules) return OP_COPY_BUILD_MODULES;
-        if (command instanceof FacilityCommand.RequestModuleDeconstruction) return OP_REQUEST_MODULE_DECONSTRUCTION;
-        if (command instanceof FacilityCommand.CancelModuleOperation) return OP_CANCEL_MODULE_OPERATION;
-        if (command instanceof FacilityCommand.ReplaceRecipeBook) return OP_REPLACE_RECIPE_BOOK;
-        if (command instanceof FacilityCommand.CreateSettingsGroup) return OP_CREATE_SETTINGS_GROUP;
-        if (command instanceof FacilityCommand.RenameSettingsGroup) return OP_RENAME_SETTINGS_GROUP;
-        if (command instanceof FacilityCommand.JoinSettingsGroup) return OP_JOIN_SETTINGS_GROUP;
-        if (command instanceof FacilityCommand.LeaveSettingsGroup) return OP_LEAVE_SETTINGS_GROUP;
-        if (command instanceof FacilityCommand.CopyModuleSettings) return OP_COPY_MODULE_SETTINGS;
-        if (command instanceof FacilityCommand.SetMinerOreBlacklisted) return OP_SET_MINER_ORE_BLACKLISTED;
-        if (command instanceof FacilityCommand.SetHammerShootingConfig) return OP_SET_HAMMER_SHOOTING_CONFIG;
-        if (command instanceof FacilityCommand.SetHammerRoutePriority) return OP_SET_HAMMER_ROUTE_PRIORITY;
-        if (command instanceof FacilityCommand.SetMinerFocusOre) return OP_SET_MINER_FOCUS_ORE;
-        if (command instanceof FacilityCommand.ConfigureDebugDataGenerator) return OP_CONFIGURE_DEBUG_DATA_GENERATOR;
-        if (command instanceof FacilityCommand.PlanHammerUpgrade) return OP_PLAN_HAMMER_UPGRADE;
-        if (command instanceof FacilityCommand.PlanTierUpgrade) return OP_PLAN_TIER_UPGRADE;
-        if (command instanceof FacilityCommand.PlanMinerFocusUpgrade) return OP_PLAN_MINER_FOCUS_UPGRADE;
-        throw malformed("Unsupported facility command");
+    private static FacilityCommand.ConfigureDebugDataGenerator readDebug(CelestialAsset.ID facility, NbtReader data) {
+        boolean hasOrigin = data.bool("hasOrigin");
+        boolean registered = hasOrigin && data.bool("registeredOrigin");
+        boolean enabled = data.bool("enabled");
+        long amount = data.longValue("amountKb");
+        int duration = data.integer("durationTicks");
+        CelestialObjectKey origin = null;
+        if (hasOrigin) {
+            CelestialObjectId body = data.enumValue(CelestialObjectId.class, "originBody");
+            origin = registered ? CelestialObjectKey.registered(body)
+                : CelestialObjectKey.minorBody(new MinorCelestialBodyId(body, data.integer("originIndex")));
+        }
+        ModuleDebugDataGenerator.Config config = new ModuleDebugDataGenerator.Config(
+            data.enumValue(ModuleDebugDataGenerator.Mode.class, "mode"),
+            enabled,
+            data.enumValue(SatelliteDataType.class, "dataType"),
+            amount,
+            duration,
+            origin);
+        if (config.enabled() != enabled || config.amountKb() != amount || config.durationTicks() != duration) {
+            throw malformed("Non-canonical debug data generator config");
+        }
+        return new FacilityCommand.ConfigureDebugDataGenerator(facility, moduleId(data, "module"), config);
     }
 
-    private static void writeInventoryKey(ByteBuf buf, InventoryKey key) {
-        require(key, "inventory key");
-        if (key instanceof ItemStackWrapper item) {
-            if (item.nbt() != null) throw malformed("Tagged item inventory keys are not supported on this wire");
-            String encoded = item.toKey();
-            if (encoded.startsWith("unknown:")) throw malformed("Unregistered item inventory key");
-            buf.writeByte(0);
-            writeString(buf, encoded);
-            return;
+    private static NBTTagCompound owner(RecipeBookOwner owner) {
+        NBTTagCompound out = new NBTTagCompound();
+        if (owner instanceof RecipeBookOwner.Private value) {
+            out.setString("type", "private");
+            putModuleId(out, "module", recipeOwnerModuleId(value.moduleId()));
+        } else if (owner instanceof RecipeBookOwner.Group value) {
+            out.setString("type", "group");
+            putGroupId(out, "group", value.groupId());
+        } else {
+            throw malformed("Unsupported recipe book owner");
         }
-        FluidKey fluid = (FluidKey) key;
-        if (fluid.tag() != null) throw malformed("Tagged fluid inventory keys are not supported on this wire");
-        String name = fluid.fluid()
-            .getName();
-        if (FluidRegistry.getFluid(name) != fluid.fluid()) throw malformed("Unregistered fluid inventory key");
-        buf.writeByte(1);
-        writeString(buf, name);
+        return out;
     }
 
-    private static void writeBuildPhysicalSpec(ByteBuf buf, IModuleComponent.BuildPhysicalSpec spec) {
-        require(spec, "build physical spec");
-        if (spec instanceof IModuleComponent.BuildPhysicalSpec.Tier tier) {
-            buf.writeByte(0);
-            writeEnum(buf, tier.tier());
-            return;
-        }
-        if (spec instanceof IModuleComponent.BuildPhysicalSpec.Hammer hammer) {
-            buf.writeByte(1);
-            writeEnum(buf, hammer.tier());
-            writeEnum(buf, hammer.variant());
-            return;
-        }
-        if (spec instanceof IModuleComponent.BuildPhysicalSpec.Miner miner) {
-            buf.writeByte(2);
-            writeEnum(buf, miner.tier());
-            writeEnum(buf, miner.focusTier());
-            return;
-        }
-        throw malformed("Unsupported build physical spec");
+    private static RecipeBookOwner owner(NbtReader owner) {
+        return switch (owner.string("type")) {
+            case "private" -> new RecipeBookOwner.Private(recipeOwnerModuleId(moduleId(owner, "module")));
+            case "group" -> new RecipeBookOwner.Group(groupId(owner, "group"));
+            default -> throw malformed("Unknown recipe book owner type");
+        };
     }
 
-    private static IModuleComponent.BuildPhysicalSpec readBuildPhysicalSpec(ByteBuf buf) {
-        int type = buf.readUnsignedByte();
-        ModuleTier tier = readEnum(buf, ModuleTier.class);
+    private static NBTTagCompound physical(IModuleComponent.BuildPhysicalSpec spec) {
+        NBTTagCompound out = new NBTTagCompound();
+        if (spec instanceof IModuleComponent.BuildPhysicalSpec.Tier value) {
+            out.setString("type", "tier");
+            putEnum(out, "tier", value.tier());
+        } else if (spec instanceof IModuleComponent.BuildPhysicalSpec.Hammer value) {
+            out.setString("type", "hammer");
+            putEnum(out, "tier", value.tier());
+            putEnum(out, "variant", value.variant());
+        } else if (spec instanceof IModuleComponent.BuildPhysicalSpec.Miner value) {
+            out.setString("type", "miner");
+            putEnum(out, "tier", value.tier());
+            putEnum(out, "focusTier", value.focusTier());
+        } else {
+            throw malformed("Unsupported build physical spec");
+        }
+        return out;
+    }
+
+    private static IModuleComponent.BuildPhysicalSpec physical(NbtReader spec) {
+        String type = spec.string("type");
+        ModuleTier tier = spec.enumValue(ModuleTier.class, "tier");
         return switch (type) {
-            case 0 -> new IModuleComponent.BuildPhysicalSpec.Tier(tier);
-            case 1 -> new IModuleComponent.BuildPhysicalSpec.Hammer(tier, readEnum(buf, HammerVariant.class));
-            case 2 -> new IModuleComponent.BuildPhysicalSpec.Miner(tier, readEnum(buf, MinerFocusTier.class));
+            case "tier" -> new IModuleComponent.BuildPhysicalSpec.Tier(tier);
+            case "hammer" -> new IModuleComponent.BuildPhysicalSpec.Hammer(
+                tier,
+                spec.enumValue(HammerVariant.class, "variant"));
+            case "miner" -> new IModuleComponent.BuildPhysicalSpec.Miner(
+                tier,
+                spec.enumValue(MinerFocusTier.class, "focusTier"));
             default -> throw malformed("Unknown build physical spec " + type);
         };
     }
 
-    private static InventoryKey readInventoryKey(ByteBuf buf) {
-        int type = buf.readUnsignedByte();
-        if (type != 0 && type != 1) throw malformed("Unknown inventory key type " + type);
-        String encoded = readString(buf);
-        if (type == 0) {
-            ItemStackWrapper item = ItemStackWrapper.fromKey(encoded);
-            if (item == null || !encoded.equals(item.toKey())) throw malformed("Invalid item inventory key");
-            return item;
-        }
-        Fluid fluid = FluidRegistry.getFluid(encoded);
-        if (fluid == null || !encoded.equals(fluid.getName())) throw malformed("Invalid fluid inventory key");
-        return new FluidKey(fluid, null);
-    }
-
-    private static void writeBoundInventoryKey(ByteBuf buf, BoundKind kind, InventoryKey key) {
-        validateBoundKey(kind, key);
-        writeInventoryKey(buf, key);
-    }
-
-    private static InventoryKey readBoundInventoryKey(ByteBuf buf, BoundKind kind) {
-        InventoryKey key = readInventoryKey(buf);
-        validateBoundKey(kind, key);
-        return key;
-    }
-
-    private static void validateBoundKey(BoundKind kind, InventoryKey key) {
-        require(kind, "bound kind");
-        require(key, "bound inventory key");
-        boolean itemBound = kind == BoundKind.ITEM_LOWER || kind == BoundKind.ITEM_UPPER;
-        if (itemBound != key.isItem()) throw malformed("Inventory key type does not match bound kind");
-    }
-
-    private static void writeFilters(ByteBuf buf, List<String> filters) {
-        require(filters, "filters");
-        validateCount(filters.size(), MAX_FILTERS, "filter");
-        int totalBytes = 0;
-        List<byte[]> encoded = new ArrayList<>(filters.size());
-        for (String filter : filters) {
-            byte[] bytes = encodeString(filter);
-            totalBytes = Math.addExact(totalBytes, bytes.length);
-            if (totalBytes > MAX_FILTER_DATA_BYTES) throw malformed("Filter string data exceeds 32 KiB");
-            encoded.add(bytes);
-        }
-        buf.writeInt(encoded.size());
-        for (byte[] bytes : encoded) writeEncodedString(buf, bytes);
-    }
-
-    private static List<String> readFilters(ByteBuf buf) {
-        int count = readCount(buf, MAX_FILTERS, "filter");
-        requireMinimumElementBytes(buf, count, 2, "filter");
-        List<String> filters = new ArrayList<>(count);
-        int totalBytes = 0;
-        for (int i = 0; i < count; i++) {
-            int length = readStringLength(buf);
-            totalBytes = Math.addExact(totalBytes, length);
-            if (totalBytes > MAX_FILTER_DATA_BYTES) throw malformed("Filter string data exceeds 32 KiB");
-            filters.add(readStringBytes(buf, length));
-        }
-        return filters;
-    }
-
-    private static void writePlacements(ByteBuf buf, List<ModulePlacement> placements) {
-        require(placements, "module placements");
-        validateCount(placements.size(), MAX_PLACEMENTS, "module placement");
-        buf.writeInt(placements.size());
+    private static NBTTagList placements(List<ModulePlacement> placements) {
+        require(placements, "module placement list");
+        NBTTagList out = new NBTTagList();
         for (ModulePlacement placement : placements) {
-            require(placement, "module placement");
-            StationTileCoord anchor = require(placement.anchor(), "module placement anchor");
-            if (placement.rotation() < 0 || placement.rotation() > 3) {
-                throw malformed("Module placement rotation must be 0..3");
+            StationTileCoord anchor = require(require(placement, "module placement").anchor(), "placement anchor");
+            NBTTagCompound tag = new NBTTagCompound();
+            tag.setInteger("x", anchor.dx());
+            tag.setInteger("y", anchor.dy());
+            tag.setInteger("rotation", placement.rotation());
+            out.appendTag(tag);
+        }
+        return out;
+    }
+
+    private static List<ModulePlacement> placements(NbtReader data) {
+        NBTTagList tags = data.compounds("placements");
+        count(tags.tagCount(), MAX_PLACEMENTS, "module placement");
+        List<ModulePlacement> out = new ArrayList<>(tags.tagCount());
+        for (int i = 0; i < tags.tagCount(); i++) {
+            NbtReader placement = data.element("placements", i, tags.getCompoundTagAt(i));
+            int rotation = placement.integer("rotation");
+            if (rotation < 0 || rotation > 3) throw malformed("Invalid placement rotation");
+            int x = placement.integer("x");
+            int y = placement.integer("y");
+            if (x < Byte.MIN_VALUE || x > Byte.MAX_VALUE || y < Byte.MIN_VALUE || y > Byte.MAX_VALUE) {
+                throw malformed("Module placement coordinates are out of range");
             }
-            buf.writeByte(anchor.dx());
-            buf.writeByte(anchor.dy());
-            buf.writeByte(placement.rotation());
+            out.add(new ModulePlacement(new StationTileCoord((byte) x, (byte) y), rotation));
         }
+        return out;
     }
 
-    private static List<ModulePlacement> readPlacements(ByteBuf buf) {
-        int count = readCount(buf, MAX_PLACEMENTS, "module placement");
-        requireMinimumElementBytes(buf, count, 3, "module placement");
-        List<ModulePlacement> placements = new ArrayList<>(count);
-        for (int i = 0; i < count; i++) {
-            StationTileCoord anchor = new StationTileCoord(buf.readByte(), buf.readByte());
-            int rotation = buf.readUnsignedByte();
-            if (rotation > 3) throw malformed("Module placement rotation must be 0..3");
-            placements.add(new ModulePlacement(anchor, rotation));
-        }
-        return placements;
-    }
-
-    private static void writeTargetIds(ByteBuf buf, List<ModuleInstance.ID> ids) {
-        require(ids, "module target IDs");
-        validateCount(ids.size(), MAX_TARGET_IDS, "module target ID");
-        Set<ModuleInstance.ID> unique = new HashSet<>();
-        buf.writeInt(ids.size());
+    private static NBTTagList targets(List<ModuleInstance.ID> ids) {
+        require(ids, "module target ID list");
+        NBTTagList out = new NBTTagList();
         for (ModuleInstance.ID id : ids) {
-            if (id == null || !unique.add(id)) throw malformed("Duplicate or null module target ID");
-            writeModuleId(buf, id);
+            out.appendTag(new NBTTagString(uuid(require(id, "module target ID").id(), "module target ID")));
         }
+        return out;
     }
 
-    private static List<ModuleInstance.ID> readTargetIds(ByteBuf buf) {
-        int count = readCount(buf, MAX_TARGET_IDS, "module target ID");
-        requireMinimumElementBytes(buf, count, 16, "module target ID");
-        List<ModuleInstance.ID> ids = new ArrayList<>(count);
+    private static List<ModuleInstance.ID> targets(NbtReader data) {
+        NBTTagList tags = data.strings("targets");
+        count(tags.tagCount(), MAX_TARGET_IDS, "module target ID");
+        List<ModuleInstance.ID> out = new ArrayList<>(tags.tagCount());
         Set<ModuleInstance.ID> unique = new HashSet<>();
-        for (int i = 0; i < count; i++) {
-            ModuleInstance.ID id = readModuleId(buf);
+        for (int i = 0; i < tags.tagCount(); i++) {
+            ModuleInstance.ID id = new ModuleInstance.ID(parseUuid(tags.getStringTagAt(i), "module target ID"));
             if (!unique.add(id)) throw malformed("Duplicate module target ID");
-            ids.add(id);
+            out.add(id);
         }
-        return ids;
+        return out;
     }
 
-    private static void writeDebugConfig(ByteBuf buf, ModuleDebugDataGenerator.Config config) {
+    private static List<String> filters(NbtReader data) {
+        NBTTagList tags = data.strings("filters");
+        count(tags.tagCount(), MAX_FILTERS, "filter");
+        List<String> out = new ArrayList<>(tags.tagCount());
+        Set<String> unique = new HashSet<>();
+        int total = 0;
+        for (int i = 0; i < tags.tagCount(); i++) {
+            String value = validateString(tags.getStringTagAt(i));
+            if (!unique.add(value)) throw malformed("Duplicate filter");
+            total = Math.addExact(total, value.getBytes(StandardCharsets.UTF_8).length);
+            if (total > MAX_FILTER_DATA_BYTES) throw malformed("Filter string data is too large");
+            out.add(value);
+        }
+        return out;
+    }
+
+    private static MinerSettings minerSettings(NbtReader data) {
+        var decoded = ModuleSettingsState.decode(
+            FacilityModuleKind.MINER,
+            data.compound("settings")
+                .tag());
+        if (!(decoded instanceof MinerSettings miner)) throw malformed("Expected miner settings");
+        Set<String> ores = miner.blacklistedOreKeys();
+        count(ores.size(), MAX_MINER_ORES, "miner ore");
+        int total = 0;
+        for (String ore : ores) {
+            String valid = validateString(ore);
+            if (valid.isBlank()) throw malformed("Miner ore key must not be blank");
+            total = Math.addExact(total, valid.getBytes(StandardCharsets.UTF_8).length);
+            if (total > MAX_MINER_ORE_DATA_BYTES) throw malformed("Miner ore string data is too large");
+        }
+        return miner;
+    }
+
+    private static void putDebug(NBTTagCompound data, ModuleDebugDataGenerator.Config config) {
         require(config, "debug data generator config");
-        writeEnum(buf, config.mode());
-        writeBoolean(buf, config.enabled());
-        writeEnum(buf, config.dataType());
-        buf.writeLong(config.amountKb());
-        buf.writeInt(config.durationTicks());
-        writeNullableCelestialKey(buf, config.originBodyKey());
-    }
-
-    private static ModuleDebugDataGenerator.Config readDebugConfig(ByteBuf buf) {
-        ModuleDebugDataGenerator.Mode mode = readEnum(buf, ModuleDebugDataGenerator.Mode.class);
-        boolean enabled = readBoolean(buf);
-        SatelliteDataType dataType = readEnum(buf, SatelliteDataType.class);
-        long amountKb = buf.readLong();
-        int durationTicks = buf.readInt();
-        CelestialObjectKey origin = readNullableCelestialKey(buf);
-        ModuleDebugDataGenerator.Config config = new ModuleDebugDataGenerator.Config(
-            mode,
-            enabled,
-            dataType,
-            amountKb,
-            durationTicks,
-            origin);
-        if (config.enabled() != enabled || config.amountKb() != amountKb || config.durationTicks() != durationTicks) {
-            throw malformed("Non-canonical debug data generator config");
-        }
-        return config;
-    }
-
-    private static void writeNullableCelestialKey(ByteBuf buf, CelestialObjectKey key) {
-        writeBoolean(buf, key != null);
-        if (key == null) return;
-        writeBoolean(buf, key.isRegistered());
-        if (key.isRegistered()) {
-            writeEnum(buf, key.registeredBodyId());
+        putEnum(data, "mode", config.mode());
+        putBool(data, "enabled", config.enabled());
+        putEnum(data, "dataType", config.dataType());
+        data.setLong("amountKb", config.amountKb());
+        data.setInteger("durationTicks", config.durationTicks());
+        CelestialObjectKey origin = config.originBodyKey();
+        putBool(data, "hasOrigin", origin != null);
+        if (origin == null) return;
+        boolean registered = origin.isRegistered();
+        putBool(data, "registeredOrigin", registered);
+        if (registered) {
+            putEnum(data, "originBody", origin.registeredBodyId());
         } else {
-            writeEnum(
-                buf,
-                key.minorBodyId()
-                    .parentBodyId());
-            buf.writeInt(
-                key.minorBodyId()
-                    .index());
+            MinorCelestialBodyId minor = origin.minorBodyId();
+            putEnum(data, "originBody", minor.parentBodyId());
+            data.setInteger("originIndex", minor.index());
         }
     }
 
-    private static CelestialObjectKey readNullableCelestialKey(ByteBuf buf) {
-        if (!readBoolean(buf)) return null;
-        if (readBoolean(buf)) return CelestialObjectKey.registered(readEnum(buf, CelestialObjectId.class));
-        return CelestialObjectKey
-            .minorBody(new MinorCelestialBodyId(readEnum(buf, CelestialObjectId.class), buf.readInt()));
+    private static void putResource(NBTTagCompound data, InventoryKey resource) {
+        data.setTag("resource", InventoryKeyState.encode(require(resource, "inventory key")));
     }
 
-    private static void writeNullableString(ByteBuf buf, String value) {
-        writeBoolean(buf, value != null);
-        if (value != null) writeString(buf, value);
-    }
-
-    private static String readNullableString(ByteBuf buf) {
-        return readBoolean(buf) ? readString(buf) : null;
-    }
-
-    private static void writeOreKey(ByteBuf buf, String oreKey) {
-        String validated = require(oreKey, "miner ore key");
-        if (validated.isBlank()) throw malformed("Miner ore key must not be blank");
-        writeString(buf, validated);
-    }
-
-    private static String readOreKey(ByteBuf buf) {
-        String oreKey = readString(buf);
-        if (oreKey.isBlank()) throw malformed("Miner ore key must not be blank");
-        return oreKey;
-    }
-
-    private static <T extends Enum<T>> void writeEnum(ByteBuf buf, T value) {
-        PacketUtil.writeEnum(buf, require(value, "enum value"));
-    }
-
-    private static <T extends Enum<T>> T readEnum(ByteBuf buf, Class<T> type) {
+    private static InventoryKey resource(NbtReader data) {
         try {
-            return PacketUtil.readEnum(buf, type);
-        } catch (IllegalStateException unknownValue) {
-            throw malformed(unknownValue.getMessage());
+            return InventoryKeyState.decode(
+                data.compound("resource")
+                    .tag());
+        } catch (RuntimeException invalid) {
+            throw malformed("Invalid inventory key");
         }
     }
 
-    private static void writeBoolean(ByteBuf buf, boolean value) {
-        buf.writeByte(value ? 1 : 0);
+    private static void putModuleId(NBTTagCompound data, String key, ModuleInstance.ID id) {
+        data.setString(key, uuid(require(id, "module ID").id(), "module ID"));
     }
 
-    private static boolean readBoolean(ByteBuf buf) {
-        int value = buf.readUnsignedByte();
-        if (value > 1) throw malformed("Boolean value must be 0 or 1");
-        return value == 1;
+    private static ModuleInstance.ID moduleId(NbtReader data, String key) {
+        return new ModuleInstance.ID(parseUuid(data.string(key), "module ID"));
     }
 
-    private static void writeString(ByteBuf buf, String value) {
-        writeEncodedString(buf, encodeString(value));
+    private static ModuleInstance.ID recipeOwnerModuleId(ModuleInstance.ID id) {
+        ModuleInstance.ID valid = require(id, "recipe owner module ID");
+        if (ZERO_UUID.equals(require(valid.id(), "recipe owner module UUID"))) {
+            throw malformed("Invalid recipe owner module ID");
+        }
+        return valid;
     }
 
-    private static byte[] encodeString(String value) {
+    private static void putNullableGroup(NBTTagCompound data, SettingsGroup.ID id) {
+        putBool(data, "hasGroup", id != null);
+        if (id != null) putGroupId(data, "group", id);
+    }
+
+    private static void putGroupId(NBTTagCompound data, String key, SettingsGroup.ID id) {
+        data.setInteger(key, require(id, "settings group ID").value());
+    }
+
+    private static SettingsGroup.ID groupId(NbtReader data, String key) {
+        return new SettingsGroup.ID(data.integer(key));
+    }
+
+    private static void putBounded(NBTTagCompound data, String key, String value) {
+        data.setString(key, validateString(value));
+    }
+
+    private static String bounded(NbtReader data, String key) {
+        return validateString(data.string(key));
+    }
+
+    private static String validateString(String value) {
+        String valid = require(value, "string");
+        if (valid.getBytes(StandardCharsets.UTF_8).length > MAX_STRING_BYTES) {
+            throw malformed("UTF-8 string exceeds 1024 bytes");
+        }
+        return valid;
+    }
+
+    private static <T extends Enum<T>> void putEnum(NBTTagCompound data, String key, T value) {
+        data.setString(key, require(value, "enum value").name());
+    }
+
+    private static void putBool(NBTTagCompound data, String key, boolean value) {
+        data.setByte(key, (byte) (value ? 1 : 0));
+    }
+
+    private static void count(int count, int maximum, String description) {
+        if (count < 0 || count > maximum) throw malformed("Invalid " + description + " count " + count);
+    }
+
+    private static String uuid(UUID value, String description) {
+        return require(value, description).toString();
+    }
+
+    private static UUID parseUuid(String value, String description) {
         try {
-            ByteBuffer encoded = StandardCharsets.UTF_8.newEncoder()
-                .onMalformedInput(CodingErrorAction.REPORT)
-                .onUnmappableCharacter(CodingErrorAction.REPORT)
-                .encode(CharBuffer.wrap(require(value, "string")));
-            if (encoded.remaining() > MAX_STRING_BYTES) throw malformed("UTF-8 string exceeds 1024 bytes");
-            byte[] bytes = new byte[encoded.remaining()];
-            encoded.get(bytes);
-            return bytes;
-        } catch (CharacterCodingException invalidUtf8) {
-            throw malformed("Malformed UTF-8 string");
+            UUID parsed = UUID.fromString(value);
+            if (!parsed.toString()
+                .equals(value)) throw malformed("Non-canonical " + description);
+            return parsed;
+        } catch (IllegalArgumentException invalid) {
+            throw malformed("Invalid " + description);
         }
     }
 
-    private static void writeEncodedString(ByteBuf buf, byte[] bytes) {
-        buf.writeShort(bytes.length);
-        buf.writeBytes(bytes);
-    }
-
-    private static String readString(ByteBuf buf) {
-        return readStringBytes(buf, readStringLength(buf));
-    }
-
-    private static int readStringLength(ByteBuf buf) {
-        int length = buf.readUnsignedShort();
-        if (length > MAX_STRING_BYTES) throw malformed("UTF-8 string exceeds 1024 bytes");
-        if (buf.readableBytes() < length) throw malformed("Truncated UTF-8 string");
-        return length;
-    }
-
-    private static String readStringBytes(ByteBuf buf, int length) {
-        byte[] bytes = new byte[length];
-        buf.readBytes(bytes);
+    private static byte[] compress(NBTTagCompound envelope) {
         try {
-            return StandardCharsets.UTF_8.newDecoder()
-                .onMalformedInput(CodingErrorAction.REPORT)
-                .onUnmappableCharacter(CodingErrorAction.REPORT)
-                .decode(ByteBuffer.wrap(bytes))
-                .toString();
-        } catch (CharacterCodingException invalidUtf8) {
-            throw malformed("Malformed UTF-8 string");
+            return CompressedStreamTools.compress(envelope);
+        } catch (IOException invalid) {
+            throw malformed("Could not compress facility command NBT");
         }
     }
 
-    private static int readCount(ByteBuf buf, int maximum, String description) {
-        int count = buf.readInt();
-        validateCount(count, maximum, description);
-        return count;
-    }
-
-    private static void requireMinimumElementBytes(ByteBuf buf, int count, int bytesPerElement, String description) {
-        long minimumBytes = (long) count * bytesPerElement;
-        if (buf.readableBytes() < minimumBytes) {
-            throw malformed("Truncated " + description + " list");
+    private static NBTTagCompound decompress(byte[] payload) {
+        try {
+            NBTTagCompound envelope = CompressedStreamTools
+                .func_152457_a(payload, new NBTSizeTracker(MAX_DECOMPRESSED_NBT_BYTES));
+            if (envelope == null) throw malformed("Null facility command NBT");
+            if (!Arrays.equals(payload, compress(envelope)))
+                throw malformed("Non-canonical or trailing compressed NBT");
+            return envelope;
+        } catch (IOException | RuntimeException invalid) {
+            throw malformed("Malformed compressed facility command NBT");
         }
-    }
-
-    private static void validateCount(int count, int maximum, String description) {
-        if (count < 0 || count > maximum) {
-            throw malformed("Invalid " + description + " count " + count);
-        }
-    }
-
-    private static void writeModuleId(ByteBuf buf, ModuleInstance.ID id) {
-        PacketUtil.writeId(buf, require(id, "module ID").id());
-    }
-
-    private static ModuleInstance.ID readModuleId(ByteBuf buf) {
-        return PacketUtil.readModuleId(buf);
-    }
-
-    private static void writeNullableSettingsGroupId(ByteBuf buf, SettingsGroup.ID id) {
-        writeBoolean(buf, id != null);
-        if (id != null) writeSettingsGroupId(buf, id);
-    }
-
-    private static SettingsGroup.ID readNullableSettingsGroupId(ByteBuf buf) {
-        return readBoolean(buf) ? readSettingsGroupId(buf) : null;
-    }
-
-    private static void writeSettingsGroupId(ByteBuf buf, SettingsGroup.ID id) {
-        buf.writeInt(require(id, "settings group ID").value());
-    }
-
-    private static SettingsGroup.ID readSettingsGroupId(ByteBuf buf) {
-        return new SettingsGroup.ID(buf.readInt());
-    }
-
-    private static void writeUuid(ByteBuf buf, UUID id) {
-        PacketUtil.writeId(buf, require(id, "UUID"));
-    }
-
-    private static UUID readUuid(ByteBuf buf) {
-        return PacketUtil.readId(buf);
     }
 
     private static <T> T require(T value, String description) {
@@ -765,9 +697,7 @@ public final class FacilityCommandPacket implements IMessage {
         @Override
         public IMessage onMessage(FacilityCommandPacket message, MessageContext context) {
             EntityPlayerMP player = context.getServerHandler().playerEntity;
-            if (player != null) {
-                ServerTickTaskQueue.schedule(() -> GATEWAY.execute(player, message.command));
-            }
+            if (player != null) ServerTickTaskQueue.schedule(() -> GATEWAY.execute(player, message.command));
             return null;
         }
     }

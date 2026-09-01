@@ -327,7 +327,7 @@ final class AssetStateSyncTest {
         ByteBuf buffer = Unpooled.buffer();
         packet.toBytes(buffer);
         AssetSyncPacket decoded = new AssetSyncPacket();
-        decoded.fromBytes(buffer);
+        decoded.fromBytes(buffer, packet.assetId());
         return decoded;
     }
 
@@ -361,7 +361,7 @@ final class AssetStateSyncTest {
             assertEquals(1, frame.frameCount());
             ByteBuf framed = Unpooled.wrappedBuffer(frame.payload());
             AssetSyncPacket packet = new AssetSyncPacket();
-            packet.fromBytes(framed);
+            packet.fromBytes(framed, frame.assetId());
             ByteBuf buffer = Unpooled.buffer();
             packet.toBytes(buffer);
             byte[] payload = new byte[buffer.readableBytes()];

@@ -126,7 +126,7 @@ final class StationMapWidgetTest {
             FacilityModuleKind.MAINTENANCE_BAY,
             StationTileCoord.CORE,
             ModuleShape.SINGLE,
-            ModuleTier.EV);
+            ModuleTier.NONE);
         ModuleInstance macerator = FacilityModuleRegistry.create(
             ModuleInstance.ID.create(),
             FacilityModuleKind.MACERATOR,
@@ -166,7 +166,7 @@ final class StationMapWidgetTest {
             FacilityModuleKind.MAINTENANCE_BAY,
             StationTileCoord.CORE,
             ModuleShape.SINGLE,
-            ModuleTier.EV);
+            ModuleTier.NONE);
         ModuleInstance macerator = FacilityModuleRegistry.create(
             ModuleInstance.ID.create(),
             FacilityModuleKind.MACERATOR,

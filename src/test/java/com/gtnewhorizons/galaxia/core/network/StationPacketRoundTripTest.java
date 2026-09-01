@@ -63,7 +63,7 @@ final class StationPacketRoundTripTest {
             SatelliteKind.PROSPECTING);
         AutomatedFacility facility = facility();
         ItemStackWrapper item = new ItemStackWrapper(Items.iron_ingot, 0, null);
-        facility.restoreInventory(Map.of(item, 9L), Map.of());
+        facility.restoreInventory(Map.of(item, 9L));
         facility.setFilters(List.of("ore:iron"), true);
         facility.logisticsConfig.set(item, new LogisticsResourceConfig(4, 8, true, false));
 

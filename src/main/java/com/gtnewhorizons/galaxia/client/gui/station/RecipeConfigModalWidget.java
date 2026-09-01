@@ -43,6 +43,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot.Resource;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 
 import gregtech.api.modularui2.GTGuiTextures;
@@ -858,12 +859,8 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private @Nullable ItemStack itemStack(SavedRecipe slot, BoundTarget target) {
-        if (slot == null || target.resource() != BoundResource.ITEM) return null;
-        ItemStack[] stacks = target.side() == BoundSide.INPUT ? slot.recipe()
-            .inputs()
-            : slot.recipe()
-                .outputs();
-        return target.index() >= 0 && stacks != null && target.index() < stacks.length ? stacks[target.index()] : null;
+        Resource resource = resource(slot, target);
+        return resource == null ? null : resource.itemStack();
     }
 
     private @Nullable ItemStackWrapper itemKey(BoundTarget target) {
@@ -876,12 +873,27 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private @Nullable FluidStack fluidStack(SavedRecipe slot, BoundTarget target) {
-        if (slot == null || target.resource() != BoundResource.FLUID) return null;
-        FluidStack[] stacks = target.side() == BoundSide.INPUT ? slot.recipe()
-            .fluidInputs()
-            : slot.recipe()
-                .fluidOutputs();
-        return target.index() >= 0 && stacks != null && target.index() < stacks.length ? stacks[target.index()] : null;
+        Resource resource = resource(slot, target);
+        return resource == null ? null : resource.fluidStack();
+    }
+
+    private @Nullable Resource resource(BoundTarget target) {
+        return resource(boundsSlot(), target);
+    }
+
+    private @Nullable Resource resource(@Nullable SavedRecipe slot, BoundTarget target) {
+        if (slot == null) return null;
+        List<Resource> resources = switch (target.resource()) {
+            case ITEM -> target.side() == BoundSide.INPUT ? slot.recipe()
+                .itemInputs()
+                : slot.recipe()
+                    .itemOutputs();
+            case FLUID -> target.side() == BoundSide.INPUT ? slot.recipe()
+                .fluidInputs()
+                : slot.recipe()
+                    .fluidOutputs();
+        };
+        return target.index() >= 0 && target.index() < resources.size() ? resources.get(target.index()) : null;
     }
 
     private GTRecipeMapLayout detailLayout() {
@@ -901,40 +913,25 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private long itemInputAmount(RecipeSnapshot recipe, ItemStackWrapper item) {
-        return itemAmount(recipe.inputs(), item);
+        return resourceAmount(recipe.itemInputs(), item);
     }
 
     private long itemOutputAmount(RecipeSnapshot recipe, ItemStackWrapper item) {
-        return itemAmount(recipe.outputs(), item);
+        return resourceAmount(recipe.itemOutputs(), item);
     }
 
-    private long itemAmount(@Nullable ItemStack[] stacks, ItemStackWrapper item) {
-        if (stacks == null) return 0L;
+    private long resourceAmount(List<Resource> resources, InventoryKey key) {
         long total = 0L;
-        for (ItemStack stack : stacks) {
-            ItemStackWrapper key = ItemStackWrapper.of(stack);
-            if (item.equals(key)) total += stack.stackSize;
-        }
+        for (Resource resource : resources) if (key.equals(resource.key())) total += resource.amount();
         return total;
     }
 
     private long fluidInputAmount(RecipeSnapshot recipe, FluidKey fluid) {
-        return fluidAmount(recipe.fluidInputs(), fluid);
+        return resourceAmount(recipe.fluidInputs(), fluid);
     }
 
     private long fluidOutputAmount(RecipeSnapshot recipe, FluidKey fluid) {
-        return fluidAmount(recipe.fluidOutputs(), fluid);
-    }
-
-    private long fluidAmount(@Nullable FluidStack[] stacks, FluidKey fluid) {
-        if (stacks == null) return 0L;
-        long total = 0L;
-        for (FluidStack stack : stacks) {
-            if (stack == null) continue;
-            if (FluidKey.of(stack)
-                .equals(fluid)) total += stack.amount;
-        }
-        return total;
+        return resourceAmount(recipe.fluidOutputs(), fluid);
     }
 
     private String modeLabel() {
@@ -1359,21 +1356,22 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
                 if (stack != null) renderItemIconScaled(stack, scale, scale, scale);
                 return;
             }
-            FluidStack stack = fluidStack(target);
+            Resource resource = resource(target);
+            FluidStack stack = resource == null ? null : resource.fluidStack();
             if (stack == null) return;
             GL11.glPushAttrib(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_ENABLE_BIT | GL11.GL_CURRENT_BIT);
             try {
                 com.cleanroommc.modularui.drawable.GuiDraw
                     .drawFluidTexture(stack, scale, scale, 16 * scale, 16 * scale, context.getCurrentDrawingZ());
-                drawFluidAmountText(stack, getArea().width, scale);
+                drawFluidAmountText(resource, getArea().width, scale);
             } finally {
                 GL11.glPopAttrib();
                 GL11.glColor4f(1f, 1f, 1f, 1f);
             }
         }
 
-        private void drawFluidAmountText(FluidStack stack, int size, int scale) {
-            String text = RecipeSlotUiModel.fluidSlotAmountText(stack);
+        private void drawFluidAmountText(Resource resource, int size, int scale) {
+            String text = RecipeSlotUiModel.fluidSlotAmountText(resource);
             if (text == null) return;
             float textScale = 0.5F * scale;
             GL11.glPushMatrix();
@@ -1406,13 +1404,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
 
         private @Nullable String chanceText() {
             if (target.side() != BoundSide.OUTPUT) return null;
-            SavedRecipe slot = boundsSlot();
-            if (slot == null) return null;
-            int[] chances = target.resource() == BoundResource.ITEM ? slot.recipe()
-                .outputChances()
-                : slot.recipe()
-                    .fluidOutputChances();
-            return GTRecipeChance.optionalOutputLabel(chances, target.index());
+            return GTRecipeChance.optionalOutputLabel(resource(target));
         }
 
         private @Nullable IDrawable slotOverlay() {

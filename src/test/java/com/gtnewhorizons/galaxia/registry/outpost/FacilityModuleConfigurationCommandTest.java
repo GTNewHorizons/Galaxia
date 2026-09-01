@@ -45,7 +45,7 @@ final class FacilityModuleConfigurationCommandTest {
     }
 
     @Test
-    void moduleConfigCommandsChangeOnceReturnNoOpAndRejectWrongComponent() {
+    void completeHammerConfigChangesAtomicallyOnceAndRejectsWrongComponent() {
         AutomatedFacility facility = facility();
         ModuleInstance hammer = add(facility, FacilityModuleKind.HAMMER);
         ModuleInstance power = add(facility, FacilityModuleKind.POWER);
@@ -55,26 +55,35 @@ final class FacilityModuleConfigurationCommandTest {
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(
-                new FacilityCommand.SetHammerShootingConfig(facility.assetId, hammer.id, config),
+                new FacilityCommand.ConfigureHammer(
+                    facility.assetId,
+                    hammer.id,
+                    config,
+                    OrbitalTransferPlanner.RoutePriority.PRIORITIZE_DV),
                 FacilityCommand.Authority.NONE));
         assertSame(
             FacilityCommand.Result.UNCHANGED,
             facility.applyCommand(
-                new FacilityCommand.SetHammerShootingConfig(facility.assetId, hammer.id, config),
-                FacilityCommand.Authority.NONE));
-        assertSame(
-            FacilityCommand.Result.CHANGED,
-            facility.applyCommand(
-                new FacilityCommand.SetHammerRoutePriority(
+                new FacilityCommand.ConfigureHammer(
                     facility.assetId,
                     hammer.id,
+                    config,
                     OrbitalTransferPlanner.RoutePriority.PRIORITIZE_DV),
                 FacilityCommand.Authority.NONE));
         FacilityCommand.Result wrong = facility.applyCommand(
-            new FacilityCommand.SetHammerShootingConfig(facility.assetId, power.id, config),
+            new FacilityCommand.ConfigureHammer(
+                facility.assetId,
+                power.id,
+                config,
+                OrbitalTransferPlanner.RoutePriority.PRIORITIZE_DV),
+            FacilityCommand.Authority.NONE);
+        AllowShootingConfig rejectedConfig = new AllowShootingConfig(AllowShootingConfig.Mode.ALWAYS, 0);
+        FacilityCommand.Result invalid = facility.applyCommand(
+            new FacilityCommand.ConfigureHammer(facility.assetId, hammer.id, rejectedConfig, null),
             FacilityCommand.Authority.NONE);
 
         assertEquals(FacilityCommand.Rejection.INVALID_MODULE_COMPONENT, wrong.rejection());
+        assertEquals(FacilityCommand.Rejection.INVALID_MODULE_CONFIG, invalid.rejection());
         assertEquals(config, hammerComponent.config());
         assertEquals(OrbitalTransferPlanner.RoutePriority.PRIORITIZE_DV, hammerComponent.routePriority());
     }

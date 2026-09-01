@@ -1,13 +1,14 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import java.util.List;
+
 import javax.annotation.Nullable;
 
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidStack;
-
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot.Resource;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 
 final class RecipeSlotUiModel {
@@ -26,8 +27,8 @@ final class RecipeSlotUiModel {
             return slot.displayName();
         }
         RecipeSnapshot recipe = slot.recipe();
-        String input = resourceSummary(recipe.inputs(), recipe.fluidInputs());
-        String output = resourceSummary(recipe.outputs(), recipe.fluidOutputs());
+        String input = resourceSummary(recipe.itemInputs(), recipe.fluidInputs());
+        String output = resourceSummary(recipe.itemOutputs(), recipe.fluidOutputs());
         if (input != null || output != null) {
             return (input != null ? input : "?") + " -> " + (output != null ? output : "?");
         }
@@ -44,22 +45,11 @@ final class RecipeSlotUiModel {
         return Math.max(min, Math.min(max, parsed));
     }
 
-    static @Nullable String fluidSlotAmountText(@Nullable FluidStack stack) {
-        return stack != null && stack.amount > 0 ? stack.amount + "L" : null;
+    static @Nullable String fluidSlotAmountText(@Nullable Resource resource) {
+        return resource != null && resource.key() instanceof FluidKey ? resource.amount() + "L" : null;
     }
 
-    private static @Nullable String itemSummary(@Nullable ItemStack[] stacks) {
-        if (stacks == null) return null;
-        for (ItemStack stack : stacks) {
-            if (stack == null || stack.getItem() == null) continue;
-            String name = stack.getDisplayName();
-            if (name == null || name.isBlank()) continue;
-            return stack.stackSize > 1 ? stack.stackSize + "x " + name : name;
-        }
-        return null;
-    }
-
-    private static @Nullable String resourceSummary(@Nullable ItemStack[] items, @Nullable FluidStack[] fluids) {
+    private static @Nullable String resourceSummary(List<Resource> items, List<Resource> fluids) {
         String item = itemSummary(items);
         String fluid = fluidSummary(fluids);
         if (item == null) return fluid;
@@ -67,23 +57,25 @@ final class RecipeSlotUiModel {
         return item + " + " + fluid;
     }
 
-    private static @Nullable String fluidSummary(@Nullable FluidStack[] stacks) {
-        if (stacks == null) return null;
-        for (FluidStack stack : stacks) {
-            if (RecipeSlotUiModel.fluidSlotAmountText(stack) == null) continue;
-            String name = fluidName(stack);
+    private static @Nullable String itemSummary(List<Resource> resources) {
+        for (Resource resource : resources) {
+            if (!(resource.key() instanceof ItemStackWrapper item)) continue;
+            String name = item.toStack(1)
+                .getDisplayName();
             if (name == null || name.isBlank()) continue;
-            return RecipeSlotUiModel.fluidSlotAmountText(stack) + " " + name;
+            return resource.amount() > 1 ? resource.amount() + "x " + name : name;
         }
         return null;
     }
 
-    private static @Nullable String fluidName(FluidStack stack) {
-        try {
-            Fluid fluid = stack.getFluid();
-            return fluid != null ? fluid.getName() : null;
-        } catch (RuntimeException ignored) {
-            return null;
+    private static @Nullable String fluidSummary(List<Resource> resources) {
+        for (Resource resource : resources) {
+            if (!(resource.key() instanceof FluidKey fluid) || fluid.fluid() == null) continue;
+            String name = fluid.fluid()
+                .getName();
+            if (name == null || name.isBlank()) continue;
+            return resource.amount() + "L " + name;
         }
+        return null;
     }
 }

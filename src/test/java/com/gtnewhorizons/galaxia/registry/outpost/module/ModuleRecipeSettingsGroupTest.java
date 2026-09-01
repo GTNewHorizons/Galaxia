@@ -50,7 +50,7 @@ final class ModuleRecipeSettingsGroupTest {
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(
-                new FacilityCommand.JoinSettingsGroup(facility.assetId, second.id, groupId),
+                new FacilityCommand.SetSettingsGroup(facility.assetId, second.id, groupId),
                 FacilityCommand.Authority.NONE));
         RecipeBookOwner.Group groupOwner = new RecipeBookOwner.Group(groupId);
 
@@ -68,7 +68,7 @@ final class ModuleRecipeSettingsGroupTest {
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(
-                new FacilityCommand.LeaveSettingsGroup(facility.assetId, second.id),
+                new FacilityCommand.SetSettingsGroup(facility.assetId, second.id, null),
                 FacilityCommand.Authority.NONE));
         replace(facility, groupOwner, book(RecipeSchedulerMode.PRIORITY));
 
