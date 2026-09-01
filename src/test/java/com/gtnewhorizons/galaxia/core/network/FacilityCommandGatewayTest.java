@@ -36,7 +36,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
@@ -245,7 +244,7 @@ final class FacilityCommandGatewayTest {
             new FacilityCommand.CopyModuleSettings(facility.assetId, missingModule, List.of(missingModule)),
             new FacilityCommand.ReplaceRecipeBook(
                 facility.assetId,
-                new RecipeBookOwner.Private(missingModule),
+                new RecipeBook.Owner.Private(missingModule),
                 RecipeBook.empty()),
             new FacilityCommand.ReplaceMinerSettings(facility.assetId, missingModule, new MinerSettings()),
             new FacilityCommand.ConfigureHammer(facility.assetId, missingModule, null, null),

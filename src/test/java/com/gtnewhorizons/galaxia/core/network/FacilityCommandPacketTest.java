@@ -47,7 +47,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
@@ -123,10 +122,10 @@ final class FacilityCommandPacketTest {
             new FacilityCommand.CopyBuildModules(FACILITY_ID, MODULE_ID, false, placements),
             new FacilityCommand.RequestModuleDeconstruction(FACILITY_ID, MODULE_ID),
             new FacilityCommand.CancelModuleOperation(FACILITY_ID, MODULE_ID),
-            new FacilityCommand.ReplaceRecipeBook(FACILITY_ID, new RecipeBookOwner.Private(MODULE_ID), recipeBook),
+            new FacilityCommand.ReplaceRecipeBook(FACILITY_ID, new RecipeBook.Owner.Private(MODULE_ID), recipeBook),
             new FacilityCommand.ReplaceRecipeBook(
                 FACILITY_ID,
-                new RecipeBookOwner.Group(new SettingsGroup.ID(7)),
+                new RecipeBook.Owner.Group(new SettingsGroup.ID(7)),
                 recipeBook),
             new FacilityCommand.CreateSettingsGroup(FACILITY_ID, MODULE_ID, "Shared miners"),
             new FacilityCommand.RenameSettingsGroup(FACILITY_ID, new SettingsGroup.ID(7), "Priority miners"),
@@ -262,7 +261,7 @@ final class FacilityCommandPacketTest {
         malformed.add(wire(duplicateOre));
 
         NBTTagCompound invalidOwner = envelope(
-            new FacilityCommand.ReplaceRecipeBook(FACILITY_ID, new RecipeBookOwner.Private(MODULE_ID), recipeBook()));
+            new FacilityCommand.ReplaceRecipeBook(FACILITY_ID, new RecipeBook.Owner.Private(MODULE_ID), recipeBook()));
         invalidOwner.getCompoundTag("data")
             .getCompoundTag("owner")
             .setString("type", "unknown");
@@ -373,7 +372,7 @@ final class FacilityCommandPacketTest {
             replaceRecipeBook(recipeBook(32, "x".repeat(1025))),
             new FacilityCommand.ReplaceRecipeBook(
                 FACILITY_ID,
-                new RecipeBookOwner.Private(new ModuleInstance.ID(new UUID(0L, 0L))),
+                new RecipeBook.Owner.Private(new ModuleInstance.ID(new UUID(0L, 0L))),
                 recipeBook()));
 
         for (int i = 0; i < invalid.size(); i++) {
@@ -498,7 +497,7 @@ final class FacilityCommandPacketTest {
     }
 
     private static FacilityCommand.ReplaceRecipeBook replaceRecipeBook(RecipeBook book) {
-        return new FacilityCommand.ReplaceRecipeBook(FACILITY_ID, new RecipeBookOwner.Private(MODULE_ID), book);
+        return new FacilityCommand.ReplaceRecipeBook(FACILITY_ID, new RecipeBook.Owner.Private(MODULE_ID), book);
     }
 
     private static NBTTagCompound firstRecipe(NBTTagCompound envelope) {

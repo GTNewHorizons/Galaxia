@@ -38,7 +38,7 @@ public final class ModuleOperationState {
     }
 
     public static ModuleOperationState deconstructing(@Nonnull Map<String, Long> refundBuffer) {
-        ModuleOperationPlan plan = new ModuleOperationPlan(new ModuleDeconstructionOperation(), 0, Map.of(), false);
+        ModuleOperationPlan plan = new ModuleOperationPlan(IModuleOperation.DECONSTRUCTION, 0, Map.of(), false);
         return new ModuleOperationState(plan, ModuleOperationPhase.REFUNDING, 0, Map.of(), refundBuffer);
     }
 
@@ -147,7 +147,7 @@ public final class ModuleOperationState {
     }
 
     private void validatePhaseDataConsistency() {
-        if (plan.spec() instanceof ModuleDeconstructionOperation
+        if (plan.spec() == IModuleOperation.DECONSTRUCTION
             && (phase != ModuleOperationPhase.REFUNDING || elapsedBuildTicks != 0 || !depositedResources.isEmpty())) {
             throw new IllegalStateException(
                 "Deconstruction operation requires REFUNDING phase, zero elapsed ticks, and empty deposits");

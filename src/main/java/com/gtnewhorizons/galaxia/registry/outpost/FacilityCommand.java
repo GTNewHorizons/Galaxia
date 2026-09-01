@@ -18,7 +18,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
@@ -74,7 +73,7 @@ public sealed interface FacilityCommand permits FacilityCommand.BuildCommand,Fac
 
     record CancelModuleOperation(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId) implements ModuleCommand {}
 
-    record ReplaceRecipeBook(CelestialAsset.ID facilityId, RecipeBookOwner owner, RecipeBook replacement)
+    record ReplaceRecipeBook(CelestialAsset.ID facilityId, RecipeBook.Owner owner, RecipeBook replacement)
         implements ModuleCommand {}
 
     record CreateSettingsGroup(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, String displayName)

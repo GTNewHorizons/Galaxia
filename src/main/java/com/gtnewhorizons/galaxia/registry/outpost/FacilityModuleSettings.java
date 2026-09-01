@@ -13,7 +13,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
@@ -154,16 +153,16 @@ final class FacilityModuleSettings {
         return effectiveSettings(requireModule(moduleId), groups);
     }
 
-    RecipeBookOwner recipeBookOwner(ModuleInstance.ID moduleId) {
+    RecipeBook.Owner recipeBookOwner(ModuleInstance.ID moduleId) {
         ModuleInstance module = requireModule(moduleId);
         if (module.settingsBinding() instanceof ModuleInstance.SettingsBinding.Private privateBinding
             && privateBinding.settings() instanceof RecipeModuleSettings) {
-            return new RecipeBookOwner.Private(moduleId);
+            return new RecipeBook.Owner.Private(moduleId);
         }
         SettingsGroup.ID groupId = sharedGroupId(module);
         SettingsGroup group = groupId == null ? null : groups.get(groupId);
         if (group != null && group.settings() instanceof RecipeModuleSettings) {
-            return new RecipeBookOwner.Group(groupId);
+            return new RecipeBook.Owner.Group(groupId);
         }
         throw new IllegalStateException("Module has no recipe-book owner: " + moduleId);
     }
@@ -172,8 +171,8 @@ final class FacilityModuleSettings {
         return recipeBook(recipeBookOwner(moduleId));
     }
 
-    RecipeBook recipeBook(RecipeBookOwner owner) {
-        if (owner instanceof RecipeBookOwner.Private privateOwner) {
+    RecipeBook recipeBook(RecipeBook.Owner owner) {
+        if (owner instanceof RecipeBook.Owner.Private privateOwner) {
             ModuleInstance module = module(privateOwner.moduleId());
             if (module != null
                 && module.settingsBinding() instanceof ModuleInstance.SettingsBinding.Private privateBinding
@@ -182,7 +181,7 @@ final class FacilityModuleSettings {
             }
             throw new IllegalStateException("Missing or stale private recipe-book owner: " + privateOwner.moduleId());
         }
-        if (owner instanceof RecipeBookOwner.Group groupOwner) {
+        if (owner instanceof RecipeBook.Owner.Group groupOwner) {
             SettingsGroup group = groups.get(groupOwner.groupId());
             if (group != null && !membersOf(groupOwner.groupId()).isEmpty()
                 && group.settings() instanceof RecipeModuleSettings recipeSettings) {
@@ -193,16 +192,16 @@ final class FacilityModuleSettings {
         throw new IllegalArgumentException("Recipe-book owner must not be null");
     }
 
-    Outcome replaceRecipeBook(RecipeBookOwner owner, RecipeBook replacement) {
+    Outcome replaceRecipeBook(RecipeBook.Owner owner, RecipeBook replacement) {
         if (owner == null || replacement == null) throw new IllegalArgumentException("Recipe book update is null");
         recipeBook(owner);
         RecipeModuleSettings settings = new RecipeModuleSettings(replacement);
-        if (owner instanceof RecipeBookOwner.Private privateOwner) {
+        if (owner instanceof RecipeBook.Owner.Private privateOwner) {
             requireModule(privateOwner.moduleId())
                 .setSettingsBinding(new ModuleInstance.SettingsBinding.Private(settings));
             return Outcome.changed(Set.of(privateOwner.moduleId()));
         }
-        RecipeBookOwner.Group groupOwner = (RecipeBookOwner.Group) owner;
+        RecipeBook.Owner.Group groupOwner = (RecipeBook.Owner.Group) owner;
         SettingsGroup group = requireGroup(groupOwner.groupId());
         Set<ModuleInstance.ID> affected = membersOf(groupOwner.groupId());
         groups.put(groupOwner.groupId(), group.withSettings(settings));

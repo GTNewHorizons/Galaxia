@@ -7,20 +7,19 @@ import javax.annotation.Nullable;
 
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 
 final class RecipeBookEditorModel {
 
-    private final RecipeBookOwner owner;
+    private final RecipeBook.Owner owner;
     private final List<SavedRecipe> recipes;
     private RecipeSchedulerMode mode;
     private NotDoablePolicy notDoablePolicy;
     private int selectedIndex;
 
-    private RecipeBookEditorModel(RecipeBookOwner owner, RecipeBook source) {
+    private RecipeBookEditorModel(RecipeBook.Owner owner, RecipeBook source) {
         this.owner = owner;
         this.recipes = new ArrayList<>(source.recipes());
         this.mode = source.mode();
@@ -28,11 +27,11 @@ final class RecipeBookEditorModel {
         this.selectedIndex = recipes.isEmpty() ? -1 : 0;
     }
 
-    static RecipeBookEditorModel edit(RecipeBookOwner owner, RecipeBook source) {
+    static RecipeBookEditorModel edit(RecipeBook.Owner owner, RecipeBook source) {
         return new RecipeBookEditorModel(owner, source);
     }
 
-    RecipeBookOwner owner() {
+    RecipeBook.Owner owner() {
         return owner;
     }
 

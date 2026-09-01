@@ -30,7 +30,7 @@ final class RecipeBookSchedulingTest {
             recipe(1, false, 9, 1),
             recipe(2, true, 5, 1));
 
-        RecipeBook.Selection selection = book.select(RecipeScheduleState.RESET, new Random(0))
+        RecipeBook.Selection selection = book.select(RecipeBook.ScheduleState.RESET, new Random(0))
             .orElseThrow();
 
         assertEquals(2, selection.index());
@@ -39,13 +39,13 @@ final class RecipeBookSchedulingTest {
     @Test
     void orderStateAdvancesOnlyThroughTheExplicitSuccessBoundary() {
         RecipeBook book = book(RecipeSchedulerMode.ORDER, recipe(0, true, 1, 3), recipe(1, true, 1, 2));
-        RecipeScheduleState initial = new RecipeScheduleState((byte) 0, (byte) 3);
+        RecipeBook.ScheduleState initial = new RecipeBook.ScheduleState((byte) 0, (byte) 3);
         RecipeBook.Selection selection = book.select(initial, new Random(0))
             .orElseThrow();
 
         assertEquals(0, selection.index());
-        assertEquals(initial, new RecipeScheduleState((byte) 0, (byte) 3));
-        assertEquals(new RecipeScheduleState((byte) 0, (byte) 2), book.advanceAfterSuccess(initial, selection));
+        assertEquals(initial, new RecipeBook.ScheduleState((byte) 0, (byte) 3));
+        assertEquals(new RecipeBook.ScheduleState((byte) 0, (byte) 2), book.advanceAfterSuccess(initial, selection));
     }
 
     @Test
@@ -55,12 +55,12 @@ final class RecipeBookSchedulingTest {
             recipe(0, true, 1, 3),
             recipe(1, false, 1, 2),
             recipe(2, true, 1, 4));
-        RecipeScheduleState state = new RecipeScheduleState((byte) 0, (byte) 0);
+        RecipeBook.ScheduleState state = new RecipeBook.ScheduleState((byte) 0, (byte) 0);
         RecipeBook.Selection selection = book.select(state, new Random(0))
             .orElseThrow();
 
         assertEquals(2, selection.index());
-        assertEquals(new RecipeScheduleState((byte) 2, (byte) 4), book.advanceAfterSuccess(state, selection));
+        assertEquals(new RecipeBook.ScheduleState((byte) 2, (byte) 4), book.advanceAfterSuccess(state, selection));
     }
 
     @Test
@@ -73,7 +73,7 @@ final class RecipeBookSchedulingTest {
         Random random = new Random(42);
 
         for (int i = 0; i < 20; i++) {
-            int selected = book.select(RecipeScheduleState.RESET, random)
+            int selected = book.select(RecipeBook.ScheduleState.RESET, random)
                 .orElseThrow()
                 .index();
             assertTrue(selected == 1 || selected == 2);
@@ -83,7 +83,7 @@ final class RecipeBookSchedulingTest {
     @Test
     void nonOrderModesKeepTheSameScheduleValueAfterSuccess() {
         RecipeBook book = book(RecipeSchedulerMode.PRIORITY, recipe(0, true, 1, 1));
-        RecipeScheduleState state = new RecipeScheduleState((byte) 4, (byte) 2);
+        RecipeBook.ScheduleState state = new RecipeBook.ScheduleState((byte) 4, (byte) 2);
         RecipeBook.Selection selection = book.select(state, new Random(0))
             .orElseThrow();
 

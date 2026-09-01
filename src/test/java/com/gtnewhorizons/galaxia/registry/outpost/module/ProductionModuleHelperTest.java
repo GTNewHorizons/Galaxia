@@ -22,8 +22,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
@@ -47,21 +45,21 @@ final class ProductionModuleHelperTest {
         ItemStackWrapper input = ItemStackWrapper.of(new ItemStack(Items.diamond));
         ItemStackWrapper output = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
         facility.insert(input, 1L);
-        RecipeScheduleState before = new RecipeScheduleState((byte) 0, (byte) 1);
+        RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
         facility.restoreRecipeScheduleState(module, before);
 
         execute(facility, module, new Random(0));
 
         assertEquals(0L, facility.itemAmount(input));
         assertEquals(1L, facility.itemAmount(output));
-        assertEquals(new RecipeScheduleState((byte) 1, (byte) 1), facility.recipeScheduleState(module));
+        assertEquals(new RecipeBook.ScheduleState((byte) 1, (byte) 1), facility.recipeScheduleState(module));
     }
 
     @Test
     void failedExchangeDoesNotAdvanceTheSchedule() {
         AutomatedFacility facility = facility();
         ModuleInstance module = installBook(facility, orderBook(recipe(Items.diamond, Items.iron_ingot, 1)));
-        RecipeScheduleState before = new RecipeScheduleState((byte) 0, (byte) 1);
+        RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
         facility.restoreRecipeScheduleState(module, before);
 
         execute(facility, module, new Random(0));
@@ -80,7 +78,7 @@ final class ProductionModuleHelperTest {
         ItemStackWrapper input = ItemStackWrapper.of(new ItemStack(Items.diamond));
         facility.insert(input, 105L);
         facility.setBound(input, 100L, true);
-        RecipeScheduleState before = new RecipeScheduleState((byte) 0, (byte) 1);
+        RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
         facility.restoreRecipeScheduleState(module, before);
 
         execute(facility, module, new Random(0));
@@ -103,7 +101,7 @@ final class ProductionModuleHelperTest {
         ItemStackWrapper output = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
         facility.insert(input, 1L);
         facility.insert(output, 5L);
-        RecipeScheduleState before = new RecipeScheduleState((byte) 0, (byte) 1);
+        RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
         facility.restoreRecipeScheduleState(module, before);
 
         execute(facility, module, new Random(0));
@@ -120,7 +118,7 @@ final class ProductionModuleHelperTest {
         ItemStackWrapper input = ItemStackWrapper.of(new ItemStack(Items.diamond));
         facility.insert(input, 1L);
         facility.addFilter(new ItemStack(Items.gold_ingot).getUnlocalizedName(), true);
-        RecipeScheduleState before = new RecipeScheduleState((byte) 0, (byte) 1);
+        RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
         facility.restoreRecipeScheduleState(module, before);
 
         execute(facility, module, new Random(0));
@@ -143,7 +141,7 @@ final class ProductionModuleHelperTest {
             kind.defaultTier());
         facility.addModule(module);
         FacilityCommand.Result result = facility.applyCommand(
-            new FacilityCommand.ReplaceRecipeBook(facility.assetId, new RecipeBookOwner.Private(module.id), book),
+            new FacilityCommand.ReplaceRecipeBook(facility.assetId, new RecipeBook.Owner.Private(module.id), book),
             FacilityCommand.Authority.NONE);
         assertSame(FacilityCommand.Result.CHANGED, result);
         return module;

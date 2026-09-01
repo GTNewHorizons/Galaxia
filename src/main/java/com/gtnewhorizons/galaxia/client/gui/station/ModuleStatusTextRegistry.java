@@ -16,7 +16,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleDeconstructionOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
@@ -200,7 +199,7 @@ final class ModuleStatusTextRegistry {
             return "Target tier: " + tierSpec.targetTier()
                 .name();
         }
-        if (spec instanceof ModuleDeconstructionOperation) {
+        if (spec == IModuleOperation.DECONSTRUCTION) {
             return StatCollector.translateToLocal("galaxia.module.operation.deconstruction_pending");
         }
         return "Operation pending";

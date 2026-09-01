@@ -16,8 +16,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -40,7 +38,7 @@ final class ModuleRecipeSettingsGroupTest {
         facility.addModule(first);
         facility.addModule(second);
 
-        replace(facility, new RecipeBookOwner.Private(first.id), book(RecipeSchedulerMode.ORDER));
+        replace(facility, new RecipeBook.Owner.Private(first.id), book(RecipeSchedulerMode.ORDER));
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(
@@ -52,7 +50,7 @@ final class ModuleRecipeSettingsGroupTest {
             facility.applyCommand(
                 new FacilityCommand.SetSettingsGroup(facility.assetId, second.id, groupId),
                 FacilityCommand.Authority.NONE));
-        RecipeBookOwner.Group groupOwner = new RecipeBookOwner.Group(groupId);
+        RecipeBook.Owner.Group groupOwner = new RecipeBook.Owner.Group(groupId);
 
         assertEquals(
             RecipeSchedulerMode.ORDER,
@@ -90,9 +88,9 @@ final class ModuleRecipeSettingsGroupTest {
         ModuleInstance target = createMachine(StationTileCoord.of(2, 0));
         facility.addModule(source);
         facility.addModule(target);
-        replace(facility, new RecipeBookOwner.Private(source.id), book(RecipeSchedulerMode.ORDER));
-        replace(facility, new RecipeBookOwner.Private(target.id), book(RecipeSchedulerMode.RANDOM));
-        facility.restoreRecipeScheduleState(target, new RecipeScheduleState((byte) 4, (byte) 2));
+        replace(facility, new RecipeBook.Owner.Private(source.id), book(RecipeSchedulerMode.ORDER));
+        replace(facility, new RecipeBook.Owner.Private(target.id), book(RecipeSchedulerMode.RANDOM));
+        facility.restoreRecipeScheduleState(target, new RecipeBook.ScheduleState((byte) 4, (byte) 2));
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.CopyModuleSettings(facility.assetId, source.id, List.of(target.id)),
@@ -103,10 +101,10 @@ final class ModuleRecipeSettingsGroupTest {
             RecipeSchedulerMode.ORDER,
             facility.recipeBook(target)
                 .mode());
-        assertEquals(RecipeScheduleState.RESET, facility.recipeScheduleState(target));
+        assertEquals(RecipeBook.ScheduleState.RESET, facility.recipeScheduleState(target));
     }
 
-    private static void replace(AutomatedFacility facility, RecipeBookOwner owner, RecipeBook book) {
+    private static void replace(AutomatedFacility facility, RecipeBook.Owner owner, RecipeBook book) {
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(

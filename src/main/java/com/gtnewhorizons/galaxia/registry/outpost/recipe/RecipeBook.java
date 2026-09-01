@@ -5,6 +5,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
+
 public record RecipeBook(List<SavedRecipe> recipes, RecipeSchedulerMode mode, NotDoablePolicy notDoablePolicy) {
 
     public static final int MAX_RECIPES = 32;
@@ -28,7 +31,7 @@ public record RecipeBook(List<SavedRecipe> recipes, RecipeSchedulerMode mode, No
         return new RecipeBook(List.of(), RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP);
     }
 
-    public Optional<Selection> select(RecipeScheduleState state, Random random) {
+    public Optional<Selection> select(ScheduleState state, Random random) {
         Objects.requireNonNull(state, "state");
         Objects.requireNonNull(random, "random");
         int index = switch (mode) {
@@ -39,7 +42,7 @@ public record RecipeBook(List<SavedRecipe> recipes, RecipeSchedulerMode mode, No
         return index < 0 ? Optional.empty() : Optional.of(new Selection(index, recipes.get(index)));
     }
 
-    public RecipeScheduleState advanceAfterSuccess(RecipeScheduleState state, Selection selection) {
+    public ScheduleState advanceAfterSuccess(ScheduleState state, Selection selection) {
         Objects.requireNonNull(state, "state");
         Objects.requireNonNull(selection, "selection");
         if (selection.index() >= recipes.size() || !recipes.get(selection.index())
@@ -48,11 +51,11 @@ public record RecipeBook(List<SavedRecipe> recipes, RecipeSchedulerMode mode, No
         }
         if (mode != RecipeSchedulerMode.ORDER) return state;
         if (state.orderRemaining() > 1 && state.orderCursor() == selection.index()) {
-            return new RecipeScheduleState(state.orderCursor(), (byte) (state.orderRemaining() - 1));
+            return new ScheduleState(state.orderCursor(), (byte) (state.orderRemaining() - 1));
         }
         int next = nextEnabledAfter(state.orderCursor());
         if (next < 0) return state;
-        return new RecipeScheduleState(
+        return new ScheduleState(
             (byte) next,
             recipes.get(next)
                 .orderSize());
@@ -71,7 +74,7 @@ public record RecipeBook(List<SavedRecipe> recipes, RecipeSchedulerMode mode, No
         return selected;
     }
 
-    private int selectOrder(RecipeScheduleState state) {
+    private int selectOrder(ScheduleState state) {
         if (recipes.isEmpty()) return -1;
         int cursor = state.orderCursor();
         if (state.orderRemaining() > 0 && cursor < recipes.size()
@@ -110,6 +113,37 @@ public record RecipeBook(List<SavedRecipe> recipes, RecipeSchedulerMode mode, No
                 throw new IllegalArgumentException("Recipe selection index out of range: " + index);
             }
             Objects.requireNonNull(recipe, "recipe");
+        }
+    }
+
+    public record ScheduleState(byte orderCursor, byte orderRemaining) {
+
+        public static final ScheduleState RESET = new ScheduleState((byte) 0, (byte) 0);
+
+        public ScheduleState {
+            if (orderCursor < 0 || orderCursor >= MAX_RECIPES) {
+                throw new IllegalArgumentException("orderCursor must be in [0, " + MAX_RECIPES + ")");
+            }
+            if (orderRemaining < 0) {
+                throw new IllegalArgumentException("orderRemaining must be >= 0: " + orderRemaining);
+            }
+        }
+    }
+
+    public sealed interface Owner permits Owner.Private,Owner.Group {
+
+        record Private(ModuleInstance.ID moduleId) implements Owner {
+
+            public Private {
+                Objects.requireNonNull(moduleId, "moduleId");
+            }
+        }
+
+        record Group(SettingsGroup.ID groupId) implements Owner {
+
+            public Group {
+                Objects.requireNonNull(groupId, "groupId");
+            }
         }
     }
 }

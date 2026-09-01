@@ -39,14 +39,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleDeconstructionOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
 import com.gtnewhorizons.galaxia.registry.outpost.station.CapacityCluster;
 import com.gtnewhorizons.galaxia.registry.outpost.station.LayoutCacheBundle;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
@@ -81,7 +78,7 @@ public final class AutomatedFacility extends CelestialAsset {
     private final StationLayout layout;
     private final LayoutCacheBundle layoutCache;
     private final FacilityModuleSettings moduleSettings;
-    private final Map<ModuleInstance.ID, RecipeScheduleState> recipeScheduleStates = new LinkedHashMap<>();
+    private final Map<ModuleInstance.ID, RecipeBook.ScheduleState> recipeScheduleStates = new LinkedHashMap<>();
 
     private final UpkeepLedger upkeepLedger;
     private UpkeepSettlement.Credits upkeepCredits = UpkeepSettlement.Credits.empty();
@@ -886,7 +883,7 @@ public final class AutomatedFacility extends CelestialAsset {
         @Nullable ModuleInstance.SettingsBinding settingsPlan) {
         modules.add(module);
         if (module.component() instanceof IRecipeModule) {
-            recipeScheduleStates.put(module.id, RecipeScheduleState.RESET);
+            recipeScheduleStates.put(module.id, RecipeBook.ScheduleState.RESET);
         }
         if (!FacilityModuleRegistry.get(module.kind())
             .settingsGroups()) return;
@@ -1087,7 +1084,7 @@ public final class AutomatedFacility extends CelestialAsset {
         modules.add(module);
         if (moduleSettings.supports(module)) moduleSettings.attach(module, null);
         if (module.component() instanceof IRecipeModule) {
-            recipeScheduleStates.put(module.id, RecipeScheduleState.RESET);
+            recipeScheduleStates.put(module.id, RecipeBook.ScheduleState.RESET);
         }
         LOG.debug(
             "[PERSIST] addModule: added {} id={} anchor=({},{}) shape={} status={} (total={})",
@@ -1174,7 +1171,7 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         for (ModuleInstance module : restored) {
             if (module.component() instanceof IRecipeModule) {
-                recipeScheduleStates.put(module.id, RecipeScheduleState.RESET);
+                recipeScheduleStates.put(module.id, RecipeBook.ScheduleState.RESET);
             }
         }
     }
@@ -1202,12 +1199,12 @@ public final class AutomatedFacility extends CelestialAsset {
         return minerSettings(module).isOreBlacklisted(oreKey);
     }
 
-    public RecipeBookOwner recipeBookOwner(ModuleInstance module) {
+    public RecipeBook.Owner recipeBookOwner(ModuleInstance module) {
         requireRecipeModule(module, "Recipe-book owner requested");
         return moduleSettings.recipeBookOwner(module.id);
     }
 
-    public RecipeBook recipeBook(RecipeBookOwner owner) {
+    public RecipeBook recipeBook(RecipeBook.Owner owner) {
         return moduleSettings.recipeBook(owner);
     }
 
@@ -1216,25 +1213,25 @@ public final class AutomatedFacility extends CelestialAsset {
         return moduleSettings.recipeBook(module.id);
     }
 
-    public RecipeScheduleState recipeScheduleState(ModuleInstance module) {
+    public RecipeBook.ScheduleState recipeScheduleState(ModuleInstance module) {
         requireRecipeModule(module, "Recipe schedule requested");
-        RecipeScheduleState state = recipeScheduleStates.get(module.id);
+        RecipeBook.ScheduleState state = recipeScheduleStates.get(module.id);
         if (state == null) throw new IllegalStateException("Recipe module missing schedule state " + module.id);
         return state;
     }
 
-    public void restoreRecipeScheduleState(ModuleInstance module, RecipeScheduleState scheduleState) {
+    public void restoreRecipeScheduleState(ModuleInstance module, RecipeBook.ScheduleState scheduleState) {
         requireRecipeModule(module, "Recipe schedule restore requested");
         if (scheduleState == null) throw new IllegalStateException("Recipe schedule state must not be null");
         recipeScheduleStates.put(module.id, scheduleState);
     }
 
-    public void installRecipeScheduleState(ModuleInstance module, RecipeScheduleState scheduleState) {
+    public void installRecipeScheduleState(ModuleInstance module, RecipeBook.ScheduleState scheduleState) {
         restoreRecipeScheduleState(module, scheduleState);
     }
 
-    public Map<ModuleInstance.ID, RecipeScheduleState> recipeScheduleStates() {
-        Map<ModuleInstance.ID, RecipeScheduleState> scheduleStates = new LinkedHashMap<>();
+    public Map<ModuleInstance.ID, RecipeBook.ScheduleState> recipeScheduleStates() {
+        Map<ModuleInstance.ID, RecipeBook.ScheduleState> scheduleStates = new LinkedHashMap<>();
         for (ModuleInstance module : modules) {
             if (!(module.component() instanceof IRecipeModule)) continue;
             scheduleStates.put(module.id, recipeScheduleState(module));
@@ -1242,9 +1239,9 @@ public final class AutomatedFacility extends CelestialAsset {
         return Collections.unmodifiableMap(scheduleStates);
     }
 
-    public void restoreRecipeScheduleStates(Map<ModuleInstance.ID, RecipeScheduleState> scheduleStates) {
+    public void restoreRecipeScheduleStates(Map<ModuleInstance.ID, RecipeBook.ScheduleState> scheduleStates) {
         if (scheduleStates == null) throw new IllegalStateException("Missing facility recipe schedule states");
-        Map<ModuleInstance.ID, RecipeScheduleState> remaining = new LinkedHashMap<>(scheduleStates);
+        Map<ModuleInstance.ID, RecipeBook.ScheduleState> remaining = new LinkedHashMap<>(scheduleStates);
         for (ModuleInstance module : modules) {
             if (module.component() instanceof IRecipeModule) {
                 restoreRecipeScheduleState(module, remaining.remove(module.id));
@@ -1264,7 +1261,7 @@ public final class AutomatedFacility extends CelestialAsset {
     private void resetRecipeSchedules(Set<ModuleInstance.ID> moduleIds) {
         for (ModuleInstance.ID moduleId : moduleIds) {
             if (recipeScheduleStates.containsKey(moduleId)) {
-                recipeScheduleStates.put(moduleId, RecipeScheduleState.RESET);
+                recipeScheduleStates.put(moduleId, RecipeBook.ScheduleState.RESET);
             }
         }
     }
@@ -1381,7 +1378,7 @@ public final class AutomatedFacility extends CelestialAsset {
         ModuleOperationState operation = requireOperation(module);
         if (operation.phase() != ModuleOperationPhase.REFUNDING) return false;
         if (operation.plan()
-            .spec() instanceof ModuleDeconstructionOperation) {
+            .spec() == IModuleOperation.DECONSTRUCTION) {
             return flushDeconstructionRefund(module, operation);
         }
         Map<String, Long> remaining = new java.util.LinkedHashMap<>();

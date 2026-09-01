@@ -51,7 +51,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -234,7 +233,7 @@ public final class CelestialClient {
             module -> new FacilityCommand.PlanTierUpgrade(assetId, List.of(module.id), targetTier, reserveItems));
     }
 
-    public static void replaceRecipeBook(ID assetId, RecipeBookOwner owner, RecipeBook replacement) {
+    public static void replaceRecipeBook(ID assetId, RecipeBook.Owner owner, RecipeBook replacement) {
         if (!(getByAssetId(assetId) instanceof AutomatedFacility)) return;
         StarmapActionSyncHandler
             .sendFacilityCommand(new FacilityCommand.ReplaceRecipeBook(assetId, owner, replacement));

@@ -24,7 +24,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
@@ -44,7 +43,7 @@ final class RecipeBookEditorModelTest {
         SavedRecipe first = savedRecipe(0, "First");
         SavedRecipe second = savedRecipe(1, "Second");
         RecipeBook source = new RecipeBook(List.of(first, second), RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP);
-        RecipeBookOwner owner = new RecipeBookOwner.Private(moduleId(1));
+        RecipeBook.Owner owner = new RecipeBook.Owner.Private(moduleId(1));
         RecipeBookEditorModel editor = RecipeBookEditorModel.edit(owner, source);
 
         assertThrows(
@@ -99,7 +98,7 @@ final class RecipeBookEditorModelTest {
         List<SavedRecipe> recipes = new ArrayList<>();
         for (int i = 0; i < RecipeBook.MAX_RECIPES; i++) recipes.add(savedRecipe(i, "Recipe " + i));
         RecipeBookEditorModel editor = RecipeBookEditorModel.edit(
-            new RecipeBookOwner.Private(moduleId(1)),
+            new RecipeBook.Owner.Private(moduleId(1)),
             new RecipeBook(recipes, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP));
 
         assertFalse(editor.canAdd());
@@ -116,7 +115,7 @@ final class RecipeBookEditorModelTest {
             List.of(savedRecipe(0, "First"), savedRecipe(1, "Second"), savedRecipe(2, "Third")),
             RecipeSchedulerMode.ORDER,
             NotDoablePolicy.SKIP);
-        RecipeBookEditorModel editor = RecipeBookEditorModel.edit(new RecipeBookOwner.Private(moduleId(1)), source);
+        RecipeBookEditorModel editor = RecipeBookEditorModel.edit(new RecipeBook.Owner.Private(moduleId(1)), source);
 
         assertTrue(editor.select(2));
         assertTrue(editor.remove(0));
@@ -142,7 +141,7 @@ final class RecipeBookEditorModelTest {
     @Test
     void renameSupportsClearingAndInvalidIndexesDoNothing() {
         RecipeBookEditorModel editor = RecipeBookEditorModel.edit(
-            new RecipeBookOwner.Private(moduleId(1)),
+            new RecipeBook.Owner.Private(moduleId(1)),
             new RecipeBook(List.of(savedRecipe(0, "Current")), RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP));
 
         assertTrue(editor.rename(0, "   "));

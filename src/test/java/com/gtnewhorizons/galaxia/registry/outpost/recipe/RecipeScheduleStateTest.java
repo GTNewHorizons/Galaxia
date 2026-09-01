@@ -9,19 +9,19 @@ final class RecipeScheduleStateTest {
 
     @Test
     void resetIsTheCanonicalInitialSchedule() {
-        assertEquals(new RecipeScheduleState((byte) 0, (byte) 0), RecipeScheduleState.RESET);
+        assertEquals(new RecipeBook.ScheduleState((byte) 0, (byte) 0), RecipeBook.ScheduleState.RESET);
     }
 
     @Test
     void cursorMustAddressTheBoundedRecipeBook() {
-        assertThrows(IllegalArgumentException.class, () -> new RecipeScheduleState((byte) -1, (byte) 0));
+        assertThrows(IllegalArgumentException.class, () -> new RecipeBook.ScheduleState((byte) -1, (byte) 0));
         assertThrows(
             IllegalArgumentException.class,
-            () -> new RecipeScheduleState((byte) RecipeBook.MAX_RECIPES, (byte) 0));
+            () -> new RecipeBook.ScheduleState((byte) RecipeBook.MAX_RECIPES, (byte) 0));
     }
 
     @Test
     void remainingExecutionCountCannotBeNegative() {
-        assertThrows(IllegalArgumentException.class, () -> new RecipeScheduleState((byte) 0, (byte) -1));
+        assertThrows(IllegalArgumentException.class, () -> new RecipeBook.ScheduleState((byte) 0, (byte) -1));
     }
 }

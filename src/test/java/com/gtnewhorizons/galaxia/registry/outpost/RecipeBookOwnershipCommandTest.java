@@ -21,8 +21,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
@@ -33,7 +31,7 @@ import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 /** Product and integration contracts for canonical recipe-book ownership and replacement commands. */
 final class RecipeBookOwnershipCommandTest {
 
-    private static final RecipeScheduleState RESET_SCHEDULE = new RecipeScheduleState((byte) 0, (byte) 0);
+    private static final RecipeBook.ScheduleState RESET_SCHEDULE = new RecipeBook.ScheduleState((byte) 0, (byte) 0);
 
     @BeforeAll
     static void init() {
@@ -45,7 +43,7 @@ final class RecipeBookOwnershipCommandTest {
         AutomatedFacility facility = facility();
         ModuleInstance first = addMacerator(facility, moduleId(1), StationTileCoord.of(1, 0));
         ModuleInstance second = addMacerator(facility, moduleId(2), StationTileCoord.of(4, 0));
-        RecipeBookOwner.Private firstPrivate = new RecipeBookOwner.Private(first.id);
+        RecipeBook.Owner.Private firstPrivate = new RecipeBook.Owner.Private(first.id);
 
         assertSame(facility.recipeBook(firstPrivate), facility.recipeBook(first));
 
@@ -60,13 +58,13 @@ final class RecipeBookOwnershipCommandTest {
             facility.applyCommand(
                 new FacilityCommand.SetSettingsGroup(facility.assetId, second.id, groupId),
                 FacilityCommand.Authority.NONE));
-        RecipeBookOwner.Group groupOwner = new RecipeBookOwner.Group(groupId);
+        RecipeBook.Owner.Group groupOwner = new RecipeBook.Owner.Group(groupId);
 
         assertSame(facility.recipeBook(groupOwner), facility.recipeBook(first));
         assertSame(facility.recipeBook(groupOwner), facility.recipeBook(second));
 
-        RecipeScheduleState firstSchedule = new RecipeScheduleState((byte) 1, (byte) 2);
-        RecipeScheduleState secondSchedule = new RecipeScheduleState((byte) 3, (byte) 4);
+        RecipeBook.ScheduleState firstSchedule = new RecipeBook.ScheduleState((byte) 1, (byte) 2);
+        RecipeBook.ScheduleState secondSchedule = new RecipeBook.ScheduleState((byte) 3, (byte) 4);
         facility.restoreRecipeScheduleState(first, firstSchedule);
         facility.restoreRecipeScheduleState(second, secondSchedule);
 
@@ -80,9 +78,9 @@ final class RecipeBookOwnershipCommandTest {
         ModuleInstance first = addMacerator(facility, moduleId(1), StationTileCoord.of(1, 0));
         ModuleInstance second = addMacerator(facility, moduleId(2), StationTileCoord.of(4, 0));
         SettingsGroup.ID groupId = createGroupWithMember(facility, first, second);
-        RecipeBookOwner.Group owner = new RecipeBookOwner.Group(groupId);
-        facility.restoreRecipeScheduleState(first, new RecipeScheduleState((byte) 1, (byte) 2));
-        facility.restoreRecipeScheduleState(second, new RecipeScheduleState((byte) 3, (byte) 4));
+        RecipeBook.Owner.Group owner = new RecipeBook.Owner.Group(groupId);
+        facility.restoreRecipeScheduleState(first, new RecipeBook.ScheduleState((byte) 1, (byte) 2));
+        facility.restoreRecipeScheduleState(second, new RecipeBook.ScheduleState((byte) 3, (byte) 4));
         RecipeBook replacement = book("Replacement", 1);
 
         FacilityCommand.Result result = facility.applyCommand(
@@ -101,14 +99,14 @@ final class RecipeBookOwnershipCommandTest {
     void validEqualReplacementIsStillChangedAndResetsSchedule() {
         AutomatedFacility facility = facility();
         ModuleInstance module = addMacerator(facility, moduleId(1), StationTileCoord.of(1, 0));
-        RecipeBookOwner.Private owner = new RecipeBookOwner.Private(module.id);
+        RecipeBook.Owner.Private owner = new RecipeBook.Owner.Private(module.id);
         RecipeBook replacement = book("Same", 1);
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(
                 new FacilityCommand.ReplaceRecipeBook(facility.assetId, owner, replacement),
                 FacilityCommand.Authority.NONE));
-        facility.restoreRecipeScheduleState(module, new RecipeScheduleState((byte) 2, (byte) 3));
+        facility.restoreRecipeScheduleState(module, new RecipeBook.ScheduleState((byte) 2, (byte) 3));
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.ReplaceRecipeBook(facility.assetId, owner, replacement),
@@ -123,16 +121,16 @@ final class RecipeBookOwnershipCommandTest {
     void stalePrivateAndMissingGroupOwnersAreRejectedWithoutMutationOrRedirect() {
         AutomatedFacility facility = facility();
         ModuleInstance module = addMacerator(facility, moduleId(1), StationTileCoord.of(1, 0));
-        RecipeBookOwner.Private stalePrivate = new RecipeBookOwner.Private(module.id);
+        RecipeBook.Owner.Private stalePrivate = new RecipeBook.Owner.Private(module.id);
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(
                 new FacilityCommand.CreateSettingsGroup(facility.assetId, module.id, "Shared macerators"),
                 FacilityCommand.Authority.NONE));
         SettingsGroup.ID actualGroupId = ((ModuleInstance.SettingsBinding.Shared) module.settingsBinding()).groupId();
-        RecipeBookOwner.Group actualOwner = new RecipeBookOwner.Group(actualGroupId);
+        RecipeBook.Owner.Group actualOwner = new RecipeBook.Owner.Group(actualGroupId);
         RecipeBook before = facility.recipeBook(actualOwner);
-        RecipeScheduleState scheduleBefore = new RecipeScheduleState((byte) 2, (byte) 2);
+        RecipeBook.ScheduleState scheduleBefore = new RecipeBook.ScheduleState((byte) 2, (byte) 2);
         facility.restoreRecipeScheduleState(module, scheduleBefore);
 
         FacilityCommand.Result staleResult = facility.applyCommand(
@@ -141,7 +139,7 @@ final class RecipeBookOwnershipCommandTest {
         FacilityCommand.Result missingGroupResult = facility.applyCommand(
             new FacilityCommand.ReplaceRecipeBook(
                 facility.assetId,
-                new RecipeBookOwner.Group(new SettingsGroup.ID(999)),
+                new RecipeBook.Owner.Group(new SettingsGroup.ID(999)),
                 book("Missing group", 3)),
             FacilityCommand.Authority.NONE);
 
@@ -162,7 +160,7 @@ final class RecipeBookOwnershipCommandTest {
                 new FacilityCommand.CreateSettingsGroup(facility.assetId, first.id, "First group"),
                 FacilityCommand.Authority.NONE));
         SettingsGroup.ID deletedGroupId = ((ModuleInstance.SettingsBinding.Shared) first.settingsBinding()).groupId();
-        RecipeBookOwner.Group staleOwner = new RecipeBookOwner.Group(deletedGroupId);
+        RecipeBook.Owner.Group staleOwner = new RecipeBook.Owner.Group(deletedGroupId);
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(
@@ -175,9 +173,9 @@ final class RecipeBookOwnershipCommandTest {
                 FacilityCommand.Authority.NONE));
 
         SettingsGroup.ID currentGroupId = ((ModuleInstance.SettingsBinding.Shared) second.settingsBinding()).groupId();
-        RecipeBookOwner.Group currentOwner = new RecipeBookOwner.Group(currentGroupId);
+        RecipeBook.Owner.Group currentOwner = new RecipeBook.Owner.Group(currentGroupId);
         RecipeBook currentBook = facility.recipeBook(currentOwner);
-        RecipeScheduleState currentSchedule = new RecipeScheduleState((byte) 2, (byte) 3);
+        RecipeBook.ScheduleState currentSchedule = new RecipeBook.ScheduleState((byte) 2, (byte) 3);
         facility.restoreRecipeScheduleState(second, currentSchedule);
 
         FacilityCommand.Result staleResult = facility.applyCommand(
@@ -194,7 +192,7 @@ final class RecipeBookOwnershipCommandTest {
     void acceptedCompleteReplacementsExecuteInServerOrderAndLastBookWins() {
         AutomatedFacility facility = facility();
         ModuleInstance module = addMacerator(facility, moduleId(1), StationTileCoord.of(1, 0));
-        RecipeBookOwner.Private owner = new RecipeBookOwner.Private(module.id);
+        RecipeBook.Owner.Private owner = new RecipeBook.Owner.Private(module.id);
         RecipeBook first = book("First", 1);
         RecipeBook second = book("Second", 2);
         assertNotEquals(first, second);

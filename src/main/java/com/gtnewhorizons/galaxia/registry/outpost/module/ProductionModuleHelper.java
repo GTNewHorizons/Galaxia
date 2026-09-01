@@ -12,7 +12,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryExchange;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot.Resource;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
@@ -26,7 +25,7 @@ public final class ProductionModuleHelper {
             throw new IllegalStateException("This method should only be called by AutomatedFacilities");
         }
         RecipeBook book = outpost.recipeBook(instance);
-        RecipeScheduleState scheduleState = outpost.recipeScheduleState(instance);
+        RecipeBook.ScheduleState scheduleState = outpost.recipeScheduleState(instance);
         RecipeBook.Selection selection = book.select(scheduleState, random)
             .orElse(null);
         if (selection == null) return;

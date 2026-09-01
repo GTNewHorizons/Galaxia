@@ -43,7 +43,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleDeconstructionOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
@@ -52,7 +51,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGe
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -233,7 +231,7 @@ public final class AssetState {
         facility.setFilters(readStrings(in, "itemFilters"), true);
         facility.setFilters(readStrings(in, "fluidFilters"), false);
 
-        Map<ModuleInstance.ID, RecipeScheduleState> schedules = new LinkedHashMap<>();
+        Map<ModuleInstance.ID, RecipeBook.ScheduleState> schedules = new LinkedHashMap<>();
         Map<ModuleInstance.ID, ModuleInstance> modules = new LinkedHashMap<>();
         List<ModuleInstance> restoredModules = new ArrayList<>();
         NBTTagList moduleTags = in.compounds("modules");
@@ -286,7 +284,7 @@ public final class AssetState {
         out.setTag("construction", writeConstructionInventory(module.getConstructionInventory()));
         ModuleOperationState operation = module.operationOrNull();
         if (operation != null) out.setTag("operation", writeOperation(operation));
-        RecipeScheduleState schedule = module.component() instanceof IRecipeModule
+        RecipeBook.ScheduleState schedule = module.component() instanceof IRecipeModule
             ? facility.recipeScheduleState(module)
             : null;
         if (schedule != null) {
@@ -305,7 +303,7 @@ public final class AssetState {
     }
 
     private static ModuleInstance readModule(AutomatedFacility facility, NbtReader in,
-        Map<ModuleInstance.ID, RecipeScheduleState> schedules) {
+        Map<ModuleInstance.ID, RecipeBook.ScheduleState> schedules) {
         NBTTagCompound tag = in.tag();
         String path = in.path();
         ModuleInstance.ID id;
@@ -347,7 +345,7 @@ public final class AssetState {
             NbtReader schedule = in.compound("schedule");
             schedules.put(
                 id,
-                new RecipeScheduleState(
+                new RecipeBook.ScheduleState(
                     (byte) schedule.integer("cursor", 0, RecipeBook.MAX_RECIPES - 1),
                     (byte) schedule.integer("remaining", 0, Byte.MAX_VALUE)));
         }
@@ -484,7 +482,7 @@ public final class AssetState {
         NBTTagCompound out = new NBTTagCompound();
         ModuleOperationPlan plan = operation.plan();
         IModuleOperation spec = plan.spec();
-        if (spec instanceof ModuleDeconstructionOperation) {
+        if (spec == IModuleOperation.DECONSTRUCTION) {
             out.setString("type", "DECONSTRUCTION");
         } else if (spec instanceof HammerModuleOperation hammer) {
             out.setString("type", "HAMMER");
@@ -535,7 +533,7 @@ public final class AssetState {
         int buildTicks = in.integer("buildTicks");
         IModuleOperation spec;
         switch (type) {
-            case "DECONSTRUCTION" -> spec = new ModuleDeconstructionOperation();
+            case "DECONSTRUCTION" -> spec = IModuleOperation.DECONSTRUCTION;
             case "HAMMER" -> {
                 if (moduleKind != FacilityModuleKind.HAMMER) throw fail(path, "hammer operation on " + moduleKind);
                 spec = new HammerModuleOperation(

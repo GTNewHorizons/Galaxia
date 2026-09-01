@@ -64,7 +64,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleDeconstructionOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
@@ -73,8 +73,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
@@ -810,7 +808,7 @@ final class FacilityPersistenceManagerTest {
         assertTrue(
             decodedModule.operationOrNull()
                 .plan()
-                .spec() instanceof ModuleDeconstructionOperation);
+                .spec() == IModuleOperation.DECONSTRUCTION);
         assertEquals(
             7L,
             decodedModule.operationOrNull()
@@ -1782,10 +1780,10 @@ final class FacilityPersistenceManagerTest {
             station.applyCommand(
                 new FacilityCommand.ReplaceRecipeBook(
                     station.assetId,
-                    new RecipeBookOwner.Private(macerator.id),
+                    new RecipeBook.Owner.Private(macerator.id),
                     expectedBook),
                 FacilityCommand.Authority.NONE));
-        station.restoreRecipeScheduleState(macerator, new RecipeScheduleState((byte) 0, (byte) 1));
+        station.restoreRecipeScheduleState(macerator, new RecipeBook.ScheduleState((byte) 0, (byte) 1));
 
         NBTTagCompound encoded = facilityTag(station);
         AutomatedFacility decoded = emptyReplacement(station);
@@ -1798,7 +1796,7 @@ final class FacilityPersistenceManagerTest {
             .orElseThrow();
         RecipeBook decodedBook = decoded.recipeBook(decodedMacerator);
         assertEquals(expectedBook, decodedBook);
-        assertEquals(new RecipeScheduleState((byte) 0, (byte) 1), decoded.recipeScheduleState(decodedMacerator));
+        assertEquals(new RecipeBook.ScheduleState((byte) 0, (byte) 1), decoded.recipeScheduleState(decodedMacerator));
         SavedRecipe decodedSlot = decodedBook.recipes()
             .get(0);
         RecipeSnapshot decodedSnapshot = decodedSlot.recipe();
@@ -1985,7 +1983,10 @@ final class FacilityPersistenceManagerTest {
         assertSame(
             FacilityCommand.Result.CHANGED,
             station.applyCommand(
-                new FacilityCommand.ReplaceRecipeBook(station.assetId, new RecipeBookOwner.Private(macerator.id), book),
+                new FacilityCommand.ReplaceRecipeBook(
+                    station.assetId,
+                    new RecipeBook.Owner.Private(macerator.id),
+                    book),
                 FacilityCommand.Authority.NONE));
         return station;
     }

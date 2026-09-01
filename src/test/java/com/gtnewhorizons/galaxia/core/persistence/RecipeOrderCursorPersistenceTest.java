@@ -26,8 +26,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
@@ -77,7 +75,7 @@ final class RecipeOrderCursorPersistenceTest {
         RecipeBook loadedBook = decoded.recipeBook(loaded);
         assertEquals(RecipeSchedulerMode.ORDER, loadedBook.mode(), "ORDER mode must survive");
         assertEquals(
-            new RecipeScheduleState((byte) 1, (byte) 3),
+            new RecipeBook.ScheduleState((byte) 1, (byte) 3),
             decoded.recipeScheduleState(loaded),
             "schedule state must survive independently of the recipe book");
 
@@ -121,9 +119,12 @@ final class RecipeOrderCursorPersistenceTest {
         assertSame(
             FacilityCommand.Result.CHANGED,
             station.applyCommand(
-                new FacilityCommand.ReplaceRecipeBook(station.assetId, new RecipeBookOwner.Private(macerator.id), book),
+                new FacilityCommand.ReplaceRecipeBook(
+                    station.assetId,
+                    new RecipeBook.Owner.Private(macerator.id),
+                    book),
                 FacilityCommand.Authority.NONE));
-        station.restoreRecipeScheduleState(macerator, new RecipeScheduleState((byte) 1, (byte) 3));
+        station.restoreRecipeScheduleState(macerator, new RecipeBook.ScheduleState((byte) 1, (byte) 3));
 
         return macerator;
     }

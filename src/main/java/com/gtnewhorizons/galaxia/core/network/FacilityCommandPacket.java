@@ -38,7 +38,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBookOwner;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -409,12 +409,12 @@ public final class FacilityCommandPacket implements IMessage {
         return new FacilityCommand.ConfigureDebugDataGenerator(facility, moduleId(data, "module"), config);
     }
 
-    private static NBTTagCompound owner(RecipeBookOwner owner) {
+    private static NBTTagCompound owner(RecipeBook.Owner owner) {
         NBTTagCompound out = new NBTTagCompound();
-        if (owner instanceof RecipeBookOwner.Private value) {
+        if (owner instanceof RecipeBook.Owner.Private value) {
             out.setString("type", "private");
             putModuleId(out, "module", recipeOwnerModuleId(value.moduleId()));
-        } else if (owner instanceof RecipeBookOwner.Group value) {
+        } else if (owner instanceof RecipeBook.Owner.Group value) {
             out.setString("type", "group");
             putGroupId(out, "group", value.groupId());
         } else {
@@ -423,10 +423,10 @@ public final class FacilityCommandPacket implements IMessage {
         return out;
     }
 
-    private static RecipeBookOwner owner(NbtReader owner) {
+    private static RecipeBook.Owner owner(NbtReader owner) {
         return switch (owner.string("type")) {
-            case "private" -> new RecipeBookOwner.Private(recipeOwnerModuleId(moduleId(owner, "module")));
-            case "group" -> new RecipeBookOwner.Group(groupId(owner, "group"));
+            case "private" -> new RecipeBook.Owner.Private(recipeOwnerModuleId(moduleId(owner, "module")));
+            case "group" -> new RecipeBook.Owner.Group(groupId(owner, "group"));
             default -> throw malformed("Unknown recipe book owner type");
         };
     }
