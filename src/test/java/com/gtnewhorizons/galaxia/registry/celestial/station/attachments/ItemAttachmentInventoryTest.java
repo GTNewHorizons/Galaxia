@@ -13,7 +13,12 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IInventoryStorageHandler;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
@@ -23,7 +28,7 @@ final class ItemAttachmentInventoryTest {
 
     @BeforeAll
     static void initRegistries() {
-        GalaxiaTestBootstrap.ensureMinecraft();
+        GalaxiaTestBootstrap.ensureCelestialRegistry();
     }
 
     @Test
@@ -72,6 +77,29 @@ final class ItemAttachmentInventoryTest {
             1L,
             inventory.aggregatedItems()
                 .get(acceptedItem));
+    }
+
+    @Test
+    void inventoryRootDoesNotTreatChildCapacityAsItsOwnStorage() {
+        InventoryBasic storage = new InventoryBasic("test", false, 1);
+        ResourceFilter<ItemStackWrapper> filter = ResourceFilter.forItems();
+        filter.add(ItemStackWrapper.of(new ItemStack(Items.stick)));
+        ItemAttachmentInventory<Object> child = new ItemAttachmentInventory<>(
+            new TestItemStorageHandler(storage, filter),
+            new Object());
+        IDistributedInventory root = new Station(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            Buildable.Status.OPERATIONAL) {
+
+            @Override
+            public List<IDistributedInventory> getChildren() {
+                return List.of(child);
+            }
+        };
+
+        assertEquals(0L, root.updateItems(ItemStackWrapper.of(new ItemStack(Items.diamond)), 1L));
+        assertEquals(0L, root.totalItemsStored());
     }
 
     private record TestItemStorageHandler(IInventory storage, ResourceFilter<ItemStackWrapper> filter)

@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
@@ -320,7 +322,9 @@ public class TileStation extends TileStationBase<TileStation> {
         if (!structureValid || proximityBlocked) return;
 
         super.tick();
-        if (getBackingStation().tryConsumeEnergy(
+        Station station = getBackingStation();
+        if (station == null) return;
+        if (station.tryConsumeEnergy(
             oxygenators.size() * OXYGENATOR_EUT + coolingCoils.size() * COIL_COOLING_EUT
                 + heatingCoils.size() * COIL_HEATING_EUT
                 + airPurifiers.size() * AIR_PURIFIER_EUT
@@ -401,7 +405,7 @@ public class TileStation extends TileStationBase<TileStation> {
             .toList();
     }
 
-    public Station getBackingStation() {
+    public @Nullable Station getBackingStation() {
         return (Station) CelestialAssetStore.findAsset(backingStation);
     }
 

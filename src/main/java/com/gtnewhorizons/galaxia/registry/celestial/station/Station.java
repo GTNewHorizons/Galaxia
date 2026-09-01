@@ -18,8 +18,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
 public class Station extends CelestialAsset implements IDistributedInventory {
@@ -50,13 +50,6 @@ public class Station extends CelestialAsset implements IDistributedInventory {
         if (teController == null) return;
 
         teController.tick();
-
-        // TODO: Make this happen only when contents change or something, otherwise performance will be horrible
-        getCannonChestItems().forEach(
-            (item, amount) -> logisticsConfig.set(
-                item,
-                LogisticsResourceConfig.DEFAULT.withOrderSize((int) (long) amount)
-                    .withSupplyEnabled(true)));
     }
 
     @Override
@@ -65,6 +58,16 @@ public class Station extends CelestialAsset implements IDistributedInventory {
         if (teController == null) return List.of();
 
         return teController.getConnectedInventories();
+    }
+
+    @Override
+    public long insertIntoOwnStorage(ItemStackWrapper item, long target) {
+        return 0L;
+    }
+
+    @Override
+    public long insertIntoOwnFluidStorage(FluidKey fluid, long target) {
+        return 0L;
     }
 
     @Override

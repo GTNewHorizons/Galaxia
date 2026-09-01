@@ -30,6 +30,7 @@ import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
+import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IAttachmentHandler;
@@ -86,9 +87,9 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
         public void tick(TileHammerCannon attachment) {
             if (attachment.graph == null) return;
 
-            attachment.moduleInstance.tick(
-                attachment.graph.getController()
-                    .getBackingStation());
+            Station station = attachment.graph.getController()
+                .getBackingStation();
+            if (station != null) attachment.moduleInstance.tick(station);
         }
 
         @Override

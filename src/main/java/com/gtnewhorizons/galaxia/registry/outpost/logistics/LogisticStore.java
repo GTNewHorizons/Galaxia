@@ -68,22 +68,13 @@ public final class LogisticStore {
     public static void tickDeliveries() {
         for (int i = activeDeliveries.size() - 1; i >= 0; i--) {
             LogisticsDelivery current = activeDeliveries.get(i);
-            if (CelestialAssetStore.findAsset(current.data.fromAssetId()) == null
-                || CelestialAssetStore.findAsset(current.data.toAssetId()) == null) {
+            CelestialAsset destination = CelestialAssetStore.findAsset(current.data.toAssetId());
+            if (CelestialAssetStore.findAsset(current.data.fromAssetId()) == null || destination == null) {
                 activeDeliveries.remove(i);
                 continue;
             }
             LogisticsDelivery ticked = current.tick();
             if (ticked.isArrived()) {
-                CelestialAsset destination = CelestialAssetStore.findAsset(ticked.data.toAssetId());
-                if (destination == null) {
-                    activeDeliveries.remove(i);
-                    LOG.warn(
-                        "[Logistics] Task {} arrived but destination outpost {} not found; resources lost.",
-                        ticked.deliveryId,
-                        ticked.data.toAssetId());
-                    return;
-                }
                 long accepted;
                 if (destination instanceof AutomatedFacility facility) {
                     accepted = facility.insert(ticked.data.resourceId(), ticked.data.amount());
