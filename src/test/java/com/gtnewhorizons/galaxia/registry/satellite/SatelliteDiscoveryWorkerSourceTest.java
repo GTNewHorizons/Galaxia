@@ -7,6 +7,7 @@ import java.util.OptionalLong;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -17,12 +18,18 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyI
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryWorkerContribution;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class SatelliteDiscoveryWorkerSourceTest {
 
     private static final UUID TEAM = new UUID(41L, 42L);
     private static final CelestialObjectKey ANCHOR = CelestialObjectKey
         .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0));
+
+    @BeforeAll
+    static void init() {
+        GalaxiaTestBootstrap.ensureCelestialRegistry();
+    }
 
     @AfterEach
     void clearAssets() {

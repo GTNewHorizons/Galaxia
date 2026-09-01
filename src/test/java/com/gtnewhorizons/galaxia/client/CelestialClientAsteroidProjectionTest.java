@@ -47,7 +47,7 @@ final class CelestialClientAsteroidProjectionTest {
     }
 
     @Test
-    void repeatedProjectionLookupsDoNotRescanUnchangedSiblingCatalog() {
+    void oneProjectionPassSupportsRepeatedBodyLookupsWithoutRescanningSiblings() {
         CelestialClient.clear();
         CelestialKnowledgeClientState.clear();
         CelestialDiscoveryClientState.clear();
@@ -64,20 +64,15 @@ final class CelestialClientAsteroidProjectionTest {
         CountingList<CelestialObject> siblings = new CountingList<>(asteroids);
         AsteroidClientProjectionService service = new AsteroidClientProjectionService();
         service.setIncludeHidden(true);
-        assertTrue(
-            service.projectionFor(asteroids.get(0), siblings, List.of())
-                .isPresent());
+        Map<CelestialObjectKey, AsteroidStarmapProjection> projections = service
+            .projectionLookup(frozenBelt.key(), siblings, List.of());
         siblings.resetReadCount();
 
         for (CelestialObject asteroid : asteroids) {
-            assertTrue(
-                service.projectionFor(asteroid, siblings, List.of())
-                    .isPresent());
+            assertTrue(projections.containsKey(asteroid.key()));
         }
 
-        assertTrue(
-            siblings.readCount() <= asteroids.size(),
-            () -> "unchanged projection lookups rescanned the sibling catalog " + siblings.readCount() + " times");
+        assertEquals(0, siblings.readCount());
         CelestialClient.clear();
         CelestialKnowledgeClientState.clear();
         CelestialDiscoveryClientState.clear();

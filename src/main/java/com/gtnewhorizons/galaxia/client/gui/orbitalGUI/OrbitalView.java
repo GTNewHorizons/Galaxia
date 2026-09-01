@@ -45,7 +45,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscovery
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
-import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteBandwidthFormatter;
@@ -272,12 +271,6 @@ public class OrbitalView {
             return new double[] { state.worldX, state.worldY };
         }
 
-        double[] getWorldVelocity(CelestialObject body) {
-            BodyWorldState state = getState(body);
-            if (state == null) return null;
-            return new double[] { state.worldVx, state.worldVy };
-        }
-
         CelestialObject getParent(CelestialObject body) {
             BodyWorldState state = getState(body);
             return state == null ? null : state.parent;
@@ -312,7 +305,7 @@ public class OrbitalView {
                 cachedState = new BodyWorldState();
                 states.put(body.key(), cachedState);
             }
-            cachedState.set(parent, worldState.x(), worldState.y(), worldState.vx(), worldState.vy(), rebuildVersion);
+            cachedState.set(parent, worldState.x(), worldState.y(), rebuildVersion);
         }
 
         static boolean usesAbsolutePosition(CelestialObject parent, CelestialObject child) {
@@ -328,28 +321,17 @@ public class OrbitalView {
                 globalTime);
         }
 
-        static double[] calculatePosition(OrbitalParams p, double t) {
-            OrbitalMechanics.OrbitalState state = OrbitalMechanics
-                .calculateOrbitalState(p, OrbitalMechanics.resolveAttractorMu(null, p), t);
-            return new double[] { state.x(), state.y() };
-        }
-
         private static final class BodyWorldState {
 
             private CelestialObject parent;
             private double worldX;
             private double worldY;
-            private double worldVx;
-            private double worldVy;
             private int rebuildStamp = 0;
 
-            void set(CelestialObject parent, double worldX, double worldY, double worldVx, double worldVy,
-                int rebuildStamp) {
+            void set(CelestialObject parent, double worldX, double worldY, int rebuildStamp) {
                 this.parent = parent;
                 this.worldX = worldX;
                 this.worldY = worldY;
-                this.worldVx = worldVx;
-                this.worldVy = worldVy;
                 this.rebuildStamp = rebuildStamp;
             }
         }
@@ -452,7 +434,6 @@ public class OrbitalView {
             }
         };
         private final OrbitalBodyZoom bodyZoom;
-        private final StarmapAssetActions.OrbitalAssetSupport assetSupport = new StarmapAssetActions.OrbitalAssetSupport();
         private final InterplanetaryTransferSystem.OrbitalTransferSupport transferSupport = new InterplanetaryTransferSystem.OrbitalTransferSupport();
         private final StarmapAssetActions.OrbitalAssetActionController assetActionController;
         private final StarmapAssetActions.OrbitalAssetUiState assetUiState = new StarmapAssetActions.OrbitalAssetUiState();
@@ -518,7 +499,6 @@ public class OrbitalView {
                 }
             }, viewContext);
             this.assetActionController = new StarmapAssetActions.OrbitalAssetActionController(
-                assetSupport,
                 new StarmapAssetActions.OrbitalAssetActionController.Callbacks() {
 
                     @Override
@@ -546,7 +526,7 @@ public class OrbitalView {
 
                     @Override
                     public void createResourceTransfer(CelestialObject sourceBody, CelestialAsset sourceAsset,
-                        StationTransferTarget target) {
+                        CelestialAsset target) {
                         OrbitalMapWidget.this.createResourceTransfer(sourceBody, sourceAsset, target);
                     }
                 },
@@ -575,36 +555,6 @@ public class OrbitalView {
                     @Override
                     public boolean canCreateAutomatedFacility(CelestialObject body) {
                         return OrbitalMapWidget.this.canCreateAutomatedFacility(body);
-                    }
-
-                    @Override
-                    public boolean hasStoredConstructionResources(CelestialAsset asset) {
-                        return assetSupport.hasStoredConstructionResources(asset);
-                    }
-
-                    @Override
-                    public boolean isManageableStationAsset(CelestialAsset asset) {
-                        return assetSupport.isManageableStationAsset(asset);
-                    }
-
-                    @Override
-                    public String formatAssetDisplayName(CelestialAsset asset) {
-                        return assetSupport.formatAssetDisplayName(asset);
-                    }
-
-                    @Override
-                    public String buildConstructionInventorySummary(CelestialAsset asset) {
-                        return assetSupport.buildConstructionInventorySummary(asset);
-                    }
-
-                    @Override
-                    public String formatAssetKind(CelestialAsset.Kind kind) {
-                        return assetSupport.formatAssetKind(kind);
-                    }
-
-                    @Override
-                    public String formatAssetLocation(CelestialAsset.Location location) {
-                        return assetSupport.formatAssetLocation(location);
                     }
 
                     @Override
@@ -734,7 +684,7 @@ public class OrbitalView {
                     }
 
                     @Override
-                    public void sendPendingResourceTransfer(StationTransferTarget target) {
+                    public void sendPendingResourceTransfer(CelestialAsset target) {
                         assetActionController.sendPendingResourceTransfer(assetUiState, target);
                         assetActionsWidget.markStructureDirty();
                     }
@@ -2016,17 +1966,20 @@ public class OrbitalView {
         }
 
         private void createResourceTransfer(CelestialObject sourceBody, CelestialAsset sourceAsset,
-            StationTransferTarget target) {
-            if (sourceBody == null || sourceAsset == null || target == null || target.hostBody() == null) {
+            CelestialAsset target) {
+            CelestialObject targetBody = target == null ? null
+                : GalaxiaCelestialAPI.get(target.celestialObjectKey)
+                    .orElse(null);
+            if (sourceBody == null || sourceAsset == null || targetBody == null) {
                 showActionStatus("Transfer failed");
                 return;
             }
             InterplanetaryTransferJob transfer = transferSupport.createTransferJob(
                 root,
                 sourceBody,
-                target.hostBody(),
+                targetBody,
                 sourceAsset.displayName() + " -> " + target.displayName(),
-                assetSupport.buildConstructionInventorySummary(sourceAsset),
+                StarmapAssetActions.buildConstructionInventorySummary(sourceAsset),
                 clock.time());
             if (transfer == null) {
                 showActionStatus("Transfer failed");

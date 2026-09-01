@@ -247,14 +247,6 @@ public final class InterplanetaryTransferSystem {
         return OrbitalTransferPlanner.sampleTransferArcInto(ax, ay, rx1, ry1, vx1, vy1, tof, mu, outXs, outYs, n);
     }
 
-    // -----------------------------------------------------------------------
-    // Helper methods (delegates to shared OrbitalTransferPlanner)
-    // -----------------------------------------------------------------------
-
-    private static CelestialObject findHostStar(CelestialObject root, CelestialObject target) {
-        return GalaxiaCelestialAPI.findStar(root, target);
-    }
-
     public static LambertStressReport runLambertStress(CelestialObject root, CelestialObject star, double globalTime,
         int simulations, double maxDvLimit) {
         int requested = Math.max(0, simulations);
@@ -433,8 +425,8 @@ public final class InterplanetaryTransferSystem {
             return;
         }
 
-        CelestialObject star = findHostStar(root, origin);
-        CelestialObject destStar = findHostStar(root, dest);
+        CelestialObject star = GalaxiaCelestialAPI.findStar(root, origin);
+        CelestialObject destStar = GalaxiaCelestialAPI.findStar(root, dest);
         if (star == null || star != destStar) {
             state.clearPreview();
             return;
@@ -622,8 +614,8 @@ public final class InterplanetaryTransferSystem {
             CelestialObject destinationBody, String transferName, String inventorySummary, double departureTime,
             double duration) {
             if (root == null || sourceBody == null || destinationBody == null) return null;
-            CelestialObject star = findHostStar(root, sourceBody);
-            CelestialObject destStar = findHostStar(root, destinationBody);
+            CelestialObject star = GalaxiaCelestialAPI.findStar(root, sourceBody);
+            CelestialObject destStar = GalaxiaCelestialAPI.findStar(root, destinationBody);
             if (star == null || star != destStar) return null;
 
             double tof = Math.max(1.0, duration);

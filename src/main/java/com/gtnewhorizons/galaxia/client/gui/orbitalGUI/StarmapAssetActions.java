@@ -27,6 +27,7 @@ import com.cleanroommc.modularui.widget.scroll.VerticalScrollData;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
+import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
@@ -61,12 +62,7 @@ record PendingAssetDestruction(CelestialAsset asset, boolean armed) {}
 
 record PendingConstructionCancellation(CelestialAsset asset) {}
 
-record PendingResourceTransfer(CelestialAsset asset, List<StationTransferTarget> targets) {}
-
-record StationTransferTarget(CelestialAsset.ID assetId, String displayName, CelestialObject hostBody) {}
-
-record TransferTargetRow(StationTransferTarget target, int left, int top, int right, int bottom,
-    ButtonRect sendButton) {}
+record PendingResourceTransfer(CelestialAsset asset, List<CelestialAsset> targets) {}
 
 record SatelliteAssetRow(SatelliteKind kind, int count) {}
 
@@ -115,79 +111,50 @@ public final class StarmapAssetActions {
         return rows;
     }
 
-    public static final class OrbitalAssetSupport {
+    static String formatAssetDisplayName(CelestialAsset asset) {
+        // TODO: Localize
+        return switch (asset.status()) {
+            case CONSTRUCTION_SITE -> asset.displayName() + " (In construction)";
+            case DECONSTRUCTION -> asset.displayName() + " (Deconstruction)";
+            default -> asset.displayName();
+        };
+    }
 
-        boolean hasStoredConstructionResources(CelestialAsset asset) {
-            return asset != null && asset.hasStoredConstructionResources();
+    static String buildConstructionInventorySummary(CelestialAsset asset) {
+        if (asset.status() == CelestialAsset.Status.DECONSTRUCTION)
+            return buildStoredInventorySummary(asset.constructionInventory());
+        if (asset.requiredResources()
+            .isEmpty()) return "Empty";
+        StringBuilder summary = new StringBuilder();
+        for (Map.Entry<ItemStack, Long> required : asset.requiredResources()
+            .entrySet()) {
+            long storedAmount = asset.constructionInventory()
+                .getOrDefault(required.getKey(), 0L);
+            if (summary.length() > 0) summary.append(", ");
+            summary.append(storedAmount)
+                .append('/')
+                .append(required.getValue())
+                .append(' ')
+                .append(
+                    required.getKey()
+                        .getDisplayName());
         }
+        return summary.toString();
+    }
 
-        boolean isManageableStationAsset(CelestialAsset asset) {
-            return asset != null && asset.isManageable();
+    private static String buildStoredInventorySummary(Map<ItemStack, Long> storedResources) {
+        // TODO: Localize
+        if (storedResources.isEmpty()) return "Empty";
+        StringBuilder summary = new StringBuilder();
+        for (Map.Entry<ItemStack, Long> stored : storedResources.entrySet()) {
+            if (summary.length() > 0) summary.append(", ");
+            summary.append(stored.getValue())
+                .append(' ')
+                .append(
+                    stored.getKey()
+                        .getDisplayName());
         }
-
-        String formatAssetDisplayName(CelestialAsset asset) {
-            // TODO: Localize
-            return switch (asset.status()) {
-                case CONSTRUCTION_SITE -> asset.displayName() + " (In construction)";
-                case DECONSTRUCTION -> asset.displayName() + " (Deconstruction)";
-                default -> asset.displayName();
-            };
-        }
-
-        String buildConstructionInventorySummary(CelestialAsset asset) {
-            if (asset.status() == CelestialAsset.Status.DECONSTRUCTION)
-                return buildStoredInventorySummary(asset.constructionInventory());
-            if (asset.requiredResources()
-                .isEmpty()) return "Empty";
-            StringBuilder sb = new StringBuilder();
-            for (Map.Entry<ItemStack, Long> required : asset.requiredResources()
-                .entrySet()) {
-                long storedAmount = asset.constructionInventory()
-                    .getOrDefault(required.getKey(), 0L);
-                if (sb.length() > 0) sb.append(", ");
-                sb.append(storedAmount)
-                    .append('/')
-                    .append(required.getValue())
-                    .append(' ')
-                    .append(
-                        required.getKey()
-                            .getDisplayName());
-            }
-            return sb.toString();
-        }
-
-        List<StationTransferTarget> getTransferTargetsInSystem(CelestialObject root, CelestialObject body) {
-            List<StationTransferTarget> targets = new ArrayList<>();
-            if (body == null) return targets;
-            for (CelestialClient.TransferTarget t : CelestialClient.getTransferTargetsInSystem(root, body)) {
-                targets.add(new StationTransferTarget(t.assetId(), t.displayName(), t.hostBody()));
-            }
-            return targets;
-        }
-
-        String formatAssetKind(CelestialAsset.Kind kind) {
-            return kind.getDisplayName();
-        }
-
-        String formatAssetLocation(CelestialAsset.Location location) {
-            return location.getDisplayName();
-        }
-
-        private String buildStoredInventorySummary(Map<ItemStack, Long> storedResources) {
-            // TODO: Localize
-            if (storedResources.isEmpty()) return "Empty";
-            StringBuilder sb = new StringBuilder();
-            for (Map.Entry<ItemStack, Long> stored : storedResources.entrySet()) {
-                if (sb.length() > 0) sb.append(", ");
-                sb.append(stored.getValue())
-                    .append(' ')
-                    .append(
-                        stored.getKey()
-                            .getDisplayName());
-            }
-            return sb.toString();
-        }
-
+        return summary.toString();
     }
 
     public static final class OrbitalAssetActionController {
@@ -202,16 +169,13 @@ public final class StarmapAssetActions {
 
             String getRenameInput();
 
-            void createResourceTransfer(CelestialObject sourceBody, CelestialAsset sourceAsset,
-                StationTransferTarget target);
+            void createResourceTransfer(CelestialObject sourceBody, CelestialAsset sourceAsset, CelestialAsset target);
         }
 
-        private final OrbitalAssetSupport assetSupport;
         private final Callbacks callbacks;
         private final StarmapViewContext view;
 
-        OrbitalAssetActionController(OrbitalAssetSupport assetSupport, Callbacks callbacks, StarmapViewContext view) {
-            this.assetSupport = assetSupport;
+        OrbitalAssetActionController(Callbacks callbacks, StarmapViewContext view) {
             this.callbacks = callbacks;
             this.view = view;
         }
@@ -241,7 +205,7 @@ public final class StarmapAssetActions {
                 callbacks.showActionStatus(
                     StatCollector.translateToLocalFormatted(
                         "galaxia.gui.orbital.asset.create.unsupported_body",
-                        assetSupport.formatAssetKind(kind)));
+                        kind.getDisplayName()));
                 return;
             }
             CelestialAsset.Location location = getDefaultAssetLocation(kind);
@@ -254,9 +218,9 @@ public final class StarmapAssetActions {
                 CelestialAsset asset = CelestialAsset.create(body.key(), kind, true);
                 asset.setDisplayName(displayName);
                 if (CelestialClient.registerAsset(body.key(), asset)) {
-                    callbacks.showActionStatus(assetSupport.formatAssetKind(kind) + " creation requested");
+                    callbacks.showActionStatus(kind.getDisplayName() + " creation requested");
                 } else {
-                    callbacks.showActionStatus(assetSupport.formatAssetKind(kind) + " creation failed");
+                    callbacks.showActionStatus(kind.getDisplayName() + " creation failed");
                 }
                 return;
             }
@@ -293,25 +257,29 @@ public final class StarmapAssetActions {
                 asset.setDisplayName(state.pendingAssetCreation.displayName());
                 if (!CelestialClient.registerAsset(state.pendingAssetCreation.celestialObjectKey(), asset)) {
                     callbacks.showActionStatus(
-                        assetSupport.formatAssetKind(state.pendingAssetCreation.kind()) + " creation failed");
+                        state.pendingAssetCreation.kind()
+                            .getDisplayName() + " creation failed");
                     return;
                 }
 
                 callbacks.showActionStatus(
                     // TODO: Localize
-                    assetSupport.formatAssetKind(state.pendingAssetCreation.kind()) + " creation requested");
+                    state.pendingAssetCreation.kind()
+                        .getDisplayName() + " creation requested");
             } else {
                 CelestialAsset asset = CelestialAsset
                     .create(state.pendingAssetCreation.celestialObjectKey(), state.pendingAssetCreation.kind(), false);
                 asset.setDisplayName(state.pendingAssetCreation.displayName());
                 if (!CelestialClient.registerAsset(state.pendingAssetCreation.celestialObjectKey(), asset)) {
                     callbacks.showActionStatus(
-                        assetSupport.formatAssetKind(state.pendingAssetCreation.kind()) + " construction failed");
+                        state.pendingAssetCreation.kind()
+                            .getDisplayName() + " construction failed");
                     return;
                 }
                 callbacks.showActionStatus(
                     // TODO: Localize
-                    assetSupport.formatAssetKind(state.pendingAssetCreation.kind()) + " construction planned");
+                    state.pendingAssetCreation.kind()
+                        .getDisplayName() + " construction planned");
             }
             state.pendingAssetCreation = null;
         }
@@ -358,7 +326,7 @@ public final class StarmapAssetActions {
         }
 
         void openStationManagement(OrbitalAssetUiState state, CelestialAsset asset) {
-            if (asset == null || !assetSupport.isManageableStationAsset(asset)) return;
+            if (asset == null || !asset.isManageable()) return;
             StationManagementScreen.open(asset.assetId, view.creativeBuildMode());
         }
 
@@ -391,7 +359,7 @@ public final class StarmapAssetActions {
                 cancelConstruction(asset);
                 return;
             }
-            if (assetSupport.hasStoredConstructionResources(asset)) {
+            if (asset.hasStoredConstructionResources()) {
                 openPendingConstructionCancellation(state, asset);
                 return;
             }
@@ -410,14 +378,14 @@ public final class StarmapAssetActions {
             if (asset == null) return;
             state.pendingResourceTransfer = new PendingResourceTransfer(
                 asset,
-                assetSupport.getTransferTargetsInSystem(root, state.assetActionsBody));
+                CelestialClient.getTransferTargetsInSystem(root, state.assetActionsBody));
         }
 
         void dismissPendingResourceTransfer(OrbitalAssetUiState state) {
             state.pendingResourceTransfer = null;
         }
 
-        void sendPendingResourceTransfer(OrbitalAssetUiState state, StationTransferTarget target) {
+        void sendPendingResourceTransfer(OrbitalAssetUiState state, CelestialAsset target) {
             if (state.pendingResourceTransfer != null) {
                 callbacks.createResourceTransfer(state.assetActionsBody, state.pendingResourceTransfer.asset(), target);
             }
@@ -470,7 +438,7 @@ public final class StarmapAssetActions {
         }
 
         private String buildDefaultAssetDisplayName(CelestialObject body, CelestialAsset.Kind kind) {
-            return body.displayName() + " " + assetSupport.formatAssetKind(kind);
+            return body.displayName() + " " + kind.getDisplayName();
         }
 
         private CelestialAsset.Location getDefaultAssetLocation(CelestialAsset.Kind kind) {
@@ -530,18 +498,6 @@ public final class StarmapAssetActions {
 
             boolean canCreateAutomatedFacility(CelestialObject body);
 
-            boolean hasStoredConstructionResources(CelestialAsset asset);
-
-            boolean isManageableStationAsset(CelestialAsset asset);
-
-            String formatAssetDisplayName(CelestialAsset asset);
-
-            String buildConstructionInventorySummary(CelestialAsset asset);
-
-            String formatAssetKind(CelestialAsset.Kind kind);
-
-            String formatAssetLocation(CelestialAsset.Location location);
-
             void drawAssetIcon(CelestialAsset.Kind kind, int x, int y, int size, float alpha);
 
             void closeAssetActions();
@@ -584,7 +540,7 @@ public final class StarmapAssetActions {
 
             void dismissPendingResourceTransfer();
 
-            void sendPendingResourceTransfer(StationTransferTarget target);
+            void sendPendingResourceTransfer(CelestialAsset target);
 
             void dismissPendingModalByOutsideClick();
 
@@ -965,7 +921,10 @@ public final class StarmapAssetActions {
             modal.child(
                 createAssetIconWidget(creation.kind(), 1.0f).pos(12, 10)
                     .size(18, 18));
-            modal.child(createTitleText("Confirm " + callbacks.formatAssetKind(creation.kind())).pos(36, 10));
+            modal.child(
+                createTitleText(
+                    "Confirm " + creation.kind()
+                        .getDisplayName()).pos(36, 10));
             modal.child(createBodyText(creation.displayName(), EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(36, 28));
             modal.child(createSectionText("Required resources").pos(12, 52));
             int resourceY = 68;
@@ -998,7 +957,7 @@ public final class StarmapAssetActions {
             modal.child(createTitleText("Rename Asset").pos(12, 10));
             modal.child(
                 createBodyText(
-                    callbacks.formatAssetDisplayName(state.pendingAssetRename.asset()),
+                    formatAssetDisplayName(state.pendingAssetRename.asset()),
                     EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(12, 28));
             modal.child(
                 createBodyText("New name", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(RENAME_INPUT_PADDING, 42));
@@ -1043,9 +1002,8 @@ public final class StarmapAssetActions {
             modal.child(
                 createBodyText("You are about to destroy:", EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(18, 52));
             modal.child(
-                createBodyText(
-                    callbacks.formatAssetDisplayName(destruction.asset()),
-                    EnumColors.MAP_COLOR_TEXT_TITLE.getColor()).pos(18, 68));
+                createBodyText(formatAssetDisplayName(destruction.asset()), EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
+                    .pos(18, 68));
             modal.child(
                 createBodyText(
                     destruction.armed() ? "Click Destroy again to confirm." : "Press Destroy to arm confirmation.",
@@ -1076,7 +1034,7 @@ public final class StarmapAssetActions {
             modal.child(createTitleText("Cancel Construction?").pos(12, 10));
             modal.child(
                 createBodyText(
-                    callbacks.formatAssetDisplayName(state.pendingConstructionCancellation.asset()),
+                    formatAssetDisplayName(state.pendingConstructionCancellation.asset()),
                     EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(12, 28));
             modal.child(
                 createBodyText(
@@ -1104,9 +1062,8 @@ public final class StarmapAssetActions {
             ParentWidget<?> modal = createModalRoot(bounds);
             modal.child(createTitleText("Send Resources To").pos(12, 10));
             modal.child(
-                createBodyText(
-                    callbacks.formatAssetDisplayName(transfer.asset()),
-                    EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(12, 28));
+                createBodyText(formatAssetDisplayName(transfer.asset()), EnumColors.MAP_COLOR_TEXT_BODY.getColor())
+                    .pos(12, 28));
             modal.child(
                 createBodyText(
                     "Requires an orbital rocket with enough capacity.",
@@ -1126,7 +1083,7 @@ public final class StarmapAssetActions {
             int rowTop = 66;
             for (int i = 0; i < transfer.targets()
                 .size(); i++) {
-                StationTransferTarget target = transfer.targets()
+                CelestialAsset target = transfer.targets()
                     .get(i);
                 int currentTop = rowTop + i * 42;
                 modal.child(
@@ -1145,8 +1102,9 @@ public final class StarmapAssetActions {
                         .pos(46, currentTop + 6));
                 modal.child(
                     createBodyText(
-                        target.hostBody()
-                            .displayName(),
+                        GalaxiaCelestialAPI.get(target.celestialObjectKey)
+                            .map(CelestialObject::displayName)
+                            .orElse("Unknown"),
                         EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(46, currentTop + 18));
                 modal.child(
                     createFooterButton("Send", true, () -> callbacks.sendPendingResourceTransfer(target))
@@ -1256,7 +1214,7 @@ public final class StarmapAssetActions {
             row.child(
                 createBodyText(
                     // TODO: Localize
-                    (deconstruction ? "Stored: " : "Inventory: ") + callbacks.buildConstructionInventorySummary(asset),
+                    (deconstruction ? "Stored: " : "Inventory: ") + buildConstructionInventorySummary(asset),
                     EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(ROW_TEXT_LEFT, ROW_DETAIL_Y)
                         .width(textWidth));
             row.child(
@@ -1279,15 +1237,13 @@ public final class StarmapAssetActions {
             row.child(
                 createAssetIconWidget(asset.kind, 1.0f).pos(ROW_ICON_X, ROW_ICON_Y)
                     .size(ROW_ICON_SLOT_SIZE, ROW_ICON_SLOT_SIZE));
-            boolean manageable = callbacks.isManageableStationAsset(asset);
+            boolean manageable = asset.isManageable();
             int actionButtonsWidth = manageable ? (ICON_BUTTON_SIZE * 2 + ROW_ACTION_BUTTON_GAP) : ICON_BUTTON_SIZE;
             int textWidth = rowWidth - ROW_TEXT_LEFT - actionButtonsWidth - ROW_TEXT_RIGHT_GAP;
             row.child(createNameButton(asset, textWidth).pos(ROW_TEXT_LEFT, ROW_NAME_Y));
             row.child(
                 createBodyText(
-                    trimToWidth(
-                        callbacks.formatAssetKind(asset.kind) + " | " + callbacks.formatAssetLocation(asset.location),
-                        textWidth),
+                    trimToWidth(asset.kind.getDisplayName() + " | " + asset.location.getDisplayName(), textWidth),
                     EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(ROW_TEXT_LEFT, ROW_DETAIL_Y)
                         .width(textWidth));
             int buttonX = rowWidth - ROW_ACTION_BUTTON_RIGHT_INSET;
@@ -1405,7 +1361,7 @@ public final class StarmapAssetActions {
 
         private ButtonWidget<?> createNameButton(CelestialAsset asset, int width) {
             int buttonWidth = Math.max(NAME_BUTTON_MIN_WIDTH, width);
-            String text = trimToWidth(callbacks.formatAssetDisplayName(asset), buttonWidth);
+            String text = trimToWidth(formatAssetDisplayName(asset), buttonWidth);
             return new ScrollAwareButtonWidget().size(buttonWidth, NAME_BUTTON_HEIGHT)
                 .background(IDrawable.EMPTY)
                 .hoverBackground(IDrawable.EMPTY)

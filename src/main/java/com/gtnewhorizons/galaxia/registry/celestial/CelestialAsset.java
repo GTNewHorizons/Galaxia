@@ -95,8 +95,13 @@ public abstract class CelestialAsset implements Buildable {
         this.assetId = assetId;
         this.status = status;
         this.celestialObjectKey = celestialObjectKey;
-        this.systemKey = resolveStar(celestialObjectKey).key();
-        this.planetaryAnchorBodyKey = resolvePlanetaryAnchor(celestialObjectKey).key();
+        CelestialObject star = GalaxiaCelestialAPI.findStar(celestialObjectKey);
+        if (star == null) throw new IllegalStateException("Cannot resolve asset system for " + celestialObjectKey);
+        this.systemKey = star.key();
+        CelestialObject planetaryAnchor = GalaxiaCelestialAPI.findPlanetaryAnchor(celestialObjectKey);
+        if (planetaryAnchor == null)
+            throw new IllegalStateException("Cannot resolve asset planetary anchor for " + celestialObjectKey);
+        this.planetaryAnchorBodyKey = planetaryAnchor.key();
         this.displayName = displayName(celestialObjectKey) + ":" + kind.getDisplayName();
         this.kind = kind;
         this.location = Location.ofKind(kind);
@@ -109,32 +114,6 @@ public abstract class CelestialAsset implements Buildable {
         Map<ItemStack, Long> constructionInventory) {
 
         this(assetId, CelestialObjectKey.registered(celestialObjectId), kind, status, constructionInventory);
-    }
-
-    private static CelestialObject resolveStar(CelestialObjectKey key) {
-        CelestialObject star = GalaxiaCelestialAPI.findStar(key);
-        if (star != null) return star;
-        if (key != null && key.isMinorBody()) {
-            star = GalaxiaCelestialAPI.findStar(
-                CelestialObjectKey.registered(
-                    key.minorBodyId()
-                        .parentBodyId()));
-        }
-        if (star != null) return star;
-        throw new IllegalStateException("Cannot resolve asset system for celestial object: " + key);
-    }
-
-    private static CelestialObject resolvePlanetaryAnchor(CelestialObjectKey key) {
-        CelestialObject anchor = GalaxiaCelestialAPI.findPlanetaryAnchor(key);
-        if (anchor != null) return anchor;
-        if (key != null && key.isMinorBody()) {
-            anchor = GalaxiaCelestialAPI.findPlanetaryAnchor(
-                CelestialObjectKey.registered(
-                    key.minorBodyId()
-                        .parentBodyId()));
-        }
-        if (anchor != null) return anchor;
-        throw new IllegalStateException("Cannot resolve asset planetary anchor for celestial object: " + key);
     }
 
     private static String displayName(CelestialObjectKey key) {

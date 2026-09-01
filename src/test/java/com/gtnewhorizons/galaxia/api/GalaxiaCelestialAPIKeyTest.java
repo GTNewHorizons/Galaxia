@@ -39,6 +39,21 @@ final class GalaxiaCelestialAPIKeyTest {
     }
 
     @Test
+    void unmaterializedMinorKeyUsesItsRegisteredParentAncestry() {
+        CelestialObjectKey key = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0));
+
+        assertEquals(
+            CelestialObjectId.VAEL,
+            GalaxiaCelestialAPI.findStar(key)
+                .requireRegisteredId());
+        assertEquals(
+            CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT),
+            GalaxiaCelestialAPI.findPlanetaryAnchor(key)
+                .key());
+    }
+
+    @Test
     void findByDimensionIdReturnsRegisteredBodyForKnownDimension() {
         CelestialObject mars = GalaxiaCelestialAPI.findByDimension(DimensionEnum.MARS.getId())
             .orElseThrow();

@@ -69,9 +69,6 @@ import cpw.mods.fml.relauncher.SideOnly;
 @SideOnly(Side.CLIENT)
 public final class CelestialClient {
 
-    @Deprecated
-    public record TransferTarget(CelestialAsset.ID assetId, String displayName, CelestialObject hostBody) {}
-
     // ── Client-side asset mirror (via CLIENT store) ──
 
     public static CelestialAsset getByAssetId(CelestialAsset.ID assetId) {
@@ -205,8 +202,8 @@ public final class CelestialClient {
         StarmapActionSyncHandler.sendRequestFullSync(assetId);
     }
 
-    public static List<TransferTarget> getTransferTargetsInSystem(CelestialObject root, CelestialObject body) {
-        List<TransferTarget> targets = new ArrayList<>();
+    public static List<CelestialAsset> getTransferTargetsInSystem(CelestialObject root, CelestialObject body) {
+        List<CelestialAsset> targets = new ArrayList<>();
         if (body == null) return targets;
         CelestialObject hostStar = GalaxiaCelestialAPI.findStar(root, body);
         if (hostStar == null) return targets;
@@ -588,12 +585,10 @@ public final class CelestialClient {
             includeHidden)) {
             return cached.children();
         }
+        List<CelestialDiscoveryScanSnapshot> scans = CelestialDiscoveryClientState.snapshots();
         List<CelestialObject> children = CelestialRegistry.children(
             parentKey,
-            asteroidProjections.discoveryView(
-                parentKey,
-                CelestialDiscoveryClientState.snapshots(),
-                CelestialKnowledgeClientState.discoveryView()),
+            asteroidProjections.discoveryView(parentKey, scans, CelestialKnowledgeClientState.discoveryView()),
             includeHidden);
         childrenCache.put(
             parentKey,
@@ -601,12 +596,13 @@ public final class CelestialClient {
                 CelestialKnowledgeClientState.revision(),
                 CelestialDiscoveryClientState.revision(),
                 includeHidden,
-                children));
+                children,
+                asteroidProjections.projectionLookup(parentKey, children, scans)));
         return children;
     }
 
     private record CachedChildren(int knowledgeRevision, int discoveryRevision, boolean includeHidden,
-        List<CelestialObject> children) {
+        List<CelestialObject> children, Map<CelestialObjectKey, AsteroidStarmapProjection> asteroidProjections) {
 
         boolean matches(int currentKnowledge, int currentDiscovery, boolean currentIncludeHidden) {
             return knowledgeRevision == currentKnowledge && discoveryRevision == currentDiscovery
@@ -619,8 +615,12 @@ public final class CelestialClient {
         // Resolving siblings rebuilds the belt catalog; skip it for bodies that can never have a projection.
         if (!body.key()
             .isMinorBody()) return Optional.empty();
-        List<CelestialObject> siblings = getChildren(body.parentKey());
-        return asteroidProjections.projectionFor(body, siblings, CelestialDiscoveryClientState.snapshots());
+        getChildren(body.parentKey());
+        CachedChildren cached = childrenCache.get(body.parentKey());
+        return Optional.ofNullable(
+            cached == null ? null
+                : cached.asteroidProjections()
+                    .get(body.key()));
     }
 
     public static boolean showHiddenAsteroidObjects() {
@@ -657,11 +657,11 @@ public final class CelestialClient {
 
     // ── Helpers ──
 
-    private static void collectTransferTargets(CelestialObject current, List<TransferTarget> targets) {
+    private static void collectTransferTargets(CelestialObject current, List<CelestialAsset> targets) {
         List<CelestialAsset> state = getState(current.key());
         for (CelestialAsset asset : state) {
             if (asset.isManageable()) {
-                targets.add(new TransferTarget(asset.assetId, asset.displayName(), current));
+                targets.add(asset);
             }
         }
         for (CelestialObject child : getChildren(current)) {
