@@ -9,7 +9,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
@@ -36,7 +36,7 @@ final class MinerFocusUiModelTest {
         module.setOperation(
             ModuleOperationState.waiting(
                 new ModuleOperationPlan(
-                    new MinerFocusOperation(ModuleTier.EV, MinerFocusTier.II.name(), "ore:iron"),
+                    new IModuleOperation.MinerFocus(ModuleTier.EV, MinerFocusTier.II.name(), "ore:iron"),
                     2,
                     java.util.Map.of(),
                     false)));
@@ -84,7 +84,7 @@ final class MinerFocusUiModelTest {
         module.setOperation(
             ModuleOperationState.waiting(
                 new ModuleOperationPlan(
-                    new MinerFocusOperation(ModuleTier.EV, MinerFocusTier.II.name(), null),
+                    new IModuleOperation.MinerFocus(ModuleTier.EV, MinerFocusTier.II.name(), null),
                     2,
                     java.util.Map.of(),
                     false)));

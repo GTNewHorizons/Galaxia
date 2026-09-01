@@ -14,7 +14,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 
 public final class ModuleHammer implements IModuleComponent, IParallelModule {
@@ -122,7 +121,7 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
             throw new IllegalArgumentException("Invalid hammer operation target");
         }
         requireTier(plan.targetVariant(), plan.targetTier());
-        return new HammerModuleOperation(
+        return new IModuleOperation.Hammer(
             plan.targetTier(),
             plan.targetVariant()
                 .name());
@@ -151,7 +150,7 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
 
     @Override
     public void applyOperationTarget(IModuleOperation spec, ModuleInstance module) {
-        if (!(spec instanceof HammerModuleOperation hammerSpec)) {
+        if (!(spec instanceof IModuleOperation.Hammer hammerSpec)) {
             throw new IllegalStateException(
                 "HAMMER cannot handle " + spec.getClass()
                     .getSimpleName());

@@ -8,7 +8,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.core.network.ClientStateLifecycle;
+import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
@@ -59,7 +59,7 @@ final class SatelliteNetworkClientStateTest {
     void clientLifecycleClearClearsSatelliteSnapshot() {
         SatelliteNetworkClientState.update(state(new UUID(1L, 2L), 1, 10L));
 
-        ClientStateLifecycle.clearAll();
+        CelestialClient.clear();
 
         assertEquals(
             0,

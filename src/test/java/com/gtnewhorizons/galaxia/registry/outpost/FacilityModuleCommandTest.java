@@ -24,10 +24,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -393,7 +393,11 @@ final class FacilityModuleCommandTest {
     }
 
     private static ModuleOperationState waitingOperation() {
-        ModuleOperationPlan plan = new ModuleOperationPlan(new ModuleTierOperation(ModuleTier.HV), 20, Map.of(), true);
+        ModuleOperationPlan plan = new ModuleOperationPlan(
+            new IModuleOperation.Tier(ModuleTier.HV),
+            20,
+            Map.of(),
+            true);
         return ModuleOperationState.restore(plan, ModuleOperationPhase.WAITING_FOR_MATERIALS, 0, Map.of(), Map.of());
     }
 }

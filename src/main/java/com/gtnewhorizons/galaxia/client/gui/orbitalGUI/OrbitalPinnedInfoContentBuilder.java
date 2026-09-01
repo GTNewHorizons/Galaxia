@@ -417,10 +417,9 @@ public final class OrbitalPinnedInfoContentBuilder {
 
         private Widget<?> createItemWidget(ItemStack stack, int size) {
             ItemStack displayStack = stack.copy();
-            return DrawableCommand
-                .asDrawable((context, x, y, width, height) -> drawGuiItemStack(displayStack, x, y, size))
-                .asWidget()
-                .tooltip(t -> t.addLine(displayStack.getDisplayName()));
+            return ((IDrawable) (context, x, y, width, height,
+                ignoredTheme) -> drawGuiItemStack(displayStack, x, y, size)).asWidget()
+                    .tooltip(t -> t.addLine(displayStack.getDisplayName()));
         }
 
         private int getContentWidth(Minecraft mc, List<PinnedInfoRow> rows, int widgetWidth) {
@@ -503,9 +502,8 @@ public final class OrbitalPinnedInfoContentBuilder {
         }
 
         private IDrawable createBackgroundDrawable() {
-            return DrawableCommand.asDrawable(
-                (context, x, y, width, height) -> Gui
-                    .drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_MODAL_BG.getColor()));
+            return (context, x, y, width, height, ignoredTheme) -> Gui
+                .drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_MODAL_BG.getColor());
         }
 
     }

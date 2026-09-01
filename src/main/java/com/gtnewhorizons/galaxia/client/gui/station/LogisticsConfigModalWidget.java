@@ -16,6 +16,7 @@ import net.minecraft.item.ItemStack;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.value.StringValue;
@@ -26,7 +27,6 @@ import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -96,8 +96,9 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         ScrollWidget<?> scroll = new ScrollWidget<>(scrollData).pos(SCROLL_X, SCROLL_Y)
             .size(SCROLL_WIDTH, SCROLL_HEIGHT)
             .background(
-                DrawableCommand.asDrawable(
-                    (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_SCROLL_BG.getColor())));
+
+                (ctx, x, y, w, h, ignoredTheme) -> Gui
+                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_SCROLL_BG.getColor()));
         scroll.child(scrollContent);
         child(scroll);
         addHeaderTooltip(NAME_X, NAME_WIDTH, "Tracked item");
@@ -178,11 +179,11 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         ParentWidget<?> row = new ParentWidget<>().widthRelOffset(1f, -SCROLLBAR_GAP)
             .height(ROW_HEIGHT)
             .background(
-                DrawableCommand.asDrawable(
-                    (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())));
+
+                (ctx, x, y, w, h, ignoredTheme) -> Gui
+                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor()));
         row.child(
-            DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawRowText(asset, entry, x, y, w))
-                .asWidget()
+            ((IDrawable) (ctx, x, y, w, h, ignoredTheme) -> drawRowText(asset, entry, x, y, w)).asWidget()
                 .pos(0, 0)
                 .widthRel(1f)
                 .height(ROW_HEIGHT));
@@ -307,14 +308,14 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
             .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
             .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
             .background(
-                DrawableCommand.asDrawable(
-                    (ctx, x, y, w, h) -> com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect.draw(
-                        x,
-                        y,
-                        w,
-                        h,
-                        EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                        EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
+
+                (ctx, x, y, w, h, ignoredTheme) -> com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect.draw(
+                    x,
+                    y,
+                    w,
+                    h,
+                    EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()))
             .value(
                 new StringValue.Dynamic(
                     () -> amountText(rowIndex, reserve),
@@ -509,8 +510,7 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
 
     private void addHeaderTooltip(int x, int width, String text) {
         child(
-            DrawableCommand.asDrawable((ctx, drawX, drawY, drawW, drawH) -> {})
-                .asWidget()
+            ((IDrawable) (ctx, drawX, drawY, drawW, drawH, ignoredTheme) -> {}).asWidget()
                 .pos(SCROLL_X + x, HEADER_Y - 2)
                 .size(width, 13)
                 .tooltip(t -> t.addLine(text)));

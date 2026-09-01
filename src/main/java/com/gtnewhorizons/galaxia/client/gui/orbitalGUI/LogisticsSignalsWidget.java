@@ -16,6 +16,7 @@ import net.minecraft.item.ItemStack;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.ScrollWidget;
@@ -185,10 +186,10 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         panelRoot.setEnabled(true);
         ParentWidget<?> backgroundLayer = new ParentWidget<>().pos(0, 0)
             .size(PANEL_W, panelH)
-            .background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
+            .background((ctx, x, y, w, h, ignoredTheme) -> {
                 Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_MODAL_BG.getColor());
                 Gui.drawRect(x, y, x + w, y + 24, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
-            }));
+            });
         panelRoot.child(backgroundLayer);
         panelRoot.child(WidgetOutline.create(backgroundLayer, 3, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
 
@@ -269,8 +270,9 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         ParentWidget<?> rowWidget = new ParentWidget<>().widthRel(1f)
             .height(ROW_H)
             .background(
-                DrawableCommand.asDrawable(
-                    (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())));
+
+                (ctx, x, y, w, h, ignoredTheme) -> Gui
+                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor()));
 
         if (state == null) return rowWidget;
 
@@ -281,12 +283,9 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         });
 
         rowWidget.child(
-            DrawableCommand
-                .asDrawable(
-                    (ctx, bx, by, bw, bh) -> {
-                        if (state.displayStack != null) renderItemIcon(state.displayStack, bx + 1, by + 3);
-                    })
-                .asWidget()
+            ((IDrawable) (ctx, bx, by, bw, bh, ignoredTheme) -> {
+                if (state.displayStack != null) renderItemIcon(state.displayStack, bx + 1, by + 3);
+            }).asWidget()
                 .pos(COL_ICON, 0)
                 .size(16, ROW_H));
 

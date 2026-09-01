@@ -627,8 +627,9 @@ public final class StarmapAssetActions {
             setEnabled(false);
             size(0, 0);
             background(
-                DrawableCommand.asDrawable(
-                    (c, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_OVERLAY_BG.getColor())));
+
+                (c, x, y, w, h, ignoredTheme) -> Gui
+                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_OVERLAY_BG.getColor()));
         }
 
         @Override
@@ -855,9 +856,9 @@ public final class StarmapAssetActions {
                 .widthRelOffset(1f, -(CONTENT_PADDING * 2) - CONTENT_SCROLLBAR_GAP)
                 .heightRelOffset(1f, -(contentTop + CONTENT_BOTTOM_PADDING))
                 .background(
-                    DrawableCommand.asDrawable(
-                        (context, x, y, width, height) -> Gui
-                            .drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_SCROLL_BG.getColor())));
+
+                    (context, x, y, width, height, ignoredTheme) -> Gui
+                        .drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_SCROLL_BG.getColor()));
             activeScrollWidget = scroll;
             mainScrollWidget = scroll;
             ParentWidget<?> content = new ParentWidget<>().widthRel(1f)
@@ -961,14 +962,13 @@ public final class StarmapAssetActions {
                     EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(12, 28));
             modal.child(
                 createBodyText("New name", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(RENAME_INPUT_PADDING, 42));
-            modal.child(DrawableCommand.asDrawable((context, x, y, width, height) -> {
+            modal.child(((IDrawable) (context, x, y, width, height, ignoredTheme) -> {
                 Gui.drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_RENAME_INPUT_BG.getColor());
                 Gui.drawRect(x, y, x + width, y + 1, EnumColors.MAP_COLOR_RENAME_BORDER.getColor());
                 Gui.drawRect(x, y + height - 1, x + width, y + height, EnumColors.MAP_COLOR_RENAME_BORDER.getColor());
                 Gui.drawRect(x, y, x + 1, y + height, EnumColors.MAP_COLOR_RENAME_BORDER.getColor());
                 Gui.drawRect(x + width - 1, y, x + width, y + height, EnumColors.MAP_COLOR_RENAME_BORDER.getColor());
-            })
-                .asWidget()
+            }).asWidget()
                 .pos(RENAME_INPUT_PADDING, CONTENT_TOP + 4)
                 .size(312, RENAME_INPUT_HEIGHT));
             addFooterButtons(
@@ -1087,13 +1087,10 @@ public final class StarmapAssetActions {
                     .get(i);
                 int currentTop = rowTop + i * 42;
                 modal.child(
-                    DrawableCommand
-                        .asDrawable(
-                            (context, x, y, width, h) -> Gui
-                                .drawRect(x, y, x + width, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor()))
-                        .asWidget()
-                        .pos(14, currentTop)
-                        .size(bounds.right() - bounds.left() - 28, 36));
+                    ((IDrawable) (context, x, y, width, h, ignoredTheme) -> Gui
+                        .drawRect(x, y, x + width, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())).asWidget()
+                            .pos(14, currentTop)
+                            .size(bounds.right() - bounds.left() - 28, 36));
                 modal.child(
                     createAssetIconWidget(CelestialAsset.Kind.STATION, 1.0f).pos(24, currentTop + 9)
                         .size(16, 16));
@@ -1201,9 +1198,9 @@ public final class StarmapAssetActions {
             ParentWidget<?> row = new PassiveRow().widthRelOffset(1f, -ROW_WIDTH_INSET)
                 .height(ROW_HEIGHT)
                 .background(
-                    DrawableCommand.asDrawable(
-                        (context, x, y, width, height) -> Gui
-                            .drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_ROW_BG.getColor())));
+
+                    (context, x, y, width, height, ignoredTheme) -> Gui
+                        .drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_ROW_BG.getColor()));
             row.child(
                 createAssetIconWidget(asset.kind, 1.0f).pos(ROW_ICON_X, ROW_ICON_Y)
                     .size(ROW_ICON_SLOT_SIZE, ROW_ICON_SLOT_SIZE));
@@ -1231,9 +1228,9 @@ public final class StarmapAssetActions {
             ParentWidget<?> row = new PassiveRow().widthRelOffset(1f, -ROW_WIDTH_INSET)
                 .height(ROW_HEIGHT)
                 .background(
-                    DrawableCommand.asDrawable(
-                        (context, x, y, width, height) -> Gui
-                            .drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_ROW_BG.getColor())));
+
+                    (context, x, y, width, height, ignoredTheme) -> Gui
+                        .drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_ROW_BG.getColor()));
             row.child(
                 createAssetIconWidget(asset.kind, 1.0f).pos(ROW_ICON_X, ROW_ICON_Y)
                     .size(ROW_ICON_SLOT_SIZE, ROW_ICON_SLOT_SIZE));
@@ -1288,9 +1285,9 @@ public final class StarmapAssetActions {
             ParentWidget<?> row = new PassiveRow().widthRelOffset(1f, -ROW_WIDTH_INSET)
                 .height(ROW_HEIGHT)
                 .background(
-                    DrawableCommand.asDrawable(
-                        (context, x, y, width, height) -> Gui
-                            .drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_ROW_BG.getColor())));
+
+                    (context, x, y, width, height, ignoredTheme) -> Gui
+                        .drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_ROW_BG.getColor()));
             row.child(
                 createAssetIconWidget(CelestialAsset.Kind.SATELLITE, 1.0f).pos(ROW_ICON_X, ROW_ICON_Y)
                     .size(ROW_ICON_SLOT_SIZE, ROW_ICON_SLOT_SIZE));
@@ -1365,7 +1362,7 @@ public final class StarmapAssetActions {
             return new ScrollAwareButtonWidget().size(buttonWidth, NAME_BUTTON_HEIGHT)
                 .background(IDrawable.EMPTY)
                 .hoverBackground(IDrawable.EMPTY)
-                .overlay(DrawableCommand.asDrawable((context, x, y, w, h) -> {
+                .overlay((context, x, y, w, h, ignoredTheme) -> {
                     net.minecraft.client.gui.FontRenderer fr = net.minecraft.client.Minecraft
                         .getMinecraft().fontRenderer;
                     fr.drawStringWithShadow(
@@ -1373,8 +1370,8 @@ public final class StarmapAssetActions {
                         x,
                         y + (h - fr.FONT_HEIGHT) / 2 + TEXT_BASELINE_OFFSET,
                         EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
-                }))
-                .hoverOverlay(DrawableCommand.asDrawable((context, x, y, w, h) -> {
+                })
+                .hoverOverlay((context, x, y, w, h, ignoredTheme) -> {
                     net.minecraft.client.gui.FontRenderer fr = net.minecraft.client.Minecraft
                         .getMinecraft().fontRenderer;
                     fr.drawStringWithShadow(
@@ -1382,7 +1379,7 @@ public final class StarmapAssetActions {
                         x,
                         y + (h - fr.FONT_HEIGHT) / 2 + TEXT_BASELINE_OFFSET,
                         EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
-                }))
+                })
                 .onMousePressed(mouseButton -> {
                     if (mouseButton != 0) return true;
                     callbacks.openPendingAssetRename(asset);
@@ -1534,7 +1531,7 @@ public final class StarmapAssetActions {
         private ButtonWidget<?> createTextButton(String label, boolean enabled, Runnable action, boolean danger) {
             return new ScrollAwareButtonWidget().background(createTextButtonBackground(enabled, false, danger))
                 .hoverBackground(createTextButtonBackground(enabled, true, danger))
-                .overlay(DrawableCommand.asDrawable((context, x, y, w, h) -> {
+                .overlay((context, x, y, w, h, ignoredTheme) -> {
                     org.lwjgl.opengl.GL11.glEnable(org.lwjgl.opengl.GL11.GL_TEXTURE_2D);
                     com.cleanroommc.modularui.utils.GlStateManager.color(1f, 1f, 1f, 1f);
                     net.minecraft.client.gui.FontRenderer fr = net.minecraft.client.Minecraft
@@ -1547,7 +1544,7 @@ public final class StarmapAssetActions {
                         x + (w - textW) / 2,
                         y + (h - fr.FONT_HEIGHT) / 2 + TEXT_BASELINE_OFFSET,
                         color);
-                }))
+                })
                 .onMousePressed(mouseButton -> {
                     if (mouseButton != 0 || !enabled) return true;
                     action.run();
@@ -1581,23 +1578,22 @@ public final class StarmapAssetActions {
         }
 
         private IDrawable createRectFrameDrawable(int backgroundColor, int borderColor) {
-            return DrawableCommand.asDrawable((context, x, y, width, height) -> {
+            return (context, x, y, width, height, ignoredTheme) -> {
                 Gui.drawRect(x, y, x + width, y + height, backgroundColor);
                 Gui.drawRect(x, y, x + width, y + 1, borderColor);
                 Gui.drawRect(x, y + height - 1, x + width, y + height, borderColor);
                 Gui.drawRect(x, y, x + 1, y + height, borderColor);
                 Gui.drawRect(x + width - 1, y, x + width, y + height, borderColor);
-            });
+            };
         }
 
         private IDrawable createAssetIconDrawable(CelestialAsset.Kind kind, float alpha) {
-            return DrawableCommand.asDrawable(
-                (context, x, y, width, height) -> callbacks.drawAssetIcon(
-                    kind,
-                    x + (width - ROW_ICON_DRAW_SIZE) / 2,
-                    y + (height - ROW_ICON_DRAW_SIZE) / 2,
-                    ROW_ICON_DRAW_SIZE,
-                    alpha));
+            return (context, x, y, width, height, ignoredTheme) -> callbacks.drawAssetIcon(
+                kind,
+                x + (width - ROW_ICON_DRAW_SIZE) / 2,
+                y + (height - ROW_ICON_DRAW_SIZE) / 2,
+                ROW_ICON_DRAW_SIZE,
+                alpha);
         }
 
         private Widget<?> createAssetIconWidget(CelestialAsset.Kind kind, float alpha) {
@@ -1605,12 +1601,11 @@ public final class StarmapAssetActions {
         }
 
         private IDrawable createGlyphDrawable(StarmapActionGlyph glyph, int color) {
-            return DrawableCommand
-                .asDrawable((context, x, y, width, height) -> drawGlyph(x, y, width, height, glyph, color));
+            return (context, x, y, width, height, ignoredTheme) -> drawGlyph(x, y, width, height, glyph, color);
         }
 
         private Widget<?> createCenteredLargeText(String text, float scale, int color) {
-            return DrawableCommand.asDrawable((context, x, y, width, height) -> {
+            return ((IDrawable) (context, x, y, width, height, ignoredTheme) -> {
                 Minecraft mc = Minecraft.getMinecraft();
                 GlStateManager.pushMatrix();
                 GlStateManager.translate(x + width / 2f, y, 0);
@@ -1618,8 +1613,7 @@ public final class StarmapAssetActions {
                 float textWidth = mc.fontRenderer.getStringWidth(text);
                 mc.fontRenderer.drawStringWithShadow(text, Math.round(-textWidth / 2f), 0, color);
                 GlStateManager.popMatrix();
-            })
-                .asWidget();
+            }).asWidget();
         }
 
         private void drawGlyph(int x, int y, int width, int height, StarmapActionGlyph glyph, int color) {
@@ -1655,10 +1649,10 @@ public final class StarmapAssetActions {
         }
 
         private IDrawable createModalBackgroundDrawable(int backgroundColor, int headerColor) {
-            return DrawableCommand.asDrawable((context, x, y, width, height) -> {
+            return (context, x, y, width, height, ignoredTheme) -> {
                 Gui.drawRect(x, y, x + width, y + height, backgroundColor);
                 if (headerColor >= 0) Gui.drawRect(x, y, x + width, y + HEADER_HEIGHT, headerColor);
-            });
+            };
         }
 
         private List<CelestialAsset> getConstructionAssets(List<CelestialAsset> assets) {

@@ -17,11 +17,9 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePanelAction;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
@@ -194,7 +192,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     }
 
     private ButtonWidget<?> createDestroyButton() {
-        return new ButtonWidget<>().background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
+        return new ButtonWidget<>().background((ctx, x, y, w, h, ignoredTheme) -> {
             if (isPickerActive()) return;
             BorderedRect.draw(
                 x,
@@ -205,8 +203,8 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
                     : EnumColors.MAP_COLOR_BTN_DISABLED.getColor(),
                 canDestroySelected() ? EnumColors.MAP_COLOR_BTN_DESTROY_BORDER.getColor()
                     : EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor());
-        }))
-            .hoverBackground(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
+        })
+            .hoverBackground((ctx, x, y, w, h, ignoredTheme) -> {
                 if (isPickerActive()) return;
                 BorderedRect.draw(
                     x,
@@ -217,8 +215,8 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
                         : EnumColors.MAP_COLOR_BTN_DISABLED.getColor(),
                     canDestroySelected() ? EnumColors.MAP_COLOR_BTN_DESTROY_BORDER.getColor()
                         : EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor());
-            }))
-            .overlay(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
+            })
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> {
                 if (isPickerActive()) return;
                 FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
                 String label = armedDestroySelection != null && armedDestroySelection.equals(map.selection())
@@ -232,7 +230,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
                     x + (w - textWidth) / 2,
                     y + (h - fr.FONT_HEIGHT) / 2 + BUTTON_TEXT_BASELINE_OFFSET,
                     color);
-            }))
+            })
             .onMousePressed(mouseButton -> {
                 if (isPickerActive()) return false;
                 if (mouseButton != 0 || !canDestroySelected()) return true;
@@ -256,9 +254,8 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
 
     private ButtonWidget<?> createDestroyMultipleToggle() {
         return new ButtonWidget<>()
-            .background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawDestroyMultipleToggle(x, y, w, h, false)))
-            .hoverBackground(
-                DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawDestroyMultipleToggle(x, y, w, h, true)))
+            .background((ctx, x, y, w, h, ignoredTheme) -> drawDestroyMultipleToggle(x, y, w, h, false))
+            .hoverBackground((ctx, x, y, w, h, ignoredTheme) -> drawDestroyMultipleToggle(x, y, w, h, true))
             .onMousePressed(mouseButton -> {
                 if (isPickerActive() || armedDestroySelection == null || mouseButton != 0) return false;
                 destroyMultipleMode = !destroyMultipleMode;
@@ -290,19 +287,19 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     }
 
     private ButtonWidget<?> createModuleActionButton(int slot) {
-        return new ButtonWidget<>().background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
+        return new ButtonWidget<>().background((ctx, x, y, w, h, ignoredTheme) -> {
             if (isPickerActive()) return;
             ModulePanelAction action = actionAtSlot(slot);
             if (action == null) return;
             drawActionButtonBackground(x, y, w, h, true, false);
-        }))
-            .hoverBackground(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
+        })
+            .hoverBackground((ctx, x, y, w, h, ignoredTheme) -> {
                 if (isPickerActive()) return;
                 ModulePanelAction action = actionAtSlot(slot);
                 if (action == null) return;
                 drawActionButtonBackground(x, y, w, h, true, true);
-            }))
-            .overlay(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
+            })
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> {
                 if (isPickerActive()) return;
                 ModulePanelAction action = actionAtSlot(slot);
                 if (action == null) return;
@@ -314,7 +311,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
                     x + (w - textWidth) / 2,
                     y + (h - fr.FONT_HEIGHT) / 2 + BUTTON_TEXT_BASELINE_OFFSET,
                     EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
-            }))
+            })
             .onMousePressed(mouseButton -> {
                 if (isPickerActive() || mouseButton != 0) return false;
                 ModulePanelAction action = actionAtSlot(slot);
@@ -369,7 +366,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
             configController.openMinerBlacklist(module.id);
         } else if (module.component() instanceof ModuleHammer) {
             configController.openHammer(module.id);
-        } else if (module.component() instanceof IRecipeModule) {
+        } else if (module.recipe() != null) {
             configController.openRecipeConfig(module.id);
         } else if (module.component() instanceof ModuleDebugDataGenerator) {
             configController.openDebugDataGenerator(module.id);

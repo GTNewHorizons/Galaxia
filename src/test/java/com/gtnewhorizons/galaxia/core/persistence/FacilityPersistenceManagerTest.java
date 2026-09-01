@@ -63,12 +63,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
@@ -176,7 +174,7 @@ final class FacilityPersistenceManagerTest {
         hammer.setOperation(
             ModuleOperationState.waiting(
                 new ModuleOperationPlan(
-                    new HammerModuleOperation(ModuleTier.LuV, HammerVariant.BIG.name()),
+                    new IModuleOperation.Hammer(ModuleTier.LuV, HammerVariant.BIG.name()),
                     37,
                     actualMaterialCost,
                     true)));
@@ -766,10 +764,10 @@ final class FacilityPersistenceManagerTest {
                 .voidCompletionRefund());
         assertTrue(
             decodedOperation.plan()
-                .spec() instanceof HammerModuleOperation);
+                .spec() instanceof IModuleOperation.Hammer);
         assertEquals(
             "BIG",
-            ((HammerModuleOperation) decodedOperation.plan()
+            ((IModuleOperation.Hammer) decodedOperation.plan()
                 .spec()).targetVariantKey());
         assertEquals(
             ModuleTier.LuV,
@@ -826,7 +824,7 @@ final class FacilityPersistenceManagerTest {
             ModuleOperationState
                 .waiting(
                     new ModuleOperationPlan(
-                        new HammerModuleOperation(ModuleTier.LuV, HammerVariant.BIG.name()),
+                        new IModuleOperation.Hammer(ModuleTier.LuV, HammerVariant.BIG.name()),
                         37,
                         Map.of(),
                         false))
@@ -859,7 +857,7 @@ final class FacilityPersistenceManagerTest {
             .get(1);
         module.setOperation(
             ModuleOperationState
-                .waiting(new ModuleOperationPlan(new ModuleTierOperation(ModuleTier.IV), 37, Map.of(), false)));
+                .waiting(new ModuleOperationPlan(new IModuleOperation.Tier(ModuleTier.IV), 37, Map.of(), false)));
 
         NBTTagCompound encoded = facilityTag(station);
         AutomatedFacility decoded = new AutomatedFacility(
@@ -875,7 +873,7 @@ final class FacilityPersistenceManagerTest {
         assertNotNull(decodedOperation);
         assertTrue(
             decodedOperation.plan()
-                .spec() instanceof ModuleTierOperation);
+                .spec() instanceof IModuleOperation.Tier);
         assertEquals(
             ModuleTier.IV,
             decodedOperation.plan()
@@ -1207,7 +1205,7 @@ final class FacilityPersistenceManagerTest {
                 .getTierData(targetTier)
                 .constructionCost());
         return new ModuleOperationPlan(
-            new HammerModuleOperation(targetTier, targetVariant.name()),
+            new IModuleOperation.Hammer(targetTier, targetVariant.name()),
             buildTicks,
             cost,
             reserveItems,

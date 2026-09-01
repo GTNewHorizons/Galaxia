@@ -15,7 +15,6 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -181,11 +180,9 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
 
     private ButtonWidget<?> createOptionButton(int slot) {
         return new ButtonWidget<>()
-            .background(
-                DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawOptionButton(x, y, w, h, optionRef(slot), false)))
-            .hoverBackground(
-                DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawOptionButton(x, y, w, h, optionRef(slot), true)))
-            .overlay(DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawOptionLabel(x, y, w, h, optionRef(slot))))
+            .background((ctx, x, y, w, h, ignoredTheme) -> drawOptionButton(x, y, w, h, optionRef(slot), false))
+            .hoverBackground((ctx, x, y, w, h, ignoredTheme) -> drawOptionButton(x, y, w, h, optionRef(slot), true))
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> drawOptionLabel(x, y, w, h, optionRef(slot)))
             .onMousePressed(mouseButton -> {
                 OptionRef ref = optionRef(slot);
                 if (mouseButton != 0 || ref == null

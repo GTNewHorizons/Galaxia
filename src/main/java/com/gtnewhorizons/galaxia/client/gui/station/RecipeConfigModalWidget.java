@@ -1,6 +1,9 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTech5UnofficialNewHorizonsLoaded;
+
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
@@ -29,9 +32,7 @@ import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
-import com.gtnewhorizons.galaxia.client.gui.station.recipe.RecipeInputScreen;
-import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeChance;
+import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeInputScreen;
 import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeMapId;
 import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeMapLayout;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -41,7 +42,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot.Resource;
@@ -322,7 +322,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             .autoUpdateOnChange(false)
             .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
             .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
-            .background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
+            .background((ctx, x, y, w, h, ignoredTheme) -> {
                 if (!canUseRow(rowIndex)) return;
                 com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect.draw(
                     x,
@@ -331,7 +331,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
                     h,
                     EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
                     EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
-            }))
+            })
             .value(new StringValue.Dynamic(() -> fieldText(rowIndex, field), text -> setField(rowIndex, field, text)))
             .setFocusOnGuiOpen(false)
             .setEnabledIf(w -> canUseRow(rowIndex));
@@ -351,7 +351,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private boolean canConfigureRecipes() {
-        return isRecipeListOpen() && !isRecipeRenameOpen() && selectedRecipeModule() != null;
+        return isRecipeListOpen() && !isRecipeRenameOpen() && selectedRecipe() != null;
     }
 
     private boolean canAddRecipe() {
@@ -438,14 +438,14 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private void cycleMode() {
-        if (selectedRecipeModule() == null) return;
+        if (selectedRecipe() == null) return;
         settingsGroupSelector.closeMenu();
         closeRecipeRename();
         editor.cycleMode();
     }
 
     private void cycleNotDoablePolicy() {
-        if (selectedRecipeModule() == null) return;
+        if (selectedRecipe() == null) return;
         settingsGroupSelector.closeMenu();
         closeRecipeRename();
         editor.cycleNotDoablePolicy();
@@ -456,7 +456,8 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         if (module == null) return;
         settingsGroupSelector.closeMenu();
         closeRecipeRename();
-        RecipeInputScreen.open(module, editor::add);
+        if (!isGregTech5UnofficialNewHorizonsLoaded()) return;
+        GTRecipeInputScreen.open(module, editor::add);
     }
 
     private void save() {
@@ -520,7 +521,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             .autoUpdateOnChange(true)
             .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
             .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
-            .background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
+            .background((ctx, x, y, w, h, ignoredTheme) -> {
                 if (selectedBoundTarget == null || !isBoundsOpen()) return;
                 BorderedRect.draw(
                     x,
@@ -529,7 +530,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
                     h,
                     EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
                     EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
-            }))
+            })
             .value(new StringValue.Dynamic(() -> boundAmountInput, text -> boundAmountInput = text == null ? "" : text))
             .setFocusOnGuiOpen(false)
             .setEnabledIf(w -> selectedBoundTarget != null && isBoundsOpen());
@@ -688,7 +689,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             .autoUpdateOnChange(false)
             .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
             .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
-            .background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
+            .background((ctx, x, y, w, h, ignoredTheme) -> {
                 if (!isRecipeRenameOpen()) return;
                 BorderedRect.draw(
                     x,
@@ -697,7 +698,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
                     h,
                     EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
                     EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
-            }))
+            })
             .value(
                 new StringValue.Dynamic(() -> recipeNameInput, input -> recipeNameInput = input == null ? "" : input))
             .setFocusOnGuiOpen(false)
@@ -897,9 +898,8 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private GTRecipeMapLayout detailLayout() {
-        IRecipeModule recipeModule = selectedRecipeModule();
-        GTRecipeMapId mapId = recipeModule != null ? GTRecipeMapId.fromRecipeMapName(recipeModule.getRecipeMapName())
-            : null;
+        FacilityModuleRegistry.Definition.Recipe recipe = selectedRecipe();
+        GTRecipeMapId mapId = recipe != null ? GTRecipeMapId.fromRecipeMapName(recipe.mapName()) : null;
         return GTRecipeMapLayout.fromRecipeMap(GTRecipeMapId.findRecipeMap(mapId));
     }
 
@@ -963,9 +963,9 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         return editor.recipes();
     }
 
-    private @Nullable IRecipeModule selectedRecipeModule() {
+    private @Nullable FacilityModuleRegistry.Definition.Recipe selectedRecipe() {
         ModuleInstance module = selectedModule();
-        return module != null && module.component() instanceof IRecipeModule recipeModule ? recipeModule : null;
+        return module == null ? null : module.recipe();
     }
 
     private @Nullable ModuleInstance selectedModule() {
@@ -1404,7 +1404,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
 
         private @Nullable String chanceText() {
             if (target.side() != BoundSide.OUTPUT) return null;
-            return GTRecipeChance.optionalOutputLabel(resource(target));
+            return optionalOutputLabel(resource(target));
         }
 
         private @Nullable IDrawable slotOverlay() {
@@ -1428,6 +1428,15 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             }
             return null;
         }
+    }
+
+    private static @Nullable String optionalOutputLabel(@Nullable Resource output) {
+        if (output == null || !output.hasChance()) return null;
+        int chance = output.effectiveChance();
+        if (chance >= 10_000) return null;
+        if (chance == 0) return "0%";
+        if (chance % 100 == 0) return chance / 100 + "%";
+        return String.format(Locale.ROOT, "%.2f%%", chance / 100.0D);
     }
 
     private record BoundTarget(BoundSide side, BoundResource resource, int index) {}

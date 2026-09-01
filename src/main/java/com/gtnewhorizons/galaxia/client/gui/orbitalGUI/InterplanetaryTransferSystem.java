@@ -1215,9 +1215,9 @@ public final class InterplanetaryTransferSystem {
                 .widthRel(1f)
                 .heightRel(1f)
                 .background(
-                    DrawableCommand.asDrawable(
-                        (ctx, x, y, w, h) -> Gui
-                            .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_MODAL_BG.getColor())));
+
+                    (ctx, x, y, w, h, ignoredTheme) -> Gui
+                        .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_MODAL_BG.getColor()));
             panel.child(backgroundLayer);
             panel.child(WidgetOutline.create(backgroundLayer, 3, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
 
@@ -1277,7 +1277,7 @@ public final class InterplanetaryTransferSystem {
             panel.child(
                 new PassiveLayer().pos(80, 112)
                     .size(INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT)
-                    .background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
+                    .background((ctx, x, y, w, h, ignoredTheme) -> {
                         BorderedRect.draw(
                             x,
                             y,
@@ -1285,7 +1285,7 @@ public final class InterplanetaryTransferSystem {
                             h,
                             EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
                             EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
-                    })));
+                    }));
 
             panel.child(
                 createButton(
@@ -1431,23 +1431,21 @@ public final class InterplanetaryTransferSystem {
             return new PassiveLayer().pos(CONTENT_X, y)
                 .size(PANEL_WIDTH - CONTENT_X * 2, 1)
                 .background(
-                    DrawableCommand.asDrawable(
-                        (ctx, x, yy, w, h) -> Gui
-                            .drawRect(x, yy, x + w, yy + 1, EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor())));
+
+                    (ctx, x, yy, w, h, ignoredTheme) -> Gui
+                        .drawRect(x, yy, x + w, yy + 1, EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor()));
         }
 
         private ButtonWidget<?> createButton(String label, int backgroundColor, int borderColor, Runnable onClick) {
-            return new ButtonWidget<>()
-                .background(
-                    DrawableCommand.asDrawable(
-                        (ctx, x, y, w, h) -> { BorderedRect.draw(x, y, w, h, backgroundColor, borderColor); }))
+            return new ButtonWidget<>().background(
+
+                (ctx, x, y, w, h, ignoredTheme) -> { BorderedRect.draw(x, y, w, h, backgroundColor, borderColor); })
                 .hoverBackground(
-                    DrawableCommand.asDrawable(
-                        (ctx, x, y, w, h) -> {
-                            BorderedRect
-                                .draw(x, y, w, h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor(), borderColor);
-                        }))
-                .overlay(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
+
+                    (ctx, x, y, w, h, ignoredTheme) -> {
+                        BorderedRect.draw(x, y, w, h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor(), borderColor);
+                    })
+                .overlay((ctx, x, y, w, h, ignoredTheme) -> {
                     net.minecraft.client.gui.FontRenderer fr = net.minecraft.client.Minecraft
                         .getMinecraft().fontRenderer;
                     int textW = fr.getStringWidth(label);
@@ -1456,7 +1454,7 @@ public final class InterplanetaryTransferSystem {
                         x + (w - textW) / 2,
                         y + (h - fr.FONT_HEIGHT) / 2 + 1,
                         EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-                }))
+                })
                 .onMousePressed(btn -> {
                     if (btn != 0) return false;
                     onClick.run();
@@ -1568,9 +1566,9 @@ public final class InterplanetaryTransferSystem {
                 .widthRel(1f)
                 .heightRel(1f)
                 .background(
-                    DrawableCommand.asDrawable(
-                        (ctx, x, y, w, h) -> Gui
-                            .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_TRANSFER_TOOLTIP_BG.getColor())));
+
+                    (ctx, x, y, w, h, ignoredTheme) -> Gui
+                        .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_TRANSFER_TOOLTIP_BG.getColor()));
             rootPanel.child(backgroundLayer);
             rootPanel.child(WidgetOutline.create(backgroundLayer, 3, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
 

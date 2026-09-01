@@ -5,7 +5,7 @@ import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
 import com.gtnewhorizons.galaxia.core.network.AssetCreateRequestPacket;
 import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetStateFramePacket;
-import com.gtnewhorizons.galaxia.core.network.AssetStateResyncRequestPacket;
+import com.gtnewhorizons.galaxia.core.network.AssetStateSync;
 import com.gtnewhorizons.galaxia.core.network.AssetUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.BeamEffectPacket;
 import com.gtnewhorizons.galaxia.core.network.CelestialKnowledgeSyncPacket;
@@ -59,8 +59,8 @@ public final class NetworkManager {
             Side.SERVER);
         GALAXIA_NETWORK.registerMessage(CommitBlueprintAndOrderPacket.Handler.class, CommitBlueprintAndOrderPacket.class, id++,
                 Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(AssetStateResyncRequestPacket.Handler.class,
-            AssetStateResyncRequestPacket.class, id++, Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(AssetStateSync.ResyncRequest.Handler.class,
+            AssetStateSync.ResyncRequest.class, id++, Side.SERVER);
         GALAXIA_NETWORK.registerMessage(FacilityCommandPacket.Handler.class, FacilityCommandPacket.class, id++,
             Side.SERVER);
 

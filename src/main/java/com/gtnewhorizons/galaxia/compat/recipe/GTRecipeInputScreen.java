@@ -45,10 +45,8 @@ import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot.Resource;
@@ -118,9 +116,8 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
     }
 
     public GTRecipeInputScreen() {
-        String mapName = pendingModule != null && pendingModule.component() instanceof IRecipeModule rm
-            ? rm.getRecipeMapName()
-            : null;
+        String mapName = pendingModule != null && pendingModule.recipe() != null ? pendingModule.recipe()
+            .mapName() : null;
         GTRecipeMapId id = GTRecipeMapId.fromRecipeMapName(mapName);
         this.mapId = id != null ? id : GTRecipeMapId.INVALID;
         gregtech.api.recipe.RecipeMap<?> map = GTRecipeMapId.findRecipeMap(this.mapId);
@@ -178,7 +175,7 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
             .disableThemeBackground(true)
             .disableHoverThemeBackground(true);
         ModuleInstance module = pendingModule;
-        if (module == null || !(module.component() instanceof IRecipeModule)) {
+        if (module == null || module.recipe() == null) {
             addFrame(panel, "No recipe module", width, height);
             return panel;
         }
@@ -323,8 +320,7 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
         RecipeSnapshot snapshot = match.snapshot();
         ModuleInstance module = pendingModule;
         Predicate<RecipeSnapshot> onConfirm = pendingOnConfirm;
-        if (snapshot == null || module == null || !(module.component() instanceof IRecipeModule) || onConfirm == null)
-            return;
+        if (snapshot == null || module == null || module.recipe() == null || onConfirm == null) return;
         if (onConfirm.test(snapshot)) cancel();
     }
 
@@ -460,10 +456,10 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
     }
 
     private static ButtonWidget<?> btn(String label, Runnable action) {
-        return new ButtonWidget<>().overlay(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
+        return new ButtonWidget<>().overlay((ctx, x, y, w, h, ignoredTheme) -> {
             FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
             fr.drawString(label, x + (w - fr.getStringWidth(label)) / 2, y + (h - fr.FONT_HEIGHT) / 2 + 1, 0xFF1E2530);
-        }))
+        })
             .onMouseTapped(b -> {
                 if (b == 0) action.run();
                 return true;
@@ -497,8 +493,9 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
         String name = map.unlocalizedName;
         if (name == null || name.isEmpty()) return new String[0];
 
-        if (module != null && module.component() instanceof IRecipeModule recipeModule) {
-            List<String> extra = recipeModule.getAdditionalNeiTransferIdents();
+        if (module != null && module.recipe() != null) {
+            List<String> extra = module.recipe()
+                .additionalNeiTransferIdents();
             if (!extra.isEmpty()) {
                 String[] all = new String[1 + extra.size()];
                 all[0] = name;

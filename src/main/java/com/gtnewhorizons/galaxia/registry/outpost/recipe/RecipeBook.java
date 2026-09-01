@@ -6,9 +6,11 @@ import java.util.Optional;
 import java.util.Random;
 
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 
-public record RecipeBook(List<SavedRecipe> recipes, RecipeSchedulerMode mode, NotDoablePolicy notDoablePolicy) {
+public record RecipeBook(List<SavedRecipe> recipes, RecipeSchedulerMode mode, NotDoablePolicy notDoablePolicy)
+    implements ModuleSettings {
 
     public static final int MAX_RECIPES = 32;
 

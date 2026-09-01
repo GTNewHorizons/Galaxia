@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.util.List;
-import java.util.Random;
 import java.util.UUID;
 
 import net.minecraft.init.Items;
@@ -48,7 +47,7 @@ final class ProductionModuleHelperTest {
         RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
         facility.restoreRecipeScheduleState(module, before);
 
-        execute(facility, module, new Random(0));
+        execute(facility, module);
 
         assertEquals(0L, facility.itemAmount(input));
         assertEquals(1L, facility.itemAmount(output));
@@ -62,7 +61,7 @@ final class ProductionModuleHelperTest {
         RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
         facility.restoreRecipeScheduleState(module, before);
 
-        execute(facility, module, new Random(0));
+        execute(facility, module);
 
         assertEquals(before, facility.recipeScheduleState(module));
     }
@@ -81,7 +80,7 @@ final class ProductionModuleHelperTest {
         RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
         facility.restoreRecipeScheduleState(module, before);
 
-        execute(facility, module, new Random(0));
+        execute(facility, module);
 
         assertEquals(105L, facility.itemAmount(input));
         assertEquals(before, facility.recipeScheduleState(module));
@@ -104,7 +103,7 @@ final class ProductionModuleHelperTest {
         RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
         facility.restoreRecipeScheduleState(module, before);
 
-        execute(facility, module, new Random(0));
+        execute(facility, module);
 
         assertEquals(1L, facility.itemAmount(input));
         assertEquals(5L, facility.itemAmount(output));
@@ -121,14 +120,14 @@ final class ProductionModuleHelperTest {
         RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
         facility.restoreRecipeScheduleState(module, before);
 
-        execute(facility, module, new Random(0));
+        execute(facility, module);
 
         assertEquals(1L, facility.itemAmount(input));
         assertEquals(before, facility.recipeScheduleState(module));
     }
 
-    private static void execute(AutomatedFacility facility, ModuleInstance module, Random random) {
-        ProductionModuleHelper.execute(module, facility, random);
+    private static void execute(AutomatedFacility facility, ModuleInstance module) {
+        ProductionModuleHelper.execute(module, facility);
     }
 
     private static ModuleInstance installBook(AutomatedFacility facility, RecipeBook book) {

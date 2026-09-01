@@ -13,12 +13,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus
 import com.gtnewhorizons.galaxia.registry.outpost.module.BlockingReason;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
@@ -182,20 +179,20 @@ final class ModuleStatusTextRegistry {
     }
 
     private static String operationTargetLine(IModuleOperation spec) {
-        if (spec instanceof HammerModuleOperation hammerSpec) {
+        if (spec instanceof IModuleOperation.Hammer hammerSpec) {
             return "Target: " + hammerSpec.targetVariantKey()
                 + " "
                 + hammerSpec.targetTier()
                     .name();
         }
-        if (spec instanceof MinerFocusOperation minerSpec) {
+        if (spec instanceof IModuleOperation.MinerFocus minerSpec) {
             String line = "Target focus: " + minerSpec.targetFocusTierKey();
             if (minerSpec.targetFocusOreKey() != null) {
                 line += " " + minerSpec.targetFocusOreKey();
             }
             return line;
         }
-        if (spec instanceof ModuleTierOperation tierSpec) {
+        if (spec instanceof IModuleOperation.Tier tierSpec) {
             return "Target tier: " + tierSpec.targetTier()
                 .name();
         }

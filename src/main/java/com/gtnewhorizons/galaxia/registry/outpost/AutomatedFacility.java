@@ -33,7 +33,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegist
 import com.gtnewhorizons.galaxia.registry.outpost.module.BlockingReason;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
@@ -663,9 +662,8 @@ public final class AutomatedFacility extends CelestialAsset {
                     aggregateCost.merge(material.getKey(), material.getValue(), Math::addExact);
                 }
             }
-            if (!aggregateCost.isEmpty()
-                && inventory.tryExchange(new InventoryExchange(Map.copyOf(aggregateCost), Map.of()), itemCapacity())
-                    == FacilityInventory.ExchangeResult.REJECTED) {
+            if (!aggregateCost.isEmpty() && inventory.tryExchange(aggregateCost, Map.of(), itemCapacity())
+                == FacilityInventory.ExchangeResult.REJECTED) {
                 return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INSUFFICIENT_MODULE_MATERIALS);
             }
         }
@@ -882,7 +880,7 @@ public final class AutomatedFacility extends CelestialAsset {
     private void attachModuleWithoutRevision(ModuleInstance module,
         @Nullable ModuleInstance.SettingsBinding settingsPlan) {
         modules.add(module);
-        if (module.component() instanceof IRecipeModule) {
+        if (module.recipe() != null) {
             recipeScheduleStates.put(module.id, RecipeBook.ScheduleState.RESET);
         }
         if (!FacilityModuleRegistry.get(module.kind())
@@ -1083,7 +1081,7 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         modules.add(module);
         if (moduleSettings.supports(module)) moduleSettings.attach(module, null);
-        if (module.component() instanceof IRecipeModule) {
+        if (module.recipe() != null) {
             recipeScheduleStates.put(module.id, RecipeBook.ScheduleState.RESET);
         }
         LOG.debug(
@@ -1170,7 +1168,7 @@ public final class AutomatedFacility extends CelestialAsset {
             throw invalid;
         }
         for (ModuleInstance module : restored) {
-            if (module.component() instanceof IRecipeModule) {
+            if (module.recipe() != null) {
                 recipeScheduleStates.put(module.id, RecipeBook.ScheduleState.RESET);
             }
         }
@@ -1233,7 +1231,7 @@ public final class AutomatedFacility extends CelestialAsset {
     public Map<ModuleInstance.ID, RecipeBook.ScheduleState> recipeScheduleStates() {
         Map<ModuleInstance.ID, RecipeBook.ScheduleState> scheduleStates = new LinkedHashMap<>();
         for (ModuleInstance module : modules) {
-            if (!(module.component() instanceof IRecipeModule)) continue;
+            if (module.recipe() == null) continue;
             scheduleStates.put(module.id, recipeScheduleState(module));
         }
         return Collections.unmodifiableMap(scheduleStates);
@@ -1243,7 +1241,7 @@ public final class AutomatedFacility extends CelestialAsset {
         if (scheduleStates == null) throw new IllegalStateException("Missing facility recipe schedule states");
         Map<ModuleInstance.ID, RecipeBook.ScheduleState> remaining = new LinkedHashMap<>(scheduleStates);
         for (ModuleInstance module : modules) {
-            if (module.component() instanceof IRecipeModule) {
+            if (module.recipe() != null) {
                 restoreRecipeScheduleState(module, remaining.remove(module.id));
             }
         }
@@ -1253,7 +1251,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     private void requireRecipeModule(ModuleInstance module, String action) {
-        if (module == null || !(module.component() instanceof IRecipeModule) || moduleById(module.id) == null) {
+        if (module == null || module.recipe() == null || moduleById(module.id) == null) {
             throw new IllegalStateException(action + " for non-recipe module " + (module == null ? "null" : module.id));
         }
     }
@@ -1282,8 +1280,7 @@ public final class AutomatedFacility extends CelestialAsset {
         ModuleOperationState operation = requireWaitingOperation(module);
         Map<ItemStackWrapper, Long> requested = requireMaterialCost(materialCost);
         if (requested.isEmpty()) return true;
-        if (inventory.tryExchange(new InventoryExchange(Map.copyOf(requested), Map.of()), itemCapacity())
-            == FacilityInventory.ExchangeResult.REJECTED) {
+        if (inventory.tryExchange(requested, Map.of(), itemCapacity()) == FacilityInventory.ExchangeResult.REJECTED) {
             return false;
         }
         Map<String, Long> deposited = new java.util.LinkedHashMap<>();
@@ -1333,7 +1330,7 @@ public final class AutomatedFacility extends CelestialAsset {
             deposited.merge(itemKey, reserved, Long::sum);
         }
         if (!reservedItems.isEmpty()) {
-            if (inventory.tryExchange(new InventoryExchange(Map.copyOf(reservedItems), Map.of()), itemCapacity())
+            if (inventory.tryExchange(reservedItems, Map.of(), itemCapacity())
                 == FacilityInventory.ExchangeResult.REJECTED) {
                 throw new IllegalStateException(
                     "Operation partial reservation became inconsistent for module " + module.id);
@@ -1784,8 +1781,8 @@ public final class AutomatedFacility extends CelestialAsset {
         return applied;
     }
 
-    public boolean tryExchange(InventoryExchange exchange) {
-        FacilityInventory.ExchangeResult result = inventory.tryExchange(exchange, itemCapacity());
+    public boolean tryExchange(Map<? extends InventoryKey, Long> inputs, Map<? extends InventoryKey, Long> outputs) {
+        FacilityInventory.ExchangeResult result = inventory.tryExchange(inputs, outputs, itemCapacity());
         if (result == FacilityInventory.ExchangeResult.REJECTED) return false;
         if (result == FacilityInventory.ExchangeResult.CHANGED) markDirty();
         return true;

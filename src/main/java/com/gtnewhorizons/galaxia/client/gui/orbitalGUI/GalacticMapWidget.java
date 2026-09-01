@@ -150,20 +150,20 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
     }
 
     private ButtonWidget<?> createTopBarButton(Supplier<String> labelSupplier, Runnable onClick) {
-        return new ButtonWidget<>().background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
+        return new ButtonWidget<>().background((ctx, x, y, w, h, ignoredTheme) -> {
             Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor());
             Gui.drawRect(x, y, x + w, y + 1, EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
             Gui.drawRect(x, y + h - 1, x + w, y + h, EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
             Gui.drawRect(x, y, x + 1, y + h, EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
             Gui.drawRect(x + w - 1, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
-        }))
-            .hoverBackground(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
+        })
+            .hoverBackground((ctx, x, y, w, h, ignoredTheme) -> {
                 Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor());
                 Gui.drawRect(x, y, x + w, y + 1, EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
                 Gui.drawRect(x, y + h - 1, x + w, y + h, EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
                 Gui.drawRect(x, y, x + 1, y + h, EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
                 Gui.drawRect(x + w - 1, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
-            }))
+            })
             .overlay(IKey.dynamic(labelSupplier::get))
             .onMousePressed(mb -> {
                 onClick.run();

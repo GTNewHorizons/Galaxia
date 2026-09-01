@@ -105,6 +105,10 @@ public class ModuleInstance implements Buildable {
         return definition.kind();
     }
 
+    public @Nullable FacilityModuleRegistry.Definition.Recipe recipe() {
+        return definition.recipe();
+    }
+
     public Map<ModuleTier, ModuleTierData> allTierData() {
         return definition.tierData();
     }

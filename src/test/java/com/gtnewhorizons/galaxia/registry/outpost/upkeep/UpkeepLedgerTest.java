@@ -158,7 +158,8 @@ final class UpkeepLedgerTest {
             TestTieredModule::new,
             List.<ModulePanelAction>of(),
             false,
-            List.of());
+            List.of(),
+            null);
         ModuleInstance module = new ModuleInstance(
             ModuleInstance.ID.create(),
             definition,
@@ -184,7 +185,8 @@ final class UpkeepLedgerTest {
             TestTieredModule::new,
             List.<ModulePanelAction>of(),
             false,
-            List.of(ModuleAreaEffect.adjacentUpkeepMultiplier(80)));
+            List.of(ModuleAreaEffect.adjacentUpkeepMultiplier(80)),
+            null);
         ModuleInstance module = new ModuleInstance(
             ModuleInstance.ID.create(),
             definition,

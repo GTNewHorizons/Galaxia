@@ -12,7 +12,6 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -175,14 +174,14 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
             .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
             .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
             .background(
-                DrawableCommand.asDrawable(
-                    (ctx, x, y, w, h) -> BorderedRect.draw(
-                        x,
-                        y,
-                        w,
-                        h,
-                        EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                        EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
+
+                (ctx, x, y, w, h, ignoredTheme) -> BorderedRect.draw(
+                    x,
+                    y,
+                    w,
+                    h,
+                    EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()))
             .value(new StringValue.Dynamic(this::thresholdText, this::setThresholdText))
             .setFocusOnGuiOpen(false)
             .setEnabledIf(w -> canUseThresholdField());

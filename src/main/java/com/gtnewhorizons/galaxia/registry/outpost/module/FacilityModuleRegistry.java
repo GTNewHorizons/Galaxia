@@ -16,16 +16,10 @@ import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleAssembler;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleBattery;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleCentrifuge;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleChemicalReactor;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDistillery;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleElectrolyzer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleGeothermalGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMacerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMaintenanceBay;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModulePower;
@@ -38,7 +32,19 @@ public class FacilityModuleRegistry {
 
     public record Definition(FacilityModuleKind kind, Map<ModuleTier, ModuleTierData> tierData,
         BiConsumer<ModuleInstance, CelestialAsset> applyBehavior, Supplier<IModuleComponent> defaultFactory,
-        List<ModulePanelAction> panelActions, boolean settingsGroups, List<ModuleAreaEffect> areaEffects) {
+        List<ModulePanelAction> panelActions, boolean settingsGroups, List<ModuleAreaEffect> areaEffects,
+        Recipe recipe) {
+
+        public record Recipe(String mapName, List<String> additionalNeiTransferIdents) {
+
+            public Recipe {
+                if (mapName == null || mapName.isBlank()) {
+                    throw new IllegalArgumentException("Recipe map name must not be blank");
+                }
+                additionalNeiTransferIdents = List
+                    .copyOf(additionalNeiTransferIdents == null ? List.of() : additionalNeiTransferIdents);
+            }
+        }
 
         public Definition {
             if (tierData == null || tierData.isEmpty()) {
@@ -280,10 +286,7 @@ public class FacilityModuleRegistry {
                         .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
                         .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
-                .configButton()
-                .settingsGroups()
-                .behavior(ModuleMacerator::processRecipe)
-                .factory(ModuleMacerator::new)
+                .recipe("gt.recipe.macerator", "gt.recipe.category.macerator_recycling")
                 .register();
             builder(FacilityModuleKind.CENTRIFUGE)
                 .tiers(
@@ -291,10 +294,7 @@ public class FacilityModuleRegistry {
                         .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
                         .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
-                .configButton()
-                .settingsGroups()
-                .behavior(ModuleCentrifuge::processRecipe)
-                .factory(ModuleCentrifuge::new)
+                .recipe("gt.recipe.centrifuge")
                 .register();
             builder(FacilityModuleKind.ELECTROLYZER)
                 .tiers(
@@ -302,10 +302,7 @@ public class FacilityModuleRegistry {
                         .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
                         .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
-                .configButton()
-                .settingsGroups()
-                .behavior(ModuleElectrolyzer::processRecipe)
-                .factory(ModuleElectrolyzer::new)
+                .recipe("gt.recipe.electrolyzer")
                 .register();
             builder(FacilityModuleKind.CHEMICAL_REACTOR)
                 .tiers(
@@ -313,10 +310,7 @@ public class FacilityModuleRegistry {
                         .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
                         .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
-                .configButton()
-                .settingsGroups()
-                .behavior(ModuleChemicalReactor::processRecipe)
-                .factory(ModuleChemicalReactor::new)
+                .recipe("gt.recipe.chemicalreactor")
                 .register();
             builder(FacilityModuleKind.ASSEMBLER)
                 .tiers(
@@ -324,10 +318,7 @@ public class FacilityModuleRegistry {
                         .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
                         .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
-                .configButton()
-                .settingsGroups()
-                .behavior(ModuleAssembler::processRecipe)
-                .factory(ModuleAssembler::new)
+                .recipe("gt.recipe.assembler")
                 .register();
             builder(FacilityModuleKind.DISTILLERY)
                 .tiers(
@@ -335,10 +326,7 @@ public class FacilityModuleRegistry {
                         .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
                         .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
-                .configButton()
-                .settingsGroups()
-                .behavior(ModuleDistillery::processRecipe)
-                .factory(ModuleDistillery::new)
+                .recipe("gt.recipe.distillery")
                 .register();
         }
     }
@@ -360,13 +348,14 @@ public class FacilityModuleRegistry {
                 defaultFactory,
                 List.of(),
                 false,
-                areaEffects));
+                areaEffects,
+                null));
     }
 
     public static void register(FacilityModuleKind kind, Map<ModuleTier, ModuleTierData> tierData,
         BiConsumer<ModuleInstance, CelestialAsset> tickFunction, Supplier<IModuleComponent> defaultFactory) {
         DEFINITIONS
-            .put(kind, new Definition(kind, tierData, tickFunction, defaultFactory, List.of(), false, List.of()));
+            .put(kind, new Definition(kind, tierData, tickFunction, defaultFactory, List.of(), false, List.of(), null));
     }
 
     public static ModuleDefinitionBuilder builder(FacilityModuleKind kind) {
@@ -520,6 +509,7 @@ public class FacilityModuleRegistry {
         private final java.util.ArrayList<ModulePanelAction> panelActions = new java.util.ArrayList<>();
         private final java.util.ArrayList<ModuleAreaEffect> areaEffects = new java.util.ArrayList<>();
         private boolean settingsGroups;
+        private Definition.Recipe recipe;
 
         private ModuleDefinitionBuilder(FacilityModuleKind kind) {
             if (kind == null) {
@@ -561,6 +551,14 @@ public class FacilityModuleRegistry {
             return this;
         }
 
+        public ModuleDefinitionBuilder recipe(String mapName, String... additionalNeiTransferIdents) {
+            this.recipe = new Definition.Recipe(mapName, List.of(additionalNeiTransferIdents));
+            this.settingsGroups = true;
+            this.behavior = ProductionModuleHelper::execute;
+            this.factory = ProductionModuleHelper::createRuntime;
+            return configButton();
+        }
+
         public ModuleDefinitionBuilder panelAction(ModulePanelAction action) {
             if (action == null) {
                 throw new IllegalArgumentException("action must not be null");
@@ -591,7 +589,7 @@ public class FacilityModuleRegistry {
             }
             DEFINITIONS.put(
                 kind,
-                new Definition(kind, tierData, behavior, factory, panelActions, settingsGroups, areaEffects));
+                new Definition(kind, tierData, behavior, factory, panelActions, settingsGroups, areaEffects, recipe));
         }
     }
 }

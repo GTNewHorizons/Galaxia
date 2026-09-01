@@ -9,9 +9,9 @@ import net.minecraft.nbt.NBTTagString;
 
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
-import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleSettings;
 
 /** Canonical NBT state for module settings. */
 public final class ModuleSettingsState {
@@ -26,8 +26,8 @@ public final class ModuleSettingsState {
             NBTTagList blacklist = new NBTTagList();
             for (String oreKey : miner.blacklistedOreKeys()) blacklist.appendTag(new NBTTagString(oreKey));
             out.setTag("blacklist", blacklist);
-        } else if (settings instanceof RecipeModuleSettings recipes) {
-            out.setTag("book", RecipeBookState.encode(recipes.book()));
+        } else if (settings instanceof RecipeBook recipes) {
+            out.setTag("book", RecipeBookState.encode(recipes));
         } else {
             throw fail(PATH, "unsupported settings " + settings);
         }
@@ -50,7 +50,7 @@ public final class ModuleSettingsState {
             if (!in.tag()
                 .func_150296_c()
                 .equals(Set.of("book"))) throw fail(in.path(), "invalid recipe settings fields");
-            return new RecipeModuleSettings(RecipeBookState.decode(in.compound("book")));
+            return RecipeBookState.decode(in.compound("book"));
         }
         throw fail(in.path(), "unsupported settings kind " + kind);
     }

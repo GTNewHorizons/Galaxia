@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.outpost.recipe;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Random;
 
 import javax.annotation.Nullable;
 
@@ -279,6 +280,13 @@ public record RecipeSnapshot(byte recipeMapOrdinal, int recipeIndex, long conten
 
         public int effectiveChance() {
             return hasChance() ? chance : MAX_CHANCE;
+        }
+
+        public boolean shouldProduce(Random random) {
+            if (!hasChance()) return true;
+            if (chance == 0) return false;
+            if (chance >= MAX_CHANCE) return true;
+            return random.nextInt(MAX_CHANCE) < chance;
         }
 
         public @Nullable ItemStack itemStack() {

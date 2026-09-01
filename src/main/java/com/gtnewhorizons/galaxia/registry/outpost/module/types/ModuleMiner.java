@@ -26,8 +26,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
 
@@ -93,7 +91,7 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
             && Objects.equals(targetOreKey, focusOreKey)) {
             throw new IllegalArgumentException("Miner focus operation target is unchanged");
         }
-        return new MinerFocusOperation(
+        return new IModuleOperation.MinerFocus(
             plan.targetModuleTier(),
             plan.targetFocusTier()
                 .name(),
@@ -253,11 +251,11 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
 
     @Override
     public void applyOperationTarget(IModuleOperation spec, ModuleInstance module) {
-        if (spec instanceof ModuleTierOperation) {
+        if (spec instanceof IModuleOperation.Tier) {
             super.applyOperationTarget(spec, module);
             return;
         }
-        if (!(spec instanceof MinerFocusOperation minerSpec)) {
+        if (!(spec instanceof IModuleOperation.MinerFocus minerSpec)) {
             throw new IllegalStateException(
                 "MINER cannot handle " + spec.getClass()
                     .getSimpleName());

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -28,7 +29,7 @@ import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkClientState;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkState;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
-final class ClientStateLifecycleTest {
+final class CelestialClientStateTest {
 
     private static final UUID TEAM = new UUID(1L, 2L);
     private static final CelestialObjectKey ASTEROID_KEY = CelestialObjectKey
@@ -48,7 +49,7 @@ final class ClientStateLifecycleTest {
     }
 
     @Test
-    void clearAllClearsEveryClientSideSyncStore() {
+    void clearClearsEveryClientSideSyncStore() {
         CelestialAsset asset = CelestialAsset.create(
             CelestialObjectKey.registered(CelestialObjectId.MARS),
             CelestialAsset.Kind.AUTOMATED_OUTPOST,
@@ -73,7 +74,7 @@ final class ClientStateLifecycleTest {
                     new SatelliteNetworkState.Body(CelestialObjectKey.registered(CelestialObjectId.MARS), 10L, 0L)),
                 List.of()));
 
-        ClientStateLifecycle.clearAll();
+        CelestialClient.clear();
 
         assertTrue(
             CelestialAssetStore.CLIENT.allAssetsInternal()

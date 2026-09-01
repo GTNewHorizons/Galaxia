@@ -8,7 +8,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
@@ -171,7 +170,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
     void openRecipeConfig(ModuleInstance.ID moduleId) {
         ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleId);
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
-        if (facility == null || module == null || !(module.component() instanceof IRecipeModule)) return;
+        if (facility == null || module == null || module.recipe() == null) return;
         if (closeIfSame(Kind.RECIPE_CONFIG, module.id)) return;
         overlayCoordinator.closeOthers(this);
         close();
@@ -408,7 +407,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
     }
 
     private void retargetRecipeConfig(ModuleInstance module) {
-        if (!(module.component() instanceof IRecipeModule)) {
+        if (module.recipe() == null) {
             close();
             return;
         }

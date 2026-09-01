@@ -24,10 +24,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
@@ -112,7 +112,7 @@ final class FacilityInventoryContractTest {
         long capacity = facility.itemCapacity();
         facility.insert(input, capacity);
 
-        assertTrue(facility.tryExchange(new InventoryExchange(Map.of(input, 10L), Map.of(output, 10L))));
+        assertTrue(facility.tryExchange(Map.of(input, 10L), Map.of(output, 10L)));
 
         assertEquals(capacity - 10L, facility.itemAmount(input));
         assertEquals(10L, facility.itemAmount(output));
@@ -124,7 +124,7 @@ final class FacilityInventoryContractTest {
         ItemStackWrapper catalyst = ItemStackWrapper.of(new ItemStack(Items.diamond));
         facility.insert(catalyst, 1L);
 
-        assertTrue(facility.tryExchange(new InventoryExchange(Map.of(catalyst, 1L), Map.of(catalyst, 1L))));
+        assertTrue(facility.tryExchange(Map.of(catalyst, 1L), Map.of(catalyst, 1L)));
 
         assertEquals(1L, facility.itemAmount(catalyst));
     }
@@ -141,10 +141,37 @@ final class FacilityInventoryContractTest {
                 .getUnlocalizedName(),
             true);
 
-        assertFalse(facility.tryExchange(new InventoryExchange(Map.of(input, 4L), Map.of(blockedOutput, 2L))));
+        assertFalse(facility.tryExchange(Map.of(input, 4L), Map.of(blockedOutput, 2L)));
 
         assertEquals(4L, facility.itemAmount(input));
         assertEquals(0L, facility.itemAmount(blockedOutput));
+    }
+
+    @Test
+    void invalidExchangeMapsAreRejectedBeforeInventoryCalculation() {
+        AutomatedFacility facility = facility();
+        ItemStackWrapper item = ItemStackWrapper.of(new ItemStack(Items.diamond));
+        Map<InventoryKey, Long> nullKey = new LinkedHashMap<>();
+        nullKey.put(null, 1L);
+        Map<InventoryKey, Long> nullAmount = new LinkedHashMap<>();
+        nullAmount.put(item, null);
+
+        assertThrows(IllegalArgumentException.class, () -> facility.tryExchange(null, Map.of()));
+        assertThrows(IllegalArgumentException.class, () -> facility.tryExchange(Map.of(), null));
+        assertThrows(IllegalArgumentException.class, () -> facility.tryExchange(nullKey, Map.of()));
+        assertThrows(IllegalArgumentException.class, () -> facility.tryExchange(nullAmount, Map.of()));
+        assertThrows(IllegalArgumentException.class, () -> facility.tryExchange(Map.of(item, -1L), Map.of()));
+        assertEquals(0L, facility.itemAmount(item));
+    }
+
+    @Test
+    void zeroExchangeAmountsAreIgnoredBeforeAtomicCalculation() {
+        AutomatedFacility facility = facility();
+        ItemStackWrapper item = ItemStackWrapper.of(new ItemStack(Items.diamond));
+
+        assertFalse(facility.tryExchange(Map.of(item, 0L), Map.of()));
+
+        assertEquals(0L, facility.itemAmount(item));
     }
 
     @Test
@@ -374,7 +401,7 @@ final class FacilityInventoryContractTest {
             ModuleTier.NONE);
         module.setOperation(
             ModuleOperationState.waiting(
-                new ModuleOperationPlan(new ModuleTierOperation(ModuleTier.IV), 1, materialCost, true, false)));
+                new ModuleOperationPlan(new IModuleOperation.Tier(ModuleTier.IV), 1, materialCost, true, false)));
         return module;
     }
 }

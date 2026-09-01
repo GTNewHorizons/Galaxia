@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationModuleCategory;
@@ -41,7 +41,7 @@ final class FacilityModuleRegistryTest {
 
         ModuleTierData tierData = definition.getTierData(ModuleTier.LuV);
         ModuleOperationPlan plan = new ModuleOperationPlan(
-            new HammerModuleOperation(ModuleTier.LuV, "BIG"),
+            new IModuleOperation.Hammer(ModuleTier.LuV, "BIG"),
             tierData.buildTicks(),
             Map.of(),
             false);
@@ -50,7 +50,7 @@ final class FacilityModuleRegistryTest {
             ModuleTier.LuV,
             plan.spec()
                 .targetTier());
-        assertEquals("BIG", ((HammerModuleOperation) plan.spec()).targetVariantKey());
+        assertEquals("BIG", ((IModuleOperation.Hammer) plan.spec()).targetVariantKey());
         assertEquals(200, plan.buildTicks());
         assertFalse(plan.reserveItems());
     }

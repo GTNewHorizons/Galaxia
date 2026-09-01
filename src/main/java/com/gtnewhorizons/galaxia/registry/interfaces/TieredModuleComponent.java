@@ -3,7 +3,6 @@ package com.gtnewhorizons.galaxia.registry.interfaces;
 import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
 
 public abstract class TieredModuleComponent implements IModuleComponent {
@@ -19,12 +18,12 @@ public abstract class TieredModuleComponent implements IModuleComponent {
                 .contains(plan.targetTier())) {
             throw new IllegalArgumentException("Invalid tier operation target");
         }
-        return new ModuleTierOperation(plan.targetTier());
+        return new IModuleOperation.Tier(plan.targetTier());
     }
 
     @Override
     public void applyOperationTarget(IModuleOperation spec, ModuleInstance module) {
-        if (spec instanceof ModuleTierOperation tierSpec) {
+        if (spec instanceof IModuleOperation.Tier tierSpec) {
             module.setTier(tierSpec.targetTier());
             return;
         }

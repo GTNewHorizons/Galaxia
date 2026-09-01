@@ -27,7 +27,6 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.WidgetOutline;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
@@ -135,11 +134,11 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         ModularPanel panel = ModularPanel.defaultPanel("galaxia_station_module_picker", PANEL_WIDTH, PANEL_HEIGHT);
         ParentWidget<?> backgroundLayer = new PassiveBackgroundLayer().pos(0, 0)
             .sizeRel(FULL_REL, FULL_REL)
-            .background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
+            .background((ctx, x, y, w, h, ignoredTheme) -> {
                 net.minecraft.client.gui.Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_MODAL_BG.getColor());
                 net.minecraft.client.gui.Gui
                     .drawRect(x, y, x + w, y + HEADER_HEIGHT, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
-            }));
+            });
         panel.child(backgroundLayer);
         panel.child(WidgetOutline.create(backgroundLayer, 3, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
 
@@ -212,9 +211,8 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     }
 
     private ButtonWidget<?> createMultipleToggle() {
-        return new ButtonWidget<>()
-            .background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawMultipleToggle(x, y, w, h, false)))
-            .hoverBackground(DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawMultipleToggle(x, y, w, h, true)))
+        return new ButtonWidget<>().background((ctx, x, y, w, h, ignoredTheme) -> drawMultipleToggle(x, y, w, h, false))
+            .hoverBackground((ctx, x, y, w, h, ignoredTheme) -> drawMultipleToggle(x, y, w, h, true))
             .onMouseTapped(mouseButton -> {
                 if (mouseButton != 0) return false;
                 pendingMultipleBuild = !pendingMultipleBuild;
@@ -224,26 +222,25 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     }
 
     private ButtonWidget<?> createKindButton(FacilityModuleKind kind) {
-        return new ButtonWidget<>()
-            .background(
-                DrawableCommand.asDrawable(
-                    (ctx, x, y, w, h) -> BorderedRect.draw(
-                        x,
-                        y,
-                        w,
-                        h,
-                        EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                        EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
+        return new ButtonWidget<>().background(
+
+            (ctx, x, y, w, h, ignoredTheme) -> BorderedRect.draw(
+                x,
+                y,
+                w,
+                h,
+                EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+                EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()))
             .hoverBackground(
-                DrawableCommand.asDrawable(
-                    (ctx, x, y, w, h) -> BorderedRect.draw(
-                        x,
-                        y,
-                        w,
-                        h,
-                        EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor(),
-                        EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
-            .overlay(DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawKindButton(kind, x, y, w, h)))
+
+                (ctx, x, y, w, h, ignoredTheme) -> BorderedRect.draw(
+                    x,
+                    y,
+                    w,
+                    h,
+                    EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor(),
+                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()))
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> drawKindButton(kind, x, y, w, h))
             .onMouseTapped(mouseButton -> {
                 if (mouseButton != 0) return false;
                 selectKind(kind);
@@ -410,29 +407,28 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private ButtonWidget<?> createChoiceButton(java.util.function.Supplier<String> labelSupplier,
         java.util.function.BooleanSupplier enabledSupplier, java.util.function.BooleanSupplier selectedSupplier,
         Runnable onClick) {
-        return new ButtonWidget<>()
-            .background(
-                DrawableCommand.asDrawable(
-                    (ctx, x, y, w, h) -> drawChoiceButton(
-                        labelSupplier.get(),
-                        x,
-                        y,
-                        w,
-                        h,
-                        enabledSupplier.getAsBoolean(),
-                        selectedSupplier.getAsBoolean(),
-                        false)))
+        return new ButtonWidget<>().background(
+
+            (ctx, x, y, w, h, ignoredTheme) -> drawChoiceButton(
+                labelSupplier.get(),
+                x,
+                y,
+                w,
+                h,
+                enabledSupplier.getAsBoolean(),
+                selectedSupplier.getAsBoolean(),
+                false))
             .hoverBackground(
-                DrawableCommand.asDrawable(
-                    (ctx, x, y, w, h) -> drawChoiceButton(
-                        labelSupplier.get(),
-                        x,
-                        y,
-                        w,
-                        h,
-                        enabledSupplier.getAsBoolean(),
-                        selectedSupplier.getAsBoolean(),
-                        true)))
+
+                (ctx, x, y, w, h, ignoredTheme) -> drawChoiceButton(
+                    labelSupplier.get(),
+                    x,
+                    y,
+                    w,
+                    h,
+                    enabledSupplier.getAsBoolean(),
+                    selectedSupplier.getAsBoolean(),
+                    true))
             .onMousePressed(mouseButton -> {
                 if (mouseButton != 0 || !enabledSupplier.getAsBoolean()) return false;
                 onClick.run();

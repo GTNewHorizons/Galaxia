@@ -17,7 +17,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureDefinition;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -144,8 +143,8 @@ final class ModuleDetailTextRegistry {
     }
 
     private static void appendRecipeText(Context context, Lines lines) {
-        if (!(context.module()
-            .component() instanceof IRecipeModule)) return;
+        if (context.module()
+            .recipe() == null) return;
         int slots = context.facility()
             .recipeBook(context.module())
             .recipes()

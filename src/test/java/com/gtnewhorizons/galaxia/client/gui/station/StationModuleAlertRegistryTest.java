@@ -138,7 +138,8 @@ final class StationModuleAlertRegistryTest {
             TestTieredModule::new,
             List.<ModulePanelAction>of(),
             false,
-            List.of());
+            List.of(),
+            null);
         ModuleInstance module = new ModuleInstance(
             ModuleInstance.ID.create(),
             definition,

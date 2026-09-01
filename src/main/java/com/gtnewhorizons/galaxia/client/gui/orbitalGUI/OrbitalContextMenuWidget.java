@@ -167,9 +167,9 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
                     .height(height - ROW_HOVER_INSET_Y * 2)
                     .background(IDrawable.EMPTY)
                     .hoverBackground(
-                        DrawableCommand.asDrawable(
-                            (context, x, y, w, h) -> Gui
-                                .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor())))
+
+                        (context, x, y, w, h, ignoredTheme) -> Gui
+                            .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor()))
                     .onMousePressed(mouseButton -> {
                         if (mouseButton != 0) return true;
                         handleAction(body, action);
@@ -274,10 +274,10 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
     }
 
     private IDrawable createMenuBackgroundDrawable() {
-        return DrawableCommand.asDrawable((context, x, y, width, height) -> {
+        return (context, x, y, width, height, ignoredTheme) -> {
             Gui.drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_MODAL_BG.getColor());
             Gui.drawRect(x, y, x + width, y + HEADER_HEIGHT, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
-        });
+        };
     }
 
     public enum ContextMenuActionType {

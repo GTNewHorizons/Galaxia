@@ -35,18 +35,14 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
@@ -284,9 +280,7 @@ public final class AssetState {
         out.setTag("construction", writeConstructionInventory(module.getConstructionInventory()));
         ModuleOperationState operation = module.operationOrNull();
         if (operation != null) out.setTag("operation", writeOperation(operation));
-        RecipeBook.ScheduleState schedule = module.component() instanceof IRecipeModule
-            ? facility.recipeScheduleState(module)
-            : null;
+        RecipeBook.ScheduleState schedule = module.recipe() != null ? facility.recipeScheduleState(module) : null;
         if (schedule != null) {
             NBTTagCompound scheduleTag = new NBTTagCompound();
             scheduleTag.setInteger("cursor", schedule.orderCursor() & 0xFF);
@@ -339,7 +333,7 @@ public final class AssetState {
             module.setOperation(readOperation(kind, id, in.compound("operation")));
         }
         if (tag.hasKey("schedule")) {
-            if (!(module.component() instanceof IRecipeModule)) {
+            if (module.recipe() == null) {
                 throw fail(path + ".schedule", "non-recipe module has schedule state");
             }
             NbtReader schedule = in.compound("schedule");
@@ -484,14 +478,14 @@ public final class AssetState {
         IModuleOperation spec = plan.spec();
         if (spec == IModuleOperation.DECONSTRUCTION) {
             out.setString("type", "DECONSTRUCTION");
-        } else if (spec instanceof HammerModuleOperation hammer) {
+        } else if (spec instanceof IModuleOperation.Hammer hammer) {
             out.setString("type", "HAMMER");
             out.setString(
                 "targetTier",
                 hammer.targetTier()
                     .name());
             out.setString("variant", hammer.targetVariantKey());
-        } else if (spec instanceof MinerFocusOperation miner) {
+        } else if (spec instanceof IModuleOperation.MinerFocus miner) {
             out.setString("type", "MINER_FOCUS");
             out.setString(
                 "targetTier",
@@ -499,7 +493,7 @@ public final class AssetState {
                     .name());
             out.setString("focusTier", miner.targetFocusTierKey());
             if (miner.targetFocusOreKey() != null) out.setString("focusOre", miner.targetFocusOreKey());
-        } else if (spec instanceof ModuleTierOperation tier) {
+        } else if (spec instanceof IModuleOperation.Tier tier) {
             out.setString("type", "MODULE_TIER");
             out.setString(
                 "targetTier",
@@ -536,18 +530,18 @@ public final class AssetState {
             case "DECONSTRUCTION" -> spec = IModuleOperation.DECONSTRUCTION;
             case "HAMMER" -> {
                 if (moduleKind != FacilityModuleKind.HAMMER) throw fail(path, "hammer operation on " + moduleKind);
-                spec = new HammerModuleOperation(
+                spec = new IModuleOperation.Hammer(
                     in.enumValue(ModuleTier.class, "targetTier"),
                     in.nonBlankString("variant"));
             }
             case "MINER_FOCUS" -> {
                 if (moduleKind != FacilityModuleKind.MINER) throw fail(path, "miner focus operation on " + moduleKind);
-                spec = new MinerFocusOperation(
+                spec = new IModuleOperation.MinerFocus(
                     in.enumValue(ModuleTier.class, "targetTier"),
                     in.nonBlankString("focusTier"),
                     tag.hasKey("focusOre") ? in.string("focusOre") : null);
             }
-            case "MODULE_TIER" -> spec = new ModuleTierOperation(in.enumValue(ModuleTier.class, "targetTier"));
+            case "MODULE_TIER" -> spec = new IModuleOperation.Tier(in.enumValue(ModuleTier.class, "targetTier"));
             default -> throw fail(path + ".type", "unknown operation type " + type);
         }
         try {

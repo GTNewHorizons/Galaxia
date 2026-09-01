@@ -9,7 +9,6 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -28,9 +27,9 @@ final class StationCopyModuleMapButton extends ButtonWidget<StationCopyModuleMap
         this.assetId = assetId;
         this.map = map;
         this.tilePickerController = tilePickerController;
-        background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawButton(x, y, w, h, false)));
-        hoverBackground(DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawButton(x, y, w, h, true)));
-        overlay(DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawLabel(x, y, w, h)));
+        background((ctx, x, y, w, h, ignoredTheme) -> drawButton(x, y, w, h, false));
+        hoverBackground((ctx, x, y, w, h, ignoredTheme) -> drawButton(x, y, w, h, true));
+        overlay((ctx, x, y, w, h, ignoredTheme) -> drawLabel(x, y, w, h));
         onMousePressed(mouseButton -> {
             if (mouseButton != 0) return false;
             ModuleInstance source = source();

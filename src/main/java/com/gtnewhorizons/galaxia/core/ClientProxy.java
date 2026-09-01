@@ -7,6 +7,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.MinecraftForgeClient;
 
+import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.GalaxiaKeyBinds;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryItemRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryPlacementPreviewHandler;
@@ -19,7 +20,6 @@ import com.gtnewhorizons.galaxia.client.render.sky.GalaxiaSkyBootstrap;
 import com.gtnewhorizons.galaxia.core.config.ConfigMain;
 import com.gtnewhorizons.galaxia.core.nei.GalaxiaMultiblockHandler;
 import com.gtnewhorizons.galaxia.core.nei.IMCForNEI;
-import com.gtnewhorizons.galaxia.core.network.ClientStateLifecycle;
 import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
 import com.gtnewhorizons.galaxia.handlers.KeyHandler;
 import com.gtnewhorizons.galaxia.handlers.SkyUpdateHandler;
@@ -50,7 +50,7 @@ public class ClientProxy extends CommonProxy {
         super.preInit(event);
         ConfigMain.RegisterGalaxiaConfig();
         ForgeBusRegister(new ItemKineticTether.ClientEventHandler());
-        ClientStateLifecycle.EventHandler clientStateLifecycle = new ClientStateLifecycle.EventHandler();
+        CelestialClient.EventHandler clientStateLifecycle = new CelestialClient.EventHandler();
         ForgeBusRegister(clientStateLifecycle);
         FMLBusRegister(clientStateLifecycle);
         FMLBusRegister(new KeyHandler());

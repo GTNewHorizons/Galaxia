@@ -19,7 +19,6 @@ import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -355,9 +354,8 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
     }
 
     private static com.cleanroommc.modularui.api.drawable.IDrawable background(int color) {
-        return DrawableCommand.asDrawable(
-            (ctx, x, y, w, h) -> BorderedRect
-                .draw(x, y, w, h, color, EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()));
+        return (ctx, x, y, w, h, ignoredTheme) -> BorderedRect
+            .draw(x, y, w, h, color, EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
     }
 
     private record GroupOption(SettingsGroup.ID groupId, boolean create) {}

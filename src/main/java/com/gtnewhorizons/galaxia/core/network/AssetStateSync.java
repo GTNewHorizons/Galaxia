@@ -18,12 +18,16 @@ import net.minecraft.server.MinecraftServer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.state.AssetState;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 
+import cpw.mods.fml.common.network.simpleimpl.IMessage;
+import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
+import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
@@ -34,9 +38,42 @@ public final class AssetStateSync {
 
     public static final Server SERVER = new Server(new ForgeServerTransport());
     public static final Client CLIENT = new Client(
-        assetId -> Galaxia.GALAXIA_NETWORK.sendToServer(new AssetStateResyncRequestPacket(assetId)));
+        assetId -> Galaxia.GALAXIA_NETWORK.sendToServer(new ResyncRequest(assetId)));
 
     private AssetStateSync() {}
+
+    public static final class ResyncRequest implements IMessage {
+
+        private CelestialAsset.ID assetId;
+
+        public ResyncRequest() {}
+
+        ResyncRequest(CelestialAsset.ID assetId) {
+            this.assetId = assetId;
+        }
+
+        @Override
+        public void toBytes(ByteBuf buf) {
+            PacketUtil.writeId(buf, assetId);
+        }
+
+        @Override
+        public void fromBytes(ByteBuf buf) {
+            assetId = PacketUtil.readAssetId(buf);
+        }
+
+        public static final class Handler implements IMessageHandler<ResyncRequest, IMessage> {
+
+            @Override
+            public IMessage onMessage(ResyncRequest message, MessageContext ctx) {
+                EntityPlayerMP player = ctx.getServerHandler().playerEntity;
+                if (player != null && message.assetId != null) {
+                    ServerTickTaskQueue.schedule(() -> SERVER.publishFullTo(player.getUniqueID(), message.assetId));
+                }
+                return null;
+            }
+        }
+    }
 
     public static final class Server {
 
@@ -281,7 +318,7 @@ public final class AssetStateSync {
         private void apply(AssetSyncPacket packet) {
             switch (packet.syncType()) {
                 case AssetSyncPacket.CLEAR -> {
-                    ClientStateLifecycle.clearAll();
+                    CelestialClient.clear();
                     clear();
                 }
                 case AssetSyncPacket.ASSET_REMOVED -> applyRemoval(packet);

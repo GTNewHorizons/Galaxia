@@ -21,7 +21,6 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -63,14 +62,14 @@ final class ModuleConfigModalSupport {
     }
 
     static ButtonWidget<?> button(BooleanSupplier enabledSupplier, Supplier<String> labelSupplier, Runnable onClick) {
-        return new ButtonWidget<>()
-            .background(
-                DrawableCommand.asDrawable(
-                    (ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false)))
+        return new ButtonWidget<>().background(
+
+            (ctx, x, y, w, h, ignoredTheme) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false))
             .hoverBackground(
-                DrawableCommand.asDrawable(
-                    (ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true)))
-            .overlay(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
+
+                (ctx, x, y, w, h,
+                    ignoredTheme) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true))
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> {
                 if (!enabledSupplier.getAsBoolean()) return;
                 FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
                 String label = labelSupplier.get();
@@ -81,7 +80,7 @@ final class ModuleConfigModalSupport {
                     x + (w - textW) / 2,
                     y + (h - fr.FONT_HEIGHT) / 2 + 1,
                     EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
-            }))
+            })
             .onMousePressed(mouseButton -> {
                 if (mouseButton != 0 || !enabledSupplier.getAsBoolean()) return false;
                 onClick.run();
@@ -92,14 +91,14 @@ final class ModuleConfigModalSupport {
 
     static ButtonWidget<?> checkbox(BooleanSupplier enabledSupplier, BooleanSupplier checkedSupplier, String tooltip,
         Runnable onClick) {
-        return new ButtonWidget<>()
-            .background(
-                DrawableCommand.asDrawable(
-                    (ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false)))
+        return new ButtonWidget<>().background(
+
+            (ctx, x, y, w, h, ignoredTheme) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false))
             .hoverBackground(
-                DrawableCommand.asDrawable(
-                    (ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true)))
-            .overlay(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
+
+                (ctx, x, y, w, h,
+                    ignoredTheme) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true))
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> {
                 if (!enabledSupplier.getAsBoolean() || !checkedSupplier.getAsBoolean()) return;
                 FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
                 int textW = fr.getStringWidth("X");
@@ -108,7 +107,7 @@ final class ModuleConfigModalSupport {
                     x + (w - textW) / 2,
                     y + (h - fr.FONT_HEIGHT) / 2 + 1,
                     EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
-            }))
+            })
             .onMousePressed(mouseButton -> {
                 if (mouseButton != 0 || !enabledSupplier.getAsBoolean()) return false;
                 onClick.run();
@@ -134,17 +133,17 @@ final class ModuleConfigModalSupport {
 
     static ButtonWidget<?> iconButton(BooleanSupplier enabledSupplier, ItemStack icon, String tooltip,
         Runnable onClick) {
-        return new ButtonWidget<>()
-            .background(
-                DrawableCommand.asDrawable(
-                    (ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false)))
+        return new ButtonWidget<>().background(
+
+            (ctx, x, y, w, h, ignoredTheme) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false))
             .hoverBackground(
-                DrawableCommand.asDrawable(
-                    (ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true)))
-            .overlay(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
+
+                (ctx, x, y, w, h,
+                    ignoredTheme) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true))
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> {
                 if (!enabledSupplier.getAsBoolean() || icon == null) return;
                 renderItemIcon(icon, x + (w - 16) / 2, y + (h - 16) / 2);
-            }))
+            })
             .onMousePressed(mouseButton -> {
                 if (mouseButton != 0 || !enabledSupplier.getAsBoolean()) return false;
                 onClick.run();
@@ -157,17 +156,17 @@ final class ModuleConfigModalSupport {
 
     static ButtonWidget<?> textureIconButton(BooleanSupplier enabledSupplier, ResourceLocation icon, String tooltip,
         Runnable onClick) {
-        return new ButtonWidget<>()
-            .background(
-                DrawableCommand.asDrawable(
-                    (ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false)))
+        return new ButtonWidget<>().background(
+
+            (ctx, x, y, w, h, ignoredTheme) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false))
             .hoverBackground(
-                DrawableCommand.asDrawable(
-                    (ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true)))
-            .overlay(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
+
+                (ctx, x, y, w, h,
+                    ignoredTheme) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true))
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> {
                 if (!enabledSupplier.getAsBoolean() || icon == null) return;
                 renderTextureIcon(icon, x + (w - 12) / 2, y + (h - 12) / 2, 12, 12);
-            }))
+            })
             .onMousePressed(mouseButton -> {
                 if (mouseButton != 0 || !enabledSupplier.getAsBoolean()) return false;
                 onClick.run();

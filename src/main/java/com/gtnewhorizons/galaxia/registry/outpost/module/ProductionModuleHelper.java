@@ -5,11 +5,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeChance;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
+import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
-import com.gtnewhorizons.galaxia.registry.outpost.InventoryExchange;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
@@ -20,10 +20,18 @@ public final class ProductionModuleHelper {
 
     private ProductionModuleHelper() {}
 
-    public static void execute(ModuleInstance instance, CelestialAsset asset, Random random) {
+    static IModuleComponent createRuntime() {
+        return new RecipeRuntime();
+    }
+
+    public static void execute(ModuleInstance instance, CelestialAsset asset) {
         if (!(asset instanceof AutomatedFacility outpost)) {
             throw new IllegalStateException("This method should only be called by AutomatedFacilities");
         }
+        if (!(instance.component() instanceof RecipeRuntime runtime)) {
+            throw new IllegalStateException("Recipe module has invalid runtime component");
+        }
+        Random random = runtime.random;
         RecipeBook book = outpost.recipeBook(instance);
         RecipeBook.ScheduleState scheduleState = outpost.recipeScheduleState(instance);
         RecipeBook.Selection selection = book.select(scheduleState, random)
@@ -38,7 +46,7 @@ public final class ProductionModuleHelper {
 
         Map<InventoryKey, Long> selectedOutputs = selectedOutputs(recipe.itemOutputs(), recipe.fluidOutputs(), random);
         if (!allowsOutputs(outpost, selectedOutputs)) return;
-        if (!outpost.tryExchange(new InventoryExchange(requiredInputs, selectedOutputs))) return;
+        if (!outpost.tryExchange(requiredInputs, selectedOutputs)) return;
 
         outpost.installRecipeScheduleState(instance, book.advanceAfterSuccess(scheduleState, selection));
     }
@@ -64,7 +72,7 @@ public final class ProductionModuleHelper {
 
     private static void mergeSelected(Map<InventoryKey, Long> totals, List<Resource> resources, Random random) {
         for (Resource resource : resources) {
-            if (GTRecipeChance.shouldProduce(resource, random)) {
+            if (resource.shouldProduce(random)) {
                 totals.merge(resource.key(), resource.amount(), Long::sum);
             }
         }
@@ -97,5 +105,21 @@ public final class ProductionModuleHelper {
             if (outpost.amount(output.key()) < requestAmount) return true;
         }
         return false;
+    }
+
+    private static final class RecipeRuntime extends TieredModuleComponent implements IParallelModule {
+
+        private byte parallel = 1;
+        private final Random random = new Random();
+
+        @Override
+        public byte getParallel() {
+            return parallel;
+        }
+
+        @Override
+        public void setParallel(byte parallel) {
+            this.parallel = parallel;
+        }
     }
 }

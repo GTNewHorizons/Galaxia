@@ -12,10 +12,12 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import net.minecraftforge.event.world.WorldEvent;
+
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
-import com.gtnewhorizons.galaxia.core.network.ClientStateLifecycle;
+import com.gtnewhorizons.galaxia.core.network.AssetStateSync;
 import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.core.profiling.HammerTrajectoryLoadSample;
@@ -56,7 +58,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkClientState;
 
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
+import cpw.mods.fml.common.gameevent.TickEvent;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
@@ -113,8 +118,14 @@ public final class CelestialClient {
         CelestialAssetStore.CLIENT.registerAssetInternal(GTTeamsCompat.getTeam(), state);
     }
 
+    @SideOnly(Side.CLIENT)
     public static void clear() {
-        ClientStateLifecycle.clearAll();
+        clearLocalState();
+        AssetStateSync.CLIENT.clear();
+        CelestialAssetStore.CLIENT.clearInternal();
+        CelestialKnowledgeClientState.clear();
+        CelestialDiscoveryClientState.clear();
+        SatelliteNetworkClientState.clear();
     }
 
     public static void clearLocalState() {
@@ -125,6 +136,22 @@ public final class CelestialClient {
         asteroidProjections.clear();
         childrenCache.clear();
         hammerTrajectoryLoadSample = new HammerTrajectoryLoadSample(0.0, 0.0);
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static final class EventHandler {
+
+        @SubscribeEvent
+        public void onClientWorldLoad(WorldEvent.Load event) {
+            if (event.world.isRemote) {
+                clear();
+            }
+        }
+
+        @SubscribeEvent
+        public void onClientTick(TickEvent.ClientTickEvent event) {
+            if (event.phase == TickEvent.Phase.END) AssetStateSync.CLIENT.tick();
+        }
     }
 
     public static void createModules(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled,

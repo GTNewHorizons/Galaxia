@@ -4,15 +4,18 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.EnumSet;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleAssembler;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleCentrifuge;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleChemicalReactor;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDistillery;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleElectrolyzer;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class ModuleProductionTest {
+
+    @BeforeAll
+    static void initRegistry() {
+        GalaxiaTestBootstrap.ensureFacilityModules();
+    }
 
     // ---------- allowedTiers / defaultTier ----------
 
@@ -44,67 +47,22 @@ final class ModuleProductionTest {
         assertFalse(FacilityModuleKind.DISTILLERY.isCapacityModule());
     }
 
-    // ---------- Construction ----------
-
     @Test
-    void centrifugeConstruction() {
-        ModuleCentrifuge m = new ModuleCentrifuge();
-        assertEquals((byte) 1, m.getParallel());
+    void recipeDefinitionsOwnMapMetadataAndSharedRuntime() {
+        assertRecipe(FacilityModuleKind.CENTRIFUGE, "gt.recipe.centrifuge");
+        assertRecipe(FacilityModuleKind.ELECTROLYZER, "gt.recipe.electrolyzer");
+        assertRecipe(FacilityModuleKind.CHEMICAL_REACTOR, "gt.recipe.chemicalreactor");
+        assertRecipe(FacilityModuleKind.ASSEMBLER, "gt.recipe.assembler");
+        assertRecipe(FacilityModuleKind.DISTILLERY, "gt.recipe.distillery");
     }
 
-    @Test
-    void electrolyzerConstruction() {
-        ModuleElectrolyzer m = new ModuleElectrolyzer();
-        assertEquals((byte) 1, m.getParallel());
-    }
-
-    @Test
-    void chemicalReactorConstruction() {
-        ModuleChemicalReactor m = new ModuleChemicalReactor();
-        assertEquals((byte) 1, m.getParallel());
-    }
-
-    @Test
-    void assemblerConstruction() {
-        ModuleAssembler m = new ModuleAssembler();
-        assertEquals((byte) 1, m.getParallel());
-    }
-
-    @Test
-    void distilleryConstruction() {
-        ModuleDistillery m = new ModuleDistillery();
-        assertEquals((byte) 1, m.getParallel());
-    }
-
-    // ---------- getRecipeMapName ----------
-
-    @Test
-    void getRecipeMapName_centrifuge() {
-        ModuleCentrifuge m = new ModuleCentrifuge();
-        assertEquals("gt.recipe.centrifuge", m.getRecipeMapName());
-    }
-
-    @Test
-    void getRecipeMapName_electrolyzer() {
-        ModuleElectrolyzer m = new ModuleElectrolyzer();
-        assertEquals("gt.recipe.electrolyzer", m.getRecipeMapName());
-    }
-
-    @Test
-    void getRecipeMapName_chemicalReactor() {
-        ModuleChemicalReactor m = new ModuleChemicalReactor();
-        assertEquals("gt.recipe.chemicalreactor", m.getRecipeMapName());
-    }
-
-    @Test
-    void getRecipeMapName_assembler() {
-        ModuleAssembler m = new ModuleAssembler();
-        assertEquals("gt.recipe.assembler", m.getRecipeMapName());
-    }
-
-    @Test
-    void getRecipeMapName_distillery() {
-        ModuleDistillery m = new ModuleDistillery();
-        assertEquals("gt.recipe.distillery", m.getRecipeMapName());
+    private static void assertRecipe(FacilityModuleKind kind, String mapName) {
+        ModuleInstance instance = FacilityModuleRegistry
+            .create(ModuleInstance.ID.create(), kind, null, ModuleShape.SINGLE, ModuleTier.HV);
+        assertEquals(
+            mapName,
+            instance.recipe()
+                .mapName());
+        assertEquals((byte) 1, ((IParallelModule) instance.component()).getParallel());
     }
 }

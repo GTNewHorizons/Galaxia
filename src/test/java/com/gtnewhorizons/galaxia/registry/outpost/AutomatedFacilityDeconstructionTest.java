@@ -21,9 +21,9 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
@@ -77,7 +77,11 @@ final class AutomatedFacilityDeconstructionTest {
     void activeOperationRejectionPreservesOperationState() {
         AutomatedFacility facility = facility();
         ModuleInstance module = addModule(facility, FacilityModuleKind.POWER, StationTileCoord.of(1, 0));
-        ModuleOperationPlan plan = new ModuleOperationPlan(new ModuleTierOperation(ModuleTier.HV), 20, Map.of(), true);
+        ModuleOperationPlan plan = new ModuleOperationPlan(
+            new IModuleOperation.Tier(ModuleTier.HV),
+            20,
+            Map.of(),
+            true);
         ModuleOperationState operation = ModuleOperationState.restore(
             plan,
             com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase.REFUNDING,

@@ -10,11 +10,9 @@ import java.util.Set;
 import javax.annotation.Nullable;
 
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
-import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 
 final class FacilityModuleSettings {
@@ -156,12 +154,12 @@ final class FacilityModuleSettings {
     RecipeBook.Owner recipeBookOwner(ModuleInstance.ID moduleId) {
         ModuleInstance module = requireModule(moduleId);
         if (module.settingsBinding() instanceof ModuleInstance.SettingsBinding.Private privateBinding
-            && privateBinding.settings() instanceof RecipeModuleSettings) {
+            && privateBinding.settings() instanceof RecipeBook) {
             return new RecipeBook.Owner.Private(moduleId);
         }
         SettingsGroup.ID groupId = sharedGroupId(module);
         SettingsGroup group = groupId == null ? null : groups.get(groupId);
-        if (group != null && group.settings() instanceof RecipeModuleSettings) {
+        if (group != null && group.settings() instanceof RecipeBook) {
             return new RecipeBook.Owner.Group(groupId);
         }
         throw new IllegalStateException("Module has no recipe-book owner: " + moduleId);
@@ -176,16 +174,16 @@ final class FacilityModuleSettings {
             ModuleInstance module = module(privateOwner.moduleId());
             if (module != null
                 && module.settingsBinding() instanceof ModuleInstance.SettingsBinding.Private privateBinding
-                && privateBinding.settings() instanceof RecipeModuleSettings recipeSettings) {
-                return recipeSettings.book();
+                && privateBinding.settings() instanceof RecipeBook recipeBook) {
+                return recipeBook;
             }
             throw new IllegalStateException("Missing or stale private recipe-book owner: " + privateOwner.moduleId());
         }
         if (owner instanceof RecipeBook.Owner.Group groupOwner) {
             SettingsGroup group = groups.get(groupOwner.groupId());
             if (group != null && !membersOf(groupOwner.groupId()).isEmpty()
-                && group.settings() instanceof RecipeModuleSettings recipeSettings) {
-                return recipeSettings.book();
+                && group.settings() instanceof RecipeBook recipeBook) {
+                return recipeBook;
             }
             throw new IllegalStateException("Missing group recipe-book owner: " + groupOwner.groupId());
         }
@@ -195,16 +193,15 @@ final class FacilityModuleSettings {
     Outcome replaceRecipeBook(RecipeBook.Owner owner, RecipeBook replacement) {
         if (owner == null || replacement == null) throw new IllegalArgumentException("Recipe book update is null");
         recipeBook(owner);
-        RecipeModuleSettings settings = new RecipeModuleSettings(replacement);
         if (owner instanceof RecipeBook.Owner.Private privateOwner) {
             requireModule(privateOwner.moduleId())
-                .setSettingsBinding(new ModuleInstance.SettingsBinding.Private(settings));
+                .setSettingsBinding(new ModuleInstance.SettingsBinding.Private(replacement));
             return Outcome.changed(Set.of(privateOwner.moduleId()));
         }
         RecipeBook.Owner.Group groupOwner = (RecipeBook.Owner.Group) owner;
         SettingsGroup group = requireGroup(groupOwner.groupId());
         Set<ModuleInstance.ID> affected = membersOf(groupOwner.groupId());
-        groups.put(groupOwner.groupId(), group.withSettings(settings));
+        groups.put(groupOwner.groupId(), group.withSettings(replacement));
         return Outcome.changed(affected);
     }
 
@@ -367,14 +364,14 @@ final class FacilityModuleSettings {
     }
 
     private ModuleSettings captureSettings(ModuleInstance module) {
-        if (module.component() instanceof IRecipeModule) return new RecipeModuleSettings(RecipeBook.empty());
+        if (module.recipe() != null) return RecipeBook.empty();
         return module.component()
             .captureModuleSettings(module);
     }
 
     private void validateSettings(ModuleInstance module, ModuleSettings settings) {
-        if (module.component() instanceof IRecipeModule) {
-            if (!(settings instanceof RecipeModuleSettings)) {
+        if (module.recipe() != null) {
+            if (!(settings instanceof RecipeBook)) {
                 throw new IllegalStateException("Recipe module received non-recipe settings for module " + module.id);
             }
             return;
@@ -385,7 +382,7 @@ final class FacilityModuleSettings {
 
     private void applySettings(ModuleInstance module, ModuleSettings settings) {
         validateSettings(module, settings);
-        if (module.component() instanceof IRecipeModule) return;
+        if (module.recipe() != null) return;
         module.component()
             .applyModuleSettings(module, settings);
     }

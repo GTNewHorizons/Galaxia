@@ -21,7 +21,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
@@ -70,7 +69,7 @@ final class RecipeOrderCursorPersistenceTest {
                 .size());
         ModuleInstance loaded = decoded.modules()
             .get(0);
-        assertTrue(loaded.component() instanceof IRecipeModule);
+        assertNotNull(loaded.recipe());
 
         RecipeBook loadedBook = decoded.recipeBook(loaded);
         assertEquals(RecipeSchedulerMode.ORDER, loadedBook.mode(), "ORDER mode must survive");

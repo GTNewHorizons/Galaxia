@@ -13,12 +13,10 @@ import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.ScrollWidget;
 import com.cleanroommc.modularui.widget.scroll.VerticalScrollData;
 import com.gtnewhorizons.galaxia.client.EnumColors;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
@@ -60,7 +58,7 @@ final class StationItemInteractionModalWidget extends ParentWidget<StationItemIn
         this.lines = layoutLines(StationItemInteractionModel.forItem(facility, item));
         this.onClose = onClose;
         size(WIDTH, HEIGHT);
-        overlay(DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawModal(x, y)));
+        overlay((ctx, x, y, w, h, ignoredTheme) -> drawModal(x, y));
         child(
             ModuleConfigModalSupport.iconButton(() -> true, CLOSE_ICON, "Close", onClose)
                 .pos(WIDTH - 24, 4)
@@ -72,7 +70,7 @@ final class StationItemInteractionModalWidget extends ParentWidget<StationItemIn
                     .y() + ROW_HEIGHT);
         scrollData.setScrollSize(contentHeight);
         scrollContent.height(contentHeight)
-            .overlay(DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawContent(x, y)));
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> drawContent(x, y));
         ScrollWidget<?> scroll = new ScrollWidget<>(scrollData).pos(CONTENT_X, CONTENT_Y)
             .size(CONTENT_WIDTH, CONTENT_HEIGHT);
         scroll.child(scrollContent);
@@ -202,7 +200,7 @@ final class StationItemInteractionModalWidget extends ParentWidget<StationItemIn
         if (module == null) return;
         if (module.component() instanceof ModuleHammer) {
             configController.openHammer(module.id);
-        } else if (module.component() instanceof IRecipeModule) {
+        } else if (module.recipe() != null) {
             configController.openRecipeConfig(module.id);
         } else if (module.component() instanceof ModuleMiner) {
             configController.openMinerBlacklist(module.id);

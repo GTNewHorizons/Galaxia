@@ -14,7 +14,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
@@ -96,7 +95,7 @@ final class StationItemInteractionModel {
             boolean consumes = false;
             boolean produces = module.component() instanceof ModuleMiner
                 && contains(ModuleMiner.possibleOutputs(module, facility), item);
-            if (module.component() instanceof IRecipeModule) {
+            if (module.recipe() != null) {
                 for (SavedRecipe saved : facility.recipeBook(module)
                     .recipes()) {
                     if (!saved.enabled()) continue;
