@@ -2,10 +2,10 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -41,7 +41,6 @@ final class CelestialKnowledgeSyncPacketTest {
     @BeforeAll
     static void init() {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
-        CelestialKnowledgeSyncRegistry.resetForTesting();
         runtime = CelestialServerRuntime.create();
     }
 
@@ -57,7 +56,9 @@ final class CelestialKnowledgeSyncPacketTest {
 
     @Test
     void roundTripSyncsRegisteredAndMinorFactsPlusDiscovery() {
+        UUID otherTeam = new UUID(9L, 10L);
         CelestialObjectKey mars = CelestialObjectKey.registered(CelestialObjectId.MARS);
+        CelestialObjectKey moon = CelestialObjectKey.registered(CelestialObjectId.MOON);
         CelestialObjectKey asteroid = CelestialObjectKey
             .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN));
         CelestialKnowledgeService.putFacts(
@@ -65,6 +66,7 @@ final class CelestialKnowledgeSyncPacketTest {
             mars,
             CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.PROFILE));
         CelestialKnowledgeService.putFacts(TEAM, asteroid, CelestialKnowledgeFacts.discoveredUnknown());
+        CelestialKnowledgeService.putFacts(otherTeam, moon, CelestialKnowledgeFacts.discoveredUnknown());
         CelestialDiscoveryScanSnapshot scan = new CelestialDiscoveryScanSnapshot(
             TEAM,
             mars,
@@ -77,8 +79,10 @@ final class CelestialKnowledgeSyncPacketTest {
             40);
         runtime.scans()
             .restore(TEAM, List.of(scan));
+        runtime.scans()
+            .restore(otherTeam, List.of(activePlanetScan(otherTeam, CelestialObjectId.MOON, 20)));
 
-        CelestialKnowledgeSyncPacket packet = CelestialKnowledgeSyncPacket.forTeam(TEAM);
+        CelestialKnowledgeSyncPacket packet = CelestialKnowledgeSyncPacket.forTeam(TEAM, runtime.scans());
         ByteBuf buf = Unpooled.buffer();
         packet.toBytes(buf);
         CelestialKnowledgeSyncPacket read = new CelestialKnowledgeSyncPacket();
@@ -98,44 +102,18 @@ final class CelestialKnowledgeSyncPacketTest {
             CelestialKnowledgeClientState.discoveryView()
                 .discoveryState(asteroid)
                 .orElse(null));
+        assertTrue(
+            CelestialKnowledgeClientState.discoveryView()
+                .discoveryState(moon)
+                .isEmpty());
         assertEquals(List.of(scan), CelestialDiscoveryClientState.snapshots());
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = { -1, 65 })
-    void rejectsMalformedSectionCounts(int count) {
-        ByteBuf buf = Unpooled.buffer();
-        PacketUtil.writeId(buf, TEAM);
-        buf.writeInt(count);
-
-        assertThrows(IllegalStateException.class, () -> new CelestialKnowledgeSyncPacket().fromBytes(buf));
-    }
-
-    @Test
-    void rejectsTooManyLocallyGeneratedSyncSectionsBeforeWriting() {
-        List<CelestialKnowledgeSyncAdapter> originalAdapters = CelestialKnowledgeSyncRegistry.adapters();
-        CelestialKnowledgeSyncRegistry.resetForTesting();
-        try {
-            IntStream.range(0, 65)
-                .mapToObj(index -> emptyAdapter("galaxia:test_" + index))
-                .forEach(CelestialKnowledgeSyncRegistry::register);
-
-            ByteBuf buf = Unpooled.buffer();
-            assertThrows(
-                IllegalStateException.class,
-                () -> CelestialKnowledgeSyncPacket.forTeam(TEAM)
-                    .toBytes(buf));
-            assertEquals(0, buf.writerIndex());
-        } finally {
-            CelestialKnowledgeSyncRegistry.resetForTesting();
-            originalAdapters.forEach(CelestialKnowledgeSyncRegistry::register);
-        }
     }
 
     @ParameterizedTest
     @ValueSource(ints = { -1, 4097 })
     void rejectsMalformedDiscoverySnapshotCounts(int count) {
-        ByteBuf buf = singleSection("galaxia:celestial_discovery");
+        ByteBuf buf = directPayload();
+        buf.writeInt(0);
         buf.writeInt(count);
 
         assertThrows(IllegalStateException.class, () -> new CelestialKnowledgeSyncPacket().fromBytes(buf));
@@ -144,31 +122,46 @@ final class CelestialKnowledgeSyncPacketTest {
     @ParameterizedTest
     @ValueSource(ints = { -1, 65537 })
     void rejectsMalformedKnowledgeEntryCounts(int count) {
-        ByteBuf buf = singleSection("galaxia:celestial_knowledge");
+        ByteBuf buf = directPayload();
         buf.writeInt(count);
 
         assertThrows(IllegalStateException.class, () -> new CelestialKnowledgeSyncPacket().fromBytes(buf));
     }
 
     @Test
-    void unknownSectionIdFailsLoudly() {
-        ByteBuf buf = singleSection("galaxia:asteroid_fields");
+    void encodesKnowledgeAndDiscoveryCountsWithoutPluginEnvelope() {
+        ByteBuf buf = Unpooled.buffer();
+        CelestialKnowledgeSyncPacket.forTeam(TEAM, runtime.scans())
+            .toBytes(buf);
+
+        assertEquals(TEAM, PacketUtil.readId(buf));
+        assertEquals(0, buf.readInt());
+        assertEquals(0, buf.readInt());
+        assertEquals(0, buf.readableBytes());
+    }
+
+    @Test
+    void rejectsDiscoverySnapshotsFromAnotherTeam() {
+        ByteBuf buf = directPayload();
         buf.writeInt(0);
+        buf.writeInt(1);
+        writeScan(buf, activePlanetScan(new UUID(9L, 10L), CelestialObjectId.MARS, 10));
+
         assertThrows(IllegalStateException.class, () -> new CelestialKnowledgeSyncPacket().fromBytes(buf));
     }
 
     @Test
-    void newestServerRuntimeOwnsDiscoverySync() {
+    void syncUsesTheProvidedDiscoveryRuntime() {
         CelestialServerRuntime first = CelestialServerRuntime.create();
         CelestialServerRuntime current = CelestialServerRuntime.create();
-        CelestialDiscoveryScanSnapshot stale = activePlanetScan(CelestialObjectId.MARS, 10);
-        CelestialDiscoveryScanSnapshot expected = activePlanetScan(CelestialObjectId.MOON, 20);
+        CelestialDiscoveryScanSnapshot stale = activePlanetScan(TEAM, CelestialObjectId.MARS, 10);
+        CelestialDiscoveryScanSnapshot expected = activePlanetScan(TEAM, CelestialObjectId.MOON, 20);
         first.scans()
             .restore(TEAM, List.of(stale));
         current.scans()
             .restore(TEAM, List.of(expected));
 
-        CelestialKnowledgeSyncPacket packet = CelestialKnowledgeSyncPacket.forTeam(TEAM);
+        CelestialKnowledgeSyncPacket packet = CelestialKnowledgeSyncPacket.forTeam(TEAM, current.scans());
         ByteBuf buf = Unpooled.buffer();
         packet.toBytes(buf);
         CelestialKnowledgeSyncPacket read = new CelestialKnowledgeSyncPacket();
@@ -181,10 +174,11 @@ final class CelestialKnowledgeSyncPacketTest {
         runtime = current;
     }
 
-    private static CelestialDiscoveryScanSnapshot activePlanetScan(CelestialObjectId id, long elapsedTicks) {
+    private static CelestialDiscoveryScanSnapshot activePlanetScan(UUID teamId, CelestialObjectId id,
+        long elapsedTicks) {
         CelestialObjectKey key = CelestialObjectKey.registered(id);
         return new CelestialDiscoveryScanSnapshot(
-            TEAM,
+            teamId,
             key,
             0.5,
             2,
@@ -195,29 +189,21 @@ final class CelestialKnowledgeSyncPacketTest {
             elapsedTicks);
     }
 
-    private static CelestialKnowledgeSyncAdapter emptyAdapter(String type) {
-        return new CelestialKnowledgeSyncAdapter() {
-
-            @Override
-            public CelestialKnowledgeSyncType type() {
-                return new CelestialKnowledgeSyncType(type);
-            }
-
-            @Override
-            public void write(ByteBuf buf, UUID teamId) {}
-
-            @Override
-            public CelestialKnowledgeSyncPayload read(ByteBuf buf) {
-                return () -> {};
-            }
-        };
+    private static void writeScan(ByteBuf buf, CelestialDiscoveryScanSnapshot scan) {
+        PacketUtil.writeId(buf, scan.teamId());
+        PacketUtil.writeCelestialObjectKey(buf, scan.anchorKey());
+        buf.writeDouble(scan.radius());
+        buf.writeLong(scan.scopeRevision());
+        PacketUtil.writeEnum(buf, scan.capability());
+        PacketUtil.writeEnum(buf, scan.status());
+        PacketUtil.writeCelestialObjectKey(buf, scan.targetKey());
+        PacketUtil.writeEnum(buf, scan.step());
+        buf.writeLong(scan.elapsedTicks());
     }
 
-    private static ByteBuf singleSection(String type) {
+    private static ByteBuf directPayload() {
         ByteBuf buf = Unpooled.buffer();
         PacketUtil.writeId(buf, TEAM);
-        buf.writeInt(1);
-        PacketUtil.writeString(buf, type);
         return buf;
     }
 }

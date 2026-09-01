@@ -108,7 +108,8 @@ public class CelestialEventHandler {
             SatelliteNetworkState satelliteNetwork = satelliteNetworks
                 .computeIfAbsent(playerTeam, team -> SatelliteNetworkService.rebuild(team, orbitalTime));
             Galaxia.GALAXIA_NETWORK.sendTo(new SatelliteNetworkSyncPacket(satelliteNetwork), player);
-            Galaxia.GALAXIA_NETWORK.sendTo(CelestialKnowledgeSyncPacket.forTeam(playerTeam), player);
+            Galaxia.GALAXIA_NETWORK
+                .sendTo(CelestialKnowledgeSyncPacket.forTeam(playerTeam, celestialRuntime.scans()), player);
 
             List<LogisticsDelivery> relevantDeliveries = LogisticStore.activeDeliveries()
                 .stream()
