@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -59,9 +58,6 @@ public final class FacilityPersistenceManager {
     private final CelestialServerRuntime celestialRuntime;
     private final CelestialKnowledgePersistenceAdapter celestialKnowledge;
     private final CelestialDiscoveryPersistenceAdapter celestialDiscovery;
-
-    private static final String INVENTORY_KEY_ITEM_PREFIX = "I";
-    private static final String INVENTORY_KEY_FLUID_PREFIX = "F";
 
     public FacilityPersistenceManager(CelestialServerRuntime celestialRuntime) {
         this.celestialRuntime = celestialRuntime;
@@ -171,16 +167,6 @@ public final class FacilityPersistenceManager {
         LOG.info("[PERSIST] LOAD END: {} asset(s) loaded", decoded.size());
     }
 
-    private static <T extends Enum<T>> T safeValueOf(Class<T> cls, String name) {
-        if (name == null) return null;
-        try {
-            return Enum.valueOf(cls, name);
-        } catch (IllegalArgumentException e) {
-            LOG.warn("[Logistics] Unknown enum value {} for {}", name, cls.getSimpleName());
-            return null;
-        }
-    }
-
     private void saveAssets(File file) {
         NBTTagCompound root = new NBTTagCompound();
         root.setInteger("version", 1);
@@ -240,23 +226,11 @@ public final class FacilityPersistenceManager {
             tj.tofOrbitalOsu = delivery.data.tofOrbitalOsu();
             list.add(tj);
         }
-        writeJson(file, list);
+        AtomicJsonWriter.write(file, gson, list, "logistics tasks");
     }
 
     private static CelestialObjectKeyJson encodeCelestialObjectKey(CelestialObjectKey key) {
         return CelestialObjectKeyJsonCodec.encode(key);
-    }
-
-    private void writeJson(File file, Object value) {
-        File tmp = new File(file.getParent(), file.getName() + ".tmp");
-        try (FileWriter writer = new FileWriter(tmp)) {
-            gson.toJson(value, writer);
-        } catch (IOException e) {
-            LOG.error("[Logistics] Failed to write {}: {}", file, e.getMessage());
-            tmp.delete();
-            return;
-        }
-        replace(file, tmp);
     }
 
     private void writeNbt(File file, NBTTagCompound value) {
