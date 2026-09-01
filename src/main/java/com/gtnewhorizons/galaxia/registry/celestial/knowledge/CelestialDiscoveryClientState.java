@@ -40,12 +40,15 @@ public final class CelestialDiscoveryClientState {
     }
 
     public static void update(List<CelestialDiscoveryScanSnapshot> newSnapshots) {
+        List<CelestialDiscoveryScanSnapshot> updated = List.copyOf(newSnapshots == null ? List.of() : newSnapshots);
+        if (snapshots.equals(updated)) return;
+        snapshots = updated;
         revision++;
-        snapshots = List.copyOf(newSnapshots == null ? List.of() : newSnapshots);
     }
 
     public static void clear() {
-        revision++;
+        if (snapshots.isEmpty()) return;
         snapshots = List.of();
+        revision++;
     }
 }

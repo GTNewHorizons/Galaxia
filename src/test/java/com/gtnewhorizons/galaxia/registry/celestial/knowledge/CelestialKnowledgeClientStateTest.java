@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -66,5 +67,22 @@ final class CelestialKnowledgeClientStateTest {
     void effectiveDiscoveryFallsBackToRegisteredDefault() {
         CelestialObjectKey mars = CelestialObjectKey.registered(CelestialObjectId.MARS);
         assertEquals(DiscoveryState.DISCOVERED, CelestialKnowledgeClientState.effectiveDiscoveryState(mars));
+    }
+
+    @Test
+    void unchangedSyncedKnowledgeDoesNotInvalidateClientViews() {
+        CelestialObjectKey mars = CelestialObjectKey.registered(CelestialObjectId.MARS);
+        Map<CelestialObjectKey, CelestialKnowledgeFacts> facts = Map
+            .of(mars, CelestialKnowledgeFacts.discoveredUnknown());
+        CelestialKnowledgeClientState.apply(facts);
+        CelestialDiscoveryClientState.update(List.of());
+        int knowledgeRevision = CelestialKnowledgeClientState.revision();
+        int discoveryRevision = CelestialDiscoveryClientState.revision();
+
+        CelestialKnowledgeClientState.apply(facts);
+        CelestialDiscoveryClientState.update(List.of());
+
+        assertEquals(knowledgeRevision, CelestialKnowledgeClientState.revision());
+        assertEquals(discoveryRevision, CelestialDiscoveryClientState.revision());
     }
 }

@@ -85,8 +85,6 @@ public class CelestialEventHandler {
 
         HammerTrajectoryLoadTracker.endTick();
 
-        syncSatelliteNetworks(orbitalTime);
-
         syncCooldownTicks--;
         if (syncCooldownTicks > 0) return;
         syncCooldownTicks = 20;
@@ -95,6 +93,7 @@ public class CelestialEventHandler {
             syncHammerTrajectoryLoadDebug();
         }
 
+        Map<UUID, SatelliteNetworkState> satelliteNetworks = new HashMap<>();
         for (EntityPlayerMP player : MinecraftServer.getServer()
             .getConfigurationManager().playerEntityList) {
             if (player == null) continue;
@@ -106,6 +105,11 @@ public class CelestialEventHandler {
                 AssetStateSync.SERVER.resetRecipient(playerId);
             }
 
+            SatelliteNetworkState satelliteNetwork = satelliteNetworks
+                .computeIfAbsent(playerTeam, team -> SatelliteNetworkService.rebuild(team, orbitalTime));
+            Galaxia.GALAXIA_NETWORK.sendTo(new SatelliteNetworkSyncPacket(satelliteNetwork), player);
+            Galaxia.GALAXIA_NETWORK.sendTo(CelestialKnowledgeSyncPacket.forTeam(playerTeam), player);
+
             List<LogisticsDelivery> relevantDeliveries = LogisticStore.activeDeliveries()
                 .stream()
                 .filter(d -> CelestialAssetStore.isOwnedBy(playerTeam, d.data.fromAssetId()))
@@ -115,18 +119,6 @@ public class CelestialEventHandler {
             Galaxia.GALAXIA_NETWORK.sendTo(LogisticsSyncPacket.from(relevantDeliveries, relevantSignals), player);
         }
         AssetStateSync.SERVER.publishPeriodic();
-    }
-
-    private static void syncSatelliteNetworks(double orbitalTime) {
-        for (EntityPlayerMP player : MinecraftServer.getServer()
-            .getConfigurationManager().playerEntityList) {
-            if (player == null) continue;
-            if (TeamEventHandler.playersToClear.contains(player.getUniqueID())) continue;
-            UUID playerTeam = GTTeamsCompat.getTeam(player);
-            SatelliteNetworkState satelliteNetwork = SatelliteNetworkService.rebuild(playerTeam, orbitalTime);
-            Galaxia.GALAXIA_NETWORK.sendTo(new SatelliteNetworkSyncPacket(satelliteNetwork), player);
-            Galaxia.GALAXIA_NETWORK.sendTo(CelestialKnowledgeSyncPacket.forTeam(playerTeam), player);
-        }
     }
 
     private boolean hasCreativeProfilerViewer() {
