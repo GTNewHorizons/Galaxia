@@ -657,3 +657,4 @@ galaxia.gui.common.generating=Generating
 galaxia.gui.common.filling=Filling
 galaxia.gui.common.active=Active
 galaxia.gui.common.idle=Idle
+galaxia.facility.command.rejected=Facility command rejected and logged.

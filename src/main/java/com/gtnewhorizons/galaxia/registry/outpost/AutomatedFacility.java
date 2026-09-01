@@ -20,6 +20,7 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureModuleContext;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.ModuleFeatureModifierBuilder;
@@ -36,6 +37,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleDeconstructionOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
@@ -44,6 +47,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.station.CapacityCluster;
 import com.gtnewhorizons.galaxia.registry.outpost.station.LayoutCacheBundle;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -95,6 +100,7 @@ public final class AutomatedFacility extends CelestialAsset {
     public static final long MAX_ENERGY = 8_000_000L;
     public static final long BASE_ITEM_CAPACITY = 1000L;
     public static final int UPKEEP_INTERVAL_TICKS = 20 * 60;
+    private static final int MAX_BUILD_TARGETS = 256;
 
     public AutomatedFacility(CelestialAsset.ID assetId, CelestialObjectKey celestialBodyKey, Kind kind, Status status) {
         super(assetId, celestialBodyKey, kind, status, null);
@@ -356,9 +362,623 @@ public final class AutomatedFacility extends CelestialAsset {
         return Collections.unmodifiableMap(bounds);
     }
 
-    public void markInventoryBoundDelta(BoundKind kind, InventoryKey resource, boolean present, long amount) {
-        if (kind == null || resource == null) return;
+    public FacilityCommand.Result applyCommand(FacilityCommand command, FacilityCommand.Authority authority) {
+        if (command == null || authority == null) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MALFORMED_COMMAND);
+        }
+        if (!assetId.equals(command.facilityId())) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.FACILITY_ID_MISMATCH);
+        }
+        if (command instanceof FacilityCommand.AdjustInventory adjustInventory) {
+            return applyAdjustInventory(adjustInventory, authority);
+        }
+        if (command instanceof FacilityCommand.ClearInventoryResource clearInventoryResource) {
+            return applyClearInventoryResource(clearInventoryResource);
+        }
+        if (command instanceof FacilityCommand.SetInventoryBound setBound) {
+            return applySetInventoryBound(setBound);
+        }
+        if (command instanceof FacilityCommand.ClearInventoryBound clearBound) {
+            return applyClearInventoryBound(clearBound);
+        }
+        if (command instanceof FacilityCommand.ReplaceFilters replaceFilters) {
+            return applyReplaceFilters(replaceFilters);
+        }
+        if (command instanceof FacilityCommand.PutLogisticsConfig putConfig) {
+            return applyPutLogisticsConfig(putConfig);
+        }
+        if (command instanceof FacilityCommand.RemoveLogisticsConfig removeConfig) {
+            return applyRemoveLogisticsConfig(removeConfig);
+        }
+        FacilityCommand.Result moduleResult = applyModuleCommand(command, authority);
+        return moduleResult != null ? moduleResult
+            : FacilityCommand.Result.rejected(FacilityCommand.Rejection.MALFORMED_COMMAND);
+    }
+
+    private FacilityCommand.Result applyAdjustInventory(FacilityCommand.AdjustInventory command,
+        FacilityCommand.Authority authority) {
+        if (command.resource() == null) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_RESOURCE);
+        }
+        if (command.direction() == null || command.amount() <= 0L) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_INVENTORY_ADJUSTMENT);
+        }
+        if (command.direction() == FacilityCommand.InventoryAdjustment.INSERT && !authority.creativeMode()) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.CREATIVE_MODE_REQUIRED);
+        }
+        long applied = command.direction() == FacilityCommand.InventoryAdjustment.INSERT
+            ? insert(command.resource(), command.amount())
+            : extract(command.resource(), command.amount());
+        return applied == 0L ? FacilityCommand.Result.UNCHANGED : FacilityCommand.Result.CHANGED;
+    }
+
+    private FacilityCommand.Result applyClearInventoryResource(FacilityCommand.ClearInventoryResource command) {
+        if (command.resource() == null) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_RESOURCE);
+        }
+        long stored = inventory.amount(command.resource());
+        if (stored == 0L) return FacilityCommand.Result.UNCHANGED;
+        return extract(command.resource(), stored) == 0L ? FacilityCommand.Result.UNCHANGED
+            : FacilityCommand.Result.CHANGED;
+    }
+
+    private @Nullable FacilityCommand.Result applyModuleCommand(FacilityCommand command,
+        FacilityCommand.Authority authority) {
+        if (command instanceof FacilityCommand.BuildModules buildModules) {
+            return applyModuleBuild(buildModules, null, authority);
+        }
+        if (command instanceof FacilityCommand.CopyBuildModules copyBuildModules) {
+            return applyCopyBuildModules(copyBuildModules, authority);
+        }
+        if (command instanceof FacilityCommand.RequestModuleDeconstruction deconstruct) {
+            return applyRequestModuleDeconstruction(deconstruct);
+        }
+        if (command instanceof FacilityCommand.CancelModuleOperation cancelOperation) {
+            return applyCancelModuleOperation(cancelOperation);
+        }
+        if (command instanceof FacilityCommand.ModuleConfiguration configuration) {
+            return applyModuleConfiguration(configuration, authority);
+        }
+        if (command instanceof FacilityCommand.PlanHammerUpgrade planHammerUpgrade) {
+            return applyPlanHammerUpgrade(planHammerUpgrade, authority);
+        }
+        if (command instanceof FacilityCommand.PlanTierUpgrade planTierUpgrade) {
+            return applyPlanTierUpgrade(planTierUpgrade, authority);
+        }
+        if (command instanceof FacilityCommand.PlanMinerFocusUpgrade planMinerFocusUpgrade) {
+            return applyPlanMinerFocusUpgrade(planMinerFocusUpgrade, authority);
+        }
+        return null;
+    }
+
+    private FacilityCommand.Result applyModuleConfiguration(FacilityCommand.ModuleConfiguration configuration,
+        FacilityCommand.Authority authority) {
+        if (configuration instanceof FacilityCommand.ConfigureDebugDataGenerator && !authority.debugAuthorized()) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.DEBUG_AUTHORIZATION_REQUIRED);
+        }
+        ModuleInstance module = moduleById(configuration.moduleId());
+        if (module == null) return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MODULE_NOT_FOUND);
+        boolean changed;
+        try {
+            changed = module.component()
+                .applyConfigurationTransition(module, configuration);
+        } catch (UnsupportedOperationException invalidComponent) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_MODULE_COMPONENT);
+        } catch (IllegalArgumentException | IllegalStateException invalidConfiguration) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_MODULE_CONFIG);
+        }
+        if (!changed) return FacilityCommand.Result.UNCHANGED;
+        if (configuration instanceof FacilityCommand.ConfigureDebugDataGenerator) {
+            SatelliteNetworkService.refreshFacilityEndpoints(this);
+        }
+        markModuleDirty(module.id);
+        return FacilityCommand.Result.CHANGED;
+    }
+
+    private FacilityCommand.Result applyPlanHammerUpgrade(FacilityCommand.PlanHammerUpgrade command,
+        FacilityCommand.Authority authority) {
+        Map<ModuleInstance, ModuleOperationPlan> plans = new LinkedHashMap<>();
+        FacilityCommand.Rejection targetRejection = resolveUpgradeTargets(command.targetModuleIds(), plans);
+        if (targetRejection != null) return FacilityCommand.Result.rejected(targetRejection);
+        for (ModuleInstance module : plans.keySet()) {
+            FacilityCommand.Rejection rejection = prepareModuleOperationPlan(
+                plans,
+                module,
+                command,
+                command.reserveItems(),
+                command.voidCompletionRefund());
+            if (rejection != null) return FacilityCommand.Result.rejected(rejection);
+        }
+        return commitModuleOperationPlans(plans, authority.creativeMode(), command.reserveItems());
+    }
+
+    private FacilityCommand.Result applyPlanTierUpgrade(FacilityCommand.PlanTierUpgrade command,
+        FacilityCommand.Authority authority) {
+        Map<ModuleInstance, ModuleOperationPlan> plans = new LinkedHashMap<>();
+        FacilityCommand.Rejection targetRejection = resolveUpgradeTargets(command.targetModuleIds(), plans);
+        if (targetRejection != null) return FacilityCommand.Result.rejected(targetRejection);
+        FacilityModuleKind targetKind = plans.keySet()
+            .iterator()
+            .next()
+            .kind();
+        if (plans.keySet()
+            .stream()
+            .anyMatch(module -> module.kind() != targetKind)) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_MODULE_TARGETS);
+        }
+        for (ModuleInstance module : plans.keySet()) {
+            FacilityCommand.Rejection rejection = prepareModuleOperationPlan(
+                plans,
+                module,
+                command,
+                command.reserveItems(),
+                false);
+            if (rejection != null) return FacilityCommand.Result.rejected(rejection);
+        }
+        return commitModuleOperationPlans(plans, authority.creativeMode(), command.reserveItems());
+    }
+
+    private FacilityCommand.Result applyPlanMinerFocusUpgrade(FacilityCommand.PlanMinerFocusUpgrade command,
+        FacilityCommand.Authority authority) {
+        Map<ModuleInstance, ModuleOperationPlan> plans = new LinkedHashMap<>();
+        FacilityCommand.Rejection targetRejection = resolveUpgradeTargets(
+            Collections.singletonList(command.moduleId()),
+            plans);
+        if (targetRejection != null) return FacilityCommand.Result.rejected(targetRejection);
+        ModuleInstance module = plans.keySet()
+            .iterator()
+            .next();
+        FacilityCommand.Rejection rejection = prepareModuleOperationPlan(plans, module, command, false, false);
+        if (rejection != null) return FacilityCommand.Result.rejected(rejection);
+        return commitModuleOperationPlans(plans, authority.creativeMode(), false);
+    }
+
+    private @Nullable FacilityCommand.Rejection prepareModuleOperationPlan(
+        Map<ModuleInstance, ModuleOperationPlan> plans, ModuleInstance module,
+        FacilityCommand.ModuleOperationRequest request, boolean reserveItems, boolean voidCompletionRefund) {
+        try {
+            IModuleOperation operation = module.component()
+                .prepareOperationTarget(module, request);
+            ModuleTier targetTier = operation.targetTier();
+            if (targetTier == null) return FacilityCommand.Rejection.INVALID_MODULE_UPGRADE;
+            plans.put(module, moduleOperationPlan(module, targetTier, operation, reserveItems, voidCompletionRefund));
+            return null;
+        } catch (UnsupportedOperationException invalidComponent) {
+            return FacilityCommand.Rejection.INVALID_MODULE_COMPONENT;
+        } catch (IllegalArgumentException | IllegalStateException invalidUpgrade) {
+            return FacilityCommand.Rejection.INVALID_MODULE_UPGRADE;
+        }
+    }
+
+    private @Nullable FacilityCommand.Rejection resolveUpgradeTargets(List<ModuleInstance.ID> targetIds,
+        Map<ModuleInstance, ModuleOperationPlan> plans) {
+        if (targetIds == null || targetIds.isEmpty() || targetIds.size() > MAX_BUILD_TARGETS) {
+            return FacilityCommand.Rejection.INVALID_MODULE_TARGETS;
+        }
+        Set<ModuleInstance.ID> uniqueIds = new HashSet<>();
+        for (ModuleInstance.ID targetId : targetIds) {
+            if (targetId == null || !uniqueIds.add(targetId)) {
+                return FacilityCommand.Rejection.INVALID_MODULE_TARGETS;
+            }
+            ModuleInstance module = moduleById(targetId);
+            if (module == null) return FacilityCommand.Rejection.MODULE_NOT_FOUND;
+            ModuleOperationState operation = module.operationOrNull();
+            if (operation != null && (!operation.phase()
+                .isTerminal()
+                || !operation.depositedResources()
+                    .isEmpty()
+                || !operation.refundBuffer()
+                    .isEmpty())) {
+                return FacilityCommand.Rejection.MODULE_OPERATION_ACTIVE;
+            }
+            plans.put(module, null);
+        }
+        return null;
+    }
+
+    private ModuleOperationPlan moduleOperationPlan(ModuleInstance module, ModuleTier targetTier,
+        com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation operation, boolean reserveItems,
+        boolean voidCompletionRefund) {
+        ModuleTierData sourceData = FacilityModuleRegistry.get(module.kind())
+            .getTierData(module.tier());
+        ModuleTierData targetData = FacilityModuleRegistry.get(module.kind())
+            .getTierData(targetTier);
+        return new ModuleOperationPlan(
+            operation,
+            sourceData.buildTicks(),
+            FacilityModuleRegistry.operationCost(targetData.constructionCost()),
+            FacilityModuleRegistry.operationCost(sourceData.constructionCost()),
+            sourceData.completionRefundPercent(),
+            reserveItems,
+            voidCompletionRefund);
+    }
+
+    private FacilityCommand.Result commitModuleOperationPlans(Map<ModuleInstance, ModuleOperationPlan> plans,
+        boolean creative, boolean reserveItems) {
+        if (creative) {
+            for (Map.Entry<ModuleInstance, ModuleOperationPlan> entry : plans.entrySet()) {
+                applyOperationTarget(entry.getKey(), entry.getValue());
+                entry.getKey()
+                    .clearOperation();
+            }
+            markStateChanged();
+            return FacilityCommand.Result.CHANGED;
+        }
+
+        if (reserveItems) {
+            Map<ItemStackWrapper, Long> aggregateCost = new LinkedHashMap<>();
+            for (ModuleOperationPlan plan : plans.values()) {
+                for (Map.Entry<ItemStackWrapper, Long> material : plan.materialCost()
+                    .entrySet()) {
+                    aggregateCost.merge(material.getKey(), material.getValue(), Math::addExact);
+                }
+            }
+            if (!aggregateCost.isEmpty() && inventory
+                .tryExchange(new InventoryExchange(aggregateCost, Map.of(), Map.of(), Map.of()), itemCapacity())
+                == FacilityInventory.ExchangeResult.REJECTED) {
+                return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INSUFFICIENT_MODULE_MATERIALS);
+            }
+        }
+
+        for (Map.Entry<ModuleInstance, ModuleOperationPlan> entry : plans.entrySet()) {
+            ModuleOperationState operation = ModuleOperationState.waiting(entry.getValue());
+            if (reserveItems && !entry.getValue()
+                .materialCost()
+                .isEmpty()) {
+                Map<String, Long> deposited = new LinkedHashMap<>();
+                for (Map.Entry<ItemStackWrapper, Long> material : entry.getValue()
+                    .materialCost()
+                    .entrySet()) {
+                    deposited.merge(
+                        material.getKey()
+                            .toKey(),
+                        material.getValue(),
+                        Math::addExact);
+                }
+                operation.withDepositedResources(deposited);
+            }
+            entry.getKey()
+                .setOperation(operation);
+        }
         markStateChanged();
+        return FacilityCommand.Result.CHANGED;
+    }
+
+    private FacilityCommand.Result applySetInventoryBound(FacilityCommand.SetInventoryBound command) {
+        FacilityCommand.Rejection resourceRejection = boundResourceRejection(command.kind(), command.resource());
+        if (resourceRejection != null) return FacilityCommand.Result.rejected(resourceRejection);
+        if (command.amount() < 0L) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_BOUND);
+        }
+        boolean lower = isLowerBound(command.kind());
+        InventoryBounds current = getBound(command.resource());
+        if (isSameBound(current, command.amount(), lower)) {
+            return FacilityCommand.Result.UNCHANGED;
+        }
+        if (!trySetBound(command.resource(), command.amount(), lower)) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_BOUND);
+        }
+        LogisticStore.updateSignalsForFacility(this);
+        markStateChanged();
+        return FacilityCommand.Result.CHANGED;
+    }
+
+    private FacilityCommand.Result applyClearInventoryBound(FacilityCommand.ClearInventoryBound command) {
+        FacilityCommand.Rejection resourceRejection = boundResourceRejection(command.kind(), command.resource());
+        if (resourceRejection != null) return FacilityCommand.Result.rejected(resourceRejection);
+        boolean lower = isLowerBound(command.kind());
+        if (!clearBound(command.resource(), lower)) return FacilityCommand.Result.UNCHANGED;
+        LogisticStore.updateSignalsForFacility(this);
+        markStateChanged();
+        return FacilityCommand.Result.CHANGED;
+    }
+
+    private FacilityCommand.Result applyReplaceFilters(FacilityCommand.ReplaceFilters command) {
+        if (command.kind() == null || command.filterKeys() == null) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_FILTERS);
+        }
+        try {
+            if (!inventory.setFilters(
+                command.filterKeys(),
+                command.kind()
+                    .isItem())) {
+                return FacilityCommand.Result.UNCHANGED;
+            }
+        } catch (IllegalArgumentException invalidFilters) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_FILTERS);
+        }
+        markStateChanged();
+        return FacilityCommand.Result.CHANGED;
+    }
+
+    private FacilityCommand.Result applyPutLogisticsConfig(FacilityCommand.PutLogisticsConfig command) {
+        if (command.resource() == null) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_RESOURCE);
+        }
+        if (command.config() == null || command.accessMode() == null
+            || command.config()
+                .minReserve() < 0
+            || command.config()
+                .orderSize() <= 0) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_LOGISTICS_CONFIG);
+        }
+        LogisticsResourceConfig updated = command.accessMode()
+            .sanitize(command.config());
+        if (logisticsConfig.hasExplicit(command.resource()) && logisticsConfig.get(command.resource())
+            .equals(updated)) {
+            return FacilityCommand.Result.UNCHANGED;
+        }
+        logisticsConfig.set(command.resource(), updated);
+        LogisticStore.updateSignalsForFacility(this);
+        markStateChanged();
+        return FacilityCommand.Result.CHANGED;
+    }
+
+    private FacilityCommand.Result applyRemoveLogisticsConfig(FacilityCommand.RemoveLogisticsConfig command) {
+        if (command.resource() == null) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_RESOURCE);
+        }
+        if (!logisticsConfig.hasExplicit(command.resource())) return FacilityCommand.Result.UNCHANGED;
+        logisticsConfig.reset(command.resource());
+        LogisticStore.updateSignalsForFacility(this);
+        markStateChanged();
+        return FacilityCommand.Result.CHANGED;
+    }
+
+    private FacilityCommand.Result applyCopyBuildModules(FacilityCommand.CopyBuildModules command,
+        FacilityCommand.Authority authority) {
+        ModuleInstance source = moduleById(command.sourceModuleId());
+        if (source == null) return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MODULE_NOT_FOUND);
+        FacilityCommand.BuildModules copiedBuild = new FacilityCommand.BuildModules(
+            command.facilityId(),
+            source.kind(),
+            source.shape(),
+            source.component()
+                .buildPhysicalSpec(source),
+            (short) 0,
+            command.instantBuild(),
+            command.placements());
+        return applyModuleBuild(copiedBuild, source, authority);
+    }
+
+    private FacilityCommand.Result applyModuleBuild(FacilityCommand.BuildModules command,
+        @Nullable ModuleInstance copySource, FacilityCommand.Authority authority) {
+        FacilityModuleKind buildKind = command.kind();
+        ModuleShape buildShape = command.shape();
+        IModuleComponent.BuildPhysicalSpec physicalSpec = command.physicalSpec();
+        List<ModulePlacement> placements = command.placements();
+        if (command.instantBuild() && !authority.debugAuthorized()) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.DEBUG_AUTHORIZATION_REQUIRED);
+        }
+        FacilityCommand.Rejection specRejection = validateModuleBuildSpec(
+            buildKind,
+            buildShape,
+            physicalSpec,
+            authority);
+        if (specRejection != null) return FacilityCommand.Result.rejected(specRejection);
+        if (!validBuildTargets(buildKind, buildShape, placements)) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_MODULE_PLACEMENT);
+        }
+        if (!validInitialSettingsGroup(buildKind, command.settingsGroupId(), copySource)) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_SETTINGS_GROUP);
+        }
+
+        List<ModuleInstance> prepared = new ArrayList<>(placements.size());
+        Map<ModuleInstance.ID, SettingsGroup> sharedSettingsGroups = new LinkedHashMap<>();
+        Map<ModuleInstance.ID, ModuleSettings> privateSettings = new LinkedHashMap<>();
+        boolean shouldInstantBuild = command.instantBuild() && authority.debugAuthorized();
+        for (ModulePlacement placement : placements) {
+            ModuleInstance module;
+            try {
+                module = buildKind.create(placement.anchor(), buildShape, physicalSpec.tier());
+                module.component()
+                    .applyBuildPhysicalSpec(module, physicalSpec);
+            } catch (IllegalArgumentException | IllegalStateException invalidModule) {
+                return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_MODULE_SPEC);
+            }
+            module.setRotation(placement.rotation());
+            if (!prepareModuleSettings(
+                module,
+                copySource,
+                command.settingsGroupId(),
+                sharedSettingsGroups,
+                privateSettings)) {
+                return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_SETTINGS_GROUP);
+            }
+            if (shouldInstantBuild) module.completeConstruction();
+            prepared.add(module);
+        }
+        if (!hasSettingsGroupCapacity(privateSettings.size())) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_SETTINGS_GROUP);
+        }
+
+        for (ModuleInstance module : prepared) {
+            attachModuleWithoutRevision(module, sharedSettingsGroups.get(module.id), privateSettings.get(module.id));
+            layout.place(module);
+            layoutCache.applyMutation(MutationKind.PLACE, module.kind(), module);
+        }
+        bumpStateRevision();
+        markDirty();
+        SatelliteNetworkService.refreshFacilityEndpoints(this);
+        return FacilityCommand.Result.CHANGED;
+    }
+
+    private FacilityCommand.Rejection validateModuleBuildSpec(FacilityModuleKind buildKind, ModuleShape buildShape,
+        IModuleComponent.BuildPhysicalSpec physicalSpec, FacilityCommand.Authority authority) {
+        if (buildKind == null || buildShape == null || physicalSpec == null || physicalSpec.tier() == null) {
+            return FacilityCommand.Rejection.INVALID_MODULE_SPEC;
+        }
+        if (buildKind.isDebugOnly() && !authority.debugAuthorized()) {
+            return FacilityCommand.Rejection.DEBUG_AUTHORIZATION_REQUIRED;
+        }
+        if (!buildKind.isAllowedOn(kind)) return FacilityCommand.Rejection.MODULE_KIND_NOT_ALLOWED;
+        if (!buildKind.allowedTiers()
+            .contains(physicalSpec.tier()) || buildShape != buildKind.defaultShape()) {
+            return FacilityCommand.Rejection.INVALID_MODULE_SPEC;
+        }
+        return null;
+    }
+
+    private boolean validInitialSettingsGroup(FacilityModuleKind buildKind, short settingsGroupId,
+        @Nullable ModuleInstance copySource) {
+        if (copySource != null || settingsGroupId == 0) return true;
+        if (!FacilityModuleRegistry.get(buildKind)
+            .settingsGroups()) return false;
+        return canJoinSettingsGroup(buildKind, settingsGroupId);
+    }
+
+    private boolean prepareModuleSettings(ModuleInstance target, @Nullable ModuleInstance copySource,
+        short settingsGroupId, Map<ModuleInstance.ID, SettingsGroup> sharedSettingsGroups,
+        Map<ModuleInstance.ID, ModuleSettings> privateSettings) {
+        if (!FacilityModuleRegistry.get(target.kind())
+            .settingsGroups()) return true;
+        try {
+            if (copySource != null) {
+                SettingsGroup sourceGroup = validateModuleRuntimeSettingsCopy(copySource, target);
+                if (sourceGroup.isJoinable()) {
+                    FacilitySettingsGroupState.applySettingsToModule(sourceGroup.settings(), target);
+                    sharedSettingsGroups.put(target.id, sourceGroup);
+                } else {
+                    ModuleSettings copied = copySource.component()
+                        .copySettings(copySource, sourceGroup.settings());
+                    FacilitySettingsGroupState.applySettingsToModule(copied, target);
+                    privateSettings.put(target.id, copied);
+                }
+                copySource.component()
+                    .afterSettingsCopied(copySource, target);
+            } else if (settingsGroupId != 0) {
+                SettingsGroup group = settingsGroupState.registry()
+                    .require(settingsGroupId, target.kind());
+                FacilitySettingsGroupState.applySettingsToModule(group.settings(), target);
+                sharedSettingsGroups.put(target.id, group);
+            } else {
+                privateSettings.put(target.id, settingsGroupState.privateSettingsFor(target));
+            }
+            return true;
+        } catch (IllegalArgumentException | IllegalStateException invalidSettings) {
+            return false;
+        }
+    }
+
+    private boolean hasSettingsGroupCapacity(int requiredPrivateGroups) {
+        if (requiredPrivateGroups == 0) return true;
+        int nextGroupId = settingsGroupState.registry()
+            .nextGroupId();
+        return nextGroupId > 0 && nextGroupId + requiredPrivateGroups <= Short.MAX_VALUE;
+    }
+
+    private void attachModuleWithoutRevision(ModuleInstance module, @Nullable SettingsGroup sharedSettingsGroup,
+        @Nullable ModuleSettings privateModuleSettings) {
+        modules.add(module);
+        if (!FacilityModuleRegistry.get(module.kind())
+            .settingsGroups()) return;
+        SettingsGroup group = sharedSettingsGroup != null ? sharedSettingsGroup
+            : settingsGroupState.registry()
+                .create(module.kind(), privateModuleSettings);
+        settingsGroupState.attachWithoutDirty(module, group);
+    }
+
+    private boolean validBuildTargets(FacilityModuleKind moduleKind, ModuleShape shape,
+        @Nullable List<ModulePlacement> placements) {
+        if (placements == null || placements.isEmpty() || placements.size() > MAX_BUILD_TARGETS || layout == null) {
+            return false;
+        }
+        Set<StationTileCoord> plannedTiles = new HashSet<>();
+        Set<StationTileCoord> originalTiles = layout.snapshot()
+            .keySet();
+        PlanetaryFeatureKey requiredFeature = moduleKind.requiredAnchorFeature();
+        for (ModulePlacement placement : placements) {
+            StationTileCoord[] footprint = validPlacementFootprint(
+                shape,
+                placement,
+                requiredFeature,
+                originalTiles,
+                plannedTiles);
+            if (footprint == null) return false;
+            Collections.addAll(plannedTiles, footprint);
+        }
+        return true;
+    }
+
+    private @Nullable StationTileCoord[] validPlacementFootprint(ModuleShape shape, @Nullable ModulePlacement placement,
+        @Nullable PlanetaryFeatureKey requiredFeature, Set<StationTileCoord> originalTiles,
+        Set<StationTileCoord> plannedTiles) {
+        if (placement == null || placement.anchor() == null) return null;
+        StationTileCoord anchor = placement.anchor();
+        if (!shape.fitsAt(anchor, placement.rotation())) return null;
+        if (requiredFeature != null && !planetaryFeaturesAt(anchor).contains(requiredFeature)) return null;
+        StationTileCoord[] footprint = shape.tiles(anchor, placement.rotation());
+        boolean adjacent = false;
+        for (StationTileCoord coord : footprint) {
+            if (originalTiles.contains(coord) || plannedTiles.contains(coord)) return null;
+            if (hasKnownOccupiedNeighbour(originalTiles, plannedTiles, coord)) adjacent = true;
+        }
+        return adjacent ? footprint : null;
+    }
+
+    private static boolean hasKnownOccupiedNeighbour(Set<StationTileCoord> originalTiles,
+        Set<StationTileCoord> plannedTiles, StationTileCoord coord) {
+        return containsKnown(originalTiles, plannedTiles, coord.dx() - 1, coord.dy())
+            || containsKnown(originalTiles, plannedTiles, coord.dx() + 1, coord.dy())
+            || containsKnown(originalTiles, plannedTiles, coord.dx(), coord.dy() - 1)
+            || containsKnown(originalTiles, plannedTiles, coord.dx(), coord.dy() + 1);
+    }
+
+    private static boolean containsKnown(Set<StationTileCoord> originalTiles, Set<StationTileCoord> plannedTiles,
+        int dx, int dy) {
+        if (dx < StationTileCoord.MIN || dx > StationTileCoord.MAX
+            || dy < StationTileCoord.MIN
+            || dy > StationTileCoord.MAX) {
+            return false;
+        }
+        StationTileCoord coord = StationTileCoord.of(dx, dy);
+        return originalTiles.contains(coord) || plannedTiles.contains(coord);
+    }
+
+    private FacilityCommand.Result applyRequestModuleDeconstruction(
+        FacilityCommand.RequestModuleDeconstruction command) {
+        return switch (requestModuleDeconstruction(command.moduleId())) {
+            case ACCEPTED -> FacilityCommand.Result.CHANGED;
+            case NOT_FOUND -> FacilityCommand.Result.rejected(FacilityCommand.Rejection.MODULE_NOT_FOUND);
+            case ACTIVE_OPERATION -> FacilityCommand.Result.rejected(FacilityCommand.Rejection.MODULE_OPERATION_ACTIVE);
+            case INVALID_REFUND -> FacilityCommand.Result
+                .rejected(FacilityCommand.Rejection.INVALID_DECONSTRUCTION_REFUND);
+            case CAPACITY_EXCEEDED -> FacilityCommand.Result.rejected(FacilityCommand.Rejection.CAPACITY_EXCEEDED);
+        };
+    }
+
+    private FacilityCommand.Result applyCancelModuleOperation(FacilityCommand.CancelModuleOperation command) {
+        ModuleInstance module = moduleById(command.moduleId());
+        if (module == null) return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MODULE_NOT_FOUND);
+        ModuleOperationState operation = module.operationOrNull();
+        if (operation == null) return FacilityCommand.Result.UNCHANGED;
+        if (operation.phase() != ModuleOperationPhase.WAITING_FOR_MATERIALS
+            && operation.phase() != ModuleOperationPhase.BUILDING) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MODULE_OPERATION_NOT_CANCELLABLE);
+        }
+        operation.cancel();
+        markModuleDirty(module.id);
+        return FacilityCommand.Result.CHANGED;
+    }
+
+    private ModuleInstance moduleById(@Nullable ModuleInstance.ID moduleId) {
+        int index = moduleIndex(moduleId);
+        return index < 0 ? null : modules.get(index);
+    }
+
+    private static FacilityCommand.Rejection boundResourceRejection(BoundKind kind, InventoryKey resource) {
+        if (kind == null || resource == null) return FacilityCommand.Rejection.INVALID_RESOURCE;
+        boolean itemBound = kind == BoundKind.ITEM_LOWER || kind == BoundKind.ITEM_UPPER;
+        return itemBound == (resource instanceof ItemStackWrapper) ? null
+            : FacilityCommand.Rejection.INVALID_RESOURCE_KIND;
+    }
+
+    private static boolean isSameBound(InventoryBounds current, long amount, boolean lower) {
+        return lower ? current.hasLow() && current.low() == amount : current.hasUpper() && current.upper() == amount;
+    }
+
+    private static boolean isLowerBound(BoundKind kind) {
+        return kind == BoundKind.ITEM_LOWER || kind == BoundKind.FLUID_LOWER;
     }
 
     public UpkeepSettlement.Credits upkeepCredits() {

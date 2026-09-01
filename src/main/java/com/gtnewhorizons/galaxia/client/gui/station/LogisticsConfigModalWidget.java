@@ -371,7 +371,6 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         LogisticsResourceConfig existing = asset.logisticsConfig.get(wrapper);
         LogisticsResourceConfig config = existing == LogisticsResourceConfig.DEFAULT ? defaultConfigForAccessMode()
             : logisticsAccessMode().sanitize(existing);
-        asset.logisticsConfig.set(wrapper, config);
         CelestialClient.updateLogisticsConfig(asset.assetId, wrapper, config, logisticsAccessMode());
     }
 
@@ -416,7 +415,6 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         Map.Entry<ItemStackWrapper, LogisticsResourceConfig> row = rowEntry(rowIndex);
         CelestialAsset asset = asset();
         if (row == null || asset == null) return;
-        asset.logisticsConfig.reset(row.getKey());
         CelestialClient.removeLogisticsConfig(asset.assetId, row.getKey());
         rowSignature = "";
         refreshRows();
@@ -424,7 +422,6 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
 
     private void update(CelestialAsset asset, ItemStackWrapper wrapper, LogisticsResourceConfig config) {
         config = logisticsAccessMode().sanitize(config);
-        asset.logisticsConfig.set(wrapper, config);
         CelestialClient.updateLogisticsConfig(asset.assetId, wrapper, config, logisticsAccessMode());
     }
 

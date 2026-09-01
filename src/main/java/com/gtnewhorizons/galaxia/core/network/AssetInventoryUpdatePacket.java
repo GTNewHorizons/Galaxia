@@ -13,7 +13,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
@@ -30,85 +29,77 @@ public final class AssetInventoryUpdatePacket implements IMessage {
     private InventoryKey resource;
     private long delta;
     private boolean creativeOnly;
-    private Operation operation = Operation.DELTA;
-    private BoundKind boundKind;
 
     public AssetInventoryUpdatePacket() {}
 
     public static AssetInventoryUpdatePacket add(CelestialAsset.ID assetId, ItemStackWrapper resource, long amount) {
-        AssetInventoryUpdatePacket pkt = new AssetInventoryUpdatePacket();
-        pkt.assetId = assetId;
-        pkt.resource = resource;
-        pkt.delta = amount;
-        pkt.creativeOnly = true;
-        return pkt;
+        AssetInventoryUpdatePacket packet = new AssetInventoryUpdatePacket();
+        packet.assetId = assetId;
+        packet.resource = resource;
+        packet.delta = amount;
+        packet.creativeOnly = true;
+        return packet;
     }
 
     public static AssetInventoryUpdatePacket remove(CelestialAsset.ID assetId, ItemStackWrapper resource) {
-        AssetInventoryUpdatePacket pkt = new AssetInventoryUpdatePacket();
-        pkt.assetId = assetId;
-        pkt.resource = resource;
-        pkt.delta = Long.MIN_VALUE;
-        pkt.creativeOnly = false;
-        return pkt;
+        AssetInventoryUpdatePacket packet = new AssetInventoryUpdatePacket();
+        packet.assetId = assetId;
+        packet.resource = resource;
+        packet.delta = Long.MIN_VALUE;
+        return packet;
     }
 
     public static AssetInventoryUpdatePacket removeAmount(CelestialAsset.ID assetId, ItemStackWrapper resource,
         long amount) {
-        AssetInventoryUpdatePacket pkt = new AssetInventoryUpdatePacket();
-        pkt.assetId = assetId;
-        pkt.resource = resource;
-        pkt.delta = -amount;
-        pkt.creativeOnly = false;
-        return pkt;
-    }
-
-    public static AssetInventoryUpdatePacket setBound(CelestialAsset.ID assetId, BoundKind kind, InventoryKey resource,
-        long amount) {
-        AssetInventoryUpdatePacket pkt = new AssetInventoryUpdatePacket();
-        pkt.assetId = assetId;
-        pkt.operation = Operation.SET_BOUND;
-        pkt.boundKind = kind;
-        pkt.resource = resource;
-        pkt.delta = amount;
-        pkt.creativeOnly = false;
-        return pkt;
-    }
-
-    public static AssetInventoryUpdatePacket clearBound(CelestialAsset.ID assetId, BoundKind kind,
-        InventoryKey resource) {
-        AssetInventoryUpdatePacket pkt = new AssetInventoryUpdatePacket();
-        pkt.assetId = assetId;
-        pkt.operation = Operation.CLEAR_BOUND;
-        pkt.boundKind = kind;
-        pkt.resource = resource;
-        pkt.delta = 0L;
-        pkt.creativeOnly = false;
-        return pkt;
+        AssetInventoryUpdatePacket packet = new AssetInventoryUpdatePacket();
+        packet.assetId = assetId;
+        packet.resource = resource;
+        packet.delta = -amount;
+        return packet;
     }
 
     @Override
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
-        PacketUtil.writeEnum(buf, operation);
         PacketUtil.writeInventoryKey(buf, resource);
         buf.writeLong(delta);
         buf.writeBoolean(creativeOnly);
-        if (operation == Operation.SET_BOUND || operation == Operation.CLEAR_BOUND) {
-            PacketUtil.writeEnum(buf, boundKind);
-        }
     }
 
     @Override
     public void fromBytes(ByteBuf buf) {
         assetId = PacketUtil.readAssetId(buf);
-        operation = PacketUtil.readEnum(buf, Operation.class);
         resource = PacketUtil.readInventoryKey(buf);
         delta = buf.readLong();
         creativeOnly = buf.readBoolean();
-        if (operation == Operation.SET_BOUND || operation == Operation.CLEAR_BOUND) {
-            boundKind = PacketUtil.readEnum(buf, BoundKind.class);
+    }
+
+    public boolean apply(UUID teamId, boolean creativePlayer) {
+        CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
+        if (asset == null || !CelestialAssetStore.isOwnedBy(teamId, assetId)) {
+            LOG.warn("[Logistics] InventoryDelta: unknown or unauthorized assetId {}", assetId);
+            return false;
         }
+        if (asset instanceof AutomatedFacility || !(asset instanceof IDistributedInventory physicalInventory)
+            || resource == null) {
+            return false;
+        }
+        if (delta > 0 && !creativePlayer) {
+            LOG.warn("[Logistics] InventoryDelta rejected: positive delta {} requires creative mode.", delta);
+            return false;
+        }
+        if (creativeOnly && (!creativePlayer || delta <= 0)) return false;
+
+        long applied = physicalInventory.updateContents(resource, delta);
+        if (applied == 0L) return false;
+        asset.bumpStateRevision();
+        long signedApplied = delta > 0L ? applied : -applied;
+        LOG.info("[Logistics] Inventory update: {} x {} on {}", signedApplied, resource.toKey(), assetId);
+        return true;
+    }
+
+    CelestialAsset.ID assetId() {
+        return assetId;
     }
 
     public static class Handler implements IMessageHandler<AssetInventoryUpdatePacket, IMessage> {
@@ -120,99 +111,11 @@ public final class AssetInventoryUpdatePacket implements IMessage {
             ServerTickTaskQueue.schedule(() -> {
                 if (!GTTeamsCompat.hasPermission(player, TeamAction.MANAGE_INVENTORY)) return;
                 UUID teamId = GTTeamsCompat.getTeam(player);
-                boolean creative = player.capabilities.isCreativeMode;
-                if (message.apply(teamId, creative)) AssetStateSync.SERVER.publishInteractive(message.assetId);
+                if (message.apply(teamId, player.capabilities.isCreativeMode)) {
+                    AssetStateSync.SERVER.publishInteractive(message.assetId);
+                }
             });
             return null;
         }
-    }
-
-    public boolean apply(UUID teamId, boolean creativePlayer) {
-        CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
-        if (asset == null || !CelestialAssetStore.isOwnedBy(teamId, assetId)) {
-            LOG.warn("[Logistics] InventoryDelta: unknown or unauthorized assetId {}", assetId);
-            return false;
-        }
-        if (operation == null || resource == null) return false;
-
-        if (operation == Operation.SET_BOUND || operation == Operation.CLEAR_BOUND) {
-            if (asset instanceof AutomatedFacility state) {
-                return applyBoundUpdate(state);
-            }
-            return false;
-        }
-        if (delta > 0 && !creativePlayer) {
-            LOG.warn("[Logistics] InventoryDelta rejected: positive delta {} requires creative mode.", delta);
-            return false;
-        }
-        if (creativeOnly && !creativePlayer) {
-            LOG.warn("[Logistics] InventoryDelta rejected: player is not in creative mode.");
-            return false;
-        }
-        if (creativeOnly && delta <= 0) {
-            LOG.warn("[Logistics] InventoryDelta rejected: invalid amount {}", delta);
-            return false;
-        }
-
-        if (this.resource == null) return false;
-        long applied;
-        if (asset instanceof AutomatedFacility facility) {
-            long requested = delta == Long.MIN_VALUE ? Long.MAX_VALUE : Math.abs(delta);
-            applied = delta > 0L ? facility.insert(resource, requested) : facility.extract(resource, requested);
-        } else if (asset instanceof IDistributedInventory physicalInventory) {
-            applied = physicalInventory.updateContents(resource, delta);
-            if (applied != 0L) asset.bumpStateRevision();
-        } else {
-            return false;
-        }
-        if (applied == 0L) return false;
-
-        long signedApplied = delta > 0L ? applied : -applied;
-        LOG.info("[Logistics] Inventory update: {} x {} on {}", signedApplied, resource.toKey(), assetId);
-        return true;
-    }
-
-    private boolean applyBoundUpdate(AutomatedFacility state) {
-        if (boundKind == null) return false;
-        if (operation == Operation.SET_BOUND) {
-            final boolean low = boundKind == BoundKind.ITEM_LOWER || boundKind == BoundKind.FLUID_LOWER;
-            if (!state.trySetBound(resource, delta, low)) {
-                LOG.warn(
-                    "[Logistics] Inventory bound rejected: {} {}={} on outpost {}",
-                    boundKind,
-                    resource.toKey(),
-                    delta,
-                    assetId);
-                return false;
-            }
-
-            state.markInventoryBoundDelta(boundKind, resource, true, delta);
-            LOG.info(
-                "[Logistics] Inventory bound set: {} {}={} on outpost {}",
-                boundKind,
-                resource.toKey(),
-                delta,
-                assetId);
-            return true;
-        } else if (operation == Operation.CLEAR_BOUND) {
-            final boolean low = boundKind == BoundKind.ITEM_LOWER || boundKind == BoundKind.FLUID_LOWER;
-            if (!state.clearBound(resource, low)) return false;
-            state.markInventoryBoundDelta(boundKind, resource, false, 0L);
-            LOG.info("[Logistics] Inventory bound cleared: {} {} on outpost {}", boundKind, resource.toKey(), assetId);
-            return true;
-
-        } else {
-            throw new IllegalStateException("[Logistics] Received malformed bound update");
-        }
-    }
-
-    private enum Operation {
-        DELTA,
-        SET_BOUND,
-        CLEAR_BOUND
-    }
-
-    CelestialAsset.ID assetId() {
-        return assetId;
     }
 }

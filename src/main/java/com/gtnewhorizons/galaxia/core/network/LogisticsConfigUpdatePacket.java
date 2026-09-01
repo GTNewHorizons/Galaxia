@@ -11,6 +11,7 @@ import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
@@ -121,6 +122,7 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
             LOG.warn("[Logistics] LogisticsConfigUpdate: unknown or unauthorized assetId {}", assetId);
             return false;
         }
+        if (asset instanceof AutomatedFacility) return false;
 
         if (!removeEntry && orderSize <= 0) {
             LOG.warn("[Logistics] LogisticsConfigUpdate rejected: orderSize must be >0");

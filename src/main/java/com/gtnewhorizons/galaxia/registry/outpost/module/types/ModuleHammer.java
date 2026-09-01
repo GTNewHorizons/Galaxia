@@ -6,6 +6,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
@@ -77,6 +78,58 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
     public static ModuleTier tierForVariantSwitch(@Nonnull HammerVariant targetVariant,
         @Nonnull ModuleTier currentTier) {
         return supportsTier(targetVariant, currentTier) ? currentTier : tiersFor(targetVariant)[0];
+    }
+
+    @Override
+    public void applyBuildPhysicalSpec(ModuleInstance module, BuildPhysicalSpec spec) {
+        if (!(spec instanceof BuildPhysicalSpec.Hammer hammerSpec) || hammerSpec.tier() == null
+            || hammerSpec.variant() == null
+            || hammerSpec.tier() != module.tier()) {
+            throw new IllegalArgumentException("Invalid hammer build physical spec");
+        }
+        requireTier(hammerSpec.variant(), hammerSpec.tier());
+        setVariant(hammerSpec.variant());
+    }
+
+    @Override
+    public BuildPhysicalSpec buildPhysicalSpec(ModuleInstance module) {
+        return new BuildPhysicalSpec.Hammer(module.tier(), variant);
+    }
+
+    @Override
+    public boolean applyConfigurationTransition(ModuleInstance module,
+        FacilityCommand.ModuleConfiguration configuration) {
+        if (configuration instanceof FacilityCommand.SetHammerShootingConfig setConfig) {
+            if (setConfig.config() == null) throw new IllegalArgumentException("Missing hammer shooting config");
+            if (setConfig.config()
+                .equals(config)) return false;
+            setConfig(setConfig.config());
+            return true;
+        }
+        if (configuration instanceof FacilityCommand.SetHammerRoutePriority setPriority) {
+            if (setPriority.priority() == null) throw new IllegalArgumentException("Missing hammer route priority");
+            if (setPriority.priority() == routePriority) return false;
+            setRoutePriority(setPriority.priority());
+            return true;
+        }
+        return IParallelModule.super.applyConfigurationTransition(module, configuration);
+    }
+
+    @Override
+    public IModuleOperation prepareOperationTarget(ModuleInstance module,
+        FacilityCommand.ModuleOperationRequest request) {
+        if (!(request instanceof FacilityCommand.PlanHammerUpgrade plan)) {
+            return IParallelModule.super.prepareOperationTarget(module, request);
+        }
+        if (plan.targetVariant() == null || plan.targetTier() == null
+            || plan.targetVariant() == variant && plan.targetTier() == module.tier()) {
+            throw new IllegalArgumentException("Invalid hammer operation target");
+        }
+        requireTier(plan.targetVariant(), plan.targetTier());
+        return new HammerModuleOperation(
+            plan.targetTier(),
+            plan.targetVariant()
+                .name());
     }
 
     public static boolean supportsTier(@Nonnull HammerVariant variant, @Nonnull ModuleTier tier) {

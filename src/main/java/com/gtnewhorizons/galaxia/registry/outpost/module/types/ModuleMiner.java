@@ -14,6 +14,7 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureMiningContext;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.MiningFeatureEffects;
@@ -44,6 +45,60 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
 
     public ModuleMiner(@Nonnull FacilityModuleKind kind) {
         this.kind = kind;
+    }
+
+    @Override
+    public void applyBuildPhysicalSpec(ModuleInstance module, BuildPhysicalSpec spec) {
+        if (!(spec instanceof BuildPhysicalSpec.Miner minerSpec) || minerSpec.tier() == null
+            || minerSpec.focusTier() == null
+            || minerSpec.tier() != module.tier()) {
+            throw new IllegalArgumentException("Invalid miner build physical spec");
+        }
+        setFocus(minerSpec.focusTier(), null, 0);
+    }
+
+    @Override
+    public BuildPhysicalSpec buildPhysicalSpec(ModuleInstance module) {
+        return new BuildPhysicalSpec.Miner(module.tier(), focusTier);
+    }
+
+    @Override
+    public boolean applyConfigurationTransition(ModuleInstance module,
+        FacilityCommand.ModuleConfiguration configuration) {
+        if (!(configuration instanceof FacilityCommand.SetMinerFocusOre setOre)) {
+            return super.applyConfigurationTransition(module, configuration);
+        }
+        if (setOre.oreKey() != null && setOre.oreKey()
+            .isBlank()) {
+            throw new IllegalArgumentException("Blank miner focus ore key");
+        }
+        if (Objects.equals(setOre.oreKey(), focusOreKey)) return false;
+        setFocusOre(setOre.oreKey());
+        return true;
+    }
+
+    @Override
+    public IModuleOperation prepareOperationTarget(ModuleInstance module,
+        FacilityCommand.ModuleOperationRequest request) {
+        if (!(request instanceof FacilityCommand.PlanMinerFocusUpgrade plan)) {
+            return super.prepareOperationTarget(module, request);
+        }
+        if (plan.targetModuleTier() == null || plan.targetFocusTier() == null
+            || !module.kind()
+                .allowedTiers()
+                .contains(plan.targetModuleTier())) {
+            throw new IllegalArgumentException("Invalid miner focus operation target");
+        }
+        String targetOreKey = plan.targetFocusTier() == MinerFocusTier.NONE ? null : focusOreKey;
+        if (module.tier() == plan.targetModuleTier() && focusTier == plan.targetFocusTier()
+            && Objects.equals(targetOreKey, focusOreKey)) {
+            throw new IllegalArgumentException("Miner focus operation target is unchanged");
+        }
+        return new MinerFocusOperation(
+            plan.targetModuleTier(),
+            plan.targetFocusTier()
+                .name(),
+            targetOreKey);
     }
 
     public static void generateOre(ModuleInstance instance, CelestialAsset outpost) {

@@ -2,9 +2,7 @@ package com.gtnewhorizons.galaxia.core;
 
 import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
 
-import com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetCreateRequestPacket;
-import com.gtnewhorizons.galaxia.core.network.AssetFilterUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetStateFramePacket;
@@ -14,6 +12,7 @@ import com.gtnewhorizons.galaxia.core.network.BeamEffectPacket;
 import com.gtnewhorizons.galaxia.core.network.CelestialKnowledgeSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.CommitBlueprintAndOrderPacket;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
+import com.gtnewhorizons.galaxia.core.network.FacilityCommandPacket;
 import com.gtnewhorizons.galaxia.core.network.HazardWarningPacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
@@ -49,8 +48,6 @@ public final class NetworkManager {
             Side.SERVER);
         GALAXIA_NETWORK.registerMessage(AssetUpdatePacket.Handler.class, AssetUpdatePacket.class, id++,
             Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(AssetBuildModulePacket.Handler.class, AssetBuildModulePacket.class, id++,
-            Side.SERVER);
         GALAXIA_NETWORK.registerMessage(AssetCreateRequestPacket.Handler.class, AssetCreateRequestPacket.class, id++,
             Side.SERVER);
         GALAXIA_NETWORK.registerMessage(AssetModuleUpdatePacket.Handler.class, AssetModuleUpdatePacket.class, id++,
@@ -58,8 +55,6 @@ public final class NetworkManager {
         GALAXIA_NETWORK.registerMessage(AssetInventoryUpdatePacket.Handler.class, AssetInventoryUpdatePacket.class, id++,
             Side.SERVER);
         GALAXIA_NETWORK.registerMessage(LogisticsConfigUpdatePacket.Handler.class, LogisticsConfigUpdatePacket.class, id++,
-            Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(AssetFilterUpdatePacket.Handler.class, AssetFilterUpdatePacket.class, id++,
             Side.SERVER);
         GALAXIA_NETWORK.registerMessage(RocketDestinationSyncPacket.Handler.class, RocketDestinationSyncPacket.class, id++,
             Side.SERVER);
@@ -69,6 +64,8 @@ public final class NetworkManager {
                 Side.SERVER);
         GALAXIA_NETWORK.registerMessage(AssetStateResyncRequestPacket.Handler.class,
             AssetStateResyncRequestPacket.class, id++, Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(FacilityCommandPacket.Handler.class, FacilityCommandPacket.class, id++,
+            Side.SERVER);
 
         GALAXIA_NETWORK.registerMessage(OxygenSyncPacket.Handler.class, OxygenSyncPacket.class, id++,
             Side.CLIENT);

@@ -19,13 +19,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
-import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
-import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
@@ -36,12 +30,6 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
 
     public static final String KEY = "starmap_actions";
 
-    private static final int REQUEST_CREATE_ASSET = 1;
-    private static final int REQUEST_UPDATE_ASSET = 2;
-    private static final int REQUEST_BUILD_MODULE = 3;
-    private static final int REQUEST_MODULE_UPDATE = 4;
-    private static final int REQUEST_LOGISTICS_CONFIG = 6;
-    private static final int REQUEST_FILTER_UPDATE = 7;
     private static final int REQUEST_SATELLITE_MUTATION = 8;
 
     private static final int RESPONSE_ACTION_FAILED = 101;
@@ -90,33 +78,6 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
     }
 
     @SideOnly(Side.CLIENT)
-    public static boolean sendBuildModules(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
-        ModuleTier tier, HammerVariant hammerVariant, MinerFocusTier minerFocusTier, short settingsGroupId,
-        boolean instantBuild, List<ModulePlacement> placements) {
-        AssetBuildModulePacket packet = AssetBuildModulePacket.createManyWithSpec(
-            assetId,
-            kind,
-            shape,
-            tier,
-            hammerVariant,
-            minerFocusTier,
-            settingsGroupId,
-            instantBuild,
-            placements);
-        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
-        return true;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public static boolean sendCopyModule(CelestialAsset.ID assetId, int sourceModuleIndex,
-        ModuleInstance.ID sourceModuleId, boolean instantBuild, List<ModulePlacement> placements) {
-        AssetBuildModulePacket packet = AssetBuildModulePacket
-            .copyFromModule(assetId, sourceModuleIndex, sourceModuleId, instantBuild, placements);
-        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
-        return true;
-    }
-
-    @SideOnly(Side.CLIENT)
     public static boolean sendUpdateAsset(AssetUpdatePacket packet) {
         Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
@@ -154,6 +115,12 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
     }
 
     @SideOnly(Side.CLIENT)
+    public static boolean sendFacilityCommand(FacilityCommand command) {
+        Galaxia.GALAXIA_NETWORK.sendToServer(new FacilityCommandPacket(command));
+        return true;
+    }
+
+    @SideOnly(Side.CLIENT)
     public static boolean sendInventoryUpdate(AssetInventoryUpdatePacket packet) {
         Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
@@ -161,12 +128,6 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
 
     @SideOnly(Side.CLIENT)
     public static boolean sendLogisticsConfig(LogisticsConfigUpdatePacket packet) {
-        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
-        return true;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public static boolean sendFilterUpdate(AssetFilterUpdatePacket packet) {
         Galaxia.GALAXIA_NETWORK.sendToServer(packet);
         return true;
     }
@@ -213,66 +174,7 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
     }
 
     private void handleOnServer(int id, PacketBuffer buf, EntityPlayerMP playerMp) throws IOException {
-        UUID teamId = GTTeamsCompat.getTeam(playerMp);
-
         switch (id) {
-            case REQUEST_CREATE_ASSET -> {
-                if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.CREATE_ASSET)) {
-                    syncFailure("Asset creation denied");
-                    return;
-                }
-                AssetCreateRequestPacket packet = new AssetCreateRequestPacket();
-                packet.fromBytes(buf);
-                CelestialAsset created;
-                try {
-                    created = packet.apply(teamId);
-                } catch (IllegalArgumentException ex) {
-                    syncFailure(ex.getMessage());
-                    return;
-                }
-                if (created == null) {
-                    syncFailure("Asset creation failed");
-                } else {
-                    AssetStateSync.SERVER.publishInteractive(created.assetId);
-                }
-            }
-            case REQUEST_UPDATE_ASSET -> {
-                AssetUpdatePacket packet = new AssetUpdatePacket();
-                packet.fromBytes(buf);
-                if (packet.apply(teamId, playerMp)) {
-                    if (!packet.removesAsset()) {
-                        AssetStateSync.SERVER.publishInteractive(packet.assetId());
-                    }
-                }
-            }
-            case REQUEST_BUILD_MODULE -> {
-                if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.BUILD_MODULE)) return;
-                AssetBuildModulePacket packet = new AssetBuildModulePacket();
-                packet.fromBytes(buf);
-                if (!packet.apply(teamId, playerMp)) {
-                    syncFailure("Module build failed");
-                } else {
-                    AssetStateSync.SERVER.publishInteractive(packet.assetId());
-                }
-            }
-            case REQUEST_MODULE_UPDATE -> {
-                if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.MODIFY_MODULE)) return;
-                AssetModuleUpdatePacket packet = new AssetModuleUpdatePacket();
-                packet.fromBytes(buf);
-                if (packet.apply(teamId, playerMp)) AssetStateSync.SERVER.publishInteractive(packet.assetId());
-            }
-            case REQUEST_LOGISTICS_CONFIG -> {
-                if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.CONFIGURE_LOGISTICS)) return;
-                LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket();
-                packet.fromBytes(buf);
-                if (packet.apply(teamId)) AssetStateSync.SERVER.publishInteractive(packet.assetId());
-            }
-            case REQUEST_FILTER_UPDATE -> {
-                if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.CONFIGURE_LOGISTICS)) return;
-                AssetFilterUpdatePacket packet = new AssetFilterUpdatePacket();
-                packet.fromBytes(buf);
-                if (packet.apply(teamId)) AssetStateSync.SERVER.publishInteractive(packet.assetId());
-            }
             case REQUEST_SATELLITE_MUTATION -> {
                 UUID debugTeamId = PacketUtil.readId(buf);
                 CelestialObjectKey bodyKey = PacketUtil.readCelestialObjectKey(buf);

@@ -49,11 +49,15 @@ final class FacilitySettingsGroupState {
     }
 
     void attach(ModuleInstance module, SettingsGroup group, Consumer<ModuleInstance.ID> dirtyModuleSink) {
+        attachWithoutDirty(module, group);
+        dirtyModuleSink.accept(module.id);
+    }
+
+    void attachWithoutDirty(ModuleInstance module, SettingsGroup group) {
         registry.require(group.id(), module.kind());
         registry.addMember(group.id(), module.anchor());
         module.setGroupId(group.id());
         applySettingsToModule(group.settings(), module);
-        dirtyModuleSink.accept(module.id);
     }
 
     void detach(ModuleInstance module) {

@@ -15,7 +15,6 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
-import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket.ConfigAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -288,8 +287,7 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
             if (MinerFocusUiModel.canPlanTier(module, targetFocusTier)) {
                 CelestialClient.planMinerFocusTier(assetId, controller.moduleIndex(), targetTier, targetFocusTier);
             } else if (module.tier() != targetTier) {
-                CelestialClient
-                    .updateModuleConfig(assetId, controller.moduleIndex(), ConfigAction.SET_TIER, targetTier);
+                CelestialClient.planModuleTierUpgrade(assetId, controller.moduleIndex(), targetTier, false);
             }
         }
         controller.close();

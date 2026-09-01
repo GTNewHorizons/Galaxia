@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.List;
 import java.util.UUID;
 
 import net.minecraft.init.Items;
@@ -17,11 +16,11 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
@@ -36,105 +35,53 @@ final class LogisticsConfigUpdatePacketTest {
     }
 
     @BeforeEach
+    @AfterEach
     void cleanStores() {
         CelestialAssetStore.SERVER.clearInternal();
         CelestialAssetStore.CLIENT.clearInternal();
         LogisticStore.clearSignals();
     }
 
-    @AfterEach
-    void cleanStoresAfter() {
-        CelestialAssetStore.SERVER.clearInternal();
-        CelestialAssetStore.CLIENT.clearInternal();
-        LogisticStore.clearSignals();
-    }
-
     @Test
-    void applyBumpsSyncRevisionForLogisticsConfigDelta() {
-        AutomatedFacility facility = addFacilityToServer();
-        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
-        LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket(
-            facility.assetId,
-            resource,
-            new LogisticsResourceConfig(12, 64, true, false));
-
-        boolean sync = packet.apply(TEAM);
-
-        assertEquals(1, facility.getStateRevision());
-    }
-
-    @Test
-    void importOnlyLogisticsUpdateCannotEnableSupply() {
-        AutomatedFacility facility = addFacilityToServer();
+    void applyPreservesNonAutomatedAssetBehavior() {
+        Station station = new Station(CelestialAsset.ID.create(), CelestialObjectId.MARS, Buildable.Status.OPERATIONAL);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, station);
         ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
         LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket(
-            facility.assetId,
+            station.assetId,
             resource,
             new LogisticsResourceConfig(12, 64, true, true),
             LogisticsConfigAccessMode.IMPORT_ONLY);
 
-        packet.apply(TEAM);
-
-        LogisticsResourceConfig config = facility.logisticsConfig.get(resource);
+        assertTrue(packet.apply(TEAM));
+        LogisticsResourceConfig config = station.logisticsConfig.get(resource);
         assertTrue(config.isImportEnabled());
         assertFalse(config.isSupplyEnabled());
+        assertEquals(1, station.getStateRevision());
+
+        assertTrue(
+            LogisticsConfigUpdatePacket.remove(station.assetId, resource)
+                .apply(TEAM));
+        assertEquals(LogisticsResourceConfig.DEFAULT, station.logisticsConfig.get(resource));
+        assertEquals(2, station.getStateRevision());
     }
 
     @Test
-    void disablingCoreImportClearsUpkeepAutoRequest() {
-        AutomatedFacility facility = addFacilityToServer();
-        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
-        facility.setUpkeepAutoOrder(resource, true);
-        facility.logisticsConfig.set(resource, new LogisticsResourceConfig(12, 64, true, false));
-        LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket(
-            facility.assetId,
-            resource,
-            new LogisticsResourceConfig(12, 64, false, false),
-            LogisticsConfigAccessMode.IMPORT_ONLY);
-
-        packet.apply(TEAM);
-
-        assertFalse(facility.isUpkeepAutoOrderEnabled(resource));
-    }
-
-    @Test
-    void importOnlyLogisticsUpdateRequestsEffectiveUpkeepLowerBound() {
-        AutomatedFacility facility = addFacilityToServer();
-        ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);
-        facility.insert(resource, 3);
-        facility.setBound(resource, 5, true);
-        facility.setUpkeepReserve(resource, 10L);
-
-        boolean applied = new LogisticsConfigUpdatePacket(
-            facility.assetId,
-            resource,
-            facility.logisticsConfig.get(resource)
-                .withImportEnabled(true),
-            LogisticsConfigAccessMode.IMPORT_ONLY).apply(TEAM);
-
-        LogisticSignal signal = logisticsSignalFor(facility, resource);
-        assertTrue(applied);
-        assertEquals(-12L, signal.amount());
-    }
-
-    private static AutomatedFacility addFacilityToServer() {
+    void applyRejectsAutomatedFacilityWithoutMutation() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.MARS,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
-        return facility;
-    }
+        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
+        LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket(
+            facility.assetId,
+            resource,
+            new LogisticsResourceConfig(12, 64, true, false));
 
-    private static LogisticSignal logisticsSignalFor(AutomatedFacility facility, ItemStackWrapper resource) {
-        return LogisticStore.allSignalsForScope(LogisticSignal.Scope.SYSTEM)
-            .values()
-            .stream()
-            .flatMap(List::stream)
-            .filter(signal -> facility.assetId.equals(signal.outpostAssetId()))
-            .filter(signal -> resource.equals(signal.resourceId()))
-            .findFirst()
-            .orElseThrow();
+        assertFalse(packet.apply(TEAM));
+        assertEquals(LogisticsResourceConfig.DEFAULT, facility.logisticsConfig.get(resource));
+        assertEquals(0, facility.getStateRevision());
     }
 }

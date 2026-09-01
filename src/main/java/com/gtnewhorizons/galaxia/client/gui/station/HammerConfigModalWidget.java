@@ -12,7 +12,6 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
-import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -239,20 +238,21 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
             case WHEN_DV_UNDER -> AllowShootingConfig.Mode.WHEN_TOF_UNDER;
             case WHEN_TOF_UNDER -> AllowShootingConfig.Mode.ALWAYS;
         };
-        CelestialClient.updateModuleConfig(
+        CelestialClient.setHammerShootingConfig(
             assetId,
             controller.moduleIndex(),
-            AssetModuleUpdatePacket.ConfigAction.SET_ALLOW_SHOOTING_MODE,
-            next);
+            new AllowShootingConfig(
+                next,
+                hammer.config()
+                    .threshold()));
     }
 
     private void toggleRoutePriority() {
         ModuleHammer hammer = selectedHammer();
         if (hammer == null) return;
-        CelestialClient.updateModuleConfig(
+        CelestialClient.setHammerRoutePriority(
             assetId,
             controller.moduleIndex(),
-            AssetModuleUpdatePacket.ConfigAction.SET_ROUTE_PRIORITY,
             hammer.routePriority()
                 .toggled());
     }
@@ -295,11 +295,15 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
     }
 
     private void updateThreshold(double value) {
-        CelestialClient.updateModuleConfig(
+        ModuleHammer hammer = selectedHammer();
+        if (hammer == null) return;
+        CelestialClient.setHammerShootingConfig(
             assetId,
             controller.moduleIndex(),
-            AssetModuleUpdatePacket.ConfigAction.SET_ALLOW_SHOOTING_THRESHOLD,
-            value);
+            new AllowShootingConfig(
+                hammer.config()
+                    .mode(),
+                value));
     }
 
     private String dispatchStatusLine(HammerDispatchStatus.Status status) {

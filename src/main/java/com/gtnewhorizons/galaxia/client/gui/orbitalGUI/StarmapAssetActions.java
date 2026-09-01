@@ -755,7 +755,6 @@ public final class StarmapAssetActions {
                         .containsKey(wrapper);
                     if (wrapper != null && !alreadyTracked) {
                         LogisticsResourceConfig newCfg = new LogisticsResourceConfig(0, 64, false, false);
-                        outpost.logisticsConfig.set(wrapper, newCfg);
                         Galaxia.LOG.info(
                             "[Outpost UI] Added logistics tracked item {} to outpost {} from item picker",
                             wrapper.toKey(),
