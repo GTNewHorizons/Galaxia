@@ -12,6 +12,7 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
+import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -122,7 +123,7 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
 
     private void openLogistics() {
         if (selectedModule() == null) return;
-        controller.openLogistics(controller.moduleIndex());
+        controller.openLogistics(controller.moduleId());
     }
 
     private boolean hasCancellableOperation() {
@@ -174,7 +175,7 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
             .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
             .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
             .background(
-                ModuleConfigModalSupport.drawable(
+                DrawableCommand.asDrawable(
                     (ctx, x, y, w, h) -> BorderedRect.draw(
                         x,
                         y,
@@ -240,7 +241,7 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
         };
         CelestialClient.configureHammer(
             assetId,
-            controller.moduleIndex(),
+            controller.moduleId(),
             new AllowShootingConfig(
                 next,
                 hammer.config()
@@ -253,7 +254,7 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
         if (hammer == null) return;
         CelestialClient.configureHammer(
             assetId,
-            controller.moduleIndex(),
+            controller.moduleId(),
             hammer.config(),
             hammer.routePriority()
                 .toggled());
@@ -301,7 +302,7 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
         if (hammer == null) return;
         CelestialClient.configureHammer(
             assetId,
-            controller.moduleIndex(),
+            controller.moduleId(),
             new AllowShootingConfig(
                 hammer.config()
                     .mode(),

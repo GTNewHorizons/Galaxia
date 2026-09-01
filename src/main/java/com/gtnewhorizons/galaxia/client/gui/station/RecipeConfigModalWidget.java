@@ -29,6 +29,7 @@ import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
+import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.client.gui.station.recipe.RecipeInputScreen;
 import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeChance;
 import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeMapId;
@@ -114,7 +115,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
-    private final @Nullable StationEditModeController editModeController;
+    private final @Nullable StationTilePickerController tilePickerController;
     private final ModuleSettingsGroupSelectorWidget settingsGroupSelector;
     private final RecipeBookEditorModel editor;
     private int page;
@@ -127,10 +128,10 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private @Nullable TextFieldWidget recipeNameField;
 
     RecipeConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller,
-        @Nullable StationEditModeController editModeController, RecipeBookEditorModel editor) {
+        @Nullable StationTilePickerController tilePickerController, RecipeBookEditorModel editor) {
         this.assetId = assetId;
         this.controller = controller;
-        this.editModeController = editModeController;
+        this.tilePickerController = tilePickerController;
         this.editor = editor;
         this.settingsGroupSelector = new ModuleSettingsGroupSelectorWidget(assetId, controller, () -> {
             ModuleInstance module = selectedModule();
@@ -321,7 +322,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             .autoUpdateOnChange(false)
             .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
             .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
-            .background(ModuleConfigModalSupport.drawable((ctx, x, y, w, h) -> {
+            .background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
                 if (!canUseRow(rowIndex)) return;
                 com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect.draw(
                     x,
@@ -360,7 +361,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private boolean canCopySettings() {
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         ModuleInstance module = selectedModule();
-        return editModeController != null && canConfigureRecipes()
+        return tilePickerController != null && canConfigureRecipes()
             && !settingsGroupSelector.isBlockingModuleControls()
             && facility != null
             && facility.stationLayout() != null
@@ -466,19 +467,18 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private void startCopySettingsPicker() {
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         ModuleInstance source = selectedModule();
-        int sourceModuleIndex = controller.moduleIndex();
-        if (facility == null || source == null || editModeController == null || sourceModuleIndex < 0) return;
+        if (facility == null || source == null || tilePickerController == null) return;
         settingsGroupSelector.closeMenu();
         closeRecipeRename();
         CelestialClient.replaceRecipeBook(assetId, editor.owner(), editor.replacement());
         controller.close();
-        editModeController.startTileMode(
-            StationEditModeController.Mode.COPY_MODULE,
-            "Copy module settings",
-            "Copy",
-            coord -> ModuleSettingsCopyPickerModel.isCompatibleTarget(facility, source, coord),
+        tilePickerController.start("Copy module settings", "Copy", coord -> {
+            ModuleInstance target = facility.stationLayout()
+                .moduleAt(coord);
+            return target != null && facility.canCopyModuleRuntimeSettings(source, target);
+        },
             coord -> StationTargetPicker.normalizeTarget(facility, coord),
-            targets -> CelestialClient.copyModuleSettings(assetId, sourceModuleIndex, targets));
+            targets -> CelestialClient.copyModuleSettings(assetId, source.id, targets));
     }
 
     private void previousPage() {
@@ -520,7 +520,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             .autoUpdateOnChange(true)
             .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
             .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
-            .background(ModuleConfigModalSupport.drawable((ctx, x, y, w, h) -> {
+            .background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
                 if (selectedBoundTarget == null || !isBoundsOpen()) return;
                 BorderedRect.draw(
                     x,
@@ -688,7 +688,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             .autoUpdateOnChange(false)
             .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
             .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
-            .background(ModuleConfigModalSupport.drawable((ctx, x, y, w, h) -> {
+            .background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
                 if (!isRecipeRenameOpen()) return;
                 BorderedRect.draw(
                     x,

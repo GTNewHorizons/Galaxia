@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -9,9 +8,6 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.Nullable;
-
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.FontRenderer;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.client.EnumColors;
@@ -29,36 +25,19 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 final class ModuleDetailTextRegistry {
 
     private static final int SECTION_GAP = 4;
-    private static final int LINE_GAP = 3;
     private static final String FEATURE_LINE_PREFIX = "  ";
     private static final String FEATURE_EFFECT_PREFIX = "    ";
-    private static final List<Provider> PROVIDERS = new ArrayList<>();
-
-    static {
-        register(ModuleDetailTextRegistry::appendBaseModuleText);
-        register(ModuleDetailTextRegistry::appendCapacityText);
-        register(ModuleDetailTextRegistry::appendMaintenanceText);
-        register(ModuleDetailTextRegistry::appendPlanetaryFeatureText);
-        register(ModuleDetailTextRegistry::appendRecipeText);
-    }
 
     private ModuleDetailTextRegistry() {}
 
-    static void register(Provider provider) {
-        if (provider == null) throw new IllegalArgumentException("Module detail text provider must not be null");
-        PROVIDERS.add(provider);
-    }
-
     static Lines collect(Context context) {
         Lines lines = new Lines();
-        for (Provider provider : PROVIDERS) {
-            provider.append(context, lines);
-        }
+        appendBaseModuleText(context, lines);
+        appendCapacityText(context, lines);
+        appendMaintenanceText(context, lines);
+        appendPlanetaryFeatureText(context, lines);
+        appendRecipeText(context, lines);
         return lines;
-    }
-
-    static List<Provider> providers() {
-        return Collections.unmodifiableList(PROVIDERS);
     }
 
     private static void appendBaseModuleText(Context context, Lines lines) {
@@ -174,11 +153,6 @@ final class ModuleDetailTextRegistry {
         lines.sectionLine("Recipes: " + slots, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
     }
 
-    interface Provider {
-
-        void append(Context context, Lines lines);
-    }
-
     record Context(AutomatedFacility facility, StationLayout layout, ModuleInstance module,
         @Nullable CelestialAsset.ID facilityId) {}
 
@@ -204,38 +178,14 @@ final class ModuleDetailTextRegistry {
                     continue;
                 }
                 TextEntry text = (TextEntry) entry;
-                lineY = drawLine(text.text(), x, lineY, text.color());
+                lineY = ModuleConfigModalSupport.drawLine(text.text(), x, lineY, text.color());
             }
             return lineY;
-        }
-
-        int size() {
-            int size = 0;
-            for (Entry entry : entries) {
-                if (entry instanceof TextEntry) size++;
-            }
-            return size;
-        }
-
-        List<String> texts() {
-            List<String> texts = new ArrayList<>();
-            for (Entry entry : entries) {
-                if (entry instanceof TextEntry text) {
-                    texts.add(text.text());
-                }
-            }
-            return texts;
         }
 
         private void section() {
             if (entries.isEmpty() || entries.get(entries.size() - 1) == SectionGap.INSTANCE) return;
             entries.add(SectionGap.INSTANCE);
-        }
-
-        private static int drawLine(String text, int x, int y, int color) {
-            FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
-            fr.drawStringWithShadow(text, x, y, color);
-            return y + fr.FONT_HEIGHT + LINE_GAP;
         }
     }
 

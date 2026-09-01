@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Map;
@@ -13,7 +12,6 @@ import net.minecraft.item.ItemStack;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
@@ -36,22 +34,6 @@ final class StationModuleAlertRegistryTest {
     @BeforeAll
     static void initRegistries() {
         GalaxiaTestBootstrap.ensureFacilityModules();
-    }
-
-    @Test
-    void registeredProviderCanAttachAlertToModule() {
-        AutomatedFacility facility = createFacility();
-        ModuleInstance module = createModule(FacilityModuleKind.POWER, StationTileCoord.of(1, 0));
-        facility.addModule(module);
-        StationModuleAlert alert = StationModuleAlert
-            .warning("Test", "Registered alert", EnumTextures.ICON_STATION_ALERT_WARNING.get());
-
-        try (StationModuleAlertRegistry.Registration ignored = StationModuleAlertRegistry
-            .register((f, m) -> m == module ? List.of(alert) : List.of())) {
-            List<StationModuleAlert> alerts = StationModuleAlertRegistry.alertsFor(facility, module);
-
-            assertTrue(alerts.contains(alert));
-        }
     }
 
     @Test
@@ -83,23 +65,6 @@ final class StationModuleAlertRegistryTest {
             StationModuleAlert.Severity.RED,
             alerts.get(0)
                 .severity());
-    }
-
-    @Test
-    void redAlertsAreOrderedBeforeYellowAlerts() {
-        AutomatedFacility facility = createFacility();
-        ModuleInstance module = createModule(FacilityModuleKind.POWER, StationTileCoord.of(1, 0));
-        StationModuleAlert yellow = StationModuleAlert
-            .warning("Yellow", "Yellow alert", EnumTextures.ICON_STATION_ALERT_WARNING.get());
-        StationModuleAlert red = StationModuleAlert
-            .critical("Red", "Red alert", EnumTextures.ICON_STATION_ALERT_ERROR.get());
-
-        try (StationModuleAlertRegistry.Registration ignored = StationModuleAlertRegistry
-            .register((f, m) -> m == module ? List.of(yellow, red) : List.of())) {
-            List<StationModuleAlert> alerts = StationModuleAlertRegistry.alertsFor(facility, module);
-
-            assertEquals(List.of(red, yellow), alerts);
-        }
     }
 
     @Test
@@ -156,13 +121,6 @@ final class StationModuleAlertRegistryTest {
             CelestialObjectId.PROXIMA_CENTAURI,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-    }
-
-    private static ModuleInstance createModule(FacilityModuleKind kind, StationTileCoord anchor) {
-        ModuleInstance module = FacilityModuleRegistry
-            .create(ModuleInstance.ID.create(), kind, anchor, ModuleShape.SINGLE, kind.defaultTier());
-        module.updateStatus(Buildable.Status.OPERATIONAL);
-        return module;
     }
 
     private static ModuleInstance moduleWithUpkeep(FacilityModuleKind kind, StationTileCoord anchor, long itemAmount) {

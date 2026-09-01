@@ -20,20 +20,17 @@ public final class StationCoreDirectionIndicator {
 
     public record Arrow(int tipX, int tipY, double unitX, double unitY) {}
 
-    public static @Nullable Arrow towardCore(int width, int height, int contentLeft, int contentRightPadding,
-        int contentVerticalPadding, int panX, int panY) {
-        int left = contentLeft + EDGE_INSET;
-        int right = width - contentRightPadding - EDGE_INSET;
-        int top = contentVerticalPadding + EDGE_INSET;
-        int bottom = height - contentVerticalPadding - EDGE_INSET;
+    public static @Nullable Arrow towardCore(StationMapFrame frame) {
+        int left = frame.contentLeft() + EDGE_INSET;
+        int right = frame.widgetWidth() - frame.contentRightPadding() - EDGE_INSET;
+        int top = frame.contentVerticalPadding() + EDGE_INSET;
+        int bottom = frame.widgetHeight() - frame.contentVerticalPadding() - EDGE_INSET;
         if (right <= left || bottom <= top) return null;
 
         double centerX = (left + right) * 0.5;
         double centerY = (top + bottom) * 0.5;
-        double coreX = StationMapViewport.tileLeftX(0, width, contentLeft, contentRightPadding, panX)
-            + StationMapViewport.TILE_SIZE * 0.5;
-        double coreY = StationMapViewport.tileTopY(0, height, contentVerticalPadding, panY)
-            + StationMapViewport.TILE_SIZE * 0.5;
+        double coreX = frame.tileLocalX(0) + StationMapFrame.TILE_SIZE * 0.5;
+        double coreY = frame.tileLocalY(0) + StationMapFrame.TILE_SIZE * 0.5;
         double dx = coreX - centerX;
         double dy = coreY - centerY;
         double length = Math.hypot(dx, dy);
@@ -57,13 +54,7 @@ public final class StationCoreDirectionIndicator {
         return new Arrow(roundedTipX, roundedTipY, tipToCoreX / tipToCoreLength, tipToCoreY / tipToCoreLength);
     }
 
-    public static boolean tileIntersectsScreen(int tileX, int tileY, int width, int height) {
-        return tileX < width && tileX + StationMapViewport.TILE_SIZE > 0
-            && tileY < height
-            && tileY + StationMapViewport.TILE_SIZE > 0;
-    }
-
-    public static void draw(Arrow arrow, int fillColor, int borderColor) {
+    public static void draw(Arrow arrow) {
         if (arrow == null) return;
 
         double centerX = arrow.tipX() - arrow.unitX() * (TEXTURE_WIDTH * 0.5);

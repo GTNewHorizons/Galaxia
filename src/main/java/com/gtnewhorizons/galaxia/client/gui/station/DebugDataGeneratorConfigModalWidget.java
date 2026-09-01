@@ -5,6 +5,7 @@ import javax.annotation.Nullable;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
@@ -30,7 +31,7 @@ final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGe
     DebugDataGeneratorConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller) {
         this.assetId = assetId;
         this.controller = controller;
-        overlay(ModuleConfigModalSupport.drawable((ctx, x, y, w, h) -> draw()));
+        overlay(DrawableCommand.asDrawable((ctx, x, y, w, h) -> draw()));
         addButtons();
     }
 
@@ -196,9 +197,7 @@ final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGe
     }
 
     private void apply(ModuleDebugDataGenerator.Config config) {
-        int moduleIndex = controller.moduleIndex();
-        if (moduleIndex < 0) return;
-        CelestialClient.updateDebugDataGeneratorConfig(assetId, moduleIndex, config);
+        CelestialClient.updateDebugDataGeneratorConfig(assetId, controller.moduleId(), config);
     }
 
     private ModuleDebugDataGenerator.Config config() {

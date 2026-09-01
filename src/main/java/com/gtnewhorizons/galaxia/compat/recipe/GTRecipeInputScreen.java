@@ -460,7 +460,7 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
     }
 
     private static ButtonWidget<?> btn(String label, Runnable action) {
-        return new ButtonWidget<>().overlay(drawable((ctx, x, y, w, h) -> {
+        return new ButtonWidget<>().overlay(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
             FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
             fr.drawString(label, x + (w - fr.getStringWidth(label)) / 2, y + (h - fr.FONT_HEIGHT) / 2 + 1, 0xFF1E2530);
         }))
@@ -468,10 +468,6 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
                 if (b == 0) action.run();
                 return true;
             });
-    }
-
-    private static IDrawable drawable(DrawableCommand cmd) {
-        return (ctx, x, y, w, h, t) -> cmd.draw(ctx, x, y, w, h);
     }
 
     private static int c(EnumColors color) {

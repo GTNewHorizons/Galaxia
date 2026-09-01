@@ -9,7 +9,6 @@ import net.minecraft.client.gui.Gui;
 
 import org.lwjgl.opengl.GL11;
 
-import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
@@ -1224,7 +1223,7 @@ public final class InterplanetaryTransferSystem {
                 .widthRel(1f)
                 .heightRel(1f)
                 .background(
-                    drawable(
+                    DrawableCommand.asDrawable(
                         (ctx, x, y, w, h) -> Gui
                             .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_MODAL_BG.getColor())));
             panel.child(backgroundLayer);
@@ -1286,7 +1285,7 @@ public final class InterplanetaryTransferSystem {
             panel.child(
                 new PassiveLayer().pos(80, 112)
                     .size(INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT)
-                    .background(drawable((ctx, x, y, w, h) -> {
+                    .background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
                         BorderedRect.draw(
                             x,
                             y,
@@ -1440,7 +1439,7 @@ public final class InterplanetaryTransferSystem {
             return new PassiveLayer().pos(CONTENT_X, y)
                 .size(PANEL_WIDTH - CONTENT_X * 2, 1)
                 .background(
-                    drawable(
+                    DrawableCommand.asDrawable(
                         (ctx, x, yy, w, h) -> Gui
                             .drawRect(x, yy, x + w, yy + 1, EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor())));
         }
@@ -1448,14 +1447,15 @@ public final class InterplanetaryTransferSystem {
         private ButtonWidget<?> createButton(String label, int backgroundColor, int borderColor, Runnable onClick) {
             return new ButtonWidget<>()
                 .background(
-                    drawable((ctx, x, y, w, h) -> { BorderedRect.draw(x, y, w, h, backgroundColor, borderColor); }))
+                    DrawableCommand.asDrawable(
+                        (ctx, x, y, w, h) -> { BorderedRect.draw(x, y, w, h, backgroundColor, borderColor); }))
                 .hoverBackground(
-                    drawable(
+                    DrawableCommand.asDrawable(
                         (ctx, x, y, w, h) -> {
                             BorderedRect
                                 .draw(x, y, w, h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor(), borderColor);
                         }))
-                .overlay(drawable((ctx, x, y, w, h) -> {
+                .overlay(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
                     net.minecraft.client.gui.FontRenderer fr = net.minecraft.client.Minecraft
                         .getMinecraft().fontRenderer;
                     int textW = fr.getStringWidth(label);
@@ -1476,9 +1476,6 @@ public final class InterplanetaryTransferSystem {
             return body == null ? fallback : body.displayName();
         }
 
-        private IDrawable drawable(DrawableCommand cmd) {
-            return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
-        }
     }
 
     // -----------------------------------------------------------------------
@@ -1579,7 +1576,7 @@ public final class InterplanetaryTransferSystem {
                 .widthRel(1f)
                 .heightRel(1f)
                 .background(
-                    drawable(
+                    DrawableCommand.asDrawable(
                         (ctx, x, y, w, h) -> Gui
                             .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_TRANSFER_TOOLTIP_BG.getColor())));
             rootPanel.child(backgroundLayer);
@@ -1628,9 +1625,6 @@ public final class InterplanetaryTransferSystem {
             rootPanel.pos(left, top);
         }
 
-        private IDrawable drawable(DrawableCommand cmd) {
-            return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
-        }
     }
 
     // -----------------------------------------------------------------------

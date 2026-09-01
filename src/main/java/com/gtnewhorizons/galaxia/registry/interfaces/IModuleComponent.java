@@ -42,8 +42,7 @@ public interface IModuleComponent {
         throw unsupportedCommand(configuration);
     }
 
-    default IModuleOperation prepareOperationTarget(ModuleInstance module,
-        FacilityCommand.ModuleOperationRequest request) {
+    default IModuleOperation prepareOperationTarget(ModuleInstance module, FacilityCommand.ModuleCommand request) {
         throw unsupportedCommand(request);
     }
 

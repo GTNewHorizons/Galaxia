@@ -59,9 +59,8 @@ final class StationMapWidgetTest {
             ModuleTier.EV);
         layout.place(module);
 
-        int x = StationMapViewport.tileLeftX(0, 200, 0, 0, 0) + StationMapViewport.TILE_SIZE / 2;
-        int y = StationMapViewport.tileTopY(0, 200, 0, 0) + StationMapViewport.TILE_SIZE
-            + StationMapViewport.CONNECTOR_GAP / 2;
+        int x = FRAME.tileLocalX(0) + StationMapFrame.TILE_SIZE / 2;
+        int y = FRAME.tileLocalY(0) + StationMapFrame.TILE_SIZE + StationMapFrame.CONNECTOR_GAP / 2;
 
         assertEquals(StationTileCoord.CORE, StationMapHitTester.hitTestModuleFootprint(layout, x, y, FRAME));
     }
@@ -77,10 +76,8 @@ final class StationMapWidgetTest {
             ModuleTier.EV);
         layout.place(module);
 
-        int x = StationMapViewport.tileLeftX(0, 200, 0, 0, 0) + StationMapViewport.TILE_SIZE
-            + StationMapViewport.CONNECTOR_GAP / 2;
-        int y = StationMapViewport.tileTopY(0, 200, 0, 0) + StationMapViewport.TILE_SIZE
-            + StationMapViewport.CONNECTOR_GAP / 2;
+        int x = FRAME.tileLocalX(0) + StationMapFrame.TILE_SIZE + StationMapFrame.CONNECTOR_GAP / 2;
+        int y = FRAME.tileLocalY(0) + StationMapFrame.TILE_SIZE + StationMapFrame.CONNECTOR_GAP / 2;
 
         assertEquals(StationTileCoord.CORE, StationMapHitTester.hitTestModuleFootprint(layout, x, y, FRAME));
     }
@@ -96,8 +93,8 @@ final class StationMapWidgetTest {
             ModuleTier.EV);
         layout.place(module);
 
-        int x = StationMapViewport.tileLeftX(0, 200, 0, 0, 0) + StationMapViewport.TILE_SIZE / 2;
-        int y = StationMapViewport.tileTopY(1, 200, 0, 0) + StationMapViewport.TILE_SIZE / 2;
+        int x = FRAME.tileLocalX(0) + StationMapFrame.TILE_SIZE / 2;
+        int y = FRAME.tileLocalY(1) + StationMapFrame.TILE_SIZE / 2;
 
         assertEquals(StationTileCoord.CORE, StationMapHitTester.hitTestModuleFootprint(layout, x, y, FRAME));
     }
@@ -113,8 +110,8 @@ final class StationMapWidgetTest {
             ModuleTier.EV);
         layout.place(module);
 
-        int x = StationMapViewport.tileLeftX(1, 200, 0, 0, 0) + StationMapViewport.TILE_SIZE / 2;
-        int y = StationMapViewport.tileTopY(0, 200, 0, 0) + StationMapViewport.TILE_SIZE / 2;
+        int x = FRAME.tileLocalX(1) + StationMapFrame.TILE_SIZE / 2;
+        int y = FRAME.tileLocalY(0) + StationMapFrame.TILE_SIZE / 2;
 
         assertNull(StationMapHitTester.hitTestModuleFootprint(layout, x, y, FRAME));
     }
@@ -182,8 +179,8 @@ final class StationMapWidgetTest {
 
         List<ModuleFootprintProjection.Segment> segments = StationMapOverlayPainter
             .maintenanceCoverageFillSegments(StationTileCoord.CORE, tiles, frame);
-        int x = StationMapViewport.tileLeftX(1, 240, 0, 0, 0) + StationMapViewport.TILE_SIZE / 2;
-        int y = StationMapViewport.tileTopY(0, 240, 0, 0) + StationMapViewport.TILE_SIZE / 2;
+        int x = frame.tileLocalX(1) + StationMapFrame.TILE_SIZE / 2;
+        int y = frame.tileLocalY(0) + StationMapFrame.TILE_SIZE / 2;
 
         assertTrue(covers(segments, x, y));
     }

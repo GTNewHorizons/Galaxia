@@ -171,7 +171,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         ScrollWidget<?> scroll = new ScrollWidget<>(scrollData).pos(SCROLL_X, SCROLL_Y)
             .size(SCROLL_WIDTH, SCROLL_HEIGHT)
             .background(
-                drawable(
+                DrawableCommand.asDrawable(
                     (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_SCROLL_BG.getColor())));
         scroll.child(scrollContent);
         panelRoot.child(scroll);
@@ -179,7 +179,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         panelRoot.child(emptyInventoryText);
         boundEditorRoot.pos(0, 0)
             .size(PANEL_WIDTH, PANEL_HEIGHT)
-            .overlay(drawable((ctx, x, y, w, h) -> drawBoundEditorOverlay(x, y, w, h)))
+            .overlay(DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawBoundEditorOverlay(x, y, w, h)))
             .setEnabled(false);
         boundEditorRoot.child(
             boundField(true).pos(BOUND_FIELD_X, BOUND_EDITOR_Y + 34)
@@ -422,25 +422,28 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         ParentWidget<?> rowWidget = new ParentWidget<>().widthRel(1f)
             .height(ROW_HEIGHT)
             .background(
-                drawable(
+                DrawableCommand.asDrawable(
                     (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())));
-        rowWidget.child(drawable((ctx, x, y, w, h) -> {
+        rowWidget.child(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
             ModuleConfigModalSupport.renderItemIcon(displayStack, x, y + 4);
             renderBoundMarkers(wrapper, x, y + 4);
-        }).asWidget()
+        })
+            .asWidget()
             .pos(ICON_X, 0)
             .size(16, ROW_HEIGHT)
             .tooltip(t -> t.addLine(displayStack.getDisplayName())));
         rowWidget.child(
-            drawable(
-                (ctx, x, y, w, h) -> ModuleConfigModalSupport.drawTrimmedLine(
-                    displayStack.getDisplayName(),
-                    x,
-                    y + 8,
-                    NAME_WIDTH,
-                    EnumColors.MAP_COLOR_TEXT_BODY.getColor())).asWidget()
-                        .pos(NAME_X, 0)
-                        .size(NAME_WIDTH, ROW_HEIGHT));
+            DrawableCommand
+                .asDrawable(
+                    (ctx, x, y, w, h) -> ModuleConfigModalSupport.drawTrimmedLine(
+                        displayStack.getDisplayName(),
+                        x,
+                        y + 8,
+                        NAME_WIDTH,
+                        EnumColors.MAP_COLOR_TEXT_BODY.getColor()))
+                .asWidget()
+                .pos(NAME_X, 0)
+                .size(NAME_WIDTH, ROW_HEIGHT));
         rowWidget.child(
             ModuleConfigModalSupport
                 .textureIconButton(
@@ -515,23 +518,27 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         ParentWidget<?> rowWidget = new ParentWidget<>().widthRel(1f)
             .height(ROW_HEIGHT)
             .background(
-                drawable(
+                DrawableCommand.asDrawable(
                     (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())));
         rowWidget.child(
-            drawable((ctx, x, y, w, h) -> ModuleConfigModalSupport.renderItemIcon(displayStack, x, y + 4)).asWidget()
+            DrawableCommand
+                .asDrawable((ctx, x, y, w, h) -> ModuleConfigModalSupport.renderItemIcon(displayStack, x, y + 4))
+                .asWidget()
                 .pos(ICON_X, 0)
                 .size(16, ROW_HEIGHT)
                 .tooltip(t -> t.addLine(displayStack.getDisplayName())));
         rowWidget.child(
-            drawable(
-                (ctx, x, y, w, h) -> ModuleConfigModalSupport.drawTrimmedLine(
-                    displayStack.getDisplayName(),
-                    x,
-                    y + 8,
-                    NAME_WIDTH,
-                    EnumColors.MAP_COLOR_TEXT_BODY.getColor())).asWidget()
-                        .pos(NAME_X, 0)
-                        .size(NAME_WIDTH, ROW_HEIGHT));
+            DrawableCommand
+                .asDrawable(
+                    (ctx, x, y, w, h) -> ModuleConfigModalSupport.drawTrimmedLine(
+                        displayStack.getDisplayName(),
+                        x,
+                        y + 8,
+                        NAME_WIDTH,
+                        EnumColors.MAP_COLOR_TEXT_BODY.getColor()))
+                .asWidget()
+                .pos(NAME_X, 0)
+                .size(NAME_WIDTH, ROW_HEIGHT));
         rowWidget.child(
             new TextWidget<>(
                 IKey.dynamic(
@@ -565,22 +572,24 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         ParentWidget<?> rowWidget = new ParentWidget<>().widthRel(1f)
             .height(ROW_HEIGHT)
             .background(
-                drawable(
+                DrawableCommand.asDrawable(
                     (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())));
-        rowWidget.child(drawable((ctx, x, y, w, h) -> {
+        rowWidget.child(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
             renderFluidIcon(fluidName, x, y + 4);
             renderFluidBoundMarkers(fluidKey, x, y + 4);
-        }).asWidget()
+        })
+            .asWidget()
             .pos(ICON_X, 0)
             .size(16, ROW_HEIGHT)
             .tooltip(t -> t.addLine(fluidName)));
         rowWidget.child(
-            drawable(
-                (ctx, x, y, w, h) -> ModuleConfigModalSupport
-                    .drawTrimmedLine(fluidName, x, y + 8, NAME_WIDTH, EnumColors.MAP_COLOR_TEXT_BODY.getColor()))
-                        .asWidget()
-                        .pos(NAME_X, 0)
-                        .size(NAME_WIDTH, ROW_HEIGHT));
+            DrawableCommand
+                .asDrawable(
+                    (ctx, x, y, w, h) -> ModuleConfigModalSupport
+                        .drawTrimmedLine(fluidName, x, y + 8, NAME_WIDTH, EnumColors.MAP_COLOR_TEXT_BODY.getColor()))
+                .asWidget()
+                .pos(NAME_X, 0)
+                .size(NAME_WIDTH, ROW_HEIGHT));
         rowWidget.child(
             new TextWidget<>(IKey.dynamic(() -> formatAmount(currentFluidAmount(fluidKey))))
                 .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
@@ -609,7 +618,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
             .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
             .background(
-                ModuleConfigModalSupport.drawable(
+                DrawableCommand.asDrawable(
                     (ctx, x, y, w, h) -> BorderedRect.draw(
                         x,
                         y,
@@ -635,7 +644,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             .autoUpdateOnChange(true)
             .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
             .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
-            .background(ModuleConfigModalSupport.drawable((ctx, x, y, w, h) -> {
+            .background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
                 if (!isUpkeepItem(wrapper)) return;
                 BorderedRect.draw(
                     x,
@@ -671,7 +680,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
             .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
             .background(
-                ModuleConfigModalSupport.drawable(
+                DrawableCommand.asDrawable(
                     (ctx, x, y, w, h) -> BorderedRect.draw(
                         x,
                         y,
@@ -1066,10 +1075,6 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         if (amount < 1_000L) return Long.toString(amount);
         if (amount < 1_000_000L) return (amount / 1_000L) + "k";
         return (amount / 1_000_000L) + "M";
-    }
-
-    private com.cleanroommc.modularui.api.drawable.IDrawable drawable(DrawableCommand cmd) {
-        return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
     }
 
     private enum ResourceMode {

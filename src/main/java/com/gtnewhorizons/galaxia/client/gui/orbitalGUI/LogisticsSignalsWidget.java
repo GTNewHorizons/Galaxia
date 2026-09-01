@@ -16,7 +16,6 @@ import net.minecraft.item.ItemStack;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 
-import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.ScrollWidget;
@@ -186,7 +185,7 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         panelRoot.setEnabled(true);
         ParentWidget<?> backgroundLayer = new ParentWidget<>().pos(0, 0)
             .size(PANEL_W, panelH)
-            .background(drawable((ctx, x, y, w, h) -> {
+            .background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
                 Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_MODAL_BG.getColor());
                 Gui.drawRect(x, y, x + w, y + 24, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
             }));
@@ -270,7 +269,7 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         ParentWidget<?> rowWidget = new ParentWidget<>().widthRel(1f)
             .height(ROW_H)
             .background(
-                drawable(
+                DrawableCommand.asDrawable(
                     (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())));
 
         if (state == null) return rowWidget;
@@ -282,12 +281,14 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         });
 
         rowWidget.child(
-            drawable(
-                (ctx, bx, by, bw, bh) -> {
-                    if (state.displayStack != null) renderItemIcon(state.displayStack, bx + 1, by + 3);
-                }).asWidget()
-                    .pos(COL_ICON, 0)
-                    .size(16, ROW_H));
+            DrawableCommand
+                .asDrawable(
+                    (ctx, bx, by, bw, bh) -> {
+                        if (state.displayStack != null) renderItemIcon(state.displayStack, bx + 1, by + 3);
+                    })
+                .asWidget()
+                .pos(COL_ICON, 0)
+                .size(16, ROW_H));
 
         rowWidget.child(
             new TextWidget<>(IKey.dynamic(() -> state.trimmedName)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
@@ -388,10 +389,6 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
             Comparator.comparingLong((SignalRow r) -> r.net())
                 .reversed());
         return rows;
-    }
-
-    private IDrawable drawable(DrawableCommand cmd) {
-        return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
     }
 
     private static void renderItemIcon(ItemStack stack, int x, int y) {

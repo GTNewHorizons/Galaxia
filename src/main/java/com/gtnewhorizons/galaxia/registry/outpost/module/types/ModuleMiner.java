@@ -78,8 +78,7 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
     }
 
     @Override
-    public IModuleOperation prepareOperationTarget(ModuleInstance module,
-        FacilityCommand.ModuleOperationRequest request) {
+    public IModuleOperation prepareOperationTarget(ModuleInstance module, FacilityCommand.ModuleCommand request) {
         if (!(request instanceof FacilityCommand.PlanMinerFocusUpgrade plan)) {
             return super.prepareOperationTarget(module, request);
         }

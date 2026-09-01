@@ -5,7 +5,6 @@ import java.util.function.Supplier;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.util.StatCollector;
 
-import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.widget.ParentWidget;
@@ -151,14 +150,14 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
     }
 
     private ButtonWidget<?> createTopBarButton(Supplier<String> labelSupplier, Runnable onClick) {
-        return new ButtonWidget<>().background(drawable((ctx, x, y, w, h) -> {
+        return new ButtonWidget<>().background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
             Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor());
             Gui.drawRect(x, y, x + w, y + 1, EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
             Gui.drawRect(x, y + h - 1, x + w, y + h, EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
             Gui.drawRect(x, y, x + 1, y + h, EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
             Gui.drawRect(x + w - 1, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
         }))
-            .hoverBackground(drawable((ctx, x, y, w, h) -> {
+            .hoverBackground(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
                 Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor());
                 Gui.drawRect(x, y, x + w, y + 1, EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
                 Gui.drawRect(x, y + h - 1, x + w, y + h, EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
@@ -178,7 +177,4 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
             .onUpdateListener(ButtonWidget::markTooltipDirty, true);
     }
 
-    private IDrawable drawable(DrawableCommand cmd) {
-        return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
-    }
 }

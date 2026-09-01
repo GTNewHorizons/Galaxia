@@ -113,8 +113,7 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
     }
 
     @Override
-    public IModuleOperation prepareOperationTarget(ModuleInstance module,
-        FacilityCommand.ModuleOperationRequest request) {
+    public IModuleOperation prepareOperationTarget(ModuleInstance module, FacilityCommand.ModuleCommand request) {
         if (!(request instanceof FacilityCommand.PlanHammerUpgrade plan)) {
             return IParallelModule.super.prepareOperationTarget(module, request);
         }

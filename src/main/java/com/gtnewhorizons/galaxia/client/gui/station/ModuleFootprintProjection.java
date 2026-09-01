@@ -23,31 +23,31 @@ public final class ModuleFootprintProjection {
         for (StationTileCoord tile : tiles) {
             int x = frame.tileLocalX(tile);
             int y = frame.tileLocalY(tile);
-            segments.add(new Segment(x, y, StationMapViewport.TILE_SIZE, StationMapViewport.TILE_SIZE));
+            segments.add(new Segment(x, y, StationMapFrame.TILE_SIZE, StationMapFrame.TILE_SIZE));
             if (isOccupied(occupied, tile.dx() + 1, tile.dy())) {
                 segments.add(
                     new Segment(
-                        x + StationMapViewport.TILE_SIZE,
+                        x + StationMapFrame.TILE_SIZE,
                         y,
-                        StationMapViewport.CONNECTOR_GAP,
-                        StationMapViewport.TILE_SIZE));
+                        StationMapFrame.CONNECTOR_GAP,
+                        StationMapFrame.TILE_SIZE));
             }
             if (isOccupied(occupied, tile.dx(), tile.dy() + 1)) {
                 segments.add(
                     new Segment(
                         x,
-                        y + StationMapViewport.TILE_SIZE,
-                        StationMapViewport.TILE_SIZE,
-                        StationMapViewport.CONNECTOR_GAP));
+                        y + StationMapFrame.TILE_SIZE,
+                        StationMapFrame.TILE_SIZE,
+                        StationMapFrame.CONNECTOR_GAP));
             }
             if (isOccupied(occupied, tile.dx() + 1, tile.dy()) && isOccupied(occupied, tile.dx(), tile.dy() + 1)
                 && isOccupied(occupied, tile.dx() + 1, tile.dy() + 1)) {
                 segments.add(
                     new Segment(
-                        x + StationMapViewport.TILE_SIZE,
-                        y + StationMapViewport.TILE_SIZE,
-                        StationMapViewport.CONNECTOR_GAP,
-                        StationMapViewport.CONNECTOR_GAP));
+                        x + StationMapFrame.TILE_SIZE,
+                        y + StationMapFrame.TILE_SIZE,
+                        StationMapFrame.CONNECTOR_GAP,
+                        StationMapFrame.CONNECTOR_GAP));
             }
         }
         return segments;

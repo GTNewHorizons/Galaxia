@@ -34,17 +34,9 @@ final class StationMapOverlayPainter {
     private StationMapOverlayPainter() {}
 
     static void drawFeatureOverlay(AutomatedFacility facility, StationMapFrame frame,
-        List<StationMapViewport.TilePosition> visibleFeatureTiles) {
-        StationMapViewport.collectVisibleTilePositions(
-            frame.widgetWidth(),
-            frame.widgetHeight(),
-            frame.contentLeft(),
-            frame.contentRightPadding(),
-            frame.contentVerticalPadding(),
-            frame.panX(),
-            frame.panY(),
-            visibleFeatureTiles);
-        for (StationMapViewport.TilePosition coord : visibleFeatureTiles) {
+        List<StationMapFrame.TilePosition> visibleFeatureTiles) {
+        frame.collectVisibleTilePositions(visibleFeatureTiles);
+        for (StationMapFrame.TilePosition coord : visibleFeatureTiles) {
             PlanetaryFeatureOverlayRenderer.draw(
                 frame.tileLocalX(coord.dx()),
                 frame.tileLocalY(coord.dy()),
@@ -78,7 +70,7 @@ final class StationMapOverlayPainter {
         }
         int x = frame.tileLocalX(coord);
         int y = frame.tileLocalY(coord);
-        StationTileRenderer.drawHoverOverlay(x, y, StationMapViewport.TILE_SIZE);
+        StationTileRenderer.drawHoverOverlay(x, y, StationMapFrame.TILE_SIZE);
     }
 
     static void drawSelectionOverlay(StationTileCoord coord, Map<StationTileCoord, PlacedTile> tiles,
@@ -92,7 +84,7 @@ final class StationMapOverlayPainter {
         }
         int x = frame.tileLocalX(coord);
         int y = frame.tileLocalY(coord);
-        StationTileRenderer.drawSelectionOverlay(x, y, StationMapViewport.TILE_SIZE);
+        StationTileRenderer.drawSelectionOverlay(x, y, StationMapFrame.TILE_SIZE);
     }
 
     static void drawMaintenanceBayCoverage(@Nullable StationTileCoord selected, Map<StationTileCoord, PlacedTile> tiles,
@@ -111,8 +103,8 @@ final class StationMapOverlayPainter {
                 BorderedRect.draw(
                     frame.tileLocalX(coord),
                     frame.tileLocalY(coord),
-                    StationMapViewport.TILE_SIZE,
-                    StationMapViewport.TILE_SIZE,
+                    StationMapFrame.TILE_SIZE,
+                    StationMapFrame.TILE_SIZE,
                     EnumColors.MAP_COLOR_STATION_DEBUG_NEIGHBOR_FILL.getColor(),
                     EnumColors.MAP_COLOR_STATION_DEBUG_NEIGHBOR_BORDER.getColor());
             }
@@ -136,8 +128,8 @@ final class StationMapOverlayPainter {
                     new ModuleFootprintProjection.Segment(
                         frame.tileLocalX(tile),
                         frame.tileLocalY(tile),
-                        StationMapViewport.TILE_SIZE,
-                        StationMapViewport.TILE_SIZE));
+                        StationMapFrame.TILE_SIZE,
+                        StationMapFrame.TILE_SIZE));
             }
         }
         return segments;
@@ -175,32 +167,13 @@ final class StationMapOverlayPainter {
 
     static void drawCoreDirectionIndicator(Set<StationTileCoord> occupiedTiles, StationMapFrame frame) {
         if (hasVisibleStationTile(occupiedTiles, frame)) return;
-        StationCoreDirectionIndicator.Arrow arrow = StationCoreDirectionIndicator.towardCore(
-            frame.widgetWidth(),
-            frame.widgetHeight(),
-            frame.contentLeft(),
-            frame.contentRightPadding(),
-            frame.contentVerticalPadding(),
-            frame.panX(),
-            frame.panY());
-        StationCoreDirectionIndicator.draw(
-            arrow,
-            EnumColors.MAP_COLOR_TEXT_TITLE.getColor(),
-            EnumColors.MAP_COLOR_STATION_TILE_BORDER_HOVERED.getColor());
+        StationCoreDirectionIndicator.Arrow arrow = StationCoreDirectionIndicator.towardCore(frame);
+        StationCoreDirectionIndicator.draw(arrow);
     }
 
     static void drawFeatureTooltip(AutomatedFacility facility, int localMouseX, int localMouseY,
         StationMapFrame frame) {
-        StationMapViewport.TilePosition coord = StationMapViewport.tilePositionAt(
-            localMouseX,
-            localMouseY,
-            frame.widgetWidth(),
-            frame.widgetHeight(),
-            frame.contentLeft(),
-            frame.contentRightPadding(),
-            frame.contentVerticalPadding(),
-            frame.panX(),
-            frame.panY());
+        StationMapFrame.TilePosition coord = frame.tilePositionAt(localMouseX, localMouseY);
         if (coord == null) return;
         List<PlanetaryFeatureDefinition> features = PlanetaryFeatureRegistry
             .definitionsFor(facility.planetaryFeaturesAt(coord.dx(), coord.dy()));
@@ -325,11 +298,7 @@ final class StationMapOverlayPainter {
 
     private static boolean hasVisibleStationTile(Set<StationTileCoord> occupiedTiles, StationMapFrame frame) {
         for (StationTileCoord coord : occupiedTiles) {
-            if (StationCoreDirectionIndicator.tileIntersectsScreen(
-                frame.tileLocalX(coord),
-                frame.tileLocalY(coord),
-                frame.widgetWidth(),
-                frame.widgetHeight())) {
+            if (frame.tileIntersectsScreen(frame.tileLocalX(coord), frame.tileLocalY(coord))) {
                 return true;
             }
         }

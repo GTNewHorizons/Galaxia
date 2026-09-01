@@ -19,7 +19,6 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
-import com.gtnewhorizons.galaxia.client.gui.station.layer.CapacityConnectorLayer;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.ConnectionLayerRenderer;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.ModuleLayerRenderer;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -47,7 +46,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
     private @Nullable StationTileCoord selected;
     private @Nullable StationTileCoord hovered;
     private @Nullable StationTileCoord pressedTile;
-    private final List<StationMapViewport.TilePosition> visibleFeatureTiles = new ArrayList<>();
+    private final List<StationMapFrame.TilePosition> visibleFeatureTiles = new ArrayList<>();
     private final Set<StationTileCoord> expansionSlots = new LinkedHashSet<>();
     private @Nullable StationLayout cachedExpansionLayout;
     private long cachedExpansionLayoutVersion = -1L;
@@ -177,14 +176,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             if (facility == null) return false;
             pressMouseX = toLocalMouseX(getContext().getMouseX());
             pressMouseY = toLocalMouseY(getContext().getMouseY());
-            pressInMapContent = StationMapViewport.contains(
-                pressMouseX,
-                pressMouseY,
-                getArea().width,
-                getArea().height,
-                contentLeft,
-                contentRightPadding,
-                contentVerticalPadding);
+            pressInMapContent = mapFrame().contains(pressMouseX, pressMouseY);
             if (!pressInMapContent) return false;
             pressedTile = hitTest(facility.stationLayout(), pressMouseX, pressMouseY);
             lastDragMouseX = pressMouseX;
@@ -266,14 +258,12 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
 
         StationMapOverlayPainter.drawFeatureOverlay(facility, frame, visibleFeatureTiles);
 
-        ConnectionLayerRenderer.draw(context, tiles, frame);
-
-        CapacityConnectorLayer.draw(context, tiles, frame);
+        ConnectionLayerRenderer.draw(tiles, frame);
 
         for (StationTileCoord slot : expansionSlots) {
             int sx = frame.tileLocalX(slot);
             int sy = frame.tileLocalY(slot);
-            ModuleLayerRenderer.drawExpansionSlot(context, sx, sy);
+            ModuleLayerRenderer.drawExpansionSlot(sx, sy);
         }
 
         ModuleLayerRenderer.drawFootprintTextures(tiles, frame);
@@ -282,11 +272,11 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             StationTileCoord coord = e.getKey();
             int tx = frame.tileLocalX(coord);
             int ty = frame.tileLocalY(coord);
-            ModuleLayerRenderer.drawOccupied(context, tx, ty, coord, e.getValue());
+            ModuleLayerRenderer.drawOccupied(tx, ty, coord, e.getValue());
         }
         StationMapOverlayPainter.drawModuleAlerts(tiles, moduleAlerts, frame);
 
-        drawPickerOverlay(context, tiles, frame);
+        drawPickerOverlay(tiles, frame);
 
         StationMapOverlayPainter.drawCoreDirectionIndicator(tiles.keySet(), frame);
 
@@ -318,8 +308,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
         hovered = hitTest(layout, localX, localY);
     }
 
-    private void drawPickerOverlay(ModularGuiContext context, Map<StationTileCoord, PlacedTile> tiles,
-        StationMapFrame frame) {
+    private void drawPickerOverlay(Map<StationTileCoord, PlacedTile> tiles, StationMapFrame frame) {
         if (!isPickerActive()) return;
         if (tilePickerController.visualStyle() == StationTilePickerController.VisualStyle.DECONSTRUCT) {
             drawDeconstructPickerOverlay(tiles, frame);
@@ -332,13 +321,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
         for (StationTileCoord selectedTarget : tilePickerController.selectedTargets()) {
             int selectedRotation = tilePickerController.selectedTargetRotation(selectedTarget);
             addFootprintOrthogonalCandidates(touchTiles, selectedTarget, footprint, selectedRotation);
-            drawPickerFootprint(
-                selectedTarget,
-                footprint,
-                selectedRotation,
-                true,
-                pickerPrimaryTile(selectedTarget, footprint, selectedRotation),
-                frame);
+            drawPickerFootprint(selectedTarget, footprint, selectedRotation, true, selectedTarget, frame);
         }
         addFootprintAnchorsContaining(
             candidateAnchors,
@@ -348,14 +331,13 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
         for (StationTileCoord anchor : candidateAnchors) {
             if (!tilePickerController.isCompatibleNormalized(anchor) || tilePickerController.isSelected(anchor))
                 continue;
-            StationTileCoord clickTile = ModuleBuildPickerModel
-                .tileForAnchorRotation(anchor, footprint, tilePickerController.footprintRotation());
+            StationTileCoord clickTile = anchor;
             if (clickTile == null || !clickableTiles.add(clickTile)) continue;
             int x = frame.tileLocalX(clickTile);
             int y = frame.tileLocalY(clickTile);
-            StationTileRenderer.drawPickerCompatibleOverlay(x, y, StationMapViewport.TILE_SIZE);
+            StationTileRenderer.drawPickerCompatibleOverlay(x, y, StationMapFrame.TILE_SIZE);
         }
-        drawPickerHoverFootprint(context, footprint, frame);
+        drawPickerHoverFootprint(footprint, frame);
     }
 
     private void drawDeconstructPickerOverlay(Map<StationTileCoord, PlacedTile> tiles, StationMapFrame frame) {
@@ -388,13 +370,13 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
         int x = frame.tileLocalX(coord);
         int y = frame.tileLocalY(coord);
         if (tilePickerController.isSelected(coord)) {
-            StationTileRenderer.drawPickerDeconstructSelectedOverlay(x, y, StationMapViewport.TILE_SIZE);
+            StationTileRenderer.drawPickerDeconstructSelectedOverlay(x, y, StationMapFrame.TILE_SIZE);
         } else {
-            StationTileRenderer.drawPickerCompatibleOverlay(x, y, StationMapViewport.TILE_SIZE);
+            StationTileRenderer.drawPickerCompatibleOverlay(x, y, StationMapFrame.TILE_SIZE);
         }
     }
 
-    private void drawPickerHoverFootprint(ModularGuiContext context, ModuleShape footprint, StationMapFrame frame) {
+    private void drawPickerHoverFootprint(ModuleShape footprint, StationMapFrame frame) {
         StationTileCoord hov = hovered;
         if (hov == null) return;
         StationTileCoord normalized = normalizePickerTarget(hov);
@@ -403,7 +385,6 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             ? tilePickerController.selectedTargetRotation(normalized)
             : tilePickerController.footprintRotation();
         drawPickerModulePreview(
-            context,
             normalized,
             footprint,
             rotation,
@@ -412,24 +393,20 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             frame);
     }
 
-    private void drawPickerModulePreview(ModularGuiContext context, StationTileCoord anchor, ModuleShape footprint,
-        int rotation, StationTileCoord primaryTile, boolean selected, StationMapFrame frame) {
+    private void drawPickerModulePreview(StationTileCoord anchor, ModuleShape footprint, int rotation,
+        StationTileCoord primaryTile, boolean selected, StationMapFrame frame) {
         FacilityModuleKind kind = tilePickerController.previewModuleKind();
         if (kind == null || anchor == null || footprint == null) return;
         boolean drewFootprintTexture = ModuleLayerRenderer
-            .drawPreviewFootprint(context, kind, footprint, anchor, rotation, frame);
+            .drawPreviewFootprint(kind, footprint, anchor, rotation, frame);
         for (StationTileCoord tile : footprint.tiles(anchor, rotation)) {
             int x = frame.tileLocalX(tile);
             int y = frame.tileLocalY(tile);
             if (!drewFootprintTexture) {
-                ModuleLayerRenderer.drawPreview(context, x, y, kind);
+                ModuleLayerRenderer.drawPreview(x, y, kind);
             }
             drawPickerTileOutline(x, y, selected, tile.equals(primaryTile));
         }
-    }
-
-    private StationTileCoord pickerPrimaryTile(StationTileCoord anchor, ModuleShape footprint, int rotation) {
-        return ModuleBuildPickerModel.tileForAnchorRotation(anchor, footprint, rotation);
     }
 
     private void drawPickerFootprint(StationTileCoord anchor, ModuleShape footprint, int rotation, boolean selected,
@@ -445,15 +422,15 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
     private static void drawPickerTileOutline(int x, int y, boolean selected, boolean primary) {
         if (selected) {
             if (primary) {
-                StationTileRenderer.drawPickerSelectedOverlay(x, y, StationMapViewport.TILE_SIZE);
+                StationTileRenderer.drawPickerSelectedOverlay(x, y, StationMapFrame.TILE_SIZE);
             } else {
-                StationTileRenderer.drawPickerSelectedSecondaryOverlay(x, y, StationMapViewport.TILE_SIZE);
+                StationTileRenderer.drawPickerSelectedSecondaryOverlay(x, y, StationMapFrame.TILE_SIZE);
             }
         } else {
             if (primary) {
-                StationTileRenderer.drawPickerCompatibleOverlay(x, y, StationMapViewport.TILE_SIZE);
+                StationTileRenderer.drawPickerCompatibleOverlay(x, y, StationMapFrame.TILE_SIZE);
             } else {
-                StationTileRenderer.drawPickerCompatibleSecondaryOverlay(x, y, StationMapViewport.TILE_SIZE);
+                StationTileRenderer.drawPickerCompatibleSecondaryOverlay(x, y, StationMapFrame.TILE_SIZE);
             }
         }
     }
@@ -498,16 +475,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             StationTileCoord moduleHit = StationMapHitTester.hitTestModuleFootprint(layout, localX, localY, mapFrame());
             if (moduleHit != null) return moduleHit;
         }
-        StationTileCoord coord = StationMapViewport.coordAt(
-            localX,
-            localY,
-            getArea().width,
-            getArea().height,
-            contentLeft,
-            contentRightPadding,
-            contentVerticalPadding,
-            panX,
-            panY);
+        StationTileCoord coord = mapFrame().coordAt(localX, localY);
         if (coord == null) return null;
         if (isPickerActive()) {
             StationTileCoord normalized = normalizePickerTarget(coord);
@@ -531,14 +499,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
 
     private StationTileCoord normalizePickerTarget(StationTileCoord coord) {
         if (!isPickerActive() || coord == null) return coord;
-        StationTileCoord anchor = coord;
-        if (tilePickerController.rotatesFootprint()) {
-            anchor = ModuleBuildPickerModel.anchorForRotation(
-                coord,
-                tilePickerController.selectionFootprint(),
-                tilePickerController.footprintRotation());
-        }
-        return tilePickerController.normalize(anchor);
+        return tilePickerController.normalize(coord);
     }
 
     private static void addOrthogonalCandidates(Set<StationTileCoord> candidates, StationTileCoord coord) {

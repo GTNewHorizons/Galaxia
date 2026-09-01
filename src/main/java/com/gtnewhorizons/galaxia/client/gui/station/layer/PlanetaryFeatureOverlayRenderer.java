@@ -17,7 +17,7 @@ import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
-import com.gtnewhorizons.galaxia.client.gui.station.StationMapViewport;
+import com.gtnewhorizons.galaxia.client.gui.station.StationMapFrame;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureDefinition;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
@@ -25,8 +25,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegist
 public final class PlanetaryFeatureOverlayRenderer {
 
     private static final TextureSize DEFAULT_TEXTURE_SIZE = new TextureSize(
-        StationMapViewport.TILE_SIZE,
-        StationMapViewport.TILE_SIZE);
+        StationMapFrame.TILE_SIZE,
+        StationMapFrame.TILE_SIZE);
     private static final Map<String, TextureSize> textureSizeCache = new HashMap<>();
 
     private PlanetaryFeatureOverlayRenderer() {}
@@ -64,8 +64,8 @@ public final class PlanetaryFeatureOverlayRenderer {
     }
 
     static TileOverlay centeredOverlay(int tileX, int tileY, ResourceLocation texture, int width, int height) {
-        int x = tileX + (StationMapViewport.TILE_SIZE - width) / 2;
-        int y = tileY + (StationMapViewport.TILE_SIZE - height) / 2;
+        int x = tileX + (StationMapFrame.TILE_SIZE - width) / 2;
+        int y = tileY + (StationMapFrame.TILE_SIZE - height) / 2;
         return new TileOverlay(x, y, width, height, texture);
     }
 

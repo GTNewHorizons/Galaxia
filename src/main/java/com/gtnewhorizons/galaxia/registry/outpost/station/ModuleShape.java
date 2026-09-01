@@ -44,7 +44,7 @@ public enum ModuleShape {
         StationTileCoord[] result = new StationTileCoord[offsets.length];
         int normalizedRotation = normalizeRotation(rotation);
         for (int i = 0; i < offsets.length; i++) {
-            RotatedOffset offset = rotatedOffset(offsets[i], normalizedRotation);
+            RotatedOffset offset = rotatedOffset(offsets[i][0], offsets[i][1], normalizedRotation);
             result[i] = StationTileCoord.of(anchor.dx() + offset.dx(), anchor.dy() + offset.dy());
         }
         return result;
@@ -57,7 +57,7 @@ public enum ModuleShape {
     public boolean fitsAt(StationTileCoord anchor, int rotation) {
         int normalizedRotation = normalizeRotation(rotation);
         for (byte[] baseOffset : offsets) {
-            RotatedOffset offset = rotatedOffset(baseOffset, normalizedRotation);
+            RotatedOffset offset = rotatedOffset(baseOffset[0], baseOffset[1], normalizedRotation);
             int dx = anchor.dx() + offset.dx();
             int dy = anchor.dy() + offset.dy();
             if (dx < StationTileCoord.MIN || dx > StationTileCoord.MAX) return false;
@@ -66,10 +66,8 @@ public enum ModuleShape {
         return true;
     }
 
-    private static RotatedOffset rotatedOffset(byte[] offset, int normalizedRotation) {
-        int dx = offset[0];
-        int dy = offset[1];
-        return switch (normalizedRotation) {
+    private static RotatedOffset rotatedOffset(int dx, int dy, int rotation) {
+        return switch (normalizeRotation(rotation)) {
             case 1 -> new RotatedOffset(-dy, dx);
             case 2 -> new RotatedOffset(-dx, -dy);
             case 3 -> new RotatedOffset(dy, -dx);
@@ -88,27 +86,8 @@ public enum ModuleShape {
     public TextureTile textureTile(StationTileCoord anchor, StationTileCoord tile, int rotation) {
         int dx = tile.dx() - anchor.dx();
         int dy = tile.dy() - anchor.dy();
-        int baseDx;
-        int baseDy;
-        switch (normalizeRotation(rotation)) {
-            case 1 -> {
-                baseDx = dy;
-                baseDy = -dx;
-            }
-            case 2 -> {
-                baseDx = -dx;
-                baseDy = -dy;
-            }
-            case 3 -> {
-                baseDx = -dy;
-                baseDy = dx;
-            }
-            default -> {
-                baseDx = dx;
-                baseDy = dy;
-            }
-        }
-        return new TextureTile(baseDx - minDx, baseDy - minDy);
+        RotatedOffset baseOffset = rotatedOffset(dx, dy, -rotation);
+        return new TextureTile(baseOffset.dx() - minDx, baseOffset.dy() - minDy);
     }
 
     public static int normalizeRotation(int rotation) {

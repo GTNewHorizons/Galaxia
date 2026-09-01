@@ -417,7 +417,9 @@ public final class OrbitalPinnedInfoContentBuilder {
 
         private Widget<?> createItemWidget(ItemStack stack, int size) {
             ItemStack displayStack = stack.copy();
-            return drawable((context, x, y, width, height) -> drawGuiItemStack(displayStack, x, y, size)).asWidget()
+            return DrawableCommand
+                .asDrawable((context, x, y, width, height) -> drawGuiItemStack(displayStack, x, y, size))
+                .asWidget()
                 .tooltip(t -> t.addLine(displayStack.getDisplayName()));
         }
 
@@ -501,13 +503,9 @@ public final class OrbitalPinnedInfoContentBuilder {
         }
 
         private IDrawable createBackgroundDrawable() {
-            return drawable(
+            return DrawableCommand.asDrawable(
                 (context, x, y, width, height) -> Gui
                     .drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_MODAL_BG.getColor()));
-        }
-
-        private IDrawable drawable(DrawableCommand drawCommand) {
-            return (context, x, y, width, height, widgetTheme) -> drawCommand.draw(context, x, y, width, height);
         }
 
     }

@@ -109,7 +109,7 @@ public sealed interface FacilityCommand permits FacilityCommand.BuildCommand,Fac
 
     record PlanHammerUpgrade(CelestialAsset.ID facilityId, List<ModuleInstance.ID> targetModuleIds,
         HammerVariant targetVariant, ModuleTier targetTier, boolean reserveItems, boolean voidCompletionRefund)
-        implements ModuleOperationRequest {
+        implements ModuleCommand {
 
         public PlanHammerUpgrade {
             targetModuleIds = targetModuleIds == null ? null : List.copyOf(targetModuleIds);
@@ -117,7 +117,7 @@ public sealed interface FacilityCommand permits FacilityCommand.BuildCommand,Fac
     }
 
     record PlanTierUpgrade(CelestialAsset.ID facilityId, List<ModuleInstance.ID> targetModuleIds, ModuleTier targetTier,
-        boolean reserveItems) implements ModuleOperationRequest {
+        boolean reserveItems) implements ModuleCommand {
 
         public PlanTierUpgrade {
             targetModuleIds = targetModuleIds == null ? null : List.copyOf(targetModuleIds);
@@ -125,13 +125,13 @@ public sealed interface FacilityCommand permits FacilityCommand.BuildCommand,Fac
     }
 
     record PlanMinerFocusUpgrade(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, ModuleTier targetModuleTier,
-        MinerFocusTier targetFocusTier) implements ModuleOperationRequest {}
+        MinerFocusTier targetFocusTier) implements ModuleCommand {}
 
     sealed interface BuildCommand extends FacilityCommand permits BuildModules,CopyBuildModules {
     }
 
     sealed interface ModuleCommand extends
-        FacilityCommand permits RequestModuleDeconstruction,CancelModuleOperation,ReplaceRecipeBook,ModuleConfiguration,ModuleSettingsCommand,ModuleOperationRequest {
+        FacilityCommand permits RequestModuleDeconstruction,CancelModuleOperation,ReplaceRecipeBook,ModuleConfiguration,ModuleSettingsCommand,PlanHammerUpgrade,PlanTierUpgrade,PlanMinerFocusUpgrade {
     }
 
     sealed interface InventoryCommand
@@ -150,10 +150,6 @@ public sealed interface FacilityCommand permits FacilityCommand.BuildCommand,Fac
 
     sealed interface ModuleSettingsCommand extends
         ModuleCommand permits CreateSettingsGroup,RenameSettingsGroup,SetSettingsGroup,CopyModuleSettings,ReplaceMinerSettings {
-    }
-
-    sealed interface ModuleOperationRequest
-        extends ModuleCommand permits PlanHammerUpgrade,PlanTierUpgrade,PlanMinerFocusUpgrade {
     }
 
     enum FilterKind {

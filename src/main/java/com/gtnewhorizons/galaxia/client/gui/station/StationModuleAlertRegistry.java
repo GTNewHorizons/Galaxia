@@ -1,44 +1,38 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.CopyOnWriteArrayList;
 
+import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.module.BlockingReason;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepLedger;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 
 public final class StationModuleAlertRegistry {
 
-    private static final List<StationModuleAlertProvider> PROVIDERS = new CopyOnWriteArrayList<>();
-
-    static {
-        register(UpkeepShortageModuleAlertProvider.INSTANCE);
-    }
-
     private StationModuleAlertRegistry() {}
-
-    public static Registration register(StationModuleAlertProvider provider) {
-        Objects.requireNonNull(provider, "provider");
-        PROVIDERS.add(provider);
-        return () -> PROVIDERS.remove(provider);
-    }
 
     public static List<StationModuleAlert> alertsFor(AutomatedFacility facility, ModuleInstance module) {
         if (facility == null || module == null) return List.of();
-        List<StationModuleAlert> alerts = new ArrayList<>();
-        for (StationModuleAlertProvider provider : PROVIDERS) {
-            List<StationModuleAlert> provided = provider.alerts(facility, module);
-            if (provided == null || provided.isEmpty()) continue;
-            for (StationModuleAlert alert : provided) {
-                if (alert != null) alerts.add(alert);
-            }
+        if (module.blocking() == BlockingReason.UPKEEP_SHORTAGE) {
+            return List.of(
+                StationModuleAlert
+                    .critical("Upkeep", "Missing upkeep resources.", EnumTextures.ICON_STATION_ALERT_ERROR.get()));
         }
-        alerts.sort((a, b) -> Integer.compare(severityRank(b.severity()), severityRank(a.severity())));
-        return alerts.isEmpty() ? List.of() : Collections.unmodifiableList(alerts);
+        UpkeepLedger.UpkeepSummary summary = facility.upkeepSummary();
+        UpkeepLedger.ModuleDemand demand = demandFor(summary, module);
+        if (demand == null) return List.of();
+        return UpkeepSettlement.preview(summary.moduleDemands(), facility.upkeepCredits(), facility)
+            .unpaidModuleIds()
+            .contains(module.id)
+                ? List.of(
+                    StationModuleAlert
+                        .warning("Upkeep", "Missing upkeep resources.", EnumTextures.ICON_STATION_ALERT_WARNING.get()))
+                : List.of();
     }
 
     public static Map<ModuleInstance.ID, List<StationModuleAlert>> alerts(AutomatedFacility facility) {
@@ -51,17 +45,14 @@ public final class StationModuleAlertRegistry {
         return result.isEmpty() ? Map.of() : Collections.unmodifiableMap(result);
     }
 
-    private static int severityRank(StationModuleAlert.Severity severity) {
-        return switch (severity) {
-            case RED -> 1;
-            case YELLOW -> 0;
-        };
-    }
-
-    @FunctionalInterface
-    public interface Registration extends AutoCloseable {
-
-        @Override
-        void close();
+    private static UpkeepLedger.ModuleDemand demandFor(UpkeepLedger.UpkeepSummary summary, ModuleInstance module) {
+        if (summary == null || module == null) return null;
+        for (UpkeepLedger.ModuleDemand demand : summary.moduleDemands()) {
+            if (module.id.equals(demand.moduleId()) && !demand.demand()
+                .isEmpty()) {
+                return demand;
+            }
+        }
+        return null;
     }
 }

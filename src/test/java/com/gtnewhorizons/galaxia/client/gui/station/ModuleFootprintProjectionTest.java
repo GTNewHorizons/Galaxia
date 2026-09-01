@@ -21,8 +21,8 @@ final class ModuleFootprintProjectionTest {
         List<ModuleFootprintProjection.Segment> segments = ModuleFootprintProjection
             .filledSegments(ModuleShape.QUAD_2x2, StationTileCoord.CORE, 0, FRAME);
 
-        int centerGapX = StationMapViewport.tileLeftX(0, WIDGET_SIZE, 0, 0, 0) + StationMapViewport.TILE_SIZE;
-        int centerGapY = StationMapViewport.tileTopY(0, WIDGET_SIZE, 0, 0) + StationMapViewport.TILE_SIZE;
+        int centerGapX = FRAME.tileLocalX(0) + StationMapFrame.TILE_SIZE;
+        int centerGapY = FRAME.tileLocalY(0) + StationMapFrame.TILE_SIZE;
 
         assertTrue(covers(segments, centerGapX, centerGapY));
     }
@@ -32,8 +32,8 @@ final class ModuleFootprintProjectionTest {
         List<ModuleFootprintProjection.Segment> segments = ModuleFootprintProjection
             .filledSegments(ModuleShape.L_2x2, StationTileCoord.CORE, 0, FRAME);
 
-        int missingCornerX = StationMapViewport.tileLeftX(1, WIDGET_SIZE, 0, 0, 0) + StationMapViewport.TILE_SIZE / 2;
-        int missingCornerY = StationMapViewport.tileTopY(0, WIDGET_SIZE, 0, 0) + StationMapViewport.TILE_SIZE / 2;
+        int missingCornerX = FRAME.tileLocalX(1) + StationMapFrame.TILE_SIZE / 2;
+        int missingCornerY = FRAME.tileLocalY(0) + StationMapFrame.TILE_SIZE / 2;
 
         assertFalse(covers(segments, missingCornerX, missingCornerY));
     }
@@ -43,16 +43,16 @@ final class ModuleFootprintProjectionTest {
         List<ModuleFootprintProjection.Segment> outline = ModuleFootprintProjection
             .outlineSegments(ModuleShape.QUAD_2x2, StationTileCoord.CORE, 0, FRAME);
 
-        int centerGapX = StationMapViewport.tileLeftX(0, WIDGET_SIZE, 0, 0, 0) + StationMapViewport.TILE_SIZE;
-        int centerGapY = StationMapViewport.tileTopY(0, WIDGET_SIZE, 0, 0) + StationMapViewport.TILE_SIZE;
+        int centerGapX = FRAME.tileLocalX(0) + StationMapFrame.TILE_SIZE;
+        int centerGapY = FRAME.tileLocalY(0) + StationMapFrame.TILE_SIZE;
 
         assertFalse(covers(outline, centerGapX, centerGapY));
     }
 
     @Test
     void containsMatchesFilledSegments() {
-        int centerGapX = StationMapViewport.tileLeftX(0, WIDGET_SIZE, 0, 0, 0) + StationMapViewport.TILE_SIZE;
-        int centerGapY = StationMapViewport.tileTopY(0, WIDGET_SIZE, 0, 0) + StationMapViewport.TILE_SIZE;
+        int centerGapX = FRAME.tileLocalX(0) + StationMapFrame.TILE_SIZE;
+        int centerGapY = FRAME.tileLocalY(0) + StationMapFrame.TILE_SIZE;
 
         assertTrue(
             ModuleFootprintProjection

@@ -1,5 +1,8 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.annotation.Nullable;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
@@ -24,7 +27,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 
 import cpw.mods.fml.common.FMLCommonHandler;
@@ -80,10 +85,9 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         open(assetId, creativeBuildMode);
     }
 
-    static void openCopyBuildPicker(CelestialAsset.ID assetId, int sourceModuleIndex, ModuleInstance.ID sourceModuleId,
+    static void openCopyBuildPicker(CelestialAsset.ID assetId, ModuleInstance.ID sourceModuleId,
         boolean creativeBuildMode) {
-        pendingBuildPickerRequest = BuildPickerRequest
-            .copy(assetId, sourceModuleIndex, sourceModuleId, creativeBuildMode);
+        pendingBuildPickerRequest = BuildPickerRequest.copy(assetId, sourceModuleId, creativeBuildMode);
         open(assetId, creativeBuildMode);
     }
 
@@ -121,20 +125,19 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
 
         if (isAutomatedFacility) {
             StationTilePickerController tilePickerController = new StationTilePickerController();
-            StationEditModeController editModeController = new StationEditModeController(tilePickerController);
             int overlayY = PADDING + StationInventoryPanelWidget.BUTTON_HEIGHT + 4;
             ModuleConfigModalController configController = new ModuleConfigModalController(
                 panel,
                 assetId,
                 overlayX,
                 overlayY,
-                editModeController,
+                tilePickerController,
                 overlayCoordinator);
             StationInventoryPanelWidget inventoryPanel = new StationInventoryPanelWidget(
                 assetId,
                 overlayCoordinator,
                 configController,
-                () -> !editModeController.isActive());
+                () -> !tilePickerController.isActive());
             StationMapWidget map = new StationMapWidget(
                 assetId,
                 coord -> ModulePickerScreen.open(assetId, coord, creativeBuildMode),
@@ -152,8 +155,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                     .widthRel(1f)
                     .heightRel(1f));
             panel.child(
-                new StationSidePanelWidget(assetId, map, tilePickerController, editModeController, configController)
-                    .left(PADDING)
+                new StationSidePanelWidget(assetId, map, tilePickerController, configController).left(PADDING)
                     .top(PADDING)
                     .width(LEFT_PANEL_WIDTH - PADDING)
                     .heightRelOffset(0.55f, -PADDING * 2));
@@ -163,7 +165,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                     .heightRelOffset(0.45f, -PADDING)
                     .bottom(PADDING));
             panel.child(
-                new StationTilePickerControlsWidget(editModeController).left(LEFT_PANEL_WIDTH + PADDING * 2)
+                new StationTilePickerControlsWidget(tilePickerController).left(LEFT_PANEL_WIDTH + PADDING * 2)
                     .top(PADDING * 2)
                     .width(StationTilePickerControlsWidget.WIDTH)
                     .height(StationTilePickerControlsWidget.HEIGHT));
@@ -173,7 +175,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                     .width(StationInventoryPanelWidget.PANEL_WIDTH)
                     .height(StationInventoryPanelWidget.PANEL_HEIGHT + StationInventoryPanelWidget.BUTTON_HEIGHT + 4));
             panel.child(
-                new StationCopyModuleMapButton(assetId, map, editModeController, creativeBuildMode)
+                new StationCopyModuleMapButton(assetId, map, tilePickerController, creativeBuildMode)
                     .left(LEFT_PANEL_WIDTH + PADDING * 2)
                     .bottom(PADDING)
                     .size(MAP_ACTION_BUTTON_WIDTH, MAP_ACTION_BUTTON_HEIGHT));
@@ -182,7 +184,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                     .top(0)
                     .widthRel(1f)
                     .heightRel(1f));
-            startPendingBuildPicker(assetId, editModeController);
+            startPendingBuildPicker(assetId, tilePickerController);
         } else {
             int overlayY = PADDING + StationInventoryPanelWidget.BUTTON_HEIGHT + 4;
             ModuleConfigModalController configController = new ModuleConfigModalController(
@@ -219,7 +221,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         return panel;
     }
 
-    private static void startPendingBuildPicker(CelestialAsset.ID assetId, StationEditModeController controller) {
+    private static void startPendingBuildPicker(CelestialAsset.ID assetId, StationTilePickerController controller) {
         if (FMLCommonHandler.instance()
             .getEffectiveSide() != Side.CLIENT) return;
         BuildPickerRequest request = pendingBuildPickerRequest;
@@ -234,29 +236,24 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         ModuleShape shape = copySource == null ? request.shape() : copySource.shape();
         ModuleTier tier = copySource == null ? request.tier() : copySource.tier();
         if (kind == null || shape == null || tier == null) return;
-        controller.startTileModeWithPlacements(
-            copySource == null ? StationEditModeController.Mode.MASS_BUILD : StationEditModeController.Mode.COPY_MODULE,
+        controller.startWithPlacements(
             (copySource == null ? "Build " : "Copy ") + kind.getDisplayName(),
             "Confirm",
-            (coord, selected) -> ModuleBuildPickerModel.isCompatibleTarget(
-                facility,
-                kind,
-                shape,
-                tier,
-                coord,
-                selected,
-                controller.selectedTargetRotations(),
-                controller.footprintRotation()),
+            (coord, selected) -> {
+                List<ModulePlacement> proposed = new ArrayList<>(selected.size() + 1);
+                for (StationTileCoord target : selected) {
+                    proposed.add(new ModulePlacement(target, controller.selectedTargetRotation(target)));
+                }
+                proposed.add(new ModulePlacement(coord, controller.footprintRotation()));
+                return facility.buildablePlacements(kind, shape, tier, proposed)
+                    .equals(proposed);
+            },
             coord -> coord,
             placements -> {
                 boolean sent;
                 if (copySource != null) {
-                    sent = com.gtnewhorizons.galaxia.client.CelestialClient.copyModule(
-                        assetId,
-                        request.copySourceModuleIndex(),
-                        request.copySourceModuleId(),
-                        request.creativeBuildMode(),
-                        placements);
+                    sent = com.gtnewhorizons.galaxia.client.CelestialClient
+                        .copyModule(assetId, request.copySourceModuleId(), request.creativeBuildMode(), placements);
                 } else {
                     sent = com.gtnewhorizons.galaxia.client.CelestialClient.createModules(
                         assetId,
@@ -271,12 +268,16 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 }
                 if (!sent) StationNotificationHelper.showFailure("Module build request failed");
             },
-            targets -> ModuleBuildPickerModel.connectedTargets(
-                facility,
-                targets,
-                shape,
-                controller.selectedTargetRotations(),
-                controller.footprintRotation()));
+            targets -> {
+                List<ModulePlacement> proposed = new ArrayList<>(targets.size());
+                for (StationTileCoord target : targets) {
+                    proposed.add(new ModulePlacement(target, controller.selectedTargetRotation(target)));
+                }
+                return facility.buildablePlacements(kind, shape, tier, proposed)
+                    .stream()
+                    .map(ModulePlacement::anchor)
+                    .toList();
+            });
         controller.setSelectionFootprint(shape, shape != ModuleShape.SINGLE);
         controller.setPreviewModuleKind(kind);
     }
@@ -349,8 +350,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
 
     private record BuildPickerRequest(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
         ModuleTier tier, HammerVariant hammerVariant, MinerFocusTier minerFocusTier,
-        @Nullable SettingsGroup.ID settingsGroupId, int copySourceModuleIndex, ModuleInstance.ID copySourceModuleId,
-        boolean creativeBuildMode) {
+        @Nullable SettingsGroup.ID settingsGroupId, ModuleInstance.ID copySourceModuleId, boolean creativeBuildMode) {
 
         static BuildPickerRequest create(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
             ModuleTier tier, HammerVariant hammerVariant, MinerFocusTier minerFocusTier,
@@ -363,13 +363,12 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 hammerVariant,
                 minerFocusTier == null ? MinerFocusTier.NONE : minerFocusTier,
                 settingsGroupId,
-                -1,
                 null,
                 creativeBuildMode);
         }
 
-        static BuildPickerRequest copy(CelestialAsset.ID assetId, int sourceModuleIndex,
-            ModuleInstance.ID sourceModuleId, boolean creativeBuildMode) {
+        static BuildPickerRequest copy(CelestialAsset.ID assetId, ModuleInstance.ID sourceModuleId,
+            boolean creativeBuildMode) {
             return new BuildPickerRequest(
                 assetId,
                 null,
@@ -378,19 +377,13 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 null,
                 MinerFocusTier.NONE,
                 null,
-                sourceModuleIndex,
                 sourceModuleId,
                 creativeBuildMode);
         }
 
         @Nullable
         ModuleInstance copySource(AutomatedFacility facility) {
-            if (facility == null || copySourceModuleIndex < 0 || copySourceModuleId == null) return null;
-            if (copySourceModuleIndex >= facility.modules()
-                .size()) return null;
-            ModuleInstance source = facility.modules()
-                .get(copySourceModuleIndex);
-            return copySourceModuleId.equals(source.id) ? source : null;
+            return facility == null ? null : facility.moduleById(copySourceModuleId);
         }
     }
 }

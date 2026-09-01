@@ -14,7 +14,7 @@ final class StationMapVisibleTilesTest {
 
     @Test
     void visibleTilesIncludeEmptyTileCoordinatesWithinViewport() {
-        Set<StationMapViewport.TilePosition> positions = visible(0, 0);
+        Set<StationMapFrame.TilePosition> positions = visible(0, 0);
 
         assertTrue(contains(positions, StationTileCoord.CORE.dx(), StationTileCoord.CORE.dy()));
         assertTrue(contains(positions, 1, 0));
@@ -33,13 +33,13 @@ final class StationMapVisibleTilesTest {
                 .anyMatch(position -> position.dy() > StationTileCoord.MAX));
     }
 
-    private static Set<StationMapViewport.TilePosition> visible(int panX, int panY) {
-        Set<StationMapViewport.TilePosition> positions = new LinkedHashSet<>();
-        StationMapViewport.collectVisibleTilePositions(320, 240, 20, 20, 12, panX, panY, positions);
+    private static Set<StationMapFrame.TilePosition> visible(int panX, int panY) {
+        Set<StationMapFrame.TilePosition> positions = new LinkedHashSet<>();
+        new StationMapFrame(320, 240, 20, 20, 12, panX, panY).collectVisibleTilePositions(positions);
         return positions;
     }
 
-    private static boolean contains(Set<StationMapViewport.TilePosition> positions, int dx, int dy) {
+    private static boolean contains(Set<StationMapFrame.TilePosition> positions, int dx, int dy) {
         return positions.stream()
             .anyMatch(position -> position.dx() == dx && position.dy() == dy);
     }

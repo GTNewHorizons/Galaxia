@@ -26,6 +26,7 @@ import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
+import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -95,7 +96,7 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         ScrollWidget<?> scroll = new ScrollWidget<>(scrollData).pos(SCROLL_X, SCROLL_Y)
             .size(SCROLL_WIDTH, SCROLL_HEIGHT)
             .background(
-                ModuleConfigModalSupport.drawable(
+                DrawableCommand.asDrawable(
                     (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_SCROLL_BG.getColor())));
         scroll.child(scrollContent);
         child(scroll);
@@ -177,10 +178,10 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         ParentWidget<?> row = new ParentWidget<>().widthRelOffset(1f, -SCROLLBAR_GAP)
             .height(ROW_HEIGHT)
             .background(
-                ModuleConfigModalSupport.drawable(
+                DrawableCommand.asDrawable(
                     (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())));
         row.child(
-            ModuleConfigModalSupport.drawable((ctx, x, y, w, h) -> drawRowText(asset, entry, x, y, w))
+            DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawRowText(asset, entry, x, y, w))
                 .asWidget()
                 .pos(0, 0)
                 .widthRel(1f)
@@ -306,7 +307,7 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
             .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
             .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
             .background(
-                ModuleConfigModalSupport.drawable(
+                DrawableCommand.asDrawable(
                     (ctx, x, y, w, h) -> com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect.draw(
                         x,
                         y,
@@ -476,10 +477,9 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
     private void back() {
         ModuleInstance.ID modId = controller.moduleId();
         if (modId != null) {
-            int moduleIndex = controller.moduleIndex();
             ModuleInstance module = ModuleConfigModalSupport.module(assetId, modId);
             if (module != null && module.component() instanceof ModuleHammer) {
-                controller.openHammer(moduleIndex);
+                controller.openHammer(modId);
                 return;
             }
         }
@@ -509,7 +509,7 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
 
     private void addHeaderTooltip(int x, int width, String text) {
         child(
-            ModuleConfigModalSupport.drawable((ctx, drawX, drawY, drawW, drawH) -> {})
+            DrawableCommand.asDrawable((ctx, drawX, drawY, drawW, drawH) -> {})
                 .asWidget()
                 .pos(SCROLL_X + x, HEADER_Y - 2)
                 .size(width, 13)

@@ -63,7 +63,7 @@ final class ModuleConfigModalControllerTest {
     void retargetingSameMinerUpgradeModulePreservesSelectedFocusTier() {
         TestFacility test = facilityWith(FacilityModuleKind.MINER, ModuleTier.EV);
         ModuleConfigModalController controller = controllerFor(test.facility());
-        controller.openUpgrade(0);
+        controller.openUpgrade(test.module().id);
         controller.selectModuleUpgradeOption(ModuleUpgradeUiModel.GROUP_MINER_FOCUS_TIER, MinerFocusTier.III.name());
 
         controller.retargetTo(test.module());
@@ -78,7 +78,7 @@ final class ModuleConfigModalControllerTest {
     void retargetingSameHammerUpgradeModulePreservesSelectedTierAndFlags() {
         TestFacility test = facilityWith(FacilityModuleKind.HAMMER, ModuleTier.EV);
         ModuleConfigModalController controller = controllerFor(test.facility());
-        controller.openUpgrade(0);
+        controller.openUpgrade(test.module().id);
         controller.selectModuleUpgradeOption(ModuleUpgradeUiModel.GROUP_HAMMER_TIER, ModuleTier.IV.name());
         controller.toggleHammerUpgradeReserveItems();
         controller.toggleHammerUpgradeVoidRefund();
@@ -104,7 +104,7 @@ final class ModuleConfigModalControllerTest {
             .stationLayout()
             .place(miner);
         ModuleConfigModalController controller = controllerFor(test.facility());
-        controller.openHammer(0);
+        controller.openHammer(test.module().id);
 
         controller.requestRetargetTo(miner);
 
@@ -120,10 +120,10 @@ final class ModuleConfigModalControllerTest {
         TestFacility test = facilityWith(FacilityModuleKind.HAMMER, ModuleTier.EV);
         ModuleConfigModalController controller = controllerFor(test.facility());
 
-        controller.openUpgrade(0);
+        controller.openUpgrade(test.module().id);
         assertTrue(controller.isModuleUpgradeOpen());
 
-        controller.openUpgrade(0);
+        controller.openUpgrade(test.module().id);
         assertFalse(controller.isOpen());
     }
 

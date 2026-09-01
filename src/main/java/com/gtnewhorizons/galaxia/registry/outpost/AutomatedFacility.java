@@ -588,8 +588,8 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     private @Nullable FacilityCommand.Rejection prepareModuleOperationPlan(
-        Map<ModuleInstance, ModuleOperationPlan> plans, ModuleInstance module,
-        FacilityCommand.ModuleOperationRequest request, boolean reserveItems, boolean voidCompletionRefund) {
+        Map<ModuleInstance, ModuleOperationPlan> plans, ModuleInstance module, FacilityCommand.ModuleCommand request,
+        boolean reserveItems, boolean voidCompletionRefund) {
         try {
             IModuleOperation operation = module.component()
                 .prepareOperationTarget(module, request);
@@ -810,7 +810,8 @@ public final class AutomatedFacility extends CelestialAsset {
             physicalSpec,
             authority);
         if (specRejection != null) return FacilityCommand.Result.rejected(specRejection);
-        if (!validBuildTargets(buildKind, buildShape, placements)) {
+        if (placements == null || placements.isEmpty()
+            || !placements.equals(buildablePlacements(buildKind, buildShape, physicalSpec.tier(), placements))) {
             return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_MODULE_PLACEMENT);
         }
         if (!validInitialSettingsGroup(buildKind, command.settingsGroupId(), copySource)) {
@@ -898,26 +899,37 @@ public final class AutomatedFacility extends CelestialAsset {
         moduleSettings.attach(module, settingsPlan);
     }
 
-    private boolean validBuildTargets(FacilityModuleKind moduleKind, ModuleShape shape,
-        @Nullable List<ModulePlacement> placements) {
-        if (placements == null || placements.isEmpty() || placements.size() > MAX_BUILD_TARGETS || layout == null) {
-            return false;
+    public List<ModulePlacement> buildablePlacements(@Nullable FacilityModuleKind moduleKind,
+        @Nullable ModuleShape shape, @Nullable ModuleTier tier, @Nullable List<ModulePlacement> candidates) {
+        if (moduleKind == null || shape == null
+            || tier == null
+            || candidates == null
+            || candidates.isEmpty()
+            || layout == null
+            || !moduleKind.isAllowedOn(kind)
+            || !moduleKind.allowedTiers()
+                .contains(tier)
+            || shape != moduleKind.defaultShape()) {
+            return List.of();
         }
+        List<ModulePlacement> placements = new ArrayList<>(Math.min(candidates.size(), MAX_BUILD_TARGETS));
         Set<StationTileCoord> plannedTiles = new HashSet<>();
         Set<StationTileCoord> originalTiles = layout.snapshot()
             .keySet();
         PlanetaryFeatureKey requiredFeature = moduleKind.requiredAnchorFeature();
-        for (ModulePlacement placement : placements) {
+        for (ModulePlacement candidate : candidates) {
+            if (placements.size() == MAX_BUILD_TARGETS) break;
             StationTileCoord[] footprint = validPlacementFootprint(
                 shape,
-                placement,
+                candidate,
                 requiredFeature,
                 originalTiles,
                 plannedTiles);
-            if (footprint == null) return false;
+            if (footprint == null) continue;
+            placements.add(candidate);
             Collections.addAll(plannedTiles, footprint);
         }
-        return true;
+        return List.copyOf(placements);
     }
 
     private @Nullable StationTileCoord[] validPlacementFootprint(ModuleShape shape, @Nullable ModulePlacement placement,
@@ -981,9 +993,12 @@ public final class AutomatedFacility extends CelestialAsset {
         return FacilityCommand.Result.CHANGED;
     }
 
-    private ModuleInstance moduleById(@Nullable ModuleInstance.ID moduleId) {
-        int index = moduleIndex(moduleId);
-        return index < 0 ? null : modules.get(index);
+    public @Nullable ModuleInstance moduleById(@Nullable ModuleInstance.ID moduleId) {
+        if (moduleId == null) return null;
+        for (ModuleInstance module : modules) {
+            if (moduleId.equals(module.id)) return module;
+        }
+        return null;
     }
 
     private static FacilityCommand.Rejection boundResourceRejection(BoundKind kind, InventoryKey resource) {
@@ -1096,9 +1111,8 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public DeconstructionResult requestModuleDeconstruction(ModuleInstance.ID moduleId) {
-        int index = moduleIndex(moduleId);
-        if (index < 0) return DeconstructionResult.NOT_FOUND;
-        ModuleInstance module = modules.get(index);
+        ModuleInstance module = moduleById(moduleId);
+        if (module == null) return DeconstructionResult.NOT_FOUND;
         if (module.operationOrNull() != null) return DeconstructionResult.ACTIVE_OPERATION;
 
         DeconstructionRefund refund = deconstructionRefund(module);
@@ -1143,14 +1157,6 @@ public final class AutomatedFacility extends CelestialAsset {
         layoutCache.applyMutation(MutationKind.DECONSTRUCT, module.kind(), module);
         markDirty();
         SatelliteNetworkService.refreshFacilityEndpoints(this);
-    }
-
-    public int moduleIndex(ModuleInstance.ID moduleId) {
-        if (moduleId == null) return -1;
-        for (int i = 0; i < modules.size(); i++) {
-            if (moduleId.equals(modules.get(i).id)) return i;
-        }
-        return -1;
     }
 
     public void clearModules() {

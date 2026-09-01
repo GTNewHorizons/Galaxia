@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.client.gui.station.StationMapFrame;
-import com.gtnewhorizons.galaxia.client.gui.station.StationMapViewport;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -30,10 +29,10 @@ final class ModuleLayerRendererTest {
 
         ModuleLayerRenderer.FootprintTextureBounds bounds = ModuleLayerRenderer.footprintTextureBounds(module, FRAME);
 
-        assertEquals(StationMapViewport.tileLeftX(0, 200, 0, 0, 0), bounds.x());
-        assertEquals(StationMapViewport.tileTopY(0, 200, 0, 0), bounds.y());
-        assertEquals(StationMapViewport.TILE_SIZE * 2 + StationMapViewport.CONNECTOR_GAP, bounds.width());
-        assertEquals(StationMapViewport.TILE_SIZE * 2 + StationMapViewport.CONNECTOR_GAP, bounds.height());
+        assertEquals(FRAME.tileLocalX(0), bounds.x());
+        assertEquals(FRAME.tileLocalY(0), bounds.y());
+        assertEquals(StationMapFrame.TILE_SIZE * 2 + StationMapFrame.CONNECTOR_GAP, bounds.width());
+        assertEquals(StationMapFrame.TILE_SIZE * 2 + StationMapFrame.CONNECTOR_GAP, bounds.height());
     }
 
     @Test
@@ -49,10 +48,10 @@ final class ModuleLayerRendererTest {
 
         ModuleLayerRenderer.FootprintTextureBounds bounds = ModuleLayerRenderer.footprintTextureBounds(module, FRAME);
 
-        assertEquals(StationMapViewport.tileLeftX(-1, 200, 0, 0, 0), bounds.x());
-        assertEquals(StationMapViewport.tileTopY(0, 200, 0, 0), bounds.y());
-        assertEquals(StationMapViewport.TILE_SIZE * 2 + StationMapViewport.CONNECTOR_GAP, bounds.width());
-        assertEquals(StationMapViewport.TILE_SIZE * 2 + StationMapViewport.CONNECTOR_GAP, bounds.height());
+        assertEquals(FRAME.tileLocalX(-1), bounds.x());
+        assertEquals(FRAME.tileLocalY(0), bounds.y());
+        assertEquals(StationMapFrame.TILE_SIZE * 2 + StationMapFrame.CONNECTOR_GAP, bounds.width());
+        assertEquals(StationMapFrame.TILE_SIZE * 2 + StationMapFrame.CONNECTOR_GAP, bounds.height());
     }
 
     @Test
@@ -60,10 +59,10 @@ final class ModuleLayerRendererTest {
         ModuleLayerRenderer.FootprintTextureBounds bounds = ModuleLayerRenderer
             .footprintTextureBounds(ModuleShape.L_2x2, StationTileCoord.of(0, 0), 1, FRAME);
 
-        assertEquals(StationMapViewport.tileLeftX(-1, 200, 0, 0, 0), bounds.x());
-        assertEquals(StationMapViewport.tileTopY(0, 200, 0, 0), bounds.y());
-        assertEquals(StationMapViewport.TILE_SIZE * 2 + StationMapViewport.CONNECTOR_GAP, bounds.width());
-        assertEquals(StationMapViewport.TILE_SIZE * 2 + StationMapViewport.CONNECTOR_GAP, bounds.height());
+        assertEquals(FRAME.tileLocalX(-1), bounds.x());
+        assertEquals(FRAME.tileLocalY(0), bounds.y());
+        assertEquals(StationMapFrame.TILE_SIZE * 2 + StationMapFrame.CONNECTOR_GAP, bounds.width());
+        assertEquals(StationMapFrame.TILE_SIZE * 2 + StationMapFrame.CONNECTOR_GAP, bounds.height());
     }
 
     @Test

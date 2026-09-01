@@ -5,7 +5,6 @@ import javax.annotation.Nullable;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 
-import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
@@ -13,6 +12,7 @@ import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
 final class StationCopyModuleMapButton extends ButtonWidget<StationCopyModuleMapButton> {
 
@@ -21,22 +21,21 @@ final class StationCopyModuleMapButton extends ButtonWidget<StationCopyModuleMap
 
     private final @Nullable CelestialAsset.ID assetId;
     private final StationMapWidget map;
-    private final StationEditModeController editModeController;
+    private final StationTilePickerController tilePickerController;
 
     StationCopyModuleMapButton(@Nullable CelestialAsset.ID assetId, StationMapWidget map,
-        StationEditModeController editModeController, boolean creativeBuildMode) {
+        StationTilePickerController tilePickerController, boolean creativeBuildMode) {
         this.assetId = assetId;
         this.map = map;
-        this.editModeController = editModeController;
-        background(drawable((ctx, x, y, w, h) -> drawButton(x, y, w, h, false)));
-        hoverBackground(drawable((ctx, x, y, w, h) -> drawButton(x, y, w, h, true)));
-        overlay(drawable((ctx, x, y, w, h) -> drawLabel(x, y, w, h)));
+        this.tilePickerController = tilePickerController;
+        background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawButton(x, y, w, h, false)));
+        hoverBackground(DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawButton(x, y, w, h, true)));
+        overlay(DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawLabel(x, y, w, h)));
         onMousePressed(mouseButton -> {
             if (mouseButton != 0) return false;
-            StationCopyModuleActionModel.Source source = source();
+            ModuleInstance source = source();
             if (source == null) return false;
-            StationManagementScreen
-                .openCopyBuildPicker(assetId, source.moduleIndex(), source.moduleId(), creativeBuildMode);
+            StationManagementScreen.openCopyBuildPicker(assetId, source.id, creativeBuildMode);
             return true;
         });
         setEnabledIf(w -> source() != null);
@@ -66,13 +65,13 @@ final class StationCopyModuleMapButton extends ButtonWidget<StationCopyModuleMap
             EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
     }
 
-    private @Nullable StationCopyModuleActionModel.Source source() {
-        if (editModeController.isActive()) return null;
+    private @Nullable ModuleInstance source() {
+        if (tilePickerController.isActive()) return null;
         if (!(CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility facility)) return null;
-        return StationCopyModuleActionModel.resolve(facility, map.selection());
+        if (facility.stationLayout() == null || map.selection() == null) return null;
+        ModuleInstance module = facility.stationLayout()
+            .moduleAt(map.selection());
+        return module == null ? null : facility.moduleById(module.id);
     }
 
-    private static IDrawable drawable(DrawableCommand cmd) {
-        return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
-    }
 }

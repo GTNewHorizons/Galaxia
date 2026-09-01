@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import net.minecraft.util.StatCollector;
@@ -28,33 +27,16 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 final class ModuleStatusTextRegistry {
 
-    private static final List<Provider> PROVIDERS = new ArrayList<>();
-
-    static {
-        register(ModuleStatusTextRegistry::appendSelectedTileText);
-        register(ModuleStatusTextRegistry::appendModuleRuntimeText);
-        register(ModuleStatusTextRegistry::appendMinerStatusText);
-        register(ModuleStatusTextRegistry::appendHammerStatusText);
-        register(ModuleStatusTextRegistry::appendOperationStatusText);
-    }
-
     private ModuleStatusTextRegistry() {}
-
-    static void register(Provider provider) {
-        if (provider == null) throw new IllegalArgumentException("Module status text provider must not be null");
-        PROVIDERS.add(provider);
-    }
 
     static Lines collect(Context context) {
         Lines lines = new Lines();
-        for (Provider provider : PROVIDERS) {
-            provider.append(context, lines);
-        }
+        appendSelectedTileText(context, lines);
+        appendModuleRuntimeText(context, lines);
+        appendMinerStatusText(context, lines);
+        appendHammerStatusText(context, lines);
+        appendOperationStatusText(context, lines);
         return lines;
-    }
-
-    static List<Provider> providers() {
-        return Collections.unmodifiableList(PROVIDERS);
     }
 
     private static void appendSelectedTileText(Context context, Lines lines) {
@@ -242,11 +224,6 @@ final class ModuleStatusTextRegistry {
                 + " EU, buffer "
                 + formatEu(status.storedEnergy());
         };
-    }
-
-    interface Provider {
-
-        void append(Context context, Lines lines);
     }
 
     record Context(AutomatedFacility facility, StationTileCoord selected, PlacedTile tile, ModuleInstance module) {}

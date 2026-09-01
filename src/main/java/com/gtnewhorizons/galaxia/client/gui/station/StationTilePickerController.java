@@ -122,11 +122,6 @@ final class StationTilePickerController {
         return active && !selected.isEmpty();
     }
 
-    boolean isCompatible(StationTileCoord coord) {
-        if (!active || coord == null) return false;
-        return isCompatibleNormalized(normalize(coord));
-    }
-
     boolean isCompatibleNormalized(StationTileCoord normalized) {
         return active && normalized != null
             && (selected.containsKey(normalized)
@@ -137,10 +132,6 @@ final class StationTilePickerController {
         if (!active || coord == null) return false;
         StationTileCoord normalized = normalize(coord);
         return normalized != null && selected.containsKey(normalized);
-    }
-
-    boolean toggle(StationTileCoord coord) {
-        return toggleNormalized(normalize(coord));
     }
 
     boolean toggleNormalized(StationTileCoord normalized) {
@@ -174,10 +165,6 @@ final class StationTilePickerController {
     int selectedTargetRotation(StationTileCoord coord) {
         if (coord == null) return ModuleShape.normalizeRotation(footprintRotation);
         return selected.getOrDefault(coord, ModuleShape.normalizeRotation(footprintRotation));
-    }
-
-    Map<StationTileCoord, Integer> selectedTargetRotations() {
-        return Collections.unmodifiableMap(selected);
     }
 
     @Nullable

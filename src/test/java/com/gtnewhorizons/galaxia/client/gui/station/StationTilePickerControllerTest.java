@@ -14,18 +14,47 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 final class StationTilePickerControllerTest {
 
     @Test
+    void startingAnotherPickerReplacesConfigurationAndClearsSelection() {
+        StationTilePickerController controller = new StationTilePickerController();
+        controller.start("Build", "Build", coord -> true, coord -> coord, selected -> {});
+        toggle(controller, StationTileCoord.of(1, 0));
+
+        controller.start(
+            "Destroy",
+            "Destroy",
+            coord -> coord.equals(StationTileCoord.of(2, 0)),
+            coord -> coord,
+            selected -> {});
+
+        assertTrue(controller.isActive());
+        assertEquals(0, controller.selectedCount());
+        assertFalse(controller.isSelected(StationTileCoord.of(1, 0)));
+        assertTrue(controller.isCompatibleNormalized(controller.normalize(StationTileCoord.of(2, 0))));
+    }
+
+    @Test
+    void emptyConfirmLeavesEditModeActive() {
+        StationTilePickerController controller = new StationTilePickerController();
+        controller.start("Build", "Build", coord -> true, coord -> coord, selected -> {});
+
+        controller.confirm();
+
+        assertTrue(controller.isActive());
+    }
+
+    @Test
     void pickerTogglesOnlyCompatibleTiles() {
         StationTileCoord compatible = StationTileCoord.of(1, 0);
         StationTileCoord incompatible = StationTileCoord.of(2, 0);
         StationTilePickerController controller = new StationTilePickerController();
         controller.start("Copy", "Confirm", coord -> coord.equals(compatible), coord -> coord, selected -> {});
 
-        assertTrue(controller.toggle(compatible));
-        assertFalse(controller.toggle(incompatible));
+        assertTrue(toggle(controller, compatible));
+        assertFalse(toggle(controller, incompatible));
         assertTrue(controller.isSelected(compatible));
         assertFalse(controller.isSelected(incompatible));
 
-        assertTrue(controller.toggle(compatible));
+        assertTrue(toggle(controller, compatible));
         assertFalse(controller.isSelected(compatible));
     }
 
@@ -36,7 +65,7 @@ final class StationTilePickerControllerTest {
         StationTilePickerController controller = new StationTilePickerController();
         controller.start("Copy", "Confirm", coord -> coord.equals(anchor), coord -> anchor, selected -> {});
 
-        assertTrue(controller.toggle(clicked));
+        assertTrue(toggle(controller, clicked));
 
         assertTrue(controller.isSelected(anchor));
         assertTrue(controller.isSelected(clicked));
@@ -50,8 +79,8 @@ final class StationTilePickerControllerTest {
         StationTilePickerController controller = new StationTilePickerController();
         controller.start("Copy", "Apply", coord -> true, coord -> coord, confirmed::addAll);
 
-        controller.toggle(first);
-        controller.toggle(second);
+        toggle(controller, first);
+        toggle(controller, second);
 
         assertTrue(controller.canConfirm());
         controller.confirm();
@@ -64,7 +93,7 @@ final class StationTilePickerControllerTest {
     void cancelExitsWithoutCallingConfirm() {
         StationTilePickerController controller = new StationTilePickerController();
         controller.start("Copy", "Apply", coord -> true, coord -> coord, selected -> fail("confirm should not run"));
-        controller.toggle(StationTileCoord.of(1, 0));
+        toggle(controller, StationTileCoord.of(1, 0));
 
         controller.cancel();
 
@@ -87,12 +116,12 @@ final class StationTilePickerControllerTest {
             targets -> {},
             targets -> targets.contains(first) ? targets : List.of());
 
-        assertTrue(controller.toggle(first));
-        assertTrue(controller.toggle(second));
-        assertTrue(controller.toggle(third));
+        assertTrue(toggle(controller, first));
+        assertTrue(toggle(controller, second));
+        assertTrue(toggle(controller, third));
         assertEquals(3, controller.selectedCount());
 
-        assertTrue(controller.toggle(first));
+        assertTrue(toggle(controller, first));
 
         assertEquals(0, controller.selectedCount());
         assertFalse(controller.isSelected(second));
@@ -125,14 +154,14 @@ final class StationTilePickerControllerTest {
         controller.start("Build", "Confirm", coord -> true, coord -> coord, selected -> {});
         controller.setSelectionFootprint(ModuleShape.L_2x2, true);
 
-        assertTrue(controller.toggle(first));
+        assertTrue(toggle(controller, first));
         assertEquals(0, controller.selectedTargetRotation(first));
 
         assertTrue(controller.rotateSelectionFootprint());
         assertEquals(1, controller.footprintRotation());
         assertEquals(0, controller.selectedTargetRotation(first));
 
-        assertTrue(controller.toggle(second));
+        assertTrue(toggle(controller, second));
         assertEquals(1, controller.selectedTargetRotation(second));
     }
 
@@ -151,11 +180,15 @@ final class StationTilePickerControllerTest {
             targets -> targets);
         controller.setSelectionFootprint(ModuleShape.L_2x2, true);
 
-        controller.toggle(first);
+        toggle(controller, first);
         controller.rotateSelectionFootprint();
-        controller.toggle(second);
+        toggle(controller, second);
         controller.confirm();
 
         assertEquals(List.of(new ModulePlacement(first, 0), new ModulePlacement(second, 1)), confirmed);
+    }
+
+    private static boolean toggle(StationTilePickerController controller, StationTileCoord coord) {
+        return controller.toggleNormalized(controller.normalize(coord));
     }
 }

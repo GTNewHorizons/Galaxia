@@ -12,7 +12,6 @@ import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
-import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.GuiData;
 import com.cleanroommc.modularui.factory.SimpleGuiFactory;
@@ -136,7 +135,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         ModularPanel panel = ModularPanel.defaultPanel("galaxia_station_module_picker", PANEL_WIDTH, PANEL_HEIGHT);
         ParentWidget<?> backgroundLayer = new PassiveBackgroundLayer().pos(0, 0)
             .sizeRel(FULL_REL, FULL_REL)
-            .background(drawable((ctx, x, y, w, h) -> {
+            .background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> {
                 net.minecraft.client.gui.Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_MODAL_BG.getColor());
                 net.minecraft.client.gui.Gui
                     .drawRect(x, y, x + w, y + HEADER_HEIGHT, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
@@ -213,8 +212,9 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     }
 
     private ButtonWidget<?> createMultipleToggle() {
-        return new ButtonWidget<>().background(drawable((ctx, x, y, w, h) -> drawMultipleToggle(x, y, w, h, false)))
-            .hoverBackground(drawable((ctx, x, y, w, h) -> drawMultipleToggle(x, y, w, h, true)))
+        return new ButtonWidget<>()
+            .background(DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawMultipleToggle(x, y, w, h, false)))
+            .hoverBackground(DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawMultipleToggle(x, y, w, h, true)))
             .onMouseTapped(mouseButton -> {
                 if (mouseButton != 0) return false;
                 pendingMultipleBuild = !pendingMultipleBuild;
@@ -226,7 +226,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private ButtonWidget<?> createKindButton(FacilityModuleKind kind) {
         return new ButtonWidget<>()
             .background(
-                drawable(
+                DrawableCommand.asDrawable(
                     (ctx, x, y, w, h) -> BorderedRect.draw(
                         x,
                         y,
@@ -235,7 +235,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                         EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
                         EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
             .hoverBackground(
-                drawable(
+                DrawableCommand.asDrawable(
                     (ctx, x, y, w, h) -> BorderedRect.draw(
                         x,
                         y,
@@ -243,7 +243,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                         h,
                         EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor(),
                         EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
-            .overlay(drawable((ctx, x, y, w, h) -> drawKindButton(kind, x, y, w, h)))
+            .overlay(DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawKindButton(kind, x, y, w, h)))
             .onMouseTapped(mouseButton -> {
                 if (mouseButton != 0) return false;
                 selectKind(kind);
@@ -412,7 +412,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         Runnable onClick) {
         return new ButtonWidget<>()
             .background(
-                drawable(
+                DrawableCommand.asDrawable(
                     (ctx, x, y, w, h) -> drawChoiceButton(
                         labelSupplier.get(),
                         x,
@@ -423,7 +423,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                         selectedSupplier.getAsBoolean(),
                         false)))
             .hoverBackground(
-                drawable(
+                DrawableCommand.asDrawable(
                     (ctx, x, y, w, h) -> drawChoiceButton(
                         labelSupplier.get(),
                         x,
@@ -623,10 +623,6 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         pendingSettingsGroupId = null;
         pendingInstantBuild = false;
         pendingMultipleBuild = false;
-    }
-
-    private IDrawable drawable(DrawableCommand cmd) {
-        return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
     }
 
     private static final class PassiveBackgroundLayer extends ParentWidget<PassiveBackgroundLayer> {

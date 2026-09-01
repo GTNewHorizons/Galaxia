@@ -15,6 +15,7 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
+import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -57,13 +58,13 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
-    private final @Nullable StationEditModeController editModeController;
+    private final @Nullable StationTilePickerController tilePickerController;
 
     ModuleUpgradeModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller,
-        @Nullable StationEditModeController editModeController) {
+        @Nullable StationTilePickerController tilePickerController) {
         this.assetId = assetId;
         this.controller = controller;
-        this.editModeController = editModeController;
+        this.tilePickerController = tilePickerController;
         for (int slot = 0; slot < OPTION_BUTTONS; slot++) {
             int col = slot % OPTION_COLUMNS;
             int row = slot / OPTION_COLUMNS;
@@ -181,13 +182,10 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
     private ButtonWidget<?> createOptionButton(int slot) {
         return new ButtonWidget<>()
             .background(
-                ModuleConfigModalSupport
-                    .drawable((ctx, x, y, w, h) -> drawOptionButton(x, y, w, h, optionRef(slot), false)))
+                DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawOptionButton(x, y, w, h, optionRef(slot), false)))
             .hoverBackground(
-                ModuleConfigModalSupport
-                    .drawable((ctx, x, y, w, h) -> drawOptionButton(x, y, w, h, optionRef(slot), true)))
-            .overlay(
-                ModuleConfigModalSupport.drawable((ctx, x, y, w, h) -> drawOptionLabel(x, y, w, h, optionRef(slot))))
+                DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawOptionButton(x, y, w, h, optionRef(slot), true)))
+            .overlay(DrawableCommand.asDrawable((ctx, x, y, w, h) -> drawOptionLabel(x, y, w, h, optionRef(slot))))
             .onMousePressed(mouseButton -> {
                 OptionRef ref = optionRef(slot);
                 if (mouseButton != 0 || ref == null
@@ -259,7 +257,7 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
 
     private boolean canConfirmMultiple() {
         ModuleInstance module = selectedModule();
-        return editModeController != null && module != null
+        return tilePickerController != null && module != null
             && module.component() instanceof ModuleHammer
             && canConfirm();
     }
@@ -276,7 +274,7 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
         if (module.component() instanceof ModuleHammer) {
             CelestialClient.planHammerUpgrade(
                 assetId,
-                controller.moduleIndex(),
+                module.id,
                 ModuleUpgradeUiModel.hammerVariant(controller.moduleUpgradeSelection()),
                 ModuleUpgradeUiModel.hammerTier(controller.moduleUpgradeSelection()),
                 controller.hammerUpgradeReserveItems(),
@@ -285,9 +283,9 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
             ModuleTier targetTier = ModuleUpgradeUiModel.minerTier(controller.moduleUpgradeSelection());
             MinerFocusTier targetFocusTier = ModuleUpgradeUiModel.minerFocusTier(controller.moduleUpgradeSelection());
             if (MinerFocusUiModel.canPlanTier(module, targetFocusTier)) {
-                CelestialClient.planMinerFocusTier(assetId, controller.moduleIndex(), targetTier, targetFocusTier);
+                CelestialClient.planMinerFocusTier(assetId, module.id, targetTier, targetFocusTier);
             } else if (module.tier() != targetTier) {
-                CelestialClient.planModuleTierUpgrade(assetId, controller.moduleIndex(), targetTier, false);
+                CelestialClient.planModuleTierUpgrade(assetId, module.id, targetTier, false);
             }
         }
         controller.close();
@@ -296,29 +294,28 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
     private void startMultiplePicker() {
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         ModuleInstance source = selectedModule();
-        int sourceModuleIndex = controller.moduleIndex();
         if (facility == null || source == null
-            || editModeController == null
-            || !(source.component() instanceof ModuleHammer)
-            || sourceModuleIndex < 0) return;
+            || tilePickerController == null
+            || !(source.component() instanceof ModuleHammer)) return;
         ModuleTier targetTier = ModuleUpgradeUiModel.hammerTier(controller.moduleUpgradeSelection());
         HammerVariant targetVariant = ModuleUpgradeUiModel.hammerVariant(controller.moduleUpgradeSelection());
         boolean reserveItems = controller.hammerUpgradeReserveItems();
         boolean voidCompletionRefund = controller.hammerUpgradeVoidRefund();
         controller.close();
-        editModeController.startTileMode(
-            StationEditModeController.Mode.MODULE_UPGRADE,
+        tilePickerController.start(
             "Upgrade modules",
             "Upgrade",
-            coord -> ModuleUpgradePickerModel.isCompatibleTarget(facility, source, targetTier, targetVariant, coord),
+            coord -> ModuleUpgradeUiModel.isCompatibleTarget(facility, source, targetTier, targetVariant, coord),
             coord -> StationTargetPicker.normalizeTarget(facility, coord),
             targets -> {
-                List<StationTileCoord> confirmedTargets = ModuleUpgradePickerModel
-                    .confirmedTargets(facility, source, targetTier, targetVariant, targets);
+                AutomatedFacility currentFacility = ModuleConfigModalSupport.facility(assetId);
+                ModuleInstance currentSource = currentFacility == null ? null : currentFacility.moduleById(source.id);
+                List<StationTileCoord> confirmedTargets = ModuleUpgradeUiModel
+                    .confirmedTargets(currentFacility, currentSource, targetTier, targetVariant, targets);
                 if (confirmedTargets.isEmpty()) return;
                 CelestialClient.planModuleUpgradeTargets(
                     assetId,
-                    sourceModuleIndex,
+                    source.id,
                     targetTier,
                     targetVariant,
                     reserveItems,
@@ -462,7 +459,7 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
             controller.armModuleOperationCancel();
             return;
         }
-        CelestialClient.cancelModuleOperation(assetId, controller.moduleIndex());
+        CelestialClient.cancelModuleOperation(assetId, controller.moduleId());
         controller.clearModuleOperationCancel();
     }
 

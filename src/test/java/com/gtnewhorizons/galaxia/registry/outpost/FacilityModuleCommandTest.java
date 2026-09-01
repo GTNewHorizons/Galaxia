@@ -71,6 +71,34 @@ final class FacilityModuleCommandTest {
     }
 
     @Test
+    void placementOrderIsAuthoritative() {
+        AutomatedFacility facility = facility(CelestialAsset.Kind.AUTOMATED_STATION);
+        Map<?, ?> layoutBefore = Map.copyOf(
+            facility.stationLayout()
+                .snapshot());
+        StationTileCoord first = StationTileCoord.of(1, 0);
+        StationTileCoord chained = StationTileCoord.of(2, 0);
+
+        FacilityCommand.Result result = facility.applyCommand(
+            build(
+                facility,
+                FacilityModuleKind.STORAGE,
+                ModuleTier.HV,
+                List.of(ModulePlacement.at(chained), ModulePlacement.at(first))),
+            DEBUG_AUTHORITY);
+
+        assertEquals(FacilityCommand.Status.REJECTED, result.status());
+        assertEquals(FacilityCommand.Rejection.INVALID_MODULE_PLACEMENT, result.rejection());
+        assertTrue(
+            facility.modules()
+                .isEmpty());
+        assertEquals(
+            layoutBefore,
+            facility.stationLayout()
+                .snapshot());
+    }
+
+    @Test
     void lateInvalidBuildTargetRejectsWithoutAnyAggregateMutation() {
         AutomatedFacility facility = facility(CelestialAsset.Kind.AUTOMATED_OUTPOST);
         boolean dirtyBefore = facility.isDirty();

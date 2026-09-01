@@ -9,8 +9,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
 public abstract class TieredModuleComponent implements IModuleComponent {
 
     @Override
-    public IModuleOperation prepareOperationTarget(ModuleInstance module,
-        FacilityCommand.ModuleOperationRequest request) {
+    public IModuleOperation prepareOperationTarget(ModuleInstance module, FacilityCommand.ModuleCommand request) {
         if (!(request instanceof FacilityCommand.PlanTierUpgrade plan)) {
             return IModuleComponent.super.prepareOperationTarget(module, request);
         }

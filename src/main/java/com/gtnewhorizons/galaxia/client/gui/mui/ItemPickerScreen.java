@@ -38,7 +38,6 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
 
     public enum PickContext {
         OUTPOST_LOGISTICS,
-        MINER_BLACKLIST,
         SIDEBAR_DEBUG
     }
 
@@ -48,8 +47,6 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
     private static volatile ItemStack pendingPick = null;
     /** Outpost assetId that this pick belongs to; set before opening the screen. */
     private static volatile CelestialAsset.ID pendingForOutpostId = null;
-    /** Module index for module-scoped picks such as miner blacklist configuration. */
-    private static volatile int pendingModuleIndex = -1;
     /** Routing context for the pending pick result. */
     private static volatile PickContext pendingContext = null;
     /** Screen to restore after the picker captured an item. */
@@ -62,15 +59,7 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
     public static void setPendingForOutpost(CelestialAsset.ID outpostId) {
         pendingReturnScreen = Minecraft.getMinecraft().currentScreen;
         pendingForOutpostId = outpostId;
-        pendingModuleIndex = -1;
         pendingContext = PickContext.OUTPOST_LOGISTICS;
-    }
-
-    public static void setPendingForMinerBlacklist(CelestialAsset.ID outpostId, int moduleIndex) {
-        pendingReturnScreen = Minecraft.getMinecraft().currentScreen;
-        pendingForOutpostId = outpostId;
-        pendingModuleIndex = moduleIndex;
-        pendingContext = PickContext.MINER_BLACKLIST;
     }
 
     public static void setPendingForSidebarDebug() {
@@ -84,13 +73,11 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
     public static void setPendingForSidebarDebug(GuiScreen returnScreen) {
         pendingReturnScreen = returnScreen;
         pendingForOutpostId = null;
-        pendingModuleIndex = -1;
         pendingContext = PickContext.SIDEBAR_DEBUG;
     }
 
     public static GuiScreen cancelPendingPick() {
         if (pendingPick == null && pendingForOutpostId == null
-            && pendingModuleIndex < 0
             && pendingContext == null
             && pendingReturnScreen == null) {
             return null;
@@ -98,7 +85,6 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
         GuiScreen returnScreen = pendingReturnScreen;
         pendingPick = null;
         pendingForOutpostId = null;
-        pendingModuleIndex = -1;
         pendingContext = null;
         pendingReturnScreen = null;
         return returnScreen;
@@ -112,10 +98,6 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
         return pendingPick != null && pendingForOutpostId != null && pendingContext == PickContext.OUTPOST_LOGISTICS;
     }
 
-    public static boolean hasPendingPickForMinerBlacklist() {
-        return pendingPick != null && pendingForOutpostId != null && pendingContext == PickContext.MINER_BLACKLIST;
-    }
-
     public static boolean hasPendingPickForSidebarDebug() {
         return pendingPick != null && pendingContext == PickContext.SIDEBAR_DEBUG;
     }
@@ -124,28 +106,12 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
         return pendingContext != null;
     }
 
-    public static int getPendingModuleIndex() {
-        return pendingModuleIndex;
-    }
-
     /** Returns and clears the pending outpost pick and context, or {@code null} if none. */
     public static ItemStack pollPendingPickForOutpost() {
         if (!hasPendingPickForOutpost()) return null;
         ItemStack pick = pendingPick;
         pendingPick = null;
         pendingForOutpostId = null;
-        pendingModuleIndex = -1;
-        pendingContext = null;
-        pendingReturnScreen = null;
-        return pick;
-    }
-
-    public static ItemStack pollPendingPickForMinerBlacklist() {
-        if (!hasPendingPickForMinerBlacklist()) return null;
-        ItemStack pick = pendingPick;
-        pendingPick = null;
-        pendingForOutpostId = null;
-        pendingModuleIndex = -1;
         pendingContext = null;
         pendingReturnScreen = null;
         return pick;
@@ -157,7 +123,6 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
         ItemStack pick = pendingPick;
         pendingPick = null;
         pendingForOutpostId = null;
-        pendingModuleIndex = -1;
         pendingContext = null;
         pendingReturnScreen = null;
         return pick;
