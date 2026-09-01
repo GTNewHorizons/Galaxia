@@ -11,7 +11,6 @@ import java.util.UUID;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
@@ -184,8 +183,6 @@ public final class CelestialAssetStore {
             bodyIds.remove(assetId);
             if (bodyIds.isEmpty()) byBody.remove(asset.celestialObjectKey);
         }
-        LogisticStore.removeSignalsFor(assetId);
-
         return true;
     }
 

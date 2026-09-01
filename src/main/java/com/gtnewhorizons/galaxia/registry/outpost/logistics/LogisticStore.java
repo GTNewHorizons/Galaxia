@@ -3,9 +3,11 @@ package com.gtnewhorizons.galaxia.registry.outpost.logistics;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -27,7 +29,6 @@ public final class LogisticStore {
     private static final Logger LOG = LogManager.getLogger("Galaxia");
 
     private static final List<LogisticsDelivery> activeDeliveries = new ArrayList<>();
-    private static final Map<CelestialAsset.ID, Map<ItemStackWrapper, LogisticSignal>> outpostSignals = new LinkedHashMap<>();
 
     private LogisticStore() {}
 
@@ -41,14 +42,6 @@ public final class LogisticStore {
 
     public static void clearDeliveries() {
         activeDeliveries.clear();
-    }
-
-    public static void clearSignals() {
-        outpostSignals.clear();
-    }
-
-    public static void removeSignalsFor(CelestialAsset.ID assetId) {
-        if (assetId != null) outpostSignals.remove(assetId);
     }
 
     public static long inboundInTransitAmount(CelestialAsset.ID toAssetId, ItemStackWrapper resource) {
@@ -115,110 +108,80 @@ public final class LogisticStore {
         }
     }
 
-    public static void updateSignalsForFacility(CelestialAsset asset) {
-        CelestialAsset.ID assetId = asset.assetId;
-        Map<ItemStackWrapper, Long> snapshot;
-        if (asset instanceof AutomatedFacility facility) {
-            snapshot = facility.itemSnapshot();
-        } else if (asset instanceof IDistributedInventory physicalInventory) {
-            snapshot = physicalInventory.aggregatedItems();
-        } else {
-            snapshot = Map.of();
+    public static List<LogisticSignal> collectSignals(Iterable<? extends CelestialAsset> assets) {
+        List<LogisticSignal> signals = new ArrayList<>();
+        for (CelestialAsset asset : assets) {
+            if (asset instanceof Station station && station.getTileController() == null) continue;
+            collectSignals(asset, signals);
         }
-        Map<ItemStackWrapper, Long> cannonItems = null;
-        if (asset instanceof Station station) {
-            cannonItems = station.getCannonChestItems();
-        }
-        AutomatedFacility automatedFacility = asset instanceof AutomatedFacility facility ? facility : null;
+        return List.copyOf(signals);
+    }
 
-        Map<ItemStackWrapper, LogisticSignal> currentSignals = outpostSignals
-            .computeIfAbsent(assetId, k -> new LinkedHashMap<>());
-
-        List<ItemStackWrapper> allResources = new ArrayList<>();
+    private static void collectSignals(CelestialAsset asset, List<LogisticSignal> signals) {
+        Map<ItemStackWrapper, Long> snapshot = itemSnapshot(asset);
+        Map<ItemStackWrapper, Long> cannonItems = asset instanceof Station station ? station.getCannonChestItems()
+            : Map.of();
+        Set<ItemStackWrapper> allResources = new LinkedHashSet<>();
         for (InventoryKey key : asset.logisticsConfig.snapshot()
             .keySet()) {
             if (key instanceof ItemStackWrapper item) {
                 allResources.add(item);
             }
         }
-        for (ItemStackWrapper r : snapshot.keySet()) {
-            if (!allResources.contains(r)) allResources.add(r);
-        }
-        for (ItemStackWrapper r : currentSignals.keySet()) {
-            if (!allResources.contains(r)) allResources.add(r);
-        }
-        CelestialObjectKey bodyKey = asset.celestialObjectKey;
-        CelestialObjectKey systemKey = asset.systemKey;
-        CelestialObjectKey planetaryAnchorBodyKey = asset.planetaryAnchorBodyKey;
+        allResources.addAll(snapshot.keySet());
 
         for (ItemStackWrapper resource : allResources) {
-            long stock = snapshot.getOrDefault(resource, 0L);
-            LogisticsResourceConfig cfg = asset.logisticsConfig.get(resource);
-
-            LogisticSignal oldSignal = currentSignals.get(resource);
-
-            long newAmount = 0;
-            LogisticSignal.Scope newScope = LogisticSignal.Scope.SYSTEM;
-            long importTarget = cfg.isImportEnabled() ? cfg.minReserve() : 0L;
-            long supplyReserve = cfg.minReserve();
-            if (automatedFacility != null) {
-                supplyReserve = Math.max(supplyReserve, automatedFacility.effectiveLowerBound(resource));
-                if (cfg.isImportEnabled()) {
-                    importTarget = Math.max(importTarget, automatedFacility.effectiveLowerBound(resource));
-                }
-            }
-
-            if (importTarget > 0L && stock < importTarget) {
-                newAmount = -(importTarget - stock);
-            } else if (cfg.isSupplyEnabled()) {
-                long supplyStock = stock;
-                if (cannonItems != null) {
-                    supplyStock += cannonItems.getOrDefault(resource, 0L);
-                }
-                if (supplyStock > supplyReserve) {
-                    newAmount = supplyStock - supplyReserve;
-                }
-            }
-
-            if (newAmount == 0) {
-                if (oldSignal != null) {
-                    currentSignals.remove(resource);
-                }
-            } else {
-                LogisticSignal newSignal = new LogisticSignal(
-                    assetId,
-                    systemKey,
+            long amount = signalAmount(asset, resource, snapshot.getOrDefault(resource, 0L), cannonItems);
+            if (amount == 0L) continue;
+            signals.add(
+                new LogisticSignal(
+                    asset.assetId,
+                    asset.systemKey,
                     resource,
-                    newAmount,
-                    newScope,
-                    bodyKey,
-                    planetaryAnchorBodyKey);
-
-                if (!Objects.equals(oldSignal, newSignal)) {
-                    currentSignals.put(resource, newSignal);
-                }
-            }
+                    amount,
+                    LogisticSignal.Scope.SYSTEM,
+                    asset.celestialObjectKey,
+                    asset.planetaryAnchorBodyKey));
         }
     }
 
-    public static Map<CelestialObjectKey, List<LogisticSignal>> allSignalsForScope(LogisticSignal.Scope scope) {
+    private static Map<ItemStackWrapper, Long> itemSnapshot(CelestialAsset asset) {
+        if (asset instanceof AutomatedFacility facility) return facility.itemSnapshot();
+        if (asset instanceof IDistributedInventory physicalInventory) return physicalInventory.aggregatedItems();
+        return Map.of();
+    }
+
+    private static long signalAmount(CelestialAsset asset, ItemStackWrapper resource, long stock,
+        Map<ItemStackWrapper, Long> cannonItems) {
+        LogisticsResourceConfig config = asset.logisticsConfig.get(resource);
+        long lowerBound = asset instanceof AutomatedFacility facility ? facility.effectiveLowerBound(resource) : 0L;
+        long importTarget = config.isImportEnabled() ? Math.max(config.minReserve(), lowerBound) : 0L;
+        if (importTarget > 0L && importTarget > stock) return stock - importTarget;
+        if (!config.isSupplyEnabled()) return 0L;
+        long supply = stock + cannonItems.getOrDefault(resource, 0L) - Math.max(config.minReserve(), lowerBound);
+        return Math.max(supply, 0L);
+    }
+
+    public static Map<CelestialObjectKey, List<LogisticSignal>> groupSignals(List<LogisticSignal> signals,
+        LogisticSignal.Scope scope) {
         Map<CelestialObjectKey, List<LogisticSignal>> result = new LinkedHashMap<>();
-
-        for (Map<ItemStackWrapper, LogisticSignal> outpostMap : outpostSignals.values()) {
-            for (LogisticSignal signal : outpostMap.values()) {
-                if (signal.scope() == scope) {
-                    CelestialObjectKey scopeKey = scopeKeyFor(signal);
-                    result.computeIfAbsent(scopeKey, k -> new ArrayList<>())
-                        .add(signal);
-                }
-            }
+        for (LogisticSignal signal : signals) {
+            if (signal.scope() != scope) continue;
+            result.computeIfAbsent(scopeKeyFor(signal), ignored -> new ArrayList<>())
+                .add(signal);
         }
-
-        Map<CelestialObjectKey, List<LogisticSignal>> safe = new LinkedHashMap<>(result.size());
-        for (Map.Entry<CelestialObjectKey, List<LogisticSignal>> e : result.entrySet()) {
-            safe.put(e.getKey(), Collections.unmodifiableList(e.getValue()));
+        for (Map.Entry<CelestialObjectKey, List<LogisticSignal>> entry : result.entrySet()) {
+            entry.setValue(List.copyOf(entry.getValue()));
         }
-        return Collections.unmodifiableMap(safe);
+        return Collections.unmodifiableMap(result);
+    }
+
+    public static List<LogisticSignal> signalsOwnedBy(UUID teamId, List<LogisticSignal> signals) {
+        List<LogisticSignal> owned = new ArrayList<>();
+        for (LogisticSignal signal : signals) {
+            if (CelestialAssetStore.isOwnedBy(teamId, signal.outpostAssetId())) owned.add(signal);
+        }
+        return List.copyOf(owned);
     }
 
     private static CelestialObjectKey scopeKeyFor(LogisticSignal signal) {

@@ -20,7 +20,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHamm
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
 public class Station extends CelestialAsset implements IDistributedInventory {
@@ -58,8 +57,6 @@ public class Station extends CelestialAsset implements IDistributedInventory {
                 item,
                 LogisticsResourceConfig.DEFAULT.withOrderSize((int) (long) amount)
                     .withSupplyEnabled(true)));
-
-        LogisticStore.updateSignalsForFacility(this);
     }
 
     @Override

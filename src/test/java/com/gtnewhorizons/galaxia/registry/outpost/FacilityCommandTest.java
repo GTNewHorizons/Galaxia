@@ -8,7 +8,6 @@ import java.util.List;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -25,11 +24,6 @@ final class FacilityCommandTest {
     @BeforeAll
     static void initRegistries() {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
-    }
-
-    @AfterEach
-    void clearSignals() {
-        LogisticStore.clearSignals();
     }
 
     @Test
@@ -71,7 +65,7 @@ final class FacilityCommandTest {
     }
 
     @Test
-    void logisticsCommandRefreshesSignalAndIdenticalCommandIsANoOp() {
+    void logisticsCommandChangesTheNextSignalSnapshotAndIdenticalCommandIsANoOp() {
         AutomatedFacility facility = facility();
         ItemStackWrapper item = ItemStackWrapper.of(new ItemStack(Items.stick));
         LogisticsResourceConfig config = new LogisticsResourceConfig(8, 4, true, false);
@@ -82,11 +76,7 @@ final class FacilityCommandTest {
             LogisticsConfigAccessMode.FULL);
 
         FacilityCommand.Result changed = facility.applyCommand(command, FacilityCommand.Authority.NONE);
-        List<LogisticSignal> signals = LogisticStore.allSignalsForScope(LogisticSignal.Scope.SYSTEM)
-            .values()
-            .stream()
-            .flatMap(List::stream)
-            .toList();
+        List<LogisticSignal> signals = LogisticStore.collectSignals(List.of(facility));
         FacilityCommand.Result unchanged = facility.applyCommand(command, FacilityCommand.Authority.NONE);
 
         assertEquals(FacilityCommand.Status.CHANGED, changed.status());

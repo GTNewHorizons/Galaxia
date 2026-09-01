@@ -6,7 +6,6 @@ import java.util.UUID;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
@@ -23,29 +22,6 @@ public final class HammerDispatchPlanner {
 
     private HammerDispatchPlanner() {}
 
-    public record Candidate(boolean sameBody, boolean shareAnchor, boolean routeAvailable, CelestialAsset requester,
-        ItemStackWrapper resource, long availableSurplus, long requestedAmount, int orderSize, double departureDv,
-        double totalDv, double tofSeconds, int tofTicks, double tofOsu, OrbitalTransferPlanner.TransferRoute route) {
-
-        public static Candidate fromStatusCandidate(HammerDispatchStatus.Candidate candidate) {
-            return new Candidate(
-                candidate.sameBody(),
-                candidate.shareAnchor(),
-                candidate.routeAvailable(),
-                null,
-                null,
-                candidate.availableSurplus(),
-                candidate.requestedAmount(),
-                candidate.orderSize(),
-                candidate.departureDv(),
-                candidate.totalDv(),
-                candidate.tofSeconds(),
-                candidate.sameBody() ? 1 : 0,
-                0.0,
-                null);
-        }
-    }
-
     public record Plan(CelestialAsset supplier, CelestialAsset requester, ItemStackWrapper resource,
         ModuleInstance hammerModule, ModuleHammer hammer, long sendAmount, int orderSize, long requiredEnergy,
         LogisticSignal.Scope deliveryScope, int travelTimeTicks, double departureDv, double shotDv,
@@ -61,10 +37,6 @@ public final class HammerDispatchPlanner {
         public HammerDispatchStatus.Status toStatus() {
             return new HammerDispatchStatus.Status(code, requiredEnergy, storedEnergy, sendAmount, orderSize);
         }
-    }
-
-    public static Result evaluate(AutomatedFacility supplier, ModuleInstance hammerModule, double orbitalTime) {
-        return evaluate(supplier, hammerModule, CelestialAssetStore.allAssets(), orbitalTime);
     }
 
     public static Result evaluate(AutomatedFacility supplier, ModuleInstance hammerModule, Iterable<?> assets,
@@ -125,7 +97,7 @@ public final class HammerDispatchPlanner {
                         bestBlockedStatus);
                     continue;
                 }
-                long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount, requesterCfg.orderSize());
+                long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount);
                 if (sendAmount <= 0L) continue;
                 long freeCapacity = destinationFreeItemCapacity(requester);
                 if (freeCapacity < sendAmount) {
@@ -193,7 +165,7 @@ public final class HammerDispatchPlanner {
             return Result.simple(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, hammer);
         }
         if (arrivedInbound > 0L) return destinationBlocked(hammer, arrivedInbound, requesterCfg.orderSize());
-        long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount, requesterCfg.orderSize());
+        long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount);
         if (sendAmount <= 0L) return Result.simple(HammerDispatchStatus.Code.NO_SURPLUS_AFTER_RESERVE, hammer);
         long freeCapacity = destinationFreeItemCapacity(requester);
         if (freeCapacity < sendAmount) {
@@ -213,38 +185,11 @@ public final class HammerDispatchPlanner {
             routeProfileTeamId);
     }
 
-    public static Result evaluateCandidate(ModuleHammer hammer, Candidate candidate) {
-        return evaluateCandidate(hammer, candidate, null, null);
-    }
-
-    public static Result evaluateCandidate(ModuleHammer hammer, Candidate candidate, CelestialAsset supplier,
-        ModuleInstance hammerModule) {
-        return evaluateCandidate(
-            hammer,
-            candidate.sameBody(),
-            candidate.shareAnchor(),
-            candidate.routeAvailable(),
-            candidate.requester(),
-            candidate.resource(),
-            candidate.availableSurplus(),
-            candidate.requestedAmount(),
-            candidate.orderSize(),
-            candidate.departureDv(),
-            candidate.totalDv(),
-            candidate.tofSeconds(),
-            candidate.tofTicks(),
-            candidate.tofOsu(),
-            candidate.route(),
-            supplier,
-            hammerModule);
-    }
-
-    private static Result evaluateCandidate(ModuleHammer hammer, boolean sameBody, boolean shareAnchor,
-        boolean routeAvailable, CelestialAsset requester, ItemStackWrapper resource, long availableSurplus,
-        long requestedAmount, int orderSize, double departureDv, double totalDv, double tofSeconds, int tofTicks,
-        double tofOsu, OrbitalTransferPlanner.TransferRoute route, CelestialAsset supplier,
-        ModuleInstance hammerModule) {
-        long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount, orderSize);
+    private static Result evaluateCandidate(CelestialAsset supplier, CelestialAsset requester,
+        ItemStackWrapper resource, ModuleInstance hammerModule, ModuleHammer hammer, boolean sameBody,
+        boolean shareAnchor, long availableSurplus, long requestedAmount, int orderSize,
+        OrbitalTransferPlanner.TransferRoute route) {
+        long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount);
         if (sendAmount <= 0L) return Result.simple(HammerDispatchStatus.Code.NO_SURPLUS_AFTER_RESERVE, hammer);
         if (!shareAnchor && hammer.variant() != HammerVariant.BIG) {
             return new Result(
@@ -255,7 +200,7 @@ public final class HammerDispatchPlanner {
                 orderSize,
                 null);
         }
-        if (!sameBody && !routeAvailable) {
+        if (!sameBody && route == null) {
             return new Result(
                 HammerDispatchStatus.Code.ROUTE_UNAVAILABLE,
                 0L,
@@ -264,6 +209,8 @@ public final class HammerDispatchPlanner {
                 orderSize,
                 null);
         }
+        double departureDv = sameBody ? 1.0 : route.departureDv();
+        double tofSeconds = sameBody ? 0.0 : route.tofSeconds();
         if (!sameBody && !hammer.config()
             .allows(departureDv, tofSeconds)) {
             HammerDispatchStatus.Code code = hammer.config()
@@ -272,7 +219,7 @@ public final class HammerDispatchPlanner {
             return new Result(code, 0L, hammer.energyStored(), sendAmount, orderSize, null);
         }
 
-        double shotDv = sameBody ? 1.0 : totalDv;
+        double shotDv = sameBody ? 1.0 : route.totalDv();
         long requiredEnergy = ModuleHammer.shotEnergyCost(shotDv);
         if (!hammer.canSpendShotEnergy(requiredEnergy)) {
             return new Result(
@@ -284,24 +231,21 @@ public final class HammerDispatchPlanner {
                 null);
         }
 
-        Plan plan = null;
-        if (supplier != null && requester != null && resource != null && hammerModule != null) {
-            plan = new Plan(
-                supplier,
-                requester,
-                resource,
-                hammerModule,
-                hammer,
-                sendAmount,
-                orderSize,
-                requiredEnergy,
-                sameBody ? LogisticSignal.Scope.PLANETARY : LogisticSignal.Scope.SYSTEM,
-                sameBody ? 1 : tofTicks,
-                sameBody ? 1.0 : departureDv,
-                shotDv,
-                sameBody ? 0.0 : tofOsu,
-                route);
-        }
+        Plan plan = new Plan(
+            supplier,
+            requester,
+            resource,
+            hammerModule,
+            hammer,
+            sendAmount,
+            orderSize,
+            requiredEnergy,
+            sameBody ? LogisticSignal.Scope.PLANETARY : LogisticSignal.Scope.SYSTEM,
+            sameBody ? 1 : route.tofTicks(),
+            departureDv,
+            shotDv,
+            sameBody ? 0.0 : route.tofOsu(),
+            route);
         return new Result(
             HammerDispatchStatus.Code.READY,
             requiredEnergy,
@@ -311,7 +255,7 @@ public final class HammerDispatchPlanner {
             plan);
     }
 
-    public static long dispatchAmount(ModuleHammer hammer, long availableSurplus, long requestedAmount, int orderSize) {
+    private static long dispatchAmount(ModuleHammer hammer, long availableSurplus, long requestedAmount) {
         return Math.min(Math.min(requestedAmount, availableSurplus), hammer.maxBatchSize());
     }
 
@@ -371,75 +315,22 @@ public final class HammerDispatchPlanner {
         ModuleInstance hammerModule, ModuleHammer hammer, double orbitalTime, UUID routeProfileTeamId) {
         boolean sameBody = supplier.celestialObjectKey.equals(requester.celestialObjectKey);
         CelestialObject root = GalaxiaCelestialAPI.getPrimaryRoot();
-        boolean shareAnchor = GalaxiaCelestialAPI
+        boolean shareAnchor = sameBody || GalaxiaCelestialAPI
             .sharesPlanetaryAnchor(root, supplier.celestialObjectKey, requester.celestialObjectKey);
-
-        if (sameBody) {
-            return evaluateCandidate(
-                hammer,
-                true,
-                true,
-                true,
-                requester,
-                resource,
-                availableSurplus,
-                requestedAmount,
-                requesterCfg.orderSize(),
-                1.0,
-                1.0,
-                0.0,
-                1,
-                0.0,
-                null,
-                supplier,
-                hammerModule);
-        }
-
-        OrbitalTransferPlanner.TransferRoute route = routeBetween(
-            root,
+        OrbitalTransferPlanner.TransferRoute route = sameBody ? null
+            : routeBetween(root, supplier, requester, orbitalTime, hammer, routeProfileTeamId);
+        return evaluateCandidate(
             supplier,
             requester,
-            orbitalTime,
-            hammer,
-            routeProfileTeamId);
-        if (route == null) {
-            return evaluateCandidate(
-                hammer,
-                false,
-                shareAnchor,
-                false,
-                requester,
-                resource,
-                availableSurplus,
-                requestedAmount,
-                requesterCfg.orderSize(),
-                0.0,
-                0.0,
-                0.0,
-                0,
-                0.0,
-                null,
-                supplier,
-                hammerModule);
-        }
-        return evaluateCandidate(
-            hammer,
-            false,
-            shareAnchor,
-            true,
-            requester,
             resource,
+            hammerModule,
+            hammer,
+            sameBody,
+            shareAnchor,
             availableSurplus,
             requestedAmount,
             requesterCfg.orderSize(),
-            route.departureDv(),
-            route.totalDv(),
-            route.tofSeconds(),
-            route.tofTicks(),
-            route.tofOsu(),
-            route,
-            supplier,
-            hammerModule);
+            route);
     }
 
     private static OrbitalTransferPlanner.TransferRoute routeBetween(CelestialObject root, CelestialAsset supplier,

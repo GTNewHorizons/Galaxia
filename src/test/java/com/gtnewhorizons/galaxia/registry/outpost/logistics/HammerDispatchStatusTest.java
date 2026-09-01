@@ -33,6 +33,7 @@ final class HammerDispatchStatusTest {
 
     @BeforeAll
     static void initRegistries() {
+        GalaxiaTestBootstrap.ensureCelestialRegistry();
         GalaxiaTestBootstrap.ensureFacilityModules();
     }
 
@@ -42,33 +43,11 @@ final class HammerDispatchStatusTest {
     }
 
     @Test
-    void readyWhenCandidatePassesHammerDispatchChecks() {
-        ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BIG, 1_000_000L);
-        HammerDispatchStatus.Candidate candidate = candidate(64, 64, 32, 1.5, 20.0, 120.0);
-
-        HammerDispatchStatus.Status status = HammerDispatchStatus.evaluateCandidate(hammer, candidate);
-
-        assertEquals(HammerDispatchStatus.Code.READY, status.code());
-        assertEquals(200_000L, status.requiredEnergy());
-    }
-
-    @Test
     void codesExposeDispatchPriorityDirectly() {
         assertEquals(100, HammerDispatchStatus.Code.READY.priority());
         assertEquals(80, HammerDispatchStatus.Code.BLOCKED_BY_DV_LIMIT.priority());
         assertEquals(80, HammerDispatchStatus.Code.BLOCKED_BY_TOF_LIMIT.priority());
         assertEquals(20, HammerDispatchStatus.Code.WAITING_FOR_REQUEST.priority());
-    }
-
-    @Test
-    void dispatchAmountFillsRequestedAmountWhenItExceedsOrderSize() {
-        ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BIG, 1_000_000L);
-        HammerDispatchStatus.Candidate candidate = candidate(64, 64, 32, 1.5, 20.0, 120.0);
-
-        HammerDispatchStatus.Status status = HammerDispatchStatus.evaluateCandidate(hammer, candidate);
-
-        assertEquals(HammerDispatchStatus.Code.READY, status.code());
-        assertEquals(64L, status.sendAmount());
     }
 
     @Test
@@ -121,52 +100,58 @@ final class HammerDispatchStatusTest {
     }
 
     @Test
-    void reportsEnergyNeededWhenRouteCostExceedsPrivateBuffer() {
-        ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BIG, 500_000L);
-        HammerDispatchStatus.Candidate candidate = candidate(64, 64, 32, 1.5, 80.0, 120.0);
+    void plannerReportsEnergyNeededWhenPrivateBufferCannotPayForShot() {
+        AutomatedFacility supplier = facility(CelestialObjectId.OVERWORLD);
+        AutomatedFacility requester = facility(CelestialObjectId.OVERWORLD);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
+        requester.logisticsConfig.set(resource, new LogisticsResourceConfig(64, 64, true, false));
+        supplier.insert(resource, 64);
+        ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 0L);
 
-        HammerDispatchStatus.Status status = HammerDispatchStatus.evaluateCandidate(hammer, candidate);
+        HammerDispatchPlanner.Result result = HammerDispatchPlanner
+            .evaluate(supplier, hammerModule(hammer), requester, resource, 0.0, null);
 
-        assertEquals(HammerDispatchStatus.Code.NEED_ENERGY, status.code());
-        assertEquals(800_000L, status.requiredEnergy());
-        assertEquals(500_000L, status.storedEnergy());
+        assertEquals(HammerDispatchStatus.Code.NEED_ENERGY, result.code());
+        assertEquals(10_000L, result.requiredEnergy());
+        assertEquals(0L, result.storedEnergy());
     }
 
     @Test
-    void reportsDvLimitWhenShootingConfigBlocksRoute() {
+    void plannerReportsDvLimitWhenShootingConfigBlocksRoute() {
+        AutomatedFacility supplier = facility(CelestialObjectId.FROZEN_BELT);
+        AutomatedFacility requester = facility(CelestialObjectId.OVERWORLD);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
+        requester.logisticsConfig.set(resource, new LogisticsResourceConfig(64, 64, true, false));
+        supplier.insert(resource, 64);
         ModuleHammer hammer = hammer(
-            new AllowShootingConfig(AllowShootingConfig.Mode.WHEN_DV_UNDER, 2.0),
+            new AllowShootingConfig(AllowShootingConfig.Mode.WHEN_DV_UNDER, 0.0),
             HammerVariant.BIG,
             1_000_000L);
-        HammerDispatchStatus.Candidate candidate = candidate(64, 64, 32, 3.0, 20.0, 120.0);
 
-        HammerDispatchStatus.Status status = HammerDispatchStatus.evaluateCandidate(hammer, candidate);
+        HammerDispatchPlanner.Result result = HammerDispatchPlanner
+            .evaluate(supplier, hammerModule(hammer), requester, resource, 0.0, null);
 
-        assertEquals(HammerDispatchStatus.Code.BLOCKED_BY_DV_LIMIT, status.code());
+        assertEquals(HammerDispatchStatus.Code.BLOCKED_BY_DV_LIMIT, result.code());
     }
 
     @Test
-    void dispatchAmountUsesRequestedAmountWhenItIsBelowOrderSize() {
-        ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BIG, 1_000_000L);
-        HammerDispatchStatus.Candidate candidate = candidate(64, 16, 32, 1.5, 20.0, 120.0);
+    void plannerSendsAvailableSurplusWhenItIsBelowOrderSize() {
+        AutomatedFacility supplier = facility(CelestialObjectId.OVERWORLD);
+        AutomatedFacility requester = facility(CelestialObjectId.OVERWORLD);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
+        requester.logisticsConfig.set(resource, new LogisticsResourceConfig(64, 32, true, false));
+        supplier.insert(resource, 16);
+        ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 1_000_000L);
 
-        HammerDispatchStatus.Status status = HammerDispatchStatus.evaluateCandidate(hammer, candidate);
+        HammerDispatchPlanner.Result result = HammerDispatchPlanner
+            .evaluate(supplier, hammerModule(hammer), requester, resource, 0.0, null);
 
-        assertEquals(HammerDispatchStatus.Code.READY, status.code());
-        assertEquals(16L, status.sendAmount());
-        assertEquals(32, status.orderSize());
-    }
-
-    @Test
-    void dispatchAmountUsesAvailableSurplusWhenItIsBelowOrderSize() {
-        ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BIG, 1_000_000L);
-        HammerDispatchStatus.Candidate candidate = candidate(16, 64, 32, 1.5, 20.0, 120.0);
-
-        HammerDispatchStatus.Status status = HammerDispatchStatus.evaluateCandidate(hammer, candidate);
-
-        assertEquals(HammerDispatchStatus.Code.READY, status.code());
-        assertEquals(16L, status.sendAmount());
-        assertEquals(32, status.orderSize());
+        assertEquals(HammerDispatchStatus.Code.READY, result.code());
+        assertEquals(16L, result.sendAmount());
+        assertEquals(32, result.orderSize());
     }
 
     @Test
@@ -206,7 +191,8 @@ final class HammerDispatchStatusTest {
                 supplier.celestialObjectKey,
                 requester.celestialObjectKey,
                 0,
-                0));
+                0,
+                null));
         ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 1_000_000L);
 
         HammerDispatchPlanner.Result result = HammerDispatchPlanner
@@ -248,20 +234,6 @@ final class HammerDispatchStatusTest {
             variant,
             64,
             energyStored);
-    }
-
-    private static HammerDispatchStatus.Candidate candidate(long availableSurplus, long requestedAmount, int orderSize,
-        double departureDv, double totalDv, double tofSeconds) {
-        return new HammerDispatchStatus.Candidate(
-            false,
-            true,
-            true,
-            availableSurplus,
-            requestedAmount,
-            orderSize,
-            departureDv,
-            totalDv,
-            tofSeconds);
     }
 
     private static AutomatedFacility facility(CelestialObjectId bodyId) {

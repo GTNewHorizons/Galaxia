@@ -344,27 +344,6 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
-    void worldReloadDropsLogisticSignalsOfAssetsThatNoLongerExist(@TempDir Path tempDir) {
-        CelestialServerRuntime runtime = CelestialServerRuntime.create();
-        AutomatedFacility station = createStationWithFullLayout();
-        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
-        station.insert(resource, 3);
-        station.logisticsConfig.set(resource, new LogisticsResourceConfig(15, 64, true, false));
-        LogisticStore.updateSignalsForFacility(station);
-        assertFalse(
-            LogisticStore.allSignalsForScope(LogisticSignal.Scope.SYSTEM)
-                .isEmpty(),
-            "precondition: the station emits a signal");
-
-        new FacilityPersistenceManager(runtime).loadFromSaveDirectory(tempDir.toFile());
-
-        assertEquals(
-            Map.of(),
-            LogisticStore.allSignalsForScope(LogisticSignal.Scope.SYSTEM),
-            "signals of assets from the previous world must not survive the reload");
-    }
-
-    @Test
     void discoveryFileReplacesScansForTeamsItOmits(@TempDir Path tempDir) throws Exception {
         Path file = tempDir.resolve("_discovery.json");
         UUID retainedTeam = UUID.randomUUID();

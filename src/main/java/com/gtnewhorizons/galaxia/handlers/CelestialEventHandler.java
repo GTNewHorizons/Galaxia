@@ -67,6 +67,7 @@ public class CelestialEventHandler {
         }
         celestialRuntime.tick();
 
+        List<LogisticSignal> signals = LogisticStore.collectSignals(CelestialAssetStore.allAssets());
         LogisticStore.tickDeliveries();
         double orbitalTime = GalaxiaCelestialAPI.currentOrbitalTime();
 
@@ -76,7 +77,7 @@ public class CelestialEventHandler {
         // different planetary anchors -> BIG HAMMER
         for (Map.Entry<CelestialObjectKey, List<LogisticSignal>> entry : LogisticStore
             // TODO: Use different scopes also?
-            .allSignalsForScope(LogisticSignal.Scope.SYSTEM)
+            .groupSignals(signals, LogisticSignal.Scope.SYSTEM)
             .entrySet()) {
 
             handleSignal(entry.getValue(), orbitalTime, profileHammerTrajectoryLoad);
@@ -110,7 +111,8 @@ public class CelestialEventHandler {
                 .filter(d -> CelestialAssetStore.isOwnedBy(playerTeam, d.data.fromAssetId()))
                 .collect(Collectors.toList());
 
-            Galaxia.GALAXIA_NETWORK.sendTo(LogisticsSyncPacket.from(relevantDeliveries), player);
+            List<LogisticSignal> relevantSignals = LogisticStore.signalsOwnedBy(playerTeam, signals);
+            Galaxia.GALAXIA_NETWORK.sendTo(LogisticsSyncPacket.from(relevantDeliveries, relevantSignals), player);
         }
         AssetStateSync.SERVER.publishPeriodic();
     }

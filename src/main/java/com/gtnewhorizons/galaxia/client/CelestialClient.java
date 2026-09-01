@@ -41,6 +41,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -100,11 +101,9 @@ public final class CelestialClient {
     private static final List<LogisticsDelivery> deliveries = new ArrayList<>();
     private static int deliveryRevision = 0;
     private static int signalRevision = 0;
+    private static List<LogisticSignal> signals = List.of();
     private static HammerTrajectoryLoadSample hammerTrajectoryLoadSample = new HammerTrajectoryLoadSample(0.0, 0.0);
     private static final AsteroidClientProjectionService asteroidProjections = new AsteroidClientProjectionService();
-
-    private static final Map<CelestialObjectKey, Map<String, Long>> systemSignals = new LinkedHashMap<>();
-    private static final Map<CelestialObjectKey, Map<String, Long>> planetSignals = new LinkedHashMap<>();
 
     private static final Map<CelestialObjectKey, CachedChildren> childrenCache = new LinkedHashMap<>();
 
@@ -125,6 +124,7 @@ public final class CelestialClient {
     public static void clearLocalState() {
         deliveries.clear();
         deliveryRevision = 0;
+        signals = List.of();
         signalRevision = 0;
         asteroidProjections.clear();
         childrenCache.clear();
@@ -501,23 +501,36 @@ public final class CelestialClient {
 
     // ── Signal mirror ──
 
-    public static void updateClientSignals(Map<CelestialObjectKey, Map<String, Long>> bySystem,
-        Map<CelestialObjectKey, Map<String, Long>> byPlanet) {
-        systemSignals.clear();
-        systemSignals.putAll(bySystem);
-        planetSignals.clear();
-        planetSignals.putAll(byPlanet);
+    public static void updateClientSignals(List<LogisticSignal> newSignals) {
+        signals = List.copyOf(newSignals);
         signalRevision++;
     }
 
     public static Map<String, Long> clientSignalsForSystem(CelestialObjectKey systemKey) {
-        Map<String, Long> result = systemSignals.get(systemKey);
-        return result != null ? Collections.unmodifiableMap(result) : Collections.emptyMap();
+        Map<String, Long> result = new LinkedHashMap<>();
+        for (LogisticSignal signal : signals) {
+            if (signal.scope() != LogisticSignal.Scope.SYSTEM || !systemKey.equals(signal.systemKey())) continue;
+            result.merge(
+                signal.resourceId()
+                    .toKey(),
+                signal.amount(),
+                Long::sum);
+        }
+        return Collections.unmodifiableMap(result);
     }
 
     public static Map<String, Long> clientSignalsForPlanet(CelestialObjectKey anchorBodyKey) {
-        Map<String, Long> result = planetSignals.get(anchorBodyKey);
-        return result != null ? Collections.unmodifiableMap(result) : Collections.emptyMap();
+        Map<String, Long> result = new LinkedHashMap<>();
+        for (LogisticSignal signal : signals) {
+            if (signal.scope() != LogisticSignal.Scope.SYSTEM || !anchorBodyKey.equals(signal.planetaryAnchorBodyKey()))
+                continue;
+            result.merge(
+                signal.resourceId()
+                    .toKey(),
+                signal.amount(),
+                Long::sum);
+        }
+        return Collections.unmodifiableMap(result);
     }
 
     public static int clientSignalRevision() {

@@ -30,7 +30,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeature;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
-import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.BlockingReason;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -712,7 +711,6 @@ public final class AutomatedFacility extends CelestialAsset {
         if (!trySetBound(command.resource(), command.amount(), lower)) {
             return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_BOUND);
         }
-        LogisticStore.updateSignalsForFacility(this);
         markDirty();
         return FacilityCommand.Result.CHANGED;
     }
@@ -722,7 +720,6 @@ public final class AutomatedFacility extends CelestialAsset {
         if (resourceRejection != null) return FacilityCommand.Result.rejected(resourceRejection);
         boolean lower = isLowerBound(command.kind());
         if (!clearBound(command.resource(), lower)) return FacilityCommand.Result.UNCHANGED;
-        LogisticStore.updateSignalsForFacility(this);
         markDirty();
         return FacilityCommand.Result.CHANGED;
     }
@@ -763,7 +760,6 @@ public final class AutomatedFacility extends CelestialAsset {
             return FacilityCommand.Result.UNCHANGED;
         }
         logisticsConfig.set(command.resource(), updated);
-        LogisticStore.updateSignalsForFacility(this);
         markDirty();
         return FacilityCommand.Result.CHANGED;
     }
@@ -774,7 +770,6 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         if (!logisticsConfig.hasExplicit(command.resource())) return FacilityCommand.Result.UNCHANGED;
         logisticsConfig.reset(command.resource());
-        LogisticStore.updateSignalsForFacility(this);
         markDirty();
         return FacilityCommand.Result.CHANGED;
     }
@@ -1550,8 +1545,6 @@ public final class AutomatedFacility extends CelestialAsset {
             }
             if (i < modules.size() && modules.get(i) == module) i++;
         }
-
-        LogisticStore.updateSignalsForFacility(this);
     }
 
     private boolean tickModuleOperation(ModuleInstance module) {

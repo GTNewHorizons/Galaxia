@@ -14,7 +14,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
@@ -136,7 +135,6 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
         if (resource == null) return false;
         if (removeEntry) {
             asset.logisticsConfig.reset(resource);
-            LogisticStore.updateSignalsForFacility(asset);
             asset.markDirty();
             return true;
         } else {
@@ -147,7 +145,6 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
                 isSupplyEnabled);
             config = (accessMode == null ? LogisticsConfigAccessMode.FULL : accessMode).sanitize(config);
             asset.logisticsConfig.set(resource, config);
-            LogisticStore.updateSignalsForFacility(asset);
             asset.markDirty();
             return true;
         }
