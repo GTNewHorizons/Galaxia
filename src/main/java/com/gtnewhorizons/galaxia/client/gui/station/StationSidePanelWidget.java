@@ -161,7 +161,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         lineY = drawLine(
-            "Energy: " + facility.getEnergyStored() + "/" + AutomatedFacility.MAX_ENERGY,
+            "Energy: " + facility.getEnergyStored() + "/" + facility.energyCapacity(),
             x + CONTENT_PADDING,
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());

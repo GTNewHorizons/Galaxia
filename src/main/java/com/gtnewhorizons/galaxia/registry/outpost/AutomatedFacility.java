@@ -92,7 +92,7 @@ public final class AutomatedFacility extends CelestialAsset {
     private long energyStored;
     private long ticks;
 
-    public static final long MAX_ENERGY = 8_000_000L;
+    public static final long BASE_ENERGY_CAPACITY = 8_000_000L;
     public static final long BASE_ITEM_CAPACITY = 1000L;
     public static final int UPKEEP_INTERVAL_TICKS = 20 * 60;
     private static final int MAX_BUILD_TARGETS = 256;
@@ -1268,14 +1268,6 @@ public final class AutomatedFacility extends CelestialAsset {
         return moduleSettings.canCopySettings(source, target);
     }
 
-    public void copyModuleRuntimeSettings(ModuleInstance source, ModuleInstance target) {
-        try {
-            finishModuleSettingsCommand(moduleSettings.copySettings(source, List.of(target)));
-        } catch (IllegalArgumentException | IllegalStateException invalid) {
-            throw new IllegalStateException("Invalid module settings copy", invalid);
-        }
-    }
-
     public boolean tryReserveOperationMaterials(ModuleInstance module, Map<ItemStackWrapper, Long> materialCost) {
         ModuleOperationState operation = requireWaitingOperation(module);
         Map<ItemStackWrapper, Long> requested = requireMaterialCost(materialCost);
@@ -1340,35 +1332,6 @@ public final class AutomatedFacility extends CelestialAsset {
             markDirty();
         }
         return operationHasFullDeposit(requireOperation(module), requested);
-    }
-
-    public void cancelModuleOperation(ModuleInstance module) {
-        ModuleOperationState operation = requireOperation(module);
-        module.setOperation(operation.cancel());
-        markDirty();
-    }
-
-    public void applyCreativeModuleOperation(ModuleInstance module, ModuleOperationPlan plan) {
-        if (module == null) {
-            throw new IllegalArgumentException("applyCreativeModuleOperation: module must not be null");
-        }
-        if (plan == null) {
-            throw new IllegalArgumentException("applyCreativeModuleOperation: plan must not be null for " + module.id);
-        }
-        ModuleOperationState existingOperation = module.operationOrNull();
-        if (existingOperation != null && !existingOperation.phase()
-            .isTerminal()) {
-            if (!existingOperation.depositedResources()
-                .isEmpty()
-                || !existingOperation.refundBuffer()
-                    .isEmpty()) {
-                throw new IllegalStateException(
-                    "Creative operation cannot replace active operation with stored items for module " + module.id);
-            }
-        }
-        applyOperationTarget(module, plan);
-        module.clearOperation();
-        markDirty();
     }
 
     public boolean flushModuleOperationRefund(ModuleInstance module) {
@@ -1481,10 +1444,18 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void setEnergyStored(long energyStored) {
-        long clamped = Math.clamp(energyStored, 0, MAX_ENERGY);
+        long clamped = Math.clamp(energyStored, 0, energyCapacity());
         if (this.energyStored == clamped) return;
         this.energyStored = clamped;
         markDirty();
+    }
+
+    public long energyCapacity() {
+        long capacity = BASE_ENERGY_CAPACITY;
+        for (CapacityCluster cluster : layoutCache.getCapacityClusters(FacilityModuleKind.BATTERY)) {
+            capacity += cluster.effectiveCapacity();
+        }
+        return capacity;
     }
 
     public void addEnergy(long delta) {

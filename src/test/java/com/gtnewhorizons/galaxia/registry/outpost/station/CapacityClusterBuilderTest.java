@@ -11,7 +11,11 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -20,7 +24,7 @@ import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class CapacityClusterBuilderTest {
 
-    private static final long HV_STORAGE_BASE = 1024L; // From ModuleStorage.baseCapacityForTier(HV)
+    private static final long HV_STORAGE_BASE = 1024L;
 
     @BeforeAll
     static void init() {
@@ -231,6 +235,25 @@ final class CapacityClusterBuilderTest {
             100_000L,
             FacilityModuleKind.BATTERY.create(StationTileCoord.of(3, 0), ModuleShape.SINGLE, ModuleTier.HV)
                 .baseCapacity());
+    }
+
+    @Test
+    void batteryClustersIncreaseFacilityEnergyCapacity() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
+        ModuleInstance battery = FacilityModuleKind.BATTERY
+            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.HV);
+        battery.completeConstruction();
+        facility.addModule(battery);
+        facility.stationLayout()
+            .place(battery);
+
+        assertEquals(AutomatedFacility.BASE_ENERGY_CAPACITY + 100_000L, facility.energyCapacity());
+        facility.setEnergyStored(Long.MAX_VALUE);
+        assertEquals(facility.energyCapacity(), facility.getEnergyStored());
     }
 
     @Test

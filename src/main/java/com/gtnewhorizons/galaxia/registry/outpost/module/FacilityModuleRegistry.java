@@ -13,22 +13,20 @@ import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
+import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleBattery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleGeothermalGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMaintenanceBay;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModulePower;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleStorage;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleTank;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 public class FacilityModuleRegistry {
+
+    private static final int POWER_GENERATION_EU_PER_TICK = 2048;
+    private static final int GEOTHERMAL_GENERATION_EU_PER_TICK = 8192;
 
     public record Definition(FacilityModuleKind kind, Map<ModuleTier, ModuleTierData> tierData,
         BiConsumer<ModuleInstance, CelestialAsset> applyBehavior, Supplier<IModuleComponent> defaultFactory,
@@ -73,23 +71,23 @@ public class FacilityModuleRegistry {
         register(
             FacilityModuleKind.POWER,
             tierDataBuilder().addedEnergyCapacity(1500L)
-                .powerDraw(-ModulePower.EU_TICK)
+                .powerDraw(-POWER_GENERATION_EU_PER_TICK)
                 .cooldown(1)
                 .cost(Map.of(new ItemStack(Items.redstone), 8L, new ItemStack(Items.gold_ingot), 64L))
                 .build(),
-            ModulePower::doNothing,
-            ModulePower::new);
+            (instance, outpost) -> {},
+            TieredModuleComponent::new);
         register(
             FacilityModuleKind.GEOTHERMAL_GENERATOR,
             Map.of(
                 ModuleTier.HV,
                 tierDataBuilder().addedEnergyCapacity(2000L)
-                    .powerDraw(-ModuleGeothermalGenerator.EU_TICK)
+                    .powerDraw(-GEOTHERMAL_GENERATION_EU_PER_TICK)
                     .cooldown(1)
                     .cost(Map.of(new ItemStack(Items.redstone), 64L, new ItemStack(Items.gold_ingot), 64L))
                     .build()),
-            ModulePower::doNothing,
-            ModuleGeothermalGenerator::new);
+            (instance, outpost) -> {},
+            TieredModuleComponent::new);
         builder(FacilityModuleKind.MINER)
             .tiers(
                 new TierMapBuilder()
@@ -200,7 +198,7 @@ public class FacilityModuleRegistry {
                     Map.of(new ItemStack(Items.iron_ingot), 256L, new ItemStack(Items.gold_ingot), 512L))
                 .build(),
             (instance, outpost) -> {},
-            ModuleStorage::new);
+            TieredModuleComponent::new);
         register(
             FacilityModuleKind.TANK,
             new TierMapBuilder()
@@ -227,7 +225,7 @@ public class FacilityModuleRegistry {
                     Map.of(new ItemStack(Items.iron_ingot), 256L, new ItemStack(Items.gold_ingot), 512L))
                 .build(),
             (instance, outpost) -> {},
-            ModuleTank::new);
+            TieredModuleComponent::new);
         register(
             FacilityModuleKind.BATTERY,
             new TierMapBuilder()
@@ -254,7 +252,7 @@ public class FacilityModuleRegistry {
                     Map.of(new ItemStack(Items.redstone), 256L, new ItemStack(Items.gold_ingot), 512L))
                 .build(),
             (instance, outpost) -> {},
-            ModuleBattery::new);
+            TieredModuleComponent::new);
         register(
             FacilityModuleKind.MAINTENANCE_BAY,
             tierDataBuilder().addedEnergyCapacity(500L)
@@ -263,7 +261,7 @@ public class FacilityModuleRegistry {
                 .cost(Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 16L))
                 .build(),
             (instance, outpost) -> {},
-            ModuleMaintenanceBay::new,
+            () -> new IModuleComponent() {},
             List.of(ModuleAreaEffect.adjacentUpkeepMultiplier(80)));
         builder(FacilityModuleKind.DEBUG_DATA_GENERATOR).tiers(
             Map.of(

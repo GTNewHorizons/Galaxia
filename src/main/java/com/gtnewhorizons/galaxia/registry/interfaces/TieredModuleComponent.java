@@ -5,7 +5,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
 
-public abstract class TieredModuleComponent implements IModuleComponent {
+public class TieredModuleComponent implements IModuleComponent {
 
     @Override
     public IModuleOperation prepareOperationTarget(ModuleInstance module, FacilityCommand.ModuleCommand request) {
