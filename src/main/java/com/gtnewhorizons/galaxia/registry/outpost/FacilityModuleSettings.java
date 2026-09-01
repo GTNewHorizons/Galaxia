@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.outpost;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -10,7 +9,6 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -22,117 +20,71 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup
 
 final class FacilityModuleSettings {
 
-    record AttachmentPlan(ModuleInstance.ID moduleId, @Nullable SettingsGroup.ID sharedGroupId,
-        ModuleSettings settings) {}
-
-    enum Status {
-        CHANGED,
-        UNCHANGED,
-        REJECTED
-    }
-
-    record Outcome(Status status, @Nullable FacilityCommand.Rejection rejection,
-        Set<ModuleInstance.ID> affectedModuleIds) {
+    record Outcome(boolean changed, Set<ModuleInstance.ID> affectedModuleIds) {
 
         Outcome {
             affectedModuleIds = Set.copyOf(affectedModuleIds);
         }
 
         static Outcome changed(Collection<ModuleInstance.ID> affectedModuleIds) {
-            return new Outcome(Status.CHANGED, null, Set.copyOf(affectedModuleIds));
+            return new Outcome(true, Set.copyOf(affectedModuleIds));
         }
 
         static Outcome unchanged() {
-            return new Outcome(Status.UNCHANGED, null, Set.of());
-        }
-
-        static Outcome rejected(FacilityCommand.Rejection rejection) {
-            return new Outcome(Status.REJECTED, rejection, Set.of());
+            return new Outcome(false, Set.of());
         }
     }
 
-    private final Map<ModuleInstance.ID, ModuleSettings> privateSettings = new LinkedHashMap<>();
+    private final List<ModuleInstance> modules;
     private final Map<SettingsGroup.ID, SettingsGroup> groups = new LinkedHashMap<>();
-    private final Map<ModuleInstance.ID, SettingsGroup.ID> membership = new LinkedHashMap<>();
-    private int nextGroupId = 1;
+    private long nextGroupId = 1;
 
-    FacilityModuleSettingsSnapshot snapshot() {
-        return new FacilityModuleSettingsSnapshot(privateSettings, groups, membership);
+    FacilityModuleSettings(List<ModuleInstance> modules) {
+        if (modules == null) throw new IllegalArgumentException("Module list must not be null");
+        this.modules = modules;
     }
 
-    void restore(FacilityModuleSettingsSnapshot restored, List<ModuleInstance> modules) {
-        if (restored == null || modules == null) throw new IllegalArgumentException("Module settings restore is null");
-        Map<ModuleInstance.ID, ModuleInstance> modulesById = new LinkedHashMap<>();
+    void restore(Collection<SettingsGroup> restoredGroups) {
+        if (restoredGroups == null) throw new IllegalArgumentException("Module settings restore is null");
+        Map<SettingsGroup.ID, SettingsGroup> candidates = new LinkedHashMap<>();
+        for (SettingsGroup group : restoredGroups) {
+            if (group == null || candidates.put(group.id(), group) != null) {
+                throw new IllegalArgumentException("Duplicate or null restored settings group");
+            }
+        }
+        Set<ModuleInstance.ID> moduleIds = new LinkedHashSet<>();
+        Set<SettingsGroup.ID> populatedGroups = new LinkedHashSet<>();
         for (ModuleInstance module : modules) {
-            if (modulesById.put(module.id, module) != null) {
-                throw new IllegalArgumentException("Duplicate module ID during settings restore: " + module.id);
+            if (module == null || !moduleIds.add(module.id)) {
+                throw new IllegalArgumentException("Duplicate or null module during settings restore");
+            }
+            ModuleInstance.SettingsBinding binding = module.settingsBinding();
+            if (supports(module) != (binding != null)) {
+                throw new IllegalArgumentException("Module does not have exactly one settings binding: " + module.id);
+            }
+            if (binding == null) continue;
+            validateSettings(module, effectiveSettings(module, binding, candidates));
+            if (binding instanceof ModuleInstance.SettingsBinding.Shared shared) {
+                SettingsGroup group = candidates.get(shared.groupId());
+                if (group == null || group.kind() != module.kind()) {
+                    throw new IllegalArgumentException("Invalid shared settings binding for module " + module.id);
+                }
+                populatedGroups.add(shared.groupId());
             }
         }
-        Map<SettingsGroup.ID, Integer> memberCounts = new LinkedHashMap<>();
-        for (Map.Entry<ModuleInstance.ID, SettingsGroup.ID> entry : restored.membership()
-            .entrySet()) {
-            ModuleInstance module = modulesById.get(entry.getKey());
-            SettingsGroup group = restored.groups()
-                .get(entry.getValue());
-            if (module == null || group == null || !supports(module) || group.kind() != module.kind()) {
-                throw new IllegalArgumentException("Invalid shared settings membership for module " + entry.getKey());
-            }
-            if (restored.privateSettings()
-                .containsKey(entry.getKey())) {
-                throw new IllegalArgumentException("Module has both private and shared settings: " + entry.getKey());
-            }
-            validateSettings(module, group.settings());
-            memberCounts.merge(group.id(), 1, Integer::sum);
-        }
-        for (SettingsGroup.ID groupId : restored.groups()
-            .keySet()) {
-            if (!memberCounts.containsKey(groupId)) {
-                throw new IllegalArgumentException("Restored settings group is empty: " + groupId);
-            }
-        }
-        for (Map.Entry<ModuleInstance.ID, ModuleSettings> entry : restored.privateSettings()
-            .entrySet()) {
-            ModuleInstance module = modulesById.get(entry.getKey());
-            if (module == null || !supports(module)) {
-                throw new IllegalArgumentException("Invalid private settings owner: " + entry.getKey());
-            }
-            validateSettings(module, entry.getValue());
+        if (!populatedGroups.equals(candidates.keySet())) {
+            throw new IllegalArgumentException("Restored settings groups must each have a member");
         }
         for (ModuleInstance module : modules) {
-            if (supports(module) != (restored.privateSettings()
-                .containsKey(module.id)
-                ^ restored.membership()
-                    .containsKey(module.id))) {
-                throw new IllegalArgumentException("Module does not have exactly one settings owner: " + module.id);
-            }
+            if (module.settingsBinding() != null) applySettings(module, effectiveSettings(module, candidates));
         }
-        long restoredNextGroupId = restored.groups()
-            .keySet()
-            .stream()
-            .mapToLong(id -> id.value())
-            .max()
-            .orElse(0L) + 1L;
-        if (restoredNextGroupId > Integer.MAX_VALUE) {
-            throw new IllegalStateException("Settings group ID space exhausted");
-        }
-        for (ModuleInstance module : modules) {
-            if (!supports(module)) continue;
-            ModuleSettings settings = restored.privateSettings()
-                .get(module.id);
-            if (settings == null) settings = restored.groups()
-                .get(
-                    restored.membership()
-                        .get(module.id))
-                .settings();
-            applySettings(module, settings);
-        }
-        privateSettings.clear();
-        privateSettings.putAll(restored.privateSettings());
         groups.clear();
-        groups.putAll(restored.groups());
-        membership.clear();
-        membership.putAll(restored.membership());
-        nextGroupId = (int) restoredNextGroupId;
+        groups.putAll(candidates);
+        nextGroupId = candidates.keySet()
+            .stream()
+            .mapToInt(SettingsGroup.ID::value)
+            .max()
+            .orElse(0) + 1L;
     }
 
     boolean supports(ModuleInstance module) {
@@ -140,63 +92,49 @@ final class FacilityModuleSettings {
             .settingsGroups();
     }
 
-    void attachPrivate(ModuleInstance module) {
+    void attach(ModuleInstance module, @Nullable ModuleInstance.SettingsBinding preparedBinding) {
         requireSupported(module);
-        if (privateSettings.containsKey(module.id) || membership.containsKey(module.id)) {
-            throw new IllegalStateException("Module already has settings ownership: " + module.id);
+        if (module.settingsBinding() != null) {
+            throw new IllegalStateException("Module already has a settings binding: " + module.id);
         }
-        ModuleSettings settings = captureSettings(module);
-        validateSettings(module, settings);
-        privateSettings.put(module.id, settings);
+        ModuleInstance.SettingsBinding binding = preparedBinding == null
+            ? new ModuleInstance.SettingsBinding.Private(captureSettings(module))
+            : preparedBinding;
+        validateSettings(module, effectiveSettings(module, binding, groups));
+        module.setSettingsBinding(binding);
     }
 
-    AttachmentPlan prepareAttachment(ModuleInstance target, @Nullable ModuleInstance copySource,
+    ModuleInstance.SettingsBinding prepareAttachment(ModuleInstance target, @Nullable ModuleInstance copySource,
         @Nullable SettingsGroup.ID requestedGroupId) {
         requireSupported(target);
-        ModuleSettings settings;
-        SettingsGroup.ID sharedGroupId = null;
+        ModuleInstance.SettingsBinding binding;
         if (copySource != null) {
             requireSupported(copySource);
             if (copySource.kind() != target.kind()) {
                 throw new IllegalArgumentException("Build settings source kind does not match target kind");
             }
-            settings = effectiveSettings(copySource.id);
-            IModuleComponent.SettingsCopySpec copySpec = copySource.component()
-                .prepareSettingsCopy(copySource, target);
+            ModuleSettings settings = effectiveSettings(copySource.id);
+            copySource.component()
+                .settingsCopyWouldChange(copySource, target);
             validateSettings(target, settings);
             applySettings(target, settings);
             target.component()
-                .applySettingsCopy(target, copySpec);
+                .applySettingsCopy(copySource, target);
+            binding = new ModuleInstance.SettingsBinding.Private(settings);
         } else if (requestedGroupId != null) {
             SettingsGroup group = requireGroup(requestedGroupId);
             if (group.kind() != target.kind()) {
                 throw new IllegalArgumentException("Build settings group kind does not match target kind");
             }
-            settings = group.settings();
-            validateSettings(target, settings);
-            applySettings(target, settings);
-            sharedGroupId = requestedGroupId;
+            validateSettings(target, group.settings());
+            applySettings(target, group.settings());
+            binding = new ModuleInstance.SettingsBinding.Shared(requestedGroupId);
         } else {
-            settings = captureSettings(target);
+            ModuleSettings settings = captureSettings(target);
             validateSettings(target, settings);
+            binding = new ModuleInstance.SettingsBinding.Private(settings);
         }
-        return new AttachmentPlan(target.id, sharedGroupId, settings);
-    }
-
-    void attach(AttachmentPlan plan) {
-        if (privateSettings.containsKey(plan.moduleId()) || membership.containsKey(plan.moduleId())) {
-            throw new IllegalStateException("Module already has settings ownership: " + plan.moduleId());
-        }
-        if (plan.sharedGroupId() == null) {
-            privateSettings.put(plan.moduleId(), plan.settings());
-        } else {
-            SettingsGroup group = requireGroup(plan.sharedGroupId());
-            if (!group.settings()
-                .equals(plan.settings())) {
-                throw new IllegalStateException("Prepared settings do not match shared group " + plan.sharedGroupId());
-            }
-            membership.put(plan.moduleId(), plan.sharedGroupId());
-        }
+        return binding;
     }
 
     boolean canJoin(com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind kind,
@@ -206,32 +144,23 @@ final class FacilityModuleSettings {
     }
 
     void remove(ModuleInstance.ID moduleId) {
-        if (moduleId == null) return;
-        privateSettings.remove(moduleId);
-        SettingsGroup.ID oldGroupId = membership.remove(moduleId);
-        removeGroupIfEmpty(oldGroupId);
+        ModuleInstance module = module(moduleId);
+        if (module == null) return;
+        SettingsGroup.ID groupId = sharedGroupId(module);
+        if (groupId != null && membersOf(groupId).size() == 1) groups.remove(groupId);
     }
 
     ModuleSettings effectiveSettings(ModuleInstance.ID moduleId) {
-        ModuleSettings settings = privateSettings.get(moduleId);
-        if (settings != null) return settings;
-        SettingsGroup.ID groupId = membership.get(moduleId);
-        SettingsGroup group = groupId == null ? null : groups.get(groupId);
-        if (group == null) {
-            throw new IllegalStateException("Module has no settings owner: " + moduleId);
-        }
-        return group.settings();
+        return effectiveSettings(requireModule(moduleId), groups);
     }
 
     RecipeBookOwner recipeBookOwner(ModuleInstance.ID moduleId) {
-        ModuleSettings privateOwner = privateSettings.get(moduleId);
-        if (privateOwner instanceof RecipeModuleSettings) {
-            if (membership.containsKey(moduleId)) {
-                throw new IllegalStateException("Recipe module has both private and shared settings: " + moduleId);
-            }
+        ModuleInstance module = requireModule(moduleId);
+        if (module.settingsBinding() instanceof ModuleInstance.SettingsBinding.Private privateBinding
+            && privateBinding.settings() instanceof RecipeModuleSettings) {
             return new RecipeBookOwner.Private(moduleId);
         }
-        SettingsGroup.ID groupId = membership.get(moduleId);
+        SettingsGroup.ID groupId = sharedGroupId(module);
         SettingsGroup group = groupId == null ? null : groups.get(groupId);
         if (group != null && group.settings() instanceof RecipeModuleSettings) {
             return new RecipeBookOwner.Group(groupId);
@@ -245,16 +174,18 @@ final class FacilityModuleSettings {
 
     RecipeBook recipeBook(RecipeBookOwner owner) {
         if (owner instanceof RecipeBookOwner.Private privateOwner) {
-            if (membership.containsKey(privateOwner.moduleId())) {
-                throw new IllegalStateException("Private recipe-book owner is stale: " + privateOwner.moduleId());
+            ModuleInstance module = module(privateOwner.moduleId());
+            if (module != null
+                && module.settingsBinding() instanceof ModuleInstance.SettingsBinding.Private privateBinding
+                && privateBinding.settings() instanceof RecipeModuleSettings recipeSettings) {
+                return recipeSettings.book();
             }
-            ModuleSettings settings = privateSettings.get(privateOwner.moduleId());
-            if (settings instanceof RecipeModuleSettings recipeSettings) return recipeSettings.book();
-            throw new IllegalStateException("Missing private recipe-book owner: " + privateOwner.moduleId());
+            throw new IllegalStateException("Missing or stale private recipe-book owner: " + privateOwner.moduleId());
         }
         if (owner instanceof RecipeBookOwner.Group groupOwner) {
             SettingsGroup group = groups.get(groupOwner.groupId());
-            if (group != null && group.settings() instanceof RecipeModuleSettings recipeSettings) {
+            if (group != null && !membersOf(groupOwner.groupId()).isEmpty()
+                && group.settings() instanceof RecipeModuleSettings recipeSettings) {
                 return recipeSettings.book();
             }
             throw new IllegalStateException("Missing group recipe-book owner: " + groupOwner.groupId());
@@ -263,141 +194,109 @@ final class FacilityModuleSettings {
     }
 
     Outcome replaceRecipeBook(RecipeBookOwner owner, RecipeBook replacement) {
-        if (owner == null || replacement == null) {
-            return Outcome.rejected(FacilityCommand.Rejection.INVALID_RECIPE_BOOK);
+        if (owner == null || replacement == null) throw new IllegalArgumentException("Recipe book update is null");
+        recipeBook(owner);
+        RecipeModuleSettings settings = new RecipeModuleSettings(replacement);
+        if (owner instanceof RecipeBookOwner.Private privateOwner) {
+            requireModule(privateOwner.moduleId())
+                .setSettingsBinding(new ModuleInstance.SettingsBinding.Private(settings));
+            return Outcome.changed(Set.of(privateOwner.moduleId()));
         }
-        try {
-            recipeBook(owner);
-            RecipeModuleSettings settings = new RecipeModuleSettings(replacement);
-            if (owner instanceof RecipeBookOwner.Private privateOwner) {
-                privateSettings.put(privateOwner.moduleId(), settings);
-                return Outcome.changed(Set.of(privateOwner.moduleId()));
-            }
-            RecipeBookOwner.Group groupOwner = (RecipeBookOwner.Group) owner;
-            SettingsGroup group = requireGroup(groupOwner.groupId());
-            Set<ModuleInstance.ID> affected = membersOf(groupOwner.groupId());
-            if (affected.isEmpty()) throw new IllegalStateException("Recipe settings group has no members");
-            groups.put(groupOwner.groupId(), group.withSettings(settings));
-            return Outcome.changed(affected);
-        } catch (IllegalArgumentException | IllegalStateException invalid) {
-            return Outcome.rejected(FacilityCommand.Rejection.INVALID_RECIPE_BOOK_OWNER);
-        }
+        RecipeBookOwner.Group groupOwner = (RecipeBookOwner.Group) owner;
+        SettingsGroup group = requireGroup(groupOwner.groupId());
+        Set<ModuleInstance.ID> affected = membersOf(groupOwner.groupId());
+        groups.put(groupOwner.groupId(), group.withSettings(settings));
+        return Outcome.changed(affected);
     }
 
     Outcome createGroup(ModuleInstance module, String displayName) {
-        try {
-            requireSupported(module);
-            ModuleSettings settings = effectiveSettings(module.id);
-            SettingsGroup.ID groupId = nextGroupId();
-            SettingsGroup group = new SettingsGroup(groupId, module.kind(), displayName, settings);
-            detachOwnership(module.id);
-            groups.put(groupId, group);
-            membership.put(module.id, groupId);
-            nextGroupId++;
-            return Outcome.changed(Set.of(module.id));
-        } catch (IllegalArgumentException | IllegalStateException invalid) {
-            return Outcome.rejected(FacilityCommand.Rejection.INVALID_SETTINGS_GROUP);
-        }
+        requireSupported(module);
+        ModuleSettings settings = effectiveSettings(module.id);
+        SettingsGroup.ID groupId = nextGroupId();
+        SettingsGroup.ID oldGroupId = sharedGroupId(module);
+        groups.put(groupId, new SettingsGroup(groupId, module.kind(), displayName, settings));
+        module.setSettingsBinding(new ModuleInstance.SettingsBinding.Shared(groupId));
+        removeGroupIfEmpty(oldGroupId);
+        return Outcome.changed(Set.of(module.id));
     }
 
     Outcome renameGroup(SettingsGroup.ID groupId, String displayName) {
-        try {
-            SettingsGroup current = requireGroup(groupId);
-            SettingsGroup renamed = current.withDisplayName(displayName);
-            if (renamed.equals(current)) return Outcome.unchanged();
-            groups.put(groupId, renamed);
-            return Outcome.changed(Set.of());
-        } catch (IllegalArgumentException | IllegalStateException invalid) {
-            return Outcome.rejected(FacilityCommand.Rejection.INVALID_SETTINGS_GROUP);
-        }
+        SettingsGroup current = requireGroup(groupId);
+        SettingsGroup renamed = current.withDisplayName(displayName);
+        if (renamed.equals(current)) return Outcome.unchanged();
+        groups.put(groupId, renamed);
+        return Outcome.changed(Set.of());
     }
 
     Outcome joinGroup(ModuleInstance module, SettingsGroup.ID groupId) {
-        try {
-            requireSupported(module);
-            SettingsGroup group = requireGroup(groupId);
-            if (group.kind() != module.kind()) {
-                return Outcome.rejected(FacilityCommand.Rejection.INVALID_SETTINGS_GROUP);
-            }
-            if (groupId.equals(membership.get(module.id))) return Outcome.unchanged();
-            validateSettings(module, group.settings());
-            applySettings(module, group.settings());
-            detachOwnership(module.id);
-            membership.put(module.id, groupId);
-            return Outcome.changed(Set.of(module.id));
-        } catch (IllegalArgumentException | IllegalStateException invalid) {
-            return Outcome.rejected(FacilityCommand.Rejection.INVALID_SETTINGS_GROUP);
-        }
+        requireSupported(module);
+        SettingsGroup group = requireGroup(groupId);
+        if (group.kind() != module.kind()) throw new IllegalArgumentException("Settings group kind does not match");
+        SettingsGroup.ID oldGroupId = sharedGroupId(module);
+        if (groupId.equals(oldGroupId)) return Outcome.unchanged();
+        validateSettings(module, group.settings());
+        applySettings(module, group.settings());
+        module.setSettingsBinding(new ModuleInstance.SettingsBinding.Shared(groupId));
+        removeGroupIfEmpty(oldGroupId);
+        return Outcome.changed(Set.of(module.id));
     }
 
     Outcome leaveGroup(ModuleInstance module) {
-        try {
-            requireSupported(module);
-            SettingsGroup.ID groupId = membership.get(module.id);
-            if (groupId == null) return Outcome.unchanged();
-            ModuleSettings settings = requireGroup(groupId).settings();
-            validateSettings(module, settings);
-            membership.remove(module.id);
-            privateSettings.put(module.id, settings);
-            removeGroupIfEmpty(groupId);
-            return Outcome.changed(Set.of(module.id));
-        } catch (IllegalArgumentException | IllegalStateException invalid) {
-            return Outcome.rejected(FacilityCommand.Rejection.INVALID_SETTINGS_GROUP);
-        }
+        requireSupported(module);
+        SettingsGroup.ID groupId = sharedGroupId(module);
+        if (groupId == null) return Outcome.unchanged();
+        ModuleSettings settings = requireGroup(groupId).settings();
+        validateSettings(module, settings);
+        module.setSettingsBinding(new ModuleInstance.SettingsBinding.Private(settings));
+        removeGroupIfEmpty(groupId);
+        return Outcome.changed(Set.of(module.id));
     }
 
     Outcome copySettings(ModuleInstance source, List<ModuleInstance> targets) {
         if (source == null || targets == null || targets.isEmpty()) {
-            return Outcome.rejected(FacilityCommand.Rejection.INVALID_MODULE_TARGETS);
+            throw new IllegalArgumentException("Module settings copy targets are missing");
         }
-        try {
-            requireSupported(source);
-            ModuleSettings sourceSettings = effectiveSettings(source.id);
-            Set<ModuleInstance.ID> targetIds = new LinkedHashSet<>();
-            Set<ModuleInstance.ID> changedTargetIds = new LinkedHashSet<>();
-            Map<ModuleInstance.ID, IModuleComponent.SettingsCopySpec> copySpecs = new LinkedHashMap<>();
-            for (ModuleInstance target : targets) {
-                requireSupported(target);
-                if (!targetIds.add(target.id) || source.id.equals(target.id) || source.kind() != target.kind()) {
-                    return Outcome.rejected(FacilityCommand.Rejection.INVALID_MODULE_TARGETS);
-                }
-                IModuleComponent.SettingsCopySpec copySpec = source.component()
-                    .prepareSettingsCopy(source, target);
-                copySpecs.put(target.id, copySpec);
-                validateSettings(target, sourceSettings);
-                if (copyWouldChange(target, sourceSettings, copySpec)) {
-                    changedTargetIds.add(target.id);
-                }
+        requireSupported(source);
+        ModuleSettings sourceSettings = effectiveSettings(source.id);
+        Set<ModuleInstance.ID> targetIds = new LinkedHashSet<>();
+        Set<ModuleInstance.ID> changedTargetIds = new LinkedHashSet<>();
+        for (ModuleInstance target : targets) {
+            requireSupported(target);
+            if (!targetIds.add(target.id) || source.id.equals(target.id) || source.kind() != target.kind()) {
+                throw new IllegalArgumentException("Invalid module settings copy target " + target.id);
             }
-            if (changedTargetIds.isEmpty()) return Outcome.unchanged();
-            applyChangedCopies(targets, sourceSettings, copySpecs, changedTargetIds);
-            return Outcome.changed(changedTargetIds);
-        } catch (IllegalArgumentException | IllegalStateException invalid) {
-            return Outcome.rejected(FacilityCommand.Rejection.INVALID_MODULE_TARGETS);
+            boolean subtypeChanged = source.component()
+                .settingsCopyWouldChange(source, target);
+            validateSettings(target, sourceSettings);
+            if (copyWouldChange(target, sourceSettings, subtypeChanged)) changedTargetIds.add(target.id);
         }
+        if (changedTargetIds.isEmpty()) return Outcome.unchanged();
+        applyChangedCopies(source, targets, sourceSettings, changedTargetIds);
+        return Outcome.changed(changedTargetIds);
     }
 
-    private boolean copyWouldChange(ModuleInstance target, ModuleSettings sourceSettings,
-        IModuleComponent.SettingsCopySpec copySpec) {
-        IModuleComponent.SettingsCopySpec currentCopySpec = target.component()
-            .prepareSettingsCopy(target, target);
-        return !privateSettings.containsKey(target.id) || !sourceSettings.equals(effectiveSettings(target.id))
-            || !copySpec.equals(currentCopySpec);
+    private boolean copyWouldChange(ModuleInstance target, ModuleSettings sourceSettings, boolean subtypeChanged) {
+        return !(target.settingsBinding() instanceof ModuleInstance.SettingsBinding.Private)
+            || !sourceSettings.equals(effectiveSettings(target.id))
+            || subtypeChanged;
     }
 
-    private void applyChangedCopies(List<ModuleInstance> targets, ModuleSettings sourceSettings,
-        Map<ModuleInstance.ID, IModuleComponent.SettingsCopySpec> copySpecs, Set<ModuleInstance.ID> changedTargetIds) {
+    private void applyChangedCopies(ModuleInstance source, List<ModuleInstance> targets, ModuleSettings sourceSettings,
+        Set<ModuleInstance.ID> changedTargetIds) {
         for (ModuleInstance target : targets) {
             if (!changedTargetIds.contains(target.id)) continue;
             applySettings(target, sourceSettings);
             target.component()
-                .applySettingsCopy(target, copySpecs.get(target.id));
+                .applySettingsCopy(source, target);
         }
+        Set<SettingsGroup.ID> oldGroups = new LinkedHashSet<>();
         for (ModuleInstance target : targets) {
             if (!changedTargetIds.contains(target.id)) continue;
-            detachOwnership(target.id);
-            privateSettings.put(target.id, sourceSettings);
+            SettingsGroup.ID oldGroupId = sharedGroupId(target);
+            if (oldGroupId != null) oldGroups.add(oldGroupId);
+            target.setSettingsBinding(new ModuleInstance.SettingsBinding.Private(sourceSettings));
         }
+        oldGroups.forEach(this::removeGroupIfEmpty);
     }
 
     boolean canCopySettings(ModuleInstance source, ModuleInstance target) {
@@ -407,7 +306,7 @@ final class FacilityModuleSettings {
             if (source.id.equals(target.id) || source.kind() != target.kind()) return false;
             ModuleSettings settings = effectiveSettings(source.id);
             source.component()
-                .prepareSettingsCopy(source, target);
+                .settingsCopyWouldChange(source, target);
             validateSettings(target, settings);
             return true;
         } catch (IllegalArgumentException | IllegalStateException invalid) {
@@ -415,41 +314,57 @@ final class FacilityModuleSettings {
         }
     }
 
-    Outcome replaceEffectiveSettings(ModuleInstance module, ModuleSettings replacement,
-        List<ModuleInstance> allModules) {
-        try {
-            requireSupported(module);
-            validateSettings(module, replacement);
-            ModuleSettings current = effectiveSettings(module.id);
-            if (current.equals(replacement)) return Outcome.unchanged();
-            SettingsGroup.ID groupId = membership.get(module.id);
-            if (groupId == null) {
-                applySettings(module, replacement);
-                privateSettings.put(module.id, replacement);
-                return Outcome.changed(Set.of(module.id));
-            }
-            SettingsGroup group = requireGroup(groupId);
-            List<ModuleInstance> members = modules(groupId, allModules);
-            for (ModuleInstance member : members) {
-                validateSettings(member, replacement);
-            }
-            for (ModuleInstance member : members) {
-                applySettings(member, replacement);
-            }
-            groups.put(groupId, group.withSettings(replacement));
-            return Outcome.changed(
-                members.stream()
-                    .map(member -> member.id)
-                    .toList());
-        } catch (IllegalArgumentException | IllegalStateException invalid) {
-            return Outcome.rejected(FacilityCommand.Rejection.INVALID_MODULE_CONFIG);
+    Outcome replaceEffectiveSettings(ModuleInstance module, ModuleSettings replacement) {
+        requireSupported(module);
+        validateSettings(module, replacement);
+        ModuleSettings current = effectiveSettings(module.id);
+        if (current.equals(replacement)) return Outcome.unchanged();
+        SettingsGroup.ID groupId = sharedGroupId(module);
+        if (groupId == null) {
+            applySettings(module, replacement);
+            module.setSettingsBinding(new ModuleInstance.SettingsBinding.Private(replacement));
+            return Outcome.changed(Set.of(module.id));
         }
+        SettingsGroup group = requireGroup(groupId);
+        List<ModuleInstance> members = members(groupId);
+        for (ModuleInstance member : members) validateSettings(member, replacement);
+        for (ModuleInstance member : members) applySettings(member, replacement);
+        groups.put(groupId, group.withSettings(replacement));
+        return Outcome.changed(
+            members.stream()
+                .map(member -> member.id)
+                .toList());
+    }
+
+    List<SettingsGroup> groups() {
+        return List.copyOf(groups.values());
+    }
+
+    @Nullable
+    SettingsGroup group(SettingsGroup.ID groupId) {
+        return groupId == null ? null : groups.get(groupId);
+    }
+
+    List<ModuleInstance> members(SettingsGroup.ID groupId) {
+        return modules.stream()
+            .filter(module -> groupId != null && groupId.equals(sharedGroupId(module)))
+            .toList();
     }
 
     private void requireSupported(ModuleInstance module) {
-        if (!supports(module)) {
-            throw new IllegalArgumentException("Module does not support facility settings");
-        }
+        if (!supports(module)) throw new IllegalArgumentException("Module does not support facility settings");
+    }
+
+    private ModuleInstance requireModule(ModuleInstance.ID moduleId) {
+        ModuleInstance module = module(moduleId);
+        if (module == null) throw new IllegalStateException("Missing settings module " + moduleId);
+        return module;
+    }
+
+    private @Nullable ModuleInstance module(ModuleInstance.ID moduleId) {
+        if (moduleId == null) return null;
+        for (ModuleInstance module : modules) if (moduleId.equals(module.id)) return module;
+        return null;
     }
 
     private ModuleSettings captureSettings(ModuleInstance module) {
@@ -476,44 +391,46 @@ final class FacilityModuleSettings {
             .applyModuleSettings(module, settings);
     }
 
+    private ModuleSettings effectiveSettings(ModuleInstance module, Map<SettingsGroup.ID, SettingsGroup> ownerGroups) {
+        ModuleInstance.SettingsBinding binding = module.settingsBinding();
+        if (binding == null) throw new IllegalStateException("Module has no settings binding: " + module.id);
+        return effectiveSettings(module, binding, ownerGroups);
+    }
+
+    private ModuleSettings effectiveSettings(ModuleInstance module, ModuleInstance.SettingsBinding binding,
+        Map<SettingsGroup.ID, SettingsGroup> ownerGroups) {
+        if (binding instanceof ModuleInstance.SettingsBinding.Private privateBinding) return privateBinding.settings();
+        SettingsGroup.ID groupId = ((ModuleInstance.SettingsBinding.Shared) binding).groupId();
+        SettingsGroup group = ownerGroups.get(groupId);
+        if (group == null || group.kind() != module.kind()) {
+            throw new IllegalStateException("Invalid settings group " + groupId + " for module " + module.id);
+        }
+        return group.settings();
+    }
+
     private SettingsGroup requireGroup(SettingsGroup.ID groupId) {
-        SettingsGroup group = groupId == null ? null : groups.get(groupId);
+        SettingsGroup group = group(groupId);
         if (group == null) throw new IllegalStateException("Missing settings group " + groupId);
         return group;
     }
 
     private SettingsGroup.ID nextGroupId() {
-        if (nextGroupId <= 0) throw new IllegalStateException("Settings group ID space exhausted");
-        return new SettingsGroup.ID(nextGroupId);
+        if (nextGroupId > Integer.MAX_VALUE) throw new IllegalStateException("Settings group ID space exhausted");
+        return new SettingsGroup.ID((int) nextGroupId++);
     }
 
-    private void detachOwnership(ModuleInstance.ID moduleId) {
-        privateSettings.remove(moduleId);
-        SettingsGroup.ID oldGroupId = membership.remove(moduleId);
-        removeGroupIfEmpty(oldGroupId);
+    private @Nullable SettingsGroup.ID sharedGroupId(ModuleInstance module) {
+        return module.settingsBinding() instanceof ModuleInstance.SettingsBinding.Shared shared ? shared.groupId()
+            : null;
     }
 
     private void removeGroupIfEmpty(@Nullable SettingsGroup.ID groupId) {
-        if (groupId != null && !membership.containsValue(groupId)) groups.remove(groupId);
+        if (groupId != null && membersOf(groupId).isEmpty()) groups.remove(groupId);
     }
 
     private Set<ModuleInstance.ID> membersOf(SettingsGroup.ID groupId) {
-        Set<ModuleInstance.ID> members = new LinkedHashSet<>();
-        for (Map.Entry<ModuleInstance.ID, SettingsGroup.ID> entry : membership.entrySet()) {
-            if (groupId.equals(entry.getValue())) members.add(entry.getKey());
-        }
-        return members;
-    }
-
-    private List<ModuleInstance> modules(SettingsGroup.ID groupId, List<ModuleInstance> allModules) {
-        Map<ModuleInstance.ID, ModuleInstance> byId = new LinkedHashMap<>();
-        for (ModuleInstance module : allModules) byId.put(module.id, module);
-        List<ModuleInstance> result = new ArrayList<>();
-        for (ModuleInstance.ID memberId : membersOf(groupId)) {
-            ModuleInstance member = byId.get(memberId);
-            if (member == null) throw new IllegalStateException("Missing settings group member " + memberId);
-            result.add(member);
-        }
-        return result;
+        Set<ModuleInstance.ID> memberIds = new LinkedHashSet<>();
+        for (ModuleInstance member : members(groupId)) memberIds.add(member.id);
+        return memberIds;
     }
 }

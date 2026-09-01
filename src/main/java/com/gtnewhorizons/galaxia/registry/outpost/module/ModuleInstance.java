@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -16,6 +18,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
 
 public class ModuleInstance implements Buildable {
@@ -37,6 +41,7 @@ public class ModuleInstance implements Buildable {
     private ModuleState state = ModuleState.IDLE;
     private BlockingReason blocking = BlockingReason.NONE;
     private ModuleOperationState operation;
+    private @Nullable SettingsBinding settingsBinding;
 
     private ModuleTierData currentTierData() {
         return definition.getTierData(this.tier);
@@ -85,6 +90,15 @@ public class ModuleInstance implements Buildable {
 
     public void setComponent(IModuleComponent component) {
         this.component = component;
+    }
+
+    public @Nullable SettingsBinding settingsBinding() {
+        return settingsBinding;
+    }
+
+    public void setSettingsBinding(SettingsBinding settingsBinding) {
+        if (settingsBinding == null) throw new IllegalArgumentException("Module settings binding must not be null");
+        this.settingsBinding = settingsBinding;
     }
 
     public FacilityModuleKind kind() {
@@ -310,6 +324,23 @@ public class ModuleInstance implements Buildable {
         @Override
         public String toString() {
             return id.toString();
+        }
+    }
+
+    public sealed interface SettingsBinding {
+
+        record Private(ModuleSettings settings) implements SettingsBinding {
+
+            public Private {
+                if (settings == null) throw new IllegalArgumentException("Private module settings must not be null");
+            }
+        }
+
+        record Shared(SettingsGroup.ID groupId) implements SettingsBinding {
+
+            public Shared {
+                if (groupId == null) throw new IllegalArgumentException("Shared settings group ID must not be null");
+            }
         }
     }
 }

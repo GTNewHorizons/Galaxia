@@ -172,9 +172,7 @@ final class StationItemInteractionModelTest {
             new FacilityCommand.CreateSettingsGroup(facility.assetId, first.id, displayName),
             FacilityCommand.Authority.NONE);
         assertEquals(FacilityCommand.Status.CHANGED, created.status());
-        SettingsGroup.ID groupId = facility.moduleSettingsSnapshot()
-            .membership()
-            .get(first.id);
+        SettingsGroup.ID groupId = ((ModuleInstance.SettingsBinding.Shared) first.settingsBinding()).groupId();
         assertNotNull(groupId);
         FacilityCommand.Result joined = facility.applyCommand(
             new FacilityCommand.JoinSettingsGroup(facility.assetId, second.id, groupId),

@@ -46,9 +46,7 @@ final class ModuleRecipeSettingsGroupTest {
             facility.applyCommand(
                 new FacilityCommand.CreateSettingsGroup(facility.assetId, first.id, "Dust line"),
                 FacilityCommand.Authority.NONE));
-        SettingsGroup.ID groupId = facility.moduleSettingsSnapshot()
-            .membership()
-            .get(first.id);
+        SettingsGroup.ID groupId = ((ModuleInstance.SettingsBinding.Shared) first.settingsBinding()).groupId();
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(

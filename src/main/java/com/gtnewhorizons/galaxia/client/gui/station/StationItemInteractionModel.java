@@ -11,7 +11,6 @@ import javax.annotation.Nullable;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.FacilityModuleSettingsSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -171,20 +170,10 @@ final class StationItemInteractionModel {
     }
 
     private static @Nullable SettingsGroup sharedGroup(AutomatedFacility facility, ModuleInstance module) {
-        FacilityModuleSettingsSnapshot snapshot = facility.moduleSettingsSnapshot();
-        SettingsGroup.ID groupId = snapshot.membership()
-            .get(module.id);
-        if (groupId == null) return null;
-        SettingsGroup group = snapshot.groups()
-            .get(groupId);
-        if (group == null) return null;
-        long memberCount = snapshot.membership()
-            .values()
-            .stream()
-            .filter(groupId::equals)
-            .limit(2)
-            .count();
-        return memberCount >= 2 ? group : null;
+        if (!(module.settingsBinding() instanceof ModuleInstance.SettingsBinding.Shared shared)) return null;
+        SettingsGroup group = facility.settingsGroup(shared.groupId());
+        return group != null && facility.settingsGroupMembers(shared.groupId())
+            .size() >= 2 ? group : null;
     }
 
     private static boolean contains(ItemStack[] stacks, ItemStackWrapper item) {

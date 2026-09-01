@@ -713,9 +713,7 @@ final class FacilityPersistenceManagerTest {
             new FacilityCommand.CreateSettingsGroup(station.assetId, miner.id, "Shared miners"),
             FacilityCommand.Authority.NONE);
         assertEquals(FacilityCommand.Status.CHANGED, created.status());
-        SettingsGroup.ID groupId = station.moduleSettingsSnapshot()
-            .membership()
-            .get(miner.id);
+        SettingsGroup.ID groupId = ((ModuleInstance.SettingsBinding.Shared) miner.settingsBinding()).groupId();
         assertNotNull(groupId);
 
         NBTTagCompound encoded = facilityTag(station);
@@ -728,17 +726,11 @@ final class FacilityPersistenceManagerTest {
 
         ModuleInstance decodedMiner = decoded.modules()
             .get(1);
-        assertEquals(
-            groupId,
-            decoded.moduleSettingsSnapshot()
-                .membership()
-                .get(decodedMiner.id));
+        assertEquals(new ModuleInstance.SettingsBinding.Shared(groupId), decodedMiner.settingsBinding());
         assertTrue(decoded.isMinerOreBlacklisted(decodedMiner, "ore:iron"));
         assertEquals(
             "Shared miners",
-            decoded.moduleSettingsSnapshot()
-                .groups()
-                .get(groupId)
+            decoded.settingsGroup(groupId)
                 .displayName());
     }
 
@@ -761,10 +753,7 @@ final class FacilityPersistenceManagerTest {
             .get(1);
 
         assertTrue(decoded.isMinerOreBlacklisted(decodedMiner, "ore:copper"));
-        assertNull(
-            decoded.moduleSettingsSnapshot()
-                .membership()
-                .get(decodedMiner.id));
+        assertTrue(decodedMiner.settingsBinding() instanceof ModuleInstance.SettingsBinding.Private);
     }
 
     @Test
@@ -2013,12 +2002,18 @@ final class FacilityPersistenceManagerTest {
     }
 
     private static NBTTagCompound firstEncodedRecipe(NBTTagCompound encoded) {
-        return encoded.getTagList("privateSettings", 10)
-            .getCompoundTagAt(0)
-            .getCompoundTag("settings")
-            .getCompoundTag("book")
-            .getTagList("recipes", 10)
-            .getCompoundTagAt(0);
+        NBTTagList modules = encoded.getTagList("modules", 10);
+        for (int i = 0; i < modules.tagCount(); i++) {
+            NBTTagCompound binding = modules.getCompoundTagAt(i)
+                .getCompoundTag("settingsBinding");
+            NBTTagCompound settings = binding.getCompoundTag("settings");
+            if (!binding.getBoolean("shared") && "RECIPE".equals(settings.getString("type"))) {
+                return settings.getCompoundTag("book")
+                    .getTagList("recipes", 10)
+                    .getCompoundTagAt(0);
+            }
+        }
+        throw new AssertionError("No private recipe settings found in encoded facility state");
     }
 
     private static void assertFailureChainContains(Throwable failure, String messagePart) {

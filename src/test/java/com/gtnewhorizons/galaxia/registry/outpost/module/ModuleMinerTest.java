@@ -19,7 +19,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
-import com.gtnewhorizons.galaxia.registry.outpost.FacilityModuleSettingsSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureModuleContext;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.MiningFeatureEffects;
@@ -46,15 +45,9 @@ final class ModuleMinerTest {
         ModuleInstance miner = createMiner();
         facility.addModule(miner);
 
-        FacilityModuleSettingsSnapshot snapshot = facility.moduleSettingsSnapshot();
+        assertTrue(miner.settingsBinding() instanceof ModuleInstance.SettingsBinding.Private);
         assertTrue(
-            snapshot.privateSettings()
-                .containsKey(miner.id));
-        assertFalse(
-            snapshot.membership()
-                .containsKey(miner.id));
-        assertTrue(
-            snapshot.groups()
+            facility.settingsGroups()
                 .isEmpty());
         assertFalse(facility.isMinerOreBlacklisted(miner, "ore:iron"));
 
@@ -109,9 +102,7 @@ final class ModuleMinerTest {
             facility.applyCommand(
                 new FacilityCommand.CreateSettingsGroup(facility.assetId, first.id, "Tin line"),
                 FacilityCommand.Authority.NONE));
-        SettingsGroup.ID groupId = facility.moduleSettingsSnapshot()
-            .membership()
-            .get(first.id);
+        SettingsGroup.ID groupId = ((ModuleInstance.SettingsBinding.Shared) first.settingsBinding()).groupId();
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(
@@ -139,14 +130,16 @@ final class ModuleMinerTest {
         AutomatedFacility facility = createFacility();
         ModuleInstance miner = createMiner();
         facility.addModule(miner);
-        FacilityModuleSettingsSnapshot before = facility.moduleSettingsSnapshot();
+        ModuleInstance.SettingsBinding before = miner.settingsBinding();
+        List<SettingsGroup> groupsBefore = facility.settingsGroups();
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.LeaveSettingsGroup(facility.assetId, miner.id),
             FacilityCommand.Authority.NONE);
 
         assertSame(FacilityCommand.Result.UNCHANGED, result);
-        assertEquals(before, facility.moduleSettingsSnapshot());
+        assertEquals(before, miner.settingsBinding());
+        assertEquals(groupsBefore, facility.settingsGroups());
     }
 
     @Test
@@ -159,9 +152,7 @@ final class ModuleMinerTest {
             facility.applyCommand(
                 new FacilityCommand.CreateSettingsGroup(facility.assetId, miner.id, "Public miners"),
                 FacilityCommand.Authority.NONE));
-        SettingsGroup.ID groupId = facility.moduleSettingsSnapshot()
-            .membership()
-            .get(miner.id);
+        SettingsGroup.ID groupId = ((ModuleInstance.SettingsBinding.Shared) miner.settingsBinding()).groupId();
 
         FacilityCommand.Result renamed = facility.applyCommand(
             new FacilityCommand.RenameSettingsGroup(facility.assetId, groupId, "  Priority miners  "),
@@ -173,9 +164,7 @@ final class ModuleMinerTest {
         assertSame(FacilityCommand.Result.CHANGED, renamed);
         assertEquals(
             "Priority miners",
-            facility.moduleSettingsSnapshot()
-                .groups()
-                .get(groupId)
+            facility.settingsGroup(groupId)
                 .displayName());
         assertEquals(FacilityCommand.Status.REJECTED, rejected.status());
     }
@@ -192,13 +181,17 @@ final class ModuleMinerTest {
         sourceMiner.setFocus(MinerFocusTier.II, "ore:iron", 1200);
         targetMiner.setFocus(MinerFocusTier.NONE, null, 0);
 
-        FacilityModuleSettingsSnapshot before = facility.moduleSettingsSnapshot();
+        ModuleInstance.SettingsBinding sourceBindingBefore = source.settingsBinding();
+        ModuleInstance.SettingsBinding targetBindingBefore = target.settingsBinding();
+        List<SettingsGroup> groupsBefore = facility.settingsGroups();
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.CopyModuleSettings(facility.assetId, source.id, List.of(target.id)),
             FacilityCommand.Authority.NONE);
 
         assertEquals(FacilityCommand.Status.REJECTED, result.status());
-        assertEquals(before, facility.moduleSettingsSnapshot());
+        assertEquals(sourceBindingBefore, source.settingsBinding());
+        assertEquals(targetBindingBefore, target.settingsBinding());
+        assertEquals(groupsBefore, facility.settingsGroups());
         assertNull(targetMiner.focusOreKeyOrNull());
     }
 

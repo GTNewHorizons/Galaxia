@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.interfaces;
 
-import javax.annotation.Nullable;
-
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
@@ -16,13 +14,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSetting
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
 
 public interface IModuleComponent {
-
-    sealed interface SettingsCopySpec {
-
-        record None() implements SettingsCopySpec {}
-
-        record Miner(@Nullable String focusOreKey) implements SettingsCopySpec {}
-    }
 
     sealed interface BuildPhysicalSpec {
 
@@ -81,15 +72,11 @@ public interface IModuleComponent {
         validateModuleSettings(module, settings);
     }
 
-    default SettingsCopySpec prepareSettingsCopy(ModuleInstance source, ModuleInstance target) {
-        return new SettingsCopySpec.None();
+    default boolean settingsCopyWouldChange(ModuleInstance source, ModuleInstance target) {
+        return false;
     }
 
-    default void applySettingsCopy(ModuleInstance target, SettingsCopySpec spec) {
-        if (!(spec instanceof SettingsCopySpec.None)) {
-            throw new IllegalArgumentException(getClass().getSimpleName() + " cannot apply settings copy " + spec);
-        }
-    }
+    default void applySettingsCopy(ModuleInstance source, ModuleInstance target) {}
 
     default FeatureContribution featureContribution(ModuleInstance module, PlanetaryFeatureKey feature,
         int coveredTiles, int totalTiles) {

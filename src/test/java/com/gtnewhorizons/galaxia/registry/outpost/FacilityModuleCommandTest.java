@@ -77,7 +77,11 @@ final class FacilityModuleCommandTest {
         Map<?, ?> layoutBefore = Map.copyOf(
             facility.stationLayout()
                 .snapshot());
-        FacilityModuleSettingsSnapshot settingsBefore = facility.moduleSettingsSnapshot();
+        List<SettingsGroup> groupsBefore = facility.settingsGroups();
+        List<ModuleInstance.SettingsBinding> bindingsBefore = facility.modules()
+            .stream()
+            .map(ModuleInstance::settingsBinding)
+            .toList();
         Map<?, ?> inventoryBefore = facility.itemSnapshot();
 
         FacilityCommand.Result result = facility.applyCommand(
@@ -97,7 +101,13 @@ final class FacilityModuleCommandTest {
             layoutBefore,
             facility.stationLayout()
                 .snapshot());
-        assertEquals(settingsBefore, facility.moduleSettingsSnapshot());
+        assertEquals(groupsBefore, facility.settingsGroups());
+        assertEquals(
+            bindingsBefore,
+            facility.modules()
+                .stream()
+                .map(ModuleInstance::settingsBinding)
+                .toList());
         assertEquals(inventoryBefore, facility.itemSnapshot());
         assertEquals(dirtyBefore, facility.isDirty());
         assertEquals(
@@ -113,7 +123,11 @@ final class FacilityModuleCommandTest {
         Map<?, ?> layoutBefore = Map.copyOf(
             facility.stationLayout()
                 .snapshot());
-        FacilityModuleSettingsSnapshot settingsBefore = facility.moduleSettingsSnapshot();
+        List<SettingsGroup> groupsBefore = facility.settingsGroups();
+        List<ModuleInstance.SettingsBinding> bindingsBefore = facility.modules()
+            .stream()
+            .map(ModuleInstance::settingsBinding)
+            .toList();
 
         FacilityCommand.Result result = facility.applyCommand(
             build(
@@ -132,7 +146,13 @@ final class FacilityModuleCommandTest {
             layoutBefore,
             facility.stationLayout()
                 .snapshot());
-        assertEquals(settingsBefore, facility.moduleSettingsSnapshot());
+        assertEquals(groupsBefore, facility.settingsGroups());
+        assertEquals(
+            bindingsBefore,
+            facility.modules()
+                .stream()
+                .map(ModuleInstance::settingsBinding)
+                .toList());
         assertEquals(dirtyBefore, facility.isDirty());
     }
 
@@ -203,9 +223,7 @@ final class FacilityModuleCommandTest {
             facility.applyCommand(
                 new FacilityCommand.CreateSettingsGroup(facility.assetId, source.id, "Shared miners"),
                 FacilityCommand.Authority.NONE));
-        SettingsGroup.ID groupId = facility.moduleSettingsSnapshot()
-            .membership()
-            .get(source.id);
+        SettingsGroup.ID groupId = ((ModuleInstance.SettingsBinding.Shared) source.settingsBinding()).groupId();
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.BuildModules(
@@ -221,11 +239,7 @@ final class FacilityModuleCommandTest {
         assertSame(FacilityCommand.Result.CHANGED, result);
         ModuleInstance built = facility.modules()
             .get(1);
-        assertEquals(
-            groupId,
-            facility.moduleSettingsSnapshot()
-                .membership()
-                .get(built.id));
+        assertEquals(new ModuleInstance.SettingsBinding.Shared(groupId), built.settingsBinding());
         assertEquals(ModuleTier.LuV, built.tier());
         assertEquals(MinerFocusTier.II, ((ModuleMiner) built.component()).focusTier());
     }

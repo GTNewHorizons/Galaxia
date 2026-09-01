@@ -220,7 +220,7 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
     }
 
     @Override
-    public SettingsCopySpec prepareSettingsCopy(ModuleInstance source, ModuleInstance target) {
+    public boolean settingsCopyWouldChange(ModuleInstance source, ModuleInstance target) {
         if (!(source.component() instanceof ModuleMiner sourceMiner)) {
             throw new IllegalStateException("Miner settings copy source is not a miner: " + source.id);
         }
@@ -232,18 +232,12 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
             throw new IllegalStateException(
                 "Miner settings copy target " + target.id + " has no focus tier for ore " + sourceFocusOreKey);
         }
-        return new SettingsCopySpec.Miner(sourceFocusOreKey);
+        return !Objects.equals(sourceFocusOreKey, targetMiner.focusOreKeyOrNull());
     }
 
     @Override
-    public void applySettingsCopy(ModuleInstance target, SettingsCopySpec spec) {
-        if (!(target.component() instanceof ModuleMiner targetMiner)) {
-            throw new IllegalStateException("Miner settings copy target is not a miner: " + target.id);
-        }
-        if (!(spec instanceof SettingsCopySpec.Miner minerSpec)) {
-            throw new IllegalArgumentException("Miner received invalid settings copy spec " + spec);
-        }
-        targetMiner.setFocusOre(minerSpec.focusOreKey());
+    public void applySettingsCopy(ModuleInstance source, ModuleInstance target) {
+        ((ModuleMiner) target.component()).setFocusOre(((ModuleMiner) source.component()).focusOreKeyOrNull());
     }
 
     public MinerFocusTier focusTier() {

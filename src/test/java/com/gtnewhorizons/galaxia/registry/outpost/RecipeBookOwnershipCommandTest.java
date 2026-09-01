@@ -54,9 +54,7 @@ final class RecipeBookOwnershipCommandTest {
             facility.applyCommand(
                 new FacilityCommand.CreateSettingsGroup(facility.assetId, first.id, "Shared macerators"),
                 FacilityCommand.Authority.NONE));
-        SettingsGroup.ID groupId = facility.moduleSettingsSnapshot()
-            .membership()
-            .get(first.id);
+        SettingsGroup.ID groupId = ((ModuleInstance.SettingsBinding.Shared) first.settingsBinding()).groupId();
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(
@@ -131,9 +129,7 @@ final class RecipeBookOwnershipCommandTest {
             facility.applyCommand(
                 new FacilityCommand.CreateSettingsGroup(facility.assetId, module.id, "Shared macerators"),
                 FacilityCommand.Authority.NONE));
-        SettingsGroup.ID actualGroupId = facility.moduleSettingsSnapshot()
-            .membership()
-            .get(module.id);
+        SettingsGroup.ID actualGroupId = ((ModuleInstance.SettingsBinding.Shared) module.settingsBinding()).groupId();
         RecipeBookOwner.Group actualOwner = new RecipeBookOwner.Group(actualGroupId);
         RecipeBook before = facility.recipeBook(actualOwner);
         RecipeScheduleState scheduleBefore = new RecipeScheduleState((byte) 2, (byte) 2);
@@ -153,6 +149,45 @@ final class RecipeBookOwnershipCommandTest {
         assertEquals(FacilityCommand.Status.REJECTED, missingGroupResult.status());
         assertEquals(before, facility.recipeBook(actualOwner));
         assertEquals(scheduleBefore, facility.recipeScheduleState(module));
+    }
+
+    @Test
+    void deletedGroupIdIsNotReusedByAnotherGroupInTheSameFacilityLifetime() {
+        AutomatedFacility facility = facility();
+        ModuleInstance first = addMacerator(facility, moduleId(1), StationTileCoord.of(1, 0));
+        ModuleInstance second = addMacerator(facility, moduleId(2), StationTileCoord.of(4, 0));
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            facility.applyCommand(
+                new FacilityCommand.CreateSettingsGroup(facility.assetId, first.id, "First group"),
+                FacilityCommand.Authority.NONE));
+        SettingsGroup.ID deletedGroupId = ((ModuleInstance.SettingsBinding.Shared) first.settingsBinding()).groupId();
+        RecipeBookOwner.Group staleOwner = new RecipeBookOwner.Group(deletedGroupId);
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            facility.applyCommand(
+                new FacilityCommand.LeaveSettingsGroup(facility.assetId, first.id),
+                FacilityCommand.Authority.NONE));
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            facility.applyCommand(
+                new FacilityCommand.CreateSettingsGroup(facility.assetId, second.id, "Second group"),
+                FacilityCommand.Authority.NONE));
+
+        SettingsGroup.ID currentGroupId = ((ModuleInstance.SettingsBinding.Shared) second.settingsBinding()).groupId();
+        RecipeBookOwner.Group currentOwner = new RecipeBookOwner.Group(currentGroupId);
+        RecipeBook currentBook = facility.recipeBook(currentOwner);
+        RecipeScheduleState currentSchedule = new RecipeScheduleState((byte) 2, (byte) 3);
+        facility.restoreRecipeScheduleState(second, currentSchedule);
+
+        FacilityCommand.Result staleResult = facility.applyCommand(
+            new FacilityCommand.ReplaceRecipeBook(facility.assetId, staleOwner, book("Stale owner", 4)),
+            FacilityCommand.Authority.NONE);
+
+        assertNotEquals(deletedGroupId, currentGroupId);
+        assertEquals(FacilityCommand.Status.REJECTED, staleResult.status());
+        assertEquals(currentBook, facility.recipeBook(currentOwner));
+        assertEquals(currentSchedule, facility.recipeScheduleState(second));
     }
 
     @Test
@@ -183,9 +218,7 @@ final class RecipeBookOwnershipCommandTest {
             facility.applyCommand(
                 new FacilityCommand.CreateSettingsGroup(facility.assetId, first.id, "Shared macerators"),
                 FacilityCommand.Authority.NONE));
-        SettingsGroup.ID groupId = facility.moduleSettingsSnapshot()
-            .membership()
-            .get(first.id);
+        SettingsGroup.ID groupId = ((ModuleInstance.SettingsBinding.Shared) first.settingsBinding()).groupId();
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(

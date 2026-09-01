@@ -182,9 +182,7 @@ final class FacilityCommandGatewayTest {
                     new FacilityCommand.CreateSettingsGroup(facility.assetId, first.id, "Shared miners"),
                     FacilityCommand.Authority.NONE)
                 .status());
-        SettingsGroup.ID groupId = facility.moduleSettingsSnapshot()
-            .membership()
-            .get(first.id);
+        SettingsGroup.ID groupId = ((ModuleInstance.SettingsBinding.Shared) first.settingsBinding()).groupId();
         assertNotNull(groupId);
         assertEquals(
             FacilityCommand.Status.CHANGED,

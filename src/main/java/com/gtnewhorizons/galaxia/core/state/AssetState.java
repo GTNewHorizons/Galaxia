@@ -26,7 +26,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.FacilityModuleSettingsSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
@@ -205,7 +204,7 @@ public final class AssetState {
             .forEach((key, bounds) -> current.setBound(key, bounds.low(), bounds.upper()));
         replacement.filtersSnapshot()
             .forEach((items, filters) -> current.setFilters(filters, items));
-        for (ModuleInstance module : replacement.modules()) current.addModule(module);
+        current.restoreModulesAndSettings(replacement.modules(), replacement.settingsGroups());
         current.restoreInventory(replacement.itemSnapshot(), replacement.fluidAmounts());
         current.loadUpkeepCredits(replacement.upkeepCredits());
         if (current.stationLayout() != null && replacement.stationLayout() != null) {
@@ -214,7 +213,6 @@ public final class AssetState {
                     replacement.stationLayout()
                         .snapshot());
         }
-        current.restoreModuleSettings(replacement.moduleSettingsSnapshot());
         current.restoreRecipeScheduleStates(replacement.recipeScheduleStates());
     }
 
@@ -227,7 +225,7 @@ public final class AssetState {
         Map<Boolean, List<String>> filters = facility.filtersSnapshot();
         out.setTag("itemFilters", writeStrings(filters.getOrDefault(true, List.of())));
         out.setTag("fluidFilters", writeStrings(filters.getOrDefault(false, List.of())));
-        writeSettings(out, facility.moduleSettingsSnapshot());
+        writeSettingsGroups(out, facility.settingsGroups());
 
         NBTTagList modules = new NBTTagList();
         for (ModuleInstance module : facility.modules()) modules.appendTag(writeModule(facility, module));
@@ -260,14 +258,16 @@ public final class AssetState {
 
         Map<ModuleInstance.ID, RecipeScheduleState> schedules = new LinkedHashMap<>();
         Map<ModuleInstance.ID, ModuleInstance> modules = new LinkedHashMap<>();
+        List<ModuleInstance> restoredModules = new ArrayList<>();
         NBTTagList moduleTags = requireList(encoded, "modules", NBT.TAG_COMPOUND, path);
         for (int i = 0; i < moduleTags.tagCount(); i++) {
             String modulePath = path + ".modules[" + i + "]";
             ModuleInstance module = readModule(facility, moduleTags.getCompoundTagAt(i), schedules, modulePath);
             if (modules.put(module.id, module) != null)
                 throw fail(modulePath + ".id", "duplicate module ID " + module.id);
-            facility.addModule(module);
+            restoredModules.add(module);
         }
+        facility.restoreModulesAndSettings(restoredModules, readSettingsGroups(encoded, path));
 
         facility.restoreInventory(readItems(encoded, "items", path), readFluids(encoded, "fluids", path));
         facility.loadUpkeepCredits(
@@ -275,7 +275,6 @@ public final class AssetState {
                 readItemCredits(encoded, "upkeepItems", path),
                 readFluidCredits(encoded, "upkeepFluids", path)));
         restoreAnchors(facility, modules, requireList(encoded, "anchors", NBT.TAG_COMPOUND, path), path + ".anchors");
-        facility.restoreModuleSettings(readSettings(encoded, modules, path));
         facility.restoreRecipeScheduleStates(schedules);
         return facility;
     }
@@ -320,6 +319,12 @@ public final class AssetState {
             scheduleTag.setInteger("cursor", schedule.orderCursor() & 0xFF);
             scheduleTag.setInteger("remaining", schedule.orderRemaining() & 0xFF);
             out.setTag("schedule", scheduleTag);
+        }
+        if (FacilityModuleRegistry.get(module.kind())
+            .settingsGroups()) {
+            out.setTag("settingsBinding", writeSettingsBinding(module));
+        } else if (module.settingsBinding() != null) {
+            throw new IllegalStateException("[PERSIST] Unsupported module has settings binding " + module.id);
         }
         return out;
     }
@@ -377,6 +382,13 @@ public final class AssetState {
             } catch (IllegalArgumentException ex) {
                 throw fail(path + ".schedule", "invalid schedule state", ex);
             }
+        }
+        if (FacilityModuleRegistry.get(kind)
+            .settingsGroups()) {
+            module.setSettingsBinding(
+                readSettingsBinding(kind, requireCompound(tag, "settingsBinding", path), path + ".settingsBinding"));
+        } else if (tag.hasKey("settingsBinding")) {
+            throw fail(path + ".settingsBinding", "module kind does not support settings");
         }
         return module;
     }
@@ -609,11 +621,9 @@ public final class AssetState {
         }
     }
 
-    private static void writeSettings(NBTTagCompound out, FacilityModuleSettingsSnapshot snapshot) {
+    private static void writeSettingsGroups(NBTTagCompound out, List<SettingsGroup> settingsGroups) {
         NBTTagList groups = new NBTTagList();
-        snapshot.groups()
-            .values()
-            .stream()
+        settingsGroups.stream()
             .sorted(
                 Comparator.comparingInt(
                     group -> group.id()
@@ -633,45 +643,9 @@ public final class AssetState {
                 groups.appendTag(tag);
             });
         out.setTag("settingsGroups", groups);
-
-        NBTTagList privateSettings = new NBTTagList();
-        snapshot.privateSettings()
-            .entrySet()
-            .stream()
-            .sorted(Map.Entry.comparingByKey(Comparator.comparing(ModuleInstance.ID::toString)))
-            .forEach(entry -> {
-                NBTTagCompound tag = new NBTTagCompound();
-                tag.setString(
-                    "module",
-                    entry.getKey()
-                        .toString());
-                tag.setTag("settings", writeSettings(entry.getValue()));
-                privateSettings.appendTag(tag);
-            });
-        out.setTag("privateSettings", privateSettings);
-
-        NBTTagList membership = new NBTTagList();
-        snapshot.membership()
-            .entrySet()
-            .stream()
-            .sorted(Map.Entry.comparingByKey(Comparator.comparing(ModuleInstance.ID::toString)))
-            .forEach(entry -> {
-                NBTTagCompound tag = new NBTTagCompound();
-                tag.setString(
-                    "module",
-                    entry.getKey()
-                        .toString());
-                tag.setInteger(
-                    "group",
-                    entry.getValue()
-                        .value());
-                membership.appendTag(tag);
-            });
-        out.setTag("settingsMembership", membership);
     }
 
-    private static FacilityModuleSettingsSnapshot readSettings(NBTTagCompound encoded,
-        Map<ModuleInstance.ID, ModuleInstance> modules, String path) {
+    private static List<SettingsGroup> readSettingsGroups(NBTTagCompound encoded, String path) {
         Map<SettingsGroup.ID, SettingsGroup> groups = new LinkedHashMap<>();
         NBTTagList groupTags = requireList(encoded, "settingsGroups", NBT.TAG_COMPOUND, path);
         for (int i = 0; i < groupTags.tagCount(); i++) {
@@ -691,36 +665,36 @@ public final class AssetState {
                 readSettings(kind, requireCompound(tag, "settings", itemPath), itemPath + ".settings"));
             if (groups.put(id, group) != null) throw fail(itemPath + ".id", "duplicate settings group " + id);
         }
+        return List.copyOf(groups.values());
+    }
 
-        Map<ModuleInstance.ID, ModuleSettings> privateSettings = new LinkedHashMap<>();
-        NBTTagList privateTags = requireList(encoded, "privateSettings", NBT.TAG_COMPOUND, path);
-        for (int i = 0; i < privateTags.tagCount(); i++) {
-            String itemPath = path + ".privateSettings[" + i + "]";
-            NBTTagCompound tag = privateTags.getCompoundTagAt(i);
-            ModuleInstance.ID id = requireModuleId(tag, "module", itemPath);
-            ModuleInstance module = modules.get(id);
-            if (module == null) throw fail(itemPath + ".module", "references missing module " + id);
-            ModuleSettings settings = readSettings(
-                module.kind(),
-                requireCompound(tag, "settings", itemPath),
-                itemPath + ".settings");
-            if (privateSettings.put(id, settings) != null) throw fail(itemPath + ".module", "duplicate owner " + id);
+    private static NBTTagCompound writeSettingsBinding(ModuleInstance module) {
+        ModuleInstance.SettingsBinding binding = module.settingsBinding();
+        if (binding == null) throw new IllegalStateException("[PERSIST] Module has no settings binding " + module.id);
+        NBTTagCompound out = new NBTTagCompound();
+        if (binding instanceof ModuleInstance.SettingsBinding.Private privateBinding) {
+            out.setBoolean("shared", false);
+            out.setTag("settings", writeSettings(privateBinding.settings()));
+        } else {
+            out.setBoolean("shared", true);
+            out.setInteger(
+                "group",
+                ((ModuleInstance.SettingsBinding.Shared) binding).groupId()
+                    .value());
         }
+        return out;
+    }
 
-        Map<ModuleInstance.ID, SettingsGroup.ID> membership = new LinkedHashMap<>();
-        NBTTagList membershipTags = requireList(encoded, "settingsMembership", NBT.TAG_COMPOUND, path);
-        for (int i = 0; i < membershipTags.tagCount(); i++) {
-            String itemPath = path + ".settingsMembership[" + i + "]";
-            NBTTagCompound tag = membershipTags.getCompoundTagAt(i);
-            ModuleInstance.ID id = requireModuleId(tag, "module", itemPath);
-            SettingsGroup.ID groupId = new SettingsGroup.ID(requireInt(tag, "group", itemPath));
-            if (!modules.containsKey(id)) throw fail(itemPath + ".module", "references missing module " + id);
-            if (membership.put(id, groupId) != null) throw fail(itemPath + ".module", "duplicate membership " + id);
-        }
+    private static ModuleInstance.SettingsBinding readSettingsBinding(FacilityModuleKind kind, NBTTagCompound tag,
+        String path) {
         try {
-            return new FacilityModuleSettingsSnapshot(privateSettings, groups, membership);
+            if (requireBoolean(tag, "shared", path)) {
+                return new ModuleInstance.SettingsBinding.Shared(new SettingsGroup.ID(requireInt(tag, "group", path)));
+            }
+            return new ModuleInstance.SettingsBinding.Private(
+                readSettings(kind, requireCompound(tag, "settings", path), path + ".settings"));
         } catch (RuntimeException ex) {
-            throw fail(path + ".settings", "invalid settings relationships", ex);
+            throw fail(path, "invalid module settings binding", ex);
         }
     }
 

@@ -473,9 +473,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         if (definition == null || !definition.settingsGroups()) return List.of(new GroupOption("No Group", null));
         List<GroupOption> options = new ArrayList<>();
         options.add(new GroupOption("No Group", null));
-        facility.moduleSettingsSnapshot()
-            .groups()
-            .values()
+        facility.settingsGroups()
             .stream()
             .filter(group -> group.kind() == kind)
             .sorted(Comparator.comparing(SettingsGroup::displayName, String.CASE_INSENSITIVE_ORDER))

@@ -1,20 +1,18 @@
 package com.gtnewhorizons.galaxia.registry.outpost;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.core.state.AssetState;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
@@ -37,157 +35,99 @@ final class FacilityModuleSettingsCommandTest {
     }
 
     @Test
-    void settingsCapableModuleHasExactlyOnePrivateOrSharedOwner() {
+    void settingsCapableModuleAlwaysOwnsOneImmutableBinding() {
         AutomatedFacility facility = facility();
         ModuleInstance shared = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
         ModuleInstance privateModule = addMiner(facility, moduleId(2), StationTileCoord.of(4, 0));
 
-        FacilityModuleSettingsSnapshot before = facility.moduleSettingsSnapshot();
-        assertExactlyOneOwner(before, shared.id);
-        assertExactlyOneOwner(before, privateModule.id);
+        assertTrue(shared.settingsBinding() instanceof ModuleInstance.SettingsBinding.Private);
+        assertTrue(privateModule.settingsBinding() instanceof ModuleInstance.SettingsBinding.Private);
 
-        FacilityCommand.Result result = facility.applyCommand(
-            new FacilityCommand.CreateSettingsGroup(facility.assetId, shared.id, "Shared miners"),
-            FacilityCommand.Authority.NONE);
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            facility.applyCommand(
+                new FacilityCommand.CreateSettingsGroup(facility.assetId, shared.id, "Shared miners"),
+                FacilityCommand.Authority.NONE));
 
-        assertSame(FacilityCommand.Result.CHANGED, result);
-        FacilityModuleSettingsSnapshot after = facility.moduleSettingsSnapshot();
-        assertExactlyOneOwner(after, shared.id);
-        assertExactlyOneOwner(after, privateModule.id);
-        assertTrue(
-            after.membership()
-                .containsKey(shared.id));
-        assertTrue(
-            after.privateSettings()
-                .containsKey(privateModule.id));
+        assertTrue(shared.settingsBinding() instanceof ModuleInstance.SettingsBinding.Shared);
+        assertTrue(privateModule.settingsBinding() instanceof ModuleInstance.SettingsBinding.Private);
     }
 
     @Test
-    void creatingGroupCopiesEffectiveSettingsAndJoinsSource() {
+    void creatingGroupKeepsEffectiveSettingsAndBindsSource() {
         AutomatedFacility facility = facility();
         ModuleInstance source = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
         facility.setMinerOreBlacklisted(source, "ore:iron", true);
-        Set<String> expectedSettings = oreKeys(
-            facility.moduleSettingsSnapshot()
-                .privateSettings()
-                .get(source.id));
+        Set<String> expected = oreKeys(privateSettings(source));
 
-        FacilityCommand.Result result = facility.applyCommand(
-            new FacilityCommand.CreateSettingsGroup(facility.assetId, source.id, "Shared miners"),
-            FacilityCommand.Authority.NONE);
-
-        assertSame(FacilityCommand.Result.CHANGED, result);
-        FacilityModuleSettingsSnapshot after = facility.moduleSettingsSnapshot();
-        SettingsGroup.ID groupId = after.membership()
-            .get(source.id);
-        assertNotNull(groupId);
-        assertFalse(
-            after.privateSettings()
-                .containsKey(source.id));
-        assertEquals(
-            expectedSettings,
-            oreKeys(
-                after.groups()
-                    .get(groupId)
-                    .settings()));
-    }
-
-    @Test
-    void leavingGroupCopiesSharedSettingsToPrivateAndRemovesEmptyGroup() {
-        AutomatedFacility facility = facility();
-        ModuleInstance source = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
-        facility.setMinerOreBlacklisted(source, "ore:iron", true);
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(
                 new FacilityCommand.CreateSettingsGroup(facility.assetId, source.id, "Shared miners"),
                 FacilityCommand.Authority.NONE));
-        FacilityModuleSettingsSnapshot shared = facility.moduleSettingsSnapshot();
-        SettingsGroup.ID groupId = shared.membership()
-            .get(source.id);
-        Set<String> expectedSettings = oreKeys(
-            shared.groups()
-                .get(groupId)
-                .settings());
 
-        FacilityCommand.Result result = facility.applyCommand(
-            new FacilityCommand.LeaveSettingsGroup(facility.assetId, source.id),
-            FacilityCommand.Authority.NONE);
-
-        assertSame(FacilityCommand.Result.CHANGED, result);
-        FacilityModuleSettingsSnapshot after = facility.moduleSettingsSnapshot();
-        assertFalse(
-            after.membership()
-                .containsKey(source.id));
-        assertFalse(
-            after.groups()
-                .containsKey(groupId));
-        assertEquals(
-            expectedSettings,
-            oreKeys(
-                after.privateSettings()
-                    .get(source.id)));
+        SettingsGroup group = facility.settingsGroup(sharedGroupId(source));
+        assertEquals(expected, oreKeys(group.settings()));
     }
 
     @Test
-    void copyingSettingsMakesEveryTargetPrivateAndNeverJoinsSourceGroup() {
+    void leavingGroupCopiesCurrentSettingsAndRemovesEmptyGroup() {
+        AutomatedFacility facility = facility();
+        ModuleInstance source = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
+        facility.setMinerOreBlacklisted(source, "ore:iron", true);
+        facility.applyCommand(
+            new FacilityCommand.CreateSettingsGroup(facility.assetId, source.id, "Shared miners"),
+            FacilityCommand.Authority.NONE);
+        SettingsGroup.ID groupId = sharedGroupId(source);
+        Set<String> expected = oreKeys(
+            facility.settingsGroup(groupId)
+                .settings());
+
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            facility.applyCommand(
+                new FacilityCommand.LeaveSettingsGroup(facility.assetId, source.id),
+                FacilityCommand.Authority.NONE));
+
+        assertEquals(expected, oreKeys(privateSettings(source)));
+        assertNull(facility.settingsGroup(groupId));
+    }
+
+    @Test
+    void copyingSettingsMakesTargetsPrivateAndRemovesTheirEmptyGroup() {
         AutomatedFacility facility = facility();
         ModuleInstance source = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
         ModuleInstance firstTarget = addMiner(facility, moduleId(2), StationTileCoord.of(4, 0));
         ModuleInstance secondTarget = addMiner(facility, moduleId(3), StationTileCoord.of(7, 0));
         facility.setMinerOreBlacklisted(source, "ore:iron", true);
-        facility.setMinerOreBlacklisted(firstTarget, "ore:copper", true);
-        assertSame(
-            FacilityCommand.Result.CHANGED,
-            facility.applyCommand(
-                new FacilityCommand.CreateSettingsGroup(facility.assetId, source.id, "Source miners"),
-                FacilityCommand.Authority.NONE));
-        assertSame(
-            FacilityCommand.Result.CHANGED,
-            facility.applyCommand(
-                new FacilityCommand.CreateSettingsGroup(facility.assetId, firstTarget.id, "Target miners"),
-                FacilityCommand.Authority.NONE));
-        FacilityModuleSettingsSnapshot grouped = facility.moduleSettingsSnapshot();
-        SettingsGroup.ID sourceGroupId = grouped.membership()
-            .get(source.id);
-        SettingsGroup.ID targetGroupId = grouped.membership()
-            .get(firstTarget.id);
-        assertSame(
-            FacilityCommand.Result.CHANGED,
-            facility.applyCommand(
-                new FacilityCommand.JoinSettingsGroup(facility.assetId, secondTarget.id, targetGroupId),
-                FacilityCommand.Authority.NONE));
-
-        FacilityCommand.Result result = facility.applyCommand(
-            new FacilityCommand.CopyModuleSettings(
-                facility.assetId,
-                source.id,
-                List.of(firstTarget.id, secondTarget.id)),
+        facility.applyCommand(
+            new FacilityCommand.CreateSettingsGroup(facility.assetId, source.id, "Source miners"),
+            FacilityCommand.Authority.NONE);
+        facility.applyCommand(
+            new FacilityCommand.CreateSettingsGroup(facility.assetId, firstTarget.id, "Target miners"),
+            FacilityCommand.Authority.NONE);
+        SettingsGroup.ID sourceGroupId = sharedGroupId(source);
+        SettingsGroup.ID targetGroupId = sharedGroupId(firstTarget);
+        facility.applyCommand(
+            new FacilityCommand.JoinSettingsGroup(facility.assetId, secondTarget.id, targetGroupId),
             FacilityCommand.Authority.NONE);
 
-        assertSame(FacilityCommand.Result.CHANGED, result);
-        FacilityModuleSettingsSnapshot after = facility.moduleSettingsSnapshot();
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            facility.applyCommand(
+                new FacilityCommand.CopyModuleSettings(
+                    facility.assetId,
+                    source.id,
+                    List.of(firstTarget.id, secondTarget.id)),
+                FacilityCommand.Authority.NONE));
+
         Set<String> sourceSettings = oreKeys(
-            after.groups()
-                .get(sourceGroupId)
+            facility.settingsGroup(sourceGroupId)
                 .settings());
-        for (ModuleInstance target : List.of(firstTarget, secondTarget)) {
-            assertFalse(
-                after.membership()
-                    .containsKey(target.id));
-            assertEquals(
-                sourceSettings,
-                oreKeys(
-                    after.privateSettings()
-                        .get(target.id)));
-        }
-        assertEquals(
-            sourceGroupId,
-            after.membership()
-                .get(source.id));
-        assertFalse(
-            after.groups()
-                .containsKey(targetGroupId));
+        assertEquals(sourceSettings, oreKeys(privateSettings(firstTarget)));
+        assertEquals(sourceSettings, oreKeys(privateSettings(secondTarget)));
+        assertEquals(sourceGroupId, sharedGroupId(source));
+        assertNull(facility.settingsGroup(targetGroupId));
     }
 
     @Test
@@ -196,217 +136,125 @@ final class FacilityModuleSettingsCommandTest {
         ModuleInstance source = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
         ModuleInstance target = addMiner(facility, moduleId(2), StationTileCoord.of(4, 0));
         facility.setMinerOreBlacklisted(source, "ore:iron", true);
-        facility.setMinerOreBlacklisted(target, "ore:copper", true);
         FacilityCommand.CopyModuleSettings command = new FacilityCommand.CopyModuleSettings(
             facility.assetId,
             source.id,
             List.of(target.id));
-        assertSame(FacilityCommand.Result.CHANGED, facility.applyCommand(command, FacilityCommand.Authority.NONE));
-        FacilityModuleSettingsSnapshot beforeRepeat = facility.moduleSettingsSnapshot();
+        facility.applyCommand(command, FacilityCommand.Authority.NONE);
+        ModuleInstance.SettingsBinding before = target.settingsBinding();
 
-        FacilityCommand.Result repeated = facility.applyCommand(command, FacilityCommand.Authority.NONE);
-
-        assertSame(FacilityCommand.Result.UNCHANGED, repeated);
-        assertEquals(beforeRepeat, facility.moduleSettingsSnapshot());
+        assertSame(FacilityCommand.Result.UNCHANGED, facility.applyCommand(command, FacilityCommand.Authority.NONE));
+        assertEquals(before, target.settingsBinding());
     }
 
     @Test
-    void mixedCopyReturnsChangedWhenOneTargetAlreadyMatches() {
+    void mixedCopyChangesOnlyStaleTarget() {
         AutomatedFacility facility = facility();
         ModuleInstance source = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
-        ModuleInstance matchingTarget = addMiner(facility, moduleId(2), StationTileCoord.of(4, 0));
-        ModuleInstance staleTarget = addMiner(facility, moduleId(3), StationTileCoord.of(7, 0));
+        ModuleInstance matching = addMiner(facility, moduleId(2), StationTileCoord.of(4, 0));
+        ModuleInstance stale = addMiner(facility, moduleId(3), StationTileCoord.of(7, 0));
         facility.setMinerOreBlacklisted(source, "ore:iron", true);
-        facility.setMinerOreBlacklisted(staleTarget, "ore:copper", true);
+        facility.setMinerOreBlacklisted(stale, "ore:copper", true);
+        facility.applyCommand(
+            new FacilityCommand.CopyModuleSettings(facility.assetId, source.id, List.of(matching.id)),
+            FacilityCommand.Authority.NONE);
+
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(
-                new FacilityCommand.CopyModuleSettings(facility.assetId, source.id, List.of(matchingTarget.id)),
+                new FacilityCommand.CopyModuleSettings(facility.assetId, source.id, List.of(matching.id, stale.id)),
                 FacilityCommand.Authority.NONE));
-
-        FacilityCommand.Result result = facility.applyCommand(
-            new FacilityCommand.CopyModuleSettings(
-                facility.assetId,
-                source.id,
-                List.of(matchingTarget.id, staleTarget.id)),
-            FacilityCommand.Authority.NONE);
-
-        assertSame(FacilityCommand.Result.CHANGED, result);
-        FacilityModuleSettingsSnapshot after = facility.moduleSettingsSnapshot();
-        assertEquals(
-            oreKeys(
-                after.privateSettings()
-                    .get(source.id)),
-            oreKeys(
-                after.privateSettings()
-                    .get(matchingTarget.id)));
-        assertEquals(
-            oreKeys(
-                after.privateSettings()
-                    .get(source.id)),
-            oreKeys(
-                after.privateSettings()
-                    .get(staleTarget.id)));
+        assertEquals(privateSettings(source), privateSettings(matching));
+        assertEquals(privateSettings(source), privateSettings(stale));
     }
 
     @Test
-    void equalImmutableSettingsStillRunSubtypeCopyValidation() {
-        AutomatedFacility facility = facility();
-        ModuleInstance source = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
-        ModuleInstance target = addMiner(facility, moduleId(2), StationTileCoord.of(4, 0));
-        ((ModuleMiner) source.component()).setFocus(MinerFocusTier.I, "ore:iron", 0);
-        FacilityModuleSettingsSnapshot before = facility.moduleSettingsSnapshot();
-
-        FacilityCommand.Result result = facility.applyCommand(
-            new FacilityCommand.CopyModuleSettings(facility.assetId, source.id, List.of(target.id)),
-            FacilityCommand.Authority.NONE);
-
-        assertEquals(FacilityCommand.Status.REJECTED, result.status());
-        assertEquals(before, facility.moduleSettingsSnapshot());
-    }
-
-    @Test
-    void copyChangesWhenOnlySubtypeStateDiffers() {
+    void subtypeCopyValidationAndStateRemainAuthoritative() {
         AutomatedFacility facility = facility();
         ModuleInstance source = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
         ModuleInstance target = addMiner(facility, moduleId(2), StationTileCoord.of(4, 0));
         ModuleMiner sourceMiner = (ModuleMiner) source.component();
         ModuleMiner targetMiner = (ModuleMiner) target.component();
         sourceMiner.setFocus(MinerFocusTier.I, "ore:iron", 0);
-        targetMiner.setFocus(MinerFocusTier.I, "ore:copper", 0);
-        assertEquals(
-            facility.moduleSettingsSnapshot()
-                .privateSettings()
-                .get(source.id),
-            facility.moduleSettingsSnapshot()
-                .privateSettings()
-                .get(target.id));
 
-        FacilityCommand.Result result = facility.applyCommand(
+        FacilityCommand.Result rejected = facility.applyCommand(
             new FacilityCommand.CopyModuleSettings(facility.assetId, source.id, List.of(target.id)),
             FacilityCommand.Authority.NONE);
+        assertEquals(FacilityCommand.Status.REJECTED, rejected.status());
 
-        assertSame(FacilityCommand.Result.CHANGED, result);
+        targetMiner.setFocus(MinerFocusTier.I, "ore:copper", 0);
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            facility.applyCommand(
+                new FacilityCommand.CopyModuleSettings(facility.assetId, source.id, List.of(target.id)),
+                FacilityCommand.Authority.NONE));
         assertEquals("ore:iron", targetMiner.focusOreKeyOrNull());
     }
 
     @Test
-    void reconstructedModuleAnchorDoesNotChangeModuleIdMembership() {
+    void bindingsRoundTripAndNextGroupIdComesFromRestoredGroups() {
         AutomatedFacility original = facility();
-        ModuleInstance originalModule = addMiner(original, moduleId(1), StationTileCoord.of(1, 0));
+        ModuleInstance shared = addMiner(original, moduleId(1), StationTileCoord.of(1, 0));
+        ModuleInstance privateModule = addMiner(original, moduleId(2), StationTileCoord.of(4, 0));
+        original.applyCommand(
+            new FacilityCommand.CreateSettingsGroup(original.assetId, shared.id, "Shared miners"),
+            FacilityCommand.Authority.NONE);
+        SettingsGroup.ID restoredGroupId = sharedGroupId(shared);
+
+        AutomatedFacility restored = (AutomatedFacility) AssetState
+            .decode(AssetState.encode(UUID.randomUUID(), original))
+            .asset();
+        ModuleInstance restoredShared = module(restored, shared.id);
+        ModuleInstance restoredPrivate = module(restored, privateModule.id);
+
+        assertEquals(restoredGroupId, sharedGroupId(restoredShared));
+        assertTrue(restoredPrivate.settingsBinding() instanceof ModuleInstance.SettingsBinding.Private);
         assertSame(
             FacilityCommand.Result.CHANGED,
-            original.applyCommand(
-                new FacilityCommand.CreateSettingsGroup(original.assetId, originalModule.id, "Shared miners"),
+            restored.applyCommand(
+                new FacilityCommand.CreateSettingsGroup(restored.assetId, restoredPrivate.id, "Next miners"),
                 FacilityCommand.Authority.NONE));
-        FacilityModuleSettingsSnapshot saved = original.moduleSettingsSnapshot();
-        SettingsGroup.ID groupId = saved.membership()
-            .get(originalModule.id);
-
-        AutomatedFacility reconstructed = facility();
-        ModuleInstance movedModule = addMiner(reconstructed, originalModule.id, StationTileCoord.of(7, 0));
-        reconstructed.restoreModuleSettings(saved);
-
-        assertEquals(
-            groupId,
-            reconstructed.moduleSettingsSnapshot()
-                .membership()
-                .get(movedModule.id));
-        assertEquals(
-            1,
-            reconstructed.moduleSettingsSnapshot()
-                .membership()
-                .size());
-    }
-
-    @Test
-    void restoringGroupsDerivesNextPositiveIdWithoutCollision() {
-        AutomatedFacility facility = facility();
-        ModuleInstance shared = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
-        ModuleInstance privateModule = addMiner(facility, moduleId(2), StationTileCoord.of(4, 0));
-        FacilityModuleSettingsSnapshot initial = facility.moduleSettingsSnapshot();
-        SettingsGroup.ID restoredGroupId = new SettingsGroup.ID(7);
-        ModuleSettings sharedSettings = initial.privateSettings()
-            .get(shared.id);
-        FacilityModuleSettingsSnapshot restored = new FacilityModuleSettingsSnapshot(
-            Map.of(
-                privateModule.id,
-                initial.privateSettings()
-                    .get(privateModule.id)),
-            Map.of(
-                restoredGroupId,
-                new SettingsGroup(restoredGroupId, shared.kind(), "Restored miners", sharedSettings)),
-            Map.of(shared.id, restoredGroupId));
-        facility.restoreModuleSettings(restored);
-
-        assertSame(
-            FacilityCommand.Result.CHANGED,
-            facility.applyCommand(
-                new FacilityCommand.CreateSettingsGroup(facility.assetId, privateModule.id, "Next miners"),
-                FacilityCommand.Authority.NONE));
-
-        FacilityModuleSettingsSnapshot after = facility.moduleSettingsSnapshot();
-        SettingsGroup.ID nextGroupId = after.membership()
-            .get(privateModule.id);
-        assertEquals(new SettingsGroup.ID(8), nextGroupId);
-        assertTrue(
-            after.groups()
-                .containsKey(restoredGroupId));
-        assertTrue(
-            after.groups()
-                .containsKey(nextGroupId));
-    }
-
-    @Test
-    void invalidReconstructedMembershipDoesNotChangeExistingSnapshot() {
-        AutomatedFacility facility = facility();
-        ModuleInstance module = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
-        FacilityModuleSettingsSnapshot before = facility.moduleSettingsSnapshot();
-        FacilityModuleSettingsSnapshot invalid = new FacilityModuleSettingsSnapshot(
-            Map.of(),
-            before.groups(),
-            Map.of(module.id, new SettingsGroup.ID(99)));
-
-        assertThrows(IllegalArgumentException.class, () -> facility.restoreModuleSettings(invalid));
-
-        assertEquals(before, facility.moduleSettingsSnapshot());
+        assertEquals(new SettingsGroup.ID(restoredGroupId.value() + 1), sharedGroupId(restoredPrivate));
     }
 
     @Test
     void invalidBatchCopyMakesNoPartialSettingsChange() {
         AutomatedFacility facility = facility();
         ModuleInstance source = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
-        ModuleInstance validTarget = addMiner(facility, moduleId(2), StationTileCoord.of(4, 0));
+        ModuleInstance target = addMiner(facility, moduleId(2), StationTileCoord.of(4, 0));
         facility.setMinerOreBlacklisted(source, "ore:iron", true);
-        facility.setMinerOreBlacklisted(validTarget, "ore:copper", true);
-        FacilityModuleSettingsSnapshot before = facility.moduleSettingsSnapshot();
+        facility.setMinerOreBlacklisted(target, "ore:copper", true);
+        ModuleInstance.SettingsBinding before = target.settingsBinding();
 
         FacilityCommand.Result result = facility.applyCommand(
-            new FacilityCommand.CopyModuleSettings(facility.assetId, source.id, List.of(validTarget.id, moduleId(99))),
+            new FacilityCommand.CopyModuleSettings(facility.assetId, source.id, List.of(target.id, moduleId(99))),
             FacilityCommand.Authority.NONE);
 
         assertEquals(FacilityCommand.Status.REJECTED, result.status());
-        assertEquals(before, facility.moduleSettingsSnapshot());
+        assertEquals(before, target.settingsBinding());
     }
 
-    private static void assertExactlyOneOwner(FacilityModuleSettingsSnapshot snapshot, ModuleInstance.ID moduleId) {
-        boolean privatelyOwned = snapshot.privateSettings()
-            .containsKey(moduleId);
-        boolean shared = snapshot.membership()
-            .containsKey(moduleId);
-        assertTrue(privatelyOwned ^ shared, "Expected exactly one settings owner for " + moduleId);
-        if (shared) {
-            assertTrue(
-                snapshot.groups()
-                    .containsKey(
-                        snapshot.membership()
-                            .get(moduleId)));
-        }
+    private static ModuleSettings privateSettings(ModuleInstance module) {
+        assertTrue(module.settingsBinding() instanceof ModuleInstance.SettingsBinding.Private);
+        return ((ModuleInstance.SettingsBinding.Private) module.settingsBinding()).settings();
+    }
+
+    private static SettingsGroup.ID sharedGroupId(ModuleInstance module) {
+        assertTrue(module.settingsBinding() instanceof ModuleInstance.SettingsBinding.Shared);
+        return ((ModuleInstance.SettingsBinding.Shared) module.settingsBinding()).groupId();
     }
 
     private static Set<String> oreKeys(ModuleSettings settings) {
         assertTrue(settings instanceof MinerSettings, "Expected miner settings but got " + settings);
         return ((MinerSettings) settings).blacklistedOreKeys();
+    }
+
+    private static ModuleInstance module(AutomatedFacility facility, ModuleInstance.ID id) {
+        return facility.modules()
+            .stream()
+            .filter(module -> id.equals(module.id))
+            .findFirst()
+            .orElseThrow();
     }
 
     private static AutomatedFacility facility() {
