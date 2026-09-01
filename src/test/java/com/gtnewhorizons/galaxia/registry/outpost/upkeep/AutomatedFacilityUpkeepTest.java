@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.registry.outpost.upkeep;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Map;
@@ -145,58 +144,36 @@ final class AutomatedFacilityUpkeepTest {
     }
 
     @Test
-    void upkeepBlockingAndRecoveryAdvanceStateRevision() {
-        ModuleInstance module = moduleWithUpkeep(ModulePriority.NORMAL, "1");
-        AutomatedFacility facility = facilityWithModules(module);
-        int revisionBeforeBlocking = facility.getStateRevision();
-
-        tickUpkeepMinute(facility);
-
-        assertTrue(facility.getStateRevision() > revisionBeforeBlocking);
-
-        facility.insert(UPKEEP_ITEM, 1);
-        int revisionBeforeRecovery = facility.getStateRevision();
-        tickUpkeepMinute(facility);
-
-        assertTrue(facility.getStateRevision() > revisionBeforeRecovery);
-    }
-
-    @Test
-    void oneSettlementPassAdvancesRevisionOnceForMultipleBlockingChanges() {
+    void oneSettlementPassBlocksAllModulesWithShortage() {
         ModuleInstance high = moduleWithUpkeep(ModulePriority.HIGH, "1");
         ModuleInstance normal = moduleWithUpkeep(ModulePriority.NORMAL, "1");
         ModuleInstance low = moduleWithUpkeep(ModulePriority.LOW, "1");
         AutomatedFacility facility = facilityWithModules(high, normal, low);
-        int revisionBefore = facility.getStateRevision();
 
         facility.settleUpkeep();
 
         assertEquals(BlockingReason.UPKEEP_SHORTAGE, high.blocking());
         assertEquals(BlockingReason.UPKEEP_SHORTAGE, normal.blocking());
         assertEquals(BlockingReason.UPKEEP_SHORTAGE, low.blocking());
-        assertEquals(revisionBefore + 1, facility.getStateRevision());
     }
 
     @Test
-    void entirelyUnchangedSettlementDoesNotAdvanceRevision() {
+    void repeatedUnchangedSettlementPreservesBlockingState() {
         ModuleInstance module = moduleWithUpkeep(ModulePriority.NORMAL, "1");
         AutomatedFacility facility = facilityWithModules(module);
         facility.settleUpkeep();
-        int revisionBefore = facility.getStateRevision();
 
         facility.settleUpkeep();
 
         assertEquals(BlockingReason.UPKEEP_SHORTAGE, module.blocking());
         assertEquals(ModuleState.BLOCKED, module.state());
-        assertEquals(revisionBefore, facility.getStateRevision());
     }
 
     @Test
-    void consumptionAndCreditChangeAdvanceRevisionOnce() {
+    void consumptionAndCreditChangeApplyTogether() {
         ModuleInstance module = moduleWithUpkeep(ModulePriority.NORMAL, "0.1");
         AutomatedFacility facility = facilityWithModules(module);
         facility.insert(UPKEEP_ITEM, 1L);
-        int revisionBefore = facility.getStateRevision();
 
         facility.settleUpkeep();
 
@@ -207,7 +184,6 @@ final class AutomatedFacilityUpkeepTest {
                 .itemCredit(UPKEEP_ITEM)
                 .toDisplayString());
         assertEquals(BlockingReason.NONE, module.blocking());
-        assertEquals(revisionBefore + 1, facility.getStateRevision());
     }
 
     @Test
@@ -220,22 +196,20 @@ final class AutomatedFacilityUpkeepTest {
     }
 
     @Test
-    void wholeUnitConsumptionAdvancesRevisionWhenCreditsAndBlockingStayUnchanged() {
+    void wholeUnitConsumptionAppliesWhenCreditsAndBlockingStayUnchanged() {
         ModuleInstance module = moduleWithUpkeep(ModulePriority.NORMAL, "1");
         AutomatedFacility facility = facilityWithModules(module);
         facility.insert(UPKEEP_ITEM, 1L);
-        int revisionBefore = facility.getStateRevision();
 
         facility.settleUpkeep();
 
         assertEquals(0L, facility.itemAmount(UPKEEP_ITEM));
         assertEquals(UpkeepSettlement.Credits.empty(), facility.upkeepCredits());
         assertEquals(BlockingReason.NONE, module.blocking());
-        assertEquals(revisionBefore + 1, facility.getStateRevision());
     }
 
     @Test
-    void exceptionalSettlementPublishesEarlierInventoryConsumptionOnce() {
+    void exceptionalSettlementPreservesEarlierInventoryConsumption() {
         ModuleInstance paidFirst = moduleWithUpkeep(ModulePriority.HIGH, "1");
         ItemStack extremeStack = new ItemStack(new Item());
         ModuleTierData extremeTier = tierDataBuilder()
@@ -244,12 +218,10 @@ final class AutomatedFacilityUpkeepTest {
         ModuleInstance throwsLater = moduleWithTierData(ModulePriority.NORMAL, extremeTier);
         AutomatedFacility facility = facilityWithModules(paidFirst, throwsLater);
         facility.insert(UPKEEP_ITEM, 2L);
-        int revisionBefore = facility.getStateRevision();
 
         assertThrows(RuntimeException.class, facility::settleUpkeep);
 
         assertEquals(1L, facility.itemAmount(UPKEEP_ITEM));
-        assertEquals(revisionBefore + 1, facility.getStateRevision());
     }
 
     private static void tickUpkeepMinute(AutomatedFacility facility) {

@@ -44,9 +44,8 @@ final class FacilityModuleCommandTest {
     }
 
     @Test
-    void multiBuildCommitsChainedPlacementsWithOneRevision() {
+    void multiBuildCommitsChainedPlacements() {
         AutomatedFacility facility = facility(CelestialAsset.Kind.AUTOMATED_STATION);
-        int revisionBefore = facility.getStateRevision();
         StationTileCoord first = StationTileCoord.of(1, 0);
         StationTileCoord chained = StationTileCoord.of(2, 0);
 
@@ -59,7 +58,6 @@ final class FacilityModuleCommandTest {
             DEBUG_AUTHORITY);
 
         assertSame(FacilityCommand.Result.CHANGED, result);
-        assertEquals(revisionBefore + 1, facility.getStateRevision());
         assertEquals(
             List.of(first, chained),
             facility.modules()
@@ -75,7 +73,6 @@ final class FacilityModuleCommandTest {
     @Test
     void lateInvalidBuildTargetRejectsWithoutAnyAggregateMutation() {
         AutomatedFacility facility = facility(CelestialAsset.Kind.AUTOMATED_OUTPOST);
-        int revisionBefore = facility.getStateRevision();
         boolean dirtyBefore = facility.isDirty();
         Map<?, ?> layoutBefore = Map.copyOf(
             facility.stationLayout()
@@ -102,7 +99,6 @@ final class FacilityModuleCommandTest {
                 .snapshot());
         assertEquals(settingsBefore, facility.moduleSettingsSnapshot());
         assertEquals(inventoryBefore, facility.itemSnapshot());
-        assertEquals(revisionBefore, facility.getStateRevision());
         assertEquals(dirtyBefore, facility.isDirty());
         assertEquals(
             0,
@@ -113,7 +109,6 @@ final class FacilityModuleCommandTest {
     @Test
     void instantBuildWithoutDebugAuthorizationRejectsWithoutAggregateMutation() {
         AutomatedFacility facility = facility(CelestialAsset.Kind.AUTOMATED_STATION);
-        int revisionBefore = facility.getStateRevision();
         boolean dirtyBefore = facility.isDirty();
         Map<?, ?> layoutBefore = Map.copyOf(
             facility.stationLayout()
@@ -138,14 +133,12 @@ final class FacilityModuleCommandTest {
             facility.stationLayout()
                 .snapshot());
         assertEquals(settingsBefore, facility.moduleSettingsSnapshot());
-        assertEquals(revisionBefore, facility.getStateRevision());
         assertEquals(dirtyBefore, facility.isDirty());
     }
 
     @Test
     void nullMinerFocusTierIsAnInvalidModuleSpec() {
         AutomatedFacility facility = facility(CelestialAsset.Kind.AUTOMATED_STATION);
-        int revisionBefore = facility.getStateRevision();
         FacilityCommand command = new FacilityCommand.BuildModules(
             facility.assetId,
             FacilityModuleKind.STORAGE,
@@ -162,7 +155,6 @@ final class FacilityModuleCommandTest {
         assertTrue(
             facility.modules()
                 .isEmpty());
-        assertEquals(revisionBefore, facility.getStateRevision());
     }
 
     @Test
@@ -176,7 +168,6 @@ final class FacilityModuleCommandTest {
         source.setOperation(waitingOperation());
         facility.addModule(source);
         facility.setMinerOreBlacklisted(source, "ore:iron", true);
-        int revisionBefore = facility.getStateRevision();
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.CopyBuildModules(
@@ -187,7 +178,6 @@ final class FacilityModuleCommandTest {
             DEBUG_AUTHORITY);
 
         assertSame(FacilityCommand.Result.CHANGED, result);
-        assertEquals(revisionBefore + 1, facility.getStateRevision());
         ModuleInstance copied = facility.modules()
             .get(1);
         assertEquals(source.kind(), copied.kind());
@@ -216,7 +206,6 @@ final class FacilityModuleCommandTest {
         SettingsGroup.ID groupId = facility.moduleSettingsSnapshot()
             .membership()
             .get(source.id);
-        int revisionBefore = facility.getStateRevision();
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.BuildModules(
@@ -239,14 +228,12 @@ final class FacilityModuleCommandTest {
                 .get(built.id));
         assertEquals(ModuleTier.LuV, built.tier());
         assertEquals(MinerFocusTier.II, ((ModuleMiner) built.component()).focusTier());
-        assertEquals(revisionBefore + 1, facility.getStateRevision());
     }
 
     @Test
-    void deconstructionMapsResultAndAdvancesRevisionOnce() {
+    void deconstructionMapsResultAndStartsOperation() {
         AutomatedFacility facility = facility(CelestialAsset.Kind.AUTOMATED_STATION);
         ModuleInstance module = addPlaced(facility, FacilityModuleKind.POWER, StationTileCoord.of(1, 0), true);
-        int revisionBefore = facility.getStateRevision();
 
         FacilityCommand.Result changed = facility.applyCommand(
             new FacilityCommand.RequestModuleDeconstruction(facility.assetId, module.id),
@@ -260,7 +247,6 @@ final class FacilityModuleCommandTest {
         assertFalse(
             facility.modules()
                 .contains(module));
-        assertEquals(revisionBefore + 1, facility.getStateRevision());
     }
 
     @Test
@@ -272,7 +258,6 @@ final class FacilityModuleCommandTest {
         ItemStackWrapper filler = ItemStackWrapper.of(new ItemStack(Items.diamond));
         long stored = AutomatedFacility.BASE_ITEM_CAPACITY + 1L;
         assertEquals(stored, facility.insert(filler, stored));
-        int revisionBefore = facility.getStateRevision();
 
         FacilityCommand.Result activeResult = facility.applyCommand(
             new FacilityCommand.RequestModuleDeconstruction(facility.assetId, active.id),
@@ -287,17 +272,15 @@ final class FacilityModuleCommandTest {
             facility.modules()
                 .containsAll(List.of(active, storage)));
         assertEquals(stored, facility.itemAmount(filler));
-        assertEquals(revisionBefore, facility.getStateRevision());
     }
 
     @Test
-    void cancelOperationTargetsStableIdAndAdvancesRevisionExactlyOnce() {
+    void cancelOperationTargetsStableId() {
         AutomatedFacility facility = facility(CelestialAsset.Kind.AUTOMATED_STATION);
         ModuleInstance untouched = addPlaced(facility, FacilityModuleKind.POWER, StationTileCoord.of(1, 0), true);
         ModuleInstance target = addPlaced(facility, FacilityModuleKind.POWER, StationTileCoord.of(2, 0), true);
         ModuleOperationState operation = waitingOperation();
         target.setOperation(operation);
-        int revisionBefore = facility.getStateRevision();
 
         FacilityCommand.Result changed = facility.applyCommand(
             new FacilityCommand.CancelModuleOperation(facility.assetId, target.id),
@@ -314,7 +297,6 @@ final class FacilityModuleCommandTest {
         assertEquals(FacilityCommand.Rejection.MODULE_OPERATION_NOT_CANCELLABLE, notCancellable.rejection());
         assertSame(ModuleOperationPhase.CANCELLED, operation.phase());
         assertNull(untouched.operationOrNull());
-        assertEquals(revisionBefore + 1, facility.getStateRevision());
     }
 
     private static FacilityCommand.BuildModules build(AutomatedFacility facility, FacilityModuleKind kind,

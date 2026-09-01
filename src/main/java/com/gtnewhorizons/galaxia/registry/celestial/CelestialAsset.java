@@ -36,7 +36,6 @@ public abstract class CelestialAsset implements Buildable {
     private Map<ItemStack, Long> constructionInventory;
     private String displayName;
 
-    private int stateRevision;
     private boolean dirty = true;
 
     public final LogisticsConfiguration logisticsConfig;
@@ -103,7 +102,6 @@ public abstract class CelestialAsset implements Buildable {
         this.location = Location.ofKind(kind);
         this.requiredResources = defaultRequirements(kind);
         this.constructionInventory = constructionInventory == null ? Collections.emptyMap() : constructionInventory;
-        this.stateRevision = 0;
         this.logisticsConfig = new LogisticsConfiguration();
     }
 
@@ -192,7 +190,7 @@ public abstract class CelestialAsset implements Buildable {
     public void updateStatus(Status status) {
         if (this.status == status) return;
         this.status = status;
-        markStateChanged();
+        markDirty();
     }
 
     public String displayName() {
@@ -202,7 +200,7 @@ public abstract class CelestialAsset implements Buildable {
     public void setDisplayName(String displayName) {
         if (Objects.equals(this.displayName, displayName)) return;
         this.displayName = displayName;
-        markStateChanged();
+        markDirty();
     }
 
     public boolean hasStoredConstructionResources() {
@@ -222,23 +220,6 @@ public abstract class CelestialAsset implements Buildable {
 
     public WarningPriority warningPriority() {
         return WarningPriority.NONE;
-    }
-
-    public int getStateRevision() {
-        return stateRevision;
-    }
-
-    public void setStateRevision(int revision) {
-        this.stateRevision = Math.max(this.stateRevision, revision);
-    }
-
-    public void bumpStateRevision() {
-        stateRevision++;
-        dirty = true;
-    }
-
-    protected void markStateChanged() {
-        bumpStateRevision();
     }
 
     public abstract void tick();

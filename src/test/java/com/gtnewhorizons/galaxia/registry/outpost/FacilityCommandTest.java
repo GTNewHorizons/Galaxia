@@ -33,10 +33,9 @@ final class FacilityCommandTest {
     }
 
     @Test
-    void boundCommandsChangeOnceAndLeaveRevisionUntouchedForNoOpOrRejection() {
+    void boundCommandsApplyChangesAndRejectNoOps() {
         AutomatedFacility facility = facility();
         ItemStackWrapper item = ItemStackWrapper.of(new ItemStack(Items.stick));
-        int initialRevision = facility.getStateRevision();
 
         FacilityCommand.Result changed = facility.applyCommand(
             new FacilityCommand.SetInventoryBound(facility.assetId, BoundKind.ITEM_UPPER, item, 10L),
@@ -52,7 +51,6 @@ final class FacilityCommandTest {
         assertEquals(FacilityCommand.Status.UNCHANGED, unchanged.status());
         assertEquals(FacilityCommand.Status.REJECTED, rejected.status());
         assertEquals(FacilityCommand.Rejection.INVALID_BOUND, rejected.rejection());
-        assertEquals(initialRevision + 1, facility.getStateRevision());
         assertEquals(InventoryBounds.upperBound(10L), facility.getBound(item));
     }
 
@@ -60,7 +58,6 @@ final class FacilityCommandTest {
     void facilityIdMismatchIsRejectedWithoutMutation() {
         AutomatedFacility facility = facility();
         ItemStackWrapper item = ItemStackWrapper.of(new ItemStack(Items.stick));
-        int initialRevision = facility.getStateRevision();
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.ClearInventoryBound(CelestialAsset.ID.create(), BoundKind.ITEM_LOWER, item),
@@ -68,7 +65,6 @@ final class FacilityCommandTest {
 
         assertEquals(FacilityCommand.Status.REJECTED, result.status());
         assertEquals(FacilityCommand.Rejection.FACILITY_ID_MISMATCH, result.rejection());
-        assertEquals(initialRevision, facility.getStateRevision());
         assertTrue(
             facility.getBound(item)
                 .isInvalid());
@@ -84,7 +80,6 @@ final class FacilityCommandTest {
             item,
             config,
             LogisticsConfigAccessMode.FULL);
-        int initialRevision = facility.getStateRevision();
 
         FacilityCommand.Result changed = facility.applyCommand(command, FacilityCommand.Authority.NONE);
         List<LogisticSignal> signals = LogisticStore.allSignalsForScope(LogisticSignal.Scope.SYSTEM)
@@ -96,7 +91,6 @@ final class FacilityCommandTest {
 
         assertEquals(FacilityCommand.Status.CHANGED, changed.status());
         assertEquals(FacilityCommand.Status.UNCHANGED, unchanged.status());
-        assertEquals(initialRevision + 1, facility.getStateRevision());
         assertEquals(config, facility.logisticsConfig.get(item));
         assertEquals(1, signals.size());
         assertEquals(
@@ -109,7 +103,6 @@ final class FacilityCommandTest {
     void invalidFilterReplacementIsRejectedWithoutChangingSelectedSide() {
         AutomatedFacility facility = facility();
         facility.setFilters(List.of("minecraft:stick:0"), true);
-        int initialRevision = facility.getStateRevision();
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.ReplaceFilters(
@@ -120,7 +113,6 @@ final class FacilityCommandTest {
 
         assertEquals(FacilityCommand.Status.REJECTED, result.status());
         assertEquals(FacilityCommand.Rejection.INVALID_FILTERS, result.rejection());
-        assertEquals(initialRevision, facility.getStateRevision());
         assertEquals(
             List.of("minecraft:stick:0"),
             facility.filtersSnapshot()

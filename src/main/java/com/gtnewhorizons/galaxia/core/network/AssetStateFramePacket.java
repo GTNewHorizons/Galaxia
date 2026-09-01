@@ -15,12 +15,12 @@ import io.netty.buffer.ByteBuf;
 
 public final class AssetStateFramePacket implements IMessage {
 
-    public static final int MAX_MESSAGE_BODY_BYTES = 61_439;
-    public static final int MAX_FRAME_COUNT = 256;
-    public static final int MAX_FRAME_PAYLOAD_BYTES = 61_376;
-    public static final int MAX_LOGICAL_UPDATE_BYTES = MAX_FRAME_COUNT * MAX_FRAME_PAYLOAD_BYTES;
+    public static final int MAX_MESSAGE_BODY_BYTES = 32_000;
+    public static final int MAX_LOGICAL_UPDATE_BYTES = 2 * 1024 * 1024;
     private static final int FRAME_HEADER_BYTES = 27;
     private static final int ASSET_ID_BYTES = 16;
+    public static final int MAX_FRAME_PAYLOAD_BYTES = MAX_MESSAGE_BODY_BYTES - FRAME_HEADER_BYTES - ASSET_ID_BYTES;
+    public static final int MAX_FRAME_COUNT = Math.ceilDiv(MAX_LOGICAL_UPDATE_BYTES, MAX_FRAME_PAYLOAD_BYTES);
 
     private CelestialAsset.ID assetId;
     private UUID updateId;
@@ -28,7 +28,6 @@ public final class AssetStateFramePacket implements IMessage {
     private int frameCount;
     private int declaredTotalSize;
     private byte[] payload;
-    private boolean decoded = true;
 
     public AssetStateFramePacket() {}
 
@@ -58,7 +57,7 @@ public final class AssetStateFramePacket implements IMessage {
 
     @Override
     public void fromBytes(ByteBuf buf) {
-        decoded = false;
+        payload = null;
         int encodedBodySize = buf.readableBytes();
         if (encodedBodySize < FRAME_HEADER_BYTES || encodedBodySize > MAX_MESSAGE_BODY_BYTES) return;
         try {
@@ -74,23 +73,22 @@ public final class AssetStateFramePacket implements IMessage {
                 return;
             payload = new byte[payloadLength];
             buf.readBytes(payload);
-            decoded = true;
         } catch (RuntimeException ex) {
-            decoded = false;
             payload = null;
         }
     }
 
     boolean isValid() {
-        if (!decoded || updateId == null || payload == null || assetId != null && assetId.id() == null) return false;
+        if (updateId == null || payload == null || assetId != null && assetId.id() == null) return false;
         if (frameCount < 1 || frameCount > MAX_FRAME_COUNT || frameIndex < 0 || frameIndex >= frameCount) return false;
         if (declaredTotalSize < 1 || declaredTotalSize > MAX_LOGICAL_UPDATE_BYTES) return false;
-        int expectedFrameCount = (declaredTotalSize + MAX_FRAME_PAYLOAD_BYTES - 1) / MAX_FRAME_PAYLOAD_BYTES;
+        int expectedFrameCount = Math.ceilDiv(declaredTotalSize, MAX_FRAME_PAYLOAD_BYTES);
         if (frameCount != expectedFrameCount) return false;
         int expectedPayloadLength = frameIndex == frameCount - 1
             ? declaredTotalSize - frameIndex * MAX_FRAME_PAYLOAD_BYTES
             : MAX_FRAME_PAYLOAD_BYTES;
-        return payload.length == expectedPayloadLength && encodedBodySize() <= MAX_MESSAGE_BODY_BYTES;
+        return payload.length == expectedPayloadLength
+            && FRAME_HEADER_BYTES + (assetId == null ? 0 : ASSET_ID_BYTES) + payload.length <= MAX_MESSAGE_BODY_BYTES;
     }
 
     CelestialAsset.ID assetId() {
@@ -115,10 +113,6 @@ public final class AssetStateFramePacket implements IMessage {
 
     byte[] payload() {
         return payload == null ? null : payload.clone();
-    }
-
-    private int encodedBodySize() {
-        return FRAME_HEADER_BYTES + (assetId == null ? 0 : ASSET_ID_BYTES) + payload.length;
     }
 
     public static final class Handler implements IMessageHandler<AssetStateFramePacket, IMessage> {

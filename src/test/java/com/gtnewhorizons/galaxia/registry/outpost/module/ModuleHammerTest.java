@@ -104,7 +104,6 @@ final class ModuleHammerTest {
         outpost.addModule(module);
         outpost.setEnergyStored(500_000L);
         outpost.clean();
-        int revisionBefore = outpost.getStateRevision();
 
         module.tick(outpost);
 
@@ -114,7 +113,6 @@ final class ModuleHammerTest {
         }
 
         assertTrue(outpost.isDirty());
-        assertTrue(outpost.getStateRevision() > revisionBefore);
     }
 
     @Test
@@ -146,14 +144,12 @@ final class ModuleHammerTest {
             ModuleTier.EV);
         outpost.addModule(module);
         outpost.clean();
-        int revisionBefore = outpost.getStateRevision();
         ModuleHammer hammer = (ModuleHammer) module.component();
         hammer.setEnergyStored(100_000L);
 
         assertTrue(hammer.trySpendShotEnergy(module, outpost, ModuleHammer.shotEnergyCost(7.25)));
 
         assertTrue(outpost.isDirty());
-        assertTrue(outpost.getStateRevision() > revisionBefore);
     }
 
     @Test

@@ -263,7 +263,7 @@ public final class SatelliteDataJobService {
         endpoint.module()
             .updateDetectedCounterpart(bodyKey);
         endpoint.facility()
-            .markModuleDirty(endpoint.instance().id);
+            .markDirty();
     }
 
     private static SatelliteDataKey producedKey(SatelliteDataEndpointRegistry.Endpoint producer) {
@@ -276,6 +276,6 @@ public final class SatelliteDataJobService {
         consumer.module()
             .consume(deciKb);
         consumer.facility()
-            .markModuleDirty(consumer.instance().id);
+            .markDirty();
     }
 }

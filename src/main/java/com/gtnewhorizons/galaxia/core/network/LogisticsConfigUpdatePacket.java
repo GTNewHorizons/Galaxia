@@ -137,7 +137,7 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
         if (removeEntry) {
             asset.logisticsConfig.reset(resource);
             LogisticStore.updateSignalsForFacility(asset);
-            asset.bumpStateRevision();
+            asset.markDirty();
             return true;
         } else {
             LogisticsResourceConfig config = new LogisticsResourceConfig(
@@ -148,7 +148,7 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
             config = (accessMode == null ? LogisticsConfigAccessMode.FULL : accessMode).sanitize(config);
             asset.logisticsConfig.set(resource, config);
             LogisticStore.updateSignalsForFacility(asset);
-            asset.bumpStateRevision();
+            asset.markDirty();
             return true;
         }
     }

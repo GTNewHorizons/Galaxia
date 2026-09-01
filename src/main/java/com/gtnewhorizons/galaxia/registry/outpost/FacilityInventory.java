@@ -123,6 +123,36 @@ final class FacilityInventory {
         return Collections.unmodifiableMap(new LinkedHashMap<>(fluidAmounts));
     }
 
+    void restoreSnapshot(Map<ItemStackWrapper, Long> items, Map<FluidKey, Long> fluids) {
+        Map<ItemStackWrapper, Long> validatedItems = validateItemAmounts(items);
+        Map<FluidKey, Long> validatedFluids = validateFluidAmounts(fluids);
+        itemAmounts.clear();
+        itemAmounts.putAll(validatedItems);
+        fluidAmounts.clear();
+        fluidAmounts.putAll(validatedFluids);
+    }
+
+    private static Map<FluidKey, Long> validateFluidAmounts(Map<FluidKey, Long> snapshot) {
+        if (snapshot == null) throw new IllegalArgumentException("Facility fluid snapshot must not be null");
+        Map<FluidKey, Long> validated = new LinkedHashMap<>();
+        for (Map.Entry<FluidKey, Long> entry : snapshot.entrySet()) {
+            FluidKey key = entry.getKey();
+            Long amount = entry.getValue();
+            if (key == null || key.fluid() == null) {
+                throw new IllegalArgumentException("Facility fluid snapshot contains an invalid fluid");
+            }
+            if (amount == null || amount <= 0L) {
+                throw new IllegalArgumentException(
+                    "Facility fluid snapshot amount must be positive for " + key.fluid()
+                        .getName() + ": " + amount);
+            }
+            if (validated.put(key, amount) != null) {
+                throw new IllegalArgumentException("Facility fluid snapshot contains duplicate fluid key " + key);
+            }
+        }
+        return validated;
+    }
+
     Map<ItemStackWrapper, Long> itemSnapshot() {
         return Collections.unmodifiableMap(new LinkedHashMap<>(itemAmounts));
     }
@@ -140,6 +170,12 @@ final class FacilityInventory {
     }
 
     void loadItemSnapshot(Map<ItemStackWrapper, Long> snapshot) {
+        Map<ItemStackWrapper, Long> validated = validateItemAmounts(snapshot);
+        itemAmounts.clear();
+        itemAmounts.putAll(validated);
+    }
+
+    private static Map<ItemStackWrapper, Long> validateItemAmounts(Map<ItemStackWrapper, Long> snapshot) {
         if (snapshot == null) throw new IllegalArgumentException("Facility item snapshot must not be null");
         Map<ItemStackWrapper, Long> validated = new LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, Long> entry : snapshot.entrySet()) {
@@ -154,8 +190,7 @@ final class FacilityInventory {
                 throw new IllegalArgumentException("Facility item snapshot contains duplicate item " + key.toKey());
             }
         }
-        itemAmounts.clear();
-        itemAmounts.putAll(validated);
+        return validated;
     }
 
     void loadFluidSnapshot(Map<String, Long> snapshot) {

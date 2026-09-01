@@ -57,13 +57,11 @@ final class LogisticsConfigUpdatePacketTest {
         LogisticsResourceConfig config = station.logisticsConfig.get(resource);
         assertTrue(config.isImportEnabled());
         assertFalse(config.isSupplyEnabled());
-        assertEquals(1, station.getStateRevision());
 
         assertTrue(
             LogisticsConfigUpdatePacket.remove(station.assetId, resource)
                 .apply(TEAM));
         assertEquals(LogisticsResourceConfig.DEFAULT, station.logisticsConfig.get(resource));
-        assertEquals(2, station.getStateRevision());
     }
 
     @Test
@@ -82,6 +80,5 @@ final class LogisticsConfigUpdatePacketTest {
 
         assertFalse(packet.apply(TEAM));
         assertEquals(LogisticsResourceConfig.DEFAULT, facility.logisticsConfig.get(resource));
-        assertEquals(0, facility.getStateRevision());
     }
 }

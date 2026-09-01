@@ -77,7 +77,7 @@ final class RecipeBookOwnershipCommandTest {
     }
 
     @Test
-    void acceptedGroupReplacementIsAtomicResetsAllMemberSchedulesAndAdvancesRevisionOnce() {
+    void acceptedGroupReplacementIsAtomicAndResetsAllMemberSchedules() {
         AutomatedFacility facility = facility();
         ModuleInstance first = addMacerator(facility, moduleId(1), StationTileCoord.of(1, 0));
         ModuleInstance second = addMacerator(facility, moduleId(2), StationTileCoord.of(4, 0));
@@ -86,7 +86,6 @@ final class RecipeBookOwnershipCommandTest {
         facility.restoreRecipeScheduleState(first, new RecipeScheduleState((byte) 1, (byte) 2));
         facility.restoreRecipeScheduleState(second, new RecipeScheduleState((byte) 3, (byte) 4));
         RecipeBook replacement = book("Replacement", 1);
-        int revisionBefore = facility.getStateRevision();
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.ReplaceRecipeBook(facility.assetId, owner, replacement),
@@ -98,7 +97,6 @@ final class RecipeBookOwnershipCommandTest {
         assertSame(facility.recipeBook(owner), facility.recipeBook(second));
         assertEquals(RESET_SCHEDULE, facility.recipeScheduleState(first));
         assertEquals(RESET_SCHEDULE, facility.recipeScheduleState(second));
-        assertEquals(revisionBefore + 1, facility.getStateRevision());
     }
 
     @Test
@@ -113,7 +111,6 @@ final class RecipeBookOwnershipCommandTest {
                 new FacilityCommand.ReplaceRecipeBook(facility.assetId, owner, replacement),
                 FacilityCommand.Authority.NONE));
         facility.restoreRecipeScheduleState(module, new RecipeScheduleState((byte) 2, (byte) 3));
-        int revisionBefore = facility.getStateRevision();
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.ReplaceRecipeBook(facility.assetId, owner, replacement),
@@ -122,7 +119,6 @@ final class RecipeBookOwnershipCommandTest {
         assertSame(FacilityCommand.Result.CHANGED, result);
         assertEquals(replacement, facility.recipeBook(owner));
         assertEquals(RESET_SCHEDULE, facility.recipeScheduleState(module));
-        assertEquals(revisionBefore + 1, facility.getStateRevision());
     }
 
     @Test
@@ -142,7 +138,6 @@ final class RecipeBookOwnershipCommandTest {
         RecipeBook before = facility.recipeBook(actualOwner);
         RecipeScheduleState scheduleBefore = new RecipeScheduleState((byte) 2, (byte) 2);
         facility.restoreRecipeScheduleState(module, scheduleBefore);
-        int revisionBefore = facility.getStateRevision();
 
         FacilityCommand.Result staleResult = facility.applyCommand(
             new FacilityCommand.ReplaceRecipeBook(facility.assetId, stalePrivate, book("Stale private", 2)),
@@ -158,7 +153,6 @@ final class RecipeBookOwnershipCommandTest {
         assertEquals(FacilityCommand.Status.REJECTED, missingGroupResult.status());
         assertEquals(before, facility.recipeBook(actualOwner));
         assertEquals(scheduleBefore, facility.recipeScheduleState(module));
-        assertEquals(revisionBefore, facility.getStateRevision());
     }
 
     @Test
@@ -169,7 +163,6 @@ final class RecipeBookOwnershipCommandTest {
         RecipeBook first = book("First", 1);
         RecipeBook second = book("Second", 2);
         assertNotEquals(first, second);
-        int revisionBefore = facility.getStateRevision();
 
         FacilityCommand.Result firstResult = facility.applyCommand(
             new FacilityCommand.ReplaceRecipeBook(facility.assetId, owner, first),
@@ -181,7 +174,6 @@ final class RecipeBookOwnershipCommandTest {
         assertSame(FacilityCommand.Result.CHANGED, firstResult);
         assertSame(FacilityCommand.Result.CHANGED, secondResult);
         assertEquals(second, facility.recipeBook(owner));
-        assertEquals(revisionBefore + 2, facility.getStateRevision());
     }
 
     private static SettingsGroup.ID createGroupWithMember(AutomatedFacility facility, ModuleInstance first,

@@ -40,27 +40,24 @@ final class AutomatedFacilityDeconstructionTest {
         AutomatedFacility facility = facility();
         ModuleInstance module = addModule(facility, FacilityModuleKind.POWER, StationTileCoord.of(1, 0));
         Map<ItemStackWrapper, Long> expected = constructionCost(module);
-        int revisionBefore = facility.getStateRevision();
 
         assertSame(AutomatedFacility.DeconstructionResult.ACCEPTED, facility.requestModuleDeconstruction(module.id));
 
         assertFalse(
             facility.modules()
                 .contains(module));
-        assertEquals(revisionBefore + 1, facility.getStateRevision());
         for (Map.Entry<ItemStackWrapper, Long> entry : expected.entrySet()) {
             assertEquals(entry.getValue(), facility.itemAmount(entry.getKey()));
         }
     }
 
     @Test
-    void storageRejectionPreservesIdentityInventoryAndRevision() {
+    void storageRejectionPreservesIdentityAndInventory() {
         AutomatedFacility facility = facility();
         ModuleInstance storage = addModule(facility, FacilityModuleKind.STORAGE, StationTileCoord.of(1, 0));
         ItemStackWrapper filler = ItemStackWrapper.of(new ItemStack(Items.diamond));
         long stored = AutomatedFacility.BASE_ITEM_CAPACITY + 1L;
         assertEquals(stored, facility.insert(filler, stored));
-        int revisionBefore = facility.getStateRevision();
 
         assertSame(
             AutomatedFacility.DeconstructionResult.CAPACITY_EXCEEDED,
@@ -74,7 +71,6 @@ final class AutomatedFacilityDeconstructionTest {
             facility.stationLayout()
                 .moduleAt(storage.anchor()));
         assertEquals(stored, facility.itemAmount(filler));
-        assertEquals(revisionBefore, facility.getStateRevision());
     }
 
     @Test
@@ -89,14 +85,12 @@ final class AutomatedFacilityDeconstructionTest {
             Map.of("minecraft:iron_ingot:0", 3L),
             Map.of("minecraft:gold_ingot:0", 2L));
         module.setOperation(operation);
-        int revisionBefore = facility.getStateRevision();
 
         assertSame(
             AutomatedFacility.DeconstructionResult.ACTIVE_OPERATION,
             facility.requestModuleDeconstruction(module.id));
 
         assertSame(operation, module.operationOrNull());
-        assertEquals(revisionBefore, facility.getStateRevision());
     }
 
     @Test
@@ -125,26 +119,20 @@ final class AutomatedFacilityDeconstructionTest {
                 .mapToLong(Long::longValue)
                 .sum() > 0L);
 
-        int revisionWithoutSpace = facility.getStateRevision();
         facility.tick();
-        assertEquals(revisionWithoutSpace, facility.getStateRevision());
 
         facility.extract(filler, 1L);
-        int revisionBeforeProgress = facility.getStateRevision();
         facility.tick();
         assertTrue(
             facility.modules()
                 .contains(module));
-        assertEquals(revisionBeforeProgress + 1, facility.getStateRevision());
 
         facility.extract(filler, refundAmount - 1L);
-        int revisionBeforeTick = facility.getStateRevision();
         facility.tick();
 
         assertFalse(
             facility.modules()
                 .contains(module));
-        assertEquals(revisionBeforeTick + 1, facility.getStateRevision());
         assertEquals(AutomatedFacility.BASE_ITEM_CAPACITY, facility.storedItemAmount());
     }
 

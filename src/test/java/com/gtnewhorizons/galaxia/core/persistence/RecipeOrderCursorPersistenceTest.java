@@ -3,13 +3,16 @@ package com.gtnewhorizons.galaxia.core.persistence;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
+import java.util.UUID;
 
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.core.state.AssetState;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
@@ -56,15 +59,11 @@ final class RecipeOrderCursorPersistenceTest {
         ModuleInstance macerator = createMaceratorWithOrderConfig(station);
 
         // Save
-        FacilityJsonCodec.FacilityStateJson encoded = FacilityJsonCodec.encode(station);
+        NBTTagCompound encoded = AssetState.encode(new UUID(0L, 1L), station);
 
         // Load
-        AutomatedFacility decoded = new AutomatedFacility(
-            ASSET_ID,
-            CelestialObjectId.MARS,
-            CelestialAsset.Kind.AUTOMATED_STATION,
-            Buildable.Status.OPERATIONAL);
-        FacilityJsonCodec.decode(decoded, encoded);
+        AutomatedFacility decoded = (AutomatedFacility) AssetState.decode(encoded)
+            .asset();
 
         // Verify
         assertEquals(

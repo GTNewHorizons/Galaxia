@@ -90,58 +90,50 @@ final class FacilityInventoryContractTest {
         assertThrows(IllegalArgumentException.class, () -> facility.insert(item, -1L));
         assertThrows(IllegalArgumentException.class, () -> facility.extract(item, -1L));
         assertEquals(0L, facility.itemAmount(item));
-        assertEquals(0, facility.getStateRevision());
     }
 
     @Test
-    void changedTransfersAdvanceRevisionOnceAndNoOpsDoNot() {
+    void changedTransfersMutateInventoryAndNoOpsDoNot() {
         AutomatedFacility facility = facility();
         ItemStackWrapper item = ItemStackWrapper.of(new ItemStack(Items.diamond));
 
         assertEquals(0L, facility.insert(item, 0L));
         assertEquals(0L, facility.extract(item, 1L));
-        assertEquals(0, facility.getStateRevision());
 
         assertEquals(2L, facility.insert(item, 2L));
-        assertEquals(1, facility.getStateRevision());
         assertEquals(1L, facility.extract(item, 1L));
-        assertEquals(2, facility.getStateRevision());
     }
 
     @Test
-    void acceptedExchangeUsesConsumedItemCapacityAndAdvancesRevisionOnce() {
+    void acceptedExchangeUsesConsumedItemCapacity() {
         AutomatedFacility facility = facility();
         ItemStackWrapper input = ItemStackWrapper.of(new ItemStack(Items.diamond));
         ItemStackWrapper output = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
         long capacity = facility.itemCapacity();
         facility.insert(input, capacity);
-        int revisionBefore = facility.getStateRevision();
 
         assertTrue(
             facility.tryExchange(new InventoryExchange(Map.of(input, 10L), Map.of(), Map.of(output, 10L), Map.of())));
 
         assertEquals(capacity - 10L, facility.itemAmount(input));
         assertEquals(10L, facility.itemAmount(output));
-        assertEquals(revisionBefore + 1, facility.getStateRevision());
     }
 
     @Test
-    void netZeroExchangeIsAcceptedWithoutChangingInventoryOrRevision() {
+    void netZeroExchangeIsAcceptedWithoutChangingInventory() {
         AutomatedFacility facility = facility();
         ItemStackWrapper catalyst = ItemStackWrapper.of(new ItemStack(Items.diamond));
         facility.insert(catalyst, 1L);
-        int revisionBefore = facility.getStateRevision();
 
         assertTrue(
             facility
                 .tryExchange(new InventoryExchange(Map.of(catalyst, 1L), Map.of(), Map.of(catalyst, 1L), Map.of())));
 
         assertEquals(1L, facility.itemAmount(catalyst));
-        assertEquals(revisionBefore, facility.getStateRevision());
     }
 
     @Test
-    void rejectedExchangeLeavesInputsOutputsAndRevisionUnchanged() {
+    void rejectedExchangeLeavesInputsAndOutputsUnchanged() {
         AutomatedFacility facility = facility();
         ItemStackWrapper input = ItemStackWrapper.of(new ItemStack(Items.diamond));
         ItemStackWrapper blockedOutput = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
@@ -151,7 +143,6 @@ final class FacilityInventoryContractTest {
             acceptedOutput.toItemStack()
                 .getUnlocalizedName(),
             true);
-        int revisionBefore = facility.getStateRevision();
 
         assertFalse(
             facility
@@ -159,7 +150,6 @@ final class FacilityInventoryContractTest {
 
         assertEquals(4L, facility.itemAmount(input));
         assertEquals(0L, facility.itemAmount(blockedOutput));
-        assertEquals(revisionBefore, facility.getStateRevision());
     }
 
     @Test
@@ -255,7 +245,7 @@ final class FacilityInventoryContractTest {
     }
 
     @Test
-    void batchMaterialReservationMutatesInventoryAndModuleWithOneRevision() {
+    void batchMaterialReservationMutatesInventoryAndModule() {
         AutomatedFacility facility = facility();
         ItemStackWrapper iron = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
         ItemStackWrapper gold = ItemStackWrapper.of(new ItemStack(Items.gold_ingot));
@@ -263,7 +253,6 @@ final class FacilityInventoryContractTest {
         facility.insert(iron, 2L);
         facility.insert(gold, 3L);
         ModuleInstance module = operationModule(materialCost);
-        int revisionBefore = facility.getStateRevision();
 
         assertTrue(facility.tryReserveOperationMaterials(module, materialCost));
 
@@ -279,20 +268,17 @@ final class FacilityInventoryContractTest {
             module.operationOrNull()
                 .depositedResources()
                 .get(gold.toKey()));
-        assertEquals(revisionBefore + 1, facility.getStateRevision());
     }
 
     @Test
-    void freeOperationReservationDoesNotRewriteModuleOrAdvanceRevision() {
+    void freeOperationReservationDoesNotRewriteModule() {
         AutomatedFacility facility = facility();
         ModuleInstance module = operationModule(Map.of());
         ModuleOperationState operationBefore = module.operationOrNull();
-        int revisionBefore = facility.getStateRevision();
 
         assertTrue(facility.tryReserveOperationMaterials(module, Map.of()));
 
         assertEquals(operationBefore, module.operationOrNull());
-        assertEquals(revisionBefore, facility.getStateRevision());
     }
 
     @Test
@@ -365,33 +351,7 @@ final class FacilityInventoryContractTest {
 
         assertEquals(5L, facility.insert(fluid, 10L));
         assertEquals(Long.MAX_VALUE, facility.fluidAmount(fluid));
-        assertEquals(1, facility.getStateRevision());
         assertEquals(0L, facility.insert(fluid, 1L));
-        assertEquals(1, facility.getStateRevision());
-    }
-
-    @Test
-    void unchangedFilterMutationsDoNotAdvanceRevision() {
-        AutomatedFacility facility = facility();
-        String accepted = ItemStackWrapper.of(new ItemStack(Items.diamond))
-            .toItemStack()
-            .getUnlocalizedName();
-
-        facility.clearFilters(true);
-        facility.removeFilter(accepted, true);
-        assertEquals(0, facility.getStateRevision());
-
-        facility.addFilter(accepted, true);
-        assertEquals(1, facility.getStateRevision());
-        facility.addFilter(accepted, true);
-        facility.removeFilter("item.absent", true);
-        facility.setFilters(List.of(accepted), true);
-        assertEquals(1, facility.getStateRevision());
-
-        facility.clearFilters(true);
-        assertEquals(2, facility.getStateRevision());
-        facility.clearFilters(true);
-        assertEquals(2, facility.getStateRevision());
     }
 
     @Test

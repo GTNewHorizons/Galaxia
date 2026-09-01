@@ -140,7 +140,6 @@ final class ModuleMinerTest {
         ModuleInstance miner = createMiner();
         facility.addModule(miner);
         FacilityModuleSettingsSnapshot before = facility.moduleSettingsSnapshot();
-        int revisionBefore = facility.getStateRevision();
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.LeaveSettingsGroup(facility.assetId, miner.id),
@@ -148,7 +147,6 @@ final class ModuleMinerTest {
 
         assertSame(FacilityCommand.Result.UNCHANGED, result);
         assertEquals(before, facility.moduleSettingsSnapshot());
-        assertEquals(revisionBefore, facility.getStateRevision());
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.core.state.AssetState;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -28,8 +30,10 @@ import io.netty.buffer.Unpooled;
 final class AssetStateSyncTest {
 
     private static final UUID TEAM = UUID.randomUUID();
+    private static final UUID OTHER_TEAM = UUID.randomUUID();
     private static final UUID FIRST_RECIPIENT = UUID.randomUUID();
     private static final UUID SECOND_RECIPIENT = UUID.randomUUID();
+    private static final UUID OTHER_RECIPIENT = UUID.randomUUID();
 
     @BeforeAll
     static void init() {
@@ -52,6 +56,7 @@ final class AssetStateSyncTest {
         facility.setEnergyStored(100L);
         CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
         RecordingTransport transport = new RecordingTransport(facility);
+        transport.mutateAfterFirstDelivery = true;
         AssetStateSync.Server sync = new AssetStateSync.Server(transport);
 
         sync.publishInteractive(facility.assetId);
@@ -60,18 +65,14 @@ final class AssetStateSyncTest {
         assertEquals(2, transport.payloads.size());
         assertArrayEquals(transport.payloads.get(0), transport.payloads.get(1));
         assertEquals(List.of(1L, 1L), transport.publishedRevisions);
-        assertEquals(List.of(0L, 0L), transport.basePublishedRevisions);
-        assertEquals(List.of(AssetSyncPacket.FULL_SYNC, AssetSyncPacket.FULL_SYNC), transport.syncTypes);
+        assertEquals(List.of(AssetSyncPacket.STATE, AssetSyncPacket.STATE), transport.syncTypes);
 
         transport.clearDeliveries();
         facility.setEnergyStored(300L);
         sync.publishInteractive(facility.assetId);
 
         assertEquals(List.of(2L, 2L), transport.publishedRevisions);
-        assertEquals(List.of(1L, 1L), transport.basePublishedRevisions);
-        assertEquals(
-            List.of(AssetSyncPacket.STATE_REPLACEMENT, AssetSyncPacket.STATE_REPLACEMENT),
-            transport.syncTypes);
+        assertEquals(List.of(AssetSyncPacket.STATE, AssetSyncPacket.STATE), transport.syncTypes);
     }
 
     @Test
@@ -91,9 +92,9 @@ final class AssetStateSyncTest {
         transport.clearDeliveries();
         sync.publishInteractive(facility.assetId);
 
-        assertEquals(List.of(0L, 1L), transport.basePublishedRevisions);
-        assertEquals(List.of(2L, 2L), transport.publishedRevisions);
-        assertEquals(List.of(AssetSyncPacket.FULL_SYNC, AssetSyncPacket.STATE_REPLACEMENT), transport.syncTypes);
+        assertEquals(List.of(FIRST_RECIPIENT), transport.recipientIds());
+        assertEquals(List.of(1L), transport.publishedRevisions);
+        assertEquals(List.of(AssetSyncPacket.STATE), transport.syncTypes);
     }
 
     @Test
@@ -115,9 +116,8 @@ final class AssetStateSyncTest {
         sync.publishPeriodic();
 
         assertEquals(List.of(FIRST_RECIPIENT), transport.recipientIds());
-        assertEquals(List.of(0L), transport.basePublishedRevisions);
         assertEquals(List.of(1L), transport.publishedRevisions);
-        assertEquals(List.of(AssetSyncPacket.FULL_SYNC), transport.syncTypes);
+        assertEquals(List.of(AssetSyncPacket.STATE), transport.syncTypes);
     }
 
     @Test
@@ -141,7 +141,70 @@ final class AssetStateSyncTest {
     }
 
     @Test
-    void revisionGapRequestsOneFullRecoveryWithoutApplyingTheDelta() {
+    void explicitRecoveryReturnsMissedRemovalOnlyToAnEligibleRecipient() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
+        RecordingTransport serverTransport = new RecordingTransport(facility);
+        AssetStateSync.Server server = new AssetStateSync.Server(serverTransport);
+        server.publishInteractive(facility.assetId);
+
+        AssetStateSync.Client client = new AssetStateSync.Client(new RecordingClientTransport());
+        receive(client, roundTrip(serverTransport.packets.get(0)));
+        assertTrue(CelestialAssetStore.CLIENT.findAssetInternal(facility.assetId) != null);
+
+        serverTransport.clearDeliveries();
+        assertTrue(server.destroyAsset(facility.assetId));
+        serverTransport.clearDeliveries();
+
+        server.publishFullTo(OTHER_RECIPIENT, facility.assetId);
+        assertTrue(serverTransport.packets.isEmpty());
+
+        server.publishFullTo(FIRST_RECIPIENT, facility.assetId);
+        assertEquals(List.of(AssetSyncPacket.ASSET_REMOVED), serverTransport.syncTypes);
+        receive(client, roundTrip(serverTransport.packets.get(0)));
+
+        assertNull(CelestialAssetStore.CLIENT.findAssetInternal(facility.assetId));
+    }
+
+    @Test
+    void removalTombstoneRejectsDelayedOlderStateUntilStrictlyNewerStateArrives() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        RecordingClientTransport transport = new RecordingClientTransport();
+        AssetStateSync.Client client = new AssetStateSync.Client(transport);
+
+        receive(
+            client,
+            AssetSyncPacket.state(TEAM, facility)
+                .withPublishedRevision(3L));
+        receive(client, AssetSyncPacket.assetRemoved(facility.assetId, 5L));
+        facility.setEnergyStored(40L);
+        receive(
+            client,
+            AssetSyncPacket.state(TEAM, facility)
+                .withPublishedRevision(4L));
+
+        assertNull(CelestialAssetStore.CLIENT.findAssetInternal(facility.assetId));
+        assertTrue(transport.fullRequests.isEmpty());
+
+        facility.setEnergyStored(60L);
+        receive(
+            client,
+            AssetSyncPacket.state(TEAM, facility)
+                .withPublishedRevision(6L));
+        AutomatedFacility restored = (AutomatedFacility) CelestialAssetStore.CLIENT.findAssetInternal(facility.assetId);
+        assertEquals(60L, restored.getEnergyStored());
+    }
+
+    @Test
+    void newerAbsolutePublicationAppliesWithoutPredecessor() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.MARS,
@@ -171,8 +234,8 @@ final class AssetStateSyncTest {
         receive(clientSync, gap);
         receive(clientSync, gap);
 
-        assertEquals(100L, client.getEnergyStored());
-        assertEquals(List.of(facility.assetId), clientTransport.fullRequests);
+        assertEquals(300L, client.getEnergyStored());
+        assertTrue(clientTransport.fullRequests.isEmpty());
     }
 
     @Test
@@ -204,6 +267,40 @@ final class AssetStateSyncTest {
         assertSame(client, CelestialAssetStore.CLIENT.findAssetInternal(facility.assetId));
         assertEquals(250L, client.getEnergyStored());
         assertTrue(clientTransport.fullRequests.isEmpty());
+    }
+
+    @Test
+    void canonicalReplacementPreservesAssetIdentityAndClearsAbsentState() {
+        CelestialAsset.ID assetId = CelestialAsset.ID.create();
+        AutomatedFacility current = new AutomatedFacility(
+            assetId,
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        current.setEnergyStored(100L);
+        current.setFilters(List.of("ore:old"), true);
+
+        AutomatedFacility authoritative = new AutomatedFacility(
+            assetId,
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.DISABLED);
+        authoritative.setEnergyStored(250L);
+        authoritative.setDisplayName("canonical");
+
+        AssetState.Decoded decoded = AssetState.decode(AssetState.encode(TEAM, authoritative));
+        AssetState.replace(TEAM, current, decoded);
+
+        assertEquals(250L, current.getEnergyStored());
+        assertEquals("canonical", current.displayName());
+        assertEquals(Buildable.Status.DISABLED, current.status());
+        assertFalse(
+            current.filtersSnapshot()
+                .getOrDefault(true, List.of())
+                .contains("ore:old"));
+        assertTrue(
+            current.modules()
+                .isEmpty());
     }
 
     @Test
@@ -243,10 +340,10 @@ final class AssetStateSyncTest {
         private final AutomatedFacility facility;
         private final List<UUID> recipientIds = new ArrayList<>();
         private final List<byte[]> payloads = new ArrayList<>();
-        private final List<Long> basePublishedRevisions = new ArrayList<>();
         private final List<Long> publishedRevisions = new ArrayList<>();
         private final List<Byte> syncTypes = new ArrayList<>();
         private final List<AssetSyncPacket> packets = new ArrayList<>();
+        private boolean mutateAfterFirstDelivery;
 
         private RecordingTransport(AutomatedFacility facility) {
             this.facility = facility;
@@ -254,7 +351,9 @@ final class AssetStateSyncTest {
 
         @Override
         public Collection<UUID> eligibleRecipients(UUID teamId) {
-            return List.of(FIRST_RECIPIENT, SECOND_RECIPIENT);
+            if (TEAM.equals(teamId)) return List.of(FIRST_RECIPIENT, SECOND_RECIPIENT);
+            if (OTHER_TEAM.equals(teamId)) return List.of(OTHER_RECIPIENT);
+            return List.of();
         }
 
         @Override
@@ -269,11 +368,10 @@ final class AssetStateSyncTest {
             buffer.getBytes(buffer.readerIndex(), payload);
             recipientIds.add(recipientId);
             payloads.add(payload);
-            basePublishedRevisions.add(packet.basePublishedRevision());
             publishedRevisions.add(packet.publishedRevision());
             syncTypes.add(packet.syncType());
             packets.add(packet);
-            if (recipientIds.size() == 1) facility.setEnergyStored(200L);
+            if (mutateAfterFirstDelivery && recipientIds.size() == 1) facility.setEnergyStored(200L);
         }
 
         private List<UUID> recipientIds() {
@@ -283,7 +381,6 @@ final class AssetStateSyncTest {
         private void clearDeliveries() {
             recipientIds.clear();
             payloads.clear();
-            basePublishedRevisions.clear();
             publishedRevisions.clear();
             syncTypes.clear();
             packets.clear();

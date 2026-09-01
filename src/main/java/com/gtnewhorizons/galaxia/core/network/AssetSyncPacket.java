@@ -1,1199 +1,159 @@
 package com.gtnewhorizons.galaxia.core.network;
 
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
-import com.gtnewhorizons.galaxia.api.BlockPos;
+import net.minecraft.nbt.CompressedStreamTools;
+import net.minecraft.nbt.NBTSizeTracker;
+import net.minecraft.nbt.NBTTagCompound;
+
+import com.gtnewhorizons.galaxia.core.state.AssetState;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
-import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.FacilityModuleSettingsSnapshot;
-import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
-import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
-import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
-import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
-import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleDeconstructionOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduleState;
-import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
-import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
-import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
-import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
-import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
-import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
-import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
-import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleSettings;
-import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
-import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
-import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
-import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
-import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
-import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.Unpooled;
 
 final class AssetSyncPacket {
 
-    public static final byte FULL_SYNC = 0;
-    public static final byte MODULE_ADDED = 1;
-    public static final byte INVENTORY_UPDATE = 4;
-    public static final byte LOGISTICS_CONFIG_UPDATED = 6;
-    public static final byte LAYOUT_TILE_UPDATED = 8;
-    public static final byte ASSET_REMOVED = 10;
-    public static final byte FILTER_UPDATED = 13;
-    public static final byte CLEAR = 15;
-    public static final byte INVENTORY_BOUNDS_SNAPSHOT = 16;
-    public static final byte STATE_REPLACEMENT = 17;
+    static final byte STATE = 0;
+    static final byte ASSET_REMOVED = 1;
+    static final byte CLEAR = 2;
 
-    private static final int MAX_OPERATION_MAP_ENTRIES = 256;
-    private static final int MAX_INVENTORY_BOUND_SNAPSHOT_ENTRIES = 4096;
-    private static final int MAX_FACILITY_FLUID_SNAPSHOT_ENTRIES = 4096;
-    private static final int MAX_MODULE_SETTINGS_ENTRIES = 4096;
-    private static final int MAX_FLUID_NAME_BYTES = 0xFFFF;
-    static final int MAX_FULL_SYNC_DELTAS = 65_536;
-    private static final byte OPERATION_SPEC_TIER = 1;
-    private static final byte OPERATION_SPEC_HAMMER = 2;
-    private static final byte OPERATION_SPEC_MINER_FOCUS = 3;
-    private static final byte OPERATION_SPEC_DECONSTRUCTION = 4;
-
-    CelestialAsset.ID assetId;
-    byte syncType;
-
-    int stateRevision;
-    long basePublishedRevision;
-    long publishedRevision;
-
-    UUID teamId;
-    CelestialObjectKey celestialBodyKey;
-    CelestialObjectKey systemKey;
-    CelestialObjectKey planetaryAnchorBodyKey;
-    Buildable.Status assetStatus;
-    CelestialAsset.Kind assetKind;
-    String displayName;
-    long energyStored;
-    long stationFeatureSalt;
-    UpkeepSettlement.Credits upkeepCredits = UpkeepSettlement.Credits.empty();
-    Map<String, Long> facilityFluidSnapshot = Map.of();
-    SatelliteKind satelliteKind;
-
-    List<AssetSyncPacket> fullSyncDeltas;
-    FacilityModuleSettingsSnapshot moduleSettingsSnapshot;
-    Map<ModuleInstance.ID, RecipeScheduleState> recipeScheduleStates = Map.of();
-
-    int moduleIndex;
-    ModuleInstance moduleData;
-
-    @Deprecated
-    private String resourceKey;
-    InventoryKey resource;
-    long inventoryDelta;
-    Map<InventoryKey, InventoryBounds> inventoryBoundSnapshot;
-    LogisticsResourceConfig logConfig;
-
-    StationTileCoord tileCoord;
-    StationTileState tileState;
-    ModuleInstance.ID tileModuleId;
-
-    BlockPos stationControllerPos;
-
-    boolean filterItem;
-    List<String> filterItems;
+    private byte syncType;
+    private long publishedRevision;
+    private CelestialAsset.ID assetId;
+    private byte[] statePayload;
 
     public AssetSyncPacket() {}
 
-    static AssetSyncPacket fullSync(CelestialAsset state) {
-        if (state instanceof AutomatedFacility) {
-            return fullSync((AutomatedFacility) state);
-        } else if (state instanceof Station) {
-            return fullSync((Station) state);
-        } else if (state instanceof Satellite) {
-            return fullSync((Satellite) state);
-        }
-        throw new IllegalStateException("Unexpected value: " + state);
-    }
-
-    static AssetSyncPacket stateReplacement(CelestialAsset state) {
-        AssetSyncPacket packet = fullSync(state);
-        packet.syncType = STATE_REPLACEMENT;
+    static AssetSyncPacket state(UUID teamId, CelestialAsset asset) {
+        AssetSyncPacket packet = new AssetSyncPacket();
+        packet.syncType = STATE;
+        packet.assetId = asset.assetId;
+        packet.statePayload = encodeState(AssetState.encode(teamId, asset));
         return packet;
     }
 
-    static AssetSyncPacket fullSync(Station state) {
-        AssetSyncPacket pkt = new AssetSyncPacket();
-        pkt.assetId = state.assetId;
-        pkt.assetKind = state.kind;
-        pkt.syncType = FULL_SYNC;
-        pkt.stateRevision = state.getStateRevision();
-        pkt.assetStatus = state.status();
-        pkt.displayName = state.displayName();
-
-        pkt.teamId = CelestialAssetStore.getTeamId(state.assetId);
-        pkt.celestialBodyKey = state.celestialObjectKey;
-        pkt.stationControllerPos = state.getController();
-
-        pkt.fullSyncDeltas = new ArrayList<>();
-        for (Map.Entry<InventoryKey, LogisticsResourceConfig> e : state.logisticsConfig.snapshot()
-            .entrySet()) {
-            LogisticsResourceConfig cfg = e.getValue();
-            pkt.fullSyncDeltas.add(
-                logisticsConfigUpdated(
-                    state.assetId,
-                    e.getKey(),
-                    cfg.minReserve(),
-                    cfg.orderSize(),
-                    cfg.isImportEnabled(),
-                    cfg.isSupplyEnabled()));
-        }
-
-        return pkt;
-    }
-
-    static AssetSyncPacket fullSync(AutomatedFacility state) {
-        AssetSyncPacket pkt = new AssetSyncPacket();
-        pkt.assetId = state.assetId;
-        pkt.assetKind = state.kind;
-        pkt.syncType = FULL_SYNC;
-        pkt.stateRevision = state.getStateRevision();
-        pkt.assetStatus = state.status();
-        pkt.displayName = state.displayName();
-
-        pkt.teamId = CelestialAssetStore.getTeamId(state.assetId);
-        pkt.celestialBodyKey = state.celestialObjectKey;
-        pkt.systemKey = state.systemKey;
-        pkt.planetaryAnchorBodyKey = state.planetaryAnchorBodyKey;
-        pkt.energyStored = state.getEnergyStored();
-        pkt.stationFeatureSalt = state.stationFeatureSalt();
-        pkt.upkeepCredits = state.upkeepCredits();
-        pkt.facilityFluidSnapshot = state.fluidSnapshot();
-        pkt.moduleSettingsSnapshot = state.moduleSettingsSnapshot();
-        pkt.recipeScheduleStates = state.recipeScheduleStates();
-        pkt.fullSyncDeltas = automatedFacilityDeltas(state);
-
-        return pkt;
-    }
-
-    static AssetSyncPacket fullSync(Satellite state) {
-        AssetSyncPacket pkt = new AssetSyncPacket();
-        pkt.assetId = state.assetId;
-        pkt.assetKind = state.kind;
-        pkt.syncType = FULL_SYNC;
-        pkt.stateRevision = state.getStateRevision();
-        pkt.assetStatus = state.status();
-        pkt.displayName = state.displayName();
-        pkt.teamId = CelestialAssetStore.getTeamId(state.assetId);
-        pkt.celestialBodyKey = state.celestialObjectKey;
-        pkt.satelliteKind = state.satelliteKind();
-
-        return pkt;
-    }
-
-    private static List<AssetSyncPacket> automatedFacilityDeltas(AutomatedFacility state) {
-        List<AssetSyncPacket> deltas = new ArrayList<>();
-
-        List<ModuleInstance> modules = state.modules();
-        for (int i = 0; i < modules.size(); i++) {
-            deltas.add(moduleAdded(state.assetId, i, modules.get(i)));
-        }
-
-        for (Map.Entry<ItemStackWrapper, Long> e : state.itemSnapshot()
-            .entrySet()) {
-            deltas.add(inventoryUpdate(state.assetId, e.getKey(), e.getValue()));
-        }
-
-        for (Map.Entry<Boolean, List<String>> e : state.filtersSnapshot()
-            .entrySet()) {
-            deltas.add(filterUpdated(state.assetId, e.getKey(), e.getValue()));
-        }
-
-        Map<? extends InventoryKey, InventoryBounds> itemBounds = state.getBounds(true);
-        Map<? extends InventoryKey, InventoryBounds> fluidBounds = state.getBounds(false);
-        if (!itemBounds.isEmpty() || !fluidBounds.isEmpty()) {
-            deltas.add(inventoryBoundsSnapshot(state.assetId, itemBounds, fluidBounds));
-        }
-
-        for (Map.Entry<InventoryKey, LogisticsResourceConfig> e : state.logisticsConfig.snapshot()
-            .entrySet()) {
-            LogisticsResourceConfig cfg = e.getValue();
-            deltas.add(
-                logisticsConfigUpdated(
-                    state.assetId,
-                    e.getKey(),
-                    cfg.minReserve(),
-                    cfg.orderSize(),
-                    cfg.isImportEnabled(),
-                    cfg.isSupplyEnabled()));
-        }
-
-        StationLayout layout = state.stationLayout();
-        if (layout != null) {
-            for (Map.Entry<StationTileCoord, PlacedTile> e : layout.snapshot()
-                .entrySet()) {
-                deltas.add(layoutTileUpdated(state.assetId, e.getKey(), e.getValue()));
-            }
-        }
-
-        return deltas;
+    static AssetSyncPacket assetRemoved(CelestialAsset.ID assetId, long revision) {
+        AssetSyncPacket packet = new AssetSyncPacket();
+        packet.syncType = ASSET_REMOVED;
+        packet.assetId = assetId;
+        packet.publishedRevision = revision;
+        return packet;
     }
 
     static AssetSyncPacket clear() {
-        AssetSyncPacket pkt = new AssetSyncPacket();
-        pkt.syncType = CLEAR;
-        return pkt;
+        AssetSyncPacket packet = new AssetSyncPacket();
+        packet.syncType = CLEAR;
+        return packet;
     }
 
-    static AssetSyncPacket assetRemoved(CelestialAsset.ID assetId) {
-        AssetSyncPacket pkt = new AssetSyncPacket();
-        pkt.assetId = assetId;
-        pkt.syncType = ASSET_REMOVED;
-        return pkt;
+    AssetSyncPacket withPublishedRevision(long revision) {
+        AssetSyncPacket packet = new AssetSyncPacket();
+        packet.syncType = syncType;
+        packet.assetId = assetId;
+        packet.statePayload = statePayload;
+        packet.publishedRevision = revision;
+        return packet;
     }
 
-    static AssetSyncPacket moduleAdded(CelestialAsset.ID assetId, int moduleIndex, ModuleInstance module) {
-        AssetSyncPacket pkt = new AssetSyncPacket();
-        pkt.assetId = assetId;
-        pkt.syncType = MODULE_ADDED;
-        pkt.moduleIndex = moduleIndex;
-        pkt.moduleData = module;
-        return pkt;
-    }
-
-    static AssetSyncPacket inventoryUpdate(CelestialAsset.ID assetId, InventoryKey resource, long delta) {
-        AssetSyncPacket pkt = new AssetSyncPacket();
-        pkt.assetId = assetId;
-        pkt.syncType = INVENTORY_UPDATE;
-        pkt.resource = resource;
-        pkt.inventoryDelta = delta;
-        return pkt;
-    }
-
-    static AssetSyncPacket inventoryBoundsSnapshot(CelestialAsset.ID assetId,
-        Map<? extends InventoryKey, InventoryBounds> itemBounds,
-        Map<? extends InventoryKey, InventoryBounds> fluidBounds) {
-        AssetSyncPacket pkt = new AssetSyncPacket();
-        pkt.assetId = assetId;
-        pkt.syncType = INVENTORY_BOUNDS_SNAPSHOT;
-        pkt.inventoryBoundSnapshot = new LinkedHashMap<>();
-        copyInventoryBounds(pkt.inventoryBoundSnapshot, itemBounds);
-        copyInventoryBounds(pkt.inventoryBoundSnapshot, fluidBounds);
-        return pkt;
-    }
-
-    private static void copyInventoryBounds(Map<InventoryKey, InventoryBounds> target,
-        Map<? extends InventoryKey, InventoryBounds> source) {
-        for (Map.Entry<? extends InventoryKey, InventoryBounds> e : source.entrySet()) {
-            InventoryBounds bounds = e.getValue();
-            target.put(e.getKey(), new InventoryBounds(bounds.low(), bounds.upper()));
-        }
-    }
-
-    static AssetSyncPacket logisticsConfigUpdated(CelestialAsset.ID assetId, InventoryKey resource, int minReserve,
-        int orderSize, boolean importEnabled, boolean supplyEnabled) {
-        AssetSyncPacket pkt = new AssetSyncPacket();
-        pkt.assetId = assetId;
-        pkt.syncType = LOGISTICS_CONFIG_UPDATED;
-        pkt.resource = resource;
-        pkt.logConfig = new LogisticsResourceConfig(minReserve, orderSize, importEnabled, supplyEnabled);
-        return pkt;
-    }
-
-    static AssetSyncPacket layoutTileUpdated(CelestialAsset.ID assetId, StationTileCoord coord, PlacedTile tile) {
-        AssetSyncPacket pkt = new AssetSyncPacket();
-        pkt.assetId = assetId;
-        pkt.syncType = LAYOUT_TILE_UPDATED;
-        pkt.tileCoord = coord;
-        pkt.tileState = tile.state();
-        pkt.tileModuleId = tile.module() == null ? null : tile.module().id;
-        return pkt;
-    }
-
-    static AssetSyncPacket filterUpdated(CelestialAsset.ID assetId, boolean item, List<String> filters) {
-        AssetSyncPacket pkt = new AssetSyncPacket();
-        pkt.assetId = assetId;
-        pkt.syncType = FILTER_UPDATED;
-        pkt.filterItem = item;
-        pkt.filterItems = filters == null ? List.of() : filters;
-        return pkt;
+    boolean hasSameState(AssetSyncPacket other) {
+        return other != null && Arrays.equals(statePayload, other.statePayload);
     }
 
     public void toBytes(ByteBuf buf) {
+        validate();
         buf.writeByte(syncType);
-        buf.writeInt(stateRevision);
-        buf.writeLong(basePublishedRevision);
         buf.writeLong(publishedRevision);
-
-        if (syncType != CLEAR) {
-            PacketUtil.writeId(buf, assetId);
-        }
-        switch (syncType) {
-            case FULL_SYNC, STATE_REPLACEMENT -> {
-                PacketUtil.writeEnum(buf, assetKind);
-                PacketUtil.writeEnum(buf, assetStatus);
-                PacketUtil.writeString(buf, displayName == null ? "" : displayName);
-
-                switch (assetKind) {
-                    case STATION -> {
-                        PacketUtil.writeCelestialObjectKey(buf, celestialBodyKey);
-                        if (assetStatus == Buildable.Status.OPERATIONAL) {
-                            buf.writeInt(stationControllerPos.x());
-                            buf.writeInt(stationControllerPos.y());
-                            buf.writeInt(stationControllerPos.z());
-                        }
-                        buf.writeInt(fullSyncDeltas.size());
-                        for (AssetSyncPacket d : fullSyncDeltas) {
-                            buf.writeByte(d.syncType);
-                            d.writeDelta(buf);
-                        }
-                    }
-                    case AUTOMATED_OUTPOST, AUTOMATED_STATION -> {
-                        buf.writeLong(teamId.getMostSignificantBits());
-                        buf.writeLong(teamId.getLeastSignificantBits());
-                        PacketUtil.writeCelestialObjectKey(buf, celestialBodyKey);
-                        PacketUtil.writeCelestialObjectKey(buf, systemKey);
-                        PacketUtil.writeCelestialObjectKey(buf, planetaryAnchorBodyKey);
-                        buf.writeLong(energyStored);
-                        buf.writeLong(stationFeatureSalt);
-                        writeUpkeepCredits(buf, upkeepCredits);
-                        writeFacilityFluidSnapshot(buf, facilityFluidSnapshot);
-                        writeFacilityModuleSettings(buf, moduleSettingsSnapshot, fullSyncDeltas);
-                        writeFacilityRecipeScheduleStates(buf, recipeScheduleStates);
-
-                        buf.writeInt(fullSyncDeltas.size());
-                        for (AssetSyncPacket d : fullSyncDeltas) {
-                            buf.writeByte(d.syncType);
-                            d.writeDelta(buf);
-                        }
-                    }
-                    case SATELLITE -> {
-                        buf.writeLong(teamId.getMostSignificantBits());
-                        buf.writeLong(teamId.getLeastSignificantBits());
-                        PacketUtil.writeCelestialObjectKey(buf, celestialBodyKey);
-                        PacketUtil.writeEnum(buf, satelliteKind);
-                    }
-                }
-            }
-            case CLEAR, ASSET_REMOVED -> {}
-            default -> throw new IllegalStateException("Unsupported top-level asset update type: " + syncType);
-        }
+        if (syncType != CLEAR) PacketUtil.writeId(buf, assetId);
+        if (syncType == STATE) buf.writeBytes(statePayload);
     }
 
     public void fromBytes(ByteBuf buf) {
         syncType = buf.readByte();
-        stateRevision = buf.readInt();
-        basePublishedRevision = buf.readLong();
         publishedRevision = buf.readLong();
-
-        if (syncType != CLEAR) {
-            assetId = PacketUtil.readAssetId(buf);
+        if (syncType != CLEAR) assetId = PacketUtil.readAssetId(buf);
+        if (syncType == STATE) {
+            statePayload = new byte[buf.readableBytes()];
+            buf.readBytes(statePayload);
         }
+        validate();
+        if (buf.isReadable()) throw new IllegalArgumentException("Trailing asset update bytes");
+    }
+
+    private void validate() {
         switch (syncType) {
-            case FULL_SYNC, STATE_REPLACEMENT -> {
-                assetKind = PacketUtil.readEnum(buf, CelestialAsset.Kind.class);
-                assetStatus = PacketUtil.readEnum(buf, Buildable.Status.class);
-                displayName = PacketUtil.readString(buf);
-
-                switch (assetKind) {
-                    case STATION -> {
-                        celestialBodyKey = PacketUtil.readCelestialObjectKey(buf);
-                        if (assetStatus == Buildable.Status.OPERATIONAL) {
-                            stationControllerPos = new BlockPos(buf.readInt(), buf.readInt(), buf.readInt());
-                        }
-                        int count = readFullSyncDeltaCount(buf);
-                        fullSyncDeltas = new ArrayList<>(count);
-                        for (int i = 0; i < count; i++) {
-                            AssetSyncPacket d = new AssetSyncPacket();
-                            d.assetId = assetId;
-                            d.syncType = buf.readByte();
-                            d.readDelta(buf);
-                            fullSyncDeltas.add(d);
-                        }
-                    }
-                    case AUTOMATED_OUTPOST, AUTOMATED_STATION -> {
-                        teamId = new UUID(buf.readLong(), buf.readLong());
-                        celestialBodyKey = PacketUtil.readCelestialObjectKey(buf);
-                        systemKey = PacketUtil.readCelestialObjectKey(buf);
-                        planetaryAnchorBodyKey = PacketUtil.readCelestialObjectKey(buf);
-                        energyStored = buf.readLong();
-                        stationFeatureSalt = buf.readLong();
-                        upkeepCredits = readUpkeepCredits(buf);
-                        facilityFluidSnapshot = readFacilityFluidSnapshot(buf);
-                        moduleSettingsSnapshot = readFacilityModuleSettings(buf);
-                        recipeScheduleStates = readFacilityRecipeScheduleStates(buf);
-
-                        int count = readFullSyncDeltaCount(buf);
-                        fullSyncDeltas = new ArrayList<>(count);
-
-                        for (int i = 0; i < count; i++) {
-                            AssetSyncPacket d = new AssetSyncPacket();
-                            d.assetId = assetId;
-                            d.syncType = buf.readByte();
-                            d.readDelta(buf);
-                            fullSyncDeltas.add(d);
-                        }
-                    }
-                    case SATELLITE -> {
-                        teamId = new UUID(buf.readLong(), buf.readLong());
-                        celestialBodyKey = PacketUtil.readCelestialObjectKey(buf);
-                        satelliteKind = PacketUtil.readEnum(buf, SatelliteKind.class);
-                    }
+            case STATE -> {
+                if (publishedRevision < 1L || assetId == null
+                    || statePayload == null
+                    || statePayload.length < 1
+                    || statePayload.length > AssetStateFramePacket.MAX_LOGICAL_UPDATE_BYTES) {
+                    throw new IllegalArgumentException("Invalid asset state publication");
                 }
             }
-            case CLEAR, ASSET_REMOVED -> {}
-            default -> throw new IllegalArgumentException("Unsupported top-level asset update type: " + syncType);
-        }
-    }
-
-    private static int readFullSyncDeltaCount(ByteBuf buf) {
-        int count = buf.readInt();
-        if (count < 0 || count > MAX_FULL_SYNC_DELTAS || count > buf.readableBytes()) {
-            throw new IllegalArgumentException("Invalid full asset state delta count: " + count);
-        }
-        return count;
-    }
-
-    private static void writeFacilityFluidSnapshot(ByteBuf buf, Map<String, Long> snapshot) {
-        validateFacilityFluidSnapshot(snapshot);
-        PacketUtil.writeBoundedCount(
-            buf,
-            snapshot.size(),
-            "automated facility fluid snapshot entries",
-            MAX_FACILITY_FLUID_SNAPSHOT_ENTRIES);
-        for (Map.Entry<String, Long> entry : snapshot.entrySet()) {
-            PacketUtil.writeString(buf, entry.getKey());
-            buf.writeLong(entry.getValue());
-        }
-    }
-
-    private static Map<String, Long> readFacilityFluidSnapshot(ByteBuf buf) {
-        int count = PacketUtil
-            .readBoundedCount(buf, "automated facility fluid snapshot entries", MAX_FACILITY_FLUID_SNAPSHOT_ENTRIES);
-        Map<String, Long> snapshot = new LinkedHashMap<>();
-        for (int i = 0; i < count; i++) {
-            String fluidName = PacketUtil.readString(buf);
-            long amount = buf.readLong();
-            validateFacilityFluidEntry(fluidName, amount);
-            if (snapshot.put(fluidName, amount) != null) {
-                throw new IllegalStateException("Duplicate automated facility fluid: " + fluidName);
-            }
-        }
-        return snapshot;
-    }
-
-    private static void writeFacilityRecipeScheduleStates(ByteBuf buf,
-        Map<ModuleInstance.ID, RecipeScheduleState> scheduleStates) {
-        if (scheduleStates == null) throw new IllegalStateException("Missing facility recipe schedule states");
-        PacketUtil.validateBoundedCount(
-            scheduleStates.size(),
-            "facility recipe schedule states",
-            MAX_MODULE_SETTINGS_ENTRIES);
-        buf.writeInt(scheduleStates.size());
-        scheduleStates.entrySet()
-            .stream()
-            .sorted(Map.Entry.comparingByKey(Comparator.comparing(ModuleInstance.ID::toString)))
-            .forEach(entry -> {
-                PacketUtil.writeId(buf, entry.getKey());
-                buf.writeByte(
-                    entry.getValue()
-                        .orderCursor());
-                buf.writeByte(
-                    entry.getValue()
-                        .orderRemaining());
-            });
-    }
-
-    private static Map<ModuleInstance.ID, RecipeScheduleState> readFacilityRecipeScheduleStates(ByteBuf buf) {
-        int count = PacketUtil.readBoundedCount(buf, "facility recipe schedule states", MAX_MODULE_SETTINGS_ENTRIES);
-        Map<ModuleInstance.ID, RecipeScheduleState> scheduleStates = new LinkedHashMap<>();
-        for (int i = 0; i < count; i++) {
-            ModuleInstance.ID moduleId = PacketUtil.readModuleId(buf);
-            RecipeScheduleState scheduleState = new RecipeScheduleState(buf.readByte(), buf.readByte());
-            if (scheduleStates.put(moduleId, scheduleState) != null) {
-                throw new IllegalStateException("Duplicate facility recipe schedule state: " + moduleId);
-            }
-        }
-        return scheduleStates;
-    }
-
-    private static void writeFacilityModuleSettings(ByteBuf buf, FacilityModuleSettingsSnapshot snapshot,
-        List<AssetSyncPacket> deltas) {
-        if (snapshot == null) throw new IllegalStateException("Missing facility module settings snapshot");
-        Map<ModuleInstance.ID, FacilityModuleKind> kinds = new LinkedHashMap<>();
-        for (AssetSyncPacket delta : deltas) {
-            if (delta.syncType == MODULE_ADDED && delta.moduleData != null) {
-                kinds.put(delta.moduleData.id, delta.moduleData.kind());
-            }
-        }
-        PacketUtil.validateBoundedCount(
-            snapshot.privateSettings()
-                .size(),
-            "private module settings",
-            MAX_MODULE_SETTINGS_ENTRIES);
-        buf.writeInt(
-            snapshot.privateSettings()
-                .size());
-        snapshot.privateSettings()
-            .entrySet()
-            .stream()
-            .sorted(Map.Entry.comparingByKey(Comparator.comparing(ModuleInstance.ID::toString)))
-            .forEach(entry -> {
-                FacilityModuleKind kind = kinds.get(entry.getKey());
-                if (kind == null) throw new IllegalStateException("Missing module kind for settings " + entry.getKey());
-                PacketUtil.writeId(buf, entry.getKey());
-                PacketUtil.writeEnum(buf, kind);
-                writeSettingsGroupPayload(buf, kind, entry.getValue());
-            });
-
-        PacketUtil.validateBoundedCount(
-            snapshot.groups()
-                .size(),
-            "shared module settings groups",
-            MAX_MODULE_SETTINGS_ENTRIES);
-        buf.writeInt(
-            snapshot.groups()
-                .size());
-        snapshot.groups()
-            .values()
-            .stream()
-            .sorted(
-                Comparator.comparingInt(
-                    group -> group.id()
-                        .value()))
-            .forEach(group -> {
-                buf.writeInt(
-                    group.id()
-                        .value());
-                PacketUtil.writeEnum(buf, group.kind());
-                PacketUtil.writeString(buf, group.displayName());
-                writeSettingsGroupPayload(buf, group.kind(), group.settings());
-            });
-
-        PacketUtil.validateBoundedCount(
-            snapshot.membership()
-                .size(),
-            "module settings memberships",
-            MAX_MODULE_SETTINGS_ENTRIES);
-        buf.writeInt(
-            snapshot.membership()
-                .size());
-        snapshot.membership()
-            .entrySet()
-            .stream()
-            .sorted(Map.Entry.comparingByKey(Comparator.comparing(ModuleInstance.ID::toString)))
-            .forEach(entry -> {
-                PacketUtil.writeId(buf, entry.getKey());
-                buf.writeInt(
-                    entry.getValue()
-                        .value());
-            });
-    }
-
-    private static FacilityModuleSettingsSnapshot readFacilityModuleSettings(ByteBuf buf) {
-        return new FacilityModuleSettingsSnapshot(
-            readPrivateModuleSettings(buf),
-            readSharedModuleSettings(buf),
-            readModuleSettingsMembership(buf));
-    }
-
-    private static Map<ModuleInstance.ID, ModuleSettings> readPrivateModuleSettings(ByteBuf buf) {
-        int privateCount = PacketUtil.readBoundedCount(buf, "private module settings", MAX_MODULE_SETTINGS_ENTRIES);
-        Map<ModuleInstance.ID, ModuleSettings> privateSettings = new LinkedHashMap<>();
-        for (int i = 0; i < privateCount; i++) {
-            ModuleInstance.ID moduleId = PacketUtil.readModuleId(buf);
-            FacilityModuleKind kind = PacketUtil.readEnum(buf, FacilityModuleKind.class);
-            ModuleSettings settings = readSettingsGroupPayload(buf, kind, "module=" + moduleId);
-            if (privateSettings.put(moduleId, settings) != null) {
-                throw new IllegalStateException("Duplicate private module settings: " + moduleId);
-            }
-        }
-        return privateSettings;
-    }
-
-    private static Map<SettingsGroup.ID, SettingsGroup> readSharedModuleSettings(ByteBuf buf) {
-        int groupCount = PacketUtil.readBoundedCount(buf, "shared module settings groups", MAX_MODULE_SETTINGS_ENTRIES);
-        Map<SettingsGroup.ID, SettingsGroup> groups = new LinkedHashMap<>();
-        for (int i = 0; i < groupCount; i++) {
-            SettingsGroup.ID groupId = new SettingsGroup.ID(buf.readInt());
-            FacilityModuleKind kind = PacketUtil.readEnum(buf, FacilityModuleKind.class);
-            String displayName = PacketUtil.readString(buf);
-            SettingsGroup group = new SettingsGroup(
-                groupId,
-                kind,
-                displayName,
-                readSettingsGroupPayload(buf, kind, "settingsGroup=" + groupId));
-            if (groups.put(groupId, group) != null) {
-                throw new IllegalStateException("Duplicate module settings group: " + groupId);
-            }
-        }
-        return groups;
-    }
-
-    private static Map<ModuleInstance.ID, SettingsGroup.ID> readModuleSettingsMembership(ByteBuf buf) {
-        int membershipCount = PacketUtil
-            .readBoundedCount(buf, "module settings memberships", MAX_MODULE_SETTINGS_ENTRIES);
-        Map<ModuleInstance.ID, SettingsGroup.ID> membership = new LinkedHashMap<>();
-        for (int i = 0; i < membershipCount; i++) {
-            ModuleInstance.ID moduleId = PacketUtil.readModuleId(buf);
-            SettingsGroup.ID groupId = new SettingsGroup.ID(buf.readInt());
-            if (membership.put(moduleId, groupId) != null) {
-                throw new IllegalStateException("Duplicate module settings membership: " + moduleId);
-            }
-        }
-        return membership;
-    }
-
-    static void validateFacilityFluidSnapshot(Map<String, Long> snapshot) {
-        if (snapshot == null) throw new IllegalStateException("Missing automated facility fluid snapshot");
-        PacketUtil.validateBoundedCount(
-            snapshot.size(),
-            "automated facility fluid snapshot entries",
-            MAX_FACILITY_FLUID_SNAPSHOT_ENTRIES);
-        for (Map.Entry<String, Long> entry : snapshot.entrySet()) {
-            validateFacilityFluidEntry(entry.getKey(), entry.getValue());
-        }
-    }
-
-    private static void validateFacilityFluidEntry(String fluidName, Long amount) {
-        if (fluidName == null || fluidName.isBlank()
-            || fluidName.getBytes(StandardCharsets.UTF_8).length > MAX_FLUID_NAME_BYTES
-            || FluidKey.fromName(fluidName) == null) {
-            throw new IllegalStateException("Invalid automated facility fluid name: " + fluidName);
-        }
-        if (amount == null || amount <= 0L) {
-            throw new IllegalStateException("Invalid automated facility fluid amount: " + amount);
-        }
-    }
-
-    private void writeDelta(ByteBuf buf) {
-        switch (syncType) {
-            case MODULE_ADDED -> {
-                buf.writeInt(moduleIndex);
-                writeModule(buf, moduleData);
-            }
-            case INVENTORY_UPDATE -> {
-                PacketUtil.writeInventoryKey(buf, resource);
-                buf.writeLong(inventoryDelta);
-            }
-            case INVENTORY_BOUNDS_SNAPSHOT -> writeInventoryBoundsSnapshot(buf, inventoryBoundSnapshot);
-            case LOGISTICS_CONFIG_UPDATED -> {
-                PacketUtil.writeInventoryKey(buf, resource);
-                writeLogisticsConfig(buf, logConfig);
-            }
-            case LAYOUT_TILE_UPDATED -> {
-                PacketUtil.writeStationTileCoord(buf, tileCoord);
-                PacketUtil.writeEnum(buf, tileState);
-                boolean hasModule = tileModuleId != null;
-                buf.writeBoolean(hasModule);
-                if (hasModule) PacketUtil.writeId(buf, tileModuleId);
-            }
-            case FILTER_UPDATED -> {
-                buf.writeBoolean(filterItem);
-                buf.writeShort(filterItems.size());
-                for (String key : filterItems) {
-                    PacketUtil.writeString(buf, key);
+            case ASSET_REMOVED -> {
+                if (publishedRevision < 1L || assetId == null) {
+                    throw new IllegalArgumentException("Invalid asset removal publication");
                 }
             }
-            default -> throw new IllegalStateException("Unsupported full asset state delta type: " + syncType);
-        }
-    }
-
-    private void readDelta(ByteBuf buf) {
-        switch (syncType) {
-            case MODULE_ADDED -> {
-                moduleIndex = buf.readInt();
-                moduleData = readModule(buf);
-            }
-            case INVENTORY_UPDATE -> {
-                resource = PacketUtil.readInventoryKey(buf);
-                inventoryDelta = buf.readLong();
-            }
-            case INVENTORY_BOUNDS_SNAPSHOT -> inventoryBoundSnapshot = readInventoryBoundsSnapshot(buf);
-            case LOGISTICS_CONFIG_UPDATED -> {
-                resource = PacketUtil.readInventoryKey(buf);
-                logConfig = readLogisticsConfig(buf);
-            }
-            case LAYOUT_TILE_UPDATED -> {
-                tileCoord = PacketUtil.readStationTileCoord(buf);
-                tileState = PacketUtil.readEnum(buf, StationTileState.class);
-                tileModuleId = buf.readBoolean() ? PacketUtil.readModuleId(buf) : null;
-            }
-            case FILTER_UPDATED -> {
-                filterItem = buf.readBoolean();
-                int count = buf.readShort();
-                filterItems = new ArrayList<>(count);
-                for (int i = 0; i < count; i++) {
-                    filterItems.add(PacketUtil.readString(buf));
+            case CLEAR -> {
+                if (publishedRevision != 0L || assetId != null || statePayload != null) {
+                    throw new IllegalArgumentException("Invalid asset clear publication");
                 }
             }
-            default -> throw new IllegalArgumentException("Unsupported full asset state delta type: " + syncType);
+            default -> throw new IllegalArgumentException("Unknown asset update type " + syncType);
         }
     }
 
-    private static void writeModule(ByteBuf buf, ModuleInstance module) {
-        PacketUtil.writeId(buf, module.id);
-        PacketUtil.writeEnum(buf, module.kind());
-        PacketUtil.writeEnum(buf, module.status());
-        PacketUtil.writeEnum(buf, module.tier());
-        PacketUtil.writeEnum(buf, module.shape());
-        buf.writeByte(module.rotation());
-        PacketUtil.writeEnum(buf, module.priorityOverride());
-        buf.writeBoolean(module.enabled());
-        buf.writeByte(module.component() instanceof IParallelModule pm ? pm.getParallel() : 1);
-
-        StationTileCoord anchor = module.anchorOrNull();
-        buf.writeBoolean(anchor != null);
-        if (anchor != null) PacketUtil.writeStationTileCoord(buf, anchor);
-
-        switch (module.kind()) {
-            case MINER -> {}
-            case HAMMER -> {
-                ModuleHammer h = (ModuleHammer) module.component();
-                PacketUtil.writeEnum(
-                    buf,
-                    h.config()
-                        .mode());
-                buf.writeDouble(
-                    h.config()
-                        .threshold());
-                PacketUtil.writeEnum(buf, h.routePriority());
-                PacketUtil.writeEnum(buf, h.variant());
-                buf.writeLong(h.energyStored());
+    private static byte[] encodeState(NBTTagCompound state) {
+        ByteBuf buffer = Unpooled.buffer();
+        try {
+            CompressedStreamTools.write(state, new ByteBufOutputStream(buffer));
+            if (buffer.readableBytes() > AssetStateFramePacket.MAX_LOGICAL_UPDATE_BYTES) {
+                throw new IllegalArgumentException("Asset state exceeds the logical update limit");
             }
-            case POWER, GEOTHERMAL_GENERATOR -> {}
-            case STORAGE, TANK, BATTERY -> {}
-            case DEBUG_DATA_GENERATOR -> writeDebugDataGenerator(buf, module);
-            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> {}
-            default -> {}
-        }
-        writeModuleOperation(buf, module.operationOrNull());
-    }
-
-    private static ModuleInstance readModule(ByteBuf buf) {
-        ModuleInstance.ID id = PacketUtil.readModuleId(buf);
-        FacilityModuleKind kind = PacketUtil.readEnum(buf, FacilityModuleKind.class);
-        Buildable.Status status = PacketUtil.readEnum(buf, Buildable.Status.class);
-        ModuleTier tier = PacketUtil.readEnum(buf, ModuleTier.class);
-        ModuleShape shape = PacketUtil.readEnum(buf, ModuleShape.class);
-        int rotation = buf.readByte();
-        ModulePriority modulePriority = PacketUtil.readEnum(buf, ModulePriority.class);
-        boolean enabled = buf.readBoolean();
-        byte parallel = buf.readByte();
-        StationTileCoord anchor = buf.readBoolean() ? PacketUtil.readStationTileCoord(buf) : null;
-
-        ModuleInstance module = FacilityModuleRegistry.create(id, kind, anchor, shape, tier);
-        module.setRotation(rotation);
-        module.setPriorityOverride(modulePriority);
-        module.setEnabled(enabled);
-
-        switch (kind) {
-            case MINER -> {}
-            case HAMMER -> {
-                AllowShootingConfig cfg = new AllowShootingConfig(
-                    PacketUtil.readEnum(buf, AllowShootingConfig.Mode.class),
-                    buf.readDouble());
-                OrbitalTransferPlanner.RoutePriority routePriority = PacketUtil
-                    .readEnum(buf, OrbitalTransferPlanner.RoutePriority.class);
-                HammerVariant variant = PacketUtil.readEnum(buf, HammerVariant.class);
-                long energyStored = buf.readLong();
-                ModuleHammer.requireTier(variant, tier);
-                module.setComponent(new ModuleHammer(kind, cfg, routePriority, variant, 64, energyStored));
-            }
-            case POWER, GEOTHERMAL_GENERATOR -> {}
-            case STORAGE, TANK, BATTERY -> {}
-            case DEBUG_DATA_GENERATOR -> readDebugDataGenerator(buf, module);
-            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> {}
-            default -> {}
-        }
-
-        module.setOperation(readModuleOperation(buf));
-        if (module.component() instanceof IParallelModule pm) {
-            pm.setParallel(parallel);
-        }
-        module.updateStatus(status);
-        return module;
-    }
-
-    private static void writeModuleOperation(ByteBuf buf, ModuleOperationState operation) {
-        buf.writeBoolean(operation != null);
-        if (operation == null) return;
-        ModuleOperationPlan plan = operation.plan();
-        writeOperationSpec(buf, plan.spec());
-        PacketUtil.writeEnum(buf, operation.phase());
-        buf.writeInt(operation.elapsedBuildTicks());
-        buf.writeInt(plan.buildTicks());
-        writeItemAmountMap(buf, plan.materialCost());
-        writeItemAmountMap(buf, plan.completionRefundCost());
-        buf.writeInt(plan.completionRefundPercent());
-        buf.writeBoolean(plan.reserveItems());
-        buf.writeBoolean(plan.voidCompletionRefund());
-        writeStringAmountMap(buf, operation.depositedResources());
-        writeStringAmountMap(buf, operation.refundBuffer());
-    }
-
-    private static ModuleOperationState readModuleOperation(ByteBuf buf) {
-        if (!buf.readBoolean()) return null;
-        IModuleOperation spec = readOperationSpec(buf);
-        ModuleOperationPhase phase = PacketUtil.readEnum(buf, ModuleOperationPhase.class);
-        int elapsedBuildTicks = buf.readInt();
-        int buildTicks = buf.readInt();
-        Map<ItemStackWrapper, Long> materialCost = readItemAmountMap(buf);
-        Map<ItemStackWrapper, Long> completionRefundCost = readItemAmountMap(buf);
-        int completionRefundPercent = buf.readInt();
-        boolean reserveItems = buf.readBoolean();
-        boolean voidCompletionRefund = buf.readBoolean();
-        Map<String, Long> depositedResources = readStringAmountMap(buf);
-        Map<String, Long> refundBuffer = readStringAmountMap(buf);
-        ModuleOperationPlan plan = new ModuleOperationPlan(
-            spec,
-            buildTicks,
-            materialCost,
-            completionRefundCost,
-            completionRefundPercent,
-            reserveItems,
-            voidCompletionRefund);
-        return ModuleOperationState.restore(plan, phase, elapsedBuildTicks, depositedResources, refundBuffer);
-    }
-
-    private static void writeOperationSpec(ByteBuf buf, IModuleOperation spec) {
-        if (spec instanceof ModuleDeconstructionOperation) {
-            buf.writeByte(OPERATION_SPEC_DECONSTRUCTION);
-            return;
-        }
-        if (spec instanceof HammerModuleOperation hammerSpec) {
-            buf.writeByte(OPERATION_SPEC_HAMMER);
-            PacketUtil.writeEnum(buf, hammerSpec.targetTier());
-            PacketUtil.writeString(buf, hammerSpec.targetVariantKey());
-            return;
-        }
-        if (spec instanceof MinerFocusOperation minerSpec) {
-            buf.writeByte(OPERATION_SPEC_MINER_FOCUS);
-            PacketUtil.writeEnum(buf, minerSpec.targetTier());
-            PacketUtil.writeString(buf, minerSpec.targetFocusTierKey());
-            buf.writeBoolean(minerSpec.targetFocusOreKey() != null);
-            if (minerSpec.targetFocusOreKey() != null) PacketUtil.writeString(buf, minerSpec.targetFocusOreKey());
-            return;
-        }
-        if (spec instanceof ModuleTierOperation tierSpec) {
-            buf.writeByte(OPERATION_SPEC_TIER);
-            PacketUtil.writeEnum(buf, tierSpec.targetTier());
-            return;
-        }
-        throw new IllegalStateException(
-            "Unsupported module operation spec: " + spec.getClass()
-                .getName());
-    }
-
-    private static IModuleOperation readOperationSpec(ByteBuf buf) {
-        int type = buf.readUnsignedByte();
-        return switch (type) {
-            case OPERATION_SPEC_DECONSTRUCTION -> new ModuleDeconstructionOperation();
-            case OPERATION_SPEC_HAMMER -> new HammerModuleOperation(
-                PacketUtil.readEnum(buf, ModuleTier.class),
-                PacketUtil.readString(buf));
-            case OPERATION_SPEC_MINER_FOCUS -> {
-                ModuleTier targetTier = PacketUtil.readEnum(buf, ModuleTier.class);
-                String focusTierKey = PacketUtil.readString(buf);
-                String focusOreKey = buf.readBoolean() ? PacketUtil.readString(buf) : null;
-                yield new MinerFocusOperation(targetTier, focusTierKey, focusOreKey);
-            }
-            case OPERATION_SPEC_TIER -> new ModuleTierOperation(PacketUtil.readEnum(buf, ModuleTier.class));
-            default -> throw new IllegalStateException("Unknown module operation spec type: " + type);
-        };
-    }
-
-    private static void writeItemAmountMap(ByteBuf buf, Map<ItemStackWrapper, Long> amounts) {
-        buf.writeInt(amounts.size());
-        for (Map.Entry<ItemStackWrapper, Long> entry : amounts.entrySet()) {
-            PacketUtil.writeString(
-                buf,
-                entry.getKey()
-                    .toKey());
-            buf.writeLong(entry.getValue());
+            byte[] encoded = new byte[buffer.readableBytes()];
+            buffer.readBytes(encoded);
+            return encoded;
+        } catch (IOException ex) {
+            throw new IllegalArgumentException("Could not encode asset state", ex);
+        } finally {
+            buffer.release();
         }
     }
 
-    private static Map<ItemStackWrapper, Long> readItemAmountMap(ByteBuf buf) {
-        int size = readOperationMapSize(buf);
-        Map<ItemStackWrapper, Long> amounts = new LinkedHashMap<>();
-        for (int i = 0; i < size; i++) {
-            ItemStackWrapper item = ItemStackWrapper.fromKey(PacketUtil.readString(buf));
-            long amount = buf.readLong();
-            if (item != null && amount > 0L) amounts.put(item, amount);
+    private static NBTTagCompound decodeState(byte[] encoded) {
+        if (encoded == null || encoded.length < 1 || encoded.length > AssetStateFramePacket.MAX_LOGICAL_UPDATE_BYTES) {
+            throw new IllegalArgumentException("Invalid asset state size");
         }
-        return amounts;
-    }
-
-    private static void writeStringAmountMap(ByteBuf buf, Map<String, Long> amounts) {
-        buf.writeInt(amounts.size());
-        for (Map.Entry<String, Long> entry : amounts.entrySet()) {
-            PacketUtil.writeString(buf, entry.getKey());
-            buf.writeLong(entry.getValue());
+        try (ByteArrayInputStream bytes = new ByteArrayInputStream(encoded);
+            DataInputStream input = new DataInputStream(bytes)) {
+            NBTTagCompound state = CompressedStreamTools
+                .func_152456_a(input, new NBTSizeTracker(AssetStateFramePacket.MAX_LOGICAL_UPDATE_BYTES));
+            if (bytes.available() != 0) throw new IllegalArgumentException("Trailing canonical asset state bytes");
+            return state;
+        } catch (IOException | RuntimeException ex) {
+            throw new IllegalArgumentException("Invalid canonical asset state", ex);
         }
     }
-
-    private static Map<String, Long> readStringAmountMap(ByteBuf buf) {
-        int size = readOperationMapSize(buf);
-        Map<String, Long> amounts = new LinkedHashMap<>();
-        for (int i = 0; i < size; i++) {
-            String key = PacketUtil.readString(buf);
-            long amount = buf.readLong();
-            if (!key.isBlank() && amount > 0L) amounts.put(key, amount);
-        }
-        return amounts;
-    }
-
-    private static int readOperationMapSize(ByteBuf buf) {
-        int size = buf.readInt();
-        if (size < 0 || size > MAX_OPERATION_MAP_ENTRIES) {
-            throw new IllegalStateException("Invalid module operation map size: " + size);
-        }
-        return size;
-    }
-
-    private static void writeMinerSettingsPayload(ByteBuf buf, MinerSettings settings) {
-        PacketUtil.validateBoundedCount(
-            settings.blacklistedOreKeys()
-                .size(),
-            "miner blacklist",
-            MAX_MODULE_SETTINGS_ENTRIES);
-        buf.writeInt(
-            settings.blacklistedOreKeys()
-                .size());
-        for (String oreKey : settings.blacklistedOreKeys()) {
-            PacketUtil.writeString(buf, oreKey);
-        }
-    }
-
-    private static MinerSettings readMinerSettingsPayload(ByteBuf buf, String context) {
-        int count = buf.readInt();
-        if (count < 0 || count > MAX_MODULE_SETTINGS_ENTRIES) {
-            throw new IllegalStateException(
-                "Network decoded invalid miner blacklist count " + count + " for " + context);
-        }
-        Set<String> oreKeys = java.util.stream.IntStream.range(0, count)
-            .mapToObj(ignored -> PacketUtil.readString(buf))
-            .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
-        return new MinerSettings(oreKeys);
-    }
-
-    private static void writeSettingsGroupPayload(ByteBuf buf, FacilityModuleKind kind, ModuleSettings settings) {
-        if (kind == null) throw new IllegalStateException("Settings group kind must not be null");
-        if (kind == FacilityModuleKind.MINER && settings instanceof MinerSettings minerSettings) {
-            writeMinerSettingsPayload(buf, minerSettings);
-            return;
-        }
-        if (FacilityModuleRegistry.get(kind)
-            .settingsGroups() && settings instanceof RecipeModuleSettings recipeSettings) {
-            RecipeBookWireCodec.writeBook(buf, recipeSettings.book());
-            return;
-        }
-        throw new IllegalStateException("Unsupported settings group payload " + settings + " for kind " + kind);
-    }
-
-    private static ModuleSettings readSettingsGroupPayload(ByteBuf buf, FacilityModuleKind kind, String context) {
-        if (kind == null) throw new IllegalStateException("Settings group kind must not be null for " + context);
-        if (kind == FacilityModuleKind.MINER) {
-            return readMinerSettingsPayload(buf, context);
-        }
-        if (FacilityModuleRegistry.get(kind)
-            .settingsGroups()) {
-            return new RecipeModuleSettings(RecipeBookWireCodec.readBook(buf));
-        }
-        throw new IllegalStateException("Unsupported settings group kind " + kind + " for " + context);
-    }
-
-    private static void writeLogisticsConfig(ByteBuf buf, LogisticsResourceConfig cfg) {
-        buf.writeInt(cfg.minReserve());
-        buf.writeInt(cfg.orderSize());
-        buf.writeBoolean(cfg.isImportEnabled());
-        buf.writeBoolean(cfg.isSupplyEnabled());
-    }
-
-    private static LogisticsResourceConfig readLogisticsConfig(ByteBuf buf) {
-        return new LogisticsResourceConfig(buf.readInt(), buf.readInt(), buf.readBoolean(), buf.readBoolean());
-    }
-
-    private static void writeUpkeepCredits(ByteBuf buf, UpkeepSettlement.Credits credits) {
-        UpkeepSettlement.Credits safeCredits = credits == null ? UpkeepSettlement.Credits.empty() : credits;
-        writeUpkeepCreditMap(buf, safeCredits.itemCredits());
-        writeUpkeepCreditMap(buf, safeCredits.fluidCredits());
-    }
-
-    private static <T extends InventoryKey> void writeUpkeepCreditMap(ByteBuf buf, Map<T, UpkeepAmount> credits) {
-        buf.writeInt(credits.size());
-        for (Map.Entry<T, UpkeepAmount> entry : credits.entrySet()) {
-            PacketUtil.writeInventoryKey(buf, entry.getKey());
-            buf.writeLong(
-                entry.getValue()
-                    .microUnitsPerMinute());
-        }
-    }
-
-    private static UpkeepSettlement.Credits readUpkeepCredits(ByteBuf buf) {
-        Map<ItemStackWrapper, UpkeepAmount> itemCredits = new LinkedHashMap<>();
-        int itemCount = buf.readInt();
-        for (int i = 0; i < itemCount; i++) {
-            InventoryKey key = PacketUtil.readInventoryKey(buf);
-            UpkeepAmount amount = UpkeepAmount.ofMicroUnits(buf.readLong());
-            if (key instanceof ItemStackWrapper item) {
-                itemCredits.put(item, amount);
-            }
-        }
-
-        Map<FluidKey, UpkeepAmount> fluidCredits = new LinkedHashMap<>();
-        int fluidCount = buf.readInt();
-        for (int i = 0; i < fluidCount; i++) {
-            InventoryKey key = PacketUtil.readInventoryKey(buf);
-            UpkeepAmount amount = UpkeepAmount.ofMicroUnits(buf.readLong());
-            if (key instanceof FluidKey fluid) {
-                fluidCredits.put(fluid, amount);
-            }
-        }
-        return new UpkeepSettlement.Credits(itemCredits, fluidCredits);
-    }
-
-    private static void writeInventoryBoundsSnapshot(ByteBuf buf, Map<InventoryKey, InventoryBounds> bounds) {
-        int size = bounds == null ? 0 : bounds.size();
-        buf.writeInt(size);
-        if (bounds == null) return;
-        for (Map.Entry<InventoryKey, InventoryBounds> e : bounds.entrySet()) {
-            InventoryBounds value = e.getValue();
-            PacketUtil.writeInventoryKey(buf, e.getKey());
-            buf.writeLong(value.low());
-            buf.writeLong(value.upper());
-        }
-    }
-
-    private static Map<InventoryKey, InventoryBounds> readInventoryBoundsSnapshot(ByteBuf buf) {
-        int count = buf.readInt();
-        if (count < 0 || count > MAX_INVENTORY_BOUND_SNAPSHOT_ENTRIES) {
-            throw new IllegalArgumentException("Invalid inventory bounds snapshot size: " + count);
-        }
-        Map<InventoryKey, InventoryBounds> bounds = new LinkedHashMap<>();
-        for (int i = 0; i < count; i++) {
-            InventoryKey key = PacketUtil.readInventoryKey(buf);
-            long low = buf.readLong();
-            long upper = buf.readLong();
-            if (key != null) {
-                bounds.put(key, new InventoryBounds(low, upper));
-            }
-        }
-        return bounds;
-    }
-
-    private static void writeDebugDataGenerator(ByteBuf buf, ModuleInstance module) {
-        ModuleDebugDataGenerator debugGenerator = (ModuleDebugDataGenerator) module.component();
-        ModuleDebugDataGenerator.Config config = debugGenerator.config();
-        PacketUtil.writeEnum(buf, config.mode());
-        buf.writeBoolean(config.enabled());
-        PacketUtil.writeEnum(buf, config.dataType());
-        buf.writeLong(config.amountKb());
-        buf.writeInt(config.durationTicks());
-        CelestialObjectKey originBodyKey = config.originBodyKey();
-        buf.writeBoolean(originBodyKey != null);
-        if (originBodyKey != null) PacketUtil.writeCelestialObjectKey(buf, originBodyKey);
-        buf.writeInt(debugGenerator.jobProgressTicks());
-        buf.writeLong(debugGenerator.consumedDeciKb());
-        CelestialObjectKey detectedCounterpartBodyKey = debugGenerator.detectedCounterpartBodyKey();
-        buf.writeBoolean(detectedCounterpartBodyKey != null);
-        if (detectedCounterpartBodyKey != null) PacketUtil.writeCelestialObjectKey(buf, detectedCounterpartBodyKey);
-    }
-
-    private static void readDebugDataGenerator(ByteBuf buf, ModuleInstance module) {
-        if (!(module.component() instanceof ModuleDebugDataGenerator debugGenerator)) return;
-        ModuleDebugDataGenerator.Mode mode = PacketUtil.readEnum(buf, ModuleDebugDataGenerator.Mode.class);
-        boolean enabled = buf.readBoolean();
-        SatelliteDataType dataType = PacketUtil.readEnum(buf, SatelliteDataType.class);
-        long amountKb = buf.readLong();
-        int durationTicks = buf.readInt();
-        CelestialObjectKey originBodyKey = buf.readBoolean() ? PacketUtil.readCelestialObjectKey(buf) : null;
-        int jobProgressTicks = buf.readInt();
-        long consumedDeciKb = buf.readLong();
-        CelestialObjectKey detectedCounterpartBodyKey = buf.readBoolean() ? PacketUtil.readCelestialObjectKey(buf)
-            : null;
-        debugGenerator.restore(
-            new ModuleDebugDataGenerator.Config(mode, enabled, dataType, amountKb, durationTicks, originBodyKey),
-            jobProgressTicks,
-            consumedDeciKb,
-            detectedCounterpartBodyKey);
-    }
-
-    AssetSyncPacket withPublishedRevision(long baseRevision, long revision) {
-        this.basePublishedRevision = baseRevision;
-        this.publishedRevision = revision;
-        return this;
-    }
-
-    // ── Test-support: package-private accessors ──
 
     byte syncType() {
         return syncType;
-    }
-
-    int moduleIndex() {
-        return moduleIndex;
-    }
-
-    ModuleInstance moduleData() {
-        return moduleData;
-    }
-
-    StationTileCoord tileCoord() {
-        return tileCoord;
-    }
-
-    StationTileState tileState() {
-        return tileState;
-    }
-
-    ModuleInstance.ID tileModuleId() {
-        return tileModuleId;
-    }
-
-    List<AssetSyncPacket> fullSyncDeltas() {
-        return fullSyncDeltas;
-    }
-
-    int stateRevision() {
-        return stateRevision;
     }
 
     CelestialAsset.ID assetId() {
         return assetId;
     }
 
-    long basePublishedRevision() {
-        return basePublishedRevision;
-    }
-
     long publishedRevision() {
         return publishedRevision;
     }
 
+    NBTTagCompound state() {
+        return decodeState(statePayload);
+    }
 }

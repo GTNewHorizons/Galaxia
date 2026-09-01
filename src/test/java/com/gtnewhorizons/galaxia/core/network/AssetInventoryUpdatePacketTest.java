@@ -64,7 +64,6 @@ final class AssetInventoryUpdatePacketTest {
             AssetInventoryUpdatePacket.remove(station.assetId, resource)
                 .apply(TEAM, false));
         assertEquals(0L, inventory.getItemAmount(resource));
-        assertEquals(3, station.getStateRevision());
     }
 
     @Test
@@ -77,7 +76,6 @@ final class AssetInventoryUpdatePacketTest {
 
         assertFalse(packet.apply(TEAM, false));
         assertEquals(0L, inventory.getItemAmount(resource));
-        assertEquals(0, station.getStateRevision());
     }
 
     private static Station addStation(MutableInventory inventory) {

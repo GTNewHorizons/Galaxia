@@ -175,7 +175,7 @@ public final class AutomatedFacility extends CelestialAsset {
         this.stationFeatureSalt = stationFeatureSalt;
         featureModifiersByModule.clear();
         featureModifiersStationFeatureSalt = Long.MIN_VALUE;
-        markStateChanged();
+        markDirty();
     }
 
     public PlanetaryFeatureKey planetaryFeatureAt(StationTileCoord tile) {
@@ -225,7 +225,7 @@ public final class AutomatedFacility extends CelestialAsset {
         LogisticsResourceConfig updated = current.withMinReserve((int) Math.min(Integer.MAX_VALUE, amount));
         if (updated.equals(current)) return;
         logisticsConfig.set(item, updated);
-        markStateChanged();
+        markDirty();
     }
 
     public long upkeepReserve(ItemStackWrapper item) {
@@ -258,7 +258,7 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         if (updated.equals(current)) return;
         logisticsConfig.set(item, updated);
-        markStateChanged();
+        markDirty();
     }
 
     public boolean isUpkeepAutoOrderEnabled(ItemStackWrapper item) {
@@ -461,7 +461,6 @@ public final class AutomatedFacility extends CelestialAsset {
             case UNCHANGED -> FacilityCommand.Result.UNCHANGED;
             case CHANGED -> {
                 resetRecipeSchedules(outcome.affectedModuleIds());
-                bumpStateRevision();
                 markDirty();
                 yield FacilityCommand.Result.CHANGED;
             }
@@ -544,7 +543,7 @@ public final class AutomatedFacility extends CelestialAsset {
         if (configuration instanceof FacilityCommand.ConfigureDebugDataGenerator) {
             SatelliteNetworkService.refreshFacilityEndpoints(this);
         }
-        markModuleDirty(module.id);
+        markDirty();
         return FacilityCommand.Result.CHANGED;
     }
 
@@ -674,7 +673,7 @@ public final class AutomatedFacility extends CelestialAsset {
                 entry.getKey()
                     .clearOperation();
             }
-            markStateChanged();
+            markDirty();
             return FacilityCommand.Result.CHANGED;
         }
 
@@ -713,7 +712,7 @@ public final class AutomatedFacility extends CelestialAsset {
             entry.getKey()
                 .setOperation(operation);
         }
-        markStateChanged();
+        markDirty();
         return FacilityCommand.Result.CHANGED;
     }
 
@@ -732,7 +731,7 @@ public final class AutomatedFacility extends CelestialAsset {
             return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_BOUND);
         }
         LogisticStore.updateSignalsForFacility(this);
-        markStateChanged();
+        markDirty();
         return FacilityCommand.Result.CHANGED;
     }
 
@@ -742,7 +741,7 @@ public final class AutomatedFacility extends CelestialAsset {
         boolean lower = isLowerBound(command.kind());
         if (!clearBound(command.resource(), lower)) return FacilityCommand.Result.UNCHANGED;
         LogisticStore.updateSignalsForFacility(this);
-        markStateChanged();
+        markDirty();
         return FacilityCommand.Result.CHANGED;
     }
 
@@ -760,7 +759,7 @@ public final class AutomatedFacility extends CelestialAsset {
         } catch (IllegalArgumentException invalidFilters) {
             return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_FILTERS);
         }
-        markStateChanged();
+        markDirty();
         return FacilityCommand.Result.CHANGED;
     }
 
@@ -783,7 +782,7 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         logisticsConfig.set(command.resource(), updated);
         LogisticStore.updateSignalsForFacility(this);
-        markStateChanged();
+        markDirty();
         return FacilityCommand.Result.CHANGED;
     }
 
@@ -794,7 +793,7 @@ public final class AutomatedFacility extends CelestialAsset {
         if (!logisticsConfig.hasExplicit(command.resource())) return FacilityCommand.Result.UNCHANGED;
         logisticsConfig.reset(command.resource());
         LogisticStore.updateSignalsForFacility(this);
-        markStateChanged();
+        markDirty();
         return FacilityCommand.Result.CHANGED;
     }
 
@@ -867,7 +866,6 @@ public final class AutomatedFacility extends CelestialAsset {
             layout.place(module);
             layoutCache.applyMutation(MutationKind.PLACE, module.kind(), module);
         }
-        bumpStateRevision();
         markDirty();
         SatelliteNetworkService.refreshFacilityEndpoints(this);
         return FacilityCommand.Result.CHANGED;
@@ -997,7 +995,7 @@ public final class AutomatedFacility extends CelestialAsset {
             return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MODULE_OPERATION_NOT_CANCELLABLE);
         }
         operation.cancel();
-        markModuleDirty(module.id);
+        markDirty();
         return FacilityCommand.Result.CHANGED;
     }
 
@@ -1041,7 +1039,7 @@ public final class AutomatedFacility extends CelestialAsset {
             settlementCalculated = true;
         } finally {
             settlingUpkeep = false;
-            if (!settlementCalculated && upkeepInventoryChanged) markStateChanged();
+            if (!settlementCalculated && upkeepInventoryChanged) markDirty();
         }
         upkeepCredits = result.credits();
 
@@ -1060,7 +1058,7 @@ public final class AutomatedFacility extends CelestialAsset {
             }
         }
         if (upkeepInventoryChanged || !creditsBefore.equals(upkeepCredits) || moduleChanged) {
-            markStateChanged();
+            markDirty();
         }
         return result;
     }
@@ -1099,7 +1097,6 @@ public final class AutomatedFacility extends CelestialAsset {
         if (module.component() instanceof IRecipeModule) {
             recipeScheduleStates.put(module.id, RecipeScheduleState.RESET);
         }
-        bumpStateRevision();
         LOG.debug(
             "[PERSIST] addModule: added {} id={} anchor=({},{}) shape={} status={} (total={})",
             module.kind(),
@@ -1149,7 +1146,7 @@ public final class AutomatedFacility extends CelestialAsset {
             module.setOperation(
                 module.operationOrNull()
                     .withRefundBuffer(toItemKeys(returned.remaining())));
-            markModuleDirty(module.id);
+            markDirty();
             SatelliteNetworkService.refreshFacilityEndpoints(this);
         }
         return DeconstructionResult.ACCEPTED;
@@ -1161,7 +1158,6 @@ public final class AutomatedFacility extends CelestialAsset {
         recipeScheduleStates.remove(module.id);
         if (layout != null) layout.removeTileForModule(module.id);
         layoutCache.applyMutation(MutationKind.DECONSTRUCT, module.kind(), module);
-        bumpStateRevision();
         markDirty();
         SatelliteNetworkService.refreshFacilityEndpoints(this);
     }
@@ -1305,7 +1301,7 @@ public final class AutomatedFacility extends CelestialAsset {
                 Long::sum);
         }
         module.setOperation(operation.withDepositedResources(mergeAmounts(operation.depositedResources(), deposited)));
-        markModuleDirty(module.id);
+        markDirty();
         return true;
     }
 
@@ -1351,7 +1347,7 @@ public final class AutomatedFacility extends CelestialAsset {
             }
             module.setOperation(
                 operation.withDepositedResources(mergeAmounts(operation.depositedResources(), deposited)));
-            markModuleDirty(module.id);
+            markDirty();
         }
         return operationHasFullDeposit(requireOperation(module), requested);
     }
@@ -1359,7 +1355,7 @@ public final class AutomatedFacility extends CelestialAsset {
     public void cancelModuleOperation(ModuleInstance module) {
         ModuleOperationState operation = requireOperation(module);
         module.setOperation(operation.cancel());
-        markModuleDirty(module.id);
+        markDirty();
     }
 
     public void applyCreativeModuleOperation(ModuleInstance module, ModuleOperationPlan plan) {
@@ -1382,7 +1378,7 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         applyOperationTarget(module, plan);
         module.clearOperation();
-        markModuleDirty(module.id);
+        markDirty();
     }
 
     public boolean flushModuleOperationRefund(ModuleInstance module) {
@@ -1410,7 +1406,7 @@ public final class AutomatedFacility extends CelestialAsset {
         } else {
             module.setOperation(operation.finishRefunding());
         }
-        markModuleDirty(module.id);
+        markDirty();
         return true;
     }
 
@@ -1422,7 +1418,7 @@ public final class AutomatedFacility extends CelestialAsset {
             finalizeModuleRemoval(module);
         } else {
             module.setOperation(operation.withRefundBuffer(toItemKeys(returned.remaining())));
-            markModuleDirty(module.id);
+            markDirty();
         }
         return true;
     }
@@ -1481,18 +1477,12 @@ public final class AutomatedFacility extends CelestialAsset {
         return merged;
     }
 
-    public void markModuleDirty(ModuleInstance.ID id) {
-        bumpStateRevision();
-        markDirty();
-    }
-
     private void markInventoryDelta(InventoryKey item, long delta) {
         if (item == null || delta == 0L) return;
         if (settlingUpkeep) {
             upkeepInventoryChanged = true;
             return;
         }
-        bumpStateRevision();
         markDirty();
     }
 
@@ -1504,7 +1494,7 @@ public final class AutomatedFacility extends CelestialAsset {
         long clamped = Math.clamp(energyStored, 0, MAX_ENERGY);
         if (this.energyStored == clamped) return;
         this.energyStored = clamped;
-        markStateChanged();
+        markDirty();
     }
 
     public void addEnergy(long delta) {
@@ -1582,7 +1572,7 @@ public final class AutomatedFacility extends CelestialAsset {
             }
             case CANCELLED -> {
                 module.clearOperation();
-                markModuleDirty(module.id);
+                markDirty();
                 yield false;
             }
         };
@@ -1599,7 +1589,7 @@ public final class AutomatedFacility extends CelestialAsset {
         module.setOperation(
             module.operationOrNull()
                 .beginBuilding());
-        markModuleDirty(module.id);
+        markDirty();
         return true;
     }
 
@@ -1610,7 +1600,7 @@ public final class AutomatedFacility extends CelestialAsset {
             next = next.tickBuilding();
         }
         module.setOperation(next);
-        markModuleDirty(module.id);
+        markDirty();
         if (next.phase() == ModuleOperationPhase.COMPLETE) {
             applyCompletedModuleOperation(module, next);
         }
@@ -1712,7 +1702,7 @@ public final class AutomatedFacility extends CelestialAsset {
         } else {
             module.setOperation(operation.refundAfterCompletion(completionRefund));
         }
-        markModuleDirty(module.id);
+        markDirty();
     }
 
     private void applyOperationTarget(ModuleInstance module, ModuleOperationPlan plan) {
@@ -1802,7 +1792,7 @@ public final class AutomatedFacility extends CelestialAsset {
     public boolean tryExchange(InventoryExchange exchange) {
         FacilityInventory.ExchangeResult result = inventory.tryExchange(exchange, itemCapacity());
         if (result == FacilityInventory.ExchangeResult.REJECTED) return false;
-        if (result == FacilityInventory.ExchangeResult.CHANGED) markStateChanged();
+        if (result == FacilityInventory.ExchangeResult.CHANGED) markDirty();
         return true;
     }
 
@@ -1895,6 +1885,10 @@ public final class AutomatedFacility extends CelestialAsset {
         inventory.loadFluidSnapshot(snapshot);
     }
 
+    public void restoreInventory(Map<ItemStackWrapper, Long> items, Map<FluidKey, Long> fluids) {
+        inventory.restoreSnapshot(items, fluids);
+    }
+
     public void clear() {
         itemBounds.clear();
         fluidBounds.clear();
@@ -1902,11 +1896,11 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void addFilter(String key, boolean item) {
-        if (inventory.addFilter(key, item)) markStateChanged();
+        if (inventory.addFilter(key, item)) markDirty();
     }
 
     public void removeFilter(String key, boolean item) {
-        if (inventory.removeFilter(key, item)) markStateChanged();
+        if (inventory.removeFilter(key, item)) markDirty();
     }
 
     public Map<Boolean, List<String>> filtersSnapshot() {
@@ -1914,10 +1908,10 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void setFilters(List<String> filters, boolean item) {
-        if (inventory.setFilters(filters, item)) markStateChanged();
+        if (inventory.setFilters(filters, item)) markDirty();
     }
 
     public void clearFilters(boolean item) {
-        if (inventory.clearFilters(item)) markStateChanged();
+        if (inventory.clearFilters(item)) markDirty();
     }
 }

@@ -42,7 +42,7 @@ public class Station extends CelestialAsset implements IDistributedInventory {
     public void setController(BlockPos controller) {
         if (java.util.Objects.equals(this.controller, controller)) return;
         this.controller = controller;
-        markStateChanged();
+        markDirty();
     }
 
     @Override

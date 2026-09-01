@@ -29,7 +29,6 @@ final class FacilityInventoryCommandTest {
         AutomatedFacility facility = facility();
         ItemStackWrapper item = ItemStackWrapper.of(new ItemStack(Items.stick));
         FluidKey fluid = new FluidKey(new Fluid("galaxia.command_test_fluid"), null);
-        int revision = facility.getStateRevision();
 
         FacilityCommand.Result unauthorized = facility.applyCommand(
             new FacilityCommand.AdjustInventory(facility.assetId, item, FacilityCommand.InventoryAdjustment.INSERT, 5L),
@@ -47,7 +46,6 @@ final class FacilityInventoryCommandTest {
         assertEquals(FacilityCommand.Rejection.INVALID_INVENTORY_ADJUSTMENT, nonpositive.rejection());
         assertEquals(FacilityCommand.Rejection.INVALID_INVENTORY_ADJUSTMENT, missingDirection.rejection());
         assertEquals(FacilityCommand.Rejection.INVALID_RESOURCE, missingResource.rejection());
-        assertEquals(revision, facility.getStateRevision());
 
         assertSame(
             FacilityCommand.Result.CHANGED,
@@ -70,17 +68,15 @@ final class FacilityInventoryCommandTest {
 
         assertEquals(5L, facility.itemAmount(item));
         assertEquals(7L, facility.fluidAmount(fluid));
-        assertEquals(revision + 2, facility.getStateRevision());
     }
 
     @Test
-    void extractAndClearReturnNoOpWithoutRevisionWhenResourceIsEmpty() {
+    void extractAndClearReturnNoOpWhenResourceIsEmpty() {
         AutomatedFacility facility = facility();
         ItemStackWrapper item = ItemStackWrapper.of(new ItemStack(Items.stick));
         FluidKey fluid = new FluidKey(new Fluid("galaxia.command_test_clear_fluid"), null);
         facility.insert(item, 9L);
         facility.insert(fluid, 12L);
-        int revision = facility.getStateRevision();
 
         assertSame(
             FacilityCommand.Result.CHANGED,
@@ -122,7 +118,6 @@ final class FacilityInventoryCommandTest {
 
         assertEquals(0L, facility.itemAmount(item));
         assertEquals(0L, facility.fluidAmount(fluid));
-        assertEquals(revision + 3, facility.getStateRevision());
     }
 
     private static AutomatedFacility facility() {

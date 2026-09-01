@@ -63,7 +63,7 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
         if (hammer.chargeFrom(asset, charge)) {
             // This only makes sense for the facility since station save everything to nbt
             if (asset instanceof AutomatedFacility facility) {
-                facility.markModuleDirty(instance.id);
+                facility.markDirty();
             }
         }
     }
@@ -265,7 +265,7 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
 
     public boolean trySpendShotEnergy(ModuleInstance module, AutomatedFacility outpost, long amount) {
         if (!trySpendShotEnergy(amount)) return false;
-        outpost.markModuleDirty(module.id);
+        outpost.markDirty();
         return true;
     }
 

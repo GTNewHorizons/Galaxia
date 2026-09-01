@@ -191,7 +191,7 @@ final class FacilityModuleSettingsCommandTest {
     }
 
     @Test
-    void repeatedIdenticalCopyIsUnchangedWithoutRevisionBump() {
+    void repeatedIdenticalCopyIsUnchanged() {
         AutomatedFacility facility = facility();
         ModuleInstance source = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
         ModuleInstance target = addMiner(facility, moduleId(2), StationTileCoord.of(4, 0));
@@ -203,13 +203,11 @@ final class FacilityModuleSettingsCommandTest {
             List.of(target.id));
         assertSame(FacilityCommand.Result.CHANGED, facility.applyCommand(command, FacilityCommand.Authority.NONE));
         FacilityModuleSettingsSnapshot beforeRepeat = facility.moduleSettingsSnapshot();
-        int revisionBeforeRepeat = facility.getStateRevision();
 
         FacilityCommand.Result repeated = facility.applyCommand(command, FacilityCommand.Authority.NONE);
 
         assertSame(FacilityCommand.Result.UNCHANGED, repeated);
         assertEquals(beforeRepeat, facility.moduleSettingsSnapshot());
-        assertEquals(revisionBeforeRepeat, facility.getStateRevision());
     }
 
     @Test
@@ -258,7 +256,6 @@ final class FacilityModuleSettingsCommandTest {
         ModuleInstance target = addMiner(facility, moduleId(2), StationTileCoord.of(4, 0));
         ((ModuleMiner) source.component()).setFocus(MinerFocusTier.I, "ore:iron", 0);
         FacilityModuleSettingsSnapshot before = facility.moduleSettingsSnapshot();
-        int revisionBefore = facility.getStateRevision();
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.CopyModuleSettings(facility.assetId, source.id, List.of(target.id)),
@@ -266,7 +263,6 @@ final class FacilityModuleSettingsCommandTest {
 
         assertEquals(FacilityCommand.Status.REJECTED, result.status());
         assertEquals(before, facility.moduleSettingsSnapshot());
-        assertEquals(revisionBefore, facility.getStateRevision());
     }
 
     @Test
@@ -384,7 +380,6 @@ final class FacilityModuleSettingsCommandTest {
         facility.setMinerOreBlacklisted(source, "ore:iron", true);
         facility.setMinerOreBlacklisted(validTarget, "ore:copper", true);
         FacilityModuleSettingsSnapshot before = facility.moduleSettingsSnapshot();
-        int revisionBefore = facility.getStateRevision();
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.CopyModuleSettings(facility.assetId, source.id, List.of(validTarget.id, moduleId(99))),
@@ -392,7 +387,6 @@ final class FacilityModuleSettingsCommandTest {
 
         assertEquals(FacilityCommand.Status.REJECTED, result.status());
         assertEquals(before, facility.moduleSettingsSnapshot());
-        assertEquals(revisionBefore, facility.getStateRevision());
     }
 
     private static void assertExactlyOneOwner(FacilityModuleSettingsSnapshot snapshot, ModuleInstance.ID moduleId) {

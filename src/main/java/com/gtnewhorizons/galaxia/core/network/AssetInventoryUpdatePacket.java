@@ -92,7 +92,7 @@ public final class AssetInventoryUpdatePacket implements IMessage {
 
         long applied = physicalInventory.updateContents(resource, delta);
         if (applied == 0L) return false;
-        asset.bumpStateRevision();
+        asset.markDirty();
         long signedApplied = delta > 0L ? applied : -applied;
         LOG.info("[Logistics] Inventory update: {} x {} on {}", signedApplied, resource.toKey(), assetId);
         return true;

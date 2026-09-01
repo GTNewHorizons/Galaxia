@@ -51,7 +51,6 @@ final class FacilityModuleConfigurationCommandTest {
         ModuleInstance power = add(facility, FacilityModuleKind.POWER);
         ModuleHammer hammerComponent = (ModuleHammer) hammer.component();
         AllowShootingConfig config = new AllowShootingConfig(AllowShootingConfig.Mode.WHEN_DV_UNDER, 2.5);
-        int revision = facility.getStateRevision();
 
         assertSame(
             FacilityCommand.Result.CHANGED,
@@ -78,7 +77,6 @@ final class FacilityModuleConfigurationCommandTest {
         assertEquals(FacilityCommand.Rejection.INVALID_MODULE_COMPONENT, wrong.rejection());
         assertEquals(config, hammerComponent.config());
         assertEquals(OrbitalTransferPlanner.RoutePriority.PRIORITIZE_DV, hammerComponent.routePriority());
-        assertEquals(revision + 2, facility.getStateRevision());
     }
 
     @Test
@@ -87,7 +85,6 @@ final class FacilityModuleConfigurationCommandTest {
         ModuleInstance module = add(facility, FacilityModuleKind.MINER);
         ModuleMiner miner = (ModuleMiner) module.component();
         miner.setFocus(MinerFocusTier.I, "ore:iron", 15);
-        int revision = facility.getStateRevision();
 
         FacilityCommand.Result changed = facility.applyCommand(
             new FacilityCommand.SetMinerFocusOre(facility.assetId, module.id, "ore:copper"),
@@ -108,7 +105,6 @@ final class FacilityModuleConfigurationCommandTest {
         assertSame(FacilityCommand.Result.CHANGED, cleared);
         assertNull(miner.focusOreKeyOrNull());
         assertEquals(0, miner.focusAlignmentProgress());
-        assertEquals(revision + 2, facility.getStateRevision());
     }
 
     @Test
@@ -117,7 +113,6 @@ final class FacilityModuleConfigurationCommandTest {
         ModuleInstance module = add(facility, FacilityModuleKind.DEBUG_DATA_GENERATOR);
         ModuleDebugDataGenerator.Config config = ModuleDebugDataGenerator.Config
             .produce(SatelliteDataType.PROSPECTING, 50L, 10);
-        int revision = facility.getStateRevision();
 
         FacilityCommand.Result rejected = facility.applyCommand(
             new FacilityCommand.ConfigureDebugDataGenerator(facility.assetId, module.id, config),
@@ -132,15 +127,13 @@ final class FacilityModuleConfigurationCommandTest {
         assertEquals(FacilityCommand.Rejection.DEBUG_AUTHORIZATION_REQUIRED, rejected.rejection());
         assertSame(FacilityCommand.Result.CHANGED, changed);
         assertSame(FacilityCommand.Result.UNCHANGED, unchanged);
-        assertEquals(revision + 1, facility.getStateRevision());
     }
 
     @Test
-    void creativeHammerBatchCommitsAfterFullPreflightWithOneRevision() {
+    void creativeHammerBatchCommitsAfterFullPreflight() {
         AutomatedFacility facility = facility();
         ModuleInstance first = add(facility, FacilityModuleKind.HAMMER);
         ModuleInstance second = add(facility, FacilityModuleKind.HAMMER);
-        int revision = facility.getStateRevision();
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.PlanHammerUpgrade(
@@ -161,7 +154,6 @@ final class FacilityModuleConfigurationCommandTest {
             facility.modules()
                 .stream()
                 .allMatch(m -> ((ModuleHammer) m.component()).variant() == HammerVariant.BIG));
-        assertEquals(revision + 1, facility.getStateRevision());
     }
 
     @Test
@@ -171,7 +163,6 @@ final class FacilityModuleConfigurationCommandTest {
         ModuleInstance active = add(facility, FacilityModuleKind.HAMMER);
         ModuleOperationState activeOperation = waitingOperation(active);
         active.setOperation(activeOperation);
-        int revision = facility.getStateRevision();
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.PlanHammerUpgrade(
@@ -186,7 +177,6 @@ final class FacilityModuleConfigurationCommandTest {
         assertEquals(FacilityCommand.Rejection.MODULE_OPERATION_ACTIVE, result.rejection());
         assertNull(first.operationOrNull());
         assertSame(activeOperation, active.operationOrNull());
-        assertEquals(revision, facility.getStateRevision());
     }
 
     @Test
@@ -194,7 +184,6 @@ final class FacilityModuleConfigurationCommandTest {
         AutomatedFacility facility = facility();
         ModuleInstance storage = add(facility, FacilityModuleKind.STORAGE);
         ModuleInstance tank = add(facility, FacilityModuleKind.TANK);
-        int revision = facility.getStateRevision();
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.PlanTierUpgrade(facility.assetId, List.of(storage.id, tank.id), ModuleTier.EV, false),
@@ -203,7 +192,6 @@ final class FacilityModuleConfigurationCommandTest {
         assertEquals(FacilityCommand.Rejection.INVALID_MODULE_TARGETS, result.rejection());
         assertNull(storage.operationOrNull());
         assertNull(tank.operationOrNull());
-        assertEquals(revision, facility.getStateRevision());
     }
 
     @Test
@@ -212,7 +200,6 @@ final class FacilityModuleConfigurationCommandTest {
         ModuleInstance first = add(facility, FacilityModuleKind.HAMMER);
         ModuleInstance active = add(facility, FacilityModuleKind.HAMMER);
         active.setOperation(waitingOperation(active));
-        int revision = facility.getStateRevision();
 
         FacilityCommand.Result activeResult = facility.applyCommand(
             new FacilityCommand.PlanHammerUpgrade(
@@ -236,7 +223,6 @@ final class FacilityModuleConfigurationCommandTest {
         assertEquals(FacilityCommand.Rejection.MODULE_OPERATION_ACTIVE, activeResult.rejection());
         assertEquals(FacilityCommand.Rejection.INVALID_MODULE_TARGETS, duplicate.rejection());
         assertNull(first.operationOrNull());
-        assertEquals(revision, facility.getStateRevision());
     }
 
     @Test
@@ -247,7 +233,6 @@ final class FacilityModuleConfigurationCommandTest {
         Map<ItemStackWrapper, Long> aggregate = aggregateTargetCost(first, 2, ModuleTier.IV);
         ensureItemCapacity(success, aggregate);
         aggregate.forEach(success::insert);
-        int successRevision = success.getStateRevision();
         FacilityCommand command = new FacilityCommand.PlanHammerUpgrade(
             success.assetId,
             List.of(first.id, second.id),
@@ -263,7 +248,6 @@ final class FacilityModuleConfigurationCommandTest {
             success.itemSnapshot()
                 .isEmpty());
         assertTrue(first.operationOrNull() != null && second.operationOrNull() != null);
-        assertEquals(successRevision + 1, success.getStateRevision());
 
         AutomatedFacility insufficient = facility();
         ModuleInstance insufficientFirst = add(insufficient, FacilityModuleKind.HAMMER);
@@ -276,7 +260,6 @@ final class FacilityModuleConfigurationCommandTest {
         insufficientItems.put(oneKey, insufficientItems.get(oneKey) - 1L);
         insufficientItems.forEach(insufficient::insert);
         Map<ItemStackWrapper, Long> before = insufficient.itemSnapshot();
-        int insufficientRevision = insufficient.getStateRevision();
 
         FacilityCommand.Result rejected = insufficient.applyCommand(
             new FacilityCommand.PlanHammerUpgrade(
@@ -292,7 +275,6 @@ final class FacilityModuleConfigurationCommandTest {
         assertEquals(before, insufficient.itemSnapshot());
         assertNull(insufficientFirst.operationOrNull());
         assertNull(insufficientSecond.operationOrNull());
-        assertEquals(insufficientRevision, insufficient.getStateRevision());
     }
 
     @Test
@@ -301,7 +283,6 @@ final class FacilityModuleConfigurationCommandTest {
         ModuleInstance storage = add(facility, FacilityModuleKind.STORAGE);
         ModuleInstance miner = add(facility, FacilityModuleKind.MINER);
         ModuleTier storageTarget = storage.nextTier();
-        int revision = facility.getStateRevision();
 
         FacilityCommand.Result tier = facility.applyCommand(
             new FacilityCommand.PlanTierUpgrade(facility.assetId, List.of(storage.id), storageTarget, false),
@@ -320,7 +301,6 @@ final class FacilityModuleConfigurationCommandTest {
             ModuleOperationPhase.WAITING_FOR_MATERIALS,
             miner.operationOrNull()
                 .phase());
-        assertEquals(revision + 2, facility.getStateRevision());
     }
 
     private static AutomatedFacility facility() {

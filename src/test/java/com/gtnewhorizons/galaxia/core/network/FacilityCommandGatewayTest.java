@@ -102,7 +102,6 @@ final class FacilityCommandGatewayTest {
 
         assertEquals(FacilityCommand.Status.REJECTED, result.status());
         assertEquals(FacilityCommand.Rejection.NOT_AUTHORIZED, result.rejection());
-        assertEquals(0, facility.getStateRevision());
         assertEquals(0, transport.deliveryCount);
     }
 
@@ -155,7 +154,6 @@ final class FacilityCommandGatewayTest {
         AutomatedFacility facility = facility();
         ModuleInstance miner = addMiner(facility, 1);
         CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
-        long initialRevision = facility.getStateRevision();
         FacilityCommandGateway.Actor actor = actor(TEAM, TeamAction.MODIFY_MODULE);
 
         FacilityCommand.Result blacklisted = gateway
@@ -169,12 +167,11 @@ final class FacilityCommandGatewayTest {
         assertEquals(FacilityCommand.Status.CHANGED, allowed.status());
         assertEquals(FacilityCommand.Status.UNCHANGED, repeated.status());
         assertFalse(facility.isMinerOreBlacklisted(miner, "ore:iron"));
-        assertEquals(initialRevision + 2, facility.getStateRevision());
         assertEquals(2, transport.deliveryCount);
     }
 
     @Test
-    void minerBlacklistCommandPropagatesThroughSharedSettingsWithOneRevision() {
+    void minerBlacklistCommandPropagatesThroughSharedSettings() {
         AutomatedFacility facility = facility();
         ModuleInstance first = addMiner(facility, 1);
         ModuleInstance second = addMiner(facility, 2);
@@ -197,7 +194,6 @@ final class FacilityCommandGatewayTest {
                     FacilityCommand.Authority.NONE)
                 .status());
         CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
-        long initialRevision = facility.getStateRevision();
 
         FacilityCommand.Result result = gateway.execute(
             actor(TEAM, TeamAction.MODIFY_MODULE),
@@ -206,7 +202,6 @@ final class FacilityCommandGatewayTest {
         assertEquals(FacilityCommand.Status.CHANGED, result.status());
         assertTrue(facility.isMinerOreBlacklisted(first, "ore:copper"));
         assertTrue(facility.isMinerOreBlacklisted(second, "ore:copper"));
-        assertEquals(initialRevision + 1, facility.getStateRevision());
         assertEquals(1, transport.deliveryCount);
     }
 
