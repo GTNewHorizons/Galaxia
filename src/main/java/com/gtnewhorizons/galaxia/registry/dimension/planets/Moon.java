@@ -226,7 +226,7 @@ public final class Moon {
                     .crystal(Blocks.stained_glass)
                     .build())
             .terrain(terrainConfiguration)
-            .terrain3d(new ErodedHills(new TerrainModifierEntry(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.middle, TerrainModifier.WEIRDNESS.maximum), 16))
+            .terrain3d(new ErodedHills(new TerrainModifierEntry(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.upperExtreme, TerrainModifier.WEIRDNESS.maximum), 16))
             .ocean(MOON_OBSIDIAN, MOON_BASALT, 1, MOON_OBSIDIAN, 1)
             .surfaceThickness(4)
             .build();

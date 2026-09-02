@@ -17,6 +17,7 @@ public class ErodedHills implements Terrain3D {
     private int currentZ;
     private NoiseSampler3D hillNoise;
     private double[] modifierValues;
+    private boolean needsConfirmation = true;
 
     public ErodedHills(TerrainModifierEntry modifierEntry, int height) {
         this.modifierEntry = modifierEntry;
@@ -43,12 +44,16 @@ public class ErodedHills implements Terrain3D {
 
     @Override
     public boolean preparedTerrainCache(int chunkX, int chunkZ) {
+        if (needsConfirmation) {
+            needsConfirmation = false;
+            return false;
+        }
         return chunkX == currentX && chunkZ == currentZ;
     }
 
     @Override
     public int getHeight(int localX, int localZ) {
-        double localModifier = modifierValues[localX + localZ * 16];
+        double localModifier = Math.min(modifierValues[localX + localZ * 16] * 8, 1);
         if (localModifier <= 0.01) {
             return 0;
         }
