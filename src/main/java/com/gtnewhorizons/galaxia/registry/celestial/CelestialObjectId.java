@@ -14,6 +14,7 @@ public enum CelestialObjectId {
     ROMULUS("galaxia.celestial.romulus", null),
     REMUS("galaxia.celestial.remus", null),
     EGORA("galaxia.celestial.egora", null),
+    TENEBRAE("galaxia.celestial.tenebrae", DimensionEnum.TENEBRAE),
     MARS("galaxia.celestial.mars", DimensionEnum.MARS),
     MOON("galaxia.celestial.moon", DimensionEnum.MOON),
     FROZEN_BELT("galaxia.celestial.frozen_belt", DimensionEnum.FROZEN_BELT),

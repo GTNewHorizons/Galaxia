@@ -40,13 +40,12 @@ public final class HammerDispatchPlanner {
         }
     }
 
-    public static Result evaluate(AutomatedFacility supplier, ModuleInstance hammerModule, Iterable<?> assets,
-        double orbitalTime) {
-        return evaluate(supplier, hammerModule, assets, orbitalTime, null);
-    }
+    private record CandidateEvaluation(Result result, boolean routeInspected) {}
 
-    public static Result evaluate(AutomatedFacility supplier, ModuleInstance hammerModule, Iterable<?> assets,
-        double orbitalTime, UUID routeProfileTeamId) {
+    private record RouteInspection(OrbitalTransferPlanner.TransferRoute route, boolean inspected) {}
+
+    public static Result inspect(AutomatedFacility supplier, ModuleInstance hammerModule, Iterable<?> assets,
+        double orbitalTime) {
         if (supplier == null || hammerModule == null || !(hammerModule.component() instanceof ModuleHammer hammer)) {
             return new Result(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, 0L, 0L, 0L, 0, null);
         }
@@ -117,7 +116,7 @@ public final class HammerDispatchPlanner {
                     hammerModule,
                     hammer,
                     orbitalTime,
-                    routeProfileTeamId);
+                    null).result();
                 if (result.code() == HammerDispatchStatus.Code.READY) return result;
                 bestBlockedStatus = prefer(result, bestBlockedStatus);
             }
@@ -128,7 +127,7 @@ public final class HammerDispatchPlanner {
         return Result.simple(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, hammer);
     }
 
-    public static Result evaluate(CelestialAsset supplier, ModuleInstance hammerModule, CelestialAsset requester,
+    public static Result planDispatch(CelestialAsset supplier, ModuleInstance hammerModule, CelestialAsset requester,
         ItemStackWrapper resource, double orbitalTime, UUID routeProfileTeamId) {
         if (supplier == null || requester == null
             || resource == null
@@ -177,7 +176,7 @@ public final class HammerDispatchPlanner {
             return destinationLacksPackageSpace(hammer, freeCapacity, requesterCfg.orderSize());
         }
 
-        return evaluateCandidateFor(
+        CandidateEvaluation evaluation = evaluateCandidateFor(
             supplier,
             requester,
             resource,
@@ -188,6 +187,8 @@ public final class HammerDispatchPlanner {
             hammer,
             orbitalTime,
             routeProfileTeamId);
+        if (evaluation.routeInspected()) hammer.markRouteProbeAttempted();
+        return evaluation.result();
     }
 
     private static Result evaluateCandidate(CelestialAsset supplier, CelestialAsset requester,
@@ -318,16 +319,16 @@ public final class HammerDispatchPlanner {
         return 0L;
     }
 
-    private static Result evaluateCandidateFor(CelestialAsset supplier, CelestialAsset requester,
+    private static CandidateEvaluation evaluateCandidateFor(CelestialAsset supplier, CelestialAsset requester,
         ItemStackWrapper resource, long availableSurplus, long requestedAmount, LogisticsResourceConfig requesterCfg,
         ModuleInstance hammerModule, ModuleHammer hammer, double orbitalTime, UUID routeProfileTeamId) {
         boolean sameBody = supplier.celestialObjectKey.equals(requester.celestialObjectKey);
         CelestialObject root = GalaxiaCelestialAPI.getPrimaryRoot();
         boolean shareAnchor = sameBody || GalaxiaCelestialAPI
             .sharesPlanetaryAnchor(root, supplier.celestialObjectKey, requester.celestialObjectKey);
-        OrbitalTransferPlanner.TransferRoute route = sameBody ? null
-            : routeBetween(root, supplier, requester, orbitalTime, hammer, routeProfileTeamId);
-        return evaluateCandidate(
+        RouteInspection routeInspection = sameBody ? new RouteInspection(null, false)
+            : inspectRoute(root, supplier, requester, orbitalTime, hammer, routeProfileTeamId);
+        Result result = evaluateCandidate(
             supplier,
             requester,
             resource,
@@ -338,22 +339,23 @@ public final class HammerDispatchPlanner {
             availableSurplus,
             requestedAmount,
             requesterCfg.orderSize(),
-            route);
+            routeInspection.route());
+        return new CandidateEvaluation(result, routeInspection.inspected());
     }
 
-    private static OrbitalTransferPlanner.TransferRoute routeBetween(CelestialObject root, CelestialAsset supplier,
-        CelestialAsset requester, double orbitalTime, ModuleHammer hammer, UUID routeProfileTeamId) {
+    private static RouteInspection inspectRoute(CelestialObject root, CelestialAsset supplier, CelestialAsset requester,
+        double orbitalTime, ModuleHammer hammer, UUID routeProfileTeamId) {
         CelestialObject srcBody = GalaxiaCelestialAPI.findBodyByKey(root, supplier.celestialObjectKey);
         CelestialObject dstBody = GalaxiaCelestialAPI.findBodyByKey(root, requester.celestialObjectKey);
         CelestialObject attractor = srcBody != null ? GalaxiaCelestialAPI.findStar(root, srcBody) : null;
-        if (srcBody == null || dstBody == null || attractor == null) return null;
+        if (srcBody == null || dstBody == null || attractor == null) return new RouteInspection(null, false);
 
-        hammer.markRouteProbeAttempted();
         boolean shouldProfile = routeProfileTeamId != null;
         long routeStartNanos = shouldProfile ? System.nanoTime() : 0L;
         try {
-            return OrbitalTransferPlanner
+            OrbitalTransferPlanner.TransferRoute route = OrbitalTransferPlanner
                 .computeRoute(root, attractor, srcBody, dstBody, orbitalTime, hammer.routePriority());
+            return new RouteInspection(route, true);
         } finally {
             if (shouldProfile) {
                 HammerTrajectoryLoadTracker

@@ -400,7 +400,7 @@ final class LogisticStoreTest {
 class TestLogisticsAsset extends CelestialAsset {
 
     TestLogisticsAsset(Kind kind) {
-        super(ID.create(), CelestialObjectId.OVERWORLD, kind, Buildable.Status.OPERATIONAL, null);
+        super(ID.create(), CelestialObjectId.OVERWORLD, kind, Buildable.Status.OPERATIONAL);
     }
 
     @Override

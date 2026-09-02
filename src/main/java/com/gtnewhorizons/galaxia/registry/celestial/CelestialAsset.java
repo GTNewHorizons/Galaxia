@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -33,7 +32,6 @@ public abstract class CelestialAsset implements Buildable {
 
     private Status status;
     private final Map<ItemStack, Long> requiredResources;
-    private Map<ItemStack, Long> constructionInventory;
     private String displayName;
 
     private boolean dirty = true;
@@ -89,8 +87,7 @@ public abstract class CelestialAsset implements Buildable {
         };
     }
 
-    protected CelestialAsset(ID assetId, CelestialObjectKey celestialObjectKey, Kind kind, Status status,
-        Map<ItemStack, Long> constructionInventory) {
+    protected CelestialAsset(ID assetId, CelestialObjectKey celestialObjectKey, Kind kind, Status status) {
 
         this.assetId = assetId;
         this.status = status;
@@ -106,14 +103,12 @@ public abstract class CelestialAsset implements Buildable {
         this.kind = kind;
         this.location = Location.ofKind(kind);
         this.requiredResources = defaultRequirements(kind);
-        this.constructionInventory = constructionInventory == null ? Collections.emptyMap() : constructionInventory;
         this.logisticsConfig = new LogisticsConfiguration();
     }
 
-    protected CelestialAsset(ID assetId, CelestialObjectId celestialObjectId, Kind kind, Status status,
-        Map<ItemStack, Long> constructionInventory) {
+    protected CelestialAsset(ID assetId, CelestialObjectId celestialObjectId, Kind kind, Status status) {
 
-        this(assetId, CelestialObjectKey.registered(celestialObjectId), kind, status, constructionInventory);
+        this(assetId, CelestialObjectKey.registered(celestialObjectId), kind, status);
     }
 
     private static String displayName(CelestialObjectKey key) {
@@ -137,27 +132,9 @@ public abstract class CelestialAsset implements Buildable {
         return requiredResources;
     }
 
-    public Map<ItemStack, Long> constructionInventory() {
-        return constructionInventory;
-    }
-
     @Override
     public Map<ItemStack, Long> getRequiredResources() {
         return requiredResources;
-    }
-
-    @Override
-    public Map<ItemStack, Long> getConstructionInventory() {
-        return constructionInventory;
-    }
-
-    @Override
-    public void clearConsumedResources() {
-        constructionInventory.clear();
-    }
-
-    public void setConstructionInventory(Map<ItemStack, Long> constructionInventory) {
-        this.constructionInventory = constructionInventory;
     }
 
     @Override
@@ -180,13 +157,6 @@ public abstract class CelestialAsset implements Buildable {
         if (Objects.equals(this.displayName, displayName)) return;
         this.displayName = displayName;
         markDirty();
-    }
-
-    public boolean hasStoredConstructionResources() {
-        for (Long amount : constructionInventory.values()) {
-            if (amount > 0) return true;
-        }
-        return false;
     }
 
     public boolean hasMiningCapability() {

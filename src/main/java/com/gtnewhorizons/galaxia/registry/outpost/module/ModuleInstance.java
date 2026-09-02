@@ -70,8 +70,9 @@ public class ModuleInstance implements Buildable {
 
         this.ticks += 1;
         if (this.ticks >= this.cooldownTicks()) {
-            this.definition.applyBehavior()
-                .accept(this, asset);
+            if (component != null) {
+                component.runCycle(this, asset);
+            }
             this.setTicks(this.ticks - this.cooldownTicks());
         }
     }

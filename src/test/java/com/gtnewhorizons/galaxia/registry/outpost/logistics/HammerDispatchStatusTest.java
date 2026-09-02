@@ -75,7 +75,7 @@ final class HammerDispatchStatusTest {
         ModuleInstance hammerModule = hammerModule(hammer);
 
         HammerDispatchPlanner.Result result = HammerDispatchPlanner
-            .evaluate(supplier, hammerModule, List.of(requester), 0.0);
+            .inspect(supplier, hammerModule, List.of(requester), 0.0);
 
         assertEquals(HammerDispatchStatus.Code.READY, result.code());
         HammerDispatchPlanner.Plan plan = result.plan();
@@ -103,7 +103,7 @@ final class HammerDispatchStatusTest {
         ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 1_000_000L);
 
         HammerDispatchPlanner.Result result = HammerDispatchPlanner
-            .evaluate(supplier, hammerModule(hammer), requester, resource, 0.0, null);
+            .planDispatch(supplier, hammerModule(hammer), requester, resource, 0.0, null);
 
         assertEquals(HammerDispatchStatus.Code.READY, result.code());
         assertEquals(64L, result.sendAmount());
@@ -120,7 +120,7 @@ final class HammerDispatchStatusTest {
         ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 0L);
 
         HammerDispatchPlanner.Result result = HammerDispatchPlanner
-            .evaluate(supplier, hammerModule(hammer), requester, resource, 0.0, null);
+            .planDispatch(supplier, hammerModule(hammer), requester, resource, 0.0, null);
 
         assertEquals(HammerDispatchStatus.Code.NEED_ENERGY, result.code());
         assertEquals(10_000L, result.requiredEnergy());
@@ -141,9 +141,26 @@ final class HammerDispatchStatusTest {
             1_000_000L);
 
         HammerDispatchPlanner.Result result = HammerDispatchPlanner
-            .evaluate(supplier, hammerModule(hammer), requester, resource, 0.0, null);
+            .planDispatch(supplier, hammerModule(hammer), requester, resource, 0.0, null);
 
         assertEquals(HammerDispatchStatus.Code.BLOCKED_BY_DV_LIMIT, result.code());
+    }
+
+    @Test
+    void statusInspectionDoesNotConsumeRouteProbeCooldown() {
+        AutomatedFacility supplier = facility(CelestialObjectId.FROZEN_BELT);
+        AutomatedFacility requester = facility(CelestialObjectId.OVERWORLD);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
+        requester.logisticsConfig.set(resource, new LogisticsResourceConfig(64, 64, true, false));
+        supplier.insert(resource, 64);
+        ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BIG, 1_000_000L);
+
+        HammerDispatchStatus.Status status = HammerDispatchStatus
+            .evaluate(supplier, hammerModule(hammer), List.of(requester), 0.0);
+
+        assertEquals(HammerDispatchStatus.Code.READY, status.code());
+        assertEquals(0, hammer.routeProbeCooldownTicks());
     }
 
     @Test
@@ -157,7 +174,7 @@ final class HammerDispatchStatusTest {
         ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 1_000_000L);
 
         HammerDispatchPlanner.Result result = HammerDispatchPlanner
-            .evaluate(supplier, hammerModule(hammer), requester, resource, 0.0, null);
+            .planDispatch(supplier, hammerModule(hammer), requester, resource, 0.0, null);
 
         assertEquals(HammerDispatchStatus.Code.READY, result.code());
         assertEquals(16L, result.sendAmount());
@@ -176,7 +193,7 @@ final class HammerDispatchStatusTest {
         ModuleInstance hammerModule = hammerModule(hammer);
 
         HammerDispatchPlanner.Result result = HammerDispatchPlanner
-            .evaluate(supplier, hammerModule, requester, resource, 0.0, null);
+            .planDispatch(supplier, hammerModule, requester, resource, 0.0, null);
 
         assertEquals(HammerDispatchStatus.Code.READY, result.code());
         assertEquals(16L, result.sendAmount());
@@ -206,7 +223,7 @@ final class HammerDispatchStatusTest {
         ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 1_000_000L);
 
         HammerDispatchPlanner.Result result = HammerDispatchPlanner
-            .evaluate(supplier, hammerModule(hammer), List.of(requester), 0.0);
+            .inspect(supplier, hammerModule(hammer), List.of(requester), 0.0);
 
         assertEquals(HammerDispatchStatus.Code.DESTINATION_CAPACITY_BLOCKED, result.code());
         assertEquals(64L, result.sendAmount());
@@ -227,7 +244,7 @@ final class HammerDispatchStatusTest {
         ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 1_000_000L);
 
         HammerDispatchPlanner.Result result = HammerDispatchPlanner
-            .evaluate(supplier, hammerModule(hammer), List.of(fullRequester, validRequester), 0.0);
+            .inspect(supplier, hammerModule(hammer), List.of(fullRequester, validRequester), 0.0);
 
         assertEquals(HammerDispatchStatus.Code.READY, result.code());
         HammerDispatchPlanner.Plan plan = result.plan();
@@ -282,7 +299,7 @@ final class HammerDispatchStatusTest {
         requester.logisticsConfig.set(resource, new LogisticsResourceConfig(64, 64, true, false));
 
         HammerDispatchPlanner.Result result = HammerDispatchPlanner
-            .evaluate(supplier, selectedCannon.getModuleInstance(), requester, resource, 0.0, null);
+            .planDispatch(supplier, selectedCannon.getModuleInstance(), requester, resource, 0.0, null);
 
         assertEquals(HammerDispatchStatus.Code.READY, result.code());
         assertEquals(32L, result.sendAmount());
@@ -316,7 +333,7 @@ final class HammerDispatchStatusTest {
         supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
         requester.logisticsConfig.set(resource, new LogisticsResourceConfig(64, 64, true, false));
         supplier.insert(resource, 64);
-        return HammerDispatchPlanner.evaluate(
+        return HammerDispatchPlanner.planDispatch(
             supplier,
             hammerModule(hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 1_000_000L)),
             requester,

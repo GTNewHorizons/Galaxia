@@ -173,7 +173,6 @@ final class UpkeepLedgerTest {
         FacilityModuleRegistry.Definition definition = new FacilityModuleRegistry.Definition(
             FacilityModuleKind.POWER,
             Map.of(ModuleTier.NONE, tierData),
-            (module, facility) -> {},
             TestTieredModule::new,
             List.<ModulePanelAction>of(),
             false,
@@ -199,7 +198,6 @@ final class UpkeepLedgerTest {
         FacilityModuleRegistry.Definition definition = new FacilityModuleRegistry.Definition(
             FacilityModuleKind.MAINTENANCE_BAY,
             Map.of(ModuleTier.NONE, tierData),
-            (module, facility) -> {},
             TestTieredModule::new,
             List.<ModulePanelAction>of(),
             false,

@@ -201,7 +201,7 @@ public class CelestialEventHandler {
             }
 
             HammerDispatchPlanner.Result result = HammerDispatchPlanner
-                .evaluate(supplier, module, requester, resource, orbitalTime, routeProfileTeamId);
+                .planDispatch(supplier, module, requester, resource, orbitalTime, routeProfileTeamId);
 
             HammerDispatchPlanner.Plan plan = result.plan();
             if (result.code() != HammerDispatchStatus.Code.READY || plan == null) continue;

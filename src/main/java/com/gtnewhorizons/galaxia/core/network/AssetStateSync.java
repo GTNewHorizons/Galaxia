@@ -12,18 +12,24 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.LongSupplier;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.state.AssetState;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -111,7 +117,7 @@ public final class AssetStateSync {
                         .syncType() != AssetSyncPacket.ASSET_REMOVED)
                     return;
             } else {
-                AssetSyncPacket candidate = AssetSyncPacket.state(teamId, asset);
+                AssetSyncPacket candidate = statePacket(teamId, asset);
                 if (publication == null || !candidate.hasSameState(publication.packet())) {
                     long revision = nextRevision(publication);
                     publication = new Publication(teamId, candidate.withPublishedRevision(revision));
@@ -154,7 +160,7 @@ public final class AssetStateSync {
 
         private void publish(UUID teamId, CelestialAsset asset) {
             CelestialAsset.ID assetId = asset.assetId;
-            AssetSyncPacket candidate = AssetSyncPacket.state(teamId, asset);
+            AssetSyncPacket candidate = statePacket(teamId, asset);
             Publication previous = publications.get(assetId);
             boolean changed = previous == null || !candidate.hasSameState(previous.packet());
             Publication publication = previous;
@@ -186,6 +192,16 @@ public final class AssetStateSync {
                 : Math.incrementExact(
                     publication.packet()
                         .publishedRevision());
+        }
+
+        private static AssetSyncPacket statePacket(UUID teamId, CelestialAsset asset) {
+            Map<ModuleInstance.ID, HammerDispatchStatus.Status> statuses = asset instanceof AutomatedFacility facility
+                ? HammerDispatchStatus.inspectAll(
+                    facility,
+                    CelestialAssetStore.SERVER.listAssetsInSystemInternal(asset.systemKey, teamId),
+                    GalaxiaCelestialAPI.currentOrbitalTime())
+                : Map.of();
+            return AssetSyncPacket.state(teamId, asset, statuses);
         }
 
         public void resetRecipient(UUID recipientId) {
@@ -254,6 +270,7 @@ public final class AssetStateSync {
         private final ClientTransport transport;
         private final LongSupplier currentTimeMillis;
         private final Map<CelestialAsset.ID, Long> appliedRevisions = new LinkedHashMap<>();
+        private final Map<CelestialAsset.ID, Map<ModuleInstance.ID, HammerDispatchStatus.Status>> hammerStatuses = new LinkedHashMap<>();
         private final Set<CelestialAsset.ID> pendingRecovery = new LinkedHashSet<>();
         private final Map<AssemblyKey, Assembly> assemblies = new LinkedHashMap<>();
         private long pendingAssemblyBytes;
@@ -310,9 +327,16 @@ public final class AssetStateSync {
 
         public void clear() {
             appliedRevisions.clear();
+            hammerStatuses.clear();
             pendingRecovery.clear();
             assemblies.clear();
             pendingAssemblyBytes = 0L;
+        }
+
+        public @Nullable HammerDispatchStatus.Status hammerDispatchStatus(CelestialAsset.ID assetId,
+            ModuleInstance.ID moduleId) {
+            Map<ModuleInstance.ID, HammerDispatchStatus.Status> assetStatuses = hammerStatuses.get(assetId);
+            return assetStatuses == null ? null : assetStatuses.get(moduleId);
         }
 
         private void apply(AssetSyncPacket packet) {
@@ -331,6 +355,7 @@ public final class AssetStateSync {
             long appliedRevision = appliedRevisions.getOrDefault(packet.assetId(), NO_PUBLICATION);
             if (packet.publishedRevision() <= appliedRevision) return;
             CelestialAssetStore.CLIENT.destroyAssetInternal(packet.assetId());
+            hammerStatuses.remove(packet.assetId());
             appliedRevisions.put(packet.assetId(), packet.publishedRevision());
             pendingRecovery.remove(packet.assetId());
         }
@@ -339,7 +364,8 @@ public final class AssetStateSync {
             long appliedRevision = appliedRevisions.getOrDefault(packet.assetId(), NO_PUBLICATION);
             if (packet.publishedRevision() <= appliedRevision) return;
             try {
-                AssetState.Decoded decoded = AssetState.decode(packet.state());
+                AssetSyncPacket.StatePayload state = packet.state();
+                AssetState.Decoded decoded = AssetState.decode(state.assetState());
                 if (!packet.assetId()
                     .equals(decoded.asset().assetId)) {
                     throw new IllegalArgumentException("Framed asset ID does not match canonical state");
@@ -351,6 +377,7 @@ public final class AssetStateSync {
                     AssetState
                         .replace(CelestialAssetStore.CLIENT.getTeamIdInternal(packet.assetId()), current, decoded);
                 }
+                hammerStatuses.put(packet.assetId(), state.hammerStatuses());
                 appliedRevisions.put(packet.assetId(), packet.publishedRevision());
                 pendingRecovery.remove(packet.assetId());
             } catch (RuntimeException ex) {

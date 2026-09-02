@@ -18,9 +18,6 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
-import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
-import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 import cpw.mods.fml.relauncher.Side;
@@ -61,64 +58,6 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
             activeClientHandler = null;
         }
         super.dispose();
-    }
-
-    @SideOnly(Side.CLIENT)
-    public static boolean sendRegisterAsset(CelestialObjectKey bodyKey, CelestialAsset asset) {
-        AssetCreateRequestPacket packet = switch (asset.kind) {
-            case STATION -> AssetCreateRequestPacket
-                .createStation(bodyKey, asset.displayName(), ((Station) asset).getController());
-            case AUTOMATED_OUTPOST, AUTOMATED_STATION -> AssetCreateRequestPacket
-                .createFacility(bodyKey, asset.displayName(), asset.kind, asset.isOperational());
-            case SATELLITE -> AssetCreateRequestPacket
-                .createSatellite(bodyKey, ((Satellite) asset).satelliteKind(), asset.isOperational());
-        };
-        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
-        return true;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public static boolean sendUpdateAsset(AssetUpdatePacket packet) {
-        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
-        return true;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public static boolean sendDestroyAsset(CelestialAsset.ID assetId) {
-        return sendUpdateAsset(AssetUpdatePacket.create(assetId, AssetUpdatePacket.Action.DESTROY_ASSET));
-    }
-
-    @SideOnly(Side.CLIENT)
-    public static boolean sendRenameAsset(CelestialAsset.ID assetId, String displayName) {
-        return sendUpdateAsset(AssetUpdatePacket.rename(assetId, displayName));
-    }
-
-    @SideOnly(Side.CLIENT)
-    public static boolean sendCancelConstruction(CelestialAsset.ID assetId) {
-        return sendUpdateAsset(AssetUpdatePacket.create(assetId, AssetUpdatePacket.Action.CANCEL_CONSTRUCTION));
-    }
-
-    @SideOnly(Side.CLIENT)
-    public static boolean sendStartDeconstruction(CelestialAsset.ID assetId) {
-        return sendUpdateAsset(AssetUpdatePacket.create(assetId, AssetUpdatePacket.Action.START_DECONSTRUCTION));
-    }
-
-    @SideOnly(Side.CLIENT)
-    public static boolean sendFacilityCommand(FacilityCommand command) {
-        Galaxia.GALAXIA_NETWORK.sendToServer(new FacilityCommandPacket(command));
-        return true;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public static boolean sendInventoryUpdate(AssetInventoryUpdatePacket packet) {
-        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
-        return true;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public static boolean sendLogisticsConfig(LogisticsConfigUpdatePacket packet) {
-        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
-        return true;
     }
 
     @SideOnly(Side.CLIENT)

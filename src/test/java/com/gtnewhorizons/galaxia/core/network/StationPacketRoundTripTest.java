@@ -1,7 +1,9 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -10,12 +12,16 @@ import java.util.Map;
 import java.util.UUID;
 
 import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.core.state.AssetState;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -70,15 +76,15 @@ final class StationPacketRoundTripTest {
         AssetStateSync.Client client = new AssetStateSync.Client(assetId -> {});
         receive(
             client,
-            AssetSyncPacket.state(TEAM, station)
+            AssetSyncPacket.state(TEAM, station, Map.of())
                 .withPublishedRevision(1L));
         receive(
             client,
-            AssetSyncPacket.state(TEAM, satellite)
+            AssetSyncPacket.state(TEAM, satellite, Map.of())
                 .withPublishedRevision(1L));
         receive(
             client,
-            AssetSyncPacket.state(TEAM, facility)
+            AssetSyncPacket.state(TEAM, facility, Map.of())
                 .withPublishedRevision(1L));
 
         Station decodedStation = (Station) CelestialAssetStore.CLIENT.findAssetInternal(station.assetId);
@@ -108,6 +114,37 @@ final class StationPacketRoundTripTest {
     }
 
     @Test
+    void canonicalStateStoresPlannedConstructionOnlyForAutomatedFacilities() {
+        Station station = new Station(CelestialAsset.ID.create(), CelestialObjectId.MOON, Buildable.Status.OPERATIONAL);
+        AutomatedFacility facility = facility();
+        facility.setConstructionInventory(Map.of(new ItemStack(Items.iron_ingot), 7L));
+
+        NBTTagCompound stationState = AssetState.encode(TEAM, station);
+        NBTTagCompound facilityState = AssetState.encode(TEAM, facility);
+
+        assertFalse(stationState.hasKey("construction"));
+        assertFalse(facilityState.hasKey("construction"));
+        assertTrue(
+            facilityState.getCompoundTag("facility")
+                .hasKey("construction"));
+        AutomatedFacility decoded = (AutomatedFacility) AssetState.decode(facilityState)
+            .asset();
+        assertEquals(
+            1,
+            decoded.getConstructionInventory()
+                .size());
+        Map.Entry<ItemStack, Long> restored = decoded.getConstructionInventory()
+            .entrySet()
+            .iterator()
+            .next();
+        assertEquals(ItemStackWrapper.of(new ItemStack(Items.iron_ingot)), ItemStackWrapper.of(restored.getKey()));
+        assertEquals(7L, restored.getValue());
+
+        stationState.setTag("construction", new NBTTagList());
+        assertThrows(IllegalStateException.class, () -> AssetState.decode(stationState));
+    }
+
+    @Test
     void canonicalNetworkReplacementPreservesAssetIdentityAndClearsAbsentState() {
         AutomatedFacility current = facility();
         current.setFilters(List.of("ore:old"), true);
@@ -122,7 +159,7 @@ final class StationPacketRoundTripTest {
         AssetStateSync.Client client = new AssetStateSync.Client(assetId -> {});
         receive(
             client,
-            AssetSyncPacket.state(TEAM, authoritative)
+            AssetSyncPacket.state(TEAM, authoritative, Map.of())
                 .withPublishedRevision(2L));
 
         assertSame(current, CelestialAssetStore.CLIENT.findAssetInternal(current.assetId));
@@ -153,7 +190,7 @@ final class StationPacketRoundTripTest {
         wrongBody.setEnergyStored(200L);
         receive(
             client,
-            AssetSyncPacket.state(TEAM, wrongBody)
+            AssetSyncPacket.state(TEAM, wrongBody, Map.of())
                 .withPublishedRevision(2L));
 
         AutomatedFacility wrongTeam = new AutomatedFacility(
@@ -164,7 +201,7 @@ final class StationPacketRoundTripTest {
         wrongTeam.setEnergyStored(300L);
         receive(
             client,
-            AssetSyncPacket.state(UUID.randomUUID(), wrongTeam)
+            AssetSyncPacket.state(UUID.randomUUID(), wrongTeam, Map.of())
                 .withPublishedRevision(3L));
 
         assertSame(current, CelestialAssetStore.CLIENT.findAssetInternal(current.assetId));
@@ -192,7 +229,7 @@ final class StationPacketRoundTripTest {
 
         receive(
             client,
-            AssetSyncPacket.state(TEAM, incompatible)
+            AssetSyncPacket.state(TEAM, incompatible, Map.of())
                 .withPublishedRevision(2L));
 
         assertSame(current, CelestialAssetStore.CLIENT.findAssetInternal(assetId));

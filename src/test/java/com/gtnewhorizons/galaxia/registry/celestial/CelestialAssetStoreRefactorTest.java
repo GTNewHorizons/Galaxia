@@ -12,10 +12,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 /**
@@ -41,6 +46,8 @@ final class CelestialAssetStoreRefactorTest {
     void serverAndClientAreSeparateInstances() {
         CelestialAssetStore server = CelestialAssetStore.SERVER;
         CelestialAssetStore client = CelestialAssetStore.CLIENT;
+        server.clearInternal();
+        client.clearInternal();
 
         assertNotNull(server);
         assertNotNull(client);
@@ -197,6 +204,32 @@ final class CelestialAssetStoreRefactorTest {
         store.registerAssetInternal(TEAM_A, construction);
         assertTrue(store.cancelConstructionInternal(construction.assetId));
         assertNull(store.findAssetInternal(construction.assetId));
+    }
+
+    @Test
+    void constructionResourcesBelongOnlyToAutomatedFacilities() {
+        CelestialAssetStore store = newStore();
+        Station station = new Station(CelestialAsset.ID.create(), BODY_1, Buildable.Status.CONSTRUCTION_SITE);
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            BODY_1,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.CONSTRUCTION_SITE);
+        store.registerAssetInternal(TEAM_A, station);
+        store.registerAssetInternal(TEAM_A, facility);
+
+        ItemStack resource = new ItemStack(Items.iron_ingot);
+        assertFalse(store.addToConstructionInventoryInternal(station.assetId, resource, 1L));
+        assertEquals(Buildable.Status.CONSTRUCTION_SITE, station.status());
+        assertTrue(
+            station.getConstructionInventory()
+                .isEmpty());
+
+        assertTrue(store.addToConstructionInventoryInternal(facility.assetId, resource, 1L));
+        assertEquals(
+            1L,
+            facility.getConstructionInventory()
+                .get(resource));
     }
 
     @Test

@@ -4,13 +4,11 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
@@ -28,9 +26,8 @@ public class FacilityModuleRegistry {
     private static final int GEOTHERMAL_GENERATION_EU_PER_TICK = 8192;
 
     public record Definition(FacilityModuleKind kind, Map<ModuleTier, ModuleTierData> tierData,
-        BiConsumer<ModuleInstance, CelestialAsset> applyBehavior, Supplier<IModuleComponent> defaultFactory,
-        List<ModulePanelAction> panelActions, boolean settingsGroups, List<ModuleAreaEffect> areaEffects,
-        Recipe recipe) {
+        Supplier<IModuleComponent> defaultFactory, List<ModulePanelAction> panelActions, boolean settingsGroups,
+        List<ModuleAreaEffect> areaEffects, Recipe recipe) {
 
         public record Recipe(String mapName, List<String> additionalNeiTransferIdents) {
 
@@ -72,7 +69,6 @@ public class FacilityModuleRegistry {
                 .cooldown(1)
                 .cost(Map.of(new ItemStack(Items.redstone), 8L, new ItemStack(Items.gold_ingot), 64L))
                 .build(),
-            (instance, outpost) -> {},
             TieredModuleComponent::new);
         register(
             FacilityModuleKind.GEOTHERMAL_GENERATOR,
@@ -82,7 +78,6 @@ public class FacilityModuleRegistry {
                     .cooldown(1)
                     .cost(Map.of(new ItemStack(Items.redstone), 64L, new ItemStack(Items.gold_ingot), 64L))
                     .build()),
-            (instance, outpost) -> {},
             TieredModuleComponent::new);
         builder(FacilityModuleKind.MINER)
             .tiers(
@@ -106,7 +101,6 @@ public class FacilityModuleRegistry {
             .configButton()
             .upgradeButton()
             .settingsGroups()
-            .behavior(ModuleMiner::generateOre)
             .factory(() -> new ModuleMiner(FacilityModuleKind.MINER))
             .register();
         builder(FacilityModuleKind.HAMMER)
@@ -150,7 +144,6 @@ public class FacilityModuleRegistry {
                     .build())
             .configButton()
             .upgradeButton()
-            .behavior(ModuleHammer::charge)
             .factory(
                 () -> new ModuleHammer(
                     FacilityModuleKind.HAMMER,
@@ -182,7 +175,6 @@ public class FacilityModuleRegistry {
                     16384L,
                     Map.of(new ItemStack(Items.iron_ingot), 256L, new ItemStack(Items.gold_ingot), 512L))
                 .build(),
-            (instance, outpost) -> {},
             TieredModuleComponent::new);
         register(
             FacilityModuleKind.TANK,
@@ -206,7 +198,6 @@ public class FacilityModuleRegistry {
                     256_000L,
                     Map.of(new ItemStack(Items.iron_ingot), 256L, new ItemStack(Items.gold_ingot), 512L))
                 .build(),
-            (instance, outpost) -> {},
             TieredModuleComponent::new);
         register(
             FacilityModuleKind.BATTERY,
@@ -230,7 +221,6 @@ public class FacilityModuleRegistry {
                     1_600_000L,
                     Map.of(new ItemStack(Items.redstone), 256L, new ItemStack(Items.gold_ingot), 512L))
                 .build(),
-            (instance, outpost) -> {},
             TieredModuleComponent::new);
         register(
             FacilityModuleKind.MAINTENANCE_BAY,
@@ -238,7 +228,6 @@ public class FacilityModuleRegistry {
                 .cooldown(100)
                 .cost(Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 16L))
                 .build(),
-            (instance, outpost) -> {},
             () -> new IModuleComponent() {},
             List.of(ModuleAreaEffect.adjacentUpkeepMultiplier(80)));
         builder(FacilityModuleKind.DEBUG_DATA_GENERATOR).tiers(
@@ -250,7 +239,6 @@ public class FacilityModuleRegistry {
                     .cost(Map.of(new ItemStack(Items.redstone), 1L))
                     .build()))
             .configButton()
-            .behavior((instance, outpost) -> {})
             .factory(ModuleDebugDataGenerator::new)
             .register();
 
@@ -307,30 +295,20 @@ public class FacilityModuleRegistry {
     }
 
     public static void register(FacilityModuleKind kind, ModuleTierData data,
-        BiConsumer<ModuleInstance, CelestialAsset> tickFunction, Supplier<IModuleComponent> defaultFactory) {
-        register(kind, data, tickFunction, defaultFactory, List.of());
+        Supplier<IModuleComponent> defaultFactory) {
+        register(kind, data, defaultFactory, List.of());
     }
 
-    public static void register(FacilityModuleKind kind, ModuleTierData data,
-        BiConsumer<ModuleInstance, CelestialAsset> tickFunction, Supplier<IModuleComponent> defaultFactory,
+    public static void register(FacilityModuleKind kind, ModuleTierData data, Supplier<IModuleComponent> defaultFactory,
         List<ModuleAreaEffect> areaEffects) {
         DEFINITIONS.put(
             kind,
-            new Definition(
-                kind,
-                Map.of(ModuleTier.NONE, data),
-                tickFunction,
-                defaultFactory,
-                List.of(),
-                false,
-                areaEffects,
-                null));
+            new Definition(kind, Map.of(ModuleTier.NONE, data), defaultFactory, List.of(), false, areaEffects, null));
     }
 
     public static void register(FacilityModuleKind kind, Map<ModuleTier, ModuleTierData> tierData,
-        BiConsumer<ModuleInstance, CelestialAsset> tickFunction, Supplier<IModuleComponent> defaultFactory) {
-        DEFINITIONS
-            .put(kind, new Definition(kind, tierData, tickFunction, defaultFactory, List.of(), false, List.of(), null));
+        Supplier<IModuleComponent> defaultFactory) {
+        DEFINITIONS.put(kind, new Definition(kind, tierData, defaultFactory, List.of(), false, List.of(), null));
     }
 
     public static ModuleDefinitionBuilder builder(FacilityModuleKind kind) {
@@ -468,7 +446,6 @@ public class FacilityModuleRegistry {
 
         private final FacilityModuleKind kind;
         private Map<ModuleTier, ModuleTierData> tierData;
-        private BiConsumer<ModuleInstance, CelestialAsset> behavior;
         private Supplier<IModuleComponent> factory;
         private final java.util.ArrayList<ModulePanelAction> panelActions = new java.util.ArrayList<>();
         private final java.util.ArrayList<ModuleAreaEffect> areaEffects = new java.util.ArrayList<>();
@@ -489,11 +466,6 @@ public class FacilityModuleRegistry {
 
         public ModuleDefinitionBuilder tiers(Map<ModuleTier, ModuleTierData> tierData) {
             this.tierData = tierData;
-            return this;
-        }
-
-        public ModuleDefinitionBuilder behavior(BiConsumer<ModuleInstance, CelestialAsset> behavior) {
-            this.behavior = behavior;
             return this;
         }
 
@@ -518,7 +490,6 @@ public class FacilityModuleRegistry {
         public ModuleDefinitionBuilder recipe(String mapName, String... additionalNeiTransferIdents) {
             this.recipe = new Definition.Recipe(mapName, List.of(additionalNeiTransferIdents));
             this.settingsGroups = true;
-            this.behavior = ProductionModuleHelper::execute;
             this.factory = ProductionModuleHelper::createRuntime;
             return configButton();
         }
@@ -545,15 +516,11 @@ public class FacilityModuleRegistry {
             if (tierData == null) {
                 throw new IllegalStateException("ModuleDefinitionBuilder: tierData must be set for " + kind);
             }
-            if (behavior == null) {
-                throw new IllegalStateException("ModuleDefinitionBuilder: behavior must be set for " + kind);
-            }
             if (factory == null) {
                 throw new IllegalStateException("ModuleDefinitionBuilder: factory must be set for " + kind);
             }
-            DEFINITIONS.put(
-                kind,
-                new Definition(kind, tierData, behavior, factory, panelActions, settingsGroups, areaEffects, recipe));
+            DEFINITIONS
+                .put(kind, new Definition(kind, tierData, factory, panelActions, settingsGroups, areaEffects, recipe));
         }
     }
 }

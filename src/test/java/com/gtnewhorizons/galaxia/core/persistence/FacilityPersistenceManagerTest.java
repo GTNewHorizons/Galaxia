@@ -230,18 +230,18 @@ final class FacilityPersistenceManagerTest {
         assertEquals(teamId, facilityState.teamId());
         assertEquals(
             1,
-            decoded.constructionInventory()
+            decoded.getConstructionInventory()
                 .size());
         assertEquals(
             ItemStackWrapper.of(assetItem),
             ItemStackWrapper.of(
-                decoded.constructionInventory()
+                decoded.getConstructionInventory()
                     .keySet()
                     .iterator()
                     .next()));
         assertEquals(
             9L,
-            decoded.constructionInventory()
+            decoded.getConstructionInventory()
                 .values()
                 .iterator()
                 .next());
@@ -1116,7 +1116,7 @@ final class FacilityPersistenceManagerTest {
         Path dataDir = tempDir.resolve("galaxiadata");
         Files.createDirectories(dataDir);
         NBTTagCompound root = new NBTTagCompound();
-        root.setInteger("version", 1);
+        root.setInteger("version", 2);
         NBTTagList list = new NBTTagList();
         assets.forEach(list::appendTag);
         root.setTag("assets", list);

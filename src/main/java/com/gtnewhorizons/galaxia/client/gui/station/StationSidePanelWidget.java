@@ -196,13 +196,10 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     }
 
     private void refreshHammerDispatchStatus() {
-        AutomatedFacility facility = resolveFacility(assetId);
-        StationTileCoord selected = map == null ? null : map.selection();
-        StationLayout layout = facility == null ? null : facility.stationLayout();
-        PlacedTile tile = layout == null || selected == null ? null : layout.get(selected);
-        ModuleInstance module = tile == null ? null : tile.module();
-        hammerDispatchStatus = module != null && module.component() instanceof ModuleHammer ? HammerDispatchStatus
-            .evaluate(facility, module, CelestialClient.allOutposts(), CelestialClient.currentOrbitalTime()) : null;
+        ModuleInstance module = selectedModule();
+        hammerDispatchStatus = module != null && module.component() instanceof ModuleHammer
+            ? CelestialClient.hammerDispatchStatus(assetId, module.id)
+            : null;
     }
 
     private ButtonWidget<?> createDestroyButton() {

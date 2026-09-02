@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.core.network;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -10,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -22,6 +24,13 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 import io.netty.buffer.ByteBuf;
@@ -54,6 +63,13 @@ final class AssetStateSyncTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         facility.setEnergyStored(100L);
+        ModuleInstance hammer = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.HAMMER,
+            StationTileCoord.of(0, 0),
+            ModuleShape.SINGLE,
+            ModuleTier.IV);
+        facility.addModule(hammer);
         CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
         RecordingTransport transport = new RecordingTransport(facility);
         transport.mutateAfterFirstDelivery = true;
@@ -66,6 +82,18 @@ final class AssetStateSyncTest {
         assertArrayEquals(transport.payloads.get(0), transport.payloads.get(1));
         assertEquals(List.of(1L, 1L), transport.publishedRevisions);
         assertEquals(List.of(AssetSyncPacket.STATE, AssetSyncPacket.STATE), transport.syncTypes);
+        Map<ModuleInstance.ID, HammerDispatchStatus.Status> statuses = transport.packets.get(0)
+            .state()
+            .hammerStatuses();
+        assertEquals(1, statuses.size());
+        HammerDispatchStatus.Status status = statuses.get(hammer.id);
+        assertNotNull(status);
+        assertEquals(HammerDispatchStatus.Code.NO_EXPORT_CONFIG, status.code());
+        assertEquals(
+            statuses,
+            transport.packets.get(1)
+                .state()
+                .hammerStatuses());
 
         transport.clearDeliveries();
         facility.setEnergyStored(300L);
@@ -182,13 +210,13 @@ final class AssetStateSyncTest {
 
         receive(
             client,
-            AssetSyncPacket.state(TEAM, facility)
+            AssetSyncPacket.state(TEAM, facility, Map.of())
                 .withPublishedRevision(3L));
         receive(client, AssetSyncPacket.assetRemoved(facility.assetId, 5L));
         facility.setEnergyStored(40L);
         receive(
             client,
-            AssetSyncPacket.state(TEAM, facility)
+            AssetSyncPacket.state(TEAM, facility, Map.of())
                 .withPublishedRevision(4L));
 
         assertNull(CelestialAssetStore.CLIENT.findAssetInternal(facility.assetId));
@@ -197,10 +225,55 @@ final class AssetStateSyncTest {
         facility.setEnergyStored(60L);
         receive(
             client,
-            AssetSyncPacket.state(TEAM, facility)
+            AssetSyncPacket.state(TEAM, facility, Map.of())
                 .withPublishedRevision(6L));
         AutomatedFacility restored = (AutomatedFacility) CelestialAssetStore.CLIENT.findAssetInternal(facility.assetId);
         assertEquals(60L, restored.getEnergyStored());
+    }
+
+    @Test
+    void hammerStatusSnapshotFollowsAcceptedAssetRevisionAndClientLifecycle() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ModuleInstance.ID moduleId = ModuleInstance.ID.create();
+        HammerDispatchStatus.Status ready = new HammerDispatchStatus.Status(
+            HammerDispatchStatus.Code.READY,
+            10L,
+            20L,
+            30L,
+            40);
+        RecordingClientTransport transport = new RecordingClientTransport();
+        AssetStateSync.Client client = new AssetStateSync.Client(transport);
+
+        AssetSyncPacket statusRevision = AssetSyncPacket.state(TEAM, facility, Map.of(moduleId, ready))
+            .withPublishedRevision(1L);
+        receive(client, statusRevision);
+        assertEquals(ready, client.hammerDispatchStatus(facility.assetId, moduleId));
+
+        receive(
+            client,
+            AssetSyncPacket.state(TEAM, facility, Map.of())
+                .withPublishedRevision(2L));
+        receive(client, statusRevision);
+        assertNull(client.hammerDispatchStatus(facility.assetId, moduleId));
+
+        receive(
+            client,
+            AssetSyncPacket.state(TEAM, facility, Map.of(moduleId, ready))
+                .withPublishedRevision(3L));
+        receive(client, AssetSyncPacket.assetRemoved(facility.assetId, 4L));
+        assertNull(client.hammerDispatchStatus(facility.assetId, moduleId));
+
+        receive(
+            client,
+            AssetSyncPacket.state(TEAM, facility, Map.of(moduleId, ready))
+                .withPublishedRevision(5L));
+        client.clear();
+        assertNull(client.hammerDispatchStatus(facility.assetId, moduleId));
+        assertTrue(transport.fullRequests.isEmpty());
     }
 
     @Test

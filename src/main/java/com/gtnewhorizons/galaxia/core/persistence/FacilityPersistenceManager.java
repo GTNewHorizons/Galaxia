@@ -58,6 +58,7 @@ public final class FacilityPersistenceManager {
     private static final String TASKS_FILE = "_tasks.json";
     private static final String KNOWLEDGE_FILE = "_celestial_knowledge.json";
     private static final String DISCOVERY_FILE = "_discovery.json";
+    private static final int ASSET_FORMAT_VERSION = 2;
 
     private final Gson gson;
     private File worldSaveDir;
@@ -151,7 +152,7 @@ public final class FacilityPersistenceManager {
             throw new IllegalStateException("[PERSIST] LOAD FAILED: read error " + file + ": " + e.getMessage(), e);
         }
         requireType(root, "version", NBT.TAG_INT, "assets");
-        if (root.getInteger("version") != 1) {
+        if (root.getInteger("version") != ASSET_FORMAT_VERSION) {
             throw new IllegalStateException(
                 "[PERSIST] assets.version: unsupported format " + root.getInteger("version"));
         }
@@ -175,7 +176,7 @@ public final class FacilityPersistenceManager {
 
     private void saveAssets(File file) {
         NBTTagCompound root = new NBTTagCompound();
-        root.setInteger("version", 1);
+        root.setInteger("version", ASSET_FORMAT_VERSION);
         NBTTagList assets = new NBTTagList();
         for (CelestialAsset asset : CelestialAssetStore.allAssets()) {
             assets.appendTag(AssetState.encode(CelestialAssetStore.getTeamId(asset.assetId), asset));

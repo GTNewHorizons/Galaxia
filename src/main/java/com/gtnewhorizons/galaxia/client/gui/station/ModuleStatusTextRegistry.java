@@ -197,7 +197,7 @@ final class ModuleStatusTextRegistry {
         return "Operation pending";
     }
 
-    private static String hammerDispatchStatusLine(HammerDispatchStatus.Status status) {
+    static String hammerDispatchStatusLine(HammerDispatchStatus.Status status) {
         return switch (status.code()) {
             case READY -> "Dispatch: ready";
             case WAITING_FOR_REQUEST -> "Dispatch: waiting for request";

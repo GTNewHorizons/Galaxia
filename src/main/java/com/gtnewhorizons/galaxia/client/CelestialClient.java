@@ -11,15 +11,17 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.client.Minecraft;
 import net.minecraftforge.event.world.WorldEvent;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
+import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.network.AssetCreateRequestPacket;
 import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetStateSync;
+import com.gtnewhorizons.galaxia.core.network.AssetUpdatePacket;
+import com.gtnewhorizons.galaxia.core.network.FacilityCommandPacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
-import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.core.profiling.HammerTrajectoryLoadSample;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID;
@@ -33,6 +35,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscovery
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
+import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
@@ -43,6 +46,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
@@ -58,10 +62,12 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
+import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkClientState;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
+import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
@@ -79,28 +85,18 @@ public final class CelestialClient {
         return CelestialAssetStore.CLIENT.findAssetInternal(assetId);
     }
 
+    public static @Nullable HammerDispatchStatus.Status hammerDispatchStatus(@Nullable CelestialAsset.ID assetId,
+        @Nullable ModuleInstance.ID moduleId) {
+        return assetId == null || moduleId == null ? null
+            : AssetStateSync.CLIENT.hammerDispatchStatus(assetId, moduleId);
+    }
+
     public static List<CelestialAsset> getState(CelestialObjectKey celestialObjectKey) {
         return CelestialAssetStore.CLIENT.getStateInternal(GTTeamsCompat.getTeam(), celestialObjectKey);
     }
 
     public static List<CelestialAsset> allAssets() {
         return CelestialAssetStore.CLIENT.allAssetsInternal();
-    }
-
-    public static List<AutomatedFacility> allOutposts() {
-        List<AutomatedFacility> result = new ArrayList<>();
-        for (CelestialAsset asset : CelestialAssetStore.CLIENT.allAssetsInternal()) {
-            if (asset instanceof AutomatedFacility af) {
-                result.add(af);
-            }
-        }
-        return result;
-    }
-
-    public static double currentOrbitalTime() {
-        Minecraft minecraft = Minecraft.getMinecraft();
-        return minecraft.theWorld == null ? 0.0
-            : minecraft.theWorld.getTotalWorldTime() * OrbitalTransferPlanner.OSU_PER_TICK;
     }
 
     // ── Logistics mirror ──
@@ -116,8 +112,25 @@ public final class CelestialClient {
 
     private CelestialClient() {}
 
+    private static boolean sendToServer(IMessage packet) {
+        Galaxia.GALAXIA_NETWORK.sendToServer(packet);
+        return true;
+    }
+
+    private static boolean submit(FacilityCommand command) {
+        return sendToServer(new FacilityCommandPacket(command));
+    }
+
     public static boolean registerAsset(CelestialObjectKey celestialObjectKey, CelestialAsset asset) {
-        return StarmapActionSyncHandler.sendRegisterAsset(celestialObjectKey, asset);
+        AssetCreateRequestPacket packet = switch (asset.kind) {
+            case STATION -> AssetCreateRequestPacket
+                .createStation(celestialObjectKey, asset.displayName(), ((Station) asset).getController());
+            case AUTOMATED_OUTPOST, AUTOMATED_STATION -> AssetCreateRequestPacket
+                .createFacility(celestialObjectKey, asset.displayName(), asset.kind, asset.isOperational());
+            case SATELLITE -> AssetCreateRequestPacket
+                .createSatellite(celestialObjectKey, ((Satellite) asset).satelliteKind(), asset.isOperational());
+        };
+        return sendToServer(packet);
     }
 
     public static void add(CelestialAsset state) {
@@ -178,7 +191,7 @@ public final class CelestialClient {
         @Nullable HammerVariant hammerVariant, MinerFocusTier minerFocusTier,
         @Nullable SettingsGroup.ID settingsGroupId, boolean creativeBuildModeEnabled,
         List<ModulePlacement> placements) {
-        return StarmapActionSyncHandler.sendFacilityCommand(
+        return submit(
             new FacilityCommand.BuildModules(
                 assetId,
                 kind,
@@ -204,24 +217,24 @@ public final class CelestialClient {
 
     public static boolean copyModule(ID assetId, ModuleInstance.ID sourceModuleId, boolean creativeBuildModeEnabled,
         List<ModulePlacement> placements) {
-        return StarmapActionSyncHandler.sendFacilityCommand(
+        return submit(
             new FacilityCommand.CopyBuildModules(assetId, sourceModuleId, creativeBuildModeEnabled, placements));
     }
 
     public static boolean destroyAsset(ID assetId) {
-        return StarmapActionSyncHandler.sendDestroyAsset(assetId);
+        return sendToServer(AssetUpdatePacket.create(assetId, AssetUpdatePacket.Action.DESTROY_ASSET));
     }
 
     public static boolean cancelConstruction(ID assetId) {
-        return StarmapActionSyncHandler.sendCancelConstruction(assetId);
+        return sendToServer(AssetUpdatePacket.create(assetId, AssetUpdatePacket.Action.CANCEL_CONSTRUCTION));
     }
 
     public static boolean startDeconstruction(ID assetId) {
-        return StarmapActionSyncHandler.sendStartDeconstruction(assetId);
+        return sendToServer(AssetUpdatePacket.create(assetId, AssetUpdatePacket.Action.START_DECONSTRUCTION));
     }
 
     public static boolean renameAsset(ID assetId, String displayName) {
-        return StarmapActionSyncHandler.sendRenameAsset(assetId, displayName);
+        return sendToServer(AssetUpdatePacket.rename(assetId, displayName));
     }
 
     public static List<CelestialAsset> getTransferTargetsInSystem(CelestialObject root, CelestialObject body) {
@@ -234,44 +247,38 @@ public final class CelestialClient {
     }
 
     public static void requestModuleDeconstruction(ID assetId, ModuleInstance.ID moduleId) {
-        StarmapActionSyncHandler
-            .sendFacilityCommand(new FacilityCommand.RequestModuleDeconstruction(assetId, moduleId));
+        submit(new FacilityCommand.RequestModuleDeconstruction(assetId, moduleId));
     }
 
     public static void configureHammer(ID assetId, ModuleInstance.ID moduleId, AllowShootingConfig config,
         OrbitalTransferPlanner.RoutePriority priority) {
-        StarmapActionSyncHandler
-            .sendFacilityCommand(new FacilityCommand.ConfigureHammer(assetId, moduleId, config, priority));
+        submit(new FacilityCommand.ConfigureHammer(assetId, moduleId, config, priority));
     }
 
     public static void planModuleTierUpgrade(ID assetId, ModuleInstance.ID moduleId, ModuleTier targetTier,
         boolean reserveItems) {
-        StarmapActionSyncHandler.sendFacilityCommand(
-            new FacilityCommand.PlanTierUpgrade(assetId, List.of(moduleId), targetTier, reserveItems));
+        submit(new FacilityCommand.PlanTierUpgrade(assetId, List.of(moduleId), targetTier, reserveItems));
     }
 
     public static void replaceRecipeBook(ID assetId, ModuleInstance.ID moduleId, RecipeBook replacement) {
-        StarmapActionSyncHandler
-            .sendFacilityCommand(new FacilityCommand.ReplaceRecipeBook(assetId, moduleId, replacement));
+        submit(new FacilityCommand.ReplaceRecipeBook(assetId, moduleId, replacement));
     }
 
     public static void setInventoryBound(ID assetId, BoundKind kind, InventoryKey resource, long amount) {
-        StarmapActionSyncHandler
-            .sendFacilityCommand(new FacilityCommand.SetInventoryBound(assetId, kind, resource, amount));
+        submit(new FacilityCommand.SetInventoryBound(assetId, kind, resource, amount));
     }
 
     public static void clearInventoryBound(ID assetId, BoundKind kind, InventoryKey resource) {
-        StarmapActionSyncHandler.sendFacilityCommand(new FacilityCommand.ClearInventoryBound(assetId, kind, resource));
+        submit(new FacilityCommand.ClearInventoryBound(assetId, kind, resource));
     }
 
     public static void replaceMinerSettings(ID assetId, ModuleInstance.ID moduleId, MinerSettings replacement) {
-        StarmapActionSyncHandler
-            .sendFacilityCommand(new FacilityCommand.ReplaceMinerSettings(assetId, moduleId, replacement));
+        submit(new FacilityCommand.ReplaceMinerSettings(assetId, moduleId, replacement));
     }
 
     public static void updateModuleSettingsGroup(ID assetId, ModuleInstance.ID moduleId,
         @Nullable SettingsGroup.ID groupId) {
-        StarmapActionSyncHandler.sendFacilityCommand(new FacilityCommand.SetSettingsGroup(assetId, moduleId, groupId));
+        submit(new FacilityCommand.SetSettingsGroup(assetId, moduleId, groupId));
     }
 
     public static void createModuleSettingsGroup(ID assetId, ModuleInstance.ID moduleId) {
@@ -279,22 +286,20 @@ public final class CelestialClient {
     }
 
     public static void createModuleSettingsGroup(ID assetId, ModuleInstance.ID moduleId, String displayName) {
-        StarmapActionSyncHandler
-            .sendFacilityCommand(new FacilityCommand.CreateSettingsGroup(assetId, moduleId, displayName));
+        submit(new FacilityCommand.CreateSettingsGroup(assetId, moduleId, displayName));
     }
 
     public static void renameModuleSettingsGroup(ID assetId, SettingsGroup.ID groupId, String displayName) {
-        StarmapActionSyncHandler
-            .sendFacilityCommand(new FacilityCommand.RenameSettingsGroup(assetId, groupId, displayName));
+        submit(new FacilityCommand.RenameSettingsGroup(assetId, groupId, displayName));
     }
 
     public static void cancelModuleOperation(ID assetId, ModuleInstance.ID moduleId) {
-        StarmapActionSyncHandler.sendFacilityCommand(new FacilityCommand.CancelModuleOperation(assetId, moduleId));
+        submit(new FacilityCommand.CancelModuleOperation(assetId, moduleId));
     }
 
     public static void planHammerUpgrade(ID assetId, ModuleInstance.ID moduleId, HammerVariant variant, ModuleTier tier,
         boolean reserveItems, boolean voidCompletionRefund) {
-        StarmapActionSyncHandler.sendFacilityCommand(
+        submit(
             new FacilityCommand.PlanHammerUpgrade(
                 assetId,
                 List.of(moduleId),
@@ -320,17 +325,16 @@ public final class CelestialClient {
                 reserveItems,
                 voidCompletionRefund)
             : new FacilityCommand.PlanTierUpgrade(assetId, targetIds, tier, reserveItems);
-        StarmapActionSyncHandler.sendFacilityCommand(command);
+        submit(command);
     }
 
     public static void planMinerFocusTier(ID assetId, ModuleInstance.ID moduleId, ModuleTier targetTier,
         MinerFocusTier focusTier) {
-        StarmapActionSyncHandler
-            .sendFacilityCommand(new FacilityCommand.PlanMinerFocusUpgrade(assetId, moduleId, targetTier, focusTier));
+        submit(new FacilityCommand.PlanMinerFocusUpgrade(assetId, moduleId, targetTier, focusTier));
     }
 
     public static void setMinerFocusOre(ID assetId, ModuleInstance.ID moduleId, String oreKey) {
-        StarmapActionSyncHandler.sendFacilityCommand(new FacilityCommand.SetMinerFocusOre(assetId, moduleId, oreKey));
+        submit(new FacilityCommand.SetMinerFocusOre(assetId, moduleId, oreKey));
     }
 
     public static void copyModuleSettings(ID assetId, ModuleInstance.ID sourceModuleId,
@@ -339,14 +343,12 @@ public final class CelestialClient {
         if (facility == null) return;
         List<ModuleInstance.ID> targetIds = resolveTargetModuleIds(facility, targetCoords);
         if (targetIds == null) return;
-        StarmapActionSyncHandler
-            .sendFacilityCommand(new FacilityCommand.CopyModuleSettings(assetId, sourceModuleId, targetIds));
+        submit(new FacilityCommand.CopyModuleSettings(assetId, sourceModuleId, targetIds));
     }
 
     public static void updateDebugDataGeneratorConfig(ID assetId, ModuleInstance.ID moduleId,
         ModuleDebugDataGenerator.Config config) {
-        StarmapActionSyncHandler
-            .sendFacilityCommand(new FacilityCommand.ConfigureDebugDataGenerator(assetId, moduleId, config));
+        submit(new FacilityCommand.ConfigureDebugDataGenerator(assetId, moduleId, config));
     }
 
     private static @Nullable List<ModuleInstance.ID> resolveTargetModuleIds(AutomatedFacility facility,
@@ -366,7 +368,7 @@ public final class CelestialClient {
     public static void addInventory(CelestialAsset.ID assetId, ItemStackWrapper resource, long amount) {
         CelestialAsset asset = getByAssetId(assetId);
         if (asset instanceof AutomatedFacility) {
-            StarmapActionSyncHandler.sendFacilityCommand(
+            submit(
                 new FacilityCommand.AdjustInventory(
                     assetId,
                     resource,
@@ -376,24 +378,24 @@ public final class CelestialClient {
         }
         if (!(asset instanceof IDistributedInventory)) return;
         AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.add(assetId, resource, amount);
-        StarmapActionSyncHandler.sendInventoryUpdate(packet);
+        sendToServer(packet);
     }
 
     public static void removeInventory(CelestialAsset.ID assetId, ItemStackWrapper resource) {
         CelestialAsset asset = getByAssetId(assetId);
         if (asset instanceof AutomatedFacility) {
-            StarmapActionSyncHandler.sendFacilityCommand(new FacilityCommand.ClearInventoryResource(assetId, resource));
+            submit(new FacilityCommand.ClearInventoryResource(assetId, resource));
             return;
         }
         if (!(asset instanceof IDistributedInventory)) return;
         AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.remove(assetId, resource);
-        StarmapActionSyncHandler.sendInventoryUpdate(packet);
+        sendToServer(packet);
     }
 
     public static void removeInventoryAmount(CelestialAsset.ID assetId, ItemStackWrapper resource, long amount) {
         CelestialAsset asset = getByAssetId(assetId);
         if (asset instanceof AutomatedFacility) {
-            StarmapActionSyncHandler.sendFacilityCommand(
+            submit(
                 new FacilityCommand.AdjustInventory(
                     assetId,
                     resource,
@@ -403,7 +405,7 @@ public final class CelestialClient {
         }
         if (!(asset instanceof IDistributedInventory)) return;
         AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.removeAmount(assetId, resource, amount);
-        StarmapActionSyncHandler.sendInventoryUpdate(packet);
+        sendToServer(packet);
     }
 
     public static void updateLogisticsConfig(CelestialAsset.ID assetId, ItemStackWrapper resource,
@@ -414,21 +416,20 @@ public final class CelestialClient {
     public static void updateLogisticsConfig(CelestialAsset.ID assetId, ItemStackWrapper resource,
         LogisticsResourceConfig config, LogisticsConfigAccessMode accessMode) {
         if (getByAssetId(assetId) instanceof AutomatedFacility) {
-            StarmapActionSyncHandler
-                .sendFacilityCommand(new FacilityCommand.PutLogisticsConfig(assetId, resource, config, accessMode));
+            submit(new FacilityCommand.PutLogisticsConfig(assetId, resource, config, accessMode));
             return;
         }
         LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket(assetId, resource, config, accessMode);
-        StarmapActionSyncHandler.sendLogisticsConfig(packet);
+        sendToServer(packet);
     }
 
     public static void removeLogisticsConfig(CelestialAsset.ID assetId, ItemStackWrapper resource) {
         if (getByAssetId(assetId) instanceof AutomatedFacility) {
-            StarmapActionSyncHandler.sendFacilityCommand(new FacilityCommand.RemoveLogisticsConfig(assetId, resource));
+            submit(new FacilityCommand.RemoveLogisticsConfig(assetId, resource));
             return;
         }
         LogisticsConfigUpdatePacket packet = LogisticsConfigUpdatePacket.remove(assetId, resource);
-        StarmapActionSyncHandler.sendLogisticsConfig(packet);
+        sendToServer(packet);
     }
 
     // ── Filter actions ──
@@ -465,7 +466,7 @@ public final class CelestialClient {
 
     private static void sendFilters(CelestialAsset.ID assetId, boolean isItem, List<String> filterKeys) {
         FacilityCommand.FilterKind kind = isItem ? FacilityCommand.FilterKind.ITEM : FacilityCommand.FilterKind.FLUID;
-        StarmapActionSyncHandler.sendFacilityCommand(new FacilityCommand.ReplaceFilters(assetId, kind, filterKeys));
+        submit(new FacilityCommand.ReplaceFilters(assetId, kind, filterKeys));
     }
 
     // ── Signal mirror ──
