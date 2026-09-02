@@ -72,7 +72,7 @@ dependencies {
     // @Data annotation for the data class, see: [https://projectlombok.org/api/lombok/Data]
     compileOnly('org.projectlombok:lombok:1.18.46')
     annotationProcessor('org.projectlombok:lombok:1.18.46')
-    implementation("com.cardinalstar.cubicchunks:CubicChunks1710:v0.1.13-alpha-pre:dev")
-    testRuntimeOnly("com.cardinalstar.cubicchunks:CubicChunks1710:v0.1.13-alpha-pre:dev")
+    implementation("com.cardinalstar.cubicchunks:CubicChunks1710:v0.1.21-alpha-pre:dev")
+    testRuntimeOnly("com.cardinalstar.cubicchunks:CubicChunks1710:v0.1.21-alpha-pre:dev")
     testRuntimeOnly('it.unimi.dsi:fastutil:8.5.15')
 }
