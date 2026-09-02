@@ -118,10 +118,7 @@ final class RecipeOrderCursorPersistenceTest {
         assertSame(
             FacilityCommand.Result.CHANGED,
             station.applyCommand(
-                new FacilityCommand.ReplaceRecipeBook(
-                    station.assetId,
-                    macerator.id,
-                    book),
+                new FacilityCommand.ReplaceRecipeBook(station.assetId, macerator.id, book),
                 FacilityCommand.Authority.NONE));
         station.restoreRecipeScheduleState(macerator, new RecipeBook.ScheduleState((byte) 1, (byte) 3));
 

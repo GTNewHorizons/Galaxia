@@ -97,9 +97,8 @@ final class RecipeBookEditorModelTest {
     void fullBookRejectsAdditionalRecipes() {
         List<SavedRecipe> recipes = new ArrayList<>();
         for (int i = 0; i < RecipeBook.MAX_RECIPES; i++) recipes.add(savedRecipe(i, "Recipe " + i));
-        RecipeBookEditorModel editor = RecipeBookEditorModel.edit(
-            moduleId(1),
-            new RecipeBook(recipes, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP));
+        RecipeBookEditorModel editor = RecipeBookEditorModel
+            .edit(moduleId(1), new RecipeBook(recipes, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP));
 
         assertFalse(editor.canAdd());
         assertFalse(editor.add(snapshot(RecipeBook.MAX_RECIPES)));

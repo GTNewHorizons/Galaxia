@@ -242,10 +242,7 @@ final class FacilityCommandGatewayTest {
             new FacilityCommand.RenameSettingsGroup(facility.assetId, new SettingsGroup.ID(1), "Priority settings"),
             new FacilityCommand.SetSettingsGroup(facility.assetId, missingModule, new SettingsGroup.ID(1)),
             new FacilityCommand.CopyModuleSettings(facility.assetId, missingModule, List.of(missingModule)),
-            new FacilityCommand.ReplaceRecipeBook(
-                facility.assetId,
-                missingModule,
-                RecipeBook.empty()),
+            new FacilityCommand.ReplaceRecipeBook(facility.assetId, missingModule, RecipeBook.empty()),
             new FacilityCommand.ReplaceMinerSettings(facility.assetId, missingModule, new MinerSettings()),
             new FacilityCommand.ConfigureHammer(facility.assetId, missingModule, null, null),
             new FacilityCommand.SetMinerFocusOre(facility.assetId, missingModule, "ore:iron"),
