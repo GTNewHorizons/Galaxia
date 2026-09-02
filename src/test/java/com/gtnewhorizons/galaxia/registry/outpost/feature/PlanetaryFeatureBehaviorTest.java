@@ -51,6 +51,36 @@ final class PlanetaryFeatureBehaviorTest {
     }
 
     @Test
+    void icePocketMinerContributionMatchesAppliedMiningEffect() {
+        PlanetaryFeature feature = PlanetaryFeatureRegistry
+            .feature(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET.key());
+        ModuleInstance module = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.MINER,
+            StationTileCoord.of(0, 0),
+            ModuleShape.QUAD_2x2,
+            ModuleTier.EV);
+        ModuleFeatureModifierBuilder modifierBuilder = new ModuleFeatureModifierBuilder();
+        MiningFeatureEffects.Builder miningBuilder = MiningFeatureEffects.builder();
+
+        feature.applyModuleModifiers(new FeatureModuleContext(module, feature.key(), 2, 4), modifierBuilder);
+        feature.applyMiningEffects(new FeatureMiningContext(module, feature.key(), 2, 4), miningBuilder);
+
+        int appliedChance = miningBuilder.build()
+            .replacementRolls()
+            .get(0)
+            .chancePercent();
+        String expectedContribution = FeatureContributionFormatter.chance("Ice roll chance", appliedChance);
+        assertTrue(
+            modifierBuilder.build(java.util.Map.of(feature.key(), 2))
+                .contributions()
+                .stream()
+                .anyMatch(
+                    contribution -> contribution.effectLine()
+                        .equals(expectedContribution)));
+    }
+
+    @Test
     void mineralVeinFeatureOwnsMiningBonusRolls() {
         PlanetaryFeature feature = PlanetaryFeatureRegistry.feature(PlanetaryFeatureRegistry.MINERAL_VEIN.key());
         ModuleInstance module = FacilityModuleRegistry.create(

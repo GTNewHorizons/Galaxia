@@ -20,6 +20,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
@@ -86,6 +88,28 @@ final class ProductionModuleHelperTest {
         execute(facility, module);
 
         assertEquals(105L, facility.itemAmount(input));
+        assertEquals(before, facility.recipeScheduleState(module));
+    }
+
+    @Test
+    void inputCostMustRemainAboveTheEffectiveLowerBoundWithoutAManualBound() {
+        AutomatedFacility facility = facility();
+        ModuleInstance module = installBook(facility, orderBook(recipe(Items.diamond, Items.iron_ingot, 1)));
+        ItemStackWrapper input = ItemStackWrapper.of(new ItemStack(Items.diamond));
+        facility.insert(input, 5L);
+        facility.applyCommand(
+            new FacilityCommand.PutLogisticsConfig(
+                facility.assetId,
+                input,
+                new LogisticsResourceConfig(5, 1, false, false),
+                LogisticsConfigAccessMode.FULL),
+            FacilityCommand.Authority.NONE);
+        RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
+        facility.restoreRecipeScheduleState(module, before);
+
+        execute(facility, module);
+
+        assertEquals(5L, facility.itemAmount(input));
         assertEquals(before, facility.recipeScheduleState(module));
     }
 
