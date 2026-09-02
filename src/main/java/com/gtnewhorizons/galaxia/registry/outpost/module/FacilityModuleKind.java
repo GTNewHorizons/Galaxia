@@ -139,6 +139,10 @@ public enum FacilityModuleKind {
         };
     }
 
+    public boolean supportsParallel() {
+        return this != MAINTENANCE_BAY && this != DEBUG_DATA_GENERATOR;
+    }
+
     public boolean isDebugOnly() {
         return this == DEBUG_DATA_GENERATOR;
     }

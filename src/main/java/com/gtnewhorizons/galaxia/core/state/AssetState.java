@@ -270,6 +270,10 @@ public final class AssetState {
                 : module.priorityOverride()
                     .name());
         out.setBoolean("enabled", module.enabled());
+        if (module.kind()
+            .supportsParallel()) {
+            out.setInteger("parallel", module.parallel());
+        }
         out.setString(
             "shape",
             module.shape()
@@ -322,6 +326,11 @@ public final class AssetState {
         String priority = in.string("priority");
         module.setPriorityOverride(priority.isEmpty() ? null : in.enumValue(ModulePriority.class, "priority"));
         module.setEnabled(in.bool("enabled"));
+        if (kind.supportsParallel()) {
+            module.setParallel((byte) in.integer("parallel", 1, Byte.MAX_VALUE));
+        } else if (tag.hasKey("parallel")) {
+            throw fail(path + ".parallel", kind + " does not support parallel execution");
+        }
         module.clearConsumedResources();
         module.getConstructionInventory()
             .putAll(readConstructionInventory(in, "construction"));

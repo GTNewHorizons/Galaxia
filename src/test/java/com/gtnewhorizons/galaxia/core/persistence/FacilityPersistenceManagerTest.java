@@ -129,6 +129,17 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
+    void parallelStateRoundTripsThroughAssetState() {
+        AutomatedFacility station = createStationWithFullLayout();
+        NBTTagCompound encoded = facilityTag(station);
+        moduleTag(encoded, 0).setInteger("parallel", 4);
+
+        AutomatedFacility decoded = decodeFacility(emptyReplacement(station), encoded);
+
+        assertEquals(4, moduleTag(facilityTag(decoded), 0).getInteger("parallel"));
+    }
+
+    @Test
     void assetStateRoundTripPreservesEnergyBackedByBatteryCapacity() {
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
