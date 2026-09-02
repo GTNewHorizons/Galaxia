@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 import com.gtnewhorizon.gtnhlib.util.StdLCG;
 import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.math.Smoothstep;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.ModifierHandler;
 import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
@@ -200,8 +201,8 @@ public final class TerrainFeatureApplier {
                 localNoise = Math.abs(localNoise - 0.5);
                 localNoise *= 10;
                 if (localNoise < 3 && localNoise > 2) {
-                    localNoise = 0.5 - Math.abs(localNoise - 2.5);
-                    hm[x + z * 16] -= (((localNoise) * 2 * height) * localRelevance * modifierValues[x + z * 16]);
+                    localNoise = Smoothstep.apply((0.5 - Math.abs(localNoise - 2.5)) * 2);
+                    hm[x + z * 16] -= ((localNoise * height) * localRelevance * modifierValues[x + z * 16]);
                 }
             }
         }
