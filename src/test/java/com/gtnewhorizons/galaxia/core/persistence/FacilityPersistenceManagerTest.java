@@ -1791,10 +1791,7 @@ final class FacilityPersistenceManagerTest {
         assertSame(
             FacilityCommand.Result.CHANGED,
             station.applyCommand(
-                new FacilityCommand.ReplaceRecipeBook(
-                    station.assetId,
-                    macerator.id,
-                    expectedBook),
+                new FacilityCommand.ReplaceRecipeBook(station.assetId, macerator.id, expectedBook),
                 FacilityCommand.Authority.NONE));
         station.restoreRecipeScheduleState(macerator, new RecipeBook.ScheduleState((byte) 0, (byte) 1));
 
@@ -2001,10 +1998,7 @@ final class FacilityPersistenceManagerTest {
         assertSame(
             FacilityCommand.Result.CHANGED,
             station.applyCommand(
-                new FacilityCommand.ReplaceRecipeBook(
-                    station.assetId,
-                    macerator.id,
-                    book),
+                new FacilityCommand.ReplaceRecipeBook(station.assetId, macerator.id, book),
                 FacilityCommand.Authority.NONE));
         return station;
     }

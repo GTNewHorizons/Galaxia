@@ -364,10 +364,7 @@ final class FacilityCommandPacketTest {
         List<FacilityCommand> invalid = List.of(
             replaceRecipeBook(oversizedRecipeBook()),
             replaceRecipeBook(recipeBook(32, "x".repeat(1025))),
-            new FacilityCommand.ReplaceRecipeBook(
-                FACILITY_ID,
-                new ModuleInstance.ID(new UUID(0L, 0L)),
-                recipeBook()));
+            new FacilityCommand.ReplaceRecipeBook(FACILITY_ID, new ModuleInstance.ID(new UUID(0L, 0L)), recipeBook()));
 
         for (int i = 0; i < invalid.size(); i++) {
             FacilityCommand command = invalid.get(i);

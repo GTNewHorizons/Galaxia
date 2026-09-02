@@ -60,10 +60,7 @@ final class StationItemInteractionModelTest {
         assertEquals(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(
-                new FacilityCommand.ReplaceRecipeBook(
-                    facility.assetId,
-                    first.id,
-                    recipeBook(input, output)),
+                new FacilityCommand.ReplaceRecipeBook(facility.assetId, first.id, recipeBook(input, output)),
                 FacilityCommand.Authority.NONE));
         SettingsGroup.ID groupId = createSharedGroup(facility, first, second, "Dust line");
 
