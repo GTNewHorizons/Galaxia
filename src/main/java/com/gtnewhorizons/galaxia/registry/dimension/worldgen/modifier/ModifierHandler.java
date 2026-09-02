@@ -56,6 +56,11 @@ public class ModifierHandler {
             } else if (localNoise > 2) {
                 localNoise = 2;
             }
+            if (localNoise > 1.75) {
+                System.out.println("Upper extreme");
+            } else if (localNoise < -1.75) {
+                System.out.println("Lower extreme");
+            }
             weirdnessCache[i] = localNoise;
         }
     }
