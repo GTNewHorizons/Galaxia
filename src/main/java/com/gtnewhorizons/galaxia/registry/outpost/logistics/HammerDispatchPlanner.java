@@ -8,6 +8,7 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -144,8 +145,13 @@ public final class HammerDispatchPlanner {
             return Result.simple(HammerDispatchStatus.Code.NO_EXPORT_CONFIG, hammer);
         }
 
-        long supplierStock = supplier instanceof Station station ? station.getCannonChestItems()
-            .getOrDefault(resource, 0L) : itemAmount(supplier, resource);
+        long supplierStock;
+        if (supplier instanceof Station station) {
+            TileHammerCannon cannon = station.findHammerCannon(hammerModule);
+            supplierStock = cannon == null ? 0L : cannon.getPackageAmount(resource);
+        } else {
+            supplierStock = itemAmount(supplier, resource);
+        }
         long availableSurplus = supplierStock - supplyReserveFor(supplier, resource, supplierCfg);
         if (availableSurplus <= 0L) return Result.simple(HammerDispatchStatus.Code.NO_SURPLUS_AFTER_RESERVE, hammer);
 

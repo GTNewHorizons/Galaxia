@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.core.persistence;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -10,6 +12,7 @@ import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,11 +34,13 @@ import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import com.gtnewhorizons.galaxia.core.persistence.CelestialObjectKeyJsonCodec.CelestialObjectKeyJson;
 import com.gtnewhorizons.galaxia.core.state.AssetState;
+import com.gtnewhorizons.galaxia.core.state.InventoryKeyState;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerTrajectoryLoadTracker;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
@@ -195,8 +200,7 @@ public final class FacilityPersistenceManager {
                     || task.fromBodyId == null
                     || task.toBodyId == null
                     || task.amount <= 0L) throw new IllegalArgumentException("task entry is incomplete");
-                ItemStackWrapper resource = ItemStackWrapper.fromKey(task.resourceId);
-                if (resource == null) throw new IllegalArgumentException("task resource is unknown");
+                ItemStackWrapper resource = decodeTaskResource(task.resourceId);
                 decoded.add(
                     LogisticsDelivery.createWithTrajectory(
                         LogisticsDelivery.ID.from(task.taskId),
@@ -245,8 +249,7 @@ public final class FacilityPersistenceManager {
             tj.taskId = String.valueOf(delivery.deliveryId);
             tj.fromAssetId = String.valueOf(delivery.data.fromAssetId());
             tj.toAssetId = String.valueOf(delivery.data.toAssetId());
-            tj.resourceId = delivery.data.resourceId()
-                .toKey();
+            tj.resourceId = encodeTaskResource(delivery.data.resourceId());
             tj.amount = delivery.data.amount();
             tj.remainingTicks = delivery.getRemainingTicks();
             tj.transportKind = String.valueOf(delivery.data.scope());
@@ -262,6 +265,31 @@ public final class FacilityPersistenceManager {
 
     private static CelestialObjectKeyJson encodeCelestialObjectKey(CelestialObjectKey key) {
         return CelestialObjectKeyJsonCodec.encode(key);
+    }
+
+    private static String encodeTaskResource(ItemStackWrapper resource) {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try {
+            CompressedStreamTools.writeCompressed(InventoryKeyState.encode(resource), output);
+        } catch (IOException e) {
+            throw new IllegalStateException("task resource could not be encoded", e);
+        }
+        return Base64.getEncoder()
+            .encodeToString(output.toByteArray());
+    }
+
+    private static ItemStackWrapper decodeTaskResource(String encoded) {
+        try {
+            InventoryKey resource = InventoryKeyState.decode(
+                CompressedStreamTools.readCompressed(
+                    new ByteArrayInputStream(
+                        Base64.getDecoder()
+                            .decode(encoded))));
+            if (resource instanceof ItemStackWrapper item) return item;
+        } catch (IOException | IllegalArgumentException | IllegalStateException e) {
+            throw new IllegalArgumentException("task resource is malformed", e);
+        }
+        throw new IllegalArgumentException("task resource is not an item");
     }
 
     private static TransferRouteJson encodeTransferRoute(OrbitalTransferPlanner.TransferRoute route) {

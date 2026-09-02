@@ -3,11 +3,15 @@ package com.gtnewhorizons.galaxia.registry.outpost.logistics;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.UUID;
 
 import net.minecraft.init.Items;
+import net.minecraft.inventory.InventoryBasic;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -16,6 +20,8 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -252,6 +258,49 @@ final class HammerDispatchStatusTest {
     }
 
     @Test
+    void plannerUsesTheCannonBelongingToTheSelectedHammerModule() {
+        TileHammerCannon selectedCannon = cannonWith(stack(32, "selected"));
+        TileHammerCannon otherCannon = cannonWith(stack(64, "other"));
+        ItemStackWrapper resource = ItemStackWrapper.of(stack(1, "selected"));
+        selectedCannon.getHammer()
+            .setEnergyStored(1_000_000L);
+
+        Station supplier = new Station(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.OVERWORLD,
+            Buildable.Status.OPERATIONAL) {
+
+            @Override
+            public TileHammerCannon findHammerCannon(ModuleInstance module) {
+                if (module == selectedCannon.getModuleInstance()) return selectedCannon;
+                if (module == otherCannon.getModuleInstance()) return otherCannon;
+                return null;
+            }
+        };
+        AutomatedFacility requester = facility(CelestialObjectId.OVERWORLD);
+        supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
+        requester.logisticsConfig.set(resource, new LogisticsResourceConfig(64, 64, true, false));
+
+        HammerDispatchPlanner.Result result = HammerDispatchPlanner
+            .evaluate(supplier, selectedCannon.getModuleInstance(), requester, resource, 0.0, null);
+
+        assertEquals(HammerDispatchStatus.Code.READY, result.code());
+        assertEquals(32L, result.sendAmount());
+        HammerDispatchPlanner.Plan plan = result.plan();
+        assertNotNull(plan);
+        assertEquals(resource, plan.resource());
+        assertEquals(32L, selectedCannon.getPackageAmount(resource));
+        assertEquals(64L, otherCannon.getPackageAmount(ItemStackWrapper.of(stack(1, "other"))));
+
+        TileHammerCannon dispatchCannon = supplier.findHammerCannon(selectedCannon.getModuleInstance());
+        assertSame(selectedCannon, dispatchCannon);
+        assertTrue(dispatchCannon.tryExtractPackage(plan.resource(), plan.sendAmount()));
+
+        assertEquals(0L, selectedCannon.getPackageAmount(resource));
+        assertEquals(64L, otherCannon.getPackageAmount(ItemStackWrapper.of(stack(1, "other"))));
+    }
+
+    @Test
     void plannerRejectsDestinationWithoutCargoStorage() {
         AutomatedFacility supplier = facility(CelestialObjectId.OVERWORLD);
         CelestialAsset requester = new TestLogisticsAsset(CelestialAsset.Kind.SATELLITE);
@@ -313,6 +362,23 @@ final class HammerDispatchStatusTest {
             ModuleTier.LuV);
         module.setComponent(hammer);
         return module;
+    }
+
+    private static TileHammerCannon cannonWith(ItemStack stack) {
+        TileHammerCannon cannon = new TileHammerCannon();
+        InventoryBasic inventory = new InventoryBasic("test", false, 1);
+        inventory.setInventorySlotContents(0, stack);
+        cannon.getChestInventories()
+            .add(inventory);
+        return cannon;
+    }
+
+    private static ItemStack stack(int amount, String grade) {
+        ItemStack stack = new ItemStack(Items.iron_ingot, amount, 0);
+        NBTTagCompound tag = new NBTTagCompound();
+        tag.setString("grade", grade);
+        stack.setTagCompound(tag);
+        return stack;
     }
 
 }

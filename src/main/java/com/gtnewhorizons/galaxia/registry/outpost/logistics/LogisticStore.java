@@ -151,7 +151,9 @@ public final class LogisticStore {
         allResources.addAll(snapshot.keySet());
 
         for (ItemStackWrapper resource : allResources) {
-            long amount = signalAmount(asset, resource, snapshot.getOrDefault(resource, 0L), cannonItems);
+            LogisticsResourceConfig config = asset.logisticsConfig.get(resource);
+            long importStock = snapshot.getOrDefault(resource, 0L);
+            long amount = signalAmount(asset, resource, config, importStock);
             if (amount == 0L) continue;
             signals.add(
                 new LogisticSignal(
@@ -171,14 +173,14 @@ public final class LogisticStore {
         return Map.of();
     }
 
-    private static long signalAmount(CelestialAsset asset, ItemStackWrapper resource, long stock,
-        Map<ItemStackWrapper, Long> cannonItems) {
-        LogisticsResourceConfig config = asset.logisticsConfig.get(resource);
+    private static long signalAmount(CelestialAsset asset, ItemStackWrapper resource, LogisticsResourceConfig config,
+        long importStock) {
         long lowerBound = asset instanceof AutomatedFacility facility ? facility.effectiveLowerBound(resource) : 0L;
         long importTarget = config.isImportEnabled() ? Math.max(config.minReserve(), lowerBound) : 0L;
-        if (importTarget > 0L && importTarget > stock) return stock - importTarget;
+        if (importTarget > 0L && importTarget > importStock) return importStock - importTarget;
         if (!config.isSupplyEnabled()) return 0L;
-        long supply = stock + cannonItems.getOrDefault(resource, 0L) - Math.max(config.minReserve(), lowerBound);
+        long supply = asset instanceof Station station ? station.getCannonSupplyAmount(resource, config.minReserve())
+            : importStock - Math.max(config.minReserve(), lowerBound);
         return Math.max(supply, 0L);
     }
 
