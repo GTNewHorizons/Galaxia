@@ -48,7 +48,7 @@ public final class HammerDispatchPlanner {
     public record Plan(CelestialAsset supplier, CelestialAsset requester, ItemStackWrapper resource,
         ModuleInstance hammerModule, ModuleHammer hammer, long sendAmount, int orderSize, long requiredEnergy,
         LogisticSignal.Scope deliveryScope, int travelTimeTicks, double departureDv, double shotDv,
-        double tofOrbitalSeconds, OrbitalTransferPlanner.TransferRoute route) {}
+        double tofOrbitalOsu, OrbitalTransferPlanner.TransferRoute route) {}
 
     public record Result(HammerDispatchStatus.Code code, long requiredEnergy, long storedEnergy, long sendAmount,
         int orderSize, Plan plan) {
