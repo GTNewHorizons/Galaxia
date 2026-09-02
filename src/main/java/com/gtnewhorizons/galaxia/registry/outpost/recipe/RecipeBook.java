@@ -5,9 +5,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
-import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 
 public record RecipeBook(List<SavedRecipe> recipes, RecipeSchedulerMode mode, NotDoablePolicy notDoablePolicy)
     implements ModuleSettings {
@@ -132,20 +130,4 @@ public record RecipeBook(List<SavedRecipe> recipes, RecipeSchedulerMode mode, No
         }
     }
 
-    public sealed interface Owner permits Owner.Private,Owner.Group {
-
-        record Private(ModuleInstance.ID moduleId) implements Owner {
-
-            public Private {
-                Objects.requireNonNull(moduleId, "moduleId");
-            }
-        }
-
-        record Group(SettingsGroup.ID groupId) implements Owner {
-
-            public Group {
-                Objects.requireNonNull(groupId, "groupId");
-            }
-        }
-    }
 }

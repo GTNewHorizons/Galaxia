@@ -461,7 +461,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private void save() {
-        CelestialClient.replaceRecipeBook(assetId, editor.owner(), editor.replacement());
+        CelestialClient.replaceRecipeBook(assetId, editor.moduleId(), editor.replacement());
         controller.close();
     }
 
@@ -471,7 +471,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         if (facility == null || source == null || tilePickerController == null) return;
         settingsGroupSelector.closeMenu();
         closeRecipeRename();
-        CelestialClient.replaceRecipeBook(assetId, editor.owner(), editor.replacement());
+        CelestialClient.replaceRecipeBook(assetId, editor.moduleId(), editor.replacement());
         controller.close();
         tilePickerController.start("Copy module settings", "Copy", coord -> {
             ModuleInstance target = facility.stationLayout()

@@ -17,7 +17,6 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
@@ -254,16 +253,6 @@ final class CapacityClusterBuilderTest {
         assertEquals(AutomatedFacility.BASE_ENERGY_CAPACITY + 100_000L, facility.energyCapacity());
         facility.setEnergyStored(Long.MAX_VALUE);
         assertEquals(facility.energyCapacity(), facility.getEnergyStored());
-    }
-
-    @Test
-    void maintenanceBayDoesNotImplementIParallelModule() {
-        ModuleInstance bay = FacilityModuleKind.MAINTENANCE_BAY
-            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.NONE);
-        IModuleComponent comp = bay.component();
-        assertFalse(
-            comp instanceof IParallelModule,
-            "MaintenanceBay must not implement IParallelModule — it has no parallel mechanic");
     }
 
     @Test

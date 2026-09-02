@@ -34,7 +34,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
@@ -270,12 +269,15 @@ public final class AssetState {
                 : module.priorityOverride()
                     .name());
         out.setBoolean("enabled", module.enabled());
+        if (module.kind()
+            .supportsParallel()) {
+            out.setInteger("parallel", module.parallel());
+        }
         out.setString(
             "shape",
             module.shape()
                 .name());
         out.setInteger("rotation", module.rotation());
-        out.setInteger("parallel", module.component() instanceof IParallelModule parallel ? parallel.getParallel() : 1);
         out.setTag("data", writeModuleData(module));
         out.setTag("construction", writeConstructionInventory(module.getConstructionInventory()));
         ModuleOperationState operation = module.operationOrNull();
@@ -323,8 +325,11 @@ public final class AssetState {
         String priority = in.string("priority");
         module.setPriorityOverride(priority.isEmpty() ? null : in.enumValue(ModulePriority.class, "priority"));
         module.setEnabled(in.bool("enabled"));
-        int parallel = in.integer("parallel", 1, Byte.MAX_VALUE);
-        if (module.component() instanceof IParallelModule parallelModule) parallelModule.setParallel((byte) parallel);
+        if (kind.supportsParallel()) {
+            module.setParallel((byte) in.integer("parallel", 1, Byte.MAX_VALUE));
+        } else if (tag.hasKey("parallel")) {
+            throw fail(path + ".parallel", kind + " does not support parallel execution");
+        }
         module.clearConsumedResources();
         module.getConstructionInventory()
             .putAll(readConstructionInventory(in, "construction"));

@@ -244,7 +244,7 @@ final class FacilityCommandGatewayTest {
             new FacilityCommand.CopyModuleSettings(facility.assetId, missingModule, List.of(missingModule)),
             new FacilityCommand.ReplaceRecipeBook(
                 facility.assetId,
-                new RecipeBook.Owner.Private(missingModule),
+                missingModule,
                 RecipeBook.empty()),
             new FacilityCommand.ReplaceMinerSettings(facility.assetId, missingModule, new MinerSettings()),
             new FacilityCommand.ConfigureHammer(facility.assetId, missingModule, null, null),

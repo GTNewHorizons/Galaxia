@@ -36,6 +36,7 @@ public class ModuleInstance implements Buildable {
     private final ModuleShape shape;
     private int rotation = 0;
     private ModuleTier tier;
+    private byte parallel = 1;
     private ModulePriority priorityOverride = ModulePriority.NORMAL;
     private boolean enabled = true;
     private ModuleState state = ModuleState.IDLE;
@@ -261,6 +262,20 @@ public class ModuleInstance implements Buildable {
 
     public long powerDrawEuPerTick() {
         return currentTierData().powerDrawEuPerTick();
+    }
+
+    public byte parallel() {
+        return parallel;
+    }
+
+    public void setParallel(byte parallel) {
+        if (!kind().supportsParallel()) {
+            throw new IllegalStateException(kind() + " does not support parallel execution");
+        }
+        if (parallel < 1) {
+            throw new IllegalArgumentException("parallel must be at least 1");
+        }
+        this.parallel = parallel;
     }
 
     public ModuleTier nextTier() {

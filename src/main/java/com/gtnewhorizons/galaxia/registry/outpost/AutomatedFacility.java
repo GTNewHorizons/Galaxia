@@ -363,14 +363,16 @@ public final class AutomatedFacility extends CelestialAsset {
             return applyRemoveLogisticsConfig(removeConfig);
         }
         if (command instanceof FacilityCommand.ReplaceRecipeBook replaceRecipeBook) {
-            if (replaceRecipeBook.owner() == null || replaceRecipeBook.replacement() == null) {
+            if (replaceRecipeBook.moduleId() == null || replaceRecipeBook.replacement() == null) {
                 return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_RECIPE_BOOK);
             }
+            ModuleInstance module = moduleById(replaceRecipeBook.moduleId());
+            if (module == null) return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MODULE_NOT_FOUND);
             try {
                 return finishModuleSettingsCommand(
-                    moduleSettings.replaceRecipeBook(replaceRecipeBook.owner(), replaceRecipeBook.replacement()));
-            } catch (IllegalArgumentException | IllegalStateException invalidOwner) {
-                return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_RECIPE_BOOK_OWNER);
+                    moduleSettings.replaceEffectiveSettings(module, replaceRecipeBook.replacement()));
+            } catch (IllegalArgumentException | IllegalStateException invalidBook) {
+                return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_RECIPE_BOOK);
             }
         }
         if (command instanceof FacilityCommand.ModuleSettingsCommand settingsCommand) {
@@ -1195,15 +1197,6 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public boolean isMinerOreBlacklisted(ModuleInstance module, String oreKey) {
         return minerSettings(module).isOreBlacklisted(oreKey);
-    }
-
-    public RecipeBook.Owner recipeBookOwner(ModuleInstance module) {
-        requireRecipeModule(module, "Recipe-book owner requested");
-        return moduleSettings.recipeBookOwner(module.id);
-    }
-
-    public RecipeBook recipeBook(RecipeBook.Owner owner) {
-        return moduleSettings.recipeBook(owner);
     }
 
     public RecipeBook recipeBook(ModuleInstance module) {

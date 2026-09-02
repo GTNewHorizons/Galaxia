@@ -122,11 +122,7 @@ final class FacilityCommandPacketTest {
             new FacilityCommand.CopyBuildModules(FACILITY_ID, MODULE_ID, false, placements),
             new FacilityCommand.RequestModuleDeconstruction(FACILITY_ID, MODULE_ID),
             new FacilityCommand.CancelModuleOperation(FACILITY_ID, MODULE_ID),
-            new FacilityCommand.ReplaceRecipeBook(FACILITY_ID, new RecipeBook.Owner.Private(MODULE_ID), recipeBook),
-            new FacilityCommand.ReplaceRecipeBook(
-                FACILITY_ID,
-                new RecipeBook.Owner.Group(new SettingsGroup.ID(7)),
-                recipeBook),
+            new FacilityCommand.ReplaceRecipeBook(FACILITY_ID, MODULE_ID, recipeBook),
             new FacilityCommand.CreateSettingsGroup(FACILITY_ID, MODULE_ID, "Shared miners"),
             new FacilityCommand.RenameSettingsGroup(FACILITY_ID, new SettingsGroup.ID(7), "Priority miners"),
             new FacilityCommand.SetSettingsGroup(FACILITY_ID, MODULE_ID, new SettingsGroup.ID(7)),
@@ -260,12 +256,11 @@ final class FacilityCommandPacketTest {
             .appendTag(new NBTTagString("ore:iron"));
         malformed.add(wire(duplicateOre));
 
-        NBTTagCompound invalidOwner = envelope(
-            new FacilityCommand.ReplaceRecipeBook(FACILITY_ID, new RecipeBook.Owner.Private(MODULE_ID), recipeBook()));
-        invalidOwner.getCompoundTag("data")
-            .getCompoundTag("owner")
-            .setString("type", "unknown");
-        malformed.add(wire(invalidOwner));
+        NBTTagCompound invalidRecipeModule = envelope(
+            new FacilityCommand.ReplaceRecipeBook(FACILITY_ID, MODULE_ID, recipeBook()));
+        invalidRecipeModule.getCompoundTag("data")
+            .setString("module", "not-a-uuid");
+        malformed.add(wire(invalidRecipeModule));
 
         ByteBuf valid = wire(envelope(command));
         malformed.add(valid.copy(0, valid.readableBytes() - 1));
@@ -352,7 +347,6 @@ final class FacilityCommandPacketTest {
 
         NBTTagCompound zeroOwner = envelope(replaceRecipeBook(recipeBook()));
         zeroOwner.getCompoundTag("data")
-            .getCompoundTag("owner")
             .setString("module", new UUID(0L, 0L).toString());
 
         List<NBTTagCompound> malformedCases = List
@@ -372,7 +366,7 @@ final class FacilityCommandPacketTest {
             replaceRecipeBook(recipeBook(32, "x".repeat(1025))),
             new FacilityCommand.ReplaceRecipeBook(
                 FACILITY_ID,
-                new RecipeBook.Owner.Private(new ModuleInstance.ID(new UUID(0L, 0L))),
+                new ModuleInstance.ID(new UUID(0L, 0L)),
                 recipeBook()));
 
         for (int i = 0; i < invalid.size(); i++) {
@@ -497,7 +491,7 @@ final class FacilityCommandPacketTest {
     }
 
     private static FacilityCommand.ReplaceRecipeBook replaceRecipeBook(RecipeBook book) {
-        return new FacilityCommand.ReplaceRecipeBook(FACILITY_ID, new RecipeBook.Owner.Private(MODULE_ID), book);
+        return new FacilityCommand.ReplaceRecipeBook(FACILITY_ID, MODULE_ID, book);
     }
 
     private static NBTTagCompound firstRecipe(NBTTagCompound envelope) {
