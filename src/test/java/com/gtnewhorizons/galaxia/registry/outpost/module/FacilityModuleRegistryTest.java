@@ -127,6 +127,18 @@ final class FacilityModuleRegistryTest {
     }
 
     @Test
+    void tierMapBuilderDoesNotInjectImplicitUpkeep() {
+        ModuleTierData data = new FacilityModuleRegistry.TierMapBuilder()
+            .add(ModuleTier.HV, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
+            .build()
+            .get(ModuleTier.HV);
+
+        assertTrue(
+            data.upkeepDemand()
+                .isEmpty());
+    }
+
+    @Test
     void tierDataBuilderCarriesVariantCooldownsAndOperationSettings() {
         ItemStack material = new ItemStack(Items.diamond);
 

@@ -80,8 +80,7 @@ public final class ProductionModuleHelper {
 
     private static boolean allowsInputs(AutomatedFacility outpost, Map<InventoryKey, Long> requiredInputs) {
         for (Map.Entry<InventoryKey, Long> entry : requiredInputs.entrySet()) {
-            InventoryBounds bound = outpost.getBound(entry.getKey());
-            if (bound.hasLow() && !outpost.isAboveLow(entry.getKey(), entry.getValue())) return false;
+            if (!outpost.isAboveLow(entry.getKey(), entry.getValue())) return false;
         }
         return true;
     }

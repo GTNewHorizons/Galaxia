@@ -134,7 +134,7 @@ public enum FacilityModuleKind {
 
     public boolean isProductionModule() {
         return switch (this) {
-            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> true;
+            case HAMMER, MINER, MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> true;
             default -> false;
         };
     }

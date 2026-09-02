@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -79,7 +78,7 @@ final class StationItemInteractionModelTest {
     }
 
     @Test
-    void logisticsAndGroupedUpkeepDescribeItemInteractions() {
+    void logisticsAndHammerInteractionsExcludeModulesWithoutUpkeep() {
         assumeTrue(FacilityModuleKind.MACERATOR.isAvailable());
         AutomatedFacility facility = createFacility();
         ItemStackWrapper resource = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
@@ -101,16 +100,11 @@ final class StationItemInteractionModelTest {
         assertTrue(
             entries.stream()
                 .anyMatch(entry -> entry.role() == StationItemInteractionModel.Role.HAMMER_EXPORT));
-        StationItemInteractionModel.Entry upkeep = entries.stream()
-            .filter(entry -> entry.section() == StationItemInteractionModel.Section.UPKEEP)
-            .filter(entry -> entry.kind() == FacilityModuleKind.MACERATOR)
-            .findFirst()
-            .orElseThrow();
-        assertEquals(2, upkeep.count());
-        assertNull(upkeep.groupId());
         assertTrue(
-            upkeep.amountPerMinute()
-                .microUnitsPerMinute() > 0);
+            entries.stream()
+                .noneMatch(
+                    entry -> entry.section() == StationItemInteractionModel.Section.UPKEEP
+                        && entry.kind() == FacilityModuleKind.MACERATOR));
     }
 
     @Test
@@ -133,7 +127,7 @@ final class StationItemInteractionModelTest {
     }
 
     @Test
-    void upkeepAggregatesSameKindModulesWithoutSettingsGroup() {
+    void modulesWithoutExplicitUpkeepDoNotCreateEntries() {
         AutomatedFacility facility = createFacility();
         ItemStackWrapper resource = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
         facility.addModule(createModule(FacilityModuleKind.POWER, StationTileCoord.of(1, 0)));
@@ -146,13 +140,7 @@ final class StationItemInteractionModelTest {
             .filter(entry -> entry.kind() == FacilityModuleKind.POWER)
             .toList();
 
-        assertEquals(1, upkeepEntries.size());
-        StationItemInteractionModel.Entry upkeep = upkeepEntries.get(0);
-        assertEquals(3, upkeep.count());
-        assertNull(upkeep.groupId());
-        assertTrue(
-            upkeep.amountPerMinute()
-                .microUnitsPerMinute() > 0);
+        assertTrue(upkeepEntries.isEmpty());
     }
 
     private static AutomatedFacility createFacility() {

@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.upkeep;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -65,7 +64,7 @@ final class UpkeepLedgerTest {
     }
 
     @Test
-    void summaryUsesCanonicalTierUpkeepForHammer() {
+    void summaryExcludesHammerWithoutExplicitTierUpkeep() {
         ModuleInstance hammer = FacilityModuleRegistry.create(
             ModuleInstance.ID.create(),
             FacilityModuleKind.HAMMER,
@@ -77,14 +76,12 @@ final class UpkeepLedgerTest {
 
         UpkeepLedger.UpkeepSummary summary = facility.upkeepSummary();
 
-        assertFalse(
+        assertTrue(
             hammer.currentTierUpkeepDemand()
                 .isEmpty());
-        assertEquals(
-            hammer.currentTierUpkeepDemand(),
+        assertTrue(
             summary.moduleDemands()
-                .get(0)
-                .demand());
+                .isEmpty());
     }
 
     @Test

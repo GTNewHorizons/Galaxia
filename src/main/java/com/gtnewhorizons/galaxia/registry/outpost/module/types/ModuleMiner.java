@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module.types;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -159,12 +158,8 @@ public final class ModuleMiner extends TieredModuleComponent {
 
     public static MiningFeatureEffects featureMiningEffects(@Nonnull ModuleInstance module,
         @Nonnull AutomatedFacility outpost) {
-        Map<PlanetaryFeatureKey, Integer> counts = new LinkedHashMap<>();
-        for (var tile : module.tiles()) {
-            for (PlanetaryFeatureKey feature : outpost.planetaryFeaturesAt(tile)) {
-                counts.merge(feature, 1, Integer::sum);
-            }
-        }
+        Map<PlanetaryFeatureKey, Integer> counts = outpost.featureModifiers(module)
+            .coveredTiles();
         MiningFeatureEffects.Builder builder = MiningFeatureEffects.builder();
         int totalTiles = module.shape()
             .tileCount();

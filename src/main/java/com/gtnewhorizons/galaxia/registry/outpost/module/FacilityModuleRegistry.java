@@ -8,7 +8,6 @@ import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import net.minecraft.init.Items;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -65,7 +64,6 @@ public class FacilityModuleRegistry {
     }
 
     private static final Map<FacilityModuleKind, Definition> DEFINITIONS = new EnumMap<>(FacilityModuleKind.class);
-    private static final long PLACEHOLDER_UPKEEP_PER_MINUTE = 1L;
 
     public static void init() {
         register(
@@ -393,13 +391,7 @@ public class FacilityModuleRegistry {
     }
 
     private static ModuleTierData.Builder tierDataBuilder() {
-        return ModuleTierData.builder()
-            .upkeepItem(placeholderUpkeepStack(), PLACEHOLDER_UPKEEP_PER_MINUTE);
-    }
-
-    private static ItemStack placeholderUpkeepStack() {
-        Item item = Items.iron_ingot == null ? new Item() : Items.iron_ingot;
-        return new ItemStack(item);
+        return ModuleTierData.builder();
     }
 
     public static class TierMapBuilder {
