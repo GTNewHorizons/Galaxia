@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
 
@@ -22,6 +23,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledge
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class StarmapAssetActionsTest {
@@ -85,6 +87,14 @@ final class StarmapAssetActionsTest {
         controller.triggerAssetCreation(state, mars, CelestialAsset.Kind.AUTOMATED_OUTPOST, false);
 
         assertNotNull(state.pendingAssetCreation);
+    }
+
+    @Test
+    void pendingSatelliteDeletionBlocksOtherModalActions() {
+        StarmapAssetActions.OrbitalAssetUiState state = new StarmapAssetActions.OrbitalAssetUiState();
+        state.pendingSatelliteDeletion = new PendingSatelliteDeletion(SatelliteKind.COMMUNICATION, 1);
+
+        assertTrue(state.hasBlockingModal());
     }
 
     private static void setDiscovery(CelestialObject body, DiscoveryState detectionState) {

@@ -57,6 +57,7 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
      * even if the starmap screen was closed and reopened in between.
      */
     public static void setPendingForOutpost(CelestialAsset.ID outpostId) {
+        clearPendingState();
         pendingReturnScreen = Minecraft.getMinecraft().currentScreen;
         pendingForOutpostId = outpostId;
         pendingContext = PickContext.OUTPOST_LOGISTICS;
@@ -71,8 +72,8 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
     }
 
     public static void setPendingForSidebarDebug(GuiScreen returnScreen) {
+        clearPendingState();
         pendingReturnScreen = returnScreen;
-        pendingForOutpostId = null;
         pendingContext = PickContext.SIDEBAR_DEBUG;
     }
 
@@ -83,11 +84,15 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
             return null;
         }
         GuiScreen returnScreen = pendingReturnScreen;
+        clearPendingState();
+        return returnScreen;
+    }
+
+    private static void clearPendingState() {
         pendingPick = null;
         pendingForOutpostId = null;
         pendingContext = null;
         pendingReturnScreen = null;
-        return returnScreen;
     }
 
     public static CelestialAsset.ID getPendingForOutpostId() {
@@ -95,11 +100,11 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
     }
 
     public static boolean hasPendingPickForOutpost() {
-        return pendingPick != null && pendingForOutpostId != null && pendingContext == PickContext.OUTPOST_LOGISTICS;
+        return pendingPick != null && pendingForOutpostId != null && pendingContext == null;
     }
 
     public static boolean hasPendingPickForSidebarDebug() {
-        return pendingPick != null && pendingContext == PickContext.SIDEBAR_DEBUG;
+        return pendingPick != null && pendingForOutpostId == null && pendingContext == null;
     }
 
     public static boolean hasPendingPicker() {
@@ -110,10 +115,7 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
     public static ItemStack pollPendingPickForOutpost() {
         if (!hasPendingPickForOutpost()) return null;
         ItemStack pick = pendingPick;
-        pendingPick = null;
-        pendingForOutpostId = null;
-        pendingContext = null;
-        pendingReturnScreen = null;
+        clearPendingState();
         return pick;
     }
 
@@ -121,10 +123,7 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
     public static ItemStack pollPendingPickForSidebarDebug() {
         if (!hasPendingPickForSidebarDebug()) return null;
         ItemStack pick = pendingPick;
-        pendingPick = null;
-        pendingForOutpostId = null;
-        pendingContext = null;
-        pendingReturnScreen = null;
+        clearPendingState();
         return pick;
     }
 
@@ -140,6 +139,8 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
             if (client && !init && stack != null) {
                 pendingPick = stack.copy();
                 GuiScreen returnScreen = pendingReturnScreen;
+                pendingContext = null;
+                pendingReturnScreen = null;
                 Minecraft.getMinecraft()
                     .displayGuiScreen(returnScreen);
             }

@@ -465,7 +465,8 @@ public final class StarmapAssetActions {
             return pendingAssetCreation != null || pendingAssetDestruction != null
                 || pendingConstructionCancellation != null
                 || pendingResourceTransfer != null
-                || pendingAssetRename != null;
+                || pendingAssetRename != null
+                || pendingSatelliteDeletion != null;
         }
 
         void openAssetActions(CelestialObject body) {

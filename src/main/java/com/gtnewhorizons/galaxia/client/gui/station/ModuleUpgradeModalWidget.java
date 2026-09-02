@@ -280,7 +280,11 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
             ModuleTier targetTier = ModuleUpgradeUiModel.minerTier(controller.moduleUpgradeSelection());
             MinerFocusTier targetFocusTier = ModuleUpgradeUiModel.minerFocusTier(controller.moduleUpgradeSelection());
             if (MinerFocusUiModel.canPlanTier(module, targetFocusTier)) {
-                CelestialClient.planMinerFocusTier(assetId, module.id, targetTier, targetFocusTier);
+                CelestialClient.planMinerFocusTier(
+                    assetId,
+                    module.id,
+                    targetTier == ModuleTier.NONE ? module.tier() : targetTier,
+                    targetFocusTier);
             } else if (module.tier() != targetTier) {
                 CelestialClient.planModuleTierUpgrade(assetId, module.id, targetTier, false);
             }
