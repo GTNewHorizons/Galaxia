@@ -8,7 +8,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 public final class CelestialDiscoveryClientState {
 
     private static List<CelestialDiscoveryScanSnapshot> snapshots = List.of();
+    private static List<VisibilitySnapshot> visibilitySnapshots = List.of();
     private static int revision;
+    private static int visibilityRevision;
 
     private CelestialDiscoveryClientState() {}
 
@@ -19,6 +21,10 @@ public final class CelestialDiscoveryClientState {
     /** Bumped whenever the synced scans change, so readers can cache derived views. */
     public static int revision() {
         return revision;
+    }
+
+    public static int visibilityRevision() {
+        return visibilityRevision;
     }
 
     public static Optional<CelestialDiscoveryScanSnapshot> scan(CelestialObjectKey anchorKey,
@@ -44,11 +50,32 @@ public final class CelestialDiscoveryClientState {
         if (snapshots.equals(updated)) return;
         snapshots = updated;
         revision++;
+        List<VisibilitySnapshot> updatedVisibility = updated.stream()
+            .map(VisibilitySnapshot::from)
+            .toList();
+        if (!visibilitySnapshots.equals(updatedVisibility)) {
+            visibilitySnapshots = updatedVisibility;
+            visibilityRevision++;
+        }
     }
 
     public static void clear() {
         if (snapshots.isEmpty()) return;
         snapshots = List.of();
+        visibilitySnapshots = List.of();
         revision++;
+        visibilityRevision++;
+    }
+
+    private record VisibilitySnapshot(CelestialObjectKey anchorKey, double radius,
+        CelestialDiscoveryCapability capability, CelestialObjectKey targetKey) {
+
+        private static VisibilitySnapshot from(CelestialDiscoveryScanSnapshot snapshot) {
+            return new VisibilitySnapshot(
+                snapshot.anchorKey(),
+                snapshot.radius(),
+                snapshot.capability(),
+                snapshot.targetKey());
+        }
     }
 }

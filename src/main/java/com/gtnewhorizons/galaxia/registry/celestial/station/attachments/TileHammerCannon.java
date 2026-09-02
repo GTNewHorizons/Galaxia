@@ -8,6 +8,7 @@ import javax.annotation.Nullable;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.inventory.IInventory;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.nbt.NBTTagString;
@@ -52,7 +53,7 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
     private static final String NBT_HAMMER_VARIANT = "hammerVariant";
     private static final String NBT_HAMMER_ENERGY = "hammerEnergy";
     private static final String NBT_HAMMER_COOLDOWN_SHOT = "hammerCooldownShot";
-    private static final String NBT_HAMMER_COOLDOWN_ROUTE = "hammerCooldownShot";
+    private static final String NBT_HAMMER_COOLDOWN_ROUTE = "hammerCooldownRoute";
 
     private final static String STRUCTURE_PIECE_MAIN = "main";
     private static final IStructureDefinition<TileHammerCannon> STRUCTURE_DEFINITION = StructureDefinition
@@ -131,6 +132,42 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
 
     public List<IInventory> getChestInventories() {
         return inventory;
+    }
+
+    public boolean tryExtractPackage(ItemStackWrapper resource, long amount) {
+        if (resource == null || amount <= 0L) return false;
+        if (availablePackageAmount(resource, amount) < amount) return false;
+        extractPackage(resource, amount);
+        markDirty();
+        return true;
+    }
+
+    private long availablePackageAmount(ItemStackWrapper resource, long target) {
+        long available = 0L;
+        for (IInventory chest : inventory) {
+            for (int slot = 0; slot < chest.getSizeInventory(); slot++) {
+                ItemStack stack = chest.getStackInSlot(slot);
+                if (!resource.equals(ItemStackWrapper.of(stack))) continue;
+                available += stack.stackSize;
+                if (available >= target) return available;
+            }
+        }
+        return available;
+    }
+
+    private void extractPackage(ItemStackWrapper resource, long amount) {
+        long remaining = amount;
+        for (IInventory chest : inventory) {
+            for (int slot = 0; slot < chest.getSizeInventory() && remaining > 0L; slot++) {
+                ItemStack stack = chest.getStackInSlot(slot);
+                if (!resource.equals(ItemStackWrapper.of(stack))) continue;
+                int extracted = (int) Math.min(remaining, stack.stackSize);
+                stack.stackSize -= extracted;
+                remaining -= extracted;
+                if (stack.stackSize <= 0) chest.setInventorySlotContents(slot, null);
+            }
+            if (remaining <= 0L) break;
+        }
     }
 
     public TileHammerCannon() {

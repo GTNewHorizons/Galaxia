@@ -226,7 +226,6 @@ final class StationItemInteractionModelTest {
 
     private static ModuleInstance moduleWithUpkeep(FacilityModuleKind kind, StationTileCoord anchor, long itemAmount) {
         ModuleTierData tierData = ModuleTierData.builder()
-            .addedEnergyCapacity(0L)
             .powerDraw(0L)
             .cooldown(20)
             .cost(Map.of(new ItemStack(Items.iron_ingot), 1L))

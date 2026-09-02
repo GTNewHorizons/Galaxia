@@ -16,6 +16,10 @@ import net.minecraftforge.fluids.Fluid;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
@@ -23,6 +27,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperat
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationModuleCategory;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
@@ -65,15 +70,7 @@ final class FacilityModuleRegistryTest {
 
     @Test
     void tierDataCarriesBuildTicksAndRefundPercent() {
-        ModuleTierData data = new ModuleTierData(
-            1000L,
-            0L,
-            10,
-            null,
-            null,
-            Map.of(new ItemStack(Items.diamond), 1L),
-            40,
-            50);
+        ModuleTierData data = new ModuleTierData(0L, 10, null, null, Map.of(new ItemStack(Items.diamond), 1L), 40, 50);
 
         assertEquals(40, data.buildTicks());
         assertEquals(50, data.completionRefundPercent());
@@ -84,14 +81,12 @@ final class FacilityModuleRegistryTest {
         ItemStack material = new ItemStack(Items.diamond);
 
         ModuleTierData data = ModuleTierData.builder()
-            .addedEnergyCapacity(1000L)
             .powerDraw(32L)
             .cooldown(10)
             .capacity(4096L)
             .cost(Map.of(material, 2L))
             .build();
 
-        assertEquals(1000L, data.baseEnergyCapacity());
         assertEquals(32L, data.powerDrawEuPerTick());
         assertEquals(10, data.cooldownTicks());
         assertEquals(4096L, data.capacity());
@@ -112,7 +107,6 @@ final class FacilityModuleRegistryTest {
         ItemStack upkeep = new ItemStack(new Item());
 
         ModuleTierData data = ModuleTierData.builder()
-            .addedEnergyCapacity(1000L)
             .powerDraw(32L)
             .cooldown(10)
             .cost(Map.of(material, 2L))
@@ -137,7 +131,6 @@ final class FacilityModuleRegistryTest {
         ItemStack material = new ItemStack(Items.diamond);
 
         ModuleTierData data = ModuleTierData.builder()
-            .addedEnergyCapacity(2000L)
             .powerDraw(64L)
             .cooldown(20)
             .variantCooldowns(Map.of("BIG", 600))
@@ -167,12 +160,10 @@ final class FacilityModuleRegistryTest {
         ModuleTierData hvData = definition.getTierData(ModuleTier.HV);
 
         assertEquals(1024L, hvData.capacity());
-        assertEquals(500L, hvData.baseEnergyCapacity());
         assertEquals(0L, hvData.powerDrawEuPerTick());
 
         ModuleTierData ivData = definition.getTierData(ModuleTier.IV);
         assertEquals(16384L, ivData.capacity());
-        assertEquals(8000L, ivData.baseEnergyCapacity());
     }
 
     @Test
@@ -207,6 +198,42 @@ final class FacilityModuleRegistryTest {
         assertFalse(
             FacilityModuleRegistry.get(FacilityModuleKind.HAMMER)
                 .settingsGroups());
+    }
+
+    @Test
+    void facilityReportsOperationalRecipeModulesAsProduction() {
+        ModuleInstance module = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.MACERATOR,
+            StationTileCoord.of(0, 0),
+            ModuleShape.SINGLE,
+            ModuleTier.HV);
+        module.completeConstruction();
+
+        assertTrue(facilityWith(module).hasProductionCapability());
+    }
+
+    @Test
+    void facilityReportsOperationalMinerAsProduction() {
+        ModuleInstance miner = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.MINER,
+            StationTileCoord.of(0, 0),
+            ModuleShape.SINGLE,
+            ModuleTier.EV);
+        miner.completeConstruction();
+
+        assertTrue(facilityWith(miner).hasProductionCapability());
+    }
+
+    private static AutomatedFacility facilityWith(ModuleInstance module) {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.OVERWORLD,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        facility.addModule(module);
+        return facility;
     }
 
     @Test

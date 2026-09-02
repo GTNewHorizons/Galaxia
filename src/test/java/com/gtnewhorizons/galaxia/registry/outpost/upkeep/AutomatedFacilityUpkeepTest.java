@@ -265,7 +265,6 @@ final class AutomatedFacilityUpkeepTest {
 
     private static ModuleTierData.Builder tierDataBuilder() {
         return ModuleTierData.builder()
-            .addedEnergyCapacity(0L)
             .powerDraw(0L)
             .cooldown(20)
             .cost(Map.of(new ItemStack(new Item()), 1L));

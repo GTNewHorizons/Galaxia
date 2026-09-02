@@ -5,8 +5,6 @@ import java.util.List;
 
 import net.minecraft.util.StatCollector;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
-import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus;
@@ -69,11 +67,8 @@ final class ModuleStatusTextRegistry {
             hammer.shotCooldownTicks() > 0 ? EnumColors.MAP_COLOR_TEXT_WARNING.getColor()
                 : EnumColors.MAP_COLOR_TEXT_BODY.getColor());
 
-        HammerDispatchStatus.Status status = HammerDispatchStatus.evaluate(
-            context.facility(),
-            module,
-            CelestialClient.allOutposts(),
-            GalaxiaCelestialAPI.currentOrbitalTime());
+        HammerDispatchStatus.Status status = context.hammerDispatchStatus();
+        if (status == null) return;
         lines.line(
             hammerDispatchStatusLine(status),
             status.code() == HammerDispatchStatus.Code.READY ? EnumColors.MAP_COLOR_TEXT_BODY.getColor()
@@ -222,7 +217,8 @@ final class ModuleStatusTextRegistry {
         };
     }
 
-    record Context(AutomatedFacility facility, StationTileCoord selected, PlacedTile tile, ModuleInstance module) {}
+    record Context(AutomatedFacility facility, StationTileCoord selected, PlacedTile tile, ModuleInstance module,
+        @javax.annotation.Nullable HammerDispatchStatus.Status hammerDispatchStatus) {}
 
     static final class Lines {
 

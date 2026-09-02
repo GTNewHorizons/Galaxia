@@ -74,7 +74,6 @@ public final class HammerDispatchPlanner {
                 if (!(asset instanceof CelestialAsset requester)) continue;
                 if (supplier.assetId.equals(requester.assetId)) continue;
                 if (!Objects.equals(supplier.systemKey, requester.systemKey)) continue;
-
                 LogisticsResourceConfig requesterCfg = requester.logisticsConfig.get(resource);
                 if (requesterCfg == null || !requesterCfg.isImportEnabled()) continue;
 
@@ -99,7 +98,7 @@ public final class HammerDispatchPlanner {
                 }
                 long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount);
                 if (sendAmount <= 0L) continue;
-                long freeCapacity = destinationFreeItemCapacity(requester);
+                long freeCapacity = destinationFreeItemCapacity(requester, resource);
                 if (freeCapacity < sendAmount) {
                     bestBlockedStatus = prefer(
                         destinationLacksPackageSpace(hammer, freeCapacity, requesterCfg.orderSize()),
@@ -167,7 +166,7 @@ public final class HammerDispatchPlanner {
         if (arrivedInbound > 0L) return destinationBlocked(hammer, arrivedInbound, requesterCfg.orderSize());
         long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount);
         if (sendAmount <= 0L) return Result.simple(HammerDispatchStatus.Code.NO_SURPLUS_AFTER_RESERVE, hammer);
-        long freeCapacity = destinationFreeItemCapacity(requester);
+        long freeCapacity = destinationFreeItemCapacity(requester, resource);
         if (freeCapacity < sendAmount) {
             return destinationLacksPackageSpace(hammer, freeCapacity, requesterCfg.orderSize());
         }
@@ -297,9 +296,12 @@ public final class HammerDispatchPlanner {
             null);
     }
 
-    private static long destinationFreeItemCapacity(CelestialAsset requester) {
+    private static long destinationFreeItemCapacity(CelestialAsset requester, ItemStackWrapper resource) {
         if (requester instanceof AutomatedFacility facility) return facility.remainingItemCapacity();
-        return Long.MAX_VALUE;
+        if (requester instanceof IDistributedInventory physicalInventory) {
+            return physicalInventory.getFreeItemSpace(resource);
+        }
+        return 0L;
     }
 
     private static long itemAmount(CelestialAsset asset, ItemStackWrapper resource) {

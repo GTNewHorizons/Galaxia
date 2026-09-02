@@ -55,21 +55,7 @@ final class LogisticStoreTest {
         destination.insert(filler, 998);
         CelestialAssetStore.registerAsset(teamId, source);
         CelestialAssetStore.registerAsset(teamId, destination);
-
-        LogisticStore.addDelivery(
-            LogisticsDelivery.createWithTrajectory(
-                source.assetId,
-                destination.assetId,
-                delivered,
-                5L,
-                1,
-                LogisticSignal.Scope.SYSTEM,
-                source.celestialObjectKey,
-                destination.celestialObjectKey,
-                0,
-                0,
-                null));
-
+        LogisticStore.addDelivery(delivery(source, destination, delivered, 5L, 1));
         LogisticsDelivery pending = LogisticStore.activeDeliveries()
             .get(0);
         LogisticStore.tickDeliveries();
@@ -89,10 +75,45 @@ final class LogisticStoreTest {
         LogisticStore.tickDeliveries();
 
         assertEquals(5L, destination.itemAmount(delivered));
-        assertEquals(
-            0,
+        assertTrue(
             LogisticStore.activeDeliveries()
-                .size());
+                .isEmpty());
+    }
+
+    @Test
+    void missingDestinationRefundsCargoToSurvivingSource() {
+        DeliveryScenario scenario = deliveryScenario();
+        assertAfterEndpointLoss(scenario, scenario.source(), scenario.source());
+    }
+
+    @Test
+    void missingSourceStillDeliversCargoToSurvivingDestination() {
+        DeliveryScenario scenario = deliveryScenario();
+        assertAfterEndpointLoss(scenario, scenario.destination(), scenario.destination());
+    }
+
+    @Test
+    void missingEndpointsRemoveOwnerlessDelivery() {
+        assertAfterEndpointLoss(deliveryScenario(), null, null);
+    }
+
+    @Test
+    void missingSourceAndUnsupportedDestinationRemoveOwnerlessDelivery() {
+        UUID teamId = UUID.randomUUID();
+        AutomatedFacility source = facility();
+        CelestialAsset destination = new TestLogisticsAsset(CelestialAsset.Kind.SATELLITE);
+        ItemStackWrapper delivered = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        CelestialAssetStore.registerAsset(teamId, source);
+        CelestialAssetStore.registerAsset(teamId, destination);
+        LogisticStore.addDelivery(delivery(source, destination, delivered, 5L, 1));
+        CelestialAssetStore.clear();
+        CelestialAssetStore.registerAsset(teamId, destination);
+
+        LogisticStore.tickDeliveries();
+
+        assertTrue(
+            LogisticStore.activeDeliveries()
+                .isEmpty());
     }
 
     @Test
@@ -261,7 +282,7 @@ final class LogisticStoreTest {
     @Test
     void distributedInventoryContentsFeedTheSameSignalCalculation() {
         ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
-        PhysicalInventoryAsset physical = new PhysicalInventoryAsset(Map.of(resource, 11L));
+        TestPhysicalInventoryAsset physical = new TestPhysicalInventoryAsset(Map.of(resource, 11L));
         physical.logisticsConfig.set(resource, new LogisticsResourceConfig(3, 64, false, true));
 
         LogisticSignal signal = signalFor(LogisticStore.collectSignals(List.of(physical)), physical, resource);
@@ -286,41 +307,103 @@ final class LogisticStoreTest {
             Buildable.Status.OPERATIONAL);
     }
 
-    private static final class PhysicalInventoryAsset extends CelestialAsset implements IDistributedInventory {
+    private static DeliveryScenario deliveryScenario() {
+        UUID teamId = UUID.randomUUID();
+        AutomatedFacility source = facility();
+        AutomatedFacility destination = facility();
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        CelestialAssetStore.registerAsset(teamId, source);
+        CelestialAssetStore.registerAsset(teamId, destination);
+        LogisticStore.addDelivery(delivery(source, destination, resource, 5L, 1));
+        return new DeliveryScenario(teamId, source, destination, resource);
+    }
 
-        private final Map<ItemStackWrapper, Long> items;
+    private static void assertAfterEndpointLoss(DeliveryScenario scenario, CelestialAsset survivor,
+        AutomatedFacility recipient) {
+        CelestialAssetStore.clear();
+        if (survivor != null) CelestialAssetStore.registerAsset(scenario.teamId(), survivor);
+        LogisticStore.tickDeliveries();
+        if (recipient != null) assertEquals(5L, recipient.itemAmount(scenario.resource()));
+        assertTrue(
+            LogisticStore.activeDeliveries()
+                .isEmpty());
+    }
 
-        private PhysicalInventoryAsset(Map<ItemStackWrapper, Long> items) {
-            super(
-                CelestialAsset.ID.create(),
-                CelestialObjectId.OVERWORLD,
-                CelestialAsset.Kind.STATION,
-                Buildable.Status.OPERATIONAL,
-                null);
-            this.items = new LinkedHashMap<>(items);
-        }
+    private static LogisticsDelivery delivery(CelestialAsset source, CelestialAsset destination,
+        ItemStackWrapper resource, long amount, int ticks) {
+        return LogisticsDelivery.createWithTrajectory(
+            source.assetId,
+            destination.assetId,
+            resource,
+            amount,
+            ticks,
+            LogisticSignal.Scope.SYSTEM,
+            source.celestialObjectKey,
+            destination.celestialObjectKey,
+            0,
+            0,
+            null);
+    }
 
-        @Override
-        public Map<ItemStackWrapper, Long> getItemAmounts() {
-            return items;
-        }
+    private record DeliveryScenario(UUID teamId, AutomatedFacility source, AutomatedFacility destination,
+        ItemStackWrapper resource) {}
 
-        @Override
-        public boolean tryConsumeEnergy(long powerDraw) {
-            return false;
-        }
+}
 
-        @Override
-        public long getEnergyStored() {
-            return 0;
-        }
+class TestLogisticsAsset extends CelestialAsset {
 
-        @Override
-        public Stream<ModuleInstance> forEachModule() {
-            return Stream.empty();
-        }
+    TestLogisticsAsset(Kind kind) {
+        super(ID.create(), CelestialObjectId.OVERWORLD, kind, Buildable.Status.OPERATIONAL, null);
+    }
 
-        @Override
-        public void tick() {}
+    @Override
+    public boolean tryConsumeEnergy(long powerDraw) {
+        return false;
+    }
+
+    @Override
+    public long getEnergyStored() {
+        return 0L;
+    }
+
+    @Override
+    public Stream<ModuleInstance> forEachModule() {
+        return Stream.empty();
+    }
+
+    @Override
+    public void tick() {}
+}
+
+final class TestPhysicalInventoryAsset extends TestLogisticsAsset implements IDistributedInventory {
+
+    private final Map<ItemStackWrapper, Long> items;
+    private final ItemStackWrapper acceptedResource;
+    private final long freeSpace;
+
+    TestPhysicalInventoryAsset(Map<ItemStackWrapper, Long> items) {
+        this(items, null, 0L);
+    }
+
+    TestPhysicalInventoryAsset(ItemStackWrapper acceptedResource, long freeSpace) {
+        this(Map.of(), acceptedResource, freeSpace);
+    }
+
+    private TestPhysicalInventoryAsset(Map<ItemStackWrapper, Long> items, ItemStackWrapper acceptedResource,
+        long freeSpace) {
+        super(Kind.STATION);
+        this.items = new LinkedHashMap<>(items);
+        this.acceptedResource = acceptedResource;
+        this.freeSpace = freeSpace;
+    }
+
+    @Override
+    public Map<ItemStackWrapper, Long> getItemAmounts() {
+        return items;
+    }
+
+    @Override
+    public long getFreeItemSpace(ItemStackWrapper item) {
+        return acceptedResource != null && acceptedResource.equals(item) ? freeSpace : 0L;
     }
 }

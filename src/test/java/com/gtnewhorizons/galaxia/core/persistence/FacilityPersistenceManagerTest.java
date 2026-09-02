@@ -47,6 +47,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscovery
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryStep;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
@@ -2282,6 +2283,19 @@ final class FacilityPersistenceManagerTest {
         CelestialAssetStore.registerAsset(teamId, from);
         CelestialAssetStore.registerAsset(teamId, to);
         LogisticsDelivery.ID deliveryId = LogisticsDelivery.ID.create();
+        OrbitalTransferPlanner.TransferRoute transferRoute = new OrbitalTransferPlanner.TransferRoute(
+            3.25,
+            4.5,
+            2.0,
+            2.5,
+            CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
+            1.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            true);
         LogisticStore.addDelivery(
             LogisticsDelivery.createWithTrajectory(
                 deliveryId,
@@ -2294,7 +2308,8 @@ final class FacilityPersistenceManagerTest {
                 fromKey,
                 toKey,
                 12.5,
-                3.25));
+                3.25,
+                transferRoute));
 
         manager.saveToSaveDirectory(tempDir.toFile());
 
@@ -2337,7 +2352,21 @@ final class FacilityPersistenceManagerTest {
         assertEquals(42, loaded.getRemainingTicks());
         assertEquals(12.5, loaded.data.departureOrbitalTime());
         assertEquals(3.25, loaded.data.tofOrbitalOsu());
+        assertEquals(transferRoute, loaded.data.transferRoute());
         LogisticStore.clearDeliveries();
+    }
+
+    @Test
+    void malformedCurrentLogisticsTaskDoesNotPartiallyLoad(@TempDir Path tempDir) throws Exception {
+        Path dataDir = Files.createDirectories(tempDir.resolve("galaxiadata"));
+        Files.writeString(dataDir.resolve("_tasks.json"), "[{}]");
+        LogisticStore.clearDeliveries();
+
+        new FacilityPersistenceManager(CelestialServerRuntime.create()).loadFromSaveDirectory(tempDir.toFile());
+
+        assertTrue(
+            LogisticStore.activeDeliveries()
+                .isEmpty());
     }
 
     private static void setMinerOreBlacklisted(AutomatedFacility facility, ModuleInstance module, String oreKey,

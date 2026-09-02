@@ -11,8 +11,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
 
-public record ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, int cooldownTicks,
-    @Nullable Long capacity, @Nullable Map<String, Integer> variantCooldowns, @Nullable Integer chargeTicks,
+public record ModuleTierData(long powerDrawEuPerTick, int cooldownTicks, @Nullable Long capacity,
+    @Nullable Map<String, Integer> variantCooldowns, @Nullable Integer chargeTicks,
     @Nullable Map<String, Integer> variantChargeTicks, Map<ItemStack, Long> constructionCost, int buildTicks,
     int completionRefundPercent, UpkeepDemand upkeepDemand) {
 
@@ -34,10 +34,9 @@ public record ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, i
         }
     }
 
-    public ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, int cooldownTicks, @Nullable Long capacity,
+    public ModuleTierData(long powerDrawEuPerTick, int cooldownTicks, @Nullable Long capacity,
         Map<ItemStack, Long> constructionCost) {
         this(
-            baseEnergyCapacity,
             powerDrawEuPerTick,
             cooldownTicks,
             capacity,
@@ -50,11 +49,10 @@ public record ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, i
             UpkeepDemand.EMPTY);
     }
 
-    public ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, int cooldownTicks, @Nullable Long capacity,
+    public ModuleTierData(long powerDrawEuPerTick, int cooldownTicks, @Nullable Long capacity,
         @Nullable Map<String, Integer> variantCooldowns, Map<ItemStack, Long> constructionCost, int buildTicks,
         int completionRefundPercent) {
         this(
-            baseEnergyCapacity,
             powerDrawEuPerTick,
             cooldownTicks,
             capacity,
@@ -77,7 +75,6 @@ public record ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, i
 
     public static final class Builder {
 
-        private Long addedEnergyCapacity;
         private Long powerDraw;
         private Integer cooldown;
         private Long capacity;
@@ -90,11 +87,6 @@ public record ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, i
         private UpkeepDemand upkeepDemand = UpkeepDemand.EMPTY;
 
         private Builder() {}
-
-        public Builder addedEnergyCapacity(long addedEnergyCapacity) {
-            this.addedEnergyCapacity = addedEnergyCapacity;
-            return this;
-        }
 
         public Builder powerDraw(long powerDraw) {
             this.powerDraw = powerDraw;
@@ -184,7 +176,6 @@ public record ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, i
 
         public ModuleTierData build() {
             return new ModuleTierData(
-                require(addedEnergyCapacity, "addedEnergyCapacity"),
                 require(powerDraw, "powerDraw"),
                 require(cooldown, "cooldown"),
                 capacity,

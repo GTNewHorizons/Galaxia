@@ -3,12 +3,13 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nullable;
+
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.value.StringValue;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
-import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
@@ -48,6 +49,7 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
+    private @Nullable HammerDispatchStatus.Status dispatchStatus;
 
     HammerConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller) {
         this.assetId = assetId;
@@ -88,6 +90,18 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
     }
 
     @Override
+    public void onInit() {
+        super.onInit();
+        refreshDispatchStatus();
+    }
+
+    @Override
+    public void onUpdate() {
+        super.onUpdate();
+        refreshDispatchStatus();
+    }
+
+    @Override
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
         if (!controller.isHammerOpen()) return;
         ModuleConfigModalSupport.drawFrame(title(), WIDTH, HEIGHT);
@@ -100,9 +114,8 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
                 EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
             return;
         }
-        AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
-        HammerDispatchStatus.Status status = HammerDispatchStatus
-            .evaluate(facility, module, CelestialClient.allOutposts(), GalaxiaCelestialAPI.currentOrbitalTime());
+        HammerDispatchStatus.Status status = dispatchStatus;
+        if (status == null) return;
         int y = ModuleConfigModalSupport.drawTrimmedLine(
             dispatchStatusLine(status),
             ModuleConfigModalSupport.PANEL_PADDING,
@@ -118,6 +131,18 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
                 EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
         }
         drawControls(hammer);
+    }
+
+    private void refreshDispatchStatus() {
+        if (!controller.isHammerOpen()) {
+            dispatchStatus = null;
+            return;
+        }
+        ModuleInstance module = selectedModule();
+        AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
+        dispatchStatus = module == null || !(module.component() instanceof ModuleHammer) ? null
+            : HammerDispatchStatus
+                .evaluate(facility, module, CelestialClient.allOutposts(), CelestialClient.currentOrbitalTime());
     }
 
     private void openLogistics() {
