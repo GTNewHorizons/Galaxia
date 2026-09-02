@@ -61,7 +61,7 @@ final class AssetStateFramePacketTest {
     void largeUpdateUsesBoundedFramesAndAppliesOnlyAfterCompleteAssembly() {
         AutomatedFacility facility = facility();
         facility.setDisplayName("x".repeat(62_000));
-        AssetSyncPacket update = AssetSyncPacket.state(TEAM, facility)
+        AssetSyncPacket update = AssetSyncPacket.state(TEAM, facility, Map.of())
             .withPublishedRevision(1L);
         List<AssetStateFramePacket> frames = AssetStateSync.Server.frame(update);
         frames = frames.stream()
@@ -97,7 +97,7 @@ final class AssetStateFramePacketTest {
 
         facility.setEnergyStored(5L);
         for (AssetStateFramePacket frame : AssetStateSync.Server.frame(
-            AssetSyncPacket.state(TEAM, facility)
+            AssetSyncPacket.state(TEAM, facility, Map.of())
                 .withPublishedRevision(5L))) {
             client.receive(frame);
         }
@@ -105,7 +105,7 @@ final class AssetStateFramePacketTest {
         facility.setEnergyStored(7L);
         facility.setDisplayName("7".repeat(62_000));
         List<AssetStateFramePacket> revision7 = AssetStateSync.Server.frame(
-            AssetSyncPacket.state(TEAM, facility)
+            AssetSyncPacket.state(TEAM, facility, Map.of())
                 .withPublishedRevision(7L));
         assertTrue(revision7.size() > 1);
         client.receive(revision7.get(0));
@@ -113,7 +113,7 @@ final class AssetStateFramePacketTest {
         facility.setEnergyStored(4L);
         facility.setDisplayName("4");
         for (AssetStateFramePacket frame : AssetStateSync.Server.frame(
-            AssetSyncPacket.state(TEAM, facility)
+            AssetSyncPacket.state(TEAM, facility, Map.of())
                 .withPublishedRevision(4L))) {
             client.receive(frame);
         }
@@ -125,7 +125,7 @@ final class AssetStateFramePacketTest {
         facility.setEnergyStored(9L);
         facility.setDisplayName("9".repeat(62_000));
         List<AssetStateFramePacket> revision9 = AssetStateSync.Server.frame(
-            AssetSyncPacket.state(TEAM, facility)
+            AssetSyncPacket.state(TEAM, facility, Map.of())
                 .withPublishedRevision(9L));
         assertTrue(revision9.size() > 1);
         client.receive(revision9.get(0));
@@ -133,7 +133,7 @@ final class AssetStateFramePacketTest {
         facility.setEnergyStored(8L);
         facility.setDisplayName("8");
         for (AssetStateFramePacket frame : AssetStateSync.Server.frame(
-            AssetSyncPacket.state(TEAM, facility)
+            AssetSyncPacket.state(TEAM, facility, Map.of())
                 .withPublishedRevision(8L))) {
             client.receive(frame);
         }
@@ -149,7 +149,7 @@ final class AssetStateFramePacketTest {
         AutomatedFacility facility = facility();
         facility.setDisplayName("x".repeat(62_000));
         List<AssetStateFramePacket> frames = AssetStateSync.Server.frame(
-            AssetSyncPacket.state(TEAM, facility)
+            AssetSyncPacket.state(TEAM, facility, Map.of())
                 .withPublishedRevision(1L));
         RecordingClientTransport transport = new RecordingClientTransport();
         AssetStateSync.Client client = new AssetStateSync.Client(transport);
@@ -171,9 +171,10 @@ final class AssetStateFramePacketTest {
     @Test
     void malformedAndExpiredAssembliesRequestRateLimitedRecoveryWithoutMutation() {
         AutomatedFacility malformedFacility = facility();
-        AssetStateFramePacket valid = AssetStateSync.Server.frame(
-            AssetSyncPacket.state(TEAM, malformedFacility)
-                .withPublishedRevision(1L))
+        AssetStateFramePacket valid = AssetStateSync.Server
+            .frame(
+                AssetSyncPacket.state(TEAM, malformedFacility, Map.of())
+                    .withPublishedRevision(1L))
             .get(0);
         RecordingClientTransport transport = new RecordingClientTransport();
         AtomicLong now = new AtomicLong();
@@ -185,7 +186,7 @@ final class AssetStateFramePacketTest {
         AutomatedFacility expiredFacility = facility();
         expiredFacility.setDisplayName("x".repeat(62_000));
         List<AssetStateFramePacket> expiring = AssetStateSync.Server.frame(
-            AssetSyncPacket.state(TEAM, expiredFacility)
+            AssetSyncPacket.state(TEAM, expiredFacility, Map.of())
                 .withPublishedRevision(1L));
         client.receive(expiring.get(0));
         now.addAndGet(AssetStateSync.Client.ASSEMBLY_TIMEOUT_MILLIS + 1L);
@@ -255,7 +256,7 @@ final class AssetStateFramePacketTest {
         AutomatedFacility facility = facility();
         CelestialAsset.ID differentFrameId = CelestialAsset.ID.create();
         AssetStateFramePacket valid = AssetStateSync.Server.frame(
-            AssetSyncPacket.state(TEAM, facility)
+            AssetSyncPacket.state(TEAM, facility, Map.of())
                 .withPublishedRevision(1L))
             .get(0);
         RecordingClientTransport transport = new RecordingClientTransport();
@@ -315,7 +316,7 @@ final class AssetStateFramePacketTest {
     void logicalDecoderRejectsMalformedCanonicalNbtWithoutMutation() {
         AutomatedFacility facility = facility();
         AssetStateFramePacket valid = AssetStateSync.Server.frame(
-            AssetSyncPacket.state(TEAM, facility)
+            AssetSyncPacket.state(TEAM, facility, Map.of())
                 .withPublishedRevision(1L))
             .get(0);
         byte[] payload = valid.payload();
@@ -333,7 +334,7 @@ final class AssetStateFramePacketTest {
     void logicalDecoderRequiresFullCanonicalNbtConsumption() {
         AutomatedFacility facility = facility();
         AssetStateFramePacket valid = AssetStateSync.Server.frame(
-            AssetSyncPacket.state(TEAM, facility)
+            AssetSyncPacket.state(TEAM, facility, Map.of())
                 .withPublishedRevision(1L))
             .get(0);
         byte[] trailing = Arrays.copyOf(valid.payload(), valid.payload().length + 1);
@@ -351,7 +352,7 @@ final class AssetStateFramePacketTest {
         AutomatedFacility facility = facility();
         facility.setDisplayName("x".repeat(62_000));
         List<AssetStateFramePacket> frames = AssetStateSync.Server.frame(
-            AssetSyncPacket.state(TEAM, facility)
+            AssetSyncPacket.state(TEAM, facility, Map.of())
                 .withPublishedRevision(1L));
         RecordingClientTransport transport = new RecordingClientTransport();
         AssetStateSync.Client client = new AssetStateSync.Client(transport);
@@ -367,7 +368,7 @@ final class AssetStateFramePacketTest {
         AutomatedFacility pending = facility();
         pending.setDisplayName("y".repeat(62_000));
         List<AssetStateFramePacket> pendingFrames = AssetStateSync.Server.frame(
-            AssetSyncPacket.state(TEAM, pending)
+            AssetSyncPacket.state(TEAM, pending, Map.of())
                 .withPublishedRevision(1L));
         client.receive(pendingFrames.get(0));
         for (AssetStateFramePacket clear : AssetStateSync.Server.frame(AssetSyncPacket.clear())) client.receive(clear);
@@ -397,7 +398,7 @@ final class AssetStateFramePacketTest {
         AutomatedFacility facility = facility();
         AssetStateSync.Client client = new AssetStateSync.Client(new RecordingClientTransport());
         for (AssetStateFramePacket frame : AssetStateSync.Server.frame(
-            AssetSyncPacket.state(TEAM, facility)
+            AssetSyncPacket.state(TEAM, facility, Map.of())
                 .withPublishedRevision(1L))) {
             client.receive(frame);
         }
@@ -411,7 +412,7 @@ final class AssetStateFramePacketTest {
 
         AutomatedFacility another = facility();
         for (AssetStateFramePacket frame : AssetStateSync.Server.frame(
-            AssetSyncPacket.state(TEAM, another)
+            AssetSyncPacket.state(TEAM, another, Map.of())
                 .withPublishedRevision(1L))) {
             client.receive(frame);
         }

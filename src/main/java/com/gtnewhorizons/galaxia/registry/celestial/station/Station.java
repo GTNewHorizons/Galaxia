@@ -27,7 +27,7 @@ public class Station extends CelestialAsset implements IDistributedInventory {
     private BlockPos controller;
 
     public Station(ID assetId, CelestialObjectKey celestialObjectKey, Status status) {
-        super(assetId, celestialObjectKey, Kind.STATION, status, null);
+        super(assetId, celestialObjectKey, Kind.STATION, status);
     }
 
     public Station(ID assetId, CelestialObjectId celestialObjectId, Status status) {

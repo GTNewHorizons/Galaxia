@@ -83,6 +83,8 @@ public interface IModuleComponent {
 
     default void tickOperational(ModuleInstance module, CelestialAsset outpost) {}
 
+    default void runCycle(ModuleInstance module, CelestialAsset asset) {}
+
     default IllegalStateException unsupportedSettingsGroups(ModuleInstance module) {
         return new IllegalStateException(
             getClass().getSimpleName() + " does not support settings groups for module kind " + module.kind());

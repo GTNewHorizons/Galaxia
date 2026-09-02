@@ -43,7 +43,7 @@ final class ModuleHammerTest {
     }
 
     @Test
-    void hammerChargesPrivateBufferFromStationOnApplyBehaviorInterval() {
+    void hammerChargesPrivateBufferFromStationOnModuleCycle() {
         AutomatedFacility outpost = createOutpost();
         ModuleInstance module = FacilityModuleRegistry.create(
             ModuleInstance.ID.create(),
@@ -68,7 +68,7 @@ final class ModuleHammerTest {
     }
 
     @Test
-    void hammerChargesPrivateBufferOnApplyBehaviorInterval() {
+    void hammerChargesPrivateBufferOnModuleCycle() {
         AutomatedFacility outpost = createOutpost();
         ModuleInstance module = FacilityModuleRegistry.create(
             ModuleInstance.ID.create(),

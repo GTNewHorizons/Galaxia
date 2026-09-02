@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -236,7 +235,7 @@ final class SystemAssetPanelStressTest {
 
         private FakeAsset(Kind kind, CelestialObjectKey body, Buildable.Status status, WarningPriority warning,
             boolean mining, boolean production) {
-            super(ID.create(), body, kind, status, Collections.emptyMap());
+            super(ID.create(), body, kind, status);
             this.warning = warning;
             this.mining = mining;
             this.production = production;

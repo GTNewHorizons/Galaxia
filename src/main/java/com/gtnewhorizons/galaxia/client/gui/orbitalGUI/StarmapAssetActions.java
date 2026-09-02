@@ -121,14 +121,15 @@ public final class StarmapAssetActions {
     }
 
     static String buildConstructionInventorySummary(CelestialAsset asset) {
+        if (!(asset instanceof AutomatedFacility facility)) return "Empty";
         if (asset.status() == CelestialAsset.Status.DECONSTRUCTION)
-            return buildStoredInventorySummary(asset.constructionInventory());
+            return buildStoredInventorySummary(facility.getConstructionInventory());
         if (asset.requiredResources()
             .isEmpty()) return "Empty";
         StringBuilder summary = new StringBuilder();
         for (Map.Entry<ItemStack, Long> required : asset.requiredResources()
             .entrySet()) {
-            long storedAmount = asset.constructionInventory()
+            long storedAmount = facility.getConstructionInventory()
                 .getOrDefault(required.getKey(), 0L);
             if (summary.length() > 0) summary.append(", ");
             summary.append(storedAmount)
@@ -194,6 +195,7 @@ public final class StarmapAssetActions {
         void createBaseStation(CelestialObject body) {
             if (body == null) return;
             // TODO: Localize
+            // TODO: Link this action to a "How to build a station" guide.
             callbacks.showActionStatus("Stations must be placed with a controller block");
         }
 
@@ -351,6 +353,7 @@ public final class StarmapAssetActions {
         }
 
         void handleConstructionAction(OrbitalAssetUiState state, CelestialAsset asset) {
+            if (!(asset instanceof AutomatedFacility facility)) return;
             if (asset.status() == CelestialAsset.Status.DECONSTRUCTION) {
                 openPendingResourceTransfer(state, state.assetActionsBody, asset);
                 return;
@@ -359,8 +362,8 @@ public final class StarmapAssetActions {
                 cancelConstruction(asset);
                 return;
             }
-            if (asset.hasStoredConstructionResources()) {
-                openPendingConstructionCancellation(state, asset);
+            if (facility.hasStoredConstructionResources()) {
+                openPendingConstructionCancellation(state, facility);
                 return;
             }
             cancelConstruction(asset);
@@ -1659,7 +1662,7 @@ public final class StarmapAssetActions {
         private List<CelestialAsset> getConstructionAssets(List<CelestialAsset> assets) {
             List<CelestialAsset> matching = new ArrayList<>();
             for (CelestialAsset asset : assets) {
-                if (asset.kind == CelestialAsset.Kind.SATELLITE) continue;
+                if (!(asset instanceof AutomatedFacility)) continue;
                 if (asset.status() == CelestialAsset.Status.CONSTRUCTION_SITE
                     || asset.status() == CelestialAsset.Status.DECONSTRUCTION) matching.add(asset);
             }

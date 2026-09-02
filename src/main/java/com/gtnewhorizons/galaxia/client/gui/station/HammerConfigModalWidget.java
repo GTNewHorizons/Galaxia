@@ -15,7 +15,6 @@ import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -117,7 +116,7 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
         HammerDispatchStatus.Status status = dispatchStatus;
         if (status == null) return;
         int y = ModuleConfigModalSupport.drawTrimmedLine(
-            dispatchStatusLine(status),
+            ModuleStatusTextRegistry.hammerDispatchStatusLine(status),
             ModuleConfigModalSupport.PANEL_PADDING,
             BODY_TOP,
             WIDTH - ModuleConfigModalSupport.PANEL_PADDING * 2,
@@ -139,10 +138,8 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
             return;
         }
         ModuleInstance module = selectedModule();
-        AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         dispatchStatus = module == null || !(module.component() instanceof ModuleHammer) ? null
-            : HammerDispatchStatus
-                .evaluate(facility, module, CelestialClient.allOutposts(), CelestialClient.currentOrbitalTime());
+            : CelestialClient.hammerDispatchStatus(assetId, module.id);
     }
 
     private void openLogistics() {
@@ -332,26 +329,6 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
                     .mode(),
                 value),
             hammer.routePriority());
-    }
-
-    private String dispatchStatusLine(HammerDispatchStatus.Status status) {
-        return switch (status.code()) {
-            case READY -> "Dispatch: ready";
-            case WAITING_FOR_REQUEST -> "Dispatch: waiting for request";
-            case NO_EXPORT_CONFIG -> "Dispatch: export disabled";
-            case NO_SURPLUS_AFTER_RESERVE -> "Dispatch: no surplus after reserve";
-            case DESTINATION_LACKS_PACKAGE_SPACE -> "Dispatch: destination lacks package space " + status.sendAmount()
-                + "/"
-                + status.orderSize();
-            case DESTINATION_CAPACITY_BLOCKED -> "Dispatch: destination full, " + status.sendAmount() + " arrived";
-            case NEED_BIG_HAMMER -> "Dispatch: need BIG Hammer";
-            case ROUTE_UNAVAILABLE -> "Dispatch: route unavailable";
-            case BLOCKED_BY_DV_LIMIT -> "Dispatch: blocked by dV limit";
-            case BLOCKED_BY_TOF_LIMIT -> "Dispatch: blocked by TOF limit";
-            case NEED_ENERGY -> "Dispatch: need " + ModuleConfigModalSupport.formatEu(status.requiredEnergy())
-                + " EU, buffer "
-                + ModuleConfigModalSupport.formatEu(status.storedEnergy());
-        };
     }
 
     private ModuleHammer selectedHammer() {

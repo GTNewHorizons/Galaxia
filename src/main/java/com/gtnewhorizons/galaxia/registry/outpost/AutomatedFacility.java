@@ -72,6 +72,7 @@ public final class AutomatedFacility extends CelestialAsset {
     private static final Logger LOG = LogManager.getLogger(AutomatedFacility.class);
 
     private final FacilityInventory inventory = new FacilityInventory();
+    private Map<ItemStack, Long> constructionInventory = new LinkedHashMap<>();
 
     private final List<ModuleInstance> modules;
     private final StationLayout layout;
@@ -98,7 +99,7 @@ public final class AutomatedFacility extends CelestialAsset {
     private static final int MAX_BUILD_TARGETS = 256;
 
     public AutomatedFacility(CelestialAsset.ID assetId, CelestialObjectKey celestialBodyKey, Kind kind, Status status) {
-        super(assetId, celestialBodyKey, kind, status, null);
+        super(assetId, celestialBodyKey, kind, status);
         if (kind != Kind.AUTOMATED_OUTPOST && kind != Kind.AUTOMATED_STATION) {
             throw new IllegalArgumentException(
                 "AutomatedFacility kind must be AUTOMATED_OUTPOST or AUTOMATED_STATION, got: " + kind);
@@ -115,6 +116,26 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public AutomatedFacility(CelestialAsset.ID assetId, CelestialObjectId celestialBodyId, Kind kind, Status status) {
         this(assetId, CelestialObjectKey.registered(celestialBodyId), kind, status);
+    }
+
+    @Override
+    public Map<ItemStack, Long> getConstructionInventory() {
+        return constructionInventory;
+    }
+
+    @Override
+    public void clearConsumedResources() {
+        constructionInventory.clear();
+    }
+
+    public void setConstructionInventory(Map<ItemStack, Long> constructionInventory) {
+        this.constructionInventory = new LinkedHashMap<>(constructionInventory);
+    }
+
+    public boolean hasStoredConstructionResources() {
+        return constructionInventory.values()
+            .stream()
+            .anyMatch(amount -> amount > 0L);
     }
 
     private static long createStationFeatureSalt(CelestialAsset.ID assetId, CelestialObjectKey bodyKey) {

@@ -11,6 +11,7 @@ import java.util.UUID;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
@@ -202,20 +203,20 @@ public final class CelestialAssetStore {
 
     public boolean cancelConstructionInternal(CelestialAsset.ID assetId) {
         CelestialAsset asset = byId.get(assetId);
-        if (asset == null || asset.status() != Buildable.Status.CONSTRUCTION_SITE) return false;
+        if (!(asset instanceof AutomatedFacility) || asset.status() != Buildable.Status.CONSTRUCTION_SITE) return false;
         return destroyAssetInternal(assetId);
     }
 
     public boolean startDeconstructionInternal(CelestialAsset.ID assetId) {
         CelestialAsset asset = byId.get(assetId);
-        if (asset == null || asset.status() != Buildable.Status.CONSTRUCTION_SITE) return false;
+        if (!(asset instanceof AutomatedFacility) || asset.status() != Buildable.Status.CONSTRUCTION_SITE) return false;
         asset.updateStatus(CelestialAsset.Status.DECONSTRUCTION);
         return true;
     }
 
     public boolean completeConstructionInternal(CelestialAsset.ID assetId) {
         CelestialAsset asset = byId.get(assetId);
-        if (asset == null || asset.status() != Buildable.Status.CONSTRUCTION_SITE) return false;
+        if (!(asset instanceof AutomatedFacility) || asset.status() != Buildable.Status.CONSTRUCTION_SITE) return false;
         asset.completeConstruction();
         return true;
     }
@@ -231,12 +232,14 @@ public final class CelestialAssetStore {
     public boolean addToConstructionInventoryInternal(CelestialAsset.ID assetId, ItemStack stack, long amount) {
         if (stack == null || amount <= 0) return false;
         CelestialAsset asset = byId.get(assetId);
-        if (asset == null || asset.status() != Buildable.Status.CONSTRUCTION_SITE) return false;
+        if (!(asset instanceof AutomatedFacility facility) || asset.status() != Buildable.Status.CONSTRUCTION_SITE)
+            return false;
 
-        asset.setConstructionInventory(mergeIntoConstructionInventory(asset.constructionInventory(), stack, amount));
+        facility.setConstructionInventory(
+            mergeIntoConstructionInventory(facility.getConstructionInventory(), stack, amount));
 
-        if (asset.isConstructionSatisfied()) {
-            asset.updateStatus(Buildable.Status.OPERATIONAL);
+        if (facility.isConstructionSatisfied()) {
+            facility.updateStatus(Buildable.Status.OPERATIONAL);
         }
         return true;
     }

@@ -24,14 +24,7 @@ public final class ProductionModuleHelper {
         return new RecipeRuntime();
     }
 
-    public static void execute(ModuleInstance instance, CelestialAsset asset) {
-        if (!(asset instanceof AutomatedFacility outpost)) {
-            throw new IllegalStateException("This method should only be called by AutomatedFacilities");
-        }
-        if (!(instance.component() instanceof RecipeRuntime runtime)) {
-            throw new IllegalStateException("Recipe module has invalid runtime component");
-        }
-        Random random = runtime.random;
+    private static void execute(ModuleInstance instance, AutomatedFacility outpost, Random random) {
         RecipeBook book = outpost.recipeBook(instance);
         RecipeBook.ScheduleState scheduleState = outpost.recipeScheduleState(instance);
         RecipeBook.Selection selection = book.select(scheduleState, random)
@@ -109,5 +102,13 @@ public final class ProductionModuleHelper {
     private static final class RecipeRuntime extends TieredModuleComponent {
 
         private final Random random = new Random();
+
+        @Override
+        public void runCycle(ModuleInstance module, CelestialAsset asset) {
+            if (!(asset instanceof AutomatedFacility facility)) {
+                throw new IllegalStateException("Recipe modules can only run in AutomatedFacilities");
+            }
+            execute(module, facility, random);
+        }
     }
 }

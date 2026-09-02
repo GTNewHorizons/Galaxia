@@ -11,7 +11,7 @@ public final class Satellite extends CelestialAsset {
     private final SatelliteKind satelliteKind;
 
     public Satellite(ID assetId, CelestialObjectKey celestialObjectKey, Status status, SatelliteKind satelliteKind) {
-        super(assetId, celestialObjectKey, Kind.SATELLITE, status, null);
+        super(assetId, celestialObjectKey, Kind.SATELLITE, status);
         this.satelliteKind = satelliteKind;
     }
 

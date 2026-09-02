@@ -53,10 +53,10 @@ public final class ModuleHammer implements IModuleComponent {
         setEnergyStored(energyStored);
     }
 
-    public static void charge(ModuleInstance instance, CelestialAsset asset) {
-        ModuleHammer hammer = (ModuleHammer) instance.component();
-        long charge = hammer.chargeRate(instance) * Math.max(1, instance.cooldownTicks());
-        if (hammer.chargeFrom(asset, charge)) {
+    @Override
+    public void runCycle(ModuleInstance instance, CelestialAsset asset) {
+        long charge = chargeRate(instance) * Math.max(1, instance.cooldownTicks());
+        if (chargeFrom(asset, charge)) {
             // This only makes sense for the facility since station save everything to nbt
             if (asset instanceof AutomatedFacility facility) {
                 facility.markDirty();

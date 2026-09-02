@@ -76,7 +76,6 @@ public final class AssetState {
             "satelliteKind",
             satellite.satelliteKind()
                 .name());
-        out.setTag("construction", writeConstructionInventory(asset.constructionInventory()));
         if (asset instanceof Station station && station.getController() != null) {
             NBTTagCompound controller = new NBTTagCompound();
             controller.setInteger(
@@ -101,6 +100,9 @@ public final class AssetState {
     public static Decoded decode(NBTTagCompound tag) {
         String path = tag != null && tag.hasKey("id", NBT.TAG_STRING) ? "asset[" + tag.getString("id") + "]" : "asset";
         NbtReader in = NbtReader.persistence(tag, path);
+        if (tag.hasKey("construction")) {
+            throw fail(path + ".construction", "top-level construction payload is not supported");
+        }
         UUID teamId;
         CelestialAsset.ID assetId;
         try {
@@ -121,7 +123,6 @@ public final class AssetState {
         try {
             asset = CelestialAsset.create(assetId, readBodyKey(in.compound("body")), kind, status, satelliteKind);
             asset.setDisplayName(in.string("name"));
-            asset.setConstructionInventory(readConstructionInventory(in, "construction"));
             asset.logisticsConfig.loadFromSnapshot(readLogistics(in, "logistics"));
         } catch (RuntimeException ex) {
             throw fail(path, "invalid asset state", ex);
@@ -159,7 +160,6 @@ public final class AssetState {
 
         current.setDisplayName(source.displayName());
         current.updateStatus(source.status());
-        current.setConstructionInventory(source.constructionInventory());
         current.logisticsConfig.loadFromSnapshot(source.logisticsConfig.snapshot());
         if (current instanceof Station station && source instanceof Station replacementStation) {
             station.setController(replacementStation.getController());
@@ -170,6 +170,7 @@ public final class AssetState {
     }
 
     private static void replaceFacility(AutomatedFacility current, AutomatedFacility replacement) {
+        current.setConstructionInventory(replacement.getConstructionInventory());
         current.clearModules();
         current.clear();
         current.setEnergyStored(replacement.getEnergyStored());
@@ -191,6 +192,7 @@ public final class AssetState {
 
     private static NBTTagCompound encodeFacility(AutomatedFacility facility) {
         NBTTagCompound out = new NBTTagCompound();
+        out.setTag("construction", writeConstructionInventory(facility.getConstructionInventory()));
         out.setLong("energy", facility.getEnergyStored());
         out.setLong("featureSalt", facility.stationFeatureSalt());
         out.setTag("bounds", writeBounds(facility.boundsSnapshot()));
@@ -220,6 +222,7 @@ public final class AssetState {
     private static AutomatedFacility decodeFacility(CelestialAsset asset, NbtReader in) {
         String path = in.path();
         if (!(asset instanceof AutomatedFacility facility)) throw fail(path, "asset is not an automated facility");
+        facility.setConstructionInventory(readConstructionInventory(in, "construction"));
         long energyStored = in.longValue("energy");
         facility.setStationFeatureSalt(in.longValue("featureSalt"));
         facility.restoreBounds(readBounds(in, "bounds"));

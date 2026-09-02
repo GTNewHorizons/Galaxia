@@ -17,9 +17,11 @@ public interface Buildable {
 
     Map<ItemStack, Long> getRequiredResources();
 
-    Map<ItemStack, Long> getConstructionInventory();
+    default Map<ItemStack, Long> getConstructionInventory() {
+        return Map.of();
+    }
 
-    void clearConsumedResources();
+    default void clearConsumedResources() {}
 
     Status status();
 

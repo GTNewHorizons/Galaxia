@@ -222,7 +222,6 @@ final class StationItemInteractionModelTest {
         FacilityModuleRegistry.Definition definition = new FacilityModuleRegistry.Definition(
             kind,
             Map.of(ModuleTier.NONE, tierData),
-            (module, facility) -> {},
             TestTieredModule::new,
             List.<ModulePanelAction>of(),
             false,

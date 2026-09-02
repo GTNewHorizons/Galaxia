@@ -95,10 +95,8 @@ public final class ModuleMiner extends TieredModuleComponent {
             targetOreKey);
     }
 
-    public static void generateOre(ModuleInstance instance, CelestialAsset outpost) {
-        if (!(instance.component() instanceof ModuleMiner miner)) {
-            throw new IllegalStateException("miner tick sent to non-miner module " + instance.id);
-        }
+    @Override
+    public void runCycle(ModuleInstance instance, CelestialAsset outpost) {
         if (!(outpost instanceof AutomatedFacility facility)) {
             throw new IllegalStateException("Miner should be only created in the AutomatedFacility");
         }
@@ -108,12 +106,12 @@ public final class ModuleMiner extends TieredModuleComponent {
                 List<ItemStack> candidates = miningCandidates(instance, facility, featureEffects);
                 if (candidates.isEmpty() && featureEffects.replacementRolls()
                     .isEmpty()) return;
-                miner.advanceFocusAlignment();
+                advanceFocusAlignment();
                 int rolls = 1 + featureEffects.bonusRolls();
                 for (int i = 0; i < rolls; i++) {
                     ItemStack replacement = featureEffects.rollReplacement(RANDOM);
                     ItemStack chosen = replacement != null ? replacement
-                        : candidates.isEmpty() ? null : chooseFocusedOre(miner, candidates);
+                        : candidates.isEmpty() ? null : chooseFocusedOre(this, candidates);
                     if (chosen == null) continue;
                     String oreKey = ItemStackWrapper.of(chosen)
                         .toKey();

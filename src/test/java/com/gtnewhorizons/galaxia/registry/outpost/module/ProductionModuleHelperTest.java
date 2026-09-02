@@ -154,7 +154,8 @@ final class ProductionModuleHelperTest {
     }
 
     private static void execute(AutomatedFacility facility, ModuleInstance module) {
-        ProductionModuleHelper.execute(module, facility);
+        module.component()
+            .runCycle(module, facility);
     }
 
     private static ModuleInstance installBook(AutomatedFacility facility, RecipeBook book) {
