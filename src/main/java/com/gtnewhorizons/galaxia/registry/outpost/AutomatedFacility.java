@@ -317,19 +317,6 @@ public final class AutomatedFacility extends CelestialAsset {
         if (command instanceof FacilityCommand.RemoveLogisticsConfig removeConfig) {
             return applyRemoveLogisticsConfig(removeConfig);
         }
-        if (command instanceof FacilityCommand.ReplaceRecipeBook replaceRecipeBook) {
-            if (replaceRecipeBook.moduleId() == null || replaceRecipeBook.replacement() == null) {
-                return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_RECIPE_BOOK);
-            }
-            ModuleInstance module = moduleById(replaceRecipeBook.moduleId());
-            if (module == null) return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MODULE_NOT_FOUND);
-            try {
-                return finishModuleSettingsCommand(
-                    moduleSettings.replaceEffectiveSettings(module, replaceRecipeBook.replacement()));
-            } catch (IllegalArgumentException | IllegalStateException invalidBook) {
-                return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_RECIPE_BOOK);
-            }
-        }
         if (command instanceof FacilityCommand.ModuleSettingsCommand settingsCommand) {
             return applyModuleSettingsCommand(settingsCommand);
         }
@@ -348,8 +335,12 @@ public final class AutomatedFacility extends CelestialAsset {
             if (command instanceof FacilityCommand.CreateSettingsGroup create) moduleId = create.moduleId();
             else if (command instanceof FacilityCommand.SetSettingsGroup setGroup) moduleId = setGroup.moduleId();
             else if (command instanceof FacilityCommand.CopyModuleSettings copy) moduleId = copy.sourceModuleId();
+            else if (command instanceof FacilityCommand.ReplaceRecipeBook replace) moduleId = replace.moduleId();
             else if (command instanceof FacilityCommand.ReplaceMinerSettings replace) moduleId = replace.moduleId();
             else return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MALFORMED_COMMAND);
+            if (moduleId == null && command instanceof FacilityCommand.ReplaceRecipeBook) {
+                return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_RECIPE_BOOK);
+            }
             ModuleInstance module = moduleById(moduleId);
             if (module == null) return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MODULE_NOT_FOUND);
             if (command instanceof FacilityCommand.CreateSettingsGroup create) {
@@ -359,6 +350,8 @@ public final class AutomatedFacility extends CelestialAsset {
                     : moduleSettings.joinGroup(module, setGroup.groupId());
             } else if (command instanceof FacilityCommand.CopyModuleSettings copy) {
                 return applyCopyModuleSettings(module, copy);
+            } else if (command instanceof FacilityCommand.ReplaceRecipeBook replace) {
+                outcome = moduleSettings.replaceEffectiveSettings(module, replace.replacement());
             } else if (command instanceof FacilityCommand.ReplaceMinerSettings replace) {
                 outcome = moduleSettings.replaceEffectiveSettings(module, replace.replacement());
             } else {
@@ -368,9 +361,10 @@ public final class AutomatedFacility extends CelestialAsset {
         } catch (IllegalArgumentException | IllegalStateException invalidSettings) {
             FacilityCommand.Rejection rejection = command instanceof FacilityCommand.CopyModuleSettings
                 ? FacilityCommand.Rejection.INVALID_MODULE_TARGETS
-                : command instanceof FacilityCommand.ReplaceMinerSettings
-                    ? FacilityCommand.Rejection.INVALID_MODULE_CONFIG
-                    : FacilityCommand.Rejection.INVALID_SETTINGS_GROUP;
+                : command instanceof FacilityCommand.ReplaceRecipeBook ? FacilityCommand.Rejection.INVALID_RECIPE_BOOK
+                    : command instanceof FacilityCommand.ReplaceMinerSettings
+                        ? FacilityCommand.Rejection.INVALID_MODULE_CONFIG
+                        : FacilityCommand.Rejection.INVALID_SETTINGS_GROUP;
             return FacilityCommand.Result.rejected(rejection);
         }
     }

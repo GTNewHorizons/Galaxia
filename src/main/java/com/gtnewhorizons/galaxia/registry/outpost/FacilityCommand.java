@@ -74,7 +74,7 @@ public sealed interface FacilityCommand permits FacilityCommand.BuildCommand,Fac
     record CancelModuleOperation(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId) implements ModuleCommand {}
 
     record ReplaceRecipeBook(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, RecipeBook replacement)
-        implements ModuleCommand {}
+        implements ModuleSettingsCommand {}
 
     record CreateSettingsGroup(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, String displayName)
         implements ModuleSettingsCommand {}
@@ -130,7 +130,7 @@ public sealed interface FacilityCommand permits FacilityCommand.BuildCommand,Fac
     }
 
     sealed interface ModuleCommand extends
-        FacilityCommand permits RequestModuleDeconstruction,CancelModuleOperation,ReplaceRecipeBook,ModuleConfiguration,ModuleSettingsCommand,PlanHammerUpgrade,PlanTierUpgrade,PlanMinerFocusUpgrade {
+        FacilityCommand permits RequestModuleDeconstruction,CancelModuleOperation,ModuleConfiguration,ModuleSettingsCommand,PlanHammerUpgrade,PlanTierUpgrade,PlanMinerFocusUpgrade {
     }
 
     sealed interface InventoryCommand
@@ -148,7 +148,7 @@ public sealed interface FacilityCommand permits FacilityCommand.BuildCommand,Fac
     }
 
     sealed interface ModuleSettingsCommand extends
-        ModuleCommand permits CreateSettingsGroup,RenameSettingsGroup,SetSettingsGroup,CopyModuleSettings,ReplaceMinerSettings {
+        ModuleCommand permits CreateSettingsGroup,RenameSettingsGroup,SetSettingsGroup,CopyModuleSettings,ReplaceRecipeBook,ReplaceMinerSettings {
     }
 
     enum FilterKind {
