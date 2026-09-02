@@ -8,6 +8,7 @@ import java.util.Random;
  * Original code made by Daniel Fildán for Tropicraft [StationAPI]
  */
 public class PerlinNoise3D {
+
     private final int[] p = new int[512];
 
     private final int octaves;
@@ -16,10 +17,11 @@ public class PerlinNoise3D {
 
     /**
      * Constructor for specifying all necessary parameters
-     * @param seed Seed for the noise
-     * @param octaves Number of octaves the noise should have
+     * 
+     * @param seed        Seed for the noise
+     * @param octaves     Number of octaves the noise should have
      * @param persistence Dominance of the lower octaves
-     * @param lacunarity Frequency multiplier for each lower octave
+     * @param lacunarity  Frequency multiplier for each lower octave
      */
     public PerlinNoise3D(long seed, int octaves, double persistence, double lacunarity) {
         this.octaves = octaves;
@@ -47,9 +49,10 @@ public class PerlinNoise3D {
 
     /**
      * Samples the value of a single point and scales the coordinates
-     * @param x x coordinate of the point
-     * @param y y coordinate of the point
-     * @param z z coordinate of the point
+     * 
+     * @param x      x coordinate of the point
+     * @param y      y coordinate of the point
+     * @param z      z coordinate of the point
      * @param scaleX Scale for the x coordinate
      * @param scaleY Scale for the y coordinate
      * @param scaleZ Scale for the z coordinate
@@ -61,6 +64,7 @@ public class PerlinNoise3D {
 
     /**
      * Samples the value of a single point
+     * 
      * @param x x coordinate of the point
      * @param y y coordinate of the point
      * @param z z coordinate of the point
@@ -84,6 +88,7 @@ public class PerlinNoise3D {
 
     /**
      * Generates a single noise octave for a specific point
+     * 
      * @param x x coordinate of the point
      * @param y y coordinate of the point
      * @param z z coordinate of the point
@@ -114,14 +119,16 @@ public class PerlinNoise3D {
         int BB = p[B + 1] + Z;
 
         // Blend the results from the 8 corners of the cube
-        return lerp(w, lerp(v, lerp(u, grad(p[AA], x, y, z),
-                    grad(p[BA], x - 1, y, z)),
-                lerp(u, grad(p[AB], x, y - 1, z),
-                    grad(p[BB], x - 1, y - 1, z))),
-            lerp(v, lerp(u, grad(p[AA + 1], x, y, z - 1),
-                    grad(p[BA + 1], x - 1, y, z - 1)),
-                lerp(u, grad(p[AB + 1], x, y - 1, z - 1),
-                    grad(p[BB + 1], x - 1, y - 1, z - 1))));
+        return lerp(
+            w,
+            lerp(
+                v,
+                lerp(u, grad(p[AA], x, y, z), grad(p[BA], x - 1, y, z)),
+                lerp(u, grad(p[AB], x, y - 1, z), grad(p[BB], x - 1, y - 1, z))),
+            lerp(
+                v,
+                lerp(u, grad(p[AA + 1], x, y, z - 1), grad(p[BA + 1], x - 1, y, z - 1)),
+                lerp(u, grad(p[AB + 1], x, y - 1, z - 1), grad(p[BB + 1], x - 1, y - 1, z - 1))));
     }
 
     private double fade(double t) {

@@ -1,17 +1,19 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
-import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
-import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.TerrainModifier;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.TerrainModifierEntry;
-import lombok.Getter;
-import net.minecraft.block.Block;
-import net.minecraft.init.Blocks;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import net.minecraft.block.Block;
+import net.minecraft.init.Blocks;
+
+import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
+import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.TerrainModifier;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.TerrainModifierEntry;
+
+import lombok.Getter;
 
 /**
  * Class to hold config info on terrain features

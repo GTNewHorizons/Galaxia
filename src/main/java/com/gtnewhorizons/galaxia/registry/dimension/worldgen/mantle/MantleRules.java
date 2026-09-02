@@ -19,8 +19,9 @@ public class MantleRules {
 
     /**
      * Creates mantle rules with terrain configurations
+     * 
      * @param ceiling Terrain configuration for the ceiling (simply generates everything upside down)
-     * @param floor Terrain configuration for the floor
+     * @param floor   Terrain configuration for the floor
      */
     public MantleRules(TerrainConfiguration ceiling, TerrainConfiguration floor) {
         this.ceiling = ceiling;
@@ -29,6 +30,7 @@ public class MantleRules {
 
     /**
      * Sets the filler block to place in the mantle layer
+     * 
      * @param fillerBlock Block to fill the mantle with
      * @return The object (this is a builder method)
      */

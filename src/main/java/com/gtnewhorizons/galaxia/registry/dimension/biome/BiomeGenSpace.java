@@ -1,5 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.dimension.biome;
 
+import java.util.List;
+
+import net.minecraft.world.biome.BiomeGenBase;
+
 import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationFunction;
@@ -7,10 +11,8 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguratio
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.details.Terrain3D;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.SurfaceFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.UndergroundFeature;
-import lombok.Getter;
-import net.minecraft.world.biome.BiomeGenBase;
 
-import java.util.List;
+import lombok.Getter;
 
 /**
  * The class holding all generation fields for Biome generation

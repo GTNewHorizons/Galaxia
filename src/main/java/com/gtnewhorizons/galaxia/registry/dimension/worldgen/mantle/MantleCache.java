@@ -1,5 +1,13 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle;
 
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Random;
+
+import net.minecraft.world.World;
+import net.minecraft.world.gen.NoiseGeneratorOctaves;
+
 import com.gtnewhorizon.gtnhlib.hash.Fnv1a64;
 import com.gtnewhorizon.gtnhlib.util.StdLCG;
 import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
@@ -8,13 +16,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguratio
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainFeatureApplier;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.ModifierHandler;
-import net.minecraft.world.World;
-import net.minecraft.world.gen.NoiseGeneratorOctaves;
-
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
 
 /**
  * Caches mantle terrain generation data for 32 columns at a time
@@ -35,9 +36,10 @@ public class MantleCache {
 
     /**
      * Creates a mantle cache with all relevant parameters
-     * @param world World in which the mantle generates
-     * @param random Randomizer for terrain generation
-     * @param dimension Dimension the cache is used for
+     * 
+     * @param world           World in which the mantle generates
+     * @param random          Randomizer for terrain generation
+     * @param dimension       Dimension the cache is used for
      * @param modifierHandler Handler for terrain modifiers
      */
     public MantleCache(World world, Random random, DimensionEnum dimension, ModifierHandler modifierHandler) {
@@ -51,10 +53,11 @@ public class MantleCache {
 
     /**
      * Provides data for a specific column. Creates a new cache entry if needed
+     * 
      * @param columnX x coordinate of the currently generating column
      * @param columnZ z coordinate of the currently generating column
      * @param ceiling Terrain configuration for the ceiling
-     * @param floor Terrain configuration for the floor
+     * @param floor   Terrain configuration for the floor
      * @return Record with all important data
      */
     public MantleCacheData getLocalData(int columnX, int columnZ, TerrainConfiguration ceiling,
@@ -64,7 +67,16 @@ public class MantleCache {
                 return entry.exportData;
             }
         }
-        CacheEntry correctEntry = new CacheEntry(columnX, columnZ, ceiling, floor, world, random, dimension, terrainNoise, modifierHandler);
+        CacheEntry correctEntry = new CacheEntry(
+            columnX,
+            columnZ,
+            ceiling,
+            floor,
+            world,
+            random,
+            dimension,
+            terrainNoise,
+            modifierHandler);
         cacheEntries.add(correctEntry);
         while (cacheEntries.size() > CACHE_LIMIT) {
             cacheEntries.removeFirst();
@@ -86,18 +98,20 @@ public class MantleCache {
 
         /**
          * Creates a cache entry and calculates all the relevant data
-         * @param columnX x coordinate of the currently generating column
-         * @param columnZ z coordinate of the currently generating column
-         * @param ceiling Terrain configuration for the ceiling
-         * @param floor Terrain configuration for the floor
-         * @param world World in which the mantle generates
-         * @param random Randomizer for terrain generation
-         * @param dimension Dimension the cache is used for
-         * @param terrainNoise Noise for generating the terrain
+         * 
+         * @param columnX         x coordinate of the currently generating column
+         * @param columnZ         z coordinate of the currently generating column
+         * @param ceiling         Terrain configuration for the ceiling
+         * @param floor           Terrain configuration for the floor
+         * @param world           World in which the mantle generates
+         * @param random          Randomizer for terrain generation
+         * @param dimension       Dimension the cache is used for
+         * @param terrainNoise    Noise for generating the terrain
          * @param modifierHandler Handler for terrain modifiers
          */
-        public CacheEntry(int columnX, int columnZ, TerrainConfiguration ceiling, TerrainConfiguration floor, World world,
-                          Random random, DimensionEnum dimension, NoiseGeneratorOctaves terrainNoise, ModifierHandler modifierHandler) {
+        public CacheEntry(int columnX, int columnZ, TerrainConfiguration ceiling, TerrainConfiguration floor,
+            World world, Random random, DimensionEnum dimension, NoiseGeneratorOctaves terrainNoise,
+            ModifierHandler modifierHandler) {
             this.columnX = columnX;
             this.columnZ = columnZ;
             this.world = world;
@@ -172,6 +186,7 @@ public class MantleCache {
 
         /**
          * Checks if this is the correct cache for a column
+         * 
          * @param columnX x coordinate of the currently generating column
          * @param columnZ z coordinate of the currently generating column
          * @return Response of whether this is the correct column
@@ -182,9 +197,10 @@ public class MantleCache {
 
         /**
          * Sets the seed of the randomizer for applying the terrain
+         * 
          * @param columnX x coordinate of the currently generating column
          * @param columnZ z coordinate of the currently generating column
-         * @param index Index of the terrain feature applier
+         * @param index   Index of the terrain feature applier
          * @return Randomizer with a new seed
          */
         private Random withSeed(int columnX, int columnZ, int index) {

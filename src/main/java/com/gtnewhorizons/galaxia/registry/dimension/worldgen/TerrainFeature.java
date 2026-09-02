@@ -1,10 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
-import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.TerrainModifierEntry;
-
 import java.util.Collections;
 import java.util.Map;
+
+import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.TerrainModifierEntry;
 
 /**
  * Data record holding terrain features

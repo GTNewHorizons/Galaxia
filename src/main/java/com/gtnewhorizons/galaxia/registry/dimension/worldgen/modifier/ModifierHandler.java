@@ -1,22 +1,25 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier;
 
-import com.gtnewhorizon.gtnhlib.util.StdLCG;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.math.Smoothstep;
+import java.util.Arrays;
+
 import net.minecraft.world.World;
 import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
-import java.util.Arrays;
+import com.gtnewhorizon.gtnhlib.util.StdLCG;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.math.Smoothstep;
 
 /**
  * Handles all terrain modifiers and intervals on them
  */
 public class ModifierHandler {
+
     private final NoiseGeneratorOctaves weirdnessNoise;
 
     private double[] weirdnessCache = defaultModifier();
 
     /**
      * Creates a modifier handler
+     * 
      * @param world World with the required seed
      */
     public ModifierHandler(World world) {
@@ -25,6 +28,7 @@ public class ModifierHandler {
 
     /**
      * Fills an array with default values of 1 (neutral multiplier)
+     * 
      * @return Array full of default values
      */
     private static double[] defaultModifier() {
@@ -35,9 +39,10 @@ public class ModifierHandler {
 
     /**
      * Generates modifier values of a whole chunk for a given modifier entry
+     * 
      * @param modifierEntry Modifier entry with specific requirements
-     * @param chunkX x coordinate of the chunk
-     * @param chunkZ z coordinate of the chunk
+     * @param chunkX        x coordinate of the chunk
+     * @param chunkZ        z coordinate of the chunk
      * @return Array full of modifier values
      */
     public double[] assignModifierValues(TerrainModifierEntry modifierEntry, int chunkX, int chunkZ) {
@@ -54,6 +59,7 @@ public class ModifierHandler {
 
     /**
      * Generates a cache of raw weirdness values
+     * 
      * @param chunkX x coordinate of the chunk
      * @param chunkZ z coordinate of the chunk
      */
@@ -75,6 +81,7 @@ public class ModifierHandler {
 
     /**
      * Converts raw values into a range from 0 to 1 with a peak in the middle within an interval
+     * 
      * @param minimum Lower limit of the interval
      * @param maximum Upper limit of the interval
      */
@@ -89,7 +96,8 @@ public class ModifierHandler {
                 weirdnessCache[i] = 0;
             } else {
                 // Calculate distance from the central peak and smoothen the result
-                weirdnessCache[i] = Smoothstep.apply(Math.max(0, 1 - diminishingFactor * Math.abs(peakValue - weirdnessCache[i])));
+                weirdnessCache[i] = Smoothstep
+                    .apply(Math.max(0, 1 - diminishingFactor * Math.abs(peakValue - weirdnessCache[i])));
             }
         }
     }

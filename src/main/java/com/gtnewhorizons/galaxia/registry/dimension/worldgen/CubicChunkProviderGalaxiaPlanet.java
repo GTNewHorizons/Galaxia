@@ -1,5 +1,24 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+
+import net.minecraft.block.Block;
+import net.minecraft.entity.EnumCreatureType;
+import net.minecraft.init.Blocks;
+import net.minecraft.util.MathHelper;
+import net.minecraft.world.ChunkPosition;
+import net.minecraft.world.World;
+import net.minecraft.world.biome.BiomeGenBase;
+import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
+import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
+
+import org.jetbrains.annotations.Nullable;
+
 import com.cardinalstar.cubicchunks.api.ICube;
 import com.cardinalstar.cubicchunks.api.util.Box;
 import com.cardinalstar.cubicchunks.api.worldgen.GenerationResult;
@@ -30,23 +49,8 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NoiseSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NormalizedSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.OctavesSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.ScaledSampler;
-import lombok.Getter;
-import net.minecraft.block.Block;
-import net.minecraft.entity.EnumCreatureType;
-import net.minecraft.init.Blocks;
-import net.minecraft.util.MathHelper;
-import net.minecraft.world.ChunkPosition;
-import net.minecraft.world.World;
-import net.minecraft.world.biome.BiomeGenBase;
-import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
-import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
-import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import lombok.Getter;
 
 /**
  * Terrain generator for Galaxia planets with Cubic Chunks support
@@ -159,13 +163,14 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
     /**
      * Generates a mantle layer with floor and ceiling
-     * @param cubeX x coordinate of the currently generating cube
-     * @param cubeY y coordinate of the currently generating cube
-     * @param cubeZ z coordinate of the currently generating cube
-     * @param ebs Block storage for efficient block placement
+     * 
+     * @param cubeX         x coordinate of the currently generating cube
+     * @param cubeY         y coordinate of the currently generating cube
+     * @param cubeZ         z coordinate of the currently generating cube
+     * @param ebs           Block storage for efficient block placement
      * @param ceilingOffset Upper limit height of the ceiling
-     * @param floorOffset Lower limit height of the floor
-     * @param upperMantle Whether it is the upper mantle layer
+     * @param floorOffset   Lower limit height of the floor
+     * @param upperMantle   Whether it is the upper mantle layer
      */
     private void generateMantle(int cubeX, int cubeY, int cubeZ, ExtendedBlockStorage ebs, int ceilingOffset,
         int floorOffset, boolean upperMantle) {
@@ -275,11 +280,12 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
     /**
      * Handles terrain generation for y values greater than 0
+     * 
      * @param cubeX x coordinate of the currently generating cube
      * @param cubeY y coordinate of the currently generating cube
      * @param cubeZ z coordinate of the currently generating cube
-     * @param data Data of the current chunk
-     * @param ebs Block storage for efficient block placement
+     * @param data  Data of the current chunk
+     * @param ebs   Block storage for efficient block placement
      */
     private void generateCrust(int cubeX, int cubeY, int cubeZ, HeightOracle.ChunkData data, ExtendedBlockStorage ebs) {
         CaveShape crustCaves = null;
@@ -408,7 +414,8 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
                     // Handle cave generation
                     // Check for crust caves
-                    boolean isCave = crustCaves != null && isTerrain && crustCaves.isInCave(localX, y, localZ, terrainHeight);
+                    boolean isCave = crustCaves != null && isTerrain
+                        && crustCaves.isInCave(localX, y, localZ, terrainHeight);
                     // Check for caves connecting to the upper mantle
                     if (!isCave && intermediateCaves != null && y < UPPER_INTERMEDIARY_CAVES_TOP) {
                         isCave = intermediateCaves.isInCave(
@@ -429,14 +436,16 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
     /**
      * Picks the correct surface block
-     * @param data Data of the current chunk
-     * @param localX x coordinate within the chunk
-     * @param localZ z coordinate within the chunk
-     * @param y Absolute height coordinate
+     * 
+     * @param data    Data of the current chunk
+     * @param localX  x coordinate within the chunk
+     * @param localZ  z coordinate within the chunk
+     * @param y       Absolute height coordinate
      * @param palette Block palette of the dominant biome
      * @return Surface block
      */
-    private static ImmutableBlockMeta getSurfaceBlock(HeightOracle.ChunkData data, int localX, int localZ, int y, BiomeBlockPalette palette) {
+    private static ImmutableBlockMeta getSurfaceBlock(HeightOracle.ChunkData data, int localX, int localZ, int y,
+        BiomeBlockPalette palette) {
         ImmutableBlockMeta block;
         ImmutableBlockMeta replacementBlock = data.surfaceBlocks[localX + (localZ << 4)];
 
@@ -451,10 +460,11 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
     /**
      * Efficiently places a block into the world
-     * @param ebs Block storage for efficient placement
-     * @param block Block to be placed
+     * 
+     * @param ebs    Block storage for efficient placement
+     * @param block  Block to be placed
      * @param localX x coordinate within the chunk
-     * @param y Absolute height
+     * @param y      Absolute height
      * @param localZ z coordinate within the chunk
      */
     private static void placeBlock(ExtendedBlockStorage ebs, ImmutableBlockMeta block, int localX, int y, int localZ) {
@@ -468,9 +478,10 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
     /**
      * Checks if a crack should generate at the given coordinates
+     * 
      * @param crackThickness Thickness of the filled out part of the cracks
-     * @param x x coordinate of the current block
-     * @param z z coordinate of the current block
+     * @param x              x coordinate of the current block
+     * @param z              z coordinate of the current block
      * @return Whether the block should generate a crack
      */
     private boolean isCrackBlock(float crackThickness, int x, int z) {
