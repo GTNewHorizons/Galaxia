@@ -129,6 +129,29 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
+    void assetStateRoundTripPreservesEnergyBackedByBatteryCapacity() {
+        AutomatedFacility station = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ModuleInstance battery = addModule(
+            station,
+            FacilityModuleKind.BATTERY,
+            Buildable.Status.OPERATIONAL,
+            StationTileCoord.of(1, 0));
+        battery.initAnchor(StationTileCoord.of(1, 0));
+        station.stationLayout()
+            .place(battery);
+        station.setEnergyStored(Long.MAX_VALUE);
+
+        AutomatedFacility decoded = (AutomatedFacility) AssetState.decode(AssetState.encode(new UUID(0L, 1L), station))
+            .asset();
+
+        assertEquals(station.getEnergyStored(), decoded.getEnergyStored());
+    }
+
+    @Test
     void assetStateRoundTripPreservesCanonicalAssetAndModuleState() {
         UUID teamId = UUID.randomUUID();
         AutomatedFacility facility = createStationWithFullLayout();
