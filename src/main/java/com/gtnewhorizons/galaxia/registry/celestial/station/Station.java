@@ -4,10 +4,10 @@ import java.math.BigInteger;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Stream;
 
-import net.minecraft.item.ItemStack;
+import javax.annotation.Nullable;
+
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.WorldServer;
 
@@ -105,6 +105,20 @@ public class Station extends CelestialAsset implements IDistributedInventory {
             .map(TileHammerCannon::getModuleInstance);
     }
 
+    @Nullable
+    public TileHammerCannon findHammerCannon(ModuleInstance module) {
+        if (module == null) return null;
+        TileStation ctrl = getTileController();
+        if (ctrl == null) return null;
+        StationGraph graph = ctrl.getGraph();
+        if (graph == null) return null;
+        return graph.getAttachments(TileHammerCannon.class)
+            .filter(TileHammerCannon::isStructureValid)
+            .filter(cannon -> module.equals(cannon.getModuleInstance()))
+            .findFirst()
+            .orElse(null);
+    }
+
     public Map<ItemStackWrapper, Long> getCannonChestItems() {
         Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
         TileStation ctrl = getTileController();
@@ -113,19 +127,21 @@ public class Station extends CelestialAsset implements IDistributedInventory {
         if (graph == null) return result;
         graph.getAttachments(TileHammerCannon.class)
             .filter(TileHammerCannon::isStructureValid)
-            .flatMap(
-                c -> c.getChestInventories()
-                    .stream())
-            .filter(Objects::nonNull)
-            .forEach(inv -> {
-                for (int s = 0; s < inv.getSizeInventory(); s++) {
-                    ItemStack stack = inv.getStackInSlot(s);
-                    if (stack == null) continue;
-                    ItemStackWrapper key = ItemStackWrapper.of(stack);
-                    if (key != null) result.merge(key, (long) stack.stackSize, Long::sum);
-                }
-            });
+            .forEach(
+                cannon -> cannon.getPackageItems()
+                    .forEach((key, amount) -> result.merge(key, amount, Long::sum)));
         return result;
+    }
+
+    public long getCannonSupplyAmount(ItemStackWrapper resource, long reserve) {
+        TileStation ctrl = getTileController();
+        if (ctrl == null) return 0L;
+        StationGraph graph = ctrl.getGraph();
+        if (graph == null) return 0L;
+        return graph.getAttachments(TileHammerCannon.class)
+            .filter(TileHammerCannon::isStructureValid)
+            .mapToLong(cannon -> Math.max(cannon.getPackageAmount(resource) - reserve, 0L))
+            .sum();
     }
 
     /** Public so network handlers can route filter mutations. */

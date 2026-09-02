@@ -1,7 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.celestial.station.attachments;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.Nullable;
 
@@ -134,6 +136,25 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
         return inventory;
     }
 
+    public Map<ItemStackWrapper, Long> getPackageItems() {
+        Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
+        for (IInventory chest : inventory) {
+            if (chest == null) continue;
+            for (int slot = 0; slot < chest.getSizeInventory(); slot++) {
+                ItemStack stack = chest.getStackInSlot(slot);
+                if (stack == null || stack.stackSize <= 0) continue;
+                ItemStackWrapper key = ItemStackWrapper.of(stack);
+                if (key != null) result.merge(key, (long) stack.stackSize, Long::sum);
+            }
+        }
+        return Map.copyOf(result);
+    }
+
+    public long getPackageAmount(ItemStackWrapper resource) {
+        if (resource == null) return 0L;
+        return availablePackageAmount(resource, Long.MAX_VALUE);
+    }
+
     public boolean tryExtractPackage(ItemStackWrapper resource, long amount) {
         if (resource == null || amount <= 0L) return false;
         if (availablePackageAmount(resource, amount) < amount) return false;
@@ -145,6 +166,7 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
     private long availablePackageAmount(ItemStackWrapper resource, long target) {
         long available = 0L;
         for (IInventory chest : inventory) {
+            if (chest == null) continue;
             for (int slot = 0; slot < chest.getSizeInventory(); slot++) {
                 ItemStack stack = chest.getStackInSlot(slot);
                 if (!resource.equals(ItemStackWrapper.of(stack))) continue;
@@ -158,6 +180,7 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
     private void extractPackage(ItemStackWrapper resource, long amount) {
         long remaining = amount;
         for (IInventory chest : inventory) {
+            if (chest == null) continue;
             for (int slot = 0; slot < chest.getSizeInventory() && remaining > 0L; slot++) {
                 ItemStack stack = chest.getStackInSlot(slot);
                 if (!resource.equals(ItemStackWrapper.of(stack))) continue;

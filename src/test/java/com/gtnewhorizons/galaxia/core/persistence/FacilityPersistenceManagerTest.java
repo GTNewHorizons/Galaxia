@@ -2276,7 +2276,11 @@ final class FacilityPersistenceManagerTest {
             .create(fromKey, CelestialAsset.Kind.AUTOMATED_OUTPOST, Buildable.Status.OPERATIONAL);
         CelestialAsset to = CelestialAsset
             .create(toKey, CelestialAsset.Kind.AUTOMATED_OUTPOST, Buildable.Status.OPERATIONAL);
-        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        ItemStack resourceStack = new ItemStack(Items.iron_ingot);
+        NBTTagCompound resourceTag = new NBTTagCompound();
+        resourceTag.setString("grade", "logistics-test");
+        resourceStack.setTagCompound(resourceTag);
+        ItemStackWrapper resource = ItemStackWrapper.of(resourceStack);
 
         CelestialAssetStore.clear();
         LogisticStore.clearDeliveries();
@@ -2348,6 +2352,7 @@ final class FacilityPersistenceManagerTest {
         assertEquals(to.assetId, loaded.data.toAssetId());
         assertEquals(fromKey, loaded.data.fromBodyKey());
         assertEquals(toKey, loaded.data.toBodyKey());
+        assertEquals(resource, loaded.data.resourceId());
         assertEquals(7L, loaded.data.amount());
         assertEquals(42, loaded.getRemainingTicks());
         assertEquals(12.5, loaded.data.departureOrbitalTime());

@@ -22,6 +22,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -290,6 +291,52 @@ final class LogisticStoreTest {
         assertEquals(8L, signal.amount());
     }
 
+    @Test
+    void stationSupplySignalUsesOnlyCannonPackages() {
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        TestStationAsset station = new TestStationAsset(Map.of(resource, 40L), Map.of());
+        station.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
+
+        assertTrue(
+            LogisticStore.collectSignals(List.of(station))
+                .isEmpty());
+    }
+
+    @Test
+    void stationSupplySignalReportsCannonPackages() {
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        TestStationAsset station = new TestStationAsset(Map.of(resource, 40L), Map.of(resource, 12L));
+        station.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
+
+        LogisticSignal signal = signalFor(LogisticStore.collectSignals(List.of(station)), station, resource);
+
+        assertEquals(12L, signal.amount());
+    }
+
+    @Test
+    void stationSupplySignalAppliesReserveToEachCannonBuffer() {
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        TestStationAsset station = new TestStationAsset(
+            Map.of(),
+            List.of(Map.of(resource, 40L), Map.of(resource, 40L)));
+        station.logisticsConfig.set(resource, new LogisticsResourceConfig(50, 64, false, true));
+
+        assertTrue(
+            LogisticStore.collectSignals(List.of(station))
+                .isEmpty());
+    }
+
+    @Test
+    void stationImportSignalIgnoresCannonPackages() {
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        TestStationAsset station = new TestStationAsset(Map.of(resource, 100L), Map.of(resource, 32L));
+        station.logisticsConfig.set(resource, new LogisticsResourceConfig(120, 64, true, true));
+
+        LogisticSignal signal = signalFor(LogisticStore.collectSignals(List.of(station)), station, resource);
+
+        assertEquals(-20L, signal.amount());
+    }
+
     private static LogisticSignal signalFor(List<LogisticSignal> signals, CelestialAsset asset,
         ItemStackWrapper resource) {
         return signals.stream()
@@ -406,4 +453,45 @@ final class TestPhysicalInventoryAsset extends TestLogisticsAsset implements IDi
     public long getFreeItemSpace(ItemStackWrapper item) {
         return acceptedResource != null && acceptedResource.equals(item) ? freeSpace : 0L;
     }
+}
+
+final class TestStationAsset extends Station {
+
+    private final List<IDistributedInventory> inventories;
+    private final List<Map<ItemStackWrapper, Long>> cannonItems;
+
+    TestStationAsset(Map<ItemStackWrapper, Long> items, Map<ItemStackWrapper, Long> cannonItems) {
+        this(items, List.of(cannonItems));
+    }
+
+    TestStationAsset(Map<ItemStackWrapper, Long> items, List<Map<ItemStackWrapper, Long>> cannonItems) {
+        super(ID.create(), CelestialObjectId.OVERWORLD, Buildable.Status.OPERATIONAL);
+        inventories = List.of(new TestPhysicalInventoryAsset(items));
+        this.cannonItems = List.copyOf(cannonItems);
+    }
+
+    @Override
+    public TileStation getTileController() {
+        return new TileStation();
+    }
+
+    @Override
+    public List<IDistributedInventory> getChildren() {
+        return inventories;
+    }
+
+    @Override
+    public Map<ItemStackWrapper, Long> getCannonChestItems() {
+        Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
+        cannonItems.forEach(items -> items.forEach((key, amount) -> result.merge(key, amount, Long::sum)));
+        return result;
+    }
+
+    @Override
+    public long getCannonSupplyAmount(ItemStackWrapper resource, long reserve) {
+        return cannonItems.stream()
+            .mapToLong(items -> Math.max(items.getOrDefault(resource, 0L) - reserve, 0L))
+            .sum();
+    }
+
 }

@@ -22,8 +22,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
-import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
-import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -183,20 +181,7 @@ public class CelestialEventHandler {
         double orbitalTime, boolean profileHammerTrajectoryLoad) {
 
         boolean sameBody = supplier.celestialObjectKey.equals(requester.celestialObjectKey);
-
-        Map<ModuleInstance, TileHammerCannon> moduleCannon = null;
-        if (supplier instanceof Station station) {
-            TileStation ctrl = station.getTileController();
-            StationGraph graph = ctrl != null ? ctrl.getGraph() : null;
-            if (graph == null) return false;
-            moduleCannon = new HashMap<>();
-            for (TileHammerCannon c : graph.getAttachments(TileHammerCannon.class)
-                .toList()) {
-                if (c.isStructureValid()) {
-                    moduleCannon.put(c.getModuleInstance(), c);
-                }
-            }
-        }
+        Station station = supplier instanceof Station physicalStation ? physicalStation : null;
 
         UUID routeProfileTeamId = profileHammerTrajectoryLoad ? CelestialAssetStore.getTeamId(supplier.assetId) : null;
 
@@ -207,8 +192,8 @@ public class CelestialEventHandler {
             if (!hammer.canFire()) continue;
             if (!sameBody && !hammer.canPlanRoute(module)) continue;
 
-            TileHammerCannon cannon = moduleCannon != null ? moduleCannon.get(module) : null;
-            if (moduleCannon != null && cannon == null) continue;
+            TileHammerCannon cannon = station != null ? station.findHammerCannon(module) : null;
+            if (station != null && cannon == null) continue;
 
             if (cannon != null) {
                 ResourceFilter<ItemStackWrapper> filter = cannon.getFilter();
@@ -226,7 +211,7 @@ public class CelestialEventHandler {
                 if (!hammer.trySpendShotEnergy(module, af, plan.requiredEnergy())) {
                     throw new IllegalStateException("HAMMER shot energy became inconsistent");
                 }
-            } else if (moduleCannon != null) {
+            } else if (station != null) {
                 if (!cannon.tryExtractPackage(plan.resource(), plan.sendAmount())) continue;
                 if (!hammer.trySpendShotEnergy(plan.requiredEnergy())) {
                     throw new IllegalStateException("HAMMER shot energy became inconsistent");

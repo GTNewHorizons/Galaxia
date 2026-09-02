@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Map;
+
 import net.minecraft.init.Items;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.InventoryBasic;
@@ -39,6 +41,17 @@ final class TileHammerCannonTest {
         assertNull(chosenInventory.getStackInSlot(0));
         assertEquals(8, chosenInventory.getStackInSlot(1).stackSize);
         assertEquals(8, stackAt(otherCannon, 0).stackSize);
+    }
+
+    @Test
+    void packageSnapshotUsesTheSameItemsAsPackageExtraction() {
+        ItemStack requested = stack(4, "requested");
+        TileHammerCannon cannon = cannonWith(requested, stack(8, "other"));
+
+        assertEquals(4L, cannon.getPackageAmount(ItemStackWrapper.of(requested)));
+        assertEquals(
+            Map.of(ItemStackWrapper.of(requested), 4L, ItemStackWrapper.of(stack(8, "other")), 8L),
+            cannon.getPackageItems());
     }
 
     @Test
