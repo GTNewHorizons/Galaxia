@@ -5,6 +5,7 @@ import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.math.Smoothstep;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.ModifierHandler;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.TerrainModifierEntry;
 import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
 import java.util.Random;

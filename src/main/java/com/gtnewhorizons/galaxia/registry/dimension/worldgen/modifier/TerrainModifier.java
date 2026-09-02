@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
+package com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier;
 
 /**
  * Holds all terrain modifiers alongside their range values

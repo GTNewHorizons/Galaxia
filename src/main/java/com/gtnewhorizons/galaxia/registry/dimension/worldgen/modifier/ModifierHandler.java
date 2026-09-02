@@ -1,8 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier;
 
 import com.gtnewhorizon.gtnhlib.util.StdLCG;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainModifier;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainModifierEntry;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.math.Smoothstep;
 import net.minecraft.world.World;
 import net.minecraft.world.gen.NoiseGeneratorOctaves;

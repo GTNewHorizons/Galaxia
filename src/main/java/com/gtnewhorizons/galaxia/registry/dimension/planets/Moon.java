@@ -13,8 +13,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilde
 import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.BiomeMatrixGenerator;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainModifier;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainModifierEntry;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.details.ErodedHills;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CraterFeature;
@@ -22,6 +20,8 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CrystalClus
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.FluidSpringFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.GeodeFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.StalactiteFeature;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.TerrainModifier;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.TerrainModifierEntry;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 

@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
+package com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier;
 
 /**
  * Entry for controlling terrain generation with a modifier interval
