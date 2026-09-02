@@ -248,7 +248,7 @@ public abstract class CelestialAsset implements Buildable {
     public enum Kind {
 
         STATION,
-        AUTOMATED_STATION, // Not implemented yet
+        AUTOMATED_STATION,
         AUTOMATED_OUTPOST,
         SATELLITE,
 

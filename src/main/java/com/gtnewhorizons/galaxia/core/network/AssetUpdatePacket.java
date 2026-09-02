@@ -4,14 +4,10 @@ import java.util.UUID;
 
 import net.minecraft.entity.player.EntityPlayerMP;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -20,13 +16,10 @@ import io.netty.buffer.ByteBuf;
 
 public final class AssetUpdatePacket implements IMessage {
 
-    private static final Logger LOG = LogManager.getLogger("Galaxia");
-
     public enum Action {
         DESTROY_ASSET,
         CANCEL_CONSTRUCTION,
         START_DECONSTRUCTION,
-        REQUEST_FULL_SYNC,
         RENAME_ASSET
     }
 
@@ -100,7 +93,6 @@ public final class AssetUpdatePacket implements IMessage {
         }
 
         boolean authorized = switch (action) {
-            case REQUEST_FULL_SYNC -> true;
             case DESTROY_ASSET -> GTTeamsCompat.hasPermission(teamId, player, TeamAction.DESTROY_ASSET);
             case START_DECONSTRUCTION -> GTTeamsCompat.hasPermission(teamId, player, TeamAction.DECONSTRUCT_ASSET);
             case CANCEL_CONSTRUCTION -> GTTeamsCompat.hasPermission(teamId, player, TeamAction.BUILD_MODULE);
@@ -125,15 +117,6 @@ public final class AssetUpdatePacket implements IMessage {
             case START_DECONSTRUCTION -> {
                 boolean started = CelestialAssetStore.startDeconstruction(assetId);
                 yield started;
-            }
-            case REQUEST_FULL_SYNC -> {
-                AutomatedFacility state = asset instanceof AutomatedFacility o ? o : null;
-                if (state == null && asset.status() == CelestialAsset.Status.OPERATIONAL) {
-                    CelestialAssetStore.registerAsset(teamId, asset);
-                    LOG.info("[Outpost] Auto-created state for outpost {} (team {})", assetId, teamId);
-                    state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
-                }
-                yield state != null;
             }
             case RENAME_ASSET -> {
                 boolean renamed = CelestialAssetStore.renameAsset(assetId, displayName);

@@ -48,12 +48,14 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscovery
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -932,8 +934,12 @@ final class FacilityPersistenceManagerTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
-        station.setBound(resource, 48L, true);
-        station.setBound(resource, 96L, false);
+        station.applyCommand(
+            new FacilityCommand.SetInventoryBound(station.assetId, BoundKind.ITEM_LOWER, resource, 48L),
+            FacilityCommand.Authority.NONE);
+        station.applyCommand(
+            new FacilityCommand.SetInventoryBound(station.assetId, BoundKind.ITEM_UPPER, resource, 96L),
+            FacilityCommand.Authority.NONE);
 
         CelestialAssetStore.clear();
         CelestialAssetStore.registerAsset(teamId, station);
@@ -1764,8 +1770,20 @@ final class FacilityPersistenceManagerTest {
             320,
             480);
         long contentHash = snapshot.contentHash();
-        station.setBound(new FluidKey(TEST_FLUID_1, null), 11, true);
-        station.setBound(new FluidKey(TEST_FLUID_2, null), 22, false);
+        station.applyCommand(
+            new FacilityCommand.SetInventoryBound(
+                station.assetId,
+                BoundKind.FLUID_LOWER,
+                new FluidKey(TEST_FLUID_1, null),
+                11),
+            FacilityCommand.Authority.NONE);
+        station.applyCommand(
+            new FacilityCommand.SetInventoryBound(
+                station.assetId,
+                BoundKind.FLUID_UPPER,
+                new FluidKey(TEST_FLUID_2, null),
+                22),
+            FacilityCommand.Authority.NONE);
         RecipeBook expectedBook = new RecipeBook(
             List.of(new SavedRecipe(snapshot, true, 12L, (byte) 3, (byte) 4, "Fluid recipe")),
             RecipeSchedulerMode.PRIORITY,
@@ -1927,8 +1945,13 @@ final class FacilityPersistenceManagerTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
-        station.setUpkeepReserve(resource, 17L);
-        station.setUpkeepAutoOrder(resource, true);
+        station.applyCommand(
+            new FacilityCommand.PutLogisticsConfig(
+                station.assetId,
+                resource,
+                new LogisticsResourceConfig(17, 1, true, false),
+                LogisticsConfigAccessMode.FULL),
+            FacilityCommand.Authority.NONE);
 
         AutomatedFacility decoded = (AutomatedFacility) AssetState.decode(AssetState.encode(new UUID(0L, 1L), station))
             .asset();

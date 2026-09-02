@@ -17,6 +17,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
@@ -76,7 +77,9 @@ final class ProductionModuleHelperTest {
         ModuleInstance module = installBook(facility, orderBook(recipe));
         ItemStackWrapper input = ItemStackWrapper.of(new ItemStack(Items.diamond));
         facility.insert(input, 105L);
-        facility.setBound(input, 100L, true);
+        facility.applyCommand(
+            new FacilityCommand.SetInventoryBound(facility.assetId, BoundKind.ITEM_LOWER, input, 100L),
+            FacilityCommand.Authority.NONE);
         RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
         facility.restoreRecipeScheduleState(module, before);
 

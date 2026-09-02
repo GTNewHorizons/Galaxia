@@ -18,8 +18,11 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 import com.gtnewhorizons.galaxia.registry.outpost.module.BlockingReason;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -56,7 +59,13 @@ final class AutomatedFacilityUpkeepTest {
     void manualUpkeepReserveOverridesDefaultDemandReserve() {
         AutomatedFacility facility = facilityWithModules(moduleWithUpkeep(ModulePriority.NORMAL, "2"));
 
-        facility.setUpkeepReserve(UPKEEP_ITEM, 7L);
+        facility.applyCommand(
+            new FacilityCommand.PutLogisticsConfig(
+                facility.assetId,
+                UPKEEP_ITEM,
+                new LogisticsResourceConfig(7, 1, false, false),
+                LogisticsConfigAccessMode.FULL),
+            FacilityCommand.Authority.NONE);
 
         assertEquals(7L, facility.upkeepReserve(UPKEEP_ITEM));
     }

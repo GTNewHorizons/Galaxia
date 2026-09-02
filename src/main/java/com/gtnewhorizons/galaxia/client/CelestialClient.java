@@ -224,10 +224,6 @@ public final class CelestialClient {
         return StarmapActionSyncHandler.sendRenameAsset(assetId, displayName);
     }
 
-    public static void requestFullSync(ID assetId) {
-        StarmapActionSyncHandler.sendRequestFullSync(assetId);
-    }
-
     public static List<CelestialAsset> getTransferTargetsInSystem(CelestialObject root, CelestialObject body) {
         List<CelestialAsset> targets = new ArrayList<>();
         if (body == null) return targets;
