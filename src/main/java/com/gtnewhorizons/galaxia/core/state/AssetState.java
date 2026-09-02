@@ -220,7 +220,7 @@ public final class AssetState {
     private static AutomatedFacility decodeFacility(CelestialAsset asset, NbtReader in) {
         String path = in.path();
         if (!(asset instanceof AutomatedFacility facility)) throw fail(path, "asset is not an automated facility");
-        facility.setEnergyStored(in.longValue("energy"));
+        long energyStored = in.longValue("energy");
         facility.setStationFeatureSalt(in.longValue("featureSalt"));
         facility.restoreBounds(readBounds(in, "bounds"));
         facility.setFilters(readStrings(in, "itemFilters"), true);
@@ -243,6 +243,7 @@ public final class AssetState {
         facility.loadUpkeepCredits(
             new UpkeepSettlement.Credits(readItemCredits(in, "upkeepItems"), readFluidCredits(in, "upkeepFluids")));
         restoreAnchors(facility, modules, in, "anchors");
+        facility.setEnergyStored(energyStored);
         facility.restoreRecipeScheduleStates(schedules);
         return facility;
     }
