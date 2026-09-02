@@ -16,6 +16,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
+/**
+ * Caches mantle terrain generation data for 32 columns at a time
+ */
 public class MantleCache {
 
     private static final int CACHE_LIMIT = 32;
@@ -30,6 +33,13 @@ public class MantleCache {
 
     private final List<CacheEntry> cacheEntries = new LinkedList<>();
 
+    /**
+     * Creates a mantle cache with all relevant parameters
+     * @param world World in which the mantle generates
+     * @param random Randomizer for terrain generation
+     * @param dimension Dimension the cache is used for
+     * @param modifierHandler Handler for terrain modifiers
+     */
     public MantleCache(World world, Random random, DimensionEnum dimension, ModifierHandler modifierHandler) {
         this.world = world;
         this.random = random;
@@ -39,14 +49,22 @@ public class MantleCache {
         Arrays.fill(DEFAULT_RELEVANCE, 1);
     }
 
-    public MantleCacheData getLocalData(int cubeX, int cubeZ, TerrainConfiguration ceiling,
+    /**
+     * Provides data for a specific column. Creates a new cache entry if needed
+     * @param columnX x coordinate of the currently generating column
+     * @param columnZ z coordinate of the currently generating column
+     * @param ceiling Terrain configuration for the ceiling
+     * @param floor Terrain configuration for the floor
+     * @return Record with all important data
+     */
+    public MantleCacheData getLocalData(int columnX, int columnZ, TerrainConfiguration ceiling,
         TerrainConfiguration floor) {
         for (CacheEntry entry : cacheEntries) {
-            if (entry.isCorrectCache(cubeX, cubeZ)) {
+            if (entry.isCorrectCache(columnX, columnZ)) {
                 return entry.exportData;
             }
         }
-        CacheEntry correctEntry = new CacheEntry(cubeX, cubeZ, ceiling, floor, world, random, dimension, terrainNoise, modifierHandler);
+        CacheEntry correctEntry = new CacheEntry(columnX, columnZ, ceiling, floor, world, random, dimension, terrainNoise, modifierHandler);
         cacheEntries.add(correctEntry);
         while (cacheEntries.size() > CACHE_LIMIT) {
             cacheEntries.removeFirst();
@@ -54,19 +72,34 @@ public class MantleCache {
         return correctEntry.exportData;
     }
 
+    /**
+     * Cache entry for the mantle cache
+     */
     public static final class CacheEntry {
 
-        private final int cubeX;
-        private final int cubeZ;
+        private final int columnX;
+        private final int columnZ;
         private final World world;
         private final Random random;
 
         private final MantleCacheData exportData;
 
-        public CacheEntry(int cubeX, int cubeZ, TerrainConfiguration ceiling, TerrainConfiguration floor, World world,
-            Random random, DimensionEnum dimension, NoiseGeneratorOctaves terrainNoise, ModifierHandler modifierHandler) {
-            this.cubeX = cubeX;
-            this.cubeZ = cubeZ;
+        /**
+         * Creates a cache entry and calculates all the relevant data
+         * @param columnX x coordinate of the currently generating column
+         * @param columnZ z coordinate of the currently generating column
+         * @param ceiling Terrain configuration for the ceiling
+         * @param floor Terrain configuration for the floor
+         * @param world World in which the mantle generates
+         * @param random Randomizer for terrain generation
+         * @param dimension Dimension the cache is used for
+         * @param terrainNoise Noise for generating the terrain
+         * @param modifierHandler Handler for terrain modifiers
+         */
+        public CacheEntry(int columnX, int columnZ, TerrainConfiguration ceiling, TerrainConfiguration floor, World world,
+                          Random random, DimensionEnum dimension, NoiseGeneratorOctaves terrainNoise, ModifierHandler modifierHandler) {
+            this.columnX = columnX;
+            this.columnZ = columnZ;
             this.world = world;
             this.random = random;
 
@@ -78,9 +111,9 @@ public class MantleCache {
                     f,
                     ceilingHeightmap,
                     ceilingSurfaceBlocks,
-                    cubeX,
-                    cubeZ,
-                    withSeed(cubeX, cubeZ, i++),
+                    columnX,
+                    columnZ,
+                    withSeed(columnX, columnZ, i++),
                     DEFAULT_RELEVANCE,
                     dimension,
                     terrainNoise,
@@ -92,9 +125,9 @@ public class MantleCache {
                     f,
                     ceilingHeightmap,
                     ceilingSurfaceBlocks,
-                    cubeX,
-                    cubeZ,
-                    withSeed(cubeX, cubeZ, i++),
+                    columnX,
+                    columnZ,
+                    withSeed(columnX, columnZ, i++),
                     DEFAULT_RELEVANCE,
                     dimension,
                     terrainNoise,
@@ -108,9 +141,9 @@ public class MantleCache {
                     f,
                     floorHeightmap,
                     floorSurfaceBlocks,
-                    cubeX,
-                    cubeZ,
-                    withSeed(cubeX, cubeZ, i++),
+                    columnX,
+                    columnZ,
+                    withSeed(columnX, columnZ, i++),
                     DEFAULT_RELEVANCE,
                     dimension,
                     terrainNoise,
@@ -122,9 +155,9 @@ public class MantleCache {
                     f,
                     floorHeightmap,
                     floorSurfaceBlocks,
-                    cubeX,
-                    cubeZ,
-                    withSeed(cubeX, cubeZ, i++),
+                    columnX,
+                    columnZ,
+                    withSeed(columnX, columnZ, i++),
                     DEFAULT_RELEVANCE,
                     dimension,
                     terrainNoise,
@@ -137,15 +170,28 @@ public class MantleCache {
                 floorSurfaceBlocks);
         }
 
-        public boolean isCorrectCache(int cubeX, int cubeZ) {
-            return this.cubeX == cubeX && this.cubeZ == cubeZ;
+        /**
+         * Checks if this is the correct cache for a column
+         * @param columnX x coordinate of the currently generating column
+         * @param columnZ z coordinate of the currently generating column
+         * @return Response of whether this is the correct column
+         */
+        public boolean isCorrectCache(int columnX, int columnZ) {
+            return this.columnX == columnX && this.columnZ == columnZ;
         }
 
-        private Random withSeed(int chunkX, int chunkZ, int index) {
+        /**
+         * Sets the seed of the randomizer for applying the terrain
+         * @param columnX x coordinate of the currently generating column
+         * @param columnZ z coordinate of the currently generating column
+         * @param index Index of the terrain feature applier
+         * @return Randomizer with a new seed
+         */
+        private Random withSeed(int columnX, int columnZ, int index) {
             long seed = Fnv1a64.initialState();
             seed = Fnv1a64.hashStep(seed, world.getSeed());
-            seed = Fnv1a64.hashStep(seed, chunkX);
-            seed = Fnv1a64.hashStep(seed, chunkZ);
+            seed = Fnv1a64.hashStep(seed, columnX);
+            seed = Fnv1a64.hashStep(seed, columnZ);
             seed = Fnv1a64.hashStep(seed, index);
 
             random.setSeed(seed);

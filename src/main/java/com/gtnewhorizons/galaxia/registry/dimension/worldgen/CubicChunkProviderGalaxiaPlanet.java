@@ -48,6 +48,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+/**
+ * Terrain generator for Galaxia planets with Cubic Chunks support
+ * <p>
+ * Generates a crust layer from 0 to whatever the maximum height is for the planet's terrain
+ * <p>
+ * Generates an upper mantle layer from -1 to -128 and a lower mantle layer from -129 to -256
+ */
 @ParametersAreNonnullByDefault
 public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, GalaxiaPlanetGenerator {
 
@@ -150,12 +157,23 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
         }
     }
 
+    /**
+     * Generates a mantle layer with floor and ceiling
+     * @param cubeX x coordinate of the currently generating cube
+     * @param cubeY y coordinate of the currently generating cube
+     * @param cubeZ z coordinate of the currently generating cube
+     * @param ebs Block storage for efficient block placement
+     * @param ceilingOffset Upper limit height of the ceiling
+     * @param floorOffset Lower limit height of the floor
+     * @param upperMantle Whether it is the upper mantle layer
+     */
     private void generateMantle(int cubeX, int cubeY, int cubeZ, ExtendedBlockStorage ebs, int ceilingOffset,
         int floorOffset, boolean upperMantle) {
         ImmutableBlockMeta block;
         TerrainConfiguration ceiling;
         TerrainConfiguration floor;
 
+        // Fetch mantle rules
         MantleRules mantleRules;
         if (upperMantle) {
             mantleRules = dimension.getUpperMantleRules();
@@ -166,6 +184,7 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
             return;
         }
 
+        // Set important values for mantle generation
         block = mantleRules.fillerBlock;
         ceiling = mantleRules.getCeiling();
         floor = mantleRules.getFloor();
@@ -180,6 +199,7 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
         ceilingHeightmap = mantleCacheData.ceilingHeightmap();
         floorHeightmap = mantleCacheData.floorHeightmap();
 
+        // Assign floor and ceiling caves for connecting different layers
         CaveShape ceilingCaves;
         CaveShape floorCaves;
         if (upperMantle) {
@@ -189,6 +209,8 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
             ceilingCaves = dimension.getLowerIntermediaryCaves();
             floorCaves = null;
         }
+
+        // Prepare ceiling caves
         if (ceilingCaves != null) {
             if (!ceilingCaves.preparedCaveShape()) {
                 ceilingCaves.prepareCaveShape(rand);
@@ -197,6 +219,8 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                 ceilingCaves.prepareCaveCache(cubeX, cubeZ);
             }
         }
+
+        // Prepare floor caves
         if (floorCaves != null) {
             if (!floorCaves.preparedCaveShape()) {
                 floorCaves.prepareCaveShape(rand);
@@ -205,12 +229,15 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                 floorCaves.prepareCaveCache(cubeX, cubeZ);
             }
         }
-        boolean isCave = false;
+
+        // Set cave height coordinates
         int ceilingCaveTop = upperMantle ? UPPER_INTERMEDIARY_CAVES_TOP : LOWER_INTERMEDIARY_CAVES_TOP;
         int ceilingCaveBottom = upperMantle ? UPPER_INTERMEDIARY_CAVES_BOTTOM : LOWER_INTERMEDIARY_CAVES_BOTTOM;
         int floorCaveTop = upperMantle ? LOWER_INTERMEDIARY_CAVES_TOP : Integer.MAX_VALUE;
         int floorCaveBottom = upperMantle ? LOWER_INTERMEDIARY_CAVES_BOTTOM : Integer.MIN_VALUE;
 
+        // Process cave data and generate
+        boolean isCave = false;
         for (int localX = 0; localX < CHUNK_WIDTH; localX++) {
             for (int localZ = 0; localZ < CHUNK_WIDTH; localZ++) {
                 double ceilingHeight = -ceilingHeightmap[localX + (localZ << 4)] + ceilingOffset;
@@ -218,15 +245,23 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                 int minY = cubeY << 4;
                 int maxY = minY + 16;
                 for (int y = minY; y < maxY; y++) {
+
+                    // Check if y overlaps with floor or ceiling terrain
                     if ((y < floorHeight || y > ceilingHeight)) {
+
+                        // Handle ceiling caves
                         if (ceilingCaves != null && y > ceilingCaveBottom) {
                             isCave = ceilingCaves
                                 .isInCave(localX, y - ceilingCaveBottom, localZ, ceilingCaveTop - ceilingCaveBottom);
                         }
+
+                        // Handle floor caves
                         if (!isCave && floorCaves != null && y < floorCaveTop) {
                             isCave = floorCaves
                                 .isInCave(localX, y - floorCaveBottom, localZ, floorCaveTop - floorCaveBottom);
                         }
+
+                        // Place block or reset cave status if current block is in a cave
                         if (!isCave) {
                             placeBlock(ebs, block, localX, y, localZ);
                         } else {
@@ -238,6 +273,14 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
         }
     }
 
+    /**
+     * Handles terrain generation for y values greater than 0
+     * @param cubeX x coordinate of the currently generating cube
+     * @param cubeY y coordinate of the currently generating cube
+     * @param cubeZ z coordinate of the currently generating cube
+     * @param data Data of the current chunk
+     * @param ebs Block storage for efficient block placement
+     */
     private void generateCrust(int cubeX, int cubeY, int cubeZ, HeightOracle.ChunkData data, ExtendedBlockStorage ebs) {
         CaveShape crustCaves = null;
         Terrain3D terrain3d = null;
@@ -257,6 +300,7 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
                 BiomeBlockPalette palette = DEFAULT_PALETTE;
 
+                // Check if the biome is a space biome and specify additional biome content
                 if (localBiome instanceof BiomeGenSpace spaceBiome) {
                     palette = spaceBiome;
                     Terrain3D biome3d = spaceBiome.getTerrain3d();
@@ -272,6 +316,7 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
                 int terrainHeight = Math.max(1, (int) data.heightmap[localX + (localZ << 4)]);
 
+                // Prepare cave generation if present
                 if (crustCaves != null) {
                     if (!crustCaves.preparedCaveShape()) {
                         crustCaves.prepareCaveShape(rand);
@@ -281,6 +326,7 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                     }
                 }
 
+                // Prepare 3D terrain if present
                 int terrain3dHeight = 0;
                 if (terrain3d != null) {
                     if (!terrain3d.preparedFunctions()) {
@@ -303,11 +349,14 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
                     ImmutableBlockMeta block;
 
+                    // Handle 3D terrain block checks
                     if (y >= terrainHeight && y - terrainHeight < terrain3dHeight) {
                         if (!terrain3d.isSolid(localX, y - terrainHeight, localZ)) {
                             isTerrain = false;
                         }
                     }
+
+                    // Set block according to height
                     if (isTerrain && y >= terrainHeight + terrain3dHeight - palette.getSurfaceThickness()) {
                         block = getSurfaceBlock(data, localX, localZ, y, palette);
                     } else if (isTerrain) {
@@ -319,21 +368,23 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
                     int oceanHeight = palette.getOceanHeight();
 
+                    // Handle ocean logic if necessary
                     if (y <= oceanHeight) {
-                        if (y == terrainHeight - 1) {
+                        if (y == terrainHeight - 1) { // Handle seabed
                             if (y > palette.getSeabedHeight()) {
                                 block = palette.getOceanSurface();
                                 isTerrain = false;
                             } else {
                                 block = palette.getSeabed();
                             }
-                        } else if (y > terrainHeight - 1) {
+                        } else if (y > terrainHeight - 1) { // Handle ocean itself
                             isTerrain = false;
 
                             int oceanDepth = oceanHeight - terrainHeight;
 
                             boolean topTwoLayers = y == oceanHeight - 1 || y == oceanHeight - 2;
 
+                            // Check if a cracked surface should generate
                             boolean isCrack = oceanDepth >= 2 && palette.hasCracks()
                                 && topTwoLayers
                                 && isCrackBlock(
@@ -345,6 +396,7 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                                 // The top layer should always be air and the lower blocks should be the crack blocks
                                 block = y == oceanHeight - 1 ? AIR : palette.getOceanCrackBlock();
                             } else {
+                                // Fill out ocean with surface and filler blocks
                                 if (y == oceanHeight) {
                                     block = palette.getOceanSurface();
                                 } else {
@@ -353,10 +405,11 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                             }
                         }
                     }
-                    boolean isCave = false;
-                    if (crustCaves != null && isTerrain && crustCaves.isInCave(localX, y, localZ, terrainHeight)) {
-                        isCave = true;
-                    }
+
+                    // Handle cave generation
+                    // Check for crust caves
+                    boolean isCave = crustCaves != null && isTerrain && crustCaves.isInCave(localX, y, localZ, terrainHeight);
+                    // Check for caves connecting to the upper mantle
                     if (!isCave && intermediateCaves != null && y < UPPER_INTERMEDIARY_CAVES_TOP) {
                         isCave = intermediateCaves.isInCave(
                             localX,
@@ -374,6 +427,15 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
         }
     }
 
+    /**
+     * Picks the correct surface block
+     * @param data Data of the current chunk
+     * @param localX x coordinate within the chunk
+     * @param localZ z coordinate within the chunk
+     * @param y Absolute height coordinate
+     * @param palette Block palette of the dominant biome
+     * @return Surface block
+     */
     private static ImmutableBlockMeta getSurfaceBlock(HeightOracle.ChunkData data, int localX, int localZ, int y, BiomeBlockPalette palette) {
         ImmutableBlockMeta block;
         ImmutableBlockMeta replacementBlock = data.surfaceBlocks[localX + (localZ << 4)];
@@ -381,22 +443,36 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
         if (replacementBlock != null) {
             block = replacementBlock;
         } else {
+            // Handle snow layer generation
             block = y >= palette.getSnowHeight() ? palette.getSnowBlock() : palette.getTopBlock();
         }
         return block;
     }
 
+    /**
+     * Efficiently places a block into the world
+     * @param ebs Block storage for efficient placement
+     * @param block Block to be placed
+     * @param localX x coordinate within the chunk
+     * @param y Absolute height
+     * @param localZ z coordinate within the chunk
+     */
     private static void placeBlock(ExtendedBlockStorage ebs, ImmutableBlockMeta block, int localX, int y, int localZ) {
-        if (block != null) {
-            if (block.getBlock() != Blocks.air) {
-                ebs.func_150818_a(localX, y & 15, localZ, block.getBlock());
-            }
-            if (block.getBlockMeta() != 0) {
-                ebs.setExtBlockMetadata(localX, y & 15, localZ, block.getBlockMeta());
-            }
+        if (block.getBlock() != Blocks.air) {
+            ebs.func_150818_a(localX, y & 15, localZ, block.getBlock());
+        }
+        if (block.getBlockMeta() != 0) {
+            ebs.setExtBlockMetadata(localX, y & 15, localZ, block.getBlockMeta());
         }
     }
 
+    /**
+     * Checks if a crack should generate at the given coordinates
+     * @param crackThickness Thickness of the filled out part of the cracks
+     * @param x x coordinate of the current block
+     * @param z z coordinate of the current block
+     * @return Whether the block should generate a crack
+     */
     private boolean isCrackBlock(float crackThickness, int x, int z) {
         double a = crackNoise1.sample(x, z);
         double b = crackNoise2.sample(x, z);
