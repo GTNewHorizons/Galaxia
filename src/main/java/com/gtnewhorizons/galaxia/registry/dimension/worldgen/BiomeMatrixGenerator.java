@@ -1,8 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
-import net.minecraft.world.biome.BiomeGenBase;
-
 import java.util.HashMap;
+
+import net.minecraft.world.biome.BiomeGenBase;
 
 /**
  * Creates a biome matrix using a character matrix like a shaped crafting recipe
@@ -14,6 +14,7 @@ public class BiomeMatrixGenerator {
 
     /**
      * Creates a biome matrix using a character matrix
+     * 
      * @param characterMatrix Character matrix to parse into biomes
      */
     public BiomeMatrixGenerator(String[] characterMatrix) {
@@ -22,7 +23,8 @@ public class BiomeMatrixGenerator {
 
     /**
      * Assigns a biome to a character
-     * @param key Character to assign the biome to
+     * 
+     * @param key   Character to assign the biome to
      * @param biome Biome to be assigned
      * @return The object (this is a builder method)
      */
@@ -33,6 +35,7 @@ public class BiomeMatrixGenerator {
 
     /**
      * Creates a biome matrix from previously specified values
+     * 
      * @return The finished biome matrix
      */
     public BiomeGenBase[][] createBiomeMatrix() {

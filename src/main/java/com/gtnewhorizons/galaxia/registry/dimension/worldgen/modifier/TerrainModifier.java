@@ -11,13 +11,14 @@ public enum TerrainModifier {
 
     /**
      * Creates a terrain modifier with all needed parameters
-     * @param minimum Lowest possible value
+     * 
+     * @param minimum      Lowest possible value
      * @param lowerExtreme Lower margin for extreme values
-     * @param lowerMiddle Lower margin for regular values
-     * @param middle Middle value
-     * @param upperMiddle Upper margin for regular values
+     * @param lowerMiddle  Lower margin for regular values
+     * @param middle       Middle value
+     * @param upperMiddle  Upper margin for regular values
      * @param upperExtreme Upper margin for extreme values
-     * @param maximum Highest possible value
+     * @param maximum      Highest possible value
      */
     TerrainModifier(double minimum, double lowerExtreme, double lowerMiddle, double middle, double upperMiddle,
         double upperExtreme, double maximum) {

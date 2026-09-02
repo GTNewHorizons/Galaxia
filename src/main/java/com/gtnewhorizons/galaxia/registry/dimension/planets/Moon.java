@@ -1,5 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
+import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.*;
+
+import net.minecraft.init.Blocks;
+import net.minecraft.world.biome.BiomeGenBase;
+
 import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
@@ -22,10 +27,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.GeodeFeatur
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.StalactiteFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.TerrainModifier;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.TerrainModifierEntry;
-import net.minecraft.init.Blocks;
-import net.minecraft.world.biome.BiomeGenBase;
-
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.*;
 
 /**
  * The class holding all data related to the dimension Moon
@@ -226,7 +227,13 @@ public final class Moon {
                     .crystal(Blocks.stained_glass)
                     .build())
             .terrain(terrainConfiguration)
-            .terrain3d(new ErodedHills(new TerrainModifierEntry(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.upperExtreme, TerrainModifier.WEIRDNESS.maximum), 16))
+            .terrain3d(
+                new ErodedHills(
+                    new TerrainModifierEntry(
+                        TerrainModifier.WEIRDNESS,
+                        TerrainModifier.WEIRDNESS.upperExtreme,
+                        TerrainModifier.WEIRDNESS.maximum),
+                    16))
             .ocean(MOON_OBSIDIAN, MOON_BASALT, 1, MOON_OBSIDIAN, 1)
             .surfaceThickness(4)
             .build();

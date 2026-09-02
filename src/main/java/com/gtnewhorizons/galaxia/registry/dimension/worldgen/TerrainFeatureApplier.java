@@ -1,14 +1,15 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
+import java.util.Random;
+
+import net.minecraft.world.gen.NoiseGeneratorOctaves;
+
 import com.gtnewhorizon.gtnhlib.util.StdLCG;
 import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.math.Smoothstep;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.ModifierHandler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.TerrainModifierEntry;
-import net.minecraft.world.gen.NoiseGeneratorOctaves;
-
-import java.util.Random;
 
 /**
  * Class to deal with actual application of different feature types
@@ -29,8 +30,8 @@ public final class TerrainFeatureApplier {
      * @param noise            World-level noise generator seeded from the world seed
      */
     public static void applyToHeightmap(TerrainFeature feature, double[] heightMap,
-                                        ImmutableBlockMeta[] surfaceReplacementMap, int chunkX, int chunkZ, Random rand, double[] terrainRelevance,
-                                        DimensionEnum dimension, NoiseGeneratorOctaves noise, ModifierHandler modifierHandler) {
+        ImmutableBlockMeta[] surfaceReplacementMap, int chunkX, int chunkZ, Random rand, double[] terrainRelevance,
+        DimensionEnum dimension, NoiseGeneratorOctaves noise, ModifierHandler modifierHandler) {
         TerrainPreset preset = feature.preset();
         double height = feature.height();
         double width = feature.width();
@@ -41,7 +42,16 @@ public final class TerrainFeatureApplier {
 
         switch (preset) {
             case SAND_DUNES:
-                applySandDunes(heightMap, height, width, chunkX, chunkZ, terrainRelevance, noise, modifierEntry, modifierHandler);
+                applySandDunes(
+                    heightMap,
+                    height,
+                    width,
+                    chunkX,
+                    chunkZ,
+                    terrainRelevance,
+                    noise,
+                    modifierEntry,
+                    modifierHandler);
                 break;
             case IMPACT_CRATERS:
                 applyImpactCraters(heightMap, width, height, localRand);
@@ -50,10 +60,28 @@ public final class TerrainFeatureApplier {
                 applyCentralPeakCraters(heightMap, width, height, localRand);
                 break;
             case MOUNTAIN_RANGES:
-                applyMountainRanges(heightMap, height, width, chunkX, chunkZ, terrainRelevance, noise, modifierEntry, modifierHandler);
+                applyMountainRanges(
+                    heightMap,
+                    height,
+                    width,
+                    chunkX,
+                    chunkZ,
+                    terrainRelevance,
+                    noise,
+                    modifierEntry,
+                    modifierHandler);
                 break;
             case CANYONS:
-                applyCanyons(heightMap, width, height, chunkX, chunkZ, terrainRelevance, noise, modifierEntry, modifierHandler);
+                applyCanyons(
+                    heightMap,
+                    width,
+                    height,
+                    chunkX,
+                    chunkZ,
+                    terrainRelevance,
+                    noise,
+                    modifierEntry,
+                    modifierHandler);
                 break;
             case LAVA_PLATEAUS:
                 applyLavaPlateaus(heightMap, height, localRand);
@@ -71,7 +99,18 @@ public final class TerrainFeatureApplier {
                 applyBaseHeight(heightMap, height, terrainRelevance);
                 break;
             case SHIELD_VOLCANOES:
-                applyShieldVolcanoes(heightMap, height, width, chunkX, chunkZ, terrainRelevance, surfaceReplacementMap, replacementBlock, noise, modifierEntry, modifierHandler);
+                applyShieldVolcanoes(
+                    heightMap,
+                    height,
+                    width,
+                    chunkX,
+                    chunkZ,
+                    terrainRelevance,
+                    surfaceReplacementMap,
+                    replacementBlock,
+                    noise,
+                    modifierEntry,
+                    modifierHandler);
                 break;
             case MULTI_RING_BASINS:
             case PLATEAUS_AND_ESCARPMENTS:
@@ -97,7 +136,8 @@ public final class TerrainFeatureApplier {
      * @param terrainRelevance Matrix holding the terrain precedence
      */
     private static void applySandDunes(double[] hm, double height, double width, int chunkX, int chunkZ,
-        double[] terrainRelevance, NoiseGeneratorOctaves noiseGen, TerrainModifierEntry modifierEntry, ModifierHandler modifierHandler) {
+        double[] terrainRelevance, NoiseGeneratorOctaves noiseGen, TerrainModifierEntry modifierEntry,
+        ModifierHandler modifierHandler) {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4), noiseGen);
         double[] modifierValues = modifierHandler.assignModifierValues(modifierEntry, chunkX, chunkZ);
         chunkX *= 16;
@@ -167,7 +207,8 @@ public final class TerrainFeatureApplier {
      * @param terrainRelevance Matrix holding the terrain precedence
      */
     private static void applyMountainRanges(double[] hm, double height, double width, int chunkX, int chunkZ,
-        double[] terrainRelevance, NoiseGeneratorOctaves noiseGen, TerrainModifierEntry modifierEntry, ModifierHandler modifierHandler) {
+        double[] terrainRelevance, NoiseGeneratorOctaves noiseGen, TerrainModifierEntry modifierEntry,
+        ModifierHandler modifierHandler) {
         double[] modifierValues = modifierHandler.assignModifierValues(modifierEntry, chunkX, chunkZ);
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4), noiseGen);
         for (int x = 0; x < 16; x++) {
@@ -189,7 +230,8 @@ public final class TerrainFeatureApplier {
      * @param height The depth of the canyon
      */
     private static void applyCanyons(double[] hm, double width, double height, int chunkX, int chunkZ,
-        double[] terrainRelevance, NoiseGeneratorOctaves noiseGen, TerrainModifierEntry modifierEntry, ModifierHandler modifierHandler) {
+        double[] terrainRelevance, NoiseGeneratorOctaves noiseGen, TerrainModifierEntry modifierEntry,
+        ModifierHandler modifierHandler) {
         double[] modifierValues = modifierHandler.assignModifierValues(modifierEntry, chunkX, chunkZ);
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4), noiseGen);
         for (int x = 0; x < 16; x++) {

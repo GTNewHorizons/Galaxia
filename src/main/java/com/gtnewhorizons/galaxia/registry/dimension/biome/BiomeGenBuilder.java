@@ -1,5 +1,14 @@
 package com.gtnewhorizons.galaxia.registry.dimension.biome;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import net.minecraft.block.Block;
+import net.minecraft.init.Blocks;
+import net.minecraft.world.biome.BiomeGenBase.FlowerEntry;
+import net.minecraft.world.biome.BiomeGenBase.Height;
+import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
+
 import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
 import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
@@ -8,14 +17,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguratio
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.details.Terrain3D;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.SurfaceFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.UndergroundFeature;
-import net.minecraft.block.Block;
-import net.minecraft.init.Blocks;
-import net.minecraft.world.biome.BiomeGenBase.FlowerEntry;
-import net.minecraft.world.biome.BiomeGenBase.Height;
-import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * The builder for biome generation

@@ -1,9 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen.details;
 
+import java.util.Random;
+
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.ModifierHandler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.TerrainModifierEntry;
-
-import java.util.Random;
 
 /**
  * Test 3D terrain with creates some white noise suspended in the air
