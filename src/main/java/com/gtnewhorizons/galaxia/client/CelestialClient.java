@@ -178,9 +178,6 @@ public final class CelestialClient {
         @Nullable HammerVariant hammerVariant, MinerFocusTier minerFocusTier,
         @Nullable SettingsGroup.ID settingsGroupId, boolean creativeBuildModeEnabled,
         List<ModulePlacement> placements) {
-        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
-        if (state == null) return false;
-        if (!kind.isAllowedOn(state.kind)) return false;
         return StarmapActionSyncHandler.sendFacilityCommand(
             new FacilityCommand.BuildModules(
                 assetId,
@@ -207,11 +204,8 @@ public final class CelestialClient {
 
     public static boolean copyModule(ID assetId, ModuleInstance.ID sourceModuleId, boolean creativeBuildModeEnabled,
         List<ModulePlacement> placements) {
-        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
-        ModuleInstance sourceModule = state == null ? null : state.moduleById(sourceModuleId);
-        if (sourceModule == null) return false;
         return StarmapActionSyncHandler.sendFacilityCommand(
-            new FacilityCommand.CopyBuildModules(assetId, sourceModule.id, creativeBuildModeEnabled, placements));
+            new FacilityCommand.CopyBuildModules(assetId, sourceModuleId, creativeBuildModeEnabled, placements));
     }
 
     public static boolean destroyAsset(ID assetId) {
@@ -314,7 +308,7 @@ public final class CelestialClient {
         @Nullable HammerVariant variant, boolean reserveItems, boolean voidCompletionRefund,
         List<StationTileCoord> targetCoords) {
         AutomatedFacility facility = getByAssetId(assetId) instanceof AutomatedFacility af ? af : null;
-        if (facility == null || facility.moduleById(sourceModuleId) == null) return;
+        if (facility == null) return;
         List<ModuleInstance.ID> targetIds = resolveTargetModuleIds(facility, targetCoords);
         if (targetIds == null) return;
         FacilityCommand command = variant != null
@@ -329,20 +323,10 @@ public final class CelestialClient {
         StarmapActionSyncHandler.sendFacilityCommand(command);
     }
 
-    public static void planMinerFocusTier(ID assetId, ModuleInstance.ID moduleId, MinerFocusTier focusTier) {
-        planMinerFocusTier(assetId, moduleId, ModuleTier.NONE, focusTier);
-    }
-
     public static void planMinerFocusTier(ID assetId, ModuleInstance.ID moduleId, ModuleTier targetTier,
         MinerFocusTier focusTier) {
-        ModuleTier effectiveTier = targetTier;
-        if (effectiveTier == ModuleTier.NONE) {
-            ModuleInstance module = resolveModule(assetId, moduleId);
-            if (module == null) return;
-            effectiveTier = module.tier();
-        }
-        StarmapActionSyncHandler.sendFacilityCommand(
-            new FacilityCommand.PlanMinerFocusUpgrade(assetId, moduleId, effectiveTier, focusTier));
+        StarmapActionSyncHandler
+            .sendFacilityCommand(new FacilityCommand.PlanMinerFocusUpgrade(assetId, moduleId, targetTier, focusTier));
     }
 
     public static void setMinerFocusOre(ID assetId, ModuleInstance.ID moduleId, String oreKey) {
@@ -352,23 +336,17 @@ public final class CelestialClient {
     public static void copyModuleSettings(ID assetId, ModuleInstance.ID sourceModuleId,
         List<StationTileCoord> targetCoords) {
         AutomatedFacility facility = getByAssetId(assetId) instanceof AutomatedFacility af ? af : null;
-        ModuleInstance source = resolveModule(assetId, sourceModuleId);
-        if (facility == null || source == null) return;
+        if (facility == null) return;
         List<ModuleInstance.ID> targetIds = resolveTargetModuleIds(facility, targetCoords);
         if (targetIds == null) return;
         StarmapActionSyncHandler
-            .sendFacilityCommand(new FacilityCommand.CopyModuleSettings(assetId, source.id, targetIds));
+            .sendFacilityCommand(new FacilityCommand.CopyModuleSettings(assetId, sourceModuleId, targetIds));
     }
 
     public static void updateDebugDataGeneratorConfig(ID assetId, ModuleInstance.ID moduleId,
         ModuleDebugDataGenerator.Config config) {
         StarmapActionSyncHandler
             .sendFacilityCommand(new FacilityCommand.ConfigureDebugDataGenerator(assetId, moduleId, config));
-    }
-
-    private static @Nullable ModuleInstance resolveModule(ID assetId, ModuleInstance.ID moduleId) {
-        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
-        return state == null ? null : state.moduleById(moduleId);
     }
 
     private static @Nullable List<ModuleInstance.ID> resolveTargetModuleIds(AutomatedFacility facility,
