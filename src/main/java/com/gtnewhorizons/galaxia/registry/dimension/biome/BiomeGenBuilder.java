@@ -1,22 +1,21 @@
 package com.gtnewhorizons.galaxia.registry.dimension.biome;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
+import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
+import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationFunction;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.details.Terrain3D;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.SurfaceFeature;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.UndergroundFeature;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase.FlowerEntry;
 import net.minecraft.world.biome.BiomeGenBase.Height;
 import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
 
-import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
-import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
-import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationFunction;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.details.Terrain3d;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.SurfaceFeature;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.UndergroundFeature;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * The builder for biome generation
@@ -49,7 +48,7 @@ public class BiomeGenBuilder {
     int oceanCrackComplexity;
     StratificationFunction fillerBlocks;
     CaveShape caveShape;
-    Terrain3d terrain3d;
+    Terrain3D terrain3d;
 
     List<FlowerEntry> flowers = List.of();
     List<SpawnListEntry> mobsWater = List.of();
@@ -198,7 +197,7 @@ public class BiomeGenBuilder {
         return this;
     }
 
-    public BiomeGenBuilder terrain3d(Terrain3d terrain3d) {
+    public BiomeGenBuilder terrain3d(Terrain3D terrain3d) {
         this.terrain3d = terrain3d;
         return this;
     }

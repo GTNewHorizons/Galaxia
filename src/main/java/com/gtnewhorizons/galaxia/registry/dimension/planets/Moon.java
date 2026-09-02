@@ -16,7 +16,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguratio
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainModifier;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainModifierEntry;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.details.FloatingPancake;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.details.ErodedHills;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CraterFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CrystalClusterFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.FluidSpringFeature;
@@ -104,14 +104,6 @@ public final class Moon {
                 .modifier(
                     TerrainModifier.WEIRDNESS,
                     TerrainModifier.WEIRDNESS.middle,
-                    TerrainModifier.WEIRDNESS.maximum)
-                .endFeature()
-                .feature(TerrainPreset.MOUNTAIN_RANGES)
-                .width(0.5)
-                .height(-16)
-                .modifier(
-                    TerrainModifier.WEIRDNESS,
-                    TerrainModifier.WEIRDNESS.upperExtreme,
                     TerrainModifier.WEIRDNESS.maximum)
                 .endFeature()
                 .build());
@@ -234,6 +226,7 @@ public final class Moon {
                     .crystal(Blocks.stained_glass)
                     .build())
             .terrain(terrainConfiguration)
+            .terrain3d(new ErodedHills(new TerrainModifierEntry(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.middle, TerrainModifier.WEIRDNESS.maximum), 16))
             .ocean(MOON_OBSIDIAN, MOON_BASALT, 1, MOON_OBSIDIAN, 1)
             .surfaceThickness(4)
             .build();
@@ -253,7 +246,6 @@ public final class Moon {
                 return basalt;
             })
             .caveShape(new CaveShapeTubes((byte) 16, (byte) 4, (short) 100))
-            .terrain3d(new FloatingPancake(new TerrainModifierEntry(TerrainModifier.WEIRDNESS, TerrainModifier.WEIRDNESS.minimum, TerrainModifier.WEIRDNESS.middle)))
             .surfaceFeature(
                 CraterFeature.builder()
                     .rarity(64)

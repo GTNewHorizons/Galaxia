@@ -5,9 +5,9 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.ModifierHa
 
 import java.util.Random;
 
-public interface Terrain3d {
+public interface Terrain3D {
 
-    void prepareFunctions(Random random);
+    void prepareFunctions(Random random, long seed);
 
     boolean preparedFunctions();
 

@@ -2,52 +2,45 @@ package com.gtnewhorizons.galaxia.registry.dimension.worldgen.details;
 
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainModifierEntry;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.ModifierHandler;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NoiseSampler3D;
 
 import java.util.Random;
 
-public class FloatingPancake implements Terrain3D {
+public class ErodedHills implements Terrain3D {
+    private static final double SCALE = 0.025;
 
-    private static final int CHUNK_AREA = 256;
-
-    private final int[] pancakeThickness = new int[256];
+    private final int height;
     private final TerrainModifierEntry modifierEntry;
 
-    private Random random;
     private int currentX;
     private int currentZ;
-    private boolean needsConfirmation = true;
+    private NoiseSampler3D hillNoise;
     private double[] modifierValues;
 
-    public FloatingPancake(TerrainModifierEntry modifierEntry) {
+    public ErodedHills(TerrainModifierEntry modifierEntry, int height) {
         this.modifierEntry = modifierEntry;
+        this.height = height;
     }
 
     @Override
     public void prepareFunctions(Random random, long seed) {
-        this.random = random;
+        hillNoise = new NoiseSampler3D(seed, 4);
     }
 
     @Override
     public boolean preparedFunctions() {
-        return this.random != null;
+        return hillNoise != null;
     }
 
     @Override
     public void prepareTerrainCache(int chunkX, int chunkZ, ModifierHandler modifierHandler) {
+        modifierValues = modifierHandler.assignModifierValues(getEntry(), chunkX, chunkZ);
         currentX = chunkX;
         currentZ = chunkZ;
-        modifierValues = modifierHandler.assignModifierValues(getEntry(), chunkX, chunkZ);
-        for (int i = 0; i < CHUNK_AREA; i++) {
-            pancakeThickness[i] = 1 + random.nextInt(4);
-        }
     }
 
     @Override
     public boolean preparedTerrainCache(int chunkX, int chunkZ) {
-        if (needsConfirmation) {
-            needsConfirmation = false;
-            return false;
-        }
         return chunkX == currentX && chunkZ == currentZ;
     }
 
@@ -56,12 +49,13 @@ public class FloatingPancake implements Terrain3D {
         if (modifierValues[localX + localZ * 16] <= 0.01) {
             return 0;
         }
-        return 4 + pancakeThickness[localX + localZ * 16];
+        return height;
     }
 
     @Override
     public boolean isSolid(int localX, int localY, int localZ) {
-        return localY > 4;
+        double sampledValue = hillNoise.samplePoint(localX + (currentX << 4), localY, localZ + (currentZ << 4), SCALE, SCALE, SCALE);
+        return sampledValue > 0;
     }
 
     @Override

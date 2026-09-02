@@ -19,7 +19,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeBlockPalette;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenSpace;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.DefaultBlockPalette;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.details.Terrain3d;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.details.Terrain3D;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.SurfaceFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.UndergroundFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.mantle.MantleCache;
@@ -240,7 +240,7 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
     private void generateCrust(int cubeX, int cubeY, int cubeZ, HeightOracle.ChunkData data, ExtendedBlockStorage ebs) {
         CaveShape crustCaves = null;
-        Terrain3d terrain3d = null;
+        Terrain3D terrain3d = null;
         CaveShape intermediateCaves = dimension.getUpperIntermediaryCaves();
         if (intermediateCaves != null) {
             if (!intermediateCaves.preparedCaveShape()) {
@@ -259,7 +259,7 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
 
                 if (localBiome instanceof BiomeGenSpace spaceBiome) {
                     palette = spaceBiome;
-                    Terrain3d biome3d = spaceBiome.getTerrain3d();
+                    Terrain3D biome3d = spaceBiome.getTerrain3d();
 
                     if (crustCaves == null || !crustCaves.equals(spaceBiome.getCaveShape())) {
                         crustCaves = spaceBiome.getCaveShape();
@@ -284,7 +284,7 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                 int terrain3dHeight = 0;
                 if (terrain3d != null) {
                     if (!terrain3d.preparedFunctions()) {
-                        terrain3d.prepareFunctions(rand);
+                        terrain3d.prepareFunctions(rand, worldObj.getSeed());
                     }
                     if (!terrain3d.preparedTerrainCache(cubeX, cubeZ)) {
                         terrain3d.prepareTerrainCache(cubeX, cubeZ, modifierHandler);
@@ -304,24 +304,17 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                     ImmutableBlockMeta block;
 
                     if (y >= terrainHeight && y - terrainHeight < terrain3dHeight) {
-                        if (terrain3d.isSolid(localX, y - terrainHeight, localZ)) {
-                            block = palette.getFillerBlocks()
-                                .getStrataBlock(y);
-                        } else {
-                            block = AIR;
+                        if (!terrain3d.isSolid(localX, y - terrainHeight, localZ)) {
                             isTerrain = false;
                         }
-                    } else if (y >= terrainHeight + terrain3dHeight - palette.getSurfaceThickness()) {
-                        ImmutableBlockMeta replacementBlock = data.surfaceBlocks[localX + (localZ << 4)];
-
-                        if (replacementBlock != null) {
-                            block = replacementBlock;
-                        } else {
-                            block = y >= palette.getSnowHeight() ? palette.getSnowBlock() : palette.getTopBlock();
-                        }
-                    } else {
+                    }
+                    if (isTerrain && y >= terrainHeight + terrain3dHeight - palette.getSurfaceThickness()) {
+                        block = getSurfaceBlock(data, localX, localZ, y, palette);
+                    } else if (isTerrain) {
                         block = palette.getFillerBlocks()
                             .getStrataBlock(y);
+                    } else {
+                        block = AIR;
                     }
 
                     int oceanHeight = palette.getOceanHeight();
@@ -379,6 +372,18 @@ public class CubicChunkProviderGalaxiaPlanet implements IWorldGenerator, Galaxia
                 }
             }
         }
+    }
+
+    private static ImmutableBlockMeta getSurfaceBlock(HeightOracle.ChunkData data, int localX, int localZ, int y, BiomeBlockPalette palette) {
+        ImmutableBlockMeta block;
+        ImmutableBlockMeta replacementBlock = data.surfaceBlocks[localX + (localZ << 4)];
+
+        if (replacementBlock != null) {
+            block = replacementBlock;
+        } else {
+            block = y >= palette.getSnowHeight() ? palette.getSnowBlock() : palette.getTopBlock();
+        }
+        return block;
     }
 
     private static void placeBlock(ExtendedBlockStorage ebs, ImmutableBlockMeta block, int localX, int y, int localZ) {
