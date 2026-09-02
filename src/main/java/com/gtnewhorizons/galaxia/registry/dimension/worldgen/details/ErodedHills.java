@@ -11,6 +11,7 @@ public class ErodedHills implements Terrain3D {
 
     private final int height;
     private final TerrainModifierEntry modifierEntry;
+    private final boolean[] blockColumn;
 
     private int currentX;
     private int currentZ;
@@ -20,6 +21,7 @@ public class ErodedHills implements Terrain3D {
     public ErodedHills(TerrainModifierEntry modifierEntry, int height) {
         this.modifierEntry = modifierEntry;
         this.height = height;
+        blockColumn = new boolean[height];
     }
 
     @Override
@@ -49,13 +51,30 @@ public class ErodedHills implements Terrain3D {
         if (modifierValues[localX + localZ * 16] <= 0.01) {
             return 0;
         }
-        return height;
+        for (int i = 0; i < blockColumn.length; i++) {
+            blockColumn[i] = hillNoise.samplePoint(localX + (currentX << 4), i, localZ + (currentZ << 4), SCALE, SCALE, SCALE) > 0;
+        }
+        int localHeight = height;
+        boolean foundBlock = false;
+        for (int i = height - 1; i >= 0; i--) {
+            if (blockColumn[i]) {
+                localHeight = i;
+                foundBlock = true;
+                break;
+            }
+        }
+        if (!foundBlock) {
+            return 0;
+        }
+        return localHeight;
     }
 
     @Override
     public boolean isSolid(int localX, int localY, int localZ) {
-        double sampledValue = hillNoise.samplePoint(localX + (currentX << 4), localY, localZ + (currentZ << 4), SCALE, SCALE, SCALE);
-        return sampledValue > 0;
+        if (localY > blockColumn.length) {
+            return false;
+        }
+        return blockColumn[localY];
     }
 
     @Override
