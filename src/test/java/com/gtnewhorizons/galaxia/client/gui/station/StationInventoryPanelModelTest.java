@@ -18,8 +18,11 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -135,8 +138,10 @@ final class StationInventoryPanelModelTest {
         ItemStackWrapper tracked = ItemStackWrapper.of(upkeepStack);
         distributed.addModule(moduleWithUpkeep(upkeepStack, 1L));
         distributed.insert(tracked, 7);
-        distributed.setBound(tracked, 54L, true);
-        distributed.setUpkeepReserve(tracked, 13L);
+        distributed.applyCommand(
+            new FacilityCommand.SetInventoryBound(distributed.assetId, BoundKind.ITEM_LOWER, tracked, 54L),
+            FacilityCommand.Authority.NONE);
+        distributed.logisticsConfig.set(tracked, new LogisticsResourceConfig(13, 1, false, false));
 
         List<StationInventoryPanelModel.InventoryItemRow> rows = StationInventoryPanelModel
             .inventoryRows(distributed.itemSnapshot(), distributed);
@@ -154,7 +159,7 @@ final class StationInventoryPanelModelTest {
         ItemStack upkeepStack = new ItemStack(new Item(), 1, 0);
         ItemStackWrapper tracked = ItemStackWrapper.of(upkeepStack);
         distributed.addModule(moduleWithUpkeep(upkeepStack, 2L));
-        distributed.setUpkeepReserve(tracked, 13L);
+        distributed.logisticsConfig.set(tracked, new LogisticsResourceConfig(13, 1, false, false));
 
         StationInventoryPanelModel.UpkeepReserveStatus status = StationInventoryPanelModel
             .upkeepReserveStatus(distributed, tracked);
@@ -172,7 +177,7 @@ final class StationInventoryPanelModelTest {
         ItemStack upkeepStack = new ItemStack(new Item(), 1, 0);
         ItemStackWrapper tracked = ItemStackWrapper.of(upkeepStack);
         distributed.addModule(moduleWithUpkeep(upkeepStack, 2L));
-        distributed.setUpkeepReserve(tracked, 5L);
+        distributed.logisticsConfig.set(tracked, new LogisticsResourceConfig(5, 1, false, false));
 
         StationInventoryPanelModel.UpkeepReserveStatus status = StationInventoryPanelModel
             .upkeepReserveStatus(distributed, tracked);
@@ -188,8 +193,7 @@ final class StationInventoryPanelModelTest {
         ItemStackWrapper tracked = ItemStackWrapper.of(upkeepStack);
         distributed.addModule(moduleWithUpkeep(upkeepStack, 2L));
         distributed.insert(tracked, 7);
-        distributed.setUpkeepReserve(tracked, 13L);
-        distributed.setUpkeepAutoOrder(tracked, true);
+        distributed.logisticsConfig.set(tracked, new LogisticsResourceConfig(13, 1, true, false));
 
         List<StationInventoryPanelModel.UpkeepItemRow> rows = StationInventoryPanelModel.upkeepItemRows(distributed);
 

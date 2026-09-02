@@ -104,11 +104,6 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
     }
 
     @SideOnly(Side.CLIENT)
-    public static boolean sendRequestFullSync(CelestialAsset.ID assetId) {
-        return sendUpdateAsset(AssetUpdatePacket.create(assetId, AssetUpdatePacket.Action.REQUEST_FULL_SYNC));
-    }
-
-    @SideOnly(Side.CLIENT)
     public static boolean sendFacilityCommand(FacilityCommand command) {
         Galaxia.GALAXIA_NETWORK.sendToServer(new FacilityCommandPacket(command));
         return true;

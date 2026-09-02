@@ -212,20 +212,6 @@ public final class AutomatedFacility extends CelestialAsset {
         return upkeepLedger.summary(this);
     }
 
-    public void setUpkeepReserve(ItemStackWrapper item, long amount) {
-        if (item == null) {
-            throw new IllegalArgumentException("item must not be null");
-        }
-        if (amount < 0L) {
-            throw new IllegalArgumentException("upkeep reserve must be >= 0");
-        }
-        LogisticsResourceConfig current = logisticsConfig.get(item);
-        LogisticsResourceConfig updated = current.withMinReserve((int) Math.min(Integer.MAX_VALUE, amount));
-        if (updated.equals(current)) return;
-        logisticsConfig.set(item, updated);
-        markDirty();
-    }
-
     public long upkeepReserve(ItemStackWrapper item) {
         if (item == null) return 0L;
         if (logisticsConfig.hasExplicit(item)) {
@@ -237,26 +223,6 @@ public final class AutomatedFacility extends CelestialAsset {
         if (perMinute == null || perMinute.isZero()) return 0L;
         return UpkeepAmount.ofMicroUnits(Math.multiplyExact(perMinute.microUnitsPerMinute(), 10L))
             .wholeUnitsToCoverDeficit();
-    }
-
-    public void setUpkeepAutoOrder(ItemStackWrapper item, boolean enabled) {
-        if (item == null) {
-            throw new IllegalArgumentException("item must not be null");
-        }
-        LogisticsResourceConfig current = logisticsConfig.get(item);
-        LogisticsResourceConfig updated;
-        if (enabled) {
-            long reserve = upkeepReserve(item);
-            int minReserve = (int) Math.min(Integer.MAX_VALUE, reserve);
-            int orderSize = current == LogisticsResourceConfig.DEFAULT ? 64 : current.orderSize();
-            updated = new LogisticsResourceConfig(minReserve, orderSize, true, false);
-        } else {
-            updated = current.withImportEnabled(false)
-                .withSupplyEnabled(false);
-        }
-        if (updated.equals(current)) return;
-        logisticsConfig.set(item, updated);
-        markDirty();
     }
 
     public boolean isUpkeepAutoOrderEnabled(ItemStackWrapper item) {
@@ -290,17 +256,6 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public InventoryBounds getBound(InventoryKey key) {
         return inventory.bound(key);
-    }
-
-    public void setBound(InventoryKey key, long low, long upper) {
-        inventory.setBound(key, new InventoryBounds(low, upper));
-    }
-
-    public void setBound(InventoryKey key, long amount, boolean low) {
-        InventoryBounds current = getBound(key);
-        InventoryBounds updated = low ? new InventoryBounds(amount, current.upper())
-            : new InventoryBounds(current.low(), amount);
-        inventory.setBound(key, updated);
     }
 
     public boolean trySetBound(InventoryKey key, long amount, boolean low) {

@@ -25,6 +25,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -162,9 +164,10 @@ final class LogisticStoreTest {
         AutomatedFacility station = facility();
         ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
         station.insert(resource, 3);
-        station.setBound(resource, 5, true);
-        station.setUpkeepReserve(resource, 10L);
-        station.setUpkeepAutoOrder(resource, true);
+        station.logisticsConfig.set(resource, new LogisticsResourceConfig(10, 1, true, false));
+        station.applyCommand(
+            new FacilityCommand.SetInventoryBound(station.assetId, BoundKind.ITEM_LOWER, resource, 5),
+            FacilityCommand.Authority.NONE);
 
         LogisticSignal signal = signalFor(LogisticStore.collectSignals(List.of(station)), station, resource);
         assertEquals(-12L, signal.amount());

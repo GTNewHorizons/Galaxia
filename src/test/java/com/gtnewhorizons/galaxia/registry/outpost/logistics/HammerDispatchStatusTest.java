@@ -17,6 +17,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -82,13 +84,10 @@ final class HammerDispatchStatusTest {
         AutomatedFacility requester = facility(CelestialObjectId.OVERWORLD);
         ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);
         supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
-        requester.setBound(resource, 54, true);
-        requester.setUpkeepReserve(resource, 10L);
-        requester.logisticsConfig.set(
-            resource,
-            requester.logisticsConfig.get(resource)
-                .withOrderSize(64)
-                .withImportEnabled(true));
+        requester.applyCommand(
+            new FacilityCommand.SetInventoryBound(requester.assetId, BoundKind.ITEM_LOWER, resource, 54),
+            FacilityCommand.Authority.NONE);
+        requester.logisticsConfig.set(resource, new LogisticsResourceConfig(10, 64, true, false));
         supplier.insert(resource, 128);
         ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 1_000_000L);
 

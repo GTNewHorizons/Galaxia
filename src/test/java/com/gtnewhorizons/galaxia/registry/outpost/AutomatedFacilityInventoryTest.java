@@ -42,8 +42,12 @@ final class AutomatedFacilityInventoryTest {
         // Hits capacity limit
         assertEquals(960, outpost.itemAmount(output));
         outpost.extract(output, 470);
-        outpost.setBound(input, 32L, true);
-        outpost.setBound(output, 500L, false);
+        outpost.applyCommand(
+            new FacilityCommand.SetInventoryBound(outpost.assetId, BoundKind.ITEM_LOWER, input, 32L),
+            FacilityCommand.Authority.NONE);
+        outpost.applyCommand(
+            new FacilityCommand.SetInventoryBound(outpost.assetId, BoundKind.ITEM_UPPER, output, 500L),
+            FacilityCommand.Authority.NONE);
 
         assertTrue(outpost.isAboveLow(input, 8));
         assertFalse(outpost.isAboveLow(input, 9));
@@ -61,8 +65,12 @@ final class AutomatedFacilityInventoryTest {
             Buildable.Status.OPERATIONAL);
         outpost.insert(INPUT_KEY, 1000);
         outpost.insert(OUTPUT_KEY, 900);
-        outpost.setBound(INPUT_KEY, 800L, true);
-        outpost.setBound(OUTPUT_KEY, 1000L, false);
+        outpost.applyCommand(
+            new FacilityCommand.SetInventoryBound(outpost.assetId, BoundKind.FLUID_LOWER, INPUT_KEY, 800L),
+            FacilityCommand.Authority.NONE);
+        outpost.applyCommand(
+            new FacilityCommand.SetInventoryBound(outpost.assetId, BoundKind.FLUID_UPPER, OUTPUT_KEY, 1000L),
+            FacilityCommand.Authority.NONE);
 
         assertTrue(outpost.isAboveLow(INPUT_KEY, 200L));
         assertFalse(outpost.isAboveLow(INPUT_KEY, 201L));
@@ -79,7 +87,12 @@ final class AutomatedFacilityInventoryTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         ItemStackWrapper item = ItemStackWrapper.of(new ItemStack(Items.stick));
-        facility.setBound(item, 10L, 20L);
+        facility.applyCommand(
+            new FacilityCommand.SetInventoryBound(facility.assetId, BoundKind.ITEM_LOWER, item, 10L),
+            FacilityCommand.Authority.NONE);
+        facility.applyCommand(
+            new FacilityCommand.SetInventoryBound(facility.assetId, BoundKind.ITEM_UPPER, item, 20L),
+            FacilityCommand.Authority.NONE);
         InventoryBounds original = facility.getBound(item);
 
         facility.clearBound(item, true);
@@ -92,7 +105,9 @@ final class AutomatedFacilityInventoryTest {
                 .upper());
         assertFalse(facility.clearBound(item, true));
 
-        facility.setBound(item, 15L, true);
+        facility.applyCommand(
+            new FacilityCommand.SetInventoryBound(facility.assetId, BoundKind.ITEM_LOWER, item, 15L),
+            FacilityCommand.Authority.NONE);
         assertEquals(new InventoryBounds(15L, 20L), facility.getBound(item));
         assertFalse(facility.trySetBound(item, 25L, true));
         assertEquals(new InventoryBounds(15L, 20L), facility.getBound(item));
