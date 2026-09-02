@@ -49,7 +49,7 @@ dependencies {
     // the read/write packet formats out of sync in this dev runtime.
     devOnlyNonPublishable("com.falsepattern:chunkapi-mc1.7.10:0.8.2:dev")
     runtimeOnlyNonPublishable('com.github.GTNewHorizons:Angelica:2.1.59:dev') { transitive = false }
-    devOnlyNonPublishable(files("libs/supernova-0.1.0-dev.jar"))
+    // devOnlyNonPublishable(files("libs/supernova-0.1.0-dev.jar"))
 
     devOnlyNonPublishable('com.github.GTNewHorizons:BlockRenderer6343:1.4.20:dev'){transitive=false}
 
@@ -72,7 +72,7 @@ dependencies {
     // @Data annotation for the data class, see: [https://projectlombok.org/api/lombok/Data]
     compileOnly('org.projectlombok:lombok:1.18.46')
     annotationProcessor('org.projectlombok:lombok:1.18.46')
-    compileOnly("com.cardinalstar.cubicchunks:CubicChunks1710:v0.1.4-alpha:dev")
-    testRuntimeOnly("com.cardinalstar.cubicchunks:CubicChunks1710:v0.1.4-alpha:dev")
+    implementation("com.cardinalstar.cubicchunks:CubicChunks1710:v0.1.21-alpha-pre:dev")
+    testRuntimeOnly("com.cardinalstar.cubicchunks:CubicChunks1710:v0.1.21-alpha-pre:dev")
     testRuntimeOnly('it.unimi.dsi:fastutil:8.5.15')
 }

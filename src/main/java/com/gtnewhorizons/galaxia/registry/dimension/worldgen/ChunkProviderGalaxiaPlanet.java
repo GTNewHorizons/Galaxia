@@ -24,6 +24,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.biome.DefaultBlockPalette;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.SurfaceFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.UndergroundFeature;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.ModifierHandler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NoiseSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NormalizedSampler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.OctavesSampler;
@@ -67,7 +68,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider, GalaxiaPlanet
     public ChunkProviderGalaxiaPlanet(World world, DimensionEnum dimension) {
         this.dimension = dimension;
         this.worldObj = world;
-        this.heightOracle = new HeightOracle(world, dimension, true);
+        ModifierHandler modifierHandler = new ModifierHandler(world);
+        this.heightOracle = new HeightOracle(world, dimension, true, modifierHandler);
 
         this.rand = new StdLCG(world.getSeed());
         this.crackNoise1 = new NormalizedSampler(new ScaledSampler(new OctavesSampler(rand, 2), 0.05));
@@ -264,7 +266,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider, GalaxiaPlanet
                         oceanTime += oceanTimeFinish - oceanTimeStart;
                     }
 
-                    if (caveShape != null && isTerrain && caveShape.generateCave(localX, y, localZ, terrainHeight)) {
+                    if (caveShape != null && isTerrain && caveShape.isInCave(localX, y, localZ, terrainHeight)) {
                         block = AIR;
                     }
 
