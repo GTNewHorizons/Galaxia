@@ -12,12 +12,9 @@ public class ModifierHandler {
     private final NoiseGeneratorOctaves weirdnessNoise;
 
     private double[] weirdnessCache = defaultModifier();
-    private int currentX;
-    private int currentZ;
-    private boolean cached = false;
 
     public ModifierHandler(World world) {
-        this.weirdnessNoise = new NoiseGeneratorOctaves(new StdLCG(world.getSeed()), 4);
+        weirdnessNoise = new NoiseGeneratorOctaves(new StdLCG(world.getSeed()), 4);
     }
 
     private static double[] defaultModifier() {
@@ -39,12 +36,6 @@ public class ModifierHandler {
     }
 
     private void cacheWeirdness(int chunkX, int chunkZ) {
-        if (chunkX == currentX && chunkZ == currentZ && cached) {
-            return;
-        }
-        cached = true;
-        currentX = chunkX;
-        currentZ = chunkZ;
         chunkX *= 16;
         chunkZ *= 16;
         weirdnessCache = weirdnessNoise.generateNoiseOctaves(new double[256], chunkZ, chunkX, 16, 16, 0.02, 0.02, 0);
