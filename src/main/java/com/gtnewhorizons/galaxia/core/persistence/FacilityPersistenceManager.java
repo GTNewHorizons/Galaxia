@@ -35,6 +35,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerTrajectoryLoadTracker;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
@@ -184,28 +185,57 @@ public final class FacilityPersistenceManager {
             Type listType = new TypeToken<List<TaskJson>>() {}.getType();
             List<TaskJson> list = gson.fromJson(reader, listType);
             if (list == null) return;
-            List<LogisticsDelivery> tasks = LogisticStore.activeDeliveries();
-            for (TaskJson tj : list) {
-                ItemStackWrapper resource = ItemStackWrapper.fromKey(tj.resourceId);
-                if (resource != null) {
-                    tasks.add(
-                        LogisticsDelivery.createWithTrajectory(
-                            LogisticsDelivery.ID.from(tj.taskId),
-                            CelestialAsset.ID.from(tj.fromAssetId),
-                            CelestialAsset.ID.from(tj.toAssetId),
-                            resource,
-                            tj.amount,
-                            tj.remainingTicks,
-                            LogisticSignal.Scope.valueOf(tj.transportKind),
-                            tj.fromBodyId == null ? null : CelestialObjectKeyJsonCodec.decode(tj.fromBodyId),
-                            tj.toBodyId == null ? null : CelestialObjectKeyJsonCodec.decode(tj.toBodyId),
-                            tj.departureOrbitalTime,
-                            tj.tofOrbitalOsu));
-                }
+            List<LogisticsDelivery> decoded = new ArrayList<>(list.size());
+            for (TaskJson task : list) {
+                if (task == null || task.taskId == null
+                    || task.fromAssetId == null
+                    || task.toAssetId == null
+                    || task.resourceId == null
+                    || task.transportKind == null
+                    || task.fromBodyId == null
+                    || task.toBodyId == null
+                    || task.amount <= 0L) throw new IllegalArgumentException("task entry is incomplete");
+                ItemStackWrapper resource = ItemStackWrapper.fromKey(task.resourceId);
+                if (resource == null) throw new IllegalArgumentException("task resource is unknown");
+                decoded.add(
+                    LogisticsDelivery.createWithTrajectory(
+                        LogisticsDelivery.ID.from(task.taskId),
+                        CelestialAsset.ID.from(task.fromAssetId),
+                        CelestialAsset.ID.from(task.toAssetId),
+                        resource,
+                        task.amount,
+                        task.remainingTicks,
+                        LogisticSignal.Scope.valueOf(task.transportKind),
+                        CelestialObjectKeyJsonCodec.decode(task.fromBodyId),
+                        CelestialObjectKeyJsonCodec.decode(task.toBodyId),
+                        task.departureOrbitalTime,
+                        task.tofOrbitalOsu,
+                        decodeTransferRoute(task.transferRoute)));
             }
-        } catch (IOException | JsonParseException e) {
+            LogisticStore.activeDeliveries()
+                .addAll(decoded);
+        } catch (IOException | JsonParseException | IllegalArgumentException e) {
             LOG.error("[Logistics] Failed to load tasks from {}: {}", file, e.getMessage());
         }
+    }
+
+    private static OrbitalTransferPlanner.TransferRoute decodeTransferRoute(TransferRouteJson route) {
+        if (route == null) return null;
+        OrbitalTransferPlanner.TransferRoute decoded = new OrbitalTransferPlanner.TransferRoute(
+            route.tofOsu(),
+            route.totalDv(),
+            route.departureDv(),
+            route.captureDv(),
+            CelestialObjectKeyJsonCodec.decode(route.attractorBodyId()),
+            route.anchorX(),
+            route.anchorY(),
+            route.r1x(),
+            route.r1y(),
+            route.departureVelocityX(),
+            route.departureVelocityY(),
+            route.prograde());
+        if (!decoded.hasTrajectoryGeometry()) throw new IllegalArgumentException("task transfer route is malformed");
+        return decoded;
     }
 
     private void saveTasks(File file) {
@@ -224,6 +254,7 @@ public final class FacilityPersistenceManager {
             tj.toBodyId = encodeCelestialObjectKey(delivery.data.toBodyKey());
             tj.departureOrbitalTime = delivery.data.departureOrbitalTime();
             tj.tofOrbitalOsu = delivery.data.tofOrbitalOsu();
+            tj.transferRoute = encodeTransferRoute(delivery.data.transferRoute());
             list.add(tj);
         }
         AtomicJsonWriter.write(file, gson, list, "logistics tasks");
@@ -231,6 +262,23 @@ public final class FacilityPersistenceManager {
 
     private static CelestialObjectKeyJson encodeCelestialObjectKey(CelestialObjectKey key) {
         return CelestialObjectKeyJsonCodec.encode(key);
+    }
+
+    private static TransferRouteJson encodeTransferRoute(OrbitalTransferPlanner.TransferRoute route) {
+        if (route == null) return null;
+        return new TransferRouteJson(
+            route.tofOsu(),
+            route.totalDv(),
+            route.departureDv(),
+            route.captureDv(),
+            encodeCelestialObjectKey(route.attractorBodyKey()),
+            route.anchorX(),
+            route.anchorY(),
+            route.r1x(),
+            route.r1y(),
+            route.departureVelocityX(),
+            route.departureVelocityY(),
+            route.prograde());
     }
 
     private void writeNbt(File file, NBTTagCompound value) {
@@ -288,6 +336,11 @@ public final class FacilityPersistenceManager {
         CelestialObjectKeyJson toBodyId;
         double departureOrbitalTime;
         double tofOrbitalOsu;
+        TransferRouteJson transferRoute;
     }
+
+    record TransferRouteJson(double tofOsu, double totalDv, double departureDv, double captureDv,
+        CelestialObjectKeyJson attractorBodyId, double anchorX, double anchorY, double r1x, double r1y,
+        double departureVelocityX, double departureVelocityY, boolean prograde) {}
 
 }

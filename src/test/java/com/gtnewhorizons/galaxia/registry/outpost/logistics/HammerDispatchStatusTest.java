@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.util.List;
+import java.util.UUID;
 
 import net.minecraft.init.Items;
 
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
@@ -33,6 +35,8 @@ import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class HammerDispatchStatusTest {
 
+    private static final UUID TEST_TEAM = UUID.randomUUID();
+
     @BeforeAll
     static void initRegistries() {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
@@ -42,6 +46,7 @@ final class HammerDispatchStatusTest {
     @AfterEach
     void cleanup() {
         LogisticStore.clearDeliveries();
+        CelestialAssetStore.clear();
     }
 
     @Test
@@ -225,6 +230,52 @@ final class HammerDispatchStatusTest {
         assertEquals(64L, plan.sendAmount());
     }
 
+    @Test
+    void plannerCanEvaluateTeamFilteredClientAssetsWithoutTheServerStore() {
+        AutomatedFacility supplier = unregisteredFacility(CelestialObjectId.OVERWORLD);
+        AutomatedFacility requester = unregisteredFacility(CelestialObjectId.OVERWORLD);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+
+        assertEquals(HammerDispatchStatus.Code.READY, plan(supplier, requester, resource).code());
+    }
+
+    @Test
+    void plannerUsesItemSpecificCapacityForPhysicalDestination() {
+        AutomatedFacility supplier = facility(CelestialObjectId.OVERWORLD);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        TestPhysicalInventoryAsset requester = new TestPhysicalInventoryAsset(resource, 8L);
+        CelestialAssetStore.registerAsset(TEST_TEAM, requester);
+        HammerDispatchPlanner.Result result = plan(supplier, requester, resource);
+
+        assertEquals(HammerDispatchStatus.Code.DESTINATION_LACKS_PACKAGE_SPACE, result.code());
+        assertEquals(8L, result.sendAmount());
+    }
+
+    @Test
+    void plannerRejectsDestinationWithoutCargoStorage() {
+        AutomatedFacility supplier = facility(CelestialObjectId.OVERWORLD);
+        CelestialAsset requester = new TestLogisticsAsset(CelestialAsset.Kind.SATELLITE);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        HammerDispatchPlanner.Result result = plan(supplier, requester, resource);
+
+        assertEquals(HammerDispatchStatus.Code.DESTINATION_LACKS_PACKAGE_SPACE, result.code());
+        assertEquals(0L, result.sendAmount());
+    }
+
+    private static HammerDispatchPlanner.Result plan(AutomatedFacility supplier, CelestialAsset requester,
+        ItemStackWrapper resource) {
+        supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
+        requester.logisticsConfig.set(resource, new LogisticsResourceConfig(64, 64, true, false));
+        supplier.insert(resource, 64);
+        return HammerDispatchPlanner.evaluate(
+            supplier,
+            hammerModule(hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 1_000_000L)),
+            requester,
+            resource,
+            0.0,
+            null);
+    }
+
     private static ModuleHammer hammer(AllowShootingConfig config, HammerVariant variant, long energyStored) {
         return new ModuleHammer(
             FacilityModuleKind.HAMMER,
@@ -236,6 +287,16 @@ final class HammerDispatchStatusTest {
     }
 
     private static AutomatedFacility facility(CelestialObjectId bodyId) {
+        return facility(bodyId, TEST_TEAM);
+    }
+
+    private static AutomatedFacility facility(CelestialObjectId bodyId, UUID teamId) {
+        AutomatedFacility facility = unregisteredFacility(bodyId);
+        CelestialAssetStore.registerAsset(teamId, facility);
+        return facility;
+    }
+
+    private static AutomatedFacility unregisteredFacility(CelestialObjectId bodyId) {
         return new AutomatedFacility(
             CelestialAsset.ID.create(),
             bodyId,
@@ -253,4 +314,5 @@ final class HammerDispatchStatusTest {
         module.setComponent(hammer);
         return module;
     }
+
 }

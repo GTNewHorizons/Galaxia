@@ -3,7 +3,6 @@ package com.gtnewhorizons.galaxia.registry.interfaces;
 import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
 
 public class TieredModuleComponent implements IModuleComponent {
 
@@ -33,8 +32,4 @@ public class TieredModuleComponent implements IModuleComponent {
                     .getSimpleName());
     }
 
-    @Override
-    public UpkeepDemand upkeepFor(ModuleInstance module) {
-        return module.currentTierUpkeepDemand();
-    }
 }

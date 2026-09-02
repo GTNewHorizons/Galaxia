@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -30,6 +31,7 @@ final class CelestialKnowledgeClientStateTest {
     @AfterEach
     void clearState() {
         CelestialKnowledgeClientState.clear();
+        CelestialDiscoveryClientState.clear();
     }
 
     @Test
@@ -84,5 +86,36 @@ final class CelestialKnowledgeClientStateTest {
 
         assertEquals(knowledgeRevision, CelestialKnowledgeClientState.revision());
         assertEquals(discoveryRevision, CelestialDiscoveryClientState.revision());
+    }
+
+    @Test
+    void elapsedScanProgressRefreshesSnapshotWithoutInvalidatingVisibility() {
+        CelestialDiscoveryScanSnapshot initial = activeScan(4L);
+        CelestialDiscoveryClientState.update(List.of(initial));
+        int contentRevision = CelestialDiscoveryClientState.revision();
+        int visibilityRevision = CelestialDiscoveryClientState.visibilityRevision();
+
+        CelestialDiscoveryClientState.update(List.of(activeScan(5L)));
+
+        assertEquals(contentRevision + 1, CelestialDiscoveryClientState.revision());
+        assertEquals(visibilityRevision, CelestialDiscoveryClientState.visibilityRevision());
+        assertEquals(
+            5L,
+            CelestialDiscoveryClientState.snapshots()
+                .get(0)
+                .elapsedTicks());
+    }
+
+    private static CelestialDiscoveryScanSnapshot activeScan(long elapsedTicks) {
+        return new CelestialDiscoveryScanSnapshot(
+            new UUID(1L, 2L),
+            CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT),
+            2.0,
+            1L,
+            CelestialDiscoveryCapability.PROSPECTING,
+            CelestialDiscoveryScanSnapshot.Status.ACTIVE,
+            CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 2000)),
+            CelestialDiscoveryStep.DETECTION,
+            elapsedTicks);
     }
 }

@@ -18,6 +18,7 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class CelestialClientLogisticsSignalsTest {
@@ -70,6 +71,33 @@ final class CelestialClientLogisticsSignalsTest {
         assertEquals(0, CelestialClient.clientSignalRevision());
     }
 
+    @Test
+    void equalSignalContentDoesNotAdvanceRevision() {
+        AutomatedFacility facility = facility(CelestialObjectId.OVERWORLD);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        List<LogisticSignal> snapshot = List.of(signal(facility, resource, 3L));
+        CelestialClient.updateClientSignals(snapshot);
+        int revision = CelestialClient.clientSignalRevision();
+
+        CelestialClient.updateClientSignals(List.copyOf(snapshot));
+
+        assertEquals(revision, CelestialClient.clientSignalRevision());
+    }
+
+    @Test
+    void equalDeliveryContentDoesNotAdvanceRevision() {
+        AutomatedFacility source = facility(CelestialObjectId.OVERWORLD);
+        AutomatedFacility destination = facility(CelestialObjectId.OVERWORLD);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        LogisticsDelivery.ID id = LogisticsDelivery.ID.create();
+        CelestialClient.updateClientDeliveries(List.of(delivery(id, source, destination, resource)));
+        int revision = CelestialClient.clientDeliveryRevision();
+
+        CelestialClient.updateClientDeliveries(List.of(delivery(id, source, destination, resource)));
+
+        assertEquals(revision, CelestialClient.clientDeliveryRevision());
+    }
+
     private static LogisticSignal signal(AutomatedFacility facility, ItemStackWrapper resource, long amount) {
         return new LogisticSignal(
             facility.assetId,
@@ -87,5 +115,22 @@ final class CelestialClientLogisticsSignalsTest {
             body,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
+    }
+
+    private static LogisticsDelivery delivery(LogisticsDelivery.ID id, AutomatedFacility source,
+        AutomatedFacility destination, ItemStackWrapper resource) {
+        return LogisticsDelivery.createWithTrajectory(
+            id,
+            source.assetId,
+            destination.assetId,
+            resource,
+            3L,
+            20,
+            LogisticSignal.Scope.SYSTEM,
+            source.celestialObjectKey,
+            destination.celestialObjectKey,
+            0.0,
+            0.0,
+            null);
     }
 }

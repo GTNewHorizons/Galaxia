@@ -49,7 +49,6 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
 
     private static volatile @Nullable CelestialAsset.ID pendingAssetId;
     private static volatile boolean pendingCreativeBuildMode;
-    private static volatile StationVisionLayer pendingVisionLayer = StationVisionLayer.BASE;
     private static volatile @Nullable BuildPickerRequest pendingBuildPickerRequest;
 
     public static void open(CelestialAsset.ID assetId) {
@@ -57,6 +56,11 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
     }
 
     public static void open(CelestialAsset.ID assetId, boolean creativeBuildMode) {
+        pendingBuildPickerRequest = null;
+        openScreen(assetId, creativeBuildMode);
+    }
+
+    private static void openScreen(CelestialAsset.ID assetId, boolean creativeBuildMode) {
         CelestialAsset asset = CelestialClient.getByAssetId(assetId);
         if (asset != null && asset.kind == CelestialAsset.Kind.SATELLITE) return;
         pendingAssetId = assetId;
@@ -74,7 +78,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             MinerFocusTier.NONE,
             null,
             creativeBuildMode);
-        open(assetId, creativeBuildMode);
+        openScreen(assetId, creativeBuildMode);
     }
 
     static void openBuildPicker(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape, ModuleTier tier,
@@ -82,13 +86,13 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         boolean creativeBuildMode) {
         pendingBuildPickerRequest = BuildPickerRequest
             .create(assetId, kind, shape, tier, hammerVariant, minerFocusTier, settingsGroupId, creativeBuildMode);
-        open(assetId, creativeBuildMode);
+        openScreen(assetId, creativeBuildMode);
     }
 
     static void openCopyBuildPicker(CelestialAsset.ID assetId, ModuleInstance.ID sourceModuleId,
         boolean creativeBuildMode) {
         pendingBuildPickerRequest = BuildPickerRequest.copy(assetId, sourceModuleId, creativeBuildMode);
-        open(assetId, creativeBuildMode);
+        openScreen(assetId, creativeBuildMode);
     }
 
     public static @Nullable CelestialAsset.ID pendingAssetId() {
@@ -112,7 +116,6 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             .fullScreenInvisible();
         CelestialAsset.ID assetId = pendingAssetId;
         boolean creativeBuildMode = pendingCreativeBuildMode;
-        StationVisionLayer visionLayer = pendingVisionLayer;
         boolean isAutomatedFacility = CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility;
         StationOverlayCoordinator overlayCoordinator = new StationOverlayCoordinator();
         int overlayX = LEFT_PANEL_WIDTH + PADDING * 2;
@@ -145,7 +148,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 LEFT_PANEL_WIDTH + PADDING,
                 PADDING,
                 PADDING,
-                visionLayer,
+                StationVisionLayer.BASE,
                 overlayCoordinator::containsMouse,
                 tilePickerController);
 

@@ -30,14 +30,14 @@ final class ModuleOperationDefinitionTest {
     void tierDataValidatesBuildTicks() {
         assertThrows(
             IllegalArgumentException.class,
-            () -> new ModuleTierData(1000L, 0L, 10, null, null, Map.of(new ItemStack(TEST_ITEM), 1L), 0, 80));
+            () -> new ModuleTierData(0L, 10, null, null, Map.of(new ItemStack(TEST_ITEM), 1L), 0, 80));
     }
 
     @Test
     void tierDataValidatesRefundPercent() {
         assertThrows(
             IllegalArgumentException.class,
-            () -> new ModuleTierData(1000L, 0L, 10, null, null, Map.of(new ItemStack(TEST_ITEM), 1L), 200, -1));
+            () -> new ModuleTierData(0L, 10, null, null, Map.of(new ItemStack(TEST_ITEM), 1L), 200, -1));
     }
 
     @Test

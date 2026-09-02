@@ -227,7 +227,6 @@ final class StationInventoryPanelModelTest {
 
     private static ModuleInstance moduleWithUpkeep(ItemStack upkeepItem, long itemAmount) {
         ModuleTierData tierData = ModuleTierData.builder()
-            .addedEnergyCapacity(0L)
             .powerDraw(0L)
             .cooldown(20)
             .cost(Map.of(new ItemStack(new Item()), 1L))

@@ -19,6 +19,7 @@ import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePanelAction;
@@ -57,6 +58,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     private final @Nullable StationTilePickerController tilePickerController;
     private final @Nullable ModuleConfigModalController configController;
     private @Nullable StationTileCoord armedDestroySelection;
+    private @Nullable HammerDispatchStatus.Status hammerDispatchStatus;
     private boolean destroyMultipleMode;
 
     public StationSidePanelWidget(@Nullable CelestialAsset.ID assetId, StationMapWidget map) {
@@ -101,6 +103,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
             armedDestroySelection = null;
             destroyMultipleMode = false;
         }
+        refreshHammerDispatchStatus();
     }
 
     @Override
@@ -175,7 +178,8 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
 
         PlacedTile tile = layout == null ? null : layout.get(selected);
         ModuleInstance module = tile == null ? null : tile.module();
-        lineY = ModuleStatusTextRegistry.collect(new ModuleStatusTextRegistry.Context(facility, selected, tile, module))
+        lineY = ModuleStatusTextRegistry
+            .collect(new ModuleStatusTextRegistry.Context(facility, selected, tile, module, hammerDispatchStatus))
             .draw(x + CONTENT_PADDING, lineY);
         if (module != null && module.component() instanceof ModuleHammer hammer) {
             drawHammerEnergyBar(
@@ -189,6 +193,16 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     private static @Nullable AutomatedFacility resolveFacility(@Nullable CelestialAsset.ID assetId) {
         if (assetId == null) return null;
         return CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility facility ? facility : null;
+    }
+
+    private void refreshHammerDispatchStatus() {
+        AutomatedFacility facility = resolveFacility(assetId);
+        StationTileCoord selected = map == null ? null : map.selection();
+        StationLayout layout = facility == null ? null : facility.stationLayout();
+        PlacedTile tile = layout == null || selected == null ? null : layout.get(selected);
+        ModuleInstance module = tile == null ? null : tile.module();
+        hammerDispatchStatus = module != null && module.component() instanceof ModuleHammer ? HammerDispatchStatus
+            .evaluate(facility, module, CelestialClient.allOutposts(), CelestialClient.currentOrbitalTime()) : null;
     }
 
     private ButtonWidget<?> createDestroyButton() {

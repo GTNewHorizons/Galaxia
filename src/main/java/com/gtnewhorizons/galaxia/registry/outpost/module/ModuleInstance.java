@@ -251,10 +251,6 @@ public class ModuleInstance implements Buildable {
         return currentTierData().powerDrawEuPerTick();
     }
 
-    public long baseEnergyCapacity() {
-        return currentTierData().baseEnergyCapacity();
-    }
-
     public long baseCapacity() {
         ModuleTierData data = currentTierData();
         return data.hasCapacity() ? data.capacity() : 0L;

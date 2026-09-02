@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.outpost.upkeep;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -15,7 +16,6 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -30,6 +30,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class UpkeepLedgerTest {
 
@@ -37,8 +38,7 @@ final class UpkeepLedgerTest {
 
     @BeforeAll
     static void initRegistries() {
-        CelestialRegistry.freezeAndBake();
-        FacilityModuleRegistry.init();
+        GalaxiaTestBootstrap.ensureFacilityModules();
     }
 
     @Test
@@ -62,6 +62,29 @@ final class UpkeepLedgerTest {
             1,
             summary.moduleDemands()
                 .size());
+    }
+
+    @Test
+    void summaryUsesCanonicalTierUpkeepForHammer() {
+        ModuleInstance hammer = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.HAMMER,
+            StationTileCoord.of(1, 0),
+            ModuleShape.SINGLE,
+            ModuleTier.EV);
+        hammer.completeConstruction();
+        AutomatedFacility facility = facilityWithModule(hammer);
+
+        UpkeepLedger.UpkeepSummary summary = facility.upkeepSummary();
+
+        assertFalse(
+            hammer.currentTierUpkeepDemand()
+                .isEmpty());
+        assertEquals(
+            hammer.currentTierUpkeepDemand(),
+            summary.moduleDemands()
+                .get(0)
+                .demand());
     }
 
     @Test
@@ -144,7 +167,6 @@ final class UpkeepLedgerTest {
     private static ModuleInstance moduleWithUpkeep(ItemStack upkeepItem, long itemAmount, FluidKey fluid,
         long fluidAmount) {
         ModuleTierData tierData = ModuleTierData.builder()
-            .addedEnergyCapacity(0L)
             .powerDraw(0L)
             .cooldown(20)
             .cost(Map.of(new ItemStack(new Item()), 1L))
@@ -173,7 +195,6 @@ final class UpkeepLedgerTest {
 
     private static ModuleInstance moduleWithAreaEffect() {
         ModuleTierData tierData = ModuleTierData.builder()
-            .addedEnergyCapacity(0L)
             .powerDraw(0L)
             .cooldown(20)
             .cost(Map.of(new ItemStack(new Item()), 1L))

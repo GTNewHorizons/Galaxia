@@ -68,35 +68,64 @@ public final class LogisticStore {
     public static void tickDeliveries() {
         for (int i = activeDeliveries.size() - 1; i >= 0; i--) {
             LogisticsDelivery current = activeDeliveries.get(i);
+            CelestialAsset source = CelestialAssetStore.findAsset(current.data.fromAssetId());
             CelestialAsset destination = CelestialAssetStore.findAsset(current.data.toAssetId());
-            if (CelestialAssetStore.findAsset(current.data.fromAssetId()) == null || destination == null) {
-                activeDeliveries.remove(i);
+            if (destination == null) {
+                if (canReceiveCargo(source)) {
+                    deliverOrRetain(i, current, source, "refunded");
+                } else {
+                    removeOwnerlessDelivery(i, current);
+                }
                 continue;
             }
             LogisticsDelivery ticked = current.tick();
             if (ticked.isArrived()) {
-                long accepted;
-                if (destination instanceof AutomatedFacility facility) {
-                    accepted = facility.insert(ticked.data.resourceId(), ticked.data.amount());
-                } else if (destination instanceof IDistributedInventory physicalInventory) {
-                    accepted = physicalInventory.updateContents(ticked.data.resourceId(), ticked.data.amount());
+                CelestialAsset recipient = canReceiveCargo(destination) ? destination : source;
+                if (canReceiveCargo(recipient)) {
+                    deliverOrRetain(i, ticked, recipient, recipient == destination ? "delivered" : "refunded");
                 } else {
-                    accepted = 0L;
+                    removeOwnerlessDelivery(i, ticked);
                 }
-                long remaining = ticked.data.amount() - accepted;
-                if (remaining > 0L) {
-                    ticked.setAmount(remaining);
-                } else {
-                    activeDeliveries.remove(i);
-                }
-                LOG.debug(
-                    "[Logistics] Task {} delivered {} x {} to {}",
-                    ticked.deliveryId,
-                    accepted,
-                    ticked.data.resourceId(),
-                    ticked.data.toAssetId());
             }
         }
+    }
+
+    private static boolean canReceiveCargo(CelestialAsset asset) {
+        return asset instanceof AutomatedFacility || asset instanceof IDistributedInventory;
+    }
+
+    private static void removeOwnerlessDelivery(int index, LogisticsDelivery delivery) {
+        LOG.warn(
+            "[Logistics] Removing ownerless task {} from {} to {} containing {} x {} because neither endpoint can receive it",
+            delivery.deliveryId,
+            delivery.data.fromAssetId(),
+            delivery.data.toAssetId(),
+            delivery.data.amount(),
+            delivery.data.resourceId());
+        activeDeliveries.remove(index);
+    }
+
+    private static void deliverOrRetain(int index, LogisticsDelivery delivery, CelestialAsset recipient,
+        String outcome) {
+        long accepted = insertCargo(recipient, delivery.data.resourceId(), delivery.data.amount());
+        long remaining = delivery.data.amount() - accepted;
+        if (remaining > 0L) delivery.setAmount(remaining);
+        else activeDeliveries.remove(index);
+        LOG.debug(
+            "[Logistics] Task {} {} {} x {} to {}",
+            delivery.deliveryId,
+            outcome,
+            accepted,
+            delivery.data.resourceId(),
+            recipient.assetId);
+    }
+
+    private static long insertCargo(CelestialAsset recipient, ItemStackWrapper resource, long amount) {
+        if (recipient instanceof AutomatedFacility facility) return facility.insert(resource, amount);
+        if (recipient instanceof IDistributedInventory physicalInventory) {
+            return physicalInventory.updateContents(resource, amount);
+        }
+        return 0L;
     }
 
     public static List<LogisticSignal> collectSignals(Iterable<? extends CelestialAsset> assets) {

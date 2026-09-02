@@ -70,8 +70,7 @@ public class FacilityModuleRegistry {
     public static void init() {
         register(
             FacilityModuleKind.POWER,
-            tierDataBuilder().addedEnergyCapacity(1500L)
-                .powerDraw(-POWER_GENERATION_EU_PER_TICK)
+            tierDataBuilder().powerDraw(-POWER_GENERATION_EU_PER_TICK)
                 .cooldown(1)
                 .cost(Map.of(new ItemStack(Items.redstone), 8L, new ItemStack(Items.gold_ingot), 64L))
                 .build(),
@@ -81,8 +80,7 @@ public class FacilityModuleRegistry {
             FacilityModuleKind.GEOTHERMAL_GENERATOR,
             Map.of(
                 ModuleTier.HV,
-                tierDataBuilder().addedEnergyCapacity(2000L)
-                    .powerDraw(-GEOTHERMAL_GENERATION_EU_PER_TICK)
+                tierDataBuilder().powerDraw(-GEOTHERMAL_GENERATION_EU_PER_TICK)
                     .cooldown(1)
                     .cost(Map.of(new ItemStack(Items.redstone), 64L, new ItemStack(Items.gold_ingot), 64L))
                     .build()),
@@ -93,19 +91,16 @@ public class FacilityModuleRegistry {
                 new TierMapBuilder()
                     .add(
                         ModuleTier.EV,
-                        2000L,
                         128L,
                         20,
                         Map.of(new ItemStack(Items.diamond), 8L, new ItemStack(Items.gold_ingot), 64L))
                     .add(
                         ModuleTier.IV,
-                        8000L,
                         512L,
                         20,
                         Map.of(new ItemStack(Items.diamond), 32L, new ItemStack(Items.gold_ingot), 256L))
                     .add(
                         ModuleTier.LuV,
-                        32000L,
                         2048L,
                         20,
                         Map.of(new ItemStack(Items.diamond), 128L, new ItemStack(Items.gold_ingot), 1024L))
@@ -121,7 +116,6 @@ public class FacilityModuleRegistry {
                 new TierMapBuilder()
                     .add(
                         ModuleTier.EV,
-                        1000L,
                         0L,
                         ModuleHammer.CHARGE_STEP_TICKS,
                         1200,
@@ -129,7 +123,6 @@ public class FacilityModuleRegistry {
                         Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 64L))
                     .add(
                         ModuleTier.IV,
-                        4000L,
                         0L,
                         ModuleHammer.CHARGE_STEP_TICKS,
                         900,
@@ -137,7 +130,6 @@ public class FacilityModuleRegistry {
                         Map.of(new ItemStack(Items.iron_ingot), 32L, new ItemStack(Items.gold_ingot), 256L))
                     .add(
                         ModuleTier.LuV,
-                        16000L,
                         0L,
                         ModuleHammer.CHARGE_STEP_TICKS,
                         600,
@@ -145,7 +137,6 @@ public class FacilityModuleRegistry {
                         Map.of(new ItemStack(Items.iron_ingot), 128L, new ItemStack(Items.gold_ingot), 1024L))
                     .add(
                         ModuleTier.ZPM,
-                        64000L,
                         0L,
                         ModuleHammer.CHARGE_STEP_TICKS,
                         900,
@@ -153,7 +144,6 @@ public class FacilityModuleRegistry {
                         Map.of(new ItemStack(Items.iron_ingot), 512L, new ItemStack(Items.gold_ingot), 4096L))
                     .add(
                         ModuleTier.UV,
-                        256000L,
                         0L,
                         ModuleHammer.CHARGE_STEP_TICKS,
                         600,
@@ -177,21 +167,18 @@ public class FacilityModuleRegistry {
             new TierMapBuilder()
                 .add(
                     ModuleTier.HV,
-                    500L,
                     0L,
                     1,
                     1024L,
                     Map.of(new ItemStack(Items.iron_ingot), 16L, new ItemStack(Items.gold_ingot), 32L))
                 .add(
                     ModuleTier.EV,
-                    2000L,
                     0L,
                     1,
                     4096L,
                     Map.of(new ItemStack(Items.iron_ingot), 64L, new ItemStack(Items.gold_ingot), 128L))
                 .add(
                     ModuleTier.IV,
-                    8000L,
                     0L,
                     1,
                     16384L,
@@ -204,21 +191,18 @@ public class FacilityModuleRegistry {
             new TierMapBuilder()
                 .add(
                     ModuleTier.HV,
-                    500L,
                     0L,
                     1,
                     16_000L,
                     Map.of(new ItemStack(Items.iron_ingot), 16L, new ItemStack(Items.gold_ingot), 32L))
                 .add(
                     ModuleTier.EV,
-                    2000L,
                     0L,
                     1,
                     64_000L,
                     Map.of(new ItemStack(Items.iron_ingot), 64L, new ItemStack(Items.gold_ingot), 128L))
                 .add(
                     ModuleTier.IV,
-                    8000L,
                     0L,
                     1,
                     256_000L,
@@ -231,21 +215,18 @@ public class FacilityModuleRegistry {
             new TierMapBuilder()
                 .add(
                     ModuleTier.HV,
-                    500L,
                     0L,
                     1,
                     100_000L,
                     Map.of(new ItemStack(Items.redstone), 16L, new ItemStack(Items.gold_ingot), 32L))
                 .add(
                     ModuleTier.EV,
-                    2000L,
                     0L,
                     1,
                     400_000L,
                     Map.of(new ItemStack(Items.redstone), 64L, new ItemStack(Items.gold_ingot), 128L))
                 .add(
                     ModuleTier.IV,
-                    8000L,
                     0L,
                     1,
                     1_600_000L,
@@ -255,8 +236,7 @@ public class FacilityModuleRegistry {
             TieredModuleComponent::new);
         register(
             FacilityModuleKind.MAINTENANCE_BAY,
-            tierDataBuilder().addedEnergyCapacity(500L)
-                .powerDraw(0L)
+            tierDataBuilder().powerDraw(0L)
                 .cooldown(100)
                 .cost(Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 16L))
                 .build(),
@@ -267,7 +247,6 @@ public class FacilityModuleRegistry {
             Map.of(
                 ModuleTier.HV,
                 ModuleTierData.builder()
-                    .addedEnergyCapacity(500L)
                     .powerDraw(0L)
                     .cooldown(1)
                     .cost(Map.of(new ItemStack(Items.redstone), 1L))
@@ -280,49 +259,49 @@ public class FacilityModuleRegistry {
         if (FacilityModuleKind.MACERATOR.isAvailable()) {
             builder(FacilityModuleKind.MACERATOR)
                 .tiers(
-                    new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
-                        .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
-                        .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
+                    new TierMapBuilder().add(ModuleTier.HV, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
+                        .add(ModuleTier.EV, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
+                        .add(ModuleTier.IV, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
                 .recipe("gt.recipe.macerator", "gt.recipe.category.macerator_recycling")
                 .register();
             builder(FacilityModuleKind.CENTRIFUGE)
                 .tiers(
-                    new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
-                        .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
-                        .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
+                    new TierMapBuilder().add(ModuleTier.HV, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
+                        .add(ModuleTier.EV, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
+                        .add(ModuleTier.IV, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
                 .recipe("gt.recipe.centrifuge")
                 .register();
             builder(FacilityModuleKind.ELECTROLYZER)
                 .tiers(
-                    new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
-                        .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
-                        .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
+                    new TierMapBuilder().add(ModuleTier.HV, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
+                        .add(ModuleTier.EV, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
+                        .add(ModuleTier.IV, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
                 .recipe("gt.recipe.electrolyzer")
                 .register();
             builder(FacilityModuleKind.CHEMICAL_REACTOR)
                 .tiers(
-                    new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
-                        .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
-                        .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
+                    new TierMapBuilder().add(ModuleTier.HV, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
+                        .add(ModuleTier.EV, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
+                        .add(ModuleTier.IV, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
                 .recipe("gt.recipe.chemicalreactor")
                 .register();
             builder(FacilityModuleKind.ASSEMBLER)
                 .tiers(
-                    new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
-                        .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
-                        .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
+                    new TierMapBuilder().add(ModuleTier.HV, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
+                        .add(ModuleTier.EV, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
+                        .add(ModuleTier.IV, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
                 .recipe("gt.recipe.assembler")
                 .register();
             builder(FacilityModuleKind.DISTILLERY)
                 .tiers(
-                    new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
-                        .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
-                        .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
+                    new TierMapBuilder().add(ModuleTier.HV, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
+                        .add(ModuleTier.EV, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
+                        .add(ModuleTier.IV, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
                 .recipe("gt.recipe.distillery")
                 .register();
@@ -427,11 +406,10 @@ public class FacilityModuleRegistry {
 
         private final EnumMap<ModuleTier, ModuleTierData> map = new EnumMap<>(ModuleTier.class);
 
-        public TierMapBuilder add(ModuleTier tier, long energy, long power, int cooldown, Map<ItemStack, Long> cost) {
+        public TierMapBuilder add(ModuleTier tier, long power, int cooldown, Map<ItemStack, Long> cost) {
             if (map.put(
                 tier,
-                tierDataBuilder().addedEnergyCapacity(energy)
-                    .powerDraw(power)
+                tierDataBuilder().powerDraw(power)
                     .cooldown(cooldown)
                     .cost(cost)
                     .build())
@@ -441,12 +419,10 @@ public class FacilityModuleRegistry {
             return this;
         }
 
-        public TierMapBuilder add(ModuleTier tier, long energy, long power, int cooldown, long capacity,
-            Map<ItemStack, Long> cost) {
+        public TierMapBuilder add(ModuleTier tier, long power, int cooldown, long capacity, Map<ItemStack, Long> cost) {
             if (map.put(
                 tier,
-                tierDataBuilder().addedEnergyCapacity(energy)
-                    .powerDraw(power)
+                tierDataBuilder().powerDraw(power)
                     .cooldown(cooldown)
                     .capacity(capacity)
                     .cost(cost)
@@ -457,12 +433,11 @@ public class FacilityModuleRegistry {
             return this;
         }
 
-        public TierMapBuilder add(ModuleTier tier, long energy, long power, int cooldown,
-            Map<String, Integer> variantCooldowns, Map<ItemStack, Long> cost) {
+        public TierMapBuilder add(ModuleTier tier, long power, int cooldown, Map<String, Integer> variantCooldowns,
+            Map<ItemStack, Long> cost) {
             if (map.put(
                 tier,
-                tierDataBuilder().addedEnergyCapacity(energy)
-                    .powerDraw(power)
+                tierDataBuilder().powerDraw(power)
                     .cooldown(cooldown)
                     .variantCooldowns(variantCooldowns)
                     .cost(cost)
@@ -473,12 +448,11 @@ public class FacilityModuleRegistry {
             return this;
         }
 
-        public TierMapBuilder add(ModuleTier tier, long energy, long power, int cooldown, int chargeTicks,
+        public TierMapBuilder add(ModuleTier tier, long power, int cooldown, int chargeTicks,
             Map<String, Integer> variantChargeTicks, Map<ItemStack, Long> cost) {
             if (map.put(
                 tier,
-                tierDataBuilder().addedEnergyCapacity(energy)
-                    .powerDraw(power)
+                tierDataBuilder().powerDraw(power)
                     .cooldown(cooldown)
                     .chargeTicks(chargeTicks)
                     .variantChargeTicks(variantChargeTicks)
