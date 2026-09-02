@@ -151,58 +151,10 @@ final class FacilityModuleSettings {
         return effectiveSettings(requireModule(moduleId), groups);
     }
 
-    RecipeBook.Owner recipeBookOwner(ModuleInstance.ID moduleId) {
-        ModuleInstance module = requireModule(moduleId);
-        if (module.settingsBinding() instanceof ModuleInstance.SettingsBinding.Private privateBinding
-            && privateBinding.settings() instanceof RecipeBook) {
-            return new RecipeBook.Owner.Private(moduleId);
-        }
-        SettingsGroup.ID groupId = sharedGroupId(module);
-        SettingsGroup group = groupId == null ? null : groups.get(groupId);
-        if (group != null && group.settings() instanceof RecipeBook) {
-            return new RecipeBook.Owner.Group(groupId);
-        }
-        throw new IllegalStateException("Module has no recipe-book owner: " + moduleId);
-    }
-
     RecipeBook recipeBook(ModuleInstance.ID moduleId) {
-        return recipeBook(recipeBookOwner(moduleId));
-    }
-
-    RecipeBook recipeBook(RecipeBook.Owner owner) {
-        if (owner instanceof RecipeBook.Owner.Private privateOwner) {
-            ModuleInstance module = module(privateOwner.moduleId());
-            if (module != null
-                && module.settingsBinding() instanceof ModuleInstance.SettingsBinding.Private privateBinding
-                && privateBinding.settings() instanceof RecipeBook recipeBook) {
-                return recipeBook;
-            }
-            throw new IllegalStateException("Missing or stale private recipe-book owner: " + privateOwner.moduleId());
-        }
-        if (owner instanceof RecipeBook.Owner.Group groupOwner) {
-            SettingsGroup group = groups.get(groupOwner.groupId());
-            if (group != null && !membersOf(groupOwner.groupId()).isEmpty()
-                && group.settings() instanceof RecipeBook recipeBook) {
-                return recipeBook;
-            }
-            throw new IllegalStateException("Missing group recipe-book owner: " + groupOwner.groupId());
-        }
-        throw new IllegalArgumentException("Recipe-book owner must not be null");
-    }
-
-    Outcome replaceRecipeBook(RecipeBook.Owner owner, RecipeBook replacement) {
-        if (owner == null || replacement == null) throw new IllegalArgumentException("Recipe book update is null");
-        recipeBook(owner);
-        if (owner instanceof RecipeBook.Owner.Private privateOwner) {
-            requireModule(privateOwner.moduleId())
-                .setSettingsBinding(new ModuleInstance.SettingsBinding.Private(replacement));
-            return Outcome.changed(Set.of(privateOwner.moduleId()));
-        }
-        RecipeBook.Owner.Group groupOwner = (RecipeBook.Owner.Group) owner;
-        SettingsGroup group = requireGroup(groupOwner.groupId());
-        Set<ModuleInstance.ID> affected = membersOf(groupOwner.groupId());
-        groups.put(groupOwner.groupId(), group.withSettings(replacement));
-        return Outcome.changed(affected);
+        ModuleSettings settings = effectiveSettings(moduleId);
+        if (settings instanceof RecipeBook recipeBook) return recipeBook;
+        throw new IllegalStateException("Module has no recipe book: " + moduleId);
     }
 
     Outcome createGroup(ModuleInstance module, String displayName) {

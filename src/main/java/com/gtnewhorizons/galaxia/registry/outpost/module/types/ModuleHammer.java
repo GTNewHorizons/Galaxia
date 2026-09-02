@@ -10,13 +10,12 @@ import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 
-public final class ModuleHammer implements IModuleComponent, IParallelModule {
+public final class ModuleHammer implements IModuleComponent {
 
     public static final long EU_PER_DV = 10_000L;
     public static final long MIN_SHOT_ENERGY_EU = EU_PER_DV;
@@ -27,8 +26,6 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
     private static final ModuleTier[] BIG_TIERS = { ModuleTier.LuV, ModuleTier.ZPM, ModuleTier.UV };
 
     public final FacilityModuleKind kind;
-
-    private byte parallel = 1;
 
     private final int maxBatchSize;
     private OrbitalTransferPlanner.RoutePriority routePriority;
@@ -108,13 +105,13 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
             routePriority = configure.priority();
             return true;
         }
-        return IParallelModule.super.applyConfigurationTransition(module, configuration);
+        return IModuleComponent.super.applyConfigurationTransition(module, configuration);
     }
 
     @Override
     public IModuleOperation prepareOperationTarget(ModuleInstance module, FacilityCommand.ModuleCommand request) {
         if (!(request instanceof FacilityCommand.PlanHammerUpgrade plan)) {
-            return IParallelModule.super.prepareOperationTarget(module, request);
+            return IModuleComponent.super.prepareOperationTarget(module, request);
         }
         if (plan.targetVariant() == null || plan.targetTier() == null
             || plan.targetVariant() == variant && plan.targetTier() == module.tier()) {
@@ -296,13 +293,4 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
         };
     }
 
-    @Override
-    public byte getParallel() {
-        return parallel;
-    }
-
-    @Override
-    public void setParallel(byte parallel) {
-        this.parallel = parallel;
-    }
 }

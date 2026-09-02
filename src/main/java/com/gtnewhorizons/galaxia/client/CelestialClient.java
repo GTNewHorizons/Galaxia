@@ -260,10 +260,11 @@ public final class CelestialClient {
             module -> new FacilityCommand.PlanTierUpgrade(assetId, List.of(module.id), targetTier, reserveItems));
     }
 
-    public static void replaceRecipeBook(ID assetId, RecipeBook.Owner owner, RecipeBook replacement) {
-        if (!(getByAssetId(assetId) instanceof AutomatedFacility)) return;
-        StarmapActionSyncHandler
-            .sendFacilityCommand(new FacilityCommand.ReplaceRecipeBook(assetId, owner, replacement));
+    public static void replaceRecipeBook(ID assetId, ModuleInstance.ID moduleId, RecipeBook replacement) {
+        sendModuleCommand(
+            assetId,
+            moduleId,
+            module -> new FacilityCommand.ReplaceRecipeBook(assetId, module.id, replacement));
     }
 
     public static void setInventoryBound(ID assetId, BoundKind kind, InventoryKey resource, long amount) {

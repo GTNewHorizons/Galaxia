@@ -73,7 +73,7 @@ public sealed interface FacilityCommand permits FacilityCommand.BuildCommand,Fac
 
     record CancelModuleOperation(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId) implements ModuleCommand {}
 
-    record ReplaceRecipeBook(CelestialAsset.ID facilityId, RecipeBook.Owner owner, RecipeBook replacement)
+    record ReplaceRecipeBook(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, RecipeBook replacement)
         implements ModuleCommand {}
 
     record CreateSettingsGroup(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, String displayName)
@@ -208,7 +208,6 @@ public sealed interface FacilityCommand permits FacilityCommand.BuildCommand,Fac
         INVALID_MODULE_TARGETS,
         INVALID_MODULE_COMPONENT,
         INVALID_MODULE_CONFIG,
-        INVALID_RECIPE_BOOK_OWNER,
         INVALID_RECIPE_BOOK,
         INVALID_MODULE_UPGRADE,
         MODULE_OPERATION_ACTIVE,

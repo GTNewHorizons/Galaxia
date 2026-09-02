@@ -58,7 +58,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
@@ -151,7 +150,6 @@ final class FacilityPersistenceManagerTest {
         hammer.setTicks(17);
         hammer.setPriorityOverride(ModulePriority.CRITICAL);
         hammer.setEnabled(false);
-        ((IParallelModule) hammer.component()).setParallel((byte) 4);
         ModuleHammer hammerComponent = (ModuleHammer) hammer.component();
         hammerComponent.setDispatchCooldowns(23, 29);
         ((ModuleMiner) miner.component()).setFocus(MinerFocusTier.III, "ore:diamond", 31);
@@ -230,7 +228,6 @@ final class FacilityPersistenceManagerTest {
         assertEquals(17, decodedHammer.ticks());
         assertEquals(ModulePriority.CRITICAL, decodedHammer.priorityOverride());
         assertFalse(decodedHammer.enabled());
-        assertEquals(4, ((IParallelModule) decodedHammer.component()).getParallel());
         ModuleHammer decodedHammerComponent = (ModuleHammer) decodedHammer.component();
         assertEquals(23, decodedHammerComponent.shotCooldownTicks());
         assertEquals(29, decodedHammerComponent.routeProbeCooldownTicks());
@@ -1778,7 +1775,7 @@ final class FacilityPersistenceManagerTest {
             station.applyCommand(
                 new FacilityCommand.ReplaceRecipeBook(
                     station.assetId,
-                    new RecipeBook.Owner.Private(macerator.id),
+                    macerator.id,
                     expectedBook),
                 FacilityCommand.Authority.NONE));
         station.restoreRecipeScheduleState(macerator, new RecipeBook.ScheduleState((byte) 0, (byte) 1));
@@ -1983,7 +1980,7 @@ final class FacilityPersistenceManagerTest {
             station.applyCommand(
                 new FacilityCommand.ReplaceRecipeBook(
                     station.assetId,
-                    new RecipeBook.Owner.Private(macerator.id),
+                    macerator.id,
                     book),
                 FacilityCommand.Authority.NONE));
         return station;

@@ -178,7 +178,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         this.moduleId = module.id;
 
         RecipeBookEditorModel editor = RecipeBookEditorModel
-            .edit(facility.recipeBookOwner(module), facility.recipeBook(module));
+            .edit(module.id, facility.recipeBook(module));
         RecipeConfigModalWidget widget = new RecipeConfigModalWidget(assetId, this, tilePickerController, editor);
         widget.left(x)
             .top(y)

@@ -164,7 +164,7 @@ public final class FacilityCommandPacket implements IMessage {
                 moduleId(data, "module"));
             case "replace_recipe_book" -> new FacilityCommand.ReplaceRecipeBook(
                 facility,
-                owner(data.compound("owner")),
+                recipeBookModuleId(moduleId(data, "module")),
                 RecipeBookState.decode(
                     data.compound("recipeBook")
                         .tag()));
@@ -292,7 +292,7 @@ public final class FacilityCommandPacket implements IMessage {
                 yield "cancel_module_operation";
             }
             case FacilityCommand.ReplaceRecipeBook value -> {
-                data.setTag("owner", owner(value.owner()));
+                putModuleId(data, "module", recipeBookModuleId(value.moduleId()));
                 data.setTag("recipeBook", RecipeBookState.encode(value.replacement()));
                 yield "replace_recipe_book";
             }
@@ -407,28 +407,6 @@ public final class FacilityCommandPacket implements IMessage {
             throw malformed("Non-canonical debug data generator config");
         }
         return new FacilityCommand.ConfigureDebugDataGenerator(facility, moduleId(data, "module"), config);
-    }
-
-    private static NBTTagCompound owner(RecipeBook.Owner owner) {
-        NBTTagCompound out = new NBTTagCompound();
-        if (owner instanceof RecipeBook.Owner.Private value) {
-            out.setString("type", "private");
-            putModuleId(out, "module", recipeOwnerModuleId(value.moduleId()));
-        } else if (owner instanceof RecipeBook.Owner.Group value) {
-            out.setString("type", "group");
-            putGroupId(out, "group", value.groupId());
-        } else {
-            throw malformed("Unsupported recipe book owner");
-        }
-        return out;
-    }
-
-    private static RecipeBook.Owner owner(NbtReader owner) {
-        return switch (owner.string("type")) {
-            case "private" -> new RecipeBook.Owner.Private(recipeOwnerModuleId(moduleId(owner, "module")));
-            case "group" -> new RecipeBook.Owner.Group(groupId(owner, "group"));
-            default -> throw malformed("Unknown recipe book owner type");
-        };
     }
 
     private static NBTTagCompound physical(IModuleComponent.BuildPhysicalSpec spec) {
@@ -596,10 +574,10 @@ public final class FacilityCommandPacket implements IMessage {
         return new ModuleInstance.ID(parseUuid(data.string(key), "module ID"));
     }
 
-    private static ModuleInstance.ID recipeOwnerModuleId(ModuleInstance.ID id) {
-        ModuleInstance.ID valid = require(id, "recipe owner module ID");
-        if (ZERO_UUID.equals(require(valid.id(), "recipe owner module UUID"))) {
-            throw malformed("Invalid recipe owner module ID");
+    private static ModuleInstance.ID recipeBookModuleId(ModuleInstance.ID id) {
+        ModuleInstance.ID valid = require(id, "recipe book module ID");
+        if (ZERO_UUID.equals(require(valid.id(), "recipe book module UUID"))) {
+            throw malformed("Invalid recipe book module ID");
         }
         return valid;
     }

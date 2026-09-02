@@ -22,19 +22,17 @@ import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeature;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
 
-public final class ModuleMiner extends TieredModuleComponent implements IParallelModule {
+public final class ModuleMiner extends TieredModuleComponent {
 
     public final FacilityModuleKind kind;
 
     public static final FacilityModuleKind KIND = FacilityModuleKind.MINER;
-    private byte parallel = 1;
     private MinerFocusTier focusTier = MinerFocusTier.NONE;
     private String focusOreKey;
     private int focusAlignmentProgress;
@@ -313,13 +311,4 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
         return focusTier.bonusPercent() * focusAlignmentProgress / MinerFocusTier.ALIGNMENT_REQUIRED_TICKS;
     }
 
-    @Override
-    public byte getParallel() {
-        return parallel;
-    }
-
-    @Override
-    public void setParallel(byte parallel) {
-        this.parallel = parallel;
-    }
 }

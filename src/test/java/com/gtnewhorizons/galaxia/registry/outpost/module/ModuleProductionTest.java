@@ -63,6 +63,5 @@ final class ModuleProductionTest {
             mapName,
             instance.recipe()
                 .mapName());
-        assertEquals((byte) 1, ((IParallelModule) instance.component()).getParallel());
     }
 }

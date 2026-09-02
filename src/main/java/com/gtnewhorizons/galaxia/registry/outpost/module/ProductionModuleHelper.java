@@ -107,19 +107,8 @@ public final class ProductionModuleHelper {
         return false;
     }
 
-    private static final class RecipeRuntime extends TieredModuleComponent implements IParallelModule {
+    private static final class RecipeRuntime extends TieredModuleComponent {
 
-        private byte parallel = 1;
         private final Random random = new Random();
-
-        @Override
-        public byte getParallel() {
-            return parallel;
-        }
-
-        @Override
-        public void setParallel(byte parallel) {
-            this.parallel = parallel;
-        }
     }
 }

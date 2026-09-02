@@ -43,8 +43,8 @@ final class RecipeBookEditorModelTest {
         SavedRecipe first = savedRecipe(0, "First");
         SavedRecipe second = savedRecipe(1, "Second");
         RecipeBook source = new RecipeBook(List.of(first, second), RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP);
-        RecipeBook.Owner owner = new RecipeBook.Owner.Private(moduleId(1));
-        RecipeBookEditorModel editor = RecipeBookEditorModel.edit(owner, source);
+        ModuleInstance.ID moduleId = moduleId(1);
+        RecipeBookEditorModel editor = RecipeBookEditorModel.edit(moduleId, source);
 
         assertThrows(
             UnsupportedOperationException.class,
@@ -68,7 +68,7 @@ final class RecipeBookEditorModelTest {
         assertEquals(NotDoablePolicy.SKIP, source.notDoablePolicy());
 
         RecipeBook replacement = editor.replacement();
-        assertEquals(owner, editor.owner());
+        assertEquals(moduleId, editor.moduleId());
         assertEquals(
             3,
             replacement.recipes()
@@ -98,7 +98,7 @@ final class RecipeBookEditorModelTest {
         List<SavedRecipe> recipes = new ArrayList<>();
         for (int i = 0; i < RecipeBook.MAX_RECIPES; i++) recipes.add(savedRecipe(i, "Recipe " + i));
         RecipeBookEditorModel editor = RecipeBookEditorModel.edit(
-            new RecipeBook.Owner.Private(moduleId(1)),
+            moduleId(1),
             new RecipeBook(recipes, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP));
 
         assertFalse(editor.canAdd());
@@ -115,7 +115,7 @@ final class RecipeBookEditorModelTest {
             List.of(savedRecipe(0, "First"), savedRecipe(1, "Second"), savedRecipe(2, "Third")),
             RecipeSchedulerMode.ORDER,
             NotDoablePolicy.SKIP);
-        RecipeBookEditorModel editor = RecipeBookEditorModel.edit(new RecipeBook.Owner.Private(moduleId(1)), source);
+        RecipeBookEditorModel editor = RecipeBookEditorModel.edit(moduleId(1), source);
 
         assertTrue(editor.select(2));
         assertTrue(editor.remove(0));
@@ -141,7 +141,7 @@ final class RecipeBookEditorModelTest {
     @Test
     void renameSupportsClearingAndInvalidIndexesDoNothing() {
         RecipeBookEditorModel editor = RecipeBookEditorModel.edit(
-            new RecipeBook.Owner.Private(moduleId(1)),
+            moduleId(1),
             new RecipeBook(List.of(savedRecipe(0, "Current")), RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP));
 
         assertTrue(editor.rename(0, "   "));
@@ -171,7 +171,7 @@ final class RecipeBookEditorModelTest {
         facility.stationLayout()
             .place(module);
         RecipeBook source = facility.recipeBook(module);
-        RecipeBookEditorModel editor = RecipeBookEditorModel.edit(facility.recipeBookOwner(module), source);
+        RecipeBookEditorModel editor = RecipeBookEditorModel.edit(module.id, source);
 
         assertTrue(editor.add(snapshot(4)));
 

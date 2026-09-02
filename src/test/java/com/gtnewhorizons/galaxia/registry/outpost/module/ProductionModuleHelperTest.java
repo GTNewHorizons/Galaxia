@@ -140,7 +140,7 @@ final class ProductionModuleHelperTest {
             kind.defaultTier());
         facility.addModule(module);
         FacilityCommand.Result result = facility.applyCommand(
-            new FacilityCommand.ReplaceRecipeBook(facility.assetId, new RecipeBook.Owner.Private(module.id), book),
+            new FacilityCommand.ReplaceRecipeBook(facility.assetId, module.id, book),
             FacilityCommand.Authority.NONE);
         assertSame(FacilityCommand.Result.CHANGED, result);
         return module;
