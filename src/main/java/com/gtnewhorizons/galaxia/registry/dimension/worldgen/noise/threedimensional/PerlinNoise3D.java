@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise;
+package com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.threedimensional;
 
 import java.util.Random;
 

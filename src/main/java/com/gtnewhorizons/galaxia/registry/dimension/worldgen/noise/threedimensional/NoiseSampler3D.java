@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise;
+package com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.threedimensional;
 
 /**
  * Samples values from a 3D Perlin noise

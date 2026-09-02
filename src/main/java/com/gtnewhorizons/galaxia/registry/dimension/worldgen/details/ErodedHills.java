@@ -2,7 +2,7 @@ package com.gtnewhorizons.galaxia.registry.dimension.worldgen.details;
 
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.ModifierHandler;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.TerrainModifierEntry;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NoiseSampler3D;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.threedimensional.NoiseSampler3D;
 
 import java.util.Random;
 
