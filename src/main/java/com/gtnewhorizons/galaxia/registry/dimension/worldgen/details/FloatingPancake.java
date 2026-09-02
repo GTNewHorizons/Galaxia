@@ -5,6 +5,9 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.ModifierHa
 
 import java.util.Random;
 
+/**
+ * Test 3D terrain with creates some white noise suspended in the air
+ */
 public class FloatingPancake implements Terrain3D {
 
     private static final int CHUNK_AREA = 256;

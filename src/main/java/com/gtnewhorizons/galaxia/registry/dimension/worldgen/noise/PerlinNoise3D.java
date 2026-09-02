@@ -3,6 +3,8 @@ package com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise;
 import java.util.Random;
 
 /**
+ * 3D Perlin noise for generating "smoothed" random values
+ * <p>
  * Original code made by Daniel Fildán for Tropicraft [StationAPI]
  */
 public class PerlinNoise3D {
@@ -12,6 +14,13 @@ public class PerlinNoise3D {
     private final double persistence;
     private final double lacunarity;
 
+    /**
+     * Constructor for specifying all necessary parameters
+     * @param seed Seed for the noise
+     * @param octaves Number of octaves the noise should have
+     * @param persistence Dominance of the lower octaves
+     * @param lacunarity Frequency multiplier for each lower octave
+     */
     public PerlinNoise3D(long seed, int octaves, double persistence, double lacunarity) {
         this.octaves = octaves;
         this.persistence = persistence;
@@ -36,10 +45,27 @@ public class PerlinNoise3D {
         }
     }
 
+    /**
+     * Samples the value of a single point and scales the coordinates
+     * @param x x coordinate of the point
+     * @param y y coordinate of the point
+     * @param z z coordinate of the point
+     * @param scaleX Scale for the x coordinate
+     * @param scaleY Scale for the y coordinate
+     * @param scaleZ Scale for the z coordinate
+     * @return Sampled value
+     */
     public double sample(double x, double y, double z, double scaleX, double scaleY, double scaleZ) {
         return sample(x * scaleX, y * scaleY, z * scaleZ);
     }
 
+    /**
+     * Samples the value of a single point
+     * @param x x coordinate of the point
+     * @param y y coordinate of the point
+     * @param z z coordinate of the point
+     * @return Sampled value
+     */
     public double sample(double x, double y, double z) {
         double value = 0;
         double frequency = 1;
@@ -56,6 +82,13 @@ public class PerlinNoise3D {
         return value / maxValue;
     }
 
+    /**
+     * Generates a single noise octave for a specific point
+     * @param x x coordinate of the point
+     * @param y y coordinate of the point
+     * @param z z coordinate of the point
+     * @return Noise value of the point
+     */
     private double noise(double x, double y, double z) {
         // Find unit cube that contains point
         int X = (int) Math.floor(x) & 255;

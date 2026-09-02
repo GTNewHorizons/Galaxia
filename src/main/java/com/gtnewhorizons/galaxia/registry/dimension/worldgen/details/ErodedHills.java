@@ -6,6 +6,9 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.NoiseSampler3
 
 import java.util.Random;
 
+/**
+ * Creates hills with many overhangs using 3D Perlin noise
+ */
 public class ErodedHills implements Terrain3D {
     private static final double SCALE = 0.025;
 
@@ -19,6 +22,11 @@ public class ErodedHills implements Terrain3D {
     private double[] modifierValues;
     private boolean needsConfirmation = true;
 
+    /**
+     * Constructor for configuring the 3D terrain feature
+     * @param modifierEntry Modifier entry with a modifier range to determine the terrain presence
+     * @param height Maximum height of the hills
+     */
     public ErodedHills(TerrainModifierEntry modifierEntry, int height) {
         this.modifierEntry = modifierEntry;
         this.height = height;
@@ -53,10 +61,12 @@ public class ErodedHills implements Terrain3D {
 
     @Override
     public int getHeight(int localX, int localZ) {
+        // Multiply by 8 to make transitions narrower and increase presence
         double localModifier = Math.min(modifierValues[localX + localZ * 16] * 8, 1);
         if (localModifier <= 0.01) {
             return 0;
         }
+        // Get the highest block within the local column to correctly place the surface layer
         for (int i = 0; i < blockColumn.length; i++) {
             blockColumn[i] = hillNoise.samplePoint(localX + (currentX << 4), i, localZ + (currentZ << 4), SCALE, SCALE, SCALE) > 0;
         }
@@ -69,6 +79,7 @@ public class ErodedHills implements Terrain3D {
                 break;
             }
         }
+        // Force height to 0 if there are no blocks
         if (!foundBlock) {
             return 0;
         }
