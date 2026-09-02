@@ -48,7 +48,8 @@ public class ErodedHills implements Terrain3D {
 
     @Override
     public int getHeight(int localX, int localZ) {
-        if (modifierValues[localX + localZ * 16] <= 0.01) {
+        double localModifier = modifierValues[localX + localZ * 16];
+        if (localModifier <= 0.01) {
             return 0;
         }
         for (int i = 0; i < blockColumn.length; i++) {
@@ -66,7 +67,7 @@ public class ErodedHills implements Terrain3D {
         if (!foundBlock) {
             return 0;
         }
-        return localHeight;
+        return (int) (localHeight * localModifier);
     }
 
     @Override
