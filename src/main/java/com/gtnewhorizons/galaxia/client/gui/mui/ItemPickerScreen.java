@@ -6,6 +6,8 @@ import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.item.ItemStack;
 
+import org.lwjgl.input.Keyboard;
+
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.GuiData;
@@ -25,9 +27,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
  *
  * <p>
  * Opens via {@link #FACTORY} when the user wants to pick an item for outpost logistics routing.
- * Once the user places an item the stack is stored in {@link #pendingPick}. The caller polls
- * {@link #pollPendingPick()} on the next tick (in {@code StarmapAssetActionsWidget.onUpdate})
- * and adds it to the logistics configuration.
+ * Once the user places an item the stack is stored in {@link #pendingPick}. The caller that opened
+ * the picker polls the result on its next update and applies it.
  *
  * <p>
  * Because this screen is opened through {@link SimpleGuiFactory}, the full MUI lifecycle runs
@@ -43,7 +44,7 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
 
     public static final SimpleGuiFactory FACTORY = new SimpleGuiFactory("galaxia_item_picker", ItemPickerScreen::new);
 
-    /** Set on the client when the user places an item in the slot; consumed by the map widget. */
+    /** Set on the client when the user places an item in the slot; consumed by its opening UI. */
     private static volatile ItemStack pendingPick = null;
     /** Outpost assetId that this pick belongs to; set before opening the screen. */
     private static volatile CelestialAsset.ID pendingForOutpostId = null;
@@ -132,7 +133,26 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
         // Show NEI so the user can drag items from it
         settings.getRecipeViewerSettings()
             .enable();
-        ModularPanel panel = ModularPanel.defaultPanel("galaxia_item_picker", 176, 96);
+        ModularPanel panel = new ModularPanel("galaxia_item_picker") {
+
+            @Override
+            public boolean onKeyPressed(char typedChar, int keyCode) {
+                Minecraft minecraft = Minecraft.getMinecraft();
+                boolean closesPicker = keyCode == Keyboard.KEY_ESCAPE
+                    || keyCode == minecraft.gameSettings.keyBindInventory.getKeyCode();
+                if (!closesPicker || !hasPendingPicker()) {
+                    return super.onKeyPressed(typedChar, keyCode);
+                }
+                minecraft.displayGuiScreen(cancelPendingPick());
+                return true;
+            }
+
+            @Override
+            public void onClose() {
+                if (hasPendingPicker()) cancelPendingPick();
+                super.onClose();
+            }
+        }.size(176, 96);
 
         ItemStackHandler handler = new ItemStackHandler(1);
         ModularSlot slot = new ModularSlot(handler, 0).changeListener((stack, onlyAmountChanged, client, init) -> {

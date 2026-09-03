@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.satellite;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -148,7 +149,7 @@ final class GalaxiaSatelliteAPITest {
         ModuleInstance instance = FacilityModuleKind.DEBUG_DATA_GENERATOR
             .create(StationTileCoord.of(0, 0), ModuleShape.SINGLE, ModuleTier.HV);
         instance.updateStatus(Buildable.Status.OPERATIONAL);
-        facility.addModule(instance);
+        addModule(facility, instance);
         ((ModuleDebugDataGenerator) instance.component())
             .configure(ModuleDebugDataGenerator.Config.consume(type, amountKb, 1, null));
         SatelliteNetworkService.refreshAssetEndpoints(TEAM, facility);

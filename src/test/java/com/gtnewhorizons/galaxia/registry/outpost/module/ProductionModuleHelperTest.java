@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -166,7 +167,7 @@ final class ProductionModuleHelperTest {
             StationTileCoord.of(0, 0),
             kind.defaultShape(),
             kind.defaultTier());
-        facility.addModule(module);
+        addModule(facility, module);
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.ReplaceRecipeBook(facility.assetId, module.id, book),
             FacilityCommand.Authority.NONE);

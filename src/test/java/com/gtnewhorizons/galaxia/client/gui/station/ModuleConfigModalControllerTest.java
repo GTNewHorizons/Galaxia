@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -98,8 +99,7 @@ final class ModuleConfigModalControllerTest {
         TestFacility test = facilityWith(FacilityModuleKind.HAMMER, ModuleTier.EV);
         ModuleInstance miner = FacilityModuleKind.MINER
             .create(StationTileCoord.of(2, 0), ModuleShape.SINGLE, ModuleTier.EV);
-        test.facility()
-            .addModule(miner);
+        addModule(test.facility(), miner);
         test.facility()
             .stationLayout()
             .place(miner);
@@ -169,7 +169,7 @@ final class ModuleConfigModalControllerTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         ModuleInstance module = kind.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, tier);
-        facility.addModule(module);
+        addModule(facility, module);
         facility.stationLayout()
             .place(module);
         return new TestFacility(facility, module);

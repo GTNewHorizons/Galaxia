@@ -92,7 +92,7 @@ final class FacilityCommandTest {
     @Test
     void invalidFilterReplacementIsRejectedWithoutChangingSelectedSide() {
         AutomatedFacility facility = facility();
-        facility.setFilters(List.of("minecraft:stick:0"), true);
+        facility.restoreFilters(List.of("minecraft:stick:0"), true);
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.ReplaceFilters(

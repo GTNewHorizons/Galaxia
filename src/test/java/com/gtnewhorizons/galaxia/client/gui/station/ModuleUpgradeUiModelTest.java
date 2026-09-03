@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -9,6 +10,10 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
@@ -295,6 +300,34 @@ final class ModuleUpgradeUiModelTest {
 
         assertEquals(ModuleTier.IV.name(), normalized.get(ModuleUpgradeUiModel.GROUP_MINER_TIER));
         assertEquals(MinerFocusTier.III.name(), normalized.get(ModuleUpgradeUiModel.GROUP_MINER_FOCUS_TIER));
+    }
+
+    @Test
+    void confirmedUpgradeTargetsUseStableModuleIds() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ModuleInstance source = FacilityModuleKind.HAMMER
+            .create(StationTileCoord.of(0, 0), ModuleShape.SINGLE, ModuleTier.EV);
+        ModuleInstance target = FacilityModuleKind.HAMMER
+            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.EV);
+        addModule(facility, source);
+        addModule(facility, target);
+        facility.stationLayout()
+            .place(source);
+        facility.stationLayout()
+            .place(target);
+
+        assertEquals(
+            List.of(target.id),
+            ModuleUpgradeUiModel.confirmedTargets(
+                facility,
+                source,
+                ModuleTier.IV,
+                HammerVariant.BASE,
+                List.of(target.anchor(), target.anchor())));
     }
 
     private static ModuleInstance hammerModule() {

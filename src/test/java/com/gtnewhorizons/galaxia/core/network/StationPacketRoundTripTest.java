@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.core.network;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -70,7 +71,7 @@ final class StationPacketRoundTripTest {
         AutomatedFacility facility = facility();
         ItemStackWrapper item = new ItemStackWrapper(Items.iron_ingot, 0, null);
         facility.restoreInventory(Map.of(item, 9L));
-        facility.setFilters(List.of("ore:iron"), true);
+        facility.restoreFilters(List.of("ore:iron"), true);
         facility.logisticsConfig.set(item, new LogisticsResourceConfig(4, 8, true, false));
 
         AssetStateSync.Client client = new AssetStateSync.Client(assetId -> {});
@@ -147,7 +148,7 @@ final class StationPacketRoundTripTest {
     @Test
     void canonicalNetworkReplacementPreservesAssetIdentityAndClearsAbsentState() {
         AutomatedFacility current = facility();
-        current.setFilters(List.of("ore:old"), true);
+        current.restoreFilters(List.of("ore:old"), true);
         CelestialAssetStore.CLIENT.registerAssetInternal(TEAM, current);
         AutomatedFacility authoritative = new AutomatedFacility(
             current.assetId,
@@ -248,7 +249,7 @@ final class StationPacketRoundTripTest {
             .create(ModuleInstance.ID.create(), FacilityModuleKind.HAMMER, null, ModuleShape.SINGLE, ModuleTier.IV);
         module.updateStatus(Buildable.Status.OPERATIONAL);
         module.initAnchor(StationTileCoord.of(2, 3));
-        facility.addModule(module);
+        addModule(facility, module);
         facility.stationLayout()
             .place(module);
         return facility;

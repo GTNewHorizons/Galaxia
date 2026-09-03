@@ -371,7 +371,8 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         ItemStackWrapper wrapper = ItemStackWrapper.of(stack);
         if (wrapper == null) return;
         LogisticsResourceConfig existing = asset.logisticsConfig.get(wrapper);
-        LogisticsResourceConfig config = existing == LogisticsResourceConfig.DEFAULT ? defaultConfigForAccessMode()
+        LogisticsResourceConfig config = existing == LogisticsResourceConfig.DEFAULT
+            ? defaultConfigForAccessMode(asset, wrapper)
             : logisticsAccessMode().sanitize(existing);
         CelestialClient.updateLogisticsConfig(asset.assetId, wrapper, config, logisticsAccessMode());
     }
@@ -401,7 +402,11 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         CelestialAsset asset = asset();
         if (row == null || asset == null) return;
         LogisticsResourceConfig cfg = row.getValue();
-        update(asset, row.getKey(), cfg.withImportEnabled(!cfg.isImportEnabled()));
+        boolean enabled = !cfg.isImportEnabled();
+        if (enabled && cfg.minReserve() == 0 && asset instanceof AutomatedFacility facility) {
+            cfg = cfg.withMinReserve((int) Math.min(Integer.MAX_VALUE, facility.upkeepReserve(row.getKey())));
+        }
+        update(asset, row.getKey(), cfg.withImportEnabled(enabled));
     }
 
     private void toggleExport(int rowIndex) {
@@ -502,10 +507,13 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         return controller.logisticsAccessMode();
     }
 
-    private LogisticsResourceConfig defaultConfigForAccessMode() {
+    private LogisticsResourceConfig defaultConfigForAccessMode(CelestialAsset asset, ItemStackWrapper item) {
+        int reserve = asset instanceof AutomatedFacility facility
+            ? (int) Math.min(Integer.MAX_VALUE, facility.upkeepReserve(item))
+            : 0;
         return logisticsAccessMode() == LogisticsConfigAccessMode.IMPORT_ONLY
-            ? new LogisticsResourceConfig(0, 64, true, false)
-            : new LogisticsResourceConfig(0, 64, false, false);
+            ? new LogisticsResourceConfig(reserve, 64, true, false)
+            : new LogisticsResourceConfig(reserve, 64, false, false);
     }
 
     private void addHeaderTooltip(int x, int width, String text) {

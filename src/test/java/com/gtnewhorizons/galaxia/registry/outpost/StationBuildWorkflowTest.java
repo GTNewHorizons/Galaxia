@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -105,7 +106,11 @@ final class StationBuildWorkflowTest {
         ModuleInstance module = buildModuleOnServer(facility, FacilityModuleKind.STORAGE, anchor);
 
         // Remove module (server-side flow)
-        assertSame(AutomatedFacility.DeconstructionResult.ACCEPTED, facility.requestModuleDeconstruction(module.id));
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            facility.applyCommand(
+                new FacilityCommand.RequestModuleDeconstruction(facility.assetId, module.id),
+                FacilityCommand.Authority.NONE));
 
         assertEquals(
             0,
@@ -175,7 +180,7 @@ final class StationBuildWorkflowTest {
         // Copy modules
         client.clearModules();
         for (ModuleInstance m : server.modules()) {
-            client.addModule(m);
+            addModule(client, m);
         }
 
         // Now verify validator parity for key coordinates
@@ -226,7 +231,7 @@ final class StationBuildWorkflowTest {
         StationTileCoord anchor, ModuleShape shape) {
         ModuleInstance module = FacilityModuleRegistry
             .create(ModuleInstance.ID.create(), kind, anchor, shape, kind.defaultTier());
-        facility.addModule(module);
+        addModule(facility, module);
 
         StationLayout layout = facility.stationLayout();
         StationTileState state = StationTileState.fromModuleStatus(module.status());

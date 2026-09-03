@@ -26,7 +26,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
-import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidget> {
 
@@ -307,16 +306,13 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
             "Upgrade modules",
             "Upgrade",
             coord -> ModuleUpgradeUiModel.isCompatibleTarget(facility, source, targetTier, targetVariant, coord),
-            coord -> StationTargetPicker.normalizeTarget(facility, coord),
+            coord -> StationTilePickerController.normalizeModuleTarget(facility, coord),
             targets -> {
-                AutomatedFacility currentFacility = ModuleConfigModalSupport.facility(assetId);
-                ModuleInstance currentSource = currentFacility == null ? null : currentFacility.moduleById(source.id);
-                List<StationTileCoord> confirmedTargets = ModuleUpgradeUiModel
-                    .confirmedTargets(currentFacility, currentSource, targetTier, targetVariant, targets);
+                List<ModuleInstance.ID> confirmedTargets = ModuleUpgradeUiModel
+                    .confirmedTargets(facility, source, targetTier, targetVariant, targets);
                 if (confirmedTargets.isEmpty()) return;
                 CelestialClient.planModuleUpgradeTargets(
                     assetId,
-                    source.id,
                     targetTier,
                     targetVariant,
                     reserveItems,

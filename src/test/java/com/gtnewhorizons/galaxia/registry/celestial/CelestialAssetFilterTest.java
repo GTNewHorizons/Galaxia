@@ -91,7 +91,7 @@ final class CelestialAssetFilterTest {
         String bName = b.toItemStack()
             .getUnlocalizedName();
         facility.addFilter(aName, true);
-        facility.setFilters(List.of(bName), true);
+        facility.restoreFilters(List.of(bName), true);
         List<String> filters = facility.filtersSnapshot()
             .get(true);
         assertEquals(1, filters.size());

@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -101,7 +102,7 @@ final class ModuleHammerTest {
             ModuleShape.SINGLE,
             ModuleTier.EV);
         module.updateStatus(Buildable.Status.OPERATIONAL);
-        outpost.addModule(module);
+        addModule(outpost, module);
         outpost.setEnergyStored(500_000L);
         outpost.clean();
 
@@ -142,7 +143,7 @@ final class ModuleHammerTest {
             StationTileCoord.of(1, 0),
             ModuleShape.SINGLE,
             ModuleTier.EV);
-        outpost.addModule(module);
+        addModule(outpost, module);
         outpost.clean();
         ModuleHammer hammer = (ModuleHammer) module.component();
         hammer.setEnergyStored(100_000L);

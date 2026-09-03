@@ -385,8 +385,9 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
                 .moduleAt(coord);
             return target != null && facility.canCopyModuleRuntimeSettings(source, target);
         },
-            coord -> StationTargetPicker.normalizeTarget(facility, coord),
-            targets -> CelestialClient.copyModuleSettings(assetId, source.id, targets));
+            coord -> StationTilePickerController.normalizeModuleTarget(facility, coord),
+            targets -> CelestialClient
+                .copyModuleSettings(assetId, source.id, StationTilePickerController.moduleIds(facility, targets)));
     }
 
     private void previousPage() {

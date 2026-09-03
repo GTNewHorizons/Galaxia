@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.station;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -15,6 +16,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -57,14 +59,18 @@ final class StationLayoutTest {
         ModuleInstance retained = FacilityModuleRegistry
             .create(ModuleInstance.ID.create(), FacilityModuleKind.MINER, null, ModuleShape.SINGLE, ModuleTier.EV);
         retained.initAnchor(StationTileCoord.of(0, 1));
-        station.addModule(removed);
-        station.addModule(retained);
+        addModule(station, removed);
+        addModule(station, retained);
         StationTileCoord removedCoord = StationTileCoord.of(1, 0);
         StationTileCoord retainedCoord = StationTileCoord.of(0, 1);
         layout.place(removedCoord, new PlacedTile(removed, StationTileState.OCCUPIED_OPERATIONAL));
         layout.place(retainedCoord, new PlacedTile(retained, StationTileState.OCCUPIED_OPERATIONAL));
 
-        assertEquals(AutomatedFacility.DeconstructionResult.ACCEPTED, station.requestModuleDeconstruction(removed.id));
+        assertEquals(
+            FacilityCommand.Result.CHANGED,
+            station.applyCommand(
+                new FacilityCommand.RequestModuleDeconstruction(station.assetId, removed.id),
+                FacilityCommand.Authority.NONE));
 
         assertFalse(layout.isOccupied(removedCoord));
         assertTrue(layout.isOccupied(retainedCoord));
@@ -77,7 +83,7 @@ final class StationLayoutTest {
         ModuleInstance rebuilt = FacilityModuleRegistry
             .create(ModuleInstance.ID.create(), FacilityModuleKind.HAMMER, null, ModuleShape.SINGLE, ModuleTier.EV);
         StationTileCoord rebuiltCoord = StationTileCoord.of(-1, 0);
-        station.addModule(rebuilt);
+        addModule(station, rebuilt);
         layout.place(rebuiltCoord, new PlacedTile(rebuilt, StationTileState.UNDER_CONSTRUCTION));
 
         assertTrue(layout.isOccupied(rebuiltCoord));

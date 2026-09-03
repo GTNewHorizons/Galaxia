@@ -41,7 +41,7 @@ final class AutomatedFacilityDeconstructionTest {
         ModuleInstance module = addModule(facility, FacilityModuleKind.POWER, StationTileCoord.of(1, 0));
         Map<ItemStackWrapper, Long> expected = constructionCost(module);
 
-        assertSame(AutomatedFacility.DeconstructionResult.ACCEPTED, facility.requestModuleDeconstruction(module.id));
+        assertSame(FacilityCommand.Result.CHANGED, deconstruct(facility, module));
 
         assertFalse(
             facility.modules()
@@ -59,9 +59,7 @@ final class AutomatedFacilityDeconstructionTest {
         long stored = AutomatedFacility.BASE_ITEM_CAPACITY + 1L;
         assertEquals(stored, facility.insert(filler, stored));
 
-        assertSame(
-            AutomatedFacility.DeconstructionResult.CAPACITY_EXCEEDED,
-            facility.requestModuleDeconstruction(storage.id));
+        assertSame(FacilityCommand.Rejection.CAPACITY_EXCEEDED, deconstruct(facility, storage).rejection());
 
         assertTrue(
             facility.modules()
@@ -90,9 +88,7 @@ final class AutomatedFacilityDeconstructionTest {
             Map.of("minecraft:gold_ingot:0", 2L));
         module.setOperation(operation);
 
-        assertSame(
-            AutomatedFacility.DeconstructionResult.ACTIVE_OPERATION,
-            facility.requestModuleDeconstruction(module.id));
+        assertSame(FacilityCommand.Rejection.MODULE_OPERATION_ACTIVE, deconstruct(facility, module).rejection());
 
         assertSame(operation, module.operationOrNull());
     }
@@ -110,7 +106,7 @@ final class AutomatedFacilityDeconstructionTest {
             AutomatedFacility.BASE_ITEM_CAPACITY,
             facility.insert(filler, AutomatedFacility.BASE_ITEM_CAPACITY));
 
-        assertSame(AutomatedFacility.DeconstructionResult.ACCEPTED, facility.requestModuleDeconstruction(module.id));
+        assertSame(FacilityCommand.Result.CHANGED, deconstruct(facility, module));
         assertTrue(
             facility.modules()
                 .contains(module));
@@ -145,10 +141,15 @@ final class AutomatedFacilityDeconstructionTest {
         AutomatedFacility facility = facility();
         ModuleInstance module = addModule(facility, FacilityModuleKind.POWER, StationTileCoord.of(1, 0));
         ItemStackWrapper allowed = ItemStackWrapper.of(new ItemStack(Items.diamond));
-        facility.setFilters(List.of(allowed.toKey()), true);
+        facility.applyCommand(
+            new FacilityCommand.ReplaceFilters(
+                facility.assetId,
+                FacilityCommand.FilterKind.ITEM,
+                List.of(allowed.toKey())),
+            FacilityCommand.Authority.NONE);
         Map<ItemStackWrapper, Long> refund = constructionCost(module);
 
-        assertSame(AutomatedFacility.DeconstructionResult.ACCEPTED, facility.requestModuleDeconstruction(module.id));
+        assertSame(FacilityCommand.Result.CHANGED, deconstruct(facility, module));
 
         assertFalse(
             facility.modules()
@@ -166,11 +167,17 @@ final class AutomatedFacilityDeconstructionTest {
             Buildable.Status.OPERATIONAL);
     }
 
+    private static FacilityCommand.Result deconstruct(AutomatedFacility facility, ModuleInstance module) {
+        return facility.applyCommand(
+            new FacilityCommand.RequestModuleDeconstruction(facility.assetId, module.id),
+            FacilityCommand.Authority.NONE);
+    }
+
     private static ModuleInstance addModule(AutomatedFacility facility, FacilityModuleKind kind,
         StationTileCoord anchor) {
         ModuleInstance module = kind.create(anchor, ModuleShape.SINGLE, kind.defaultTier());
         module.completeConstruction();
-        facility.addModule(module);
+        FacilityTestFixtures.addModule(facility, module);
         facility.stationLayout()
             .place(module);
         return module;

@@ -150,9 +150,9 @@ final class ModuleUpgradeUiModel {
         return target.tier() != targetTier;
     }
 
-    static List<StationTileCoord> confirmedTargets(AutomatedFacility facility, ModuleInstance source,
+    static List<ModuleInstance.ID> confirmedTargets(AutomatedFacility facility, ModuleInstance source,
         ModuleTier targetTier, @Nullable HammerVariant targetHammerVariant, List<StationTileCoord> selectedCoords) {
-        List<StationTileCoord> targets = new ArrayList<>();
+        List<ModuleInstance.ID> targets = new ArrayList<>();
         if (facility == null || source == null || selectedCoords == null || selectedCoords.isEmpty()) return targets;
         StationLayout layout = facility.stationLayout();
         if (layout == null) return targets;
@@ -163,7 +163,7 @@ final class ModuleUpgradeUiModel {
             ModuleInstance target = layout.moduleAt(coord);
             if (target == null || !seenModules.add(target.id)) continue;
             if (!isCompatibleTarget(facility, source, targetTier, targetHammerVariant, coord)) continue;
-            targets.add(target.anchor());
+            targets.add(target.id);
         }
         return targets;
     }

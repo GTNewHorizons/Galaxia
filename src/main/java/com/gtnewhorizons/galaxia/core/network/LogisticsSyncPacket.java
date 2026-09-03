@@ -48,10 +48,7 @@ public final class LogisticsSyncPacket implements IMessage {
             PacketUtil.writeId(buf, t.deliveryId);
             PacketUtil.writeId(buf, d.fromAssetId());
             PacketUtil.writeId(buf, d.toAssetId());
-            PacketUtil.writeString(
-                buf,
-                d.resourceId()
-                    .toKey());
+            PacketUtil.writeInventoryKey(buf, d.resourceId());
             buf.writeLong(d.amount());
             buf.writeInt(t.getRemainingTicks());
             PacketUtil.writeEnum(buf, d.scope());
@@ -66,10 +63,7 @@ public final class LogisticsSyncPacket implements IMessage {
         for (LogisticSignal signal : signals) {
             PacketUtil.writeId(buf, signal.outpostAssetId());
             PacketUtil.writeCelestialObjectKey(buf, signal.systemKey());
-            PacketUtil.writeString(
-                buf,
-                signal.resourceId()
-                    .toKey());
+            PacketUtil.writeInventoryKey(buf, signal.resourceId());
             buf.writeLong(signal.amount());
             PacketUtil.writeEnum(buf, signal.scope());
             PacketUtil.writeCelestialObjectKey(buf, signal.bodyKey());
@@ -85,7 +79,7 @@ public final class LogisticsSyncPacket implements IMessage {
             LogisticsDelivery.ID deliveryId = PacketUtil.readDeliveryId(buf);
             CelestialAsset.ID fromAssetId = PacketUtil.readAssetId(buf);
             CelestialAsset.ID toAssetId = PacketUtil.readAssetId(buf);
-            ItemStackWrapper resourceId = ItemStackWrapper.fromKey(PacketUtil.readString(buf));
+            ItemStackWrapper resourceId = (ItemStackWrapper) PacketUtil.readInventoryKey(buf);
             long amount = buf.readLong();
             int remainingTicks = buf.readInt();
             LogisticSignal.Scope scope = PacketUtil.readEnum(buf, LogisticSignal.Scope.class);
@@ -117,7 +111,7 @@ public final class LogisticsSyncPacket implements IMessage {
                 new LogisticSignal(
                     PacketUtil.readAssetId(buf),
                     PacketUtil.readCelestialObjectKey(buf),
-                    ItemStackWrapper.fromKey(PacketUtil.readString(buf)),
+                    (ItemStackWrapper) PacketUtil.readInventoryKey(buf),
                     buf.readLong(),
                     PacketUtil.readEnum(buf, LogisticSignal.Scope.class),
                     PacketUtil.readCelestialObjectKey(buf),

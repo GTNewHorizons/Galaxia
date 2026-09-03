@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.satellite;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -416,7 +417,7 @@ final class SatelliteNetworkServiceTest {
             ModuleShape.SINGLE,
             ModuleTier.HV);
         module.updateStatus(Buildable.Status.OPERATIONAL);
-        facility.addModule(module);
+        addModule(facility, module);
         return (ModuleDebugDataGenerator) module.component();
     }
 }

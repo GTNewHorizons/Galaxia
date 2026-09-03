@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -35,8 +36,8 @@ final class ModuleRecipeSettingsGroupTest {
         AutomatedFacility facility = createFacility();
         ModuleInstance first = createMachine(StationTileCoord.of(1, 0));
         ModuleInstance second = createMachine(StationTileCoord.of(2, 0));
-        facility.addModule(first);
-        facility.addModule(second);
+        addModule(facility, first);
+        addModule(facility, second);
 
         replace(facility, first.id, book(RecipeSchedulerMode.ORDER));
         assertSame(
@@ -84,8 +85,8 @@ final class ModuleRecipeSettingsGroupTest {
         AutomatedFacility facility = createFacility();
         ModuleInstance source = createMachine(StationTileCoord.of(1, 0));
         ModuleInstance target = createMachine(StationTileCoord.of(2, 0));
-        facility.addModule(source);
-        facility.addModule(target);
+        addModule(facility, source);
+        addModule(facility, target);
         replace(facility, source.id, book(RecipeSchedulerMode.ORDER));
         replace(facility, target.id, book(RecipeSchedulerMode.RANDOM));
         facility.restoreRecipeScheduleState(target, new RecipeBook.ScheduleState((byte) 4, (byte) 2));

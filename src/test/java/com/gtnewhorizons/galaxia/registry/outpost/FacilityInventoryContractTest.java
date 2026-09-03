@@ -220,15 +220,15 @@ final class FacilityInventoryContractTest {
     @Test
     void rejectedFilterReplacementLeavesSelectedSideUntouched() {
         AutomatedFacility facility = facility();
-        facility.setFilters(List.of("item.existing"), true);
+        facility.restoreFilters(List.of("item.existing"), true);
         List<String> invalidItems = new ArrayList<>();
         invalidItems.add("item.replacement");
         invalidItems.add(null);
 
-        assertThrows(IllegalArgumentException.class, () -> facility.setFilters(invalidItems, true));
+        assertThrows(IllegalArgumentException.class, () -> facility.restoreFilters(invalidItems, true));
         assertThrows(
             IllegalArgumentException.class,
-            () -> facility.setFilters(List.of("galaxia.missing_fluid"), false));
+            () -> facility.restoreFilters(List.of("galaxia.missing_fluid"), false));
 
         assertEquals(
             List.of("item.existing"),
