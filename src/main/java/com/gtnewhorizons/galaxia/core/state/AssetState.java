@@ -177,7 +177,7 @@ public final class AssetState {
         current.setStationFeatureSalt(replacement.stationFeatureSalt());
         current.restoreBounds(replacement.boundsSnapshot());
         replacement.filtersSnapshot()
-            .forEach((items, filters) -> current.setFilters(filters, items));
+            .forEach((items, filters) -> current.restoreFilters(filters, items));
         current.restoreModulesAndSettings(replacement.modules(), replacement.settingsGroups());
         current.restoreInventory(replacement.inventorySnapshot());
         current.loadUpkeepCredits(replacement.upkeepCredits());
@@ -226,8 +226,8 @@ public final class AssetState {
         long energyStored = in.longValue("energy");
         facility.setStationFeatureSalt(in.longValue("featureSalt"));
         facility.restoreBounds(readBounds(in, "bounds"));
-        facility.setFilters(readStrings(in, "itemFilters"), true);
-        facility.setFilters(readStrings(in, "fluidFilters"), false);
+        facility.restoreFilters(readStrings(in, "itemFilters"), true);
+        facility.restoreFilters(readStrings(in, "fluidFilters"), false);
 
         Map<ModuleInstance.ID, RecipeBook.ScheduleState> schedules = new LinkedHashMap<>();
         Map<ModuleInstance.ID, ModuleInstance> modules = new LinkedHashMap<>();

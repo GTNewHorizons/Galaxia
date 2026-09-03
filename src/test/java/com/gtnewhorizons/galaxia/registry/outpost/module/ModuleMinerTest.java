@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -43,7 +44,7 @@ final class ModuleMinerTest {
     void ungroupedMinerBlacklistIsSparseAndValidated() {
         AutomatedFacility facility = createFacility();
         ModuleInstance miner = createMiner();
-        facility.addModule(miner);
+        addModule(facility, miner);
 
         assertTrue(miner.settingsBinding() instanceof ModuleInstance.SettingsBinding.Private);
         assertTrue(
@@ -70,7 +71,7 @@ final class ModuleMinerTest {
     void blacklistVoidsOreAfterRoll() {
         AutomatedFacility facility = createFacility();
         ModuleInstance miner = createMiner();
-        facility.addModule(miner);
+        addModule(facility, miner);
         setMinerOreBlacklisted(facility, miner, "ore:iron", true);
 
         assertTrue(ModuleMiner.shouldVoidOre(miner, facility, "ore:iron"));
@@ -93,8 +94,8 @@ final class ModuleMinerTest {
         AutomatedFacility facility = createFacility();
         ModuleInstance first = createMiner(StationTileCoord.of(1, 0));
         ModuleInstance second = createMiner(StationTileCoord.of(2, 0));
-        facility.addModule(first);
-        facility.addModule(second);
+        addModule(facility, first);
+        addModule(facility, second);
         setMinerOreBlacklisted(facility, first, "ore:iron", true);
 
         assertSame(
@@ -129,7 +130,7 @@ final class ModuleMinerTest {
     void leaveOnPrivateSettingsIsUnchanged() {
         AutomatedFacility facility = createFacility();
         ModuleInstance miner = createMiner();
-        facility.addModule(miner);
+        addModule(facility, miner);
         ModuleInstance.SettingsBinding before = miner.settingsBinding();
         List<SettingsGroup> groupsBefore = facility.settingsGroups();
 
@@ -146,7 +147,7 @@ final class ModuleMinerTest {
     void renameGroupUsesStableGroupIdAndRejectsBlankName() {
         AutomatedFacility facility = createFacility();
         ModuleInstance miner = createMiner();
-        facility.addModule(miner);
+        addModule(facility, miner);
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(
@@ -170,29 +171,25 @@ final class ModuleMinerTest {
     }
 
     @Test
-    void runtimeSettingsCopyRejectsMinerTargetWithoutRequiredFocusTier() {
+    void settingsCopyKeepsPhysicalTierAndCopiesFocusOreWithoutInstalledFocus() {
         AutomatedFacility facility = createFacility();
         ModuleInstance source = createMiner(StationTileCoord.of(1, 0));
         ModuleInstance target = createMiner(StationTileCoord.of(2, 0));
-        facility.addModule(source);
-        facility.addModule(target);
+        addModule(facility, source);
+        addModule(facility, target);
         ModuleMiner sourceMiner = (ModuleMiner) source.component();
         ModuleMiner targetMiner = (ModuleMiner) target.component();
         sourceMiner.setFocus(MinerFocusTier.II, "ore:iron", 1200);
         targetMiner.setFocus(MinerFocusTier.NONE, null, 0);
 
-        ModuleInstance.SettingsBinding sourceBindingBefore = source.settingsBinding();
-        ModuleInstance.SettingsBinding targetBindingBefore = target.settingsBinding();
-        List<SettingsGroup> groupsBefore = facility.settingsGroups();
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.CopyModuleSettings(facility.assetId, source.id, List.of(target.id)),
             FacilityCommand.Authority.NONE);
 
-        assertEquals(FacilityCommand.Status.REJECTED, result.status());
-        assertEquals(sourceBindingBefore, source.settingsBinding());
-        assertEquals(targetBindingBefore, target.settingsBinding());
-        assertEquals(groupsBefore, facility.settingsGroups());
-        assertNull(targetMiner.focusOreKeyOrNull());
+        assertSame(FacilityCommand.Result.CHANGED, result);
+        assertEquals(MinerFocusTier.NONE, targetMiner.focusTier());
+        assertEquals("ore:iron", targetMiner.focusOreKeyOrNull());
+        assertEquals(0, targetMiner.focusAlignmentProgress());
     }
 
     @Test

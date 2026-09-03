@@ -109,7 +109,13 @@ final class AutomatedFacilityInventoryTest {
             new FacilityCommand.SetInventoryBound(facility.assetId, BoundKind.ITEM_LOWER, item, 15L),
             FacilityCommand.Authority.NONE);
         assertEquals(new InventoryBounds(15L, 20L), facility.getBound(item));
-        assertFalse(facility.trySetBound(item, 25L, true));
+        assertEquals(
+            FacilityCommand.Rejection.INVALID_BOUND,
+            facility
+                .applyCommand(
+                    new FacilityCommand.SetInventoryBound(facility.assetId, BoundKind.ITEM_LOWER, item, 25L),
+                    FacilityCommand.Authority.NONE)
+                .rejection());
         assertEquals(new InventoryBounds(15L, 20L), facility.getBound(item));
 
         facility.clearBound(item, false);

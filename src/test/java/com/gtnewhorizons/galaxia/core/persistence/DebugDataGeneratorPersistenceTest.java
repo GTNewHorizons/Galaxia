@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.core.persistence;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -186,7 +187,7 @@ final class DebugDataGeneratorPersistenceTest {
         module.updateStatus(Buildable.Status.OPERATIONAL);
         station.stationLayout()
             .place(module);
-        station.addModule(module);
+        addModule(station, module);
         return (ModuleDebugDataGenerator) module.component();
     }
 }

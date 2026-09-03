@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -244,7 +245,7 @@ final class FacilityModuleRegistryTest {
             CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        facility.addModule(module);
+        addModule(facility, module);
         return facility;
     }
 

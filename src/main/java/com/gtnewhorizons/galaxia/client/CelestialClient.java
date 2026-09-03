@@ -3,11 +3,9 @@ package com.gtnewhorizons.galaxia.client;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -59,7 +57,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGe
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
-import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
@@ -309,13 +306,8 @@ public final class CelestialClient {
                 voidCompletionRefund));
     }
 
-    public static void planModuleUpgradeTargets(ID assetId, ModuleInstance.ID sourceModuleId, ModuleTier tier,
-        @Nullable HammerVariant variant, boolean reserveItems, boolean voidCompletionRefund,
-        List<StationTileCoord> targetCoords) {
-        AutomatedFacility facility = getByAssetId(assetId) instanceof AutomatedFacility af ? af : null;
-        if (facility == null) return;
-        List<ModuleInstance.ID> targetIds = resolveTargetModuleIds(facility, targetCoords);
-        if (targetIds == null) return;
+    public static void planModuleUpgradeTargets(ID assetId, ModuleTier tier, @Nullable HammerVariant variant,
+        boolean reserveItems, boolean voidCompletionRefund, List<ModuleInstance.ID> targetIds) {
         FacilityCommand command = variant != null
             ? new FacilityCommand.PlanHammerUpgrade(
                 assetId,
@@ -338,31 +330,13 @@ public final class CelestialClient {
     }
 
     public static void copyModuleSettings(ID assetId, ModuleInstance.ID sourceModuleId,
-        List<StationTileCoord> targetCoords) {
-        AutomatedFacility facility = getByAssetId(assetId) instanceof AutomatedFacility af ? af : null;
-        if (facility == null) return;
-        List<ModuleInstance.ID> targetIds = resolveTargetModuleIds(facility, targetCoords);
-        if (targetIds == null) return;
+        List<ModuleInstance.ID> targetIds) {
         submit(new FacilityCommand.CopyModuleSettings(assetId, sourceModuleId, targetIds));
     }
 
     public static void updateDebugDataGeneratorConfig(ID assetId, ModuleInstance.ID moduleId,
         ModuleDebugDataGenerator.Config config) {
         submit(new FacilityCommand.ConfigureDebugDataGenerator(assetId, moduleId, config));
-    }
-
-    private static @Nullable List<ModuleInstance.ID> resolveTargetModuleIds(AutomatedFacility facility,
-        List<StationTileCoord> targetCoords) {
-        if (facility.stationLayout() == null || targetCoords == null) return null;
-        Set<ModuleInstance.ID> targetIds = new LinkedHashSet<>();
-        for (StationTileCoord targetCoord : targetCoords) {
-            if (targetCoord == null) return null;
-            ModuleInstance target = facility.stationLayout()
-                .moduleAt(targetCoord);
-            if (target == null) return null;
-            targetIds.add(target.id);
-        }
-        return targetIds.isEmpty() ? null : List.copyOf(targetIds);
     }
 
     public static void addInventory(CelestialAsset.ID assetId, ItemStackWrapper resource, long amount) {

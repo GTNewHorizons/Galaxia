@@ -30,17 +30,13 @@ import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
-import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
-import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
@@ -701,35 +697,6 @@ public final class StarmapAssetActions {
                 lastAssetListSignature = 0;
             }
 
-            // Consume item picker results even if the starmap was closed and reopened
-            // between the button click and the user returning from the item picker screen.
-            if (ItemPickerScreen.hasPendingPickForOutpost()) {
-                CelestialAsset.ID targetId = ItemPickerScreen.getPendingForOutpostId();
-                ItemStack pickedStack = ItemPickerScreen.pollPendingPickForOutpost();
-                AutomatedFacility outpost = null;
-                if (targetId != null && CelestialClient.getByAssetId(targetId) instanceof AutomatedFacility o) {
-                    outpost = o;
-                }
-                if (pickedStack != null && outpost != null) {
-                    ItemStackWrapper wrapper = ItemStackWrapper.of(pickedStack);
-                    boolean alreadyTracked = wrapper != null && outpost.logisticsConfig.snapshot()
-                        .containsKey(wrapper);
-                    if (wrapper != null && !alreadyTracked) {
-                        LogisticsResourceConfig newCfg = new LogisticsResourceConfig(0, 64, false, false);
-                        Galaxia.LOG.info(
-                            "[Outpost UI] Added logistics tracked item {} to outpost {} from item picker",
-                            wrapper.toKey(),
-                            outpost.assetId);
-                        CelestialClient.updateLogisticsConfig(outpost.assetId, wrapper, newCfg);
-                    } else if (wrapper != null) {
-                        Galaxia.LOG.info(
-                            "[Outpost UI] Ignored item picker add for {} on outpost {} because it is already tracked",
-                            wrapper.toKey(),
-                            outpost.assetId);
-                    }
-                    markStructureDirty();
-                }
-            }
             if (structureVersion != lastStructureVersion) {
                 rebuildChildren();
                 lastStructureVersion = structureVersion;

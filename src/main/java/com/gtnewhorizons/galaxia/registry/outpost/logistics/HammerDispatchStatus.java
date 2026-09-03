@@ -47,8 +47,7 @@ public final class HammerDispatchStatus {
 
     public static Status evaluate(AutomatedFacility supplier, ModuleInstance hammerModule, Iterable<?> assets,
         double orbitalTime) {
-        return HammerDispatchPlanner.inspect(supplier, hammerModule, assets, orbitalTime)
-            .toStatus();
+        return HammerDispatchPlanner.inspect(supplier, hammerModule, assets, orbitalTime);
     }
 
     public static Map<ModuleInstance.ID, Status> inspectAll(AutomatedFacility supplier, Iterable<?> assets,

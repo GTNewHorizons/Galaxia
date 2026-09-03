@@ -45,12 +45,12 @@ final class MinerFocusUiModelTest {
     }
 
     @Test
-    void oreCanBeSetOnlyAfterFocusTierIsInstalled() {
+    void oreCanBeSetWithoutFocusTierInstalled() {
         ModuleInstance module = minerModule();
         ModuleMiner miner = (ModuleMiner) module.component();
 
-        assertFalse(MinerFocusUiModel.canSetOre(module, "ore:iron"));
-        assertFalse(MinerFocusUiModel.canShowOreFocus(module));
+        assertTrue(MinerFocusUiModel.canSetOre(module, "ore:iron"));
+        assertTrue(MinerFocusUiModel.canShowOreFocus(module));
 
         miner.setFocus(MinerFocusTier.I, null, 0);
 

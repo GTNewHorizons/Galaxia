@@ -44,7 +44,12 @@ public final class HammerDispatchPlanner {
 
     private record RouteInspection(OrbitalTransferPlanner.TransferRoute route, boolean inspected) {}
 
-    public static Result inspect(AutomatedFacility supplier, ModuleInstance hammerModule, Iterable<?> assets,
+    public static HammerDispatchStatus.Status inspect(AutomatedFacility supplier, ModuleInstance hammerModule,
+        Iterable<?> assets, double orbitalTime) {
+        return inspectResult(supplier, hammerModule, assets, orbitalTime).toStatus();
+    }
+
+    private static Result inspectResult(AutomatedFacility supplier, ModuleInstance hammerModule, Iterable<?> assets,
         double orbitalTime) {
         if (supplier == null || hammerModule == null || !(hammerModule.component() instanceof ModuleHammer hammer)) {
             return new Result(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, 0L, 0L, 0L, 0, null);
@@ -79,7 +84,7 @@ public final class HammerDispatchPlanner {
 
                 long requesterStock = itemAmount(requester, resource);
                 long inboundInTransit = LogisticStore.inboundInTransitAmount(requester.assetId, resource);
-                long arrivedInbound = LogisticStore.arrivedInboundAmount(requester.assetId, resource);
+                long arrivedInbound = arrivedInboundAmount(requester, resource);
                 long requestedAmount = Math
                     .max(0L, importTargetFor(requester, resource, requesterCfg) - requesterStock - inboundInTransit);
                 if (requestedAmount <= 0L) {
@@ -161,7 +166,7 @@ public final class HammerDispatchPlanner {
 
         long requesterStock = itemAmount(requester, resource);
         long inboundInTransit = LogisticStore.inboundInTransitAmount(requester.assetId, resource);
-        long arrivedInbound = LogisticStore.arrivedInboundAmount(requester.assetId, resource);
+        long arrivedInbound = arrivedInboundAmount(requester, resource);
         long requestedAmount = Math
             .max(0L, importTargetFor(requester, resource, requesterCfg) - requesterStock - inboundInTransit);
         if (requestedAmount <= 0L) {
@@ -304,11 +309,20 @@ public final class HammerDispatchPlanner {
     }
 
     private static long destinationFreeItemCapacity(CelestialAsset requester, ItemStackWrapper resource) {
+        if (destinationUnavailable(requester)) return Long.MAX_VALUE;
         if (requester instanceof AutomatedFacility facility) return facility.remainingItemCapacity();
         if (requester instanceof IDistributedInventory physicalInventory) {
             return physicalInventory.getFreeItemSpace(resource);
         }
         return 0L;
+    }
+
+    private static boolean destinationUnavailable(CelestialAsset requester) {
+        return requester instanceof Station station && station.getTileController() == null;
+    }
+
+    private static long arrivedInboundAmount(CelestialAsset requester, ItemStackWrapper resource) {
+        return destinationUnavailable(requester) ? 0L : LogisticStore.arrivedInboundAmount(requester.assetId, resource);
     }
 
     private static long itemAmount(CelestialAsset asset, ItemStackWrapper resource) {

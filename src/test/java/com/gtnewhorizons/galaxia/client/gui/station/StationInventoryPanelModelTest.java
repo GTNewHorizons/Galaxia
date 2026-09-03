@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -111,7 +112,7 @@ final class StationInventoryPanelModelTest {
         AutomatedFacility distributed = facility();
         ItemStack upkeepStack = new ItemStack(new Item(), 1, 0);
         ItemStackWrapper tracked = ItemStackWrapper.of(upkeepStack);
-        distributed.addModule(moduleWithUpkeep(upkeepStack, 1L));
+        addModule(distributed, moduleWithUpkeep(upkeepStack, 1L));
 
         List<StationInventoryPanelModel.InventoryItemRow> rows = StationInventoryPanelModel
             .inventoryRows(distributed.itemSnapshot(), distributed);
@@ -136,7 +137,7 @@ final class StationInventoryPanelModelTest {
         AutomatedFacility distributed = facility();
         ItemStack upkeepStack = new ItemStack(new Item(), 1, 0);
         ItemStackWrapper tracked = ItemStackWrapper.of(upkeepStack);
-        distributed.addModule(moduleWithUpkeep(upkeepStack, 1L));
+        addModule(distributed, moduleWithUpkeep(upkeepStack, 1L));
         distributed.insert(tracked, 7);
         distributed.applyCommand(
             new FacilityCommand.SetInventoryBound(distributed.assetId, BoundKind.ITEM_LOWER, tracked, 54L),
@@ -158,7 +159,7 @@ final class StationInventoryPanelModelTest {
         AutomatedFacility distributed = facility();
         ItemStack upkeepStack = new ItemStack(new Item(), 1, 0);
         ItemStackWrapper tracked = ItemStackWrapper.of(upkeepStack);
-        distributed.addModule(moduleWithUpkeep(upkeepStack, 2L));
+        addModule(distributed, moduleWithUpkeep(upkeepStack, 2L));
         distributed.logisticsConfig.set(tracked, new LogisticsResourceConfig(13, 1, false, false));
 
         StationInventoryPanelModel.UpkeepReserveStatus status = StationInventoryPanelModel
@@ -176,7 +177,7 @@ final class StationInventoryPanelModelTest {
         AutomatedFacility distributed = facility();
         ItemStack upkeepStack = new ItemStack(new Item(), 1, 0);
         ItemStackWrapper tracked = ItemStackWrapper.of(upkeepStack);
-        distributed.addModule(moduleWithUpkeep(upkeepStack, 2L));
+        addModule(distributed, moduleWithUpkeep(upkeepStack, 2L));
         distributed.logisticsConfig.set(tracked, new LogisticsResourceConfig(5, 1, false, false));
 
         StationInventoryPanelModel.UpkeepReserveStatus status = StationInventoryPanelModel
@@ -191,7 +192,7 @@ final class StationInventoryPanelModelTest {
         AutomatedFacility distributed = facility();
         ItemStack upkeepStack = new ItemStack(new Item(), 1, 0);
         ItemStackWrapper tracked = ItemStackWrapper.of(upkeepStack);
-        distributed.addModule(moduleWithUpkeep(upkeepStack, 2L));
+        addModule(distributed, moduleWithUpkeep(upkeepStack, 2L));
         distributed.insert(tracked, 7);
         distributed.logisticsConfig.set(tracked, new LogisticsResourceConfig(13, 1, true, false));
 

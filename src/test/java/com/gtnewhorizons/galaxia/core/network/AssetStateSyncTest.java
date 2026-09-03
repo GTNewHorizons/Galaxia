@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.core.network;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -69,7 +70,7 @@ final class AssetStateSyncTest {
             StationTileCoord.of(0, 0),
             ModuleShape.SINGLE,
             ModuleTier.IV);
-        facility.addModule(hammer);
+        addModule(facility, hammer);
         CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
         RecordingTransport transport = new RecordingTransport(facility);
         transport.mutateAfterFirstDelivery = true;
@@ -351,7 +352,7 @@ final class AssetStateSyncTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         current.setEnergyStored(100L);
-        current.setFilters(List.of("ore:old"), true);
+        current.restoreFilters(List.of("ore:old"), true);
 
         AutomatedFacility authoritative = new AutomatedFacility(
             assetId,

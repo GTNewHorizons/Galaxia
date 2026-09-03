@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.upkeep;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -68,6 +69,21 @@ final class AutomatedFacilityUpkeepTest {
             FacilityCommand.Authority.NONE);
 
         assertEquals(7L, facility.upkeepReserve(UPKEEP_ITEM));
+    }
+
+    @Test
+    void zeroLogisticsReserveKeepsTheAutomaticUpkeepReserve() {
+        AutomatedFacility facility = facilityWithModules(moduleWithUpkeep(ModulePriority.NORMAL, "2"));
+
+        facility.applyCommand(
+            new FacilityCommand.PutLogisticsConfig(
+                facility.assetId,
+                UPKEEP_ITEM,
+                new LogisticsResourceConfig(0, 64, true, false),
+                LogisticsConfigAccessMode.FULL),
+            FacilityCommand.Authority.NONE);
+
+        assertEquals(20L, facility.upkeepReserve(UPKEEP_ITEM));
     }
 
     @Test
@@ -246,7 +262,7 @@ final class AutomatedFacilityUpkeepTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         for (ModuleInstance module : modules) {
-            facility.addModule(module);
+            addModule(facility, module);
         }
         return facility;
     }

@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -80,7 +81,7 @@ final class AutomatedFacilityFeatureModifierTest {
                         .contains(required)) continue;
                     ModuleInstance module = kind.create(coord, kind.defaultShape(), tier);
                     module.updateStatus(Buildable.Status.OPERATIONAL);
-                    facility.addModule(module);
+                    addModule(facility, module);
                     return facility;
                 }
             }

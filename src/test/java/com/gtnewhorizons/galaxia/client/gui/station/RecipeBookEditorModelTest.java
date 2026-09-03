@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -166,7 +167,7 @@ final class RecipeBookEditorModelTest {
         ModuleInstance module = FacilityModuleRegistry
             .create(moduleId(1), kind, StationTileCoord.of(1, 0), kind.defaultShape(), kind.defaultTier());
         module.completeConstruction();
-        facility.addModule(module);
+        addModule(facility, module);
         facility.stationLayout()
             .place(module);
         RecipeBook source = facility.recipeBook(module);

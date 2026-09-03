@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.core.persistence;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
@@ -109,7 +110,7 @@ final class RecipeOrderCursorPersistenceTest {
         macerator.updateStatus(Buildable.Status.OPERATIONAL);
         station.stationLayout()
             .place(macerator);
-        station.addModule(macerator);
+        addModule(station, macerator);
 
         RecipeBook book = new RecipeBook(
             List.of(recipe(0, true, 5, 2), recipe(1, true, 3, 4), recipe(2, false, 1, 1)),

@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -180,7 +181,7 @@ final class RecipeBookOwnershipCommandTest {
         ModuleInstance module = FacilityModuleRegistry
             .create(moduleId, kind, anchor, kind.defaultShape(), kind.defaultTier());
         module.completeConstruction();
-        facility.addModule(module);
+        addModule(facility, module);
         facility.stationLayout()
             .place(module);
         return module;

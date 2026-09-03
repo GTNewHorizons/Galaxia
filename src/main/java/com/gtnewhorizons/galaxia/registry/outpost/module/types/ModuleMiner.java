@@ -83,7 +83,7 @@ public final class ModuleMiner extends TieredModuleComponent {
                 .contains(plan.targetModuleTier())) {
             throw new IllegalArgumentException("Invalid miner focus operation target");
         }
-        String targetOreKey = plan.targetFocusTier() == MinerFocusTier.NONE ? null : focusOreKey;
+        String targetOreKey = focusOreKey;
         if (module.tier() == plan.targetModuleTier() && focusTier == plan.targetFocusTier()
             && Objects.equals(targetOreKey, focusOreKey)) {
             throw new IllegalArgumentException("Miner focus operation target is unchanged");
@@ -215,12 +215,7 @@ public final class ModuleMiner extends TieredModuleComponent {
         if (!(target.component() instanceof ModuleMiner targetMiner)) {
             throw new IllegalStateException("Miner settings copy target is not a miner: " + target.id);
         }
-        String sourceFocusOreKey = sourceMiner.focusOreKeyOrNull();
-        if (sourceFocusOreKey != null && targetMiner.focusTier() == MinerFocusTier.NONE) {
-            throw new IllegalStateException(
-                "Miner settings copy target " + target.id + " has no focus tier for ore " + sourceFocusOreKey);
-        }
-        return !Objects.equals(sourceFocusOreKey, targetMiner.focusOreKeyOrNull());
+        return !Objects.equals(sourceMiner.focusOreKeyOrNull(), targetMiner.focusOreKeyOrNull());
     }
 
     @Override
@@ -252,8 +247,7 @@ public final class ModuleMiner extends TieredModuleComponent {
                     .getSimpleName());
         }
         MinerFocusTier focusTier = MinerFocusTier.valueOf(minerSpec.targetFocusTierKey());
-        String focusOreKey = focusTier == MinerFocusTier.NONE ? null : minerSpec.targetFocusOreKey();
-        setFocus(focusTier, focusOreKey, 0);
+        setFocus(focusTier, minerSpec.targetFocusOreKey(), 0);
     }
 
     public void setFocus(MinerFocusTier focusTier, String focusOreKey, int focusAlignmentProgress) {
@@ -262,11 +256,8 @@ public final class ModuleMiner extends TieredModuleComponent {
         }
         String normalizedFocusOreKey = normalizeFocusOreKey(focusOreKey);
         if (focusTier == MinerFocusTier.NONE) {
-            if (normalizedFocusOreKey != null) {
-                throw new IllegalArgumentException("Miner focus ore must be null when focus tier is NONE");
-            }
             this.focusTier = focusTier;
-            this.focusOreKey = null;
+            this.focusOreKey = normalizedFocusOreKey;
             this.focusAlignmentProgress = 0;
             return;
         }
@@ -278,9 +269,6 @@ public final class ModuleMiner extends TieredModuleComponent {
 
     public void setFocusOre(String focusOreKey) {
         String normalized = normalizeFocusOreKey(focusOreKey);
-        if (focusTier == MinerFocusTier.NONE && normalized != null) {
-            throw new IllegalStateException("Miner focus ore cannot be set while focus tier is NONE");
-        }
         if (Objects.equals(this.focusOreKey, normalized)) return;
         this.focusOreKey = normalized;
         resetFocusAlignment();

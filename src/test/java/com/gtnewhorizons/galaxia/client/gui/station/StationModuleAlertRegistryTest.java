@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
@@ -40,7 +41,7 @@ final class StationModuleAlertRegistryTest {
     void upkeepWarningAppearsWhenModuleCannotCoverCurrentUpkeep() {
         AutomatedFacility facility = createFacility();
         ModuleInstance module = moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(1, 0), 1L);
-        facility.addModule(module);
+        addModule(facility, module);
 
         List<StationModuleAlert> alerts = StationModuleAlertRegistry.alertsFor(facility, module);
 
@@ -55,7 +56,7 @@ final class StationModuleAlertRegistryTest {
     void blockedUpkeepShortageIsRedAlert() {
         AutomatedFacility facility = createFacility();
         ModuleInstance module = moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(1, 0), 1L);
-        facility.addModule(module);
+        addModule(facility, module);
 
         tickUpkeepMinute(facility);
 
@@ -71,7 +72,7 @@ final class StationModuleAlertRegistryTest {
     void upkeepWarningClearsWhenInventoryCoversCurrentUpkeep() {
         AutomatedFacility facility = createFacility();
         ModuleInstance module = moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(1, 0), 1L);
-        facility.addModule(module);
+        addModule(facility, module);
         facility.insert(ItemStackWrapper.of(new ItemStack(Items.iron_ingot)), 1);
 
         List<StationModuleAlert> alerts = StationModuleAlertRegistry.alertsFor(facility, module);
@@ -86,8 +87,8 @@ final class StationModuleAlertRegistryTest {
         ModuleInstance low = moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(2, 0), 1L);
         high.setPriorityOverride(ModulePriority.HIGH);
         low.setPriorityOverride(ModulePriority.LOW);
-        facility.addModule(high);
-        facility.addModule(low);
+        addModule(facility, high);
+        addModule(facility, low);
         facility.insert(ItemStackWrapper.of(new ItemStack(Items.iron_ingot)), 1);
 
         assertEquals(List.of(), StationModuleAlertRegistry.alertsFor(facility, high));
@@ -105,7 +106,7 @@ final class StationModuleAlertRegistryTest {
         AutomatedFacility facility = createFacility();
         ModuleInstance module = moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(1, 0), 1L);
         ItemStackWrapper upkeepItem = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
-        facility.addModule(module);
+        addModule(facility, module);
         facility.insert(upkeepItem, 1);
 
         assertEquals(List.of(), StationModuleAlertRegistry.alertsFor(facility, module));

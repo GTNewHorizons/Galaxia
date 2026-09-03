@@ -1,22 +1,20 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.gtnewhorizons.galaxia.core.state.InventoryKeyState;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
-import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
-import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
+import cpw.mods.fml.common.network.ByteBufUtils;
 import io.netty.buffer.ByteBuf;
 
 /** Shared serialization helpers for outpost network packets. */
@@ -168,48 +166,13 @@ public final class PacketUtil {
         return CelestialObjectKey.minorBody(new MinorCelestialBodyId(parentBodyId, index));
     }
 
-    // ── ItemStack helpers ──────────────────────────────────────────────
+    // ── Inventory key helpers ─────────────────────────────────────────
 
     static void writeInventoryKey(ByteBuf buf, InventoryKey key) {
-        buf.writeBoolean(key.isItem());
-        writeString(buf, key.toKey());
+        ByteBufUtils.writeTag(buf, InventoryKeyState.encode(key));
     }
 
     static InventoryKey readInventoryKey(ByteBuf buf) {
-        final boolean item = buf.readBoolean();
-        if (item) {
-            return ItemStackWrapper.fromKey(readString(buf));
-        } else {
-            return FluidKey.fromName(readString(buf));
-        }
-    }
-
-    /**
-     * @param keys Must all be of the same type
-     */
-    static void writeInventoryKeys(ByteBuf buf, List<InventoryKey> keys) {
-        if (keys.isEmpty()) return;
-        buf.writeBoolean(
-            keys.getFirst()
-                .isItem());
-        buf.writeInt(keys.size());
-        for (InventoryKey key : keys) {
-            writeString(buf, key.toKey());
-        }
-    }
-
-    static List<InventoryKey> readInventoryKeys(ByteBuf buf) {
-        final boolean item = buf.readBoolean();
-        final int size = buf.readInt();
-        final List<InventoryKey> ret = new ArrayList<>(size);
-        for (int i = 0; i < size; i++) {
-            if (item) {
-                ret.add(ItemStackWrapper.fromKey(readString(buf)));
-            } else {
-                ret.add(FluidKey.fromName(readString(buf)));
-            }
-        }
-
-        return ret;
+        return InventoryKeyState.decode(ByteBufUtils.readTag(buf));
     }
 }

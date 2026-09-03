@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -327,7 +328,7 @@ final class FacilityModuleConfigurationCommandTest {
         byte y = (byte) (-28 + (index / 15) * 4);
         ModuleInstance module = kind.create(new StationTileCoord(x, y), kind.defaultShape(), kind.defaultTier());
         module.completeConstruction();
-        facility.addModule(module);
+        addModule(facility, module);
         facility.stationLayout()
             .place(module);
         return module;

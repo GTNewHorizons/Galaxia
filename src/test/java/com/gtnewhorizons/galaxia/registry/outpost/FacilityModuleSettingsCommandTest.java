@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -193,7 +194,7 @@ final class FacilityModuleSettingsCommandTest {
     }
 
     @Test
-    void subtypeCopyValidationAndStateRemainAuthoritative() {
+    void subtypeCopyKeepsPhysicalFocusTierAndCopiesFocusOre() {
         AutomatedFacility facility = facility();
         ModuleInstance source = addMiner(facility, moduleId(1), StationTileCoord.of(1, 0));
         ModuleInstance target = addMiner(facility, moduleId(2), StationTileCoord.of(4, 0));
@@ -201,17 +202,12 @@ final class FacilityModuleSettingsCommandTest {
         ModuleMiner targetMiner = (ModuleMiner) target.component();
         sourceMiner.setFocus(MinerFocusTier.I, "ore:iron", 0);
 
-        FacilityCommand.Result rejected = facility.applyCommand(
-            new FacilityCommand.CopyModuleSettings(facility.assetId, source.id, List.of(target.id)),
-            FacilityCommand.Authority.NONE);
-        assertEquals(FacilityCommand.Status.REJECTED, rejected.status());
-
-        targetMiner.setFocus(MinerFocusTier.I, "ore:copper", 0);
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(
                 new FacilityCommand.CopyModuleSettings(facility.assetId, source.id, List.of(target.id)),
                 FacilityCommand.Authority.NONE));
+        assertEquals(MinerFocusTier.NONE, targetMiner.focusTier());
         assertEquals("ore:iron", targetMiner.focusOreKeyOrNull());
     }
 
@@ -306,7 +302,7 @@ final class FacilityModuleSettingsCommandTest {
         ModuleInstance module = FacilityModuleRegistry
             .create(moduleId, kind, anchor, kind.defaultShape(), kind.defaultTier());
         module.completeConstruction();
-        facility.addModule(module);
+        addModule(facility, module);
         facility.stationLayout()
             .place(module);
         return module;

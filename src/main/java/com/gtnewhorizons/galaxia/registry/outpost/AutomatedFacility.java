@@ -61,14 +61,6 @@ import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
 
 public final class AutomatedFacility extends CelestialAsset {
 
-    public enum DeconstructionResult {
-        ACCEPTED,
-        NOT_FOUND,
-        ACTIVE_OPERATION,
-        INVALID_REFUND,
-        CAPACITY_EXCEEDED
-    }
-
     private static final Logger LOG = LogManager.getLogger(AutomatedFacility.class);
 
     private final FacilityInventory inventory = new FacilityInventory();
@@ -235,10 +227,9 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public long upkeepReserve(ItemStackWrapper item) {
         if (item == null) return 0L;
-        if (logisticsConfig.hasExplicit(item)) {
-            return logisticsConfig.get(item)
-                .minReserve();
-        }
+        long configuredReserve = logisticsConfig.get(item)
+            .minReserve();
+        if (configuredReserve > 0L) return configuredReserve;
         UpkeepAmount perMinute = upkeepSummary().itemsPerMinute()
             .get(item);
         if (perMinute == null || perMinute.isZero()) return 0L;
@@ -279,7 +270,7 @@ public final class AutomatedFacility extends CelestialAsset {
         return inventory.bound(key);
     }
 
-    public boolean trySetBound(InventoryKey key, long amount, boolean low) {
+    private boolean trySetBound(InventoryKey key, long amount, boolean low) {
         if (key == null) return false;
         InventoryBounds current = getBound(key);
         long nextLow = low ? amount : current.low();
@@ -931,14 +922,7 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private FacilityCommand.Result applyRequestModuleDeconstruction(
         FacilityCommand.RequestModuleDeconstruction command) {
-        return switch (requestModuleDeconstruction(command.moduleId())) {
-            case ACCEPTED -> FacilityCommand.Result.CHANGED;
-            case NOT_FOUND -> FacilityCommand.Result.rejected(FacilityCommand.Rejection.MODULE_NOT_FOUND);
-            case ACTIVE_OPERATION -> FacilityCommand.Result.rejected(FacilityCommand.Rejection.MODULE_OPERATION_ACTIVE);
-            case INVALID_REFUND -> FacilityCommand.Result
-                .rejected(FacilityCommand.Rejection.INVALID_DECONSTRUCTION_REFUND);
-            case CAPACITY_EXCEEDED -> FacilityCommand.Result.rejected(FacilityCommand.Rejection.CAPACITY_EXCEEDED);
-        };
+        return requestModuleDeconstruction(command.moduleId());
     }
 
     private FacilityCommand.Result applyCancelModuleOperation(FacilityCommand.CancelModuleOperation command) {
@@ -1042,7 +1026,7 @@ public final class AutomatedFacility extends CelestialAsset {
         return Collections.unmodifiableList(modules);
     }
 
-    public void addModule(ModuleInstance module) {
+    void addModule(ModuleInstance module) {
         if (modules.contains(module)) {
             LOG.warn(
                 "[PERSIST] addModule: duplicate module {} kind={} id={} (already present)",
@@ -1072,27 +1056,31 @@ public final class AutomatedFacility extends CelestialAsset {
         SatelliteNetworkService.refreshFacilityEndpoints(this);
     }
 
-    public DeconstructionResult requestModuleDeconstruction(ModuleInstance.ID moduleId) {
+    private FacilityCommand.Result requestModuleDeconstruction(ModuleInstance.ID moduleId) {
         ModuleInstance module = moduleById(moduleId);
-        if (module == null) return DeconstructionResult.NOT_FOUND;
-        if (module.operationOrNull() != null) return DeconstructionResult.ACTIVE_OPERATION;
+        if (module == null) return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MODULE_NOT_FOUND);
+        if (module.operationOrNull() != null) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MODULE_OPERATION_ACTIVE);
+        }
 
         DeconstructionRefund refund = deconstructionRefund(module);
-        if (refund == null) return DeconstructionResult.INVALID_REFUND;
+        if (refund == null) {
+            return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_DECONSTRUCTION_REFUND);
+        }
         if (module.kind() == FacilityModuleKind.STORAGE) {
             long projectedCapacity = projectedItemCapacityAfterRemoving(module.id);
             try {
                 if (Math.addExact(storedItemAmount(), refund.total()) > projectedCapacity) {
-                    return DeconstructionResult.CAPACITY_EXCEEDED;
+                    return FacilityCommand.Result.rejected(FacilityCommand.Rejection.CAPACITY_EXCEEDED);
                 }
             } catch (ArithmeticException overflow) {
-                return DeconstructionResult.INVALID_REFUND;
+                return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_DECONSTRUCTION_REFUND);
             }
         }
         if (refund.byKey()
             .isEmpty()) {
             finalizeModuleRemoval(module);
-            return DeconstructionResult.ACCEPTED;
+            return FacilityCommand.Result.CHANGED;
         }
 
         module.updateStatus(Status.DECONSTRUCTION);
@@ -1107,7 +1095,7 @@ public final class AutomatedFacility extends CelestialAsset {
             markDirty();
             SatelliteNetworkService.refreshFacilityEndpoints(this);
         }
-        return DeconstructionResult.ACCEPTED;
+        return FacilityCommand.Result.CHANGED;
     }
 
     private void finalizeModuleRemoval(ModuleInstance module) {
@@ -1831,7 +1819,7 @@ public final class AutomatedFacility extends CelestialAsset {
         return inventory.filtersSnapshot();
     }
 
-    public void setFilters(List<String> filters, boolean item) {
+    public void restoreFilters(List<String> filters, boolean item) {
         if (inventory.setFilters(filters, item)) markDirty();
     }
 

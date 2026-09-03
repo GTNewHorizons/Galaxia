@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.core.network;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -329,7 +330,7 @@ final class FacilityCommandGatewayTest {
             StationTileCoord.of(x, 0),
             FacilityModuleKind.MINER.defaultShape(),
             ModuleTier.EV);
-        facility.addModule(miner);
+        addModule(facility, miner);
         return miner;
     }
 

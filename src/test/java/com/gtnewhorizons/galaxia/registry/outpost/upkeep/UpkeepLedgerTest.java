@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.upkeep;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -134,7 +135,7 @@ final class UpkeepLedgerTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         for (ModuleInstance module : modules) {
-            facility.addModule(module);
+            addModule(facility, module);
         }
         facility.setStationFeatureSalt(neutralFeatureSalt(facility, modules));
         return facility;

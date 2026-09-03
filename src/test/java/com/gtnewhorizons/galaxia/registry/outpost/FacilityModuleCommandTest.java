@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -214,7 +215,7 @@ final class FacilityModuleCommandTest {
         sourceMiner.setFocus(MinerFocusTier.II, "ore:iron", 123);
         source.setTicks(17);
         source.setOperation(waitingOperation());
-        facility.addModule(source);
+        addModule(facility, source);
         setMinerOreBlacklisted(facility, source, "ore:iron", true);
 
         FacilityCommand.Result result = facility.applyCommand(
@@ -245,7 +246,7 @@ final class FacilityModuleCommandTest {
         AutomatedFacility facility = facility(CelestialAsset.Kind.AUTOMATED_OUTPOST);
         ModuleInstance source = FacilityModuleKind.MINER
             .create(StationTileCoord.of(5, 5), FacilityModuleKind.MINER.defaultShape(), ModuleTier.EV);
-        facility.addModule(source);
+        addModule(facility, source);
         assertSame(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(
@@ -386,7 +387,7 @@ final class FacilityModuleCommandTest {
         StationTileCoord anchor, boolean operational) {
         ModuleInstance module = kind.create(anchor, kind.defaultShape(), kind.defaultTier());
         if (operational) module.completeConstruction();
-        facility.addModule(module);
+        addModule(facility, module);
         facility.stationLayout()
             .place(module);
         return module;

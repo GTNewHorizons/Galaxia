@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.station;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -245,7 +246,7 @@ final class CapacityClusterBuilderTest {
         ModuleInstance battery = FacilityModuleKind.BATTERY
             .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.HV);
         battery.completeConstruction();
-        facility.addModule(battery);
+        addModule(facility, battery);
         facility.stationLayout()
             .place(battery);
 

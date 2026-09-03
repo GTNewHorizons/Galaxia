@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -54,8 +55,8 @@ final class StationItemInteractionModelTest {
         ItemStackWrapper resource = ItemStackWrapper.of(input);
         ModuleInstance first = createMachine(StationTileCoord.of(1, 0));
         ModuleInstance second = createMachine(StationTileCoord.of(2, 0));
-        facility.addModule(first);
-        facility.addModule(second);
+        addModule(facility, first);
+        addModule(facility, second);
         assertEquals(
             FacilityCommand.Result.CHANGED,
             facility.applyCommand(
@@ -83,11 +84,11 @@ final class StationItemInteractionModelTest {
         AutomatedFacility facility = createFacility();
         ItemStackWrapper resource = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
         facility.logisticsConfig.set(resource, new LogisticsResourceConfig(128, 64, true, true));
-        facility.addModule(createHammer(StationTileCoord.of(0, 0)));
+        addModule(facility, createHammer(StationTileCoord.of(0, 0)));
         ModuleInstance first = createMachine(StationTileCoord.of(1, 0));
         ModuleInstance second = createMachine(StationTileCoord.of(2, 0));
-        facility.addModule(first);
-        facility.addModule(second);
+        addModule(facility, first);
+        addModule(facility, second);
         createSharedGroup(facility, first, second, "Dust line");
 
         List<StationItemInteractionModel.Entry> entries = StationItemInteractionModel.forItem(facility, resource);
@@ -111,9 +112,9 @@ final class StationItemInteractionModelTest {
     void upkeepSplitsSameKindModulesWithDifferentDemand() {
         AutomatedFacility facility = createFacility();
         ItemStackWrapper resource = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
-        facility.addModule(moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(1, 0), 1L));
-        facility.addModule(moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(2, 0), 1L));
-        facility.addModule(moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(3, 0), 2L));
+        addModule(facility, moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(1, 0), 1L));
+        addModule(facility, moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(2, 0), 1L));
+        addModule(facility, moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(3, 0), 2L));
 
         List<Integer> counts = StationItemInteractionModel.forItem(facility, resource)
             .stream()
@@ -130,9 +131,9 @@ final class StationItemInteractionModelTest {
     void modulesWithoutExplicitUpkeepDoNotCreateEntries() {
         AutomatedFacility facility = createFacility();
         ItemStackWrapper resource = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
-        facility.addModule(createModule(FacilityModuleKind.POWER, StationTileCoord.of(1, 0)));
-        facility.addModule(createModule(FacilityModuleKind.POWER, StationTileCoord.of(2, 0)));
-        facility.addModule(createModule(FacilityModuleKind.POWER, StationTileCoord.of(3, 0)));
+        addModule(facility, createModule(FacilityModuleKind.POWER, StationTileCoord.of(1, 0)));
+        addModule(facility, createModule(FacilityModuleKind.POWER, StationTileCoord.of(2, 0)));
+        addModule(facility, createModule(FacilityModuleKind.POWER, StationTileCoord.of(3, 0)));
 
         List<StationItemInteractionModel.Entry> upkeepEntries = StationItemInteractionModel.forItem(facility, resource)
             .stream()

@@ -51,6 +51,7 @@ import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
@@ -1004,8 +1005,8 @@ final class FacilityPersistenceManagerTest {
             CelestialObjectId.MARS,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        facility.setFilters(List.of("ore:iron", "ore:copper"), true);
-        facility.setFilters(List.of(FluidRegistry.WATER.getName()), false);
+        facility.restoreFilters(List.of("ore:iron", "ore:copper"), true);
+        facility.restoreFilters(List.of(FluidRegistry.WATER.getName()), false);
         CelestialAssetStore.clear();
         CelestialAssetStore.registerAsset(teamId, facility);
         manager.saveToSaveDirectory(tempDir.toFile());
@@ -1070,8 +1071,8 @@ final class FacilityPersistenceManagerTest {
         String fluidFilter = fluid.fluid()
             .getName();
         station.restoreInventory(Map.of(item, storedItems, fluid, 4096L));
-        station.setFilters(List.of(itemFilter), true);
-        station.setFilters(List.of(fluidFilter), false);
+        station.restoreFilters(List.of(itemFilter), true);
+        station.restoreFilters(List.of(fluidFilter), false);
 
         CelestialAssetStore.clear();
         CelestialAssetStore.registerAsset(teamId, station);
@@ -1229,7 +1230,7 @@ final class FacilityPersistenceManagerTest {
         ModuleInstance module = FacilityModuleRegistry
             .create(ModuleInstance.ID.create(), kind, anchor, ModuleShape.SINGLE, kind.defaultTier());
         module.updateStatus(status);
-        station.addModule(module);
+        FacilityTestFixtures.addModule(station, module);
         return module;
     }
 
@@ -1265,7 +1266,7 @@ final class FacilityPersistenceManagerTest {
         quad.updateStatus(Buildable.Status.OPERATIONAL);
         quad.initAnchor(StationTileCoord.of(5, 5));
         quad.setRotation(1);
-        station.addModule(quad);
+        FacilityTestFixtures.addModule(station, quad);
         StationLayout layout = station.stationLayout();
         assertNotNull(layout);
         layout.place(quad);
@@ -1275,7 +1276,7 @@ final class FacilityPersistenceManagerTest {
             .create(ModuleInstance.ID.create(), FacilityModuleKind.MINER, null, ModuleShape.BLOCK_3x3, ModuleTier.EV);
         block.updateStatus(Buildable.Status.OPERATIONAL);
         block.initAnchor(StationTileCoord.of(-5, -5));
-        station.addModule(block);
+        FacilityTestFixtures.addModule(station, block);
         layout.place(block);
 
         NBTTagCompound encoded = facilityTag(station);
@@ -1997,7 +1998,7 @@ final class FacilityPersistenceManagerTest {
         ModuleInstance module = FacilityModuleRegistry.create(ModuleInstance.ID.create(), kind, null, shape, tier);
         module.updateStatus(status);
         module.initAnchor(coord);
-        station.addModule(module);
+        FacilityTestFixtures.addModule(station, module);
         StationLayout layout = station.stationLayout();
         assertNotNull(layout);
         layout.place(module);
