@@ -97,11 +97,7 @@ public final class SatelliteDataTransferPlanner {
                 remainingDemand);
         }
         List<Transfer> resolvedTransfers = preferLocalExchangeForOpposingDemand(transfers);
-        return new Plan(
-            resolvedTransfers,
-            usedByEdge(resolvedTransfers),
-            directedUsedByEdge(resolvedTransfers),
-            usedByBody(resolvedTransfers));
+        return summarizeTransfers(resolvedTransfers);
     }
 
     private static List<Route> routesForProducedData(SatelliteNetworkState networkState, List<Demand> demands,
@@ -260,20 +256,13 @@ public final class SatelliteDataTransferPlanner {
     static void mergeDirectedUsage(Map<SatelliteNetworkGraph.DirectedEdge, Long> target, CelestialObjectKey source,
         CelestialObjectKey destination, List<SatelliteNetworkGraph.Edge> path, long usedKbps) {
         if (target == null || source == null || destination == null || path == null || usedKbps <= 0L) return;
-        CelestialObjectKey current = source;
-        for (SatelliteNetworkGraph.Edge edge : path) {
-            CelestialObjectKey next = edge.from()
-                .equals(current) ? edge.to()
-                    : edge.to()
-                        .equals(current) ? edge.from() : null;
-            if (next == null) return;
+        List<CelestialObjectKey> bodies = routeBodies(source, path);
+        for (int i = 1; i < bodies.size(); i++) {
             target.merge(
-                new SatelliteNetworkGraph.DirectedEdge(current, next),
+                new SatelliteNetworkGraph.DirectedEdge(bodies.get(i - 1), bodies.get(i)),
                 usedKbps,
                 SatelliteDataTransferPlanner::addSaturated);
-            current = next;
         }
-        if (!current.equals(destination)) return;
     }
 
     private static List<Transfer> preferLocalExchangeForOpposingDemand(List<Transfer> transfers) {
@@ -350,15 +339,9 @@ public final class SatelliteDataTransferPlanner {
 
     private static Set<SatelliteNetworkGraph.DirectedEdge> directedPath(Transfer transfer) {
         Set<SatelliteNetworkGraph.DirectedEdge> directedEdges = new HashSet<>();
-        CelestialObjectKey current = transfer.sourceBodyKey();
-        for (SatelliteNetworkGraph.Edge edge : transfer.path()) {
-            CelestialObjectKey next = edge.from()
-                .equals(current) ? edge.to()
-                    : edge.to()
-                        .equals(current) ? edge.from() : null;
-            if (next == null) return directedEdges;
-            directedEdges.add(new SatelliteNetworkGraph.DirectedEdge(current, next));
-            current = next;
+        List<CelestialObjectKey> bodies = routeBodies(transfer.sourceBodyKey(), transfer.path());
+        for (int i = 1; i < bodies.size(); i++) {
+            directedEdges.add(new SatelliteNetworkGraph.DirectedEdge(bodies.get(i - 1), bodies.get(i)));
         }
         return directedEdges;
     }
@@ -371,47 +354,30 @@ public final class SatelliteDataTransferPlanner {
         return false;
     }
 
-    /*
-     * Collapsed link usage drives link colour. Opposite directions add together here because a link has one shared
-     * capacity pool regardless of packet direction.
+    /**
+     * Rebuilds usage after opposing transfers have been replaced by local exchanges.
+     * Links share capacity in both directions, and every body on a remote path pays bandwidth.
      */
-    private static Map<SatelliteNetworkGraph.Edge, Long> usedByEdge(List<Transfer> transfers) {
-        Map<SatelliteNetworkGraph.Edge, Long> usedByEdge = new HashMap<>();
+    private static Plan summarizeTransfers(List<Transfer> transfers) {
+        Map<SatelliteNetworkGraph.Edge, Long> edges = new HashMap<>();
+        Map<SatelliteNetworkGraph.DirectedEdge, Long> directed = new HashMap<>();
+        Map<CelestialObjectKey, Long> bodies = new HashMap<>();
         for (Transfer transfer : transfers) {
             long usedKbps = transferUsedKbps(transfer);
             if (usedKbps <= 0L) continue;
-            for (SatelliteNetworkGraph.Edge edge : transfer.path())
-                usedByEdge.merge(edge, usedKbps, SatelliteDataTransferPlanner::addSaturated);
+            for (SatelliteNetworkGraph.Edge edge : transfer.path()) {
+                edges.merge(edge, usedKbps, SatelliteDataTransferPlanner::addSaturated);
+            }
+            List<CelestialObjectKey> pathBodies = routeBodies(transfer.sourceBodyKey(), transfer.path());
+            for (int i = 0; i < pathBodies.size(); i++) {
+                bodies.merge(pathBodies.get(i), usedKbps, SatelliteDataTransferPlanner::addSaturated);
+                if (i > 0) directed.merge(
+                    new SatelliteNetworkGraph.DirectedEdge(pathBodies.get(i - 1), pathBodies.get(i)),
+                    usedKbps,
+                    SatelliteDataTransferPlanner::addSaturated);
+            }
         }
-        return usedByEdge;
-    }
-
-    private static Map<SatelliteNetworkGraph.DirectedEdge, Long> directedUsedByEdge(List<Transfer> transfers) {
-        Map<SatelliteNetworkGraph.DirectedEdge, Long> directedUsedByEdge = new HashMap<>();
-        for (Transfer transfer : transfers) {
-            mergeDirectedUsage(
-                directedUsedByEdge,
-                transfer.sourceBodyKey(),
-                transfer.destinationBodyKey(),
-                transfer.path(),
-                transferUsedKbps(transfer));
-        }
-        return directedUsedByEdge;
-    }
-
-    /*
-     * Body usage is charged to every node on the path, including relay bodies. This is what prevents two inbound routes
-     * from exceeding the destination or relay planet's local satellite bandwidth.
-     */
-    private static Map<CelestialObjectKey, Long> usedByBody(List<Transfer> transfers) {
-        Map<CelestialObjectKey, Long> usedByBody = new HashMap<>();
-        for (Transfer transfer : transfers) {
-            long usedKbps = transferUsedKbps(transfer);
-            if (usedKbps <= 0L) continue;
-            for (CelestialObjectKey bodyKey : routeBodies(transfer.sourceBodyKey(), transfer.path()))
-                usedByBody.merge(bodyKey, usedKbps, SatelliteDataTransferPlanner::addSaturated);
-        }
-        return usedByBody;
+        return new Plan(transfers, edges, directed, bodies);
     }
 
     /*

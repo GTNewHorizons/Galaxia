@@ -84,8 +84,8 @@ final class AutomatedFacilityDeconstructionTest {
             plan,
             com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase.REFUNDING,
             0,
-            Map.of("minecraft:iron_ingot:0", 3L),
-            Map.of("minecraft:gold_ingot:0", 2L));
+            Map.of(ItemStackWrapper.of(new ItemStack(Items.iron_ingot)), 3L),
+            Map.of(ItemStackWrapper.of(new ItemStack(Items.gold_ingot)), 2L));
         module.setOperation(operation);
 
         assertSame(FacilityCommand.Rejection.MODULE_OPERATION_ACTIVE, deconstruct(facility, module).rejection());

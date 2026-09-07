@@ -3,7 +3,6 @@ package com.gtnewhorizons.galaxia.registry.outpost.station;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -19,8 +18,6 @@ public final class LayoutCacheBundle {
 
     private final @Nullable StationLayout layout;
 
-    private final Map<FacilityModuleKind, Integer> duplicateCounts = new EnumMap<>(FacilityModuleKind.class);
-
     private final Map<FacilityModuleKind, List<CapacityCluster>> capacityClusters = new EnumMap<>(
         FacilityModuleKind.class);
     private boolean capacityClustersDirty = true;
@@ -32,50 +29,22 @@ public final class LayoutCacheBundle {
         this.layout = layout;
     }
 
-    public static EnumSet<CacheKind> affectedBy(MutationKind mutation, FacilityModuleKind kind) {
-        EnumSet<CacheKind> result = EnumSet.noneOf(CacheKind.class);
+    public void applyMutation(MutationKind mutation, FacilityModuleKind kind) {
         switch (mutation) {
             case PLACE, DECONSTRUCT -> {
-                result.add(CacheKind.DUPLICATE_COUNTS);
-                if (kind.isCapacityModule()) {
-                    result.add(CacheKind.CAPACITY_CLUSTERS);
-                }
-                if (hasAreaEffects(kind)) {
-                    result.add(CacheKind.MAINTENANCE_COVERAGE);
-                }
+                capacityClustersDirty |= kind.isCapacityModule();
+                maintenanceCoverageDirty |= hasAreaEffects(kind);
             }
-            case SET_TIER -> {
-                if (kind.isCapacityModule()) {
-                    result.add(CacheKind.CAPACITY_CLUSTERS);
-                }
-            }
-            case SET_ENABLED -> {
-                if (hasAreaEffects(kind)) {
-                    result.add(CacheKind.MAINTENANCE_COVERAGE);
-                }
-            }
-            // TODO: To be implemented in T7.4
+            case SET_TIER -> capacityClustersDirty |= kind.isCapacityModule();
+            case SET_ENABLED -> maintenanceCoverageDirty |= hasAreaEffects(kind);
             case SET_PARALLEL -> {}
         }
-        return result;
     }
 
     private static boolean hasAreaEffects(FacilityModuleKind kind) {
         FacilityModuleRegistry.Definition definition = FacilityModuleRegistry.get(kind);
         return definition != null && !definition.areaEffects()
             .isEmpty();
-    }
-
-    public void applyMutation(MutationKind mutation, FacilityModuleKind kind) {
-        invalidate(affectedBy(mutation, kind), mutation, kind);
-    }
-
-    public void applyMutation(MutationKind mutation, FacilityModuleKind kind, ModuleInstance module) {
-        invalidate(affectedBy(mutation, kind), mutation, kind);
-    }
-
-    public int duplicateCount(FacilityModuleKind kind) {
-        return duplicateCounts.getOrDefault(kind, 0);
     }
 
     public List<CapacityCluster> getCapacityClusters(FacilityModuleKind kind) {
@@ -133,22 +102,4 @@ public final class LayoutCacheBundle {
         maintenanceCoverageDirty = false;
     }
 
-    private void invalidate(EnumSet<CacheKind> caches, MutationKind mutation, FacilityModuleKind kind) {
-        if (caches.contains(CacheKind.DUPLICATE_COUNTS)) {
-            switch (mutation) {
-                case PLACE -> duplicateCounts.merge(kind, 1, Integer::sum);
-                case DECONSTRUCT -> duplicateCounts.computeIfPresent(kind, (k, v) -> Math.max(0, v - 1));
-                case SET_TIER -> {}
-                case SET_ENABLED -> {}
-                // TODO: To be implemented in T7.4
-                case SET_PARALLEL -> {}
-            }
-        }
-        if (caches.contains(CacheKind.CAPACITY_CLUSTERS)) {
-            capacityClustersDirty = true;
-        }
-        if (caches.contains(CacheKind.MAINTENANCE_COVERAGE)) {
-            maintenanceCoverageDirty = true;
-        }
-    }
 }

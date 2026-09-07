@@ -63,61 +63,28 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
 
     void openHammer(ModuleInstance.ID moduleId) {
         if (ModuleConfigModalSupport.module(assetId, moduleId) == null) return;
-        if (closeIfSame(Kind.HAMMER, moduleId)) return;
-        overlayCoordinator.closeOthers(this);
-        close();
-        this.kind = Kind.HAMMER;
-        this.moduleId = moduleId;
-        this.minerBlacklistPage = 0;
-        this.moduleOperationCancelArmed = false;
+        if (!prepareOpen(Kind.HAMMER, moduleId)) return;
 
         HammerConfigModalWidget widget = new HammerConfigModalWidget(assetId, this);
-        widget.left(x)
-            .top(y)
-            .width(HammerConfigModalWidget.WIDTH)
-            .height(HammerConfigModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
+        mount(widget, HammerConfigModalWidget.WIDTH, HammerConfigModalWidget.HEIGHT);
     }
 
     void openUpgrade(ModuleInstance.ID moduleId) {
         ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleId);
         if (module == null || !ModuleUpgradeUiModel.supports(module)) return;
-        if (closeIfSame(Kind.MODULE_UPGRADE, module.id)) return;
-        overlayCoordinator.closeOthers(this);
-        close();
-        this.kind = Kind.MODULE_UPGRADE;
-        this.moduleId = module.id;
+        if (!prepareOpen(Kind.MODULE_UPGRADE, module.id)) return;
         this.moduleUpgradeSelection = ModuleUpgradeUiModel.defaultSelection(module);
-        this.hammerUpgradeReserveItems = false;
-        this.hammerUpgradeVoidRefund = false;
-        this.moduleOperationCancelArmed = false;
 
         ModuleUpgradeModalWidget widget = new ModuleUpgradeModalWidget(assetId, this, tilePickerController);
-        widget.left(x)
-            .top(y)
-            .width(ModuleUpgradeModalWidget.WIDTH)
-            .height(ModuleUpgradeModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
+        mount(widget, ModuleUpgradeModalWidget.WIDTH, ModuleUpgradeModalWidget.HEIGHT);
     }
 
     void openLogistics(ModuleInstance.ID moduleId) {
         if (ModuleConfigModalSupport.module(assetId, moduleId) == null) return;
-        if (closeIfSame(Kind.LOGISTICS, moduleId)) return;
-        overlayCoordinator.closeOthers(this);
-        close();
-        this.kind = Kind.LOGISTICS;
-        this.moduleId = moduleId;
-        this.logisticsAccessMode = LogisticsConfigAccessMode.FULL;
+        if (!prepareOpen(Kind.LOGISTICS, moduleId)) return;
 
         LogisticsConfigModalWidget widget = new LogisticsConfigModalWidget(assetId, this);
-        widget.left(x)
-            .top(y)
-            .width(LogisticsConfigModalWidget.WIDTH)
-            .height(LogisticsConfigModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
+        mount(widget, LogisticsConfigModalWidget.WIDTH, LogisticsConfigModalWidget.HEIGHT);
     }
 
     void openStationLogistics() {
@@ -129,88 +96,63 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
     }
 
     private void openStationLogistics(LogisticsConfigAccessMode accessMode) {
-        if (closeIfSame(Kind.LOGISTICS, null)) return;
-        overlayCoordinator.closeOthers(this);
-        close();
-        this.kind = Kind.LOGISTICS;
-        this.moduleId = null;
+        if (!prepareOpen(Kind.LOGISTICS, null)) return;
         this.logisticsAccessMode = accessMode == null ? LogisticsConfigAccessMode.FULL : accessMode;
 
         LogisticsConfigModalWidget widget = new LogisticsConfigModalWidget(assetId, this);
-        widget.left(x)
-            .top(y)
-            .width(LogisticsConfigModalWidget.WIDTH)
-            .height(LogisticsConfigModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
+        mount(widget, LogisticsConfigModalWidget.WIDTH, LogisticsConfigModalWidget.HEIGHT);
     }
 
     void openMinerBlacklist(ModuleInstance.ID moduleId) {
         if (ModuleConfigModalSupport.module(assetId, moduleId) == null) return;
-        if (closeIfSame(Kind.MINER_BLACKLIST, moduleId)) return;
-        overlayCoordinator.closeOthers(this);
-        close();
-        this.kind = Kind.MINER_BLACKLIST;
-        this.moduleId = moduleId;
-        this.minerBlacklistPage = 0;
-        this.moduleOperationCancelArmed = false;
+        if (!prepareOpen(Kind.MINER_BLACKLIST, moduleId)) return;
 
         MinerBlacklistConfigModalWidget widget = new MinerBlacklistConfigModalWidget(
             assetId,
             this,
             tilePickerController);
-        widget.left(x)
-            .top(y)
-            .width(MinerBlacklistConfigModalWidget.WIDTH)
-            .height(MinerBlacklistConfigModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
+        mount(widget, MinerBlacklistConfigModalWidget.WIDTH, MinerBlacklistConfigModalWidget.HEIGHT);
     }
 
     void openRecipeConfig(ModuleInstance.ID moduleId) {
         ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleId);
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         if (facility == null || module == null || module.recipe() == null) return;
-        if (closeIfSame(Kind.RECIPE_CONFIG, module.id)) return;
-        overlayCoordinator.closeOthers(this);
-        close();
-        this.kind = Kind.RECIPE_CONFIG;
-        this.moduleId = module.id;
+        if (!prepareOpen(Kind.RECIPE_CONFIG, module.id)) return;
 
         RecipeBookEditorModel editor = RecipeBookEditorModel.edit(module.id, facility.recipeBook(module));
         RecipeConfigModalWidget widget = new RecipeConfigModalWidget(assetId, this, tilePickerController, editor);
-        widget.left(x)
-            .top(y)
-            .width(RecipeConfigModalWidget.WIDTH)
-            .height(RecipeConfigModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
+        mount(widget, RecipeConfigModalWidget.WIDTH, RecipeConfigModalWidget.HEIGHT);
     }
 
     void openDebugDataGenerator(ModuleInstance.ID moduleId) {
         ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleId);
         if (module == null || !(module.component() instanceof ModuleDebugDataGenerator)) return;
-        if (closeIfSame(Kind.DEBUG_DATA_GENERATOR, module.id)) return;
-        overlayCoordinator.closeOthers(this);
-        close();
-        this.kind = Kind.DEBUG_DATA_GENERATOR;
-        this.moduleId = module.id;
+        if (!prepareOpen(Kind.DEBUG_DATA_GENERATOR, module.id)) return;
 
         DebugDataGeneratorConfigModalWidget widget = new DebugDataGeneratorConfigModalWidget(assetId, this);
-        widget.left(x)
-            .top(y)
-            .width(DebugDataGeneratorConfigModalWidget.WIDTH)
-            .height(DebugDataGeneratorConfigModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
+        mount(widget, DebugDataGeneratorConfigModalWidget.WIDTH, DebugDataGeneratorConfigModalWidget.HEIGHT);
     }
 
-    private boolean closeIfSame(Kind targetKind, ModuleInstance.ID targetModuleId) {
+    private boolean prepareOpen(Kind targetKind, ModuleInstance.ID targetModuleId) {
         if (kind == targetKind && Objects.equals(moduleId, targetModuleId)) {
             close();
-            return true;
+            return false;
         }
-        return false;
+        overlayCoordinator.closeOthers(this);
+        close();
+        kind = targetKind;
+        moduleId = targetModuleId;
+        return true;
+    }
+
+    private void mount(ParentWidget<?> widget, int width, int height) {
+        widget.left(x)
+            .top(y)
+            .width(width)
+            .height(height);
+        modal = widget;
+        host.child(widget);
     }
 
     @Override

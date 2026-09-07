@@ -6,16 +6,19 @@ import java.util.Map;
 
 import javax.annotation.Nonnull;
 
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+
 public final class ModuleOperationState {
 
     private ModuleOperationPlan plan;
     private ModuleOperationPhase phase;
     private int elapsedBuildTicks;
-    private Map<String, Long> depositedResources;
-    private Map<String, Long> refundBuffer;
+    private Map<ItemStackWrapper, Long> depositedResources;
+    private Map<ItemStackWrapper, Long> refundBuffer;
 
     private ModuleOperationState(@Nonnull ModuleOperationPlan plan, @Nonnull ModuleOperationPhase phase,
-        int elapsedBuildTicks, @Nonnull Map<String, Long> depositedResources, @Nonnull Map<String, Long> refundBuffer) {
+        int elapsedBuildTicks, @Nonnull Map<ItemStackWrapper, Long> depositedResources,
+        @Nonnull Map<ItemStackWrapper, Long> refundBuffer) {
         if (plan == null) {
             throw new IllegalArgumentException("plan must not be null");
         }
@@ -37,13 +40,14 @@ public final class ModuleOperationState {
         return new ModuleOperationState(plan, ModuleOperationPhase.WAITING_FOR_MATERIALS, 0, Map.of(), Map.of());
     }
 
-    public static ModuleOperationState deconstructing(@Nonnull Map<String, Long> refundBuffer) {
+    public static ModuleOperationState deconstructing(@Nonnull Map<ItemStackWrapper, Long> refundBuffer) {
         ModuleOperationPlan plan = new ModuleOperationPlan(IModuleOperation.DECONSTRUCTION, 0, Map.of(), false);
         return new ModuleOperationState(plan, ModuleOperationPhase.REFUNDING, 0, Map.of(), refundBuffer);
     }
 
     public static ModuleOperationState restore(@Nonnull ModuleOperationPlan plan, @Nonnull ModuleOperationPhase phase,
-        int elapsedBuildTicks, @Nonnull Map<String, Long> depositedResources, @Nonnull Map<String, Long> refundBuffer) {
+        int elapsedBuildTicks, @Nonnull Map<ItemStackWrapper, Long> depositedResources,
+        @Nonnull Map<ItemStackWrapper, Long> refundBuffer) {
         return new ModuleOperationState(plan, phase, elapsedBuildTicks, depositedResources, refundBuffer);
     }
 
@@ -59,11 +63,11 @@ public final class ModuleOperationState {
         return elapsedBuildTicks;
     }
 
-    public Map<String, Long> depositedResources() {
+    public Map<ItemStackWrapper, Long> depositedResources() {
         return depositedResources;
     }
 
-    public Map<String, Long> refundBuffer() {
+    public Map<ItemStackWrapper, Long> refundBuffer() {
         return refundBuffer;
     }
 
@@ -71,13 +75,13 @@ public final class ModuleOperationState {
         return plan.reserveItems();
     }
 
-    public ModuleOperationState withDepositedResources(@Nonnull Map<String, Long> updatedDeposits) {
+    public ModuleOperationState withDepositedResources(@Nonnull Map<ItemStackWrapper, Long> updatedDeposits) {
         this.depositedResources = sanitizeItemAmounts(updatedDeposits, "depositedResources");
         validatePhaseDataConsistency();
         return this;
     }
 
-    public ModuleOperationState withRefundBuffer(@Nonnull Map<String, Long> updatedRefundBuffer) {
+    public ModuleOperationState withRefundBuffer(@Nonnull Map<ItemStackWrapper, Long> updatedRefundBuffer) {
         this.refundBuffer = sanitizeItemAmounts(updatedRefundBuffer, "refundBuffer");
         validatePhaseDataConsistency();
         return this;
@@ -93,7 +97,7 @@ public final class ModuleOperationState {
         return this;
     }
 
-    public ModuleOperationState refundAfterCompletion(@Nonnull Map<String, Long> completionRefund) {
+    public ModuleOperationState refundAfterCompletion(@Nonnull Map<ItemStackWrapper, Long> completionRefund) {
         if (phase != ModuleOperationPhase.COMPLETE) {
             throw new IllegalStateException("refundAfterCompletion requires COMPLETE phase, got " + phase);
         }
@@ -182,20 +186,19 @@ public final class ModuleOperationState {
         }
     }
 
-    private static Map<String, Long> sanitizeItemAmounts(Map<String, Long> raw, String fieldName) {
+    private static Map<ItemStackWrapper, Long> sanitizeItemAmounts(Map<ItemStackWrapper, Long> raw, String fieldName) {
         if (raw == null) {
             throw new IllegalArgumentException(fieldName + " must not be null");
         }
         if (raw.isEmpty()) {
             return Map.of();
         }
-        Map<String, Long> sanitized = new LinkedHashMap<>();
-        for (Map.Entry<String, Long> entry : raw.entrySet()) {
-            String itemKey = entry.getKey();
+        Map<ItemStackWrapper, Long> sanitized = new LinkedHashMap<>();
+        for (Map.Entry<ItemStackWrapper, Long> entry : raw.entrySet()) {
+            ItemStackWrapper itemKey = entry.getKey();
             Long amount = entry.getValue();
-            if (itemKey == null || itemKey.trim()
-                .isEmpty()) {
-                throw new IllegalArgumentException(fieldName + " contains null/blank item key");
+            if (itemKey == null) {
+                throw new IllegalArgumentException(fieldName + " contains null item key");
             }
             if (amount == null || amount <= 0) {
                 throw new IllegalArgumentException(

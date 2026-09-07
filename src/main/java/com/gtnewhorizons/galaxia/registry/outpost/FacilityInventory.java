@@ -44,32 +44,36 @@ final class FacilityInventory {
 
     ExchangeResult tryExchange(Map<? extends InventoryKey, Long> inputs, Map<? extends InventoryKey, Long> outputs,
         long itemCapacity) {
-        Map<InventoryKey, Long> normalizedInputs = immutableExchangeAmounts(inputs, "inputs");
-        Map<InventoryKey, Long> normalizedOutputs = immutableExchangeAmounts(outputs, "outputs");
-        if (normalizedInputs.isEmpty() && normalizedOutputs.isEmpty()) return ExchangeResult.REJECTED;
-        if (!allowsOutputs(normalizedOutputs)) return ExchangeResult.REJECTED;
-
-        Set<InventoryKey> touched = touchedResources(normalizedInputs, normalizedOutputs);
+        validateExchangeAmounts(inputs, "inputs");
+        validateExchangeAmounts(outputs, "outputs");
         Map<InventoryKey, Long> finalAmounts = new LinkedHashMap<>();
-        boolean changed = false;
-        for (InventoryKey resource : touched) {
-            long stored = amount(resource);
-            long input = normalizedInputs.getOrDefault(resource, 0L);
-            if (stored < input) return ExchangeResult.REJECTED;
+        for (var entry : inputs.entrySet()) {
+            if (entry.getValue() == 0L) continue;
+            long stored = amount(entry.getKey());
+            if (stored < entry.getValue()) return ExchangeResult.REJECTED;
+            finalAmounts.put(entry.getKey(), stored - entry.getValue());
+        }
+        boolean hasItemOutput = false;
+        for (var entry : outputs.entrySet()) {
+            if (entry.getValue() == 0L) continue;
+            InventoryKey resource = entry.getKey();
+            if (!allowsInsertion(resource)) return ExchangeResult.REJECTED;
+            hasItemOutput |= resource.isItem();
             try {
-                long finalAmount = Math.addExact(stored - input, normalizedOutputs.getOrDefault(resource, 0L));
-                finalAmounts.put(resource, finalAmount);
-                changed |= finalAmount != stored;
+                finalAmounts.put(
+                    resource,
+                    Math.addExact(finalAmounts.getOrDefault(resource, amount(resource)), entry.getValue()));
             } catch (ArithmeticException ignored) {
                 return ExchangeResult.REJECTED;
             }
         }
-        if (normalizedOutputs.keySet()
+        if (finalAmounts.isEmpty()) return ExchangeResult.REJECTED;
+        if (hasItemOutput && !fitsItemCapacity(finalAmounts, itemCapacity)) return ExchangeResult.REJECTED;
+        if (finalAmounts.entrySet()
             .stream()
-            .anyMatch(InventoryKey::isItem) && !fitsItemCapacity(finalAmounts, itemCapacity)) {
-            return ExchangeResult.REJECTED;
+            .allMatch(entry -> entry.getValue() == amount(entry.getKey()))) {
+            return ExchangeResult.UNCHANGED;
         }
-        if (!changed) return ExchangeResult.UNCHANGED;
 
         for (Map.Entry<InventoryKey, Long> entry : finalAmounts.entrySet()) {
             setAmount(amounts, entry.getKey(), entry.getValue());
@@ -299,24 +303,9 @@ final class FacilityInventory {
             : fluidFilter.test((FluidKey) resource);
     }
 
-    private boolean allowsOutputs(Map<InventoryKey, Long> outputs) {
-        for (InventoryKey resource : outputs.keySet()) {
-            if (!allowsInsertion(resource)) return false;
-        }
-        return true;
-    }
-
-    private static Set<InventoryKey> touchedResources(Map<InventoryKey, Long> inputs, Map<InventoryKey, Long> outputs) {
-        Set<InventoryKey> touched = new LinkedHashSet<>(inputs.keySet());
-        touched.addAll(outputs.keySet());
-        return touched;
-    }
-
-    private static Map<InventoryKey, Long> immutableExchangeAmounts(Map<? extends InventoryKey, Long> amounts,
-        String role) {
+    private static void validateExchangeAmounts(Map<? extends InventoryKey, Long> amounts, String role) {
         if (amounts == null)
             throw new IllegalArgumentException("Facility inventory exchange " + role + " must not be null");
-        Map<InventoryKey, Long> copy = new LinkedHashMap<>();
         for (Map.Entry<? extends InventoryKey, Long> entry : amounts.entrySet()) {
             if (entry.getKey() == null || entry.getValue() == null) {
                 throw new IllegalArgumentException("Facility inventory exchange " + role + " must not contain nulls");
@@ -324,16 +313,18 @@ final class FacilityInventory {
             if (entry.getValue() < 0L) {
                 throw new IllegalArgumentException("Facility inventory exchange " + role + " must be non-negative");
             }
-            if (entry.getValue() > 0L) copy.put(entry.getKey(), entry.getValue());
         }
-        return Collections.unmodifiableMap(copy);
     }
 
     private boolean fitsItemCapacity(Map<InventoryKey, Long> finalAmounts, long capacity) {
-        Map<InventoryKey, Long> projected = new LinkedHashMap<>(amounts);
-        projected.putAll(finalAmounts);
         long remaining = Math.max(0L, capacity);
-        for (Map.Entry<InventoryKey, Long> entry : projected.entrySet()) {
+        for (var entry : amounts.entrySet()) {
+            if (!entry.getKey()
+                .isItem() || finalAmounts.containsKey(entry.getKey())) continue;
+            if (entry.getValue() > remaining) return false;
+            remaining -= entry.getValue();
+        }
+        for (var entry : finalAmounts.entrySet()) {
             if (!entry.getKey()
                 .isItem()) continue;
             if (entry.getValue() > remaining) return false;

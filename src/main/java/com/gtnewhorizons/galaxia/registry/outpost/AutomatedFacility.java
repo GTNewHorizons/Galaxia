@@ -636,17 +636,9 @@ public final class AutomatedFacility extends CelestialAsset {
             if (reserveItems && !entry.getValue()
                 .materialCost()
                 .isEmpty()) {
-                Map<String, Long> deposited = new LinkedHashMap<>();
-                for (Map.Entry<ItemStackWrapper, Long> material : entry.getValue()
-                    .materialCost()
-                    .entrySet()) {
-                    deposited.merge(
-                        material.getKey()
-                            .toKey(),
-                        material.getValue(),
-                        Math::addExact);
-                }
-                operation.withDepositedResources(deposited);
+                operation.withDepositedResources(
+                    entry.getValue()
+                        .materialCost());
             }
             entry.getKey()
                 .setOperation(operation);
@@ -800,7 +792,7 @@ public final class AutomatedFacility extends CelestialAsset {
         for (ModuleInstance module : prepared) {
             attachModuleWithoutRevision(module, settingsPlans.get(module.id));
             layout.place(module);
-            layoutCache.applyMutation(MutationKind.PLACE, module.kind(), module);
+            layoutCache.applyMutation(MutationKind.PLACE, module.kind());
         }
         markDirty();
         SatelliteNetworkService.refreshFacilityEndpoints(this);
@@ -1077,21 +1069,21 @@ public final class AutomatedFacility extends CelestialAsset {
                 return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_DECONSTRUCTION_REFUND);
             }
         }
-        if (refund.byKey()
+        if (refund.byItem()
             .isEmpty()) {
             finalizeModuleRemoval(module);
             return FacilityCommand.Result.CHANGED;
         }
 
         module.updateStatus(Status.DECONSTRUCTION);
-        module.setOperation(ModuleOperationState.deconstructing(refund.byKey()));
+        module.setOperation(ModuleOperationState.deconstructing(refund.byItem()));
         FacilityInventory.ReturnItemsResult returned = inventory.returnItems(refund.byItem(), itemCapacity());
         if (returned.completed()) {
             finalizeModuleRemoval(module);
         } else {
             module.setOperation(
                 module.operationOrNull()
-                    .withRefundBuffer(toItemKeys(returned.remaining())));
+                    .withRefundBuffer(returned.remaining()));
             markDirty();
             SatelliteNetworkService.refreshFacilityEndpoints(this);
         }
@@ -1104,7 +1096,7 @@ public final class AutomatedFacility extends CelestialAsset {
         modules.remove(module);
         recipeScheduleStates.remove(module.id);
         if (layout != null) layout.removeTileForModule(module.id);
-        layoutCache.applyMutation(MutationKind.DECONSTRUCT, module.kind(), module);
+        layoutCache.applyMutation(MutationKind.DECONSTRUCT, module.kind());
         markDirty();
         SatelliteNetworkService.refreshFacilityEndpoints(this);
     }
@@ -1226,15 +1218,7 @@ public final class AutomatedFacility extends CelestialAsset {
         if (inventory.tryExchange(requested, Map.of(), itemCapacity()) == FacilityInventory.ExchangeResult.REJECTED) {
             return false;
         }
-        Map<String, Long> deposited = new java.util.LinkedHashMap<>();
-        for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
-            deposited.merge(
-                material.getKey()
-                    .toKey(),
-                material.getValue(),
-                Long::sum);
-        }
-        module.setOperation(operation.withDepositedResources(mergeAmounts(operation.depositedResources(), deposited)));
+        module.setOperation(operation.withDepositedResources(mergeAmounts(operation.depositedResources(), requested)));
         markDirty();
         return true;
     }
@@ -1258,19 +1242,15 @@ public final class AutomatedFacility extends CelestialAsset {
         ModuleOperationState operation = requireWaitingOperation(module);
         Map<ItemStackWrapper, Long> requested = requireMaterialCost(materialCost);
         Map<ItemStackWrapper, Long> reservedItems = new java.util.LinkedHashMap<>();
-        Map<String, Long> deposited = new java.util.LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
-            String itemKey = material.getKey()
-                .toKey();
             long alreadyDeposited = operation.depositedResources()
-                .getOrDefault(itemKey, 0L);
+                .getOrDefault(material.getKey(), 0L);
             long remaining = material.getValue() - alreadyDeposited;
             if (remaining <= 0L) continue;
             long available = itemAmount(material.getKey());
             long reserved = Math.min(available, remaining);
             if (reserved <= 0L) continue;
             reservedItems.put(material.getKey(), reserved);
-            deposited.merge(itemKey, reserved, Long::sum);
         }
         if (!reservedItems.isEmpty()) {
             if (inventory.tryExchange(reservedItems, Map.of(), itemCapacity())
@@ -1279,7 +1259,7 @@ public final class AutomatedFacility extends CelestialAsset {
                     "Operation partial reservation became inconsistent for module " + module.id);
             }
             module.setOperation(
-                operation.withDepositedResources(mergeAmounts(operation.depositedResources(), deposited)));
+                operation.withDepositedResources(mergeAmounts(operation.depositedResources(), reservedItems)));
             markDirty();
         }
         return operationHasFullDeposit(requireOperation(module), requested);
@@ -1292,12 +1272,11 @@ public final class AutomatedFacility extends CelestialAsset {
             .spec() == IModuleOperation.DECONSTRUCTION) {
             return flushDeconstructionRefund(module, operation);
         }
-        Map<String, Long> remaining = new java.util.LinkedHashMap<>();
+        Map<ItemStackWrapper, Long> remaining = new java.util.LinkedHashMap<>();
         boolean changed = false;
-        for (Map.Entry<String, Long> entry : operation.refundBuffer()
+        for (Map.Entry<ItemStackWrapper, Long> entry : operation.refundBuffer()
             .entrySet()) {
-            ItemStackWrapper item = requireItemKey(entry.getKey(), module);
-            long accepted = insert(item, entry.getValue());
+            long accepted = insert(entry.getKey(), entry.getValue());
             if (accepted > 0L) changed = true;
             long leftover = entry.getValue() - accepted;
             if (leftover > 0L) remaining.put(entry.getKey(), leftover);
@@ -1315,13 +1294,12 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     private boolean flushDeconstructionRefund(ModuleInstance module, ModuleOperationState operation) {
-        Map<ItemStackWrapper, Long> requested = resolveRefundItems(module, operation.refundBuffer());
-        FacilityInventory.ReturnItemsResult returned = inventory.returnItems(requested, itemCapacity());
+        FacilityInventory.ReturnItemsResult returned = inventory.returnItems(operation.refundBuffer(), itemCapacity());
         if (!returned.changed()) return false;
         if (returned.completed()) {
             finalizeModuleRemoval(module);
         } else {
-            module.setOperation(operation.withRefundBuffer(toItemKeys(returned.remaining())));
+            module.setOperation(operation.withRefundBuffer(returned.remaining()));
             markDirty();
         }
         return true;
@@ -1365,17 +1343,10 @@ public final class AutomatedFacility extends CelestialAsset {
         return materialCost;
     }
 
-    private ItemStackWrapper requireItemKey(String itemKey, ModuleInstance module) {
-        ItemStackWrapper item = ItemStackWrapper.fromKey(itemKey);
-        if (item == null) {
-            throw new IllegalStateException("Module " + module.id + " operation has unresolvable item key " + itemKey);
-        }
-        return item;
-    }
-
-    private static Map<String, Long> mergeAmounts(Map<String, Long> base, Map<String, Long> added) {
-        Map<String, Long> merged = new java.util.LinkedHashMap<>(base);
-        for (Map.Entry<String, Long> entry : added.entrySet()) {
+    private static Map<ItemStackWrapper, Long> mergeAmounts(Map<ItemStackWrapper, Long> base,
+        Map<ItemStackWrapper, Long> added) {
+        Map<ItemStackWrapper, Long> merged = new java.util.LinkedHashMap<>(base);
+        for (Map.Entry<ItemStackWrapper, Long> entry : added.entrySet()) {
             merged.merge(entry.getKey(), entry.getValue(), Long::sum);
         }
         return merged;
@@ -1606,7 +1577,7 @@ public final class AutomatedFacility extends CelestialAsset {
     private void applyCompletedModuleOperation(ModuleInstance module, ModuleOperationState operation) {
         ModuleOperationPlan plan = operation.plan();
         applyOperationTarget(module, plan);
-        Map<String, Long> completionRefund = completionRefund(module, operation);
+        Map<ItemStackWrapper, Long> completionRefund = completionRefund(operation);
         if (completionRefund.isEmpty()) {
             module.clearOperation();
         } else {
@@ -1620,11 +1591,11 @@ public final class AutomatedFacility extends CelestialAsset {
         module.component()
             .applyOperationTarget(plan.spec(), module);
         if (module.tier() != oldTier) {
-            layoutCache.applyMutation(MutationKind.SET_TIER, module.kind(), module);
+            layoutCache.applyMutation(MutationKind.SET_TIER, module.kind());
         }
     }
 
-    private Map<String, Long> completionRefund(ModuleInstance module, ModuleOperationState operation) {
+    private Map<ItemStackWrapper, Long> completionRefund(ModuleOperationState operation) {
         if (operation.plan()
             .voidCompletionRefund()) {
             return Map.of();
@@ -1632,17 +1603,13 @@ public final class AutomatedFacility extends CelestialAsset {
         int refundPercent = operation.plan()
             .completionRefundPercent();
         if (refundPercent <= 0) return Map.of();
-        Map<String, Long> refund = new java.util.LinkedHashMap<>();
+        Map<ItemStackWrapper, Long> refund = new java.util.LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, Long> entry : operation.plan()
             .completionRefundCost()
             .entrySet()) {
             long amount = entry.getValue() * refundPercent / 100L;
             if (amount <= 0L) continue;
-            refund.merge(
-                entry.getKey()
-                    .toKey(),
-                amount,
-                Long::sum);
+            refund.merge(entry.getKey(), amount, Long::sum);
         }
         return refund;
     }
@@ -1651,11 +1618,7 @@ public final class AutomatedFacility extends CelestialAsset {
         Map<ItemStackWrapper, Long> requested) {
         for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
             if (operation.depositedResources()
-                .getOrDefault(
-                    material.getKey()
-                        .toKey(),
-                    0L)
-                < material.getValue()) {
+                .getOrDefault(material.getKey(), 0L) < material.getValue()) {
                 return false;
             }
         }
@@ -1736,7 +1699,6 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private DeconstructionRefund deconstructionRefund(ModuleInstance module) {
         Map<ItemStackWrapper, Long> byItem = new LinkedHashMap<>();
-        Map<String, Long> byKey = new LinkedHashMap<>();
         long total = 0L;
         try {
             for (Map.Entry<ItemStack, Long> entry : module.getConstructionCost()
@@ -1746,38 +1708,15 @@ public final class AutomatedFacility extends CelestialAsset {
                 ItemStackWrapper item = ItemStackWrapper.of(entry.getKey());
                 if (item == null) return null;
                 byItem.merge(item, entry.getValue(), Math::addExact);
-                byKey.merge(item.toKey(), entry.getValue(), Math::addExact);
                 total = Math.addExact(total, entry.getValue());
             }
         } catch (RuntimeException invalid) {
             return null;
         }
-        return new DeconstructionRefund(
-            Collections.unmodifiableMap(new LinkedHashMap<>(byItem)),
-            Collections.unmodifiableMap(new LinkedHashMap<>(byKey)),
-            total);
+        return new DeconstructionRefund(Collections.unmodifiableMap(new LinkedHashMap<>(byItem)), total);
     }
 
-    private Map<ItemStackWrapper, Long> resolveRefundItems(ModuleInstance module, Map<String, Long> byKey) {
-        Map<ItemStackWrapper, Long> resolved = new LinkedHashMap<>();
-        for (Map.Entry<String, Long> entry : byKey.entrySet()) {
-            resolved.put(requireItemKey(entry.getKey(), module), entry.getValue());
-        }
-        return resolved;
-    }
-
-    private static Map<String, Long> toItemKeys(Map<ItemStackWrapper, Long> byItem) {
-        Map<String, Long> byKey = new LinkedHashMap<>();
-        for (Map.Entry<ItemStackWrapper, Long> entry : byItem.entrySet()) {
-            byKey.put(
-                entry.getKey()
-                    .toKey(),
-                entry.getValue());
-        }
-        return byKey;
-    }
-
-    private record DeconstructionRefund(Map<ItemStackWrapper, Long> byItem, Map<String, Long> byKey, long total) {}
+    private record DeconstructionRefund(Map<ItemStackWrapper, Long> byItem, long total) {}
 
     /// ----------------------------------------------------------------------------------
     /// Persistence helpers

@@ -82,46 +82,18 @@ public final class HammerDispatchPlanner {
                 LogisticsResourceConfig requesterCfg = requester.logisticsConfig.get(resource);
                 if (requesterCfg == null || !requesterCfg.isImportEnabled()) continue;
 
-                long requesterStock = itemAmount(requester, resource);
-                long inboundInTransit = LogisticStore.inboundInTransitAmount(requester.assetId, resource);
-                long arrivedInbound = arrivedInboundAmount(requester, resource);
-                long requestedAmount = Math
-                    .max(0L, importTargetFor(requester, resource, requesterCfg) - requesterStock - inboundInTransit);
-                if (requestedAmount <= 0L) {
-                    if (arrivedInbound > 0L) {
-                        bestBlockedStatus = prefer(
-                            destinationBlocked(hammer, arrivedInbound, requesterCfg.orderSize()),
-                            bestBlockedStatus);
-                    }
-                    continue;
-                }
-                if (arrivedInbound > 0L) {
-                    bestBlockedStatus = prefer(
-                        destinationBlocked(hammer, arrivedInbound, requesterCfg.orderSize()),
-                        bestBlockedStatus);
-                    continue;
-                }
-                long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount);
-                if (sendAmount <= 0L) continue;
-                long freeCapacity = destinationFreeItemCapacity(requester, resource);
-                if (freeCapacity < sendAmount) {
-                    bestBlockedStatus = prefer(
-                        destinationLacksPackageSpace(hammer, freeCapacity, requesterCfg.orderSize()),
-                        bestBlockedStatus);
-                    continue;
-                }
-
                 Result result = evaluateCandidateFor(
                     supplier,
                     requester,
                     resource,
                     availableSurplus,
-                    requestedAmount,
                     requesterCfg,
                     hammerModule,
                     hammer,
                     orbitalTime,
                     null).result();
+                if (result.code() == HammerDispatchStatus.Code.WAITING_FOR_REQUEST
+                    || result.code() == HammerDispatchStatus.Code.NO_SURPLUS_AFTER_RESERVE) continue;
                 if (result.code() == HammerDispatchStatus.Code.READY) return result;
                 bestBlockedStatus = prefer(result, bestBlockedStatus);
             }
@@ -164,29 +136,11 @@ public final class HammerDispatchPlanner {
             return Result.simple(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, hammer);
         }
 
-        long requesterStock = itemAmount(requester, resource);
-        long inboundInTransit = LogisticStore.inboundInTransitAmount(requester.assetId, resource);
-        long arrivedInbound = arrivedInboundAmount(requester, resource);
-        long requestedAmount = Math
-            .max(0L, importTargetFor(requester, resource, requesterCfg) - requesterStock - inboundInTransit);
-        if (requestedAmount <= 0L) {
-            if (arrivedInbound > 0L) return destinationBlocked(hammer, arrivedInbound, requesterCfg.orderSize());
-            return Result.simple(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, hammer);
-        }
-        if (arrivedInbound > 0L) return destinationBlocked(hammer, arrivedInbound, requesterCfg.orderSize());
-        long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount);
-        if (sendAmount <= 0L) return Result.simple(HammerDispatchStatus.Code.NO_SURPLUS_AFTER_RESERVE, hammer);
-        long freeCapacity = destinationFreeItemCapacity(requester, resource);
-        if (freeCapacity < sendAmount) {
-            return destinationLacksPackageSpace(hammer, freeCapacity, requesterCfg.orderSize());
-        }
-
         CandidateEvaluation evaluation = evaluateCandidateFor(
             supplier,
             requester,
             resource,
             availableSurplus,
-            requestedAmount,
             requesterCfg,
             hammerModule,
             hammer,
@@ -334,8 +288,32 @@ public final class HammerDispatchPlanner {
     }
 
     private static CandidateEvaluation evaluateCandidateFor(CelestialAsset supplier, CelestialAsset requester,
-        ItemStackWrapper resource, long availableSurplus, long requestedAmount, LogisticsResourceConfig requesterCfg,
+        ItemStackWrapper resource, long availableSurplus, LogisticsResourceConfig requesterCfg,
         ModuleInstance hammerModule, ModuleHammer hammer, double orbitalTime, UUID routeProfileTeamId) {
+        long requesterStock = itemAmount(requester, resource);
+        long inboundInTransit = LogisticStore.inboundInTransitAmount(requester.assetId, resource);
+        long arrivedInbound = arrivedInboundAmount(requester, resource);
+        long requestedAmount = Math
+            .max(0L, importTargetFor(requester, resource, requesterCfg) - requesterStock - inboundInTransit);
+        if (requestedAmount <= 0L) {
+            if (arrivedInbound > 0L) return new CandidateEvaluation(
+                destinationBlocked(hammer, arrivedInbound, requesterCfg.orderSize()),
+                false);
+            return new CandidateEvaluation(Result.simple(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, hammer), false);
+        }
+        if (arrivedInbound > 0L)
+            return new CandidateEvaluation(destinationBlocked(hammer, arrivedInbound, requesterCfg.orderSize()), false);
+        long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount);
+        if (sendAmount <= 0L) return new CandidateEvaluation(
+            Result.simple(HammerDispatchStatus.Code.NO_SURPLUS_AFTER_RESERVE, hammer),
+            false);
+        long freeCapacity = destinationFreeItemCapacity(requester, resource);
+        if (freeCapacity < sendAmount) {
+            return new CandidateEvaluation(
+                destinationLacksPackageSpace(hammer, freeCapacity, requesterCfg.orderSize()),
+                false);
+        }
+
         boolean sameBody = supplier.celestialObjectKey.equals(requester.celestialObjectKey);
         CelestialObject root = GalaxiaCelestialAPI.getPrimaryRoot();
         boolean shareAnchor = sameBody || GalaxiaCelestialAPI

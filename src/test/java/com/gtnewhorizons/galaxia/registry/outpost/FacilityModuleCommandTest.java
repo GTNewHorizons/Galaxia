@@ -139,10 +139,6 @@ final class FacilityModuleCommandTest {
                 .toList());
         assertEquals(inventoryBefore, facility.itemSnapshot());
         assertEquals(dirtyBefore, facility.isDirty());
-        assertEquals(
-            0,
-            facility.layoutCache()
-                .duplicateCount(FacilityModuleKind.MINER));
     }
 
     @Test

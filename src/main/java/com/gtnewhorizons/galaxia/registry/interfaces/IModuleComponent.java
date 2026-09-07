@@ -66,10 +66,6 @@ public interface IModuleComponent {
         }
     }
 
-    default void applyModuleSettings(ModuleInstance module, ModuleSettings settings) {
-        validateModuleSettings(module, settings);
-    }
-
     default boolean settingsCopyWouldChange(ModuleInstance source, ModuleInstance target) {
         return false;
     }
@@ -81,8 +77,10 @@ public interface IModuleComponent {
         return null;
     }
 
+    /** Called every tick while the module is operational, after its energy cost has been paid. */
     default void tickOperational(ModuleInstance module, CelestialAsset outpost) {}
 
+    /** Called when accumulated powered operational ticks reach the module cooldown. */
     default void runCycle(ModuleInstance module, CelestialAsset asset) {}
 
     default IllegalStateException unsupportedSettingsGroups(ModuleInstance module) {

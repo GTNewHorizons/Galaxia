@@ -772,9 +772,12 @@ final class FacilityPersistenceManagerTest {
         AutomatedFacility station = createStationWithFullLayout();
         ModuleInstance hammer = station.modules()
             .get(0);
+        ItemStack depositedStack = new ItemStack(Items.iron_ingot);
+        depositedStack.setStackDisplayName("Reserved material");
+        ItemStackWrapper depositedItem = ItemStackWrapper.of(depositedStack);
         ModuleOperationState operation = ModuleOperationState
             .waiting(hammerOperationPlan(hammer, ModuleTier.LuV, HammerVariant.BIG, true, true))
-            .withDepositedResources(Map.of("minecraft:iron_ingot:0", 8L))
+            .withDepositedResources(Map.of(depositedItem, 8L))
             .beginBuilding()
             .tickBuilding();
         hammer.setOperation(operation);
@@ -812,7 +815,7 @@ final class FacilityPersistenceManagerTest {
         assertEquals(
             8L,
             decodedOperation.depositedResources()
-                .get("minecraft:iron_ingot:0"));
+                .get(depositedItem));
     }
 
     @Test
@@ -821,7 +824,8 @@ final class FacilityPersistenceManagerTest {
         ModuleInstance module = station.modules()
             .get(2);
         module.updateStatus(Buildable.Status.DECONSTRUCTION);
-        module.setOperation(ModuleOperationState.deconstructing(Map.of("minecraft:gold_ingot:0", 7L)));
+        module.setOperation(
+            ModuleOperationState.deconstructing(Map.of(ItemStackWrapper.of(new ItemStack(Items.gold_ingot)), 7L)));
 
         NBTTagCompound encoded = facilityTag(station);
         AutomatedFacility decoded = new AutomatedFacility(
@@ -846,7 +850,7 @@ final class FacilityPersistenceManagerTest {
             7L,
             decodedModule.operationOrNull()
                 .refundBuffer()
-                .get("minecraft:gold_ingot:0"));
+                .get(ItemStackWrapper.of(new ItemStack(Items.gold_ingot))));
     }
 
     @Test

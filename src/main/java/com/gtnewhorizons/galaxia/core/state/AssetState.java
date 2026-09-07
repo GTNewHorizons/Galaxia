@@ -522,8 +522,8 @@ public final class AssetState {
         out.setInteger("elapsed", operation.elapsedBuildTicks());
         out.setTag("materialCost", writeResources(plan.materialCost()));
         out.setTag("completionRefund", writeResources(plan.completionRefundCost()));
-        out.setTag("deposited", writeStringAmounts(operation.depositedResources()));
-        out.setTag("refundBuffer", writeStringAmounts(operation.refundBuffer()));
+        out.setTag("deposited", writeResources(operation.depositedResources()));
+        out.setTag("refundBuffer", writeResources(operation.refundBuffer()));
         return out;
     }
 
@@ -566,8 +566,8 @@ public final class AssetState {
                 plan,
                 phase,
                 in.integer("elapsed"),
-                readStringAmounts(in, "deposited"),
-                readStringAmounts(in, "refundBuffer"));
+                readResources(in, "deposited", ItemStackWrapper.class),
+                readResources(in, "refundBuffer", ItemStackWrapper.class));
         } catch (RuntimeException ex) {
             throw fail(path, "invalid operation for module " + moduleId, ex);
         }
@@ -848,31 +848,6 @@ public final class AssetState {
         Map<FluidKey, UpkeepAmount> out = new LinkedHashMap<>();
         readResources(in, key, FluidKey.class)
             .forEach((fluid, amount) -> out.put(fluid, UpkeepAmount.ofMicroUnits(amount)));
-        return out;
-    }
-
-    private static NBTTagList writeStringAmounts(Map<String, Long> amounts) {
-        NBTTagList out = new NBTTagList();
-        amounts.forEach((key, amount) -> {
-            NBTTagCompound tag = new NBTTagCompound();
-            tag.setString("key", key);
-            tag.setLong("amount", amount);
-            out.appendTag(tag);
-        });
-        return out;
-    }
-
-    private static Map<String, Long> readStringAmounts(NbtReader in, String key) {
-        NBTTagList tags = in.compounds(key);
-        Map<String, Long> out = new LinkedHashMap<>();
-        for (int i = 0; i < tags.tagCount(); i++) {
-            NbtReader itemIn = in.element(key, i, tags.getCompoundTagAt(i));
-            String itemPath = itemIn.path();
-            String itemKey = itemIn.string("key");
-            if (itemKey.isBlank()) throw fail(itemPath + ".key", "must not be blank");
-            long amount = requirePositiveLong(itemIn, "amount");
-            if (out.put(itemKey, amount) != null) throw fail(itemPath + ".key", "duplicate key " + itemKey);
-        }
         return out;
     }
 

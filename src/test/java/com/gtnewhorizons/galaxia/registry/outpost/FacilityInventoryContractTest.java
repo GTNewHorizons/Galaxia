@@ -262,6 +262,25 @@ final class FacilityInventoryContractTest {
         assertEquals(Map.of(), facility.filtersSnapshot());
     }
 
+    // Product contract: cancelling construction returns the exact reserved item, including NBT.
+    @Test
+    void cancellationReturnsTaggedMaterialsUnchanged() {
+        AutomatedFacility facility = facility();
+        ItemStack stack = new ItemStack(Items.iron_ingot);
+        stack.setStackDisplayName("Reserved construction material");
+        ItemStackWrapper item = ItemStackWrapper.of(stack);
+        ModuleInstance module = operationModule(Map.of(item, 2L));
+        facility.insert(item, 2L);
+
+        assertTrue(facility.tryReserveOperationMaterials(module, Map.of(item, 2L)));
+        module.operationOrNull()
+            .cancel();
+        assertTrue(facility.flushModuleOperationRefund(module));
+
+        assertEquals(2L, facility.itemAmount(item));
+        assertEquals(0L, facility.itemAmount(ItemStackWrapper.of(new ItemStack(Items.iron_ingot))));
+    }
+
     @Test
     void batchMaterialReservationMutatesInventoryAndModule() {
         AutomatedFacility facility = facility();
@@ -280,12 +299,12 @@ final class FacilityInventoryContractTest {
             2L,
             module.operationOrNull()
                 .depositedResources()
-                .get(iron.toKey()));
+                .get(iron));
         assertEquals(
             3L,
             module.operationOrNull()
                 .depositedResources()
-                .get(gold.toKey()));
+                .get(gold));
     }
 
     @Test
@@ -308,7 +327,7 @@ final class FacilityInventoryContractTest {
         ModuleInstance module = operationModule(Map.of(refund, 2L));
         module.setOperation(
             module.operationOrNull()
-                .withDepositedResources(Map.of(refund.toKey(), 2L))
+                .withDepositedResources(Map.of(refund, 2L))
                 .cancel());
 
         assertFalse(facility.flushModuleOperationRefund(module));
@@ -316,7 +335,7 @@ final class FacilityInventoryContractTest {
             2L,
             module.operationOrNull()
                 .refundBuffer()
-                .get(refund.toKey()));
+                .get(refund));
 
         facility.extract(filler, 1L);
         assertTrue(facility.flushModuleOperationRefund(module));
@@ -325,7 +344,7 @@ final class FacilityInventoryContractTest {
             1L,
             module.operationOrNull()
                 .refundBuffer()
-                .get(refund.toKey()));
+                .get(refund));
 
         facility.extract(filler, 1L);
         assertTrue(facility.flushModuleOperationRefund(module));

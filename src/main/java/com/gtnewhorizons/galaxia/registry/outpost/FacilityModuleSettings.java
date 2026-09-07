@@ -72,9 +72,6 @@ final class FacilityModuleSettings {
         if (!populatedGroups.equals(candidates.keySet())) {
             throw new IllegalArgumentException("Restored settings groups must each have a member");
         }
-        for (ModuleInstance module : modules) {
-            if (module.settingsBinding() != null) applySettings(module, effectiveSettings(module, candidates));
-        }
         groups.clear();
         groups.putAll(candidates);
         nextGroupId = candidates.keySet()
@@ -114,7 +111,6 @@ final class FacilityModuleSettings {
             copySource.component()
                 .settingsCopyWouldChange(copySource, target);
             validateSettings(target, settings);
-            applySettings(target, settings);
             target.component()
                 .applySettingsCopy(copySource, target);
             binding = new ModuleInstance.SettingsBinding.Private(settings);
@@ -124,7 +120,6 @@ final class FacilityModuleSettings {
                 throw new IllegalArgumentException("Build settings group kind does not match target kind");
             }
             validateSettings(target, group.settings());
-            applySettings(target, group.settings());
             binding = new ModuleInstance.SettingsBinding.Shared(requestedGroupId);
         } else {
             ModuleSettings settings = captureSettings(target);
@@ -183,7 +178,6 @@ final class FacilityModuleSettings {
         SettingsGroup.ID oldGroupId = sharedGroupId(module);
         if (groupId.equals(oldGroupId)) return Outcome.unchanged();
         validateSettings(module, group.settings());
-        applySettings(module, group.settings());
         module.setSettingsBinding(new ModuleInstance.SettingsBinding.Shared(groupId));
         removeGroupIfEmpty(oldGroupId);
         return Outcome.changed(Set.of(module.id));
@@ -233,7 +227,6 @@ final class FacilityModuleSettings {
         Set<ModuleInstance.ID> changedTargetIds) {
         for (ModuleInstance target : targets) {
             if (!changedTargetIds.contains(target.id)) continue;
-            applySettings(target, sourceSettings);
             target.component()
                 .applySettingsCopy(source, target);
         }
@@ -269,14 +262,12 @@ final class FacilityModuleSettings {
         if (current.equals(replacement)) return Outcome.unchanged();
         SettingsGroup.ID groupId = sharedGroupId(module);
         if (groupId == null) {
-            applySettings(module, replacement);
             module.setSettingsBinding(new ModuleInstance.SettingsBinding.Private(replacement));
             return Outcome.changed(Set.of(module.id));
         }
         SettingsGroup group = requireGroup(groupId);
         List<ModuleInstance> members = members(groupId);
         for (ModuleInstance member : members) validateSettings(member, replacement);
-        for (ModuleInstance member : members) applySettings(member, replacement);
         groups.put(groupId, group.withSettings(replacement));
         return Outcome.changed(
             members.stream()
@@ -330,13 +321,6 @@ final class FacilityModuleSettings {
         }
         module.component()
             .validateModuleSettings(module, settings);
-    }
-
-    private void applySettings(ModuleInstance module, ModuleSettings settings) {
-        validateSettings(module, settings);
-        if (module.recipe() != null) return;
-        module.component()
-            .applyModuleSettings(module, settings);
     }
 
     private ModuleSettings effectiveSettings(ModuleInstance module, Map<SettingsGroup.ID, SettingsGroup> ownerGroups) {
