@@ -54,6 +54,35 @@ final class TileHammerCannonTest {
             cannon.getPackageItems());
     }
 
+    // Integration regression: the owning inventory must observe a successful extraction for saving and listeners.
+    @Test
+    void partialPackageExtractionNotifiesTheOwningInventory() {
+        var chest = new InventoryBasic("test", false, 1) {
+
+            boolean changed;
+
+            @Override
+            public void markDirty() {
+                changed = true;
+                super.markDirty();
+            }
+        };
+        ItemStack requested = stack(64, "requested");
+        chest.setInventorySlotContents(0, requested);
+        chest.changed = false;
+        TileHammerCannon cannon = new TileHammerCannon();
+        cannon.getChestInventories()
+            .add(chest);
+
+        assertFalse(cannon.tryExtractPackage(ItemStackWrapper.of(requested), 65L));
+        assertFalse(chest.changed);
+        assertTrue(cannon.tryExtractPackage(ItemStackWrapper.of(requested), 10L));
+
+        assertEquals(54, chest.getStackInSlot(0).stackSize);
+        assertEquals(ItemStackWrapper.of(requested), ItemStackWrapper.of(chest.getStackInSlot(0)));
+        assertTrue(chest.changed);
+    }
+
     @Test
     void packageExtractionIsAllOrNothingWhenChosenBufferIsShort() {
         TileHammerCannon cannon = cannonWith(new ItemStack(Items.iron_ingot, 3, 0));

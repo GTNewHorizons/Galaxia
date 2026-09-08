@@ -17,6 +17,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 public final class LayoutCacheBundle {
 
     private final @Nullable StationLayout layout;
+    private long layoutVersion = Long.MIN_VALUE;
 
     private final Map<FacilityModuleKind, List<CapacityCluster>> capacityClusters = new EnumMap<>(
         FacilityModuleKind.class);
@@ -48,6 +49,7 @@ public final class LayoutCacheBundle {
     }
 
     public List<CapacityCluster> getCapacityClusters(FacilityModuleKind kind) {
+        refreshLayoutVersion();
         if (!kind.isCapacityModule()) {
             return Collections.emptyList();
         }
@@ -82,6 +84,7 @@ public final class LayoutCacheBundle {
     // ── Maintenance coverage ──
 
     public Set<StationTileCoord> getMaintenanceCoverage() {
+        refreshLayoutVersion();
         if (maintenanceCoverageDirty) {
             rebuildMaintenanceCoverage();
         }
@@ -100,6 +103,14 @@ public final class LayoutCacheBundle {
                     .forEach(effect -> effect.collectAffectedTiles(module, maintenanceCoverage::add));
             });
         maintenanceCoverageDirty = false;
+    }
+
+    /** Layout replacement and structural edits invalidate both views, including already populated client caches. */
+    private void refreshLayoutVersion() {
+        if (layout == null || layoutVersion == layout.version()) return;
+        layoutVersion = layout.version();
+        capacityClustersDirty = true;
+        maintenanceCoverageDirty = true;
     }
 
 }

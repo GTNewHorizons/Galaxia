@@ -397,6 +397,70 @@ final class AssetStateSyncTest {
         assertEquals(2, transport.payloads.size());
     }
 
+    // Integration regression: full replacement must refresh derived state without replacing the asset identity.
+    @Test
+    void replacementRefreshesCapacityCoverageAndEnergyAfterLayoutChanges() {
+        CelestialAsset.ID id = CelestialAsset.ID.create();
+        AutomatedFacility client = new AutomatedFacility(
+            id,
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        AssetState.Decoded empty = AssetState.decode(AssetState.encode(TEAM, client));
+        long baseEnergy = client.energyCapacity();
+        long baseItems = client.itemCapacity();
+        assertTrue(
+            client.layoutCache()
+                .getMaintenanceCoverage()
+                .isEmpty());
+
+        AutomatedFacility server = new AutomatedFacility(
+            id,
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        int x = 1;
+        for (FacilityModuleKind kind : List
+            .of(FacilityModuleKind.BATTERY, FacilityModuleKind.STORAGE, FacilityModuleKind.MAINTENANCE_BAY)) {
+            ModuleInstance module = kind.create(
+                StationTileCoord.of(x++, 0),
+                ModuleShape.SINGLE,
+                kind == FacilityModuleKind.MAINTENANCE_BAY ? ModuleTier.NONE : ModuleTier.HV);
+            module.completeConstruction();
+            addModule(server, module);
+            server.stationLayout()
+                .place(module);
+        }
+        server.setEnergyStored(server.energyCapacity());
+        assertTrue(server.energyCapacity() > baseEnergy);
+        assertTrue(server.itemCapacity() > baseItems);
+        assertFalse(
+            server.layoutCache()
+                .getMaintenanceCoverage()
+                .isEmpty());
+
+        AssetState.replace(TEAM, client, AssetState.decode(AssetState.encode(TEAM, server)));
+
+        assertEquals(server.energyCapacity(), client.energyCapacity());
+        assertEquals(server.getEnergyStored(), client.getEnergyStored());
+        assertEquals(server.itemCapacity(), client.itemCapacity());
+        assertEquals(
+            server.layoutCache()
+                .getMaintenanceCoverage(),
+            client.layoutCache()
+                .getMaintenanceCoverage());
+
+        AssetState.replace(TEAM, client, empty);
+
+        assertEquals(baseEnergy, client.energyCapacity());
+        assertEquals(baseItems, client.itemCapacity());
+        assertEquals(0L, client.getEnergyStored());
+        assertTrue(
+            client.layoutCache()
+                .getMaintenanceCoverage()
+                .isEmpty());
+    }
+
     private static AssetSyncPacket roundTrip(AssetSyncPacket packet) {
         ByteBuf buffer = Unpooled.buffer();
         packet.toBytes(buffer);

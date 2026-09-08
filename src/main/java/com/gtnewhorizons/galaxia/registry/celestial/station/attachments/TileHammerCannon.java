@@ -185,9 +185,8 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
                 ItemStack stack = chest.getStackInSlot(slot);
                 if (!resource.equals(ItemStackWrapper.of(stack))) continue;
                 int extracted = (int) Math.min(remaining, stack.stackSize);
-                stack.stackSize -= extracted;
+                chest.decrStackSize(slot, extracted);
                 remaining -= extracted;
-                if (stack.stackSize <= 0) chest.setInventorySlotContents(slot, null);
             }
             if (remaining <= 0L) break;
         }

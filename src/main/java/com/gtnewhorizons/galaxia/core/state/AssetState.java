@@ -173,7 +173,6 @@ public final class AssetState {
         current.setConstructionInventory(replacement.getConstructionInventory());
         current.clearModules();
         current.clear();
-        current.setEnergyStored(replacement.getEnergyStored());
         current.setStationFeatureSalt(replacement.stationFeatureSalt());
         current.restoreBounds(replacement.boundsSnapshot());
         replacement.filtersSnapshot()
@@ -187,6 +186,7 @@ public final class AssetState {
                     replacement.stationLayout()
                         .snapshot());
         }
+        current.setEnergyStored(replacement.getEnergyStored());
         current.restoreRecipeScheduleStates(replacement.recipeScheduleStates());
     }
 

@@ -85,16 +85,25 @@ public final class SatelliteDataTransferPlanner {
          */
         for (SatelliteDataBufferStore.Entry produced : store.producedEntries()) {
             List<Route> routes = routesForProducedData(networkState, demands, remainingDemand, produced);
-            allocateAcrossRoutes(
-                teamId,
-                networkState,
-                produced,
-                routes,
-                produced.deciKb(),
-                transfers,
-                usedByEdge,
-                usedByBody,
-                remainingDemand);
+            List<Route> localRoutes = new ArrayList<>();
+            List<Route> remoteRoutes = new ArrayList<>();
+            for (Route route : routes) {
+                (route.local(produced.bodyKey()) ? localRoutes : remoteRoutes).add(route);
+            }
+            long remaining = produced.deciKb();
+            // Satisfy local demand first, then offer the surplus to remote receivers.
+            for (List<Route> priorityRoutes : List.of(localRoutes, remoteRoutes)) {
+                remaining -= allocateAcrossRoutes(
+                    teamId,
+                    networkState,
+                    produced,
+                    priorityRoutes,
+                    remaining,
+                    transfers,
+                    usedByEdge,
+                    usedByBody,
+                    remainingDemand);
+            }
         }
         List<Transfer> resolvedTransfers = preferLocalExchangeForOpposingDemand(transfers);
         return summarizeTransfers(resolvedTransfers);
@@ -113,7 +122,7 @@ public final class SatelliteDataTransferPlanner {
 
     /*
      * Convert compatible demand entries into concrete network routes. Same-body demand uses an empty path, so it
-     * shares sink allocation with remote traffic without consuming satellite bandwidth.
+     * can be served before remote traffic without consuming satellite bandwidth.
      */
     private static List<Route> routesForKeys(SatelliteNetworkState networkState,
         SatelliteDataBufferStore.Entry produced, List<Demand> demands, Map<ModuleInstance.ID, Long> remainingDemand,
@@ -126,10 +135,6 @@ public final class SatelliteDataTransferPlanner {
                 continue;
             Route route = route(networkState, produced.bodyKey(), demand);
             if (route != null) routes.add(route);
-        }
-        if (routes.stream()
-            .anyMatch(route -> route.local(produced.bodyKey()))) {
-            routes.removeIf(route -> !route.local(produced.bodyKey()));
         }
         routes.sort(
             Comparator.comparing(

@@ -193,6 +193,39 @@ final class SatelliteDataTransferPlannerTest {
         return networkWithMarsCapacity(10L);
     }
 
+    // Product regression: local priority must not starve remote demand when buffered data remains.
+    @Test
+    void recurringLocalDemandLeavesSurplusForRemoteReceivers() {
+        SatelliteDataBufferStore store = new SatelliteDataBufferStore();
+        SatelliteDataKey research = SatelliteDataKey.any(SatelliteDataType.RESEARCH);
+        List<SatelliteDataTransferPlanner.Demand> demands = List
+            .of(demand(1L, CelestialObjectId.MARS, research, 10L), demand(2L, CelestialObjectId.EGORA, research, 30L));
+        for (int tick = 0; tick < 2; tick++) {
+            store.finishProduction(key(CelestialObjectId.MARS), research, 30L);
+
+            SatelliteDataTransferPlanner.Plan plan = SatelliteDataTransferPlanner
+                .plan(TEAM, reciprocalNetwork(), store, demands);
+
+            assertEquals(10L, transferredTo(plan, CelestialObjectId.MARS));
+            assertEquals(20L, transferredTo(plan, CelestialObjectId.EGORA));
+            assertEquals(
+                40L,
+                plan.usedByBody()
+                    .get(key(CelestialObjectId.MARS)));
+            apply(store, plan);
+            assertEquals(0L, store.pendingDeciKb(key(CelestialObjectId.MARS), research));
+        }
+
+        store.finishProduction(key(CelestialObjectId.MARS), research, 5L);
+        SatelliteDataTransferPlanner.Plan scarce = SatelliteDataTransferPlanner
+            .plan(TEAM, reciprocalNetwork(), store, demands);
+        assertEquals(5L, transferredTo(scarce, CelestialObjectId.MARS));
+        assertEquals(0L, transferredTo(scarce, CelestialObjectId.EGORA));
+        assertTrue(
+            scarce.usedByEdge()
+                .isEmpty());
+    }
+
     private static SatelliteNetworkState networkWithMarsCapacity(long marsCapacityKbps) {
         return SatelliteNetworkCalculator.fromGraph(
             TEAM,
