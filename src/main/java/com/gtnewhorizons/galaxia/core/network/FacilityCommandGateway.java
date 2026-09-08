@@ -10,6 +10,7 @@ import net.minecraft.util.ChatComponentTranslation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeMapId;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -58,6 +59,27 @@ public final class FacilityCommandGateway {
         AutomatedFacility facility = findOwnedFacility(actor.teamId(), command.facilityId());
         if (facility == null) {
             return rejected(command, FacilityCommand.Rejection.FACILITY_NOT_FOUND);
+        }
+
+        if (command instanceof FacilityCommand.ReplaceRecipeBook replace) {
+            var module = facility.moduleById(replace.moduleId());
+            if (module == null || module.recipe() == null) {
+                return rejected(command, FacilityCommand.Rejection.INVALID_RECIPE_BOOK);
+            }
+            GTRecipeMapId map = GTRecipeMapId.fromRecipeMapName(
+                module.recipe()
+                    .mapName());
+            if (map == null || replace.replacement() == null) {
+                return rejected(command, FacilityCommand.Rejection.INVALID_RECIPE_BOOK);
+            }
+            try {
+                command = new FacilityCommand.ReplaceRecipeBook(
+                    replace.facilityId(),
+                    replace.moduleId(),
+                    map.resolveBook(replace.replacement()));
+            } catch (IllegalArgumentException invalidRecipe) {
+                return rejected(command, FacilityCommand.Rejection.INVALID_RECIPE_BOOK);
+            }
         }
 
         FacilityCommand.Result result = facility.applyCommand(command, actor.authority());

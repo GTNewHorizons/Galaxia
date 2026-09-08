@@ -34,12 +34,12 @@ final class ModuleOperationPlanTest {
     @Test
     void keepsReserveItemsFlagAsConfigured() {
         ModuleOperationPlan reserved = new ModuleOperationPlan(
-            new IModuleOperation.Hammer(ModuleTier.LuV, HammerVariant.BIG.name()),
+            new IModuleOperation.Hammer(ModuleTier.LuV, HammerVariant.BIG),
             400,
             cost(1L),
             true);
         ModuleOperationPlan notReserved = new ModuleOperationPlan(
-            new IModuleOperation.Hammer(ModuleTier.LuV, HammerVariant.BIG.name()),
+            new IModuleOperation.Hammer(ModuleTier.LuV, HammerVariant.BIG),
             400,
             cost(1L),
             false);
@@ -53,7 +53,7 @@ final class ModuleOperationPlanTest {
         assertThrows(
             IllegalArgumentException.class,
             () -> new ModuleOperationPlan(
-                new IModuleOperation.Hammer(ModuleTier.IV, HammerVariant.BIG.name()),
+                new IModuleOperation.Hammer(ModuleTier.IV, HammerVariant.BIG),
                 200,
                 cost(0L),
                 true));

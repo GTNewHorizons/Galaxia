@@ -59,23 +59,12 @@ public final class RecipeIntentMatcher {
 
         int recipeIndex = matches.get(0);
         GTRecipe recipe = recipes[recipeIndex];
-        byte mapOrdinal = (byte) (mapId != null ? mapId.ordinal() : GTRecipeMapId.INVALID.ordinal());
         return new Result(
             Status.SINGLE_MATCH,
             1,
             recipeIndex,
             recipe,
-            RecipeSnapshot.resolved(
-                mapOrdinal,
-                recipeIndex,
-                recipe.mInputs,
-                recipe.mOutputs,
-                recipe.mFluidInputs,
-                recipe.mFluidOutputs,
-                recipe.mOutputChances,
-                recipe.mFluidOutputChances,
-                recipe.mDuration,
-                recipe.mEUt));
+            (mapId == null ? GTRecipeMapId.INVALID : mapId).snapshot(recipeIndex, recipe));
     }
 
     private static boolean hasAnyHardSlot(ItemStack[] itemInputs, ItemStack[] itemOutputs, FluidStack[] fluidInputs,

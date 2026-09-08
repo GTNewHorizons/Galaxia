@@ -27,7 +27,7 @@ public final class PlanetaryFeatureOverlayRenderer {
     private static final TextureSize DEFAULT_TEXTURE_SIZE = new TextureSize(
         StationMapFrame.TILE_SIZE,
         StationMapFrame.TILE_SIZE);
-    private static final Map<String, TextureSize> textureSizeCache = new HashMap<>();
+    private static final Map<ResourceLocation, TextureSize> textureSizeCache = new HashMap<>();
 
     private PlanetaryFeatureOverlayRenderer() {}
 
@@ -98,7 +98,7 @@ public final class PlanetaryFeatureOverlayRenderer {
 
     private static TextureSize textureSize(ResourceLocation texture) {
         if (texture == null) return DEFAULT_TEXTURE_SIZE;
-        return textureSizeCache.computeIfAbsent(texture.toString(), key -> readTextureSize(texture));
+        return textureSizeCache.computeIfAbsent(texture, PlanetaryFeatureOverlayRenderer::readTextureSize);
     }
 
     private static TextureSize readTextureSize(ResourceLocation texture) {

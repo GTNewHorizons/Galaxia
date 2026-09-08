@@ -452,29 +452,21 @@ public final class CelestialClient {
         signalRevision++;
     }
 
-    public static Map<String, Long> clientSignalsForSystem(CelestialObjectKey systemKey) {
-        Map<String, Long> result = new LinkedHashMap<>();
+    public static Map<ItemStackWrapper, Long> clientSignalsForSystem(CelestialObjectKey systemKey) {
+        Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
         for (LogisticSignal signal : signals) {
             if (signal.scope() != LogisticSignal.Scope.SYSTEM || !systemKey.equals(signal.systemKey())) continue;
-            result.merge(
-                signal.resourceId()
-                    .toKey(),
-                signal.amount(),
-                Long::sum);
+            result.merge(signal.resourceId(), signal.amount(), Long::sum);
         }
         return Collections.unmodifiableMap(result);
     }
 
-    public static Map<String, Long> clientSignalsForPlanet(CelestialObjectKey anchorBodyKey) {
-        Map<String, Long> result = new LinkedHashMap<>();
+    public static Map<ItemStackWrapper, Long> clientSignalsForPlanet(CelestialObjectKey anchorBodyKey) {
+        Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
         for (LogisticSignal signal : signals) {
             if (signal.scope() != LogisticSignal.Scope.SYSTEM || !anchorBodyKey.equals(signal.planetaryAnchorBodyKey()))
                 continue;
-            result.merge(
-                signal.resourceId()
-                    .toKey(),
-                signal.amount(),
-                Long::sum);
+            result.merge(signal.resourceId(), signal.amount(), Long::sum);
         }
         return Collections.unmodifiableMap(result);
     }

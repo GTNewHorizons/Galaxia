@@ -210,7 +210,7 @@ final class FacilityPersistenceManagerTest {
         hammer.setOperation(
             ModuleOperationState.waiting(
                 new ModuleOperationPlan(
-                    new IModuleOperation.Hammer(ModuleTier.LuV, HammerVariant.BIG.name()),
+                    new IModuleOperation.Hammer(ModuleTier.LuV, HammerVariant.BIG),
                     37,
                     actualMaterialCost,
                     true)));
@@ -804,9 +804,9 @@ final class FacilityPersistenceManagerTest {
             decodedOperation.plan()
                 .spec() instanceof IModuleOperation.Hammer);
         assertEquals(
-            "BIG",
+            HammerVariant.BIG,
             ((IModuleOperation.Hammer) decodedOperation.plan()
-                .spec()).targetVariantKey());
+                .spec()).targetVariant());
         assertEquals(
             ModuleTier.LuV,
             decodedOperation.plan()
@@ -863,7 +863,7 @@ final class FacilityPersistenceManagerTest {
             ModuleOperationState
                 .waiting(
                     new ModuleOperationPlan(
-                        new IModuleOperation.Hammer(ModuleTier.LuV, HammerVariant.BIG.name()),
+                        new IModuleOperation.Hammer(ModuleTier.LuV, HammerVariant.BIG),
                         37,
                         Map.of(),
                         false))
@@ -1248,7 +1248,7 @@ final class FacilityPersistenceManagerTest {
                 .getTierData(targetTier)
                 .constructionCost());
         return new ModuleOperationPlan(
-            new IModuleOperation.Hammer(targetTier, targetVariant.name()),
+            new IModuleOperation.Hammer(targetTier, targetVariant),
             buildTicks,
             cost,
             reserveItems,

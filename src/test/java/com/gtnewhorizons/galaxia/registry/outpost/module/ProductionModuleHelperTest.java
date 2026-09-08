@@ -159,6 +159,63 @@ final class ProductionModuleHelperTest {
             .runCycle(module, facility);
     }
 
+    // Product contract: blocked production changes the ORDER cursor according to the chosen policy, not inventory.
+    @Test
+    void blockedOrderFollowsTheConfiguredPolicyWithoutConsumingMaterials() {
+        for (NotDoablePolicy policy : NotDoablePolicy.values()) {
+            AutomatedFacility facility = facility();
+            RecipeBook book = new RecipeBook(
+                List.of(
+                    recipe(Items.gold_ingot, Items.coal, 1),
+                    recipe(Items.diamond, Items.iron_ingot, 1),
+                    recipe(Items.stick, Items.feather, 1)),
+                RecipeSchedulerMode.ORDER,
+                policy);
+            ModuleInstance module = installBook(facility, book);
+            facility.insert(ItemStackWrapper.of(new ItemStack(Items.gold_ingot)), 1L);
+            facility.insert(ItemStackWrapper.of(new ItemStack(Items.stick)), 1L);
+            var inventoryBefore = facility.inventorySnapshot();
+            facility.restoreRecipeScheduleState(module, new RecipeBook.ScheduleState((byte) 1, (byte) 3));
+
+            execute(facility, module);
+
+            int expected = policy == NotDoablePolicy.SKIP ? 2 : 0;
+            assertEquals(inventoryBefore, facility.inventorySnapshot());
+            assertEquals(
+                expected,
+                facility.recipeScheduleState(module)
+                    .orderCursor());
+            execute(facility, module);
+            Item output = policy == NotDoablePolicy.SKIP ? Items.feather : Items.coal;
+            assertEquals(1L, facility.itemAmount(ItemStackWrapper.of(new ItemStack(output))));
+        }
+    }
+
+    // Product regression: a GT zero-sized item input is required, survives save/load, and is not consumed.
+    @Test
+    void nonConsumedInputMustBePresentButSurvivesRepeatedProduction() {
+        AutomatedFacility facility = facility();
+        RecipeBook book = orderBook(
+            savedRecipe(
+                new ItemStack[] { new ItemStack(Items.stick, 0) },
+                new ItemStack[] { new ItemStack(Items.iron_ingot) },
+                0L));
+        book = com.gtnewhorizons.galaxia.core.state.RecipeBookState
+            .decode(com.gtnewhorizons.galaxia.core.state.RecipeBookState.encode(book));
+        ModuleInstance module = installBook(facility, book);
+        ItemStackWrapper catalyst = ItemStackWrapper.of(new ItemStack(Items.stick));
+        ItemStackWrapper output = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
+
+        execute(facility, module);
+        assertEquals(0L, facility.itemAmount(output));
+        facility.insert(catalyst, 1L);
+        execute(facility, module);
+        execute(facility, module);
+
+        assertEquals(2L, facility.itemAmount(output));
+        assertEquals(1L, facility.itemAmount(catalyst));
+    }
+
     private static ModuleInstance installBook(AutomatedFacility facility, RecipeBook book) {
         FacilityModuleKind kind = FacilityModuleKind.MACERATOR;
         ModuleInstance module = FacilityModuleRegistry.create(

@@ -2,6 +2,8 @@ package com.gtnewhorizons.galaxia.registry.outpost.module.operation;
 
 import javax.annotation.Nullable;
 
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 
 public sealed interface IModuleOperation permits IModuleOperation.Tier,IModuleOperation.Hammer,IModuleOperation.MinerFocus,IModuleOperation.Deconstruction {
@@ -21,21 +23,21 @@ public sealed interface IModuleOperation permits IModuleOperation.Tier,IModuleOp
         }
     }
 
-    record Hammer(ModuleTier targetTier, String targetVariantKey) implements IModuleOperation {
+    record Hammer(ModuleTier targetTier, HammerVariant targetVariant) implements IModuleOperation {
 
         public Hammer {
-            if (targetVariantKey == null || targetVariantKey.isBlank()) {
-                throw new IllegalArgumentException("targetVariantKey must not be null or blank");
+            if (targetVariant == null) {
+                throw new IllegalArgumentException("targetVariant must not be null");
             }
         }
     }
 
-    record MinerFocus(ModuleTier targetTier, String targetFocusTierKey, @Nullable String targetFocusOreKey)
+    record MinerFocus(ModuleTier targetTier, MinerFocusTier targetFocusTier, @Nullable String targetFocusOreKey)
         implements IModuleOperation {
 
         public MinerFocus {
-            if (targetFocusTierKey == null || targetFocusTierKey.isBlank()) {
-                throw new IllegalArgumentException("targetFocusTierKey must not be null or blank");
+            if (targetFocusTier == null) {
+                throw new IllegalArgumentException("targetFocusTier must not be null");
             }
         }
     }

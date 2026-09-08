@@ -41,19 +41,19 @@ final class ModuleOperationDefinitionTest {
     }
 
     @Test
-    void hammerSpecRejectsBlankVariant() {
-        assertThrows(IllegalArgumentException.class, () -> new IModuleOperation.Hammer(ModuleTier.EV, " "));
+    void hammerSpecRejectsNullVariant() {
+        assertThrows(IllegalArgumentException.class, () -> new IModuleOperation.Hammer(ModuleTier.EV, null));
     }
 
     @Test
-    void minerFocusSpecRejectsBlankTierKey() {
-        assertThrows(IllegalArgumentException.class, () -> new IModuleOperation.MinerFocus(ModuleTier.EV, " ", null));
+    void minerFocusSpecRejectsNullTier() {
+        assertThrows(IllegalArgumentException.class, () -> new IModuleOperation.MinerFocus(ModuleTier.EV, null, null));
     }
 
     @Test
     void planHasCorrectTimingAndRefund() {
         ModuleOperationPlan plan = new ModuleOperationPlan(
-            new IModuleOperation.Hammer(ModuleTier.IV, HammerVariant.BIG.name()),
+            new IModuleOperation.Hammer(ModuleTier.IV, HammerVariant.BIG),
             120,
             cost(4L),
             true);
@@ -69,7 +69,7 @@ final class ModuleOperationDefinitionTest {
         stack.stackSize = 32;
 
         Map<ItemStackWrapper, Long> planCost = new ModuleOperationPlan(
-            new IModuleOperation.Hammer(ModuleTier.IV, HammerVariant.BIG.name()),
+            new IModuleOperation.Hammer(ModuleTier.IV, HammerVariant.BIG),
             120,
             cost,
             false).materialCost();

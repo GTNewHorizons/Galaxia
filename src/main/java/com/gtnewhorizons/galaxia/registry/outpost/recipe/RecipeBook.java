@@ -74,6 +74,18 @@ public record RecipeBook(List<SavedRecipe> recipes, RecipeSchedulerMode mode, No
         return selected;
     }
 
+    /** Chooses the next ORDER entry after a blocked attempt. The selection must come from this book. */
+    public ScheduleState advanceAfterFailure(ScheduleState state, Selection selection) {
+        if (mode != RecipeSchedulerMode.ORDER) return state;
+        int cursor = notDoablePolicy == NotDoablePolicy.BACK_TO_BEGINNING ? recipes.size() - 1 : selection.index();
+        int next = nextEnabledAfter(cursor);
+        return next < 0 ? state
+            : new ScheduleState(
+                (byte) next,
+                recipes.get(next)
+                    .orderSize());
+    }
+
     private int selectOrder(ScheduleState state) {
         if (recipes.isEmpty()) return -1;
         int cursor = state.orderCursor();

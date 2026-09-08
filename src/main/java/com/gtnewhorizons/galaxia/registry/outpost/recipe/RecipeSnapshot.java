@@ -158,6 +158,9 @@ public record RecipeSnapshot(byte recipeMapOrdinal, int recipeIndex, long conten
 
     private static void validateInputs(List<Resource> resources, String field) {
         for (Resource resource : resources) {
+            if (resource.amount() == 0L && !(resource.key() instanceof ItemStackWrapper)) {
+                throw new IllegalArgumentException("Only item inputs can be non-consumed recipe resources");
+            }
             if (resource.hasChance()) {
                 throw new IllegalArgumentException("Recipe " + field + " must not contain output chances");
             }
@@ -169,6 +172,7 @@ public record RecipeSnapshot(byte recipeMapOrdinal, int recipeIndex, long conten
         boolean hasChance = resources.get(0)
             .hasChance();
         for (Resource resource : resources) {
+            if (resource.amount() == 0L) throw new IllegalArgumentException("Recipe outputs must be positive");
             if (hasChance != resource.hasChance()) {
                 throw new IllegalArgumentException("Recipe " + field + " mixes present and absent output chances");
             }
@@ -252,8 +256,8 @@ public record RecipeSnapshot(byte recipeMapOrdinal, int recipeIndex, long conten
         }
 
         private static long validAmount(long amount) {
-            if (amount <= 0L || amount > Integer.MAX_VALUE) {
-                throw new IllegalArgumentException("Recipe resource amount must be between 1 and 2147483647");
+            if (amount < 0L || amount > Integer.MAX_VALUE) {
+                throw new IllegalArgumentException("Recipe resource amount must be between 0 and 2147483647");
             }
             return amount;
         }

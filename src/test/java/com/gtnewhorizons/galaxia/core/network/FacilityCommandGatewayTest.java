@@ -7,19 +7,24 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
+import net.minecraft.launchwrapper.Launch;
+import net.minecraftforge.fluids.FluidStack;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeMapId;
 import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
@@ -36,18 +41,28 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
+import com.gtnewhorizons.galaxia.testing.TestGTRecipes;
+
+import gregtech.api.recipe.RecipeMapBuilder;
+import gregtech.api.util.GTRecipe;
 
 final class FacilityCommandGatewayTest {
 
     private static final UUID TEAM = UUID.randomUUID();
     private static final UUID OTHER_TEAM = UUID.randomUUID();
     private static final UUID RECIPIENT = UUID.randomUUID();
+    private static GTRecipe catalogRecipe;
+    private static int catalogIndex;
 
     private RecordingTransport transport;
     private FacilityCommandGateway gateway;
@@ -55,6 +70,30 @@ final class FacilityCommandGatewayTest {
     @BeforeAll
     static void initRegistries() {
         GalaxiaTestBootstrap.ensureFacilityModules();
+        // Harness bootstrap for GT's recipe builder outside the Minecraft launcher.
+        if (Launch.blackboard == null) {
+            Launch.blackboard = new HashMap<>();
+            Launch.blackboard.put("fml.deobfuscatedEnvironment", true);
+        }
+        var mapId = GTRecipeMapId.MACERATOR;
+        var map = GTRecipeMapId.findRecipeMap(mapId);
+        if (map == null) {
+            map = RecipeMapBuilder.of(mapId.getRecipeMapUnlocalizedName())
+                .maxIO(1, 1, 0, 0)
+                .build();
+        }
+        catalogRecipe = TestGTRecipes.recipe(
+            new ItemStack[] { new ItemStack(Items.stick) },
+            new ItemStack[] { new ItemStack(Items.coal) },
+            new FluidStack[0],
+            new FluidStack[0],
+            null,
+            20,
+            1);
+        map.addRecipe(catalogRecipe);
+        catalogIndex = Arrays.asList(GTRecipeMapId.getRecipes(mapId))
+            .indexOf(catalogRecipe);
+        assertTrue(catalogIndex >= 0);
     }
 
     @BeforeEach
@@ -89,6 +128,81 @@ final class FacilityCommandGatewayTest {
         assertEquals(FacilityCommand.Rejection.FACILITY_NOT_FOUND, foreign.rejection());
         assertEquals(foreign, missing);
         assertEquals(0, transport.deliveryCount);
+    }
+
+    // Security regression: configuration permission does not authorize client-authored production recipes.
+    @Test
+    void rejectsClientAuthoredRecipeDespiteConsistentContentHash() {
+        AutomatedFacility facility = facility();
+        ModuleInstance module = FacilityModuleKind.MACERATOR
+            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.HV);
+        addModule(facility, module);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
+        var forged = RecipeSnapshot.resolved(
+            (byte) GTRecipeMapId.MACERATOR.ordinal(),
+            catalogIndex,
+            new ItemStack[] { new ItemStack(Items.stick) },
+            new ItemStack[] { new ItemStack(Items.nether_star, 64) },
+            null,
+            null,
+            20,
+            1);
+        RecipeBook book = new RecipeBook(
+            List.of(new SavedRecipe(forged, true, 0, (byte) 0, (byte) 1)),
+            RecipeSchedulerMode.ORDER,
+            NotDoablePolicy.SKIP);
+
+        FacilityCommand.Result result = gateway.execute(
+            actor(TEAM, TeamAction.MODIFY_MODULE),
+            new FacilityCommand.ReplaceRecipeBook(facility.assetId, module.id, book));
+
+        assertEquals(FacilityCommand.Rejection.INVALID_RECIPE_BOOK, result.rejection());
+        assertEquals(RecipeBook.empty(), facility.recipeBook(module));
+        assertEquals(0, transport.deliveryCount);
+    }
+
+    // Integration contract: catalog validation accepts a visible recipe and rejects changed content or map identity.
+    @Test
+    void recipeSelectionMustMatchTheModulesVisibleServerCatalog() {
+        AutomatedFacility facility = facility();
+        ModuleInstance module = FacilityModuleKind.MACERATOR
+            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.HV);
+        addModule(facility, module);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
+        var mapId = GTRecipeMapId.MACERATOR;
+        var canonical = mapId.snapshot(catalogIndex, catalogRecipe);
+        RecipeBook book = new RecipeBook(
+            List.of(new SavedRecipe(canonical, true, 12, (byte) 0, (byte) 1)),
+            RecipeSchedulerMode.ORDER,
+            NotDoablePolicy.SKIP);
+        var command = new FacilityCommand.ReplaceRecipeBook(facility.assetId, module.id, book);
+        assertEquals(
+            FacilityCommand.Status.CHANGED,
+            gateway.execute(actor(TEAM, TeamAction.MODIFY_MODULE), command)
+                .status());
+        assertEquals(book, facility.recipeBook(module));
+        try {
+            catalogRecipe.mHidden = true;
+            assertEquals(
+                FacilityCommand.Rejection.INVALID_RECIPE_BOOK,
+                gateway.execute(actor(TEAM, TeamAction.MODIFY_MODULE), command)
+                    .rejection());
+        } finally {
+            catalogRecipe.mHidden = false;
+        }
+        var otherMap = GTRecipeMapId.CENTRIFUGE.snapshot(catalogIndex, catalogRecipe);
+        var wrongBook = new RecipeBook(
+            List.of(new SavedRecipe(otherMap, true, 0, (byte) 0, (byte) 1)),
+            book.mode(),
+            book.notDoablePolicy());
+        assertEquals(
+            FacilityCommand.Rejection.INVALID_RECIPE_BOOK,
+            gateway
+                .execute(
+                    actor(TEAM, TeamAction.MODIFY_MODULE),
+                    new FacilityCommand.ReplaceRecipeBook(facility.assetId, module.id, wrongBook))
+                .rejection());
+        assertEquals(book, facility.recipeBook(module));
     }
 
     @Test

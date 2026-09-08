@@ -36,7 +36,7 @@ final class MinerFocusUiModelTest {
         module.setOperation(
             ModuleOperationState.waiting(
                 new ModuleOperationPlan(
-                    new IModuleOperation.MinerFocus(ModuleTier.EV, MinerFocusTier.II.name(), "ore:iron"),
+                    new IModuleOperation.MinerFocus(ModuleTier.EV, MinerFocusTier.II, "ore:iron"),
                     2,
                     java.util.Map.of(),
                     false)));
@@ -84,7 +84,7 @@ final class MinerFocusUiModelTest {
         module.setOperation(
             ModuleOperationState.waiting(
                 new ModuleOperationPlan(
-                    new IModuleOperation.MinerFocus(ModuleTier.EV, MinerFocusTier.II.name(), null),
+                    new IModuleOperation.MinerFocus(ModuleTier.EV, MinerFocusTier.II, null),
                     2,
                     java.util.Map.of(),
                     false)));

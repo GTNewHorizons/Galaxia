@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import net.minecraft.init.Items;
+import net.minecraft.nbt.NBTTagCompound;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -47,11 +48,24 @@ final class CelestialClientLogisticsSignalsTest {
         CelestialClient.updateClientSignals(signals);
 
         assertEquals(initialRevision + 1, CelestialClient.clientSignalRevision());
-        assertEquals(
-            Map.of(iron.toKey(), 0L, diamond.toKey(), 5L),
-            CelestialClient.clientSignalsForSystem(first.systemKey));
-        assertEquals(Map.of(iron.toKey(), 0L), CelestialClient.clientSignalsForPlanet(first.planetaryAnchorBodyKey));
-        assertEquals(Map.of(diamond.toKey(), 5L), CelestialClient.clientSignalsForPlanet(mars.planetaryAnchorBodyKey));
+        assertEquals(Map.of(iron, 0L, diamond, 5L), CelestialClient.clientSignalsForSystem(first.systemKey));
+        assertEquals(Map.of(iron, 0L), CelestialClient.clientSignalsForPlanet(first.planetaryAnchorBodyKey));
+        assertEquals(Map.of(diamond, 5L), CelestialClient.clientSignalsForPlanet(mars.planetaryAnchorBodyKey));
+    }
+
+    @Test
+    void signalsWithDifferentNbtRemainDistinct() {
+        AutomatedFacility facility = facility(CelestialObjectId.OVERWORLD);
+        NBTTagCompound firstTag = new NBTTagCompound();
+        firstTag.setString("variant", "first");
+        NBTTagCompound secondTag = new NBTTagCompound();
+        secondTag.setString("variant", "second");
+        ItemStackWrapper first = new ItemStackWrapper(Items.iron_ingot, 0, firstTag);
+        ItemStackWrapper second = new ItemStackWrapper(Items.iron_ingot, 0, secondTag);
+
+        CelestialClient.updateClientSignals(List.of(signal(facility, first, 3L), signal(facility, second, 5L)));
+
+        assertEquals(Map.of(first, 3L, second, 5L), CelestialClient.clientSignalsForSystem(facility.systemKey));
     }
 
     @Test

@@ -47,7 +47,7 @@ final class FacilityModuleRegistryTest {
 
         ModuleTierData tierData = definition.getTierData(ModuleTier.LuV);
         ModuleOperationPlan plan = new ModuleOperationPlan(
-            new IModuleOperation.Hammer(ModuleTier.LuV, "BIG"),
+            new IModuleOperation.Hammer(ModuleTier.LuV, HammerVariant.BIG),
             tierData.buildTicks(),
             Map.of(),
             false);
@@ -56,7 +56,7 @@ final class FacilityModuleRegistryTest {
             ModuleTier.LuV,
             plan.spec()
                 .targetTier());
-        assertEquals("BIG", ((IModuleOperation.Hammer) plan.spec()).targetVariantKey());
+        assertEquals(HammerVariant.BIG, ((IModuleOperation.Hammer) plan.spec()).targetVariant());
         assertEquals(200, plan.buildTicks());
         assertFalse(plan.reserveItems());
     }
@@ -146,9 +146,9 @@ final class FacilityModuleRegistryTest {
         ModuleTierData data = ModuleTierData.builder()
             .powerDraw(64L)
             .cooldown(20)
-            .variantCooldowns(Map.of("BIG", 600))
+            .variantCooldowns(Map.of(HammerVariant.BIG, 600))
             .chargeTicks(400)
-            .variantChargeTicks(Map.of("BIG", 800))
+            .variantChargeTicks(Map.of(HammerVariant.BIG, 800))
             .cost(Map.of(material, 4L))
             .buildTicks(40)
             .refundPercent(50)
@@ -157,12 +157,12 @@ final class FacilityModuleRegistryTest {
         assertEquals(
             600,
             data.variantCooldowns()
-                .get("BIG"));
+                .get(HammerVariant.BIG));
         assertEquals(400, data.chargeTicks());
         assertEquals(
             800,
             data.variantChargeTicks()
-                .get("BIG"));
+                .get(HammerVariant.BIG));
         assertEquals(40, data.buildTicks());
         assertEquals(50, data.completionRefundPercent());
     }

@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.item.ItemStack;
@@ -79,10 +81,10 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
     private VerticalScrollData scrollData;
 
     private int lastDataRevision = Integer.MIN_VALUE;
-    private String lastStructureSignature = "";
+    private @Nullable SignalStructure lastStructure;
     private ParentWidget<?> rowsContainer;
     private String cachedTitle = "";
-    private final Map<String, SignalRowState> rowStates = new LinkedHashMap<>();
+    private final Map<ItemStackWrapper, SignalRowState> rowStates = new LinkedHashMap<>();
 
     LogisticsSignalsWidget(CelestialObject galaxyRoot, Supplier<CelestialObject> viewRootSupplier,
         Supplier<Boolean> openSupplier) {
@@ -106,7 +108,7 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
                 rowsContainer = null;
                 rowStates.clear();
                 lastDataRevision = Integer.MIN_VALUE;
-                lastStructureSignature = "";
+                lastStructure = null;
                 size(0, 0);
                 panelRoot.scheduleResize();
                 scheduleResize();
@@ -123,10 +125,10 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         List<SignalRow> rows = aggregateSignals(scope, viewRoot);
         updateRowStates(rows, scope, viewRoot);
 
-        String structureSignature = buildStructureSignature(rows);
-        if (!structureSignature.equals(lastStructureSignature) || rowsContainer == null) {
+        SignalStructure structure = buildStructure(rows);
+        if (!structure.equals(lastStructure) || rowsContainer == null) {
             rebuildPanel(scope, viewRoot, rows);
-            lastStructureSignature = structureSignature;
+            lastStructure = structure;
         }
     }
 
@@ -155,22 +157,14 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         return r == 0 ? Integer.MAX_VALUE : r;
     }
 
-    private String buildStructureSignature(List<SignalRow> rows) {
-        StringBuilder sig = new StringBuilder(rows.size() * 24);
-        sig.append(rows.size())
-            .append('|');
+    private SignalStructure buildStructure(List<SignalRow> rows) {
         int rowsToShow = Math.min(MAX_VISIBLE_ROWS, rows.size());
+        List<SignalStructureRow> visibleRows = new ArrayList<>(rowsToShow);
         for (int i = 0; i < rowsToShow; i++) {
             SignalRow row = rows.get(i);
-            sig.append(
-                row.item()
-                    .toKey())
-                .append(':')
-                .append(row.net() >= 0 ? '+' : '-')
-                .append(row.net())
-                .append('|');
+            visibleRows.add(new SignalStructureRow(row.item(), row.net()));
         }
-        return sig.toString();
+        return new SignalStructure(rows.size(), List.copyOf(visibleRows));
     }
 
     private void rebuildPanel(ViewScope scope, CelestialObject viewRoot, List<SignalRow> rows) {
@@ -240,10 +234,9 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
 
     private void updateRowStates(List<SignalRow> rows, ViewScope scope, CelestialObject viewRoot) {
         cachedTitle = buildScopeLabel(scope, viewRoot);
-        Map<String, SignalRowState> nextStates = new HashMap<>();
+        Map<ItemStackWrapper, SignalRowState> nextStates = new HashMap<>();
         for (SignalRow row : rows) {
-            String key = row.item()
-                .toKey();
+            ItemStackWrapper key = row.item();
             SignalRowState state = rowStates.get(key);
             if (state == null) {
                 state = new SignalRowState(row.item());
@@ -253,20 +246,13 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         }
         rowStates.clear();
         for (SignalRow row : rows) {
-            SignalRowState state = nextStates.get(
-                row.item()
-                    .toKey());
-            if (state != null) rowStates.put(
-                row.item()
-                    .toKey(),
-                state);
+            SignalRowState state = nextStates.get(row.item());
+            if (state != null) rowStates.put(row.item(), state);
         }
     }
 
     private ParentWidget<?> buildSignalRow(SignalRow row) {
-        SignalRowState state = rowStates.get(
-            row.item()
-                .toKey());
+        SignalRowState state = rowStates.get(row.item());
         ParentWidget<?> rowWidget = new ParentWidget<>().widthRel(1f)
             .height(ROW_H)
             .background(
@@ -350,7 +336,7 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
     }
 
     private List<SignalRow> aggregateSignals(ViewScope scope, CelestialObject viewRoot) {
-        Map<String, Long> signalData;
+        Map<ItemStackWrapper, Long> signalData;
         switch (scope) {
             case SYSTEM:
                 signalData = CelestialClient.clientSignalsForSystem(viewRoot.key());
@@ -367,10 +353,8 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         }
 
         Map<ItemStackWrapper, long[]> acc = new LinkedHashMap<>();
-        for (Map.Entry<String, Long> e : signalData.entrySet()) {
-            ItemStackWrapper item = ItemStackWrapper.fromKey(e.getKey());
-            if (item == null) continue;
-            acc.put(item, new long[] { e.getValue(), 0L });
+        for (Map.Entry<ItemStackWrapper, Long> e : signalData.entrySet()) {
+            acc.put(e.getKey(), new long[] { e.getValue(), 0L });
         }
 
         for (LogisticsDelivery delivery : CelestialClient.clientDeliveries()) {
@@ -476,4 +460,8 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
     }
 
     private record SignalRow(ItemStackWrapper item, long net, long inTransit) {}
+
+    private record SignalStructure(int totalRows, List<SignalStructureRow> visibleRows) {}
+
+    private record SignalStructureRow(ItemStackWrapper item, long net) {}
 }

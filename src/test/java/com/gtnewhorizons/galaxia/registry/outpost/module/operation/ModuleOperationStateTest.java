@@ -156,7 +156,7 @@ final class ModuleOperationStateTest {
 
     private static ModuleOperationPlan rebuildPlan(boolean reserveItems, int buildTicks) {
         return new ModuleOperationPlan(
-            new IModuleOperation.Hammer(ModuleTier.IV, HammerVariant.BIG.name()),
+            new IModuleOperation.Hammer(ModuleTier.IV, HammerVariant.BIG),
             buildTicks,
             Map.of(),
             reserveItems);

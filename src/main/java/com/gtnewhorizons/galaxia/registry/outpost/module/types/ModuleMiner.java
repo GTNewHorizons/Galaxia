@@ -88,11 +88,7 @@ public final class ModuleMiner extends TieredModuleComponent {
             && Objects.equals(targetOreKey, focusOreKey)) {
             throw new IllegalArgumentException("Miner focus operation target is unchanged");
         }
-        return new IModuleOperation.MinerFocus(
-            plan.targetModuleTier(),
-            plan.targetFocusTier()
-                .name(),
-            targetOreKey);
+        return new IModuleOperation.MinerFocus(plan.targetModuleTier(), plan.targetFocusTier(), targetOreKey);
     }
 
     @Override
@@ -246,8 +242,7 @@ public final class ModuleMiner extends TieredModuleComponent {
                 "MINER cannot handle " + spec.getClass()
                     .getSimpleName());
         }
-        MinerFocusTier focusTier = MinerFocusTier.valueOf(minerSpec.targetFocusTierKey());
-        setFocus(focusTier, minerSpec.targetFocusOreKey(), 0);
+        setFocus(minerSpec.targetFocusTier(), minerSpec.targetFocusOreKey(), 0);
     }
 
     public void setFocus(MinerFocusTier focusTier, String focusOreKey, int focusAlignmentProgress) {

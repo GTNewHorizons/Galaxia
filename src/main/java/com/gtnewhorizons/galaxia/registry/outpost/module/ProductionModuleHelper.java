@@ -31,17 +31,21 @@ public final class ProductionModuleHelper {
             .orElse(null);
         if (selection == null) return;
 
-        SavedRecipe slot = selection.recipe();
+        boolean produced = tryProduce(outpost, selection.recipe(), random);
+        outpost.installRecipeScheduleState(
+            instance,
+            produced ? book.advanceAfterSuccess(scheduleState, selection)
+                : book.advanceAfterFailure(scheduleState, selection));
+    }
+
+    private static boolean tryProduce(AutomatedFacility outpost, SavedRecipe slot, Random random) {
         RecipeSnapshot recipe = slot.recipe();
         Map<InventoryKey, Long> requiredInputs = totals(recipe.itemInputs(), recipe.fluidInputs());
-        if (!allowsInputs(outpost, requiredInputs)) return;
-        if (!matchesRequestAmount(outpost, slot, recipe.itemOutputs(), recipe.fluidOutputs())) return;
+        if (!allowsInputs(outpost, requiredInputs)) return false;
+        if (!matchesRequestAmount(outpost, slot, recipe.itemOutputs(), recipe.fluidOutputs())) return false;
 
         Map<InventoryKey, Long> selectedOutputs = selectedOutputs(recipe.itemOutputs(), recipe.fluidOutputs(), random);
-        if (!allowsOutputs(outpost, selectedOutputs)) return;
-        if (!outpost.tryExchange(requiredInputs, selectedOutputs)) return;
-
-        outpost.installRecipeScheduleState(instance, book.advanceAfterSuccess(scheduleState, selection));
+        return allowsOutputs(outpost, selectedOutputs) && outpost.tryExchange(requiredInputs, selectedOutputs);
     }
 
     private static Map<InventoryKey, Long> totals(List<Resource> first, List<Resource> second) {
@@ -73,6 +77,8 @@ public final class ProductionModuleHelper {
 
     private static boolean allowsInputs(AutomatedFacility outpost, Map<InventoryKey, Long> requiredInputs) {
         for (Map.Entry<InventoryKey, Long> entry : requiredInputs.entrySet()) {
+            // GT encodes non-consumed item inputs as zero, but the item must still be present.
+            if (entry.getValue() == 0L && outpost.amount(entry.getKey()) == 0L) return false;
             if (!outpost.isAboveLow(entry.getKey(), entry.getValue())) return false;
         }
         return true;

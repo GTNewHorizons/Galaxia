@@ -156,7 +156,7 @@ public final class RecipeBookState {
             InventoryKey decoded = decodeKey(resourceIn);
             boolean hasChance = resourceIn.tag()
                 .hasKey("chance");
-            long amount = positiveLong(resourceIn, "amount");
+            long amount = resourceIn.longValue("amount");
             int chance = hasChance ? resourceIn.integer("chance") : -1;
             try {
                 resources.add(hasChance ? new Resource(decoded, amount, chance) : new Resource(decoded, amount));
@@ -242,12 +242,6 @@ public final class RecipeBookState {
         if (value == null || value.getBytes(StandardCharsets.UTF_8).length > MAX_DISPLAY_NAME_BYTES) {
             throw fail(path, "exceeds 1024 UTF-8 bytes");
         }
-        return value;
-    }
-
-    private static long positiveLong(NbtReader in, String key) {
-        long value = in.longValue(key);
-        if (value <= 0L) throw fail(in.path() + "." + key, "must be positive");
         return value;
     }
 

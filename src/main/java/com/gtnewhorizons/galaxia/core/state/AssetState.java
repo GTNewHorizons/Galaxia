@@ -493,14 +493,20 @@ public final class AssetState {
                 "targetTier",
                 hammer.targetTier()
                     .name());
-            out.setString("variant", hammer.targetVariantKey());
+            out.setString(
+                "variant",
+                hammer.targetVariant()
+                    .name());
         } else if (spec instanceof IModuleOperation.MinerFocus miner) {
             out.setString("type", "MINER_FOCUS");
             out.setString(
                 "targetTier",
                 miner.targetTier()
                     .name());
-            out.setString("focusTier", miner.targetFocusTierKey());
+            out.setString(
+                "focusTier",
+                miner.targetFocusTier()
+                    .name());
             if (miner.targetFocusOreKey() != null) out.setString("focusOre", miner.targetFocusOreKey());
         } else if (spec instanceof IModuleOperation.Tier tier) {
             out.setString("type", "MODULE_TIER");
@@ -541,13 +547,13 @@ public final class AssetState {
                 if (moduleKind != FacilityModuleKind.HAMMER) throw fail(path, "hammer operation on " + moduleKind);
                 spec = new IModuleOperation.Hammer(
                     in.enumValue(ModuleTier.class, "targetTier"),
-                    in.nonBlankString("variant"));
+                    in.enumValue(HammerVariant.class, "variant"));
             }
             case "MINER_FOCUS" -> {
                 if (moduleKind != FacilityModuleKind.MINER) throw fail(path, "miner focus operation on " + moduleKind);
                 spec = new IModuleOperation.MinerFocus(
                     in.enumValue(ModuleTier.class, "targetTier"),
-                    in.nonBlankString("focusTier"),
+                    in.enumValue(MinerFocusTier.class, "focusTier"),
                     tag.hasKey("focusOre") ? in.string("focusOre") : null);
             }
             case "MODULE_TIER" -> spec = new IModuleOperation.Tier(in.enumValue(ModuleTier.class, "targetTier"));

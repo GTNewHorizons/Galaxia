@@ -64,6 +64,41 @@ final class RecipeIntentMatcherTest {
                     .fluidStack()));
     }
 
+    // Integration regression: GT's non-consumed item markers survive selection from a real recipe representation.
+    @Test
+    void matchingPreservesNonConsumedItemInput() {
+        Item item = new Item();
+        GTRecipe recipe = TestGTRecipes.recipe(
+            new ItemStack[] { new ItemStack(item, 0, 24) },
+            new ItemStack[] { new ItemStack(new Item()) },
+            null,
+            null,
+            null,
+            20,
+            30);
+        var result = RecipeIntentMatcher.match(
+            GTRecipeMapId.DISTILLERY,
+            new GTRecipe[] { recipe },
+            new ItemStack[] { new ItemStack(item, 1, 24) },
+            null,
+            null,
+            null);
+        assertEquals(RecipeIntentMatcher.Status.SINGLE_MATCH, result.status());
+        assertEquals(
+            0L,
+            result.snapshot()
+                .itemInputs()
+                .get(0)
+                .amount());
+        assertEquals(
+            24,
+            result.snapshot()
+                .itemInputs()
+                .get(0)
+                .itemStack()
+                .getItemDamage());
+    }
+
     @Test
     void multipleMatchesRequireMoreHardSlots() throws Exception {
         GTRecipe water = recipe(

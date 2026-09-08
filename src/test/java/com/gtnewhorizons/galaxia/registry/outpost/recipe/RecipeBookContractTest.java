@@ -26,6 +26,25 @@ final class RecipeBookContractTest {
     }
 
     @Test
+    void nonConsumedInputSupportDoesNotPermitZeroOutputs() {
+        RecipeSnapshot snapshot = RecipeSnapshot.resolved(
+            (byte) 1,
+            0,
+            new ItemStack[] { new ItemStack(new Item()) },
+            new ItemStack[] { new ItemStack(new Item(), 0) },
+            null,
+            null,
+            20,
+            30);
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new RecipeBook(
+                List.of(new SavedRecipe(snapshot, true, 0L, (byte) 0, (byte) 1)),
+                RecipeSchedulerMode.ORDER,
+                NotDoablePolicy.SKIP));
+    }
+
+    @Test
     void constructionAndAccessDeeplyProtectRecipeContents() {
         ItemStack input = new ItemStack(new Item(), 2, 0);
         ItemStack output = new ItemStack(new Item(), 3, 1);

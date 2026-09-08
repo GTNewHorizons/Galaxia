@@ -175,13 +175,13 @@ final class ModuleStatusTextRegistry {
 
     private static String operationTargetLine(IModuleOperation spec) {
         if (spec instanceof IModuleOperation.Hammer hammerSpec) {
-            return "Target: " + hammerSpec.targetVariantKey()
+            return "Target: " + hammerSpec.targetVariant()
                 + " "
                 + hammerSpec.targetTier()
                     .name();
         }
         if (spec instanceof IModuleOperation.MinerFocus minerSpec) {
-            String line = "Target focus: " + minerSpec.targetFocusTierKey();
+            String line = "Target focus: " + minerSpec.targetFocusTier();
             if (minerSpec.targetFocusOreKey() != null) {
                 line += " " + minerSpec.targetFocusOreKey();
             }

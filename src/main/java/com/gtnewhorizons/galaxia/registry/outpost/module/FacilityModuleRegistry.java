@@ -111,35 +111,35 @@ public class FacilityModuleRegistry {
                         0L,
                         ModuleHammer.CHARGE_STEP_TICKS,
                         1200,
-                        Map.of(HammerVariant.BASE.name(), 1200),
+                        Map.of(HammerVariant.BASE, 1200),
                         Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 64L))
                     .add(
                         ModuleTier.IV,
                         0L,
                         ModuleHammer.CHARGE_STEP_TICKS,
                         900,
-                        Map.of(HammerVariant.BASE.name(), 900),
+                        Map.of(HammerVariant.BASE, 900),
                         Map.of(new ItemStack(Items.iron_ingot), 32L, new ItemStack(Items.gold_ingot), 256L))
                     .add(
                         ModuleTier.LuV,
                         0L,
                         ModuleHammer.CHARGE_STEP_TICKS,
                         600,
-                        Map.of(HammerVariant.BASE.name(), 600, HammerVariant.BIG.name(), 1200),
+                        Map.of(HammerVariant.BASE, 600, HammerVariant.BIG, 1200),
                         Map.of(new ItemStack(Items.iron_ingot), 128L, new ItemStack(Items.gold_ingot), 1024L))
                     .add(
                         ModuleTier.ZPM,
                         0L,
                         ModuleHammer.CHARGE_STEP_TICKS,
                         900,
-                        Map.of(HammerVariant.BIG.name(), 900),
+                        Map.of(HammerVariant.BIG, 900),
                         Map.of(new ItemStack(Items.iron_ingot), 512L, new ItemStack(Items.gold_ingot), 4096L))
                     .add(
                         ModuleTier.UV,
                         0L,
                         ModuleHammer.CHARGE_STEP_TICKS,
                         600,
-                        Map.of(HammerVariant.BIG.name(), 600),
+                        Map.of(HammerVariant.BIG, 600),
                         Map.of(new ItemStack(Items.iron_ingot), 2048L, new ItemStack(Items.gold_ingot), 16384L))
                     .build())
             .configButton()
@@ -403,8 +403,8 @@ public class FacilityModuleRegistry {
             return this;
         }
 
-        public TierMapBuilder add(ModuleTier tier, long power, int cooldown, Map<String, Integer> variantCooldowns,
-            Map<ItemStack, Long> cost) {
+        public TierMapBuilder add(ModuleTier tier, long power, int cooldown,
+            Map<HammerVariant, Integer> variantCooldowns, Map<ItemStack, Long> cost) {
             if (map.put(
                 tier,
                 tierDataBuilder().powerDraw(power)
@@ -419,7 +419,7 @@ public class FacilityModuleRegistry {
         }
 
         public TierMapBuilder add(ModuleTier tier, long power, int cooldown, int chargeTicks,
-            Map<String, Integer> variantChargeTicks, Map<ItemStack, Long> cost) {
+            Map<HammerVariant, Integer> variantChargeTicks, Map<ItemStack, Long> cost) {
             if (map.put(
                 tier,
                 tierDataBuilder().powerDraw(power)

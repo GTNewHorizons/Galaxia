@@ -118,10 +118,7 @@ public final class ModuleHammer implements IModuleComponent {
             throw new IllegalArgumentException("Invalid hammer operation target");
         }
         requireTier(plan.targetVariant(), plan.targetTier());
-        return new IModuleOperation.Hammer(
-            plan.targetTier(),
-            plan.targetVariant()
-                .name());
+        return new IModuleOperation.Hammer(plan.targetTier(), plan.targetVariant());
     }
 
     public static boolean supportsTier(@Nonnull HammerVariant variant, @Nonnull ModuleTier tier) {
@@ -138,7 +135,7 @@ public final class ModuleHammer implements IModuleComponent {
     public static int chargeTicks(@Nonnull HammerVariant variant, @Nonnull ModuleTierData data) {
         if (data.variantChargeTicks() != null) {
             Integer override = data.variantChargeTicks()
-                .get(variant.name());
+                .get(variant);
             if (override != null) return override;
         }
         if (data.chargeTicks() != null) return data.chargeTicks();
@@ -152,7 +149,7 @@ public final class ModuleHammer implements IModuleComponent {
                 "HAMMER cannot handle " + spec.getClass()
                     .getSimpleName());
         }
-        HammerVariant targetVariant = HammerVariant.valueOf(hammerSpec.targetVariantKey());
+        HammerVariant targetVariant = hammerSpec.targetVariant();
         ModuleTier targetTier = hammerSpec.targetTier();
         requireTier(targetVariant, targetTier);
         this.variant = targetVariant;
@@ -164,7 +161,7 @@ public final class ModuleHammer implements IModuleComponent {
     public int cooldownTicks(ModuleInstance module, ModuleTierData data) {
         if (data.variantCooldowns() != null) {
             Integer override = data.variantCooldowns()
-                .get(variant.name());
+                .get(variant);
             if (override != null) return override;
         }
         return data.cooldownTicks();
