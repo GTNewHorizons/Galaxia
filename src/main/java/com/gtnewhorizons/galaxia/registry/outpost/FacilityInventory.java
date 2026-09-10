@@ -210,23 +210,13 @@ final class FacilityInventory {
     boolean addFilter(String key, boolean item) {
         if (key == null) return false;
         ResourceFilter<?> filter = item ? itemFilter : fluidFilter;
-        if (filter.serialize()
-            .contains(key)) {
-            return false;
-        }
-        filter.add(key);
-        return true;
+        return filter.add(key);
     }
 
     boolean removeFilter(String key, boolean item) {
         if (key == null) return false;
         ResourceFilter<?> filter = item ? itemFilter : fluidFilter;
-        if (!filter.serialize()
-            .contains(key)) {
-            return false;
-        }
-        filter.remove(key);
-        return true;
+        return filter.remove(key);
     }
 
     Map<Boolean, List<String>> filtersSnapshot() {

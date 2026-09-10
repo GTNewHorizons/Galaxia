@@ -17,23 +17,23 @@ public final class ResourceFilter<T> implements Predicate<T> {
     }
 
     /** Exact match against the encoded form of a typed value. */
-    public void add(T value) {
-        add(encoder.apply(value));
+    public boolean add(T value) {
+        return add(encoder.apply(value));
     }
 
     /** Exact match against a raw string. */
-    public void add(String value) {
-        if (serialized.contains(value)) return;
-        serialized.add(value);
+    public boolean add(String value) {
+        if (serialized.contains(value)) return false;
+        return serialized.add(value);
     }
 
-    public void remove(T value) {
-        remove(encoder.apply(value));
+    public boolean remove(T value) {
+        return remove(encoder.apply(value));
     }
 
     /** Removes the first entry whose serialized form equals {@code value}. */
-    public void remove(String value) {
-        serialized.remove(value);
+    public boolean remove(String value) {
+        return serialized.remove(value);
     }
 
     /**
