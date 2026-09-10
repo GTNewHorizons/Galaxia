@@ -13,8 +13,6 @@ import com.gtnewhorizons.galaxia.registry.interfaces.IZeroGMovementProvider;
 
 import baubles.api.BaubleType;
 import baubles.api.expanded.IBaubleExpanded;
-import baubles.common.container.InventoryBaubles;
-import baubles.common.lib.PlayerHandler;
 
 public class ItemReactionControlSystem extends Item implements IBaubleExpanded, IZeroGMovementProvider {
 
@@ -24,52 +22,7 @@ public class ItemReactionControlSystem extends Item implements IBaubleExpanded, 
 
     @Override
     public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
-        if (world.isRemote) return stack;
-        if (!canEquip(stack, player)) return stack;
-
-        boolean equipped = tryEquipOrReplace(player, stack);
-
-        if (equipped && !player.capabilities.isCreativeMode) {
-            player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
-            player.inventoryContainer.detectAndSendChanges();
-            if (player.openContainer != null) player.openContainer.detectAndSendChanges();
-        }
-
-        return stack;
-    }
-
-    private boolean tryEquipOrReplace(EntityPlayer player, ItemStack stack) {
-        InventoryBaubles baubles = PlayerHandler.getPlayerBaubles(player);
-
-        // First look for empty slots
-        for (int i : Galaxia.rcsSlot) {
-            if (!baubles.isItemValidForSlot(i, stack)) continue;
-
-            ItemStack inSlot = baubles.getStackInSlot(i);
-
-            if (inSlot == null) {
-                baubles.setInventorySlotContents(i, stack.copy());
-                baubles.markDirty();
-                onEquipped(stack, player);
-                return true;
-            }
-
-        }
-
-        // No slots found - Look for potential swap
-        for (int i : Galaxia.rcsSlot) {
-            if (!baubles.isItemValidForSlot(i, stack)) continue;
-            ItemStack inSlot = baubles.getStackInSlot(i);
-            boolean added = player.inventory.addItemStackToInventory(inSlot.copy());
-            if (!added) return false;
-            baubles.setInventorySlotContents(i, stack.copy());
-            baubles.markDirty();
-            onEquipped(stack, player);
-            return true;
-        }
-
-        // No swaps or empty slots
-        return false;
+        return GalaxiaAPI.onBaubleRightClick(stack, world, player, Galaxia.rcsSlot);
     }
 
     @Override

@@ -46,6 +46,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.CapacityCluster;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import baubles.api.BaublesApi;
+import baubles.api.IBauble;
+import baubles.common.container.InventoryBaubles;
+import baubles.common.lib.PlayerHandler;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Loader;
 import gregtech.api.GregTechAPI;
@@ -163,6 +166,43 @@ public final class GalaxiaAPI {
         }
 
         return (float) (temp - acceptableMinTemp) / (acceptableMaxTemp - acceptableMinTemp);
+    }
+
+    public static ItemStack onBaubleRightClick(ItemStack stack, World world, EntityPlayer player, int[] slots) {
+        if (world.isRemote) return stack;
+        IBauble bauble = (IBauble) stack.getItem();
+        if (!bauble.canEquip(stack, player)) return stack;
+
+        boolean equipped = tryEquipBauble(player, stack, slots, bauble);
+        if (equipped && !player.capabilities.isCreativeMode) {
+            player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
+            player.inventoryContainer.detectAndSendChanges();
+            if (player.openContainer != null) player.openContainer.detectAndSendChanges();
+        }
+        return stack;
+    }
+
+    private static boolean tryEquipBauble(EntityPlayer player, ItemStack stack, int[] slots, IBauble bauble) {
+        InventoryBaubles baubles = PlayerHandler.getPlayerBaubles(player);
+        for (int slot : slots) {
+            if (!baubles.isItemValidForSlot(slot, stack)) continue;
+            if (baubles.getStackInSlot(slot) == null) {
+                baubles.setInventorySlotContents(slot, stack.copy());
+                baubles.markDirty();
+                bauble.onEquipped(stack, player);
+                return true;
+            }
+        }
+        for (int slot : slots) {
+            if (!baubles.isItemValidForSlot(slot, stack)) continue;
+            ItemStack inSlot = baubles.getStackInSlot(slot);
+            if (!player.inventory.addItemStackToInventory(inSlot.copy())) return false;
+            baubles.setInventorySlotContents(slot, stack.copy());
+            baubles.markDirty();
+            bauble.onEquipped(stack, player);
+            return true;
+        }
+        return false;
     }
 
     private static boolean hasBaubleInSlots(EntityPlayer player, int[] slots, Class<?> itemClass) {
