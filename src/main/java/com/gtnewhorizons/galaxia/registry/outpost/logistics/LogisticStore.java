@@ -59,14 +59,6 @@ public final class LogisticStore {
             .getOrDefault(resource, InboundAmounts.EMPTY);
     }
 
-    public static long inboundInTransitAmount(CelestialAsset.ID toAssetId, ItemStackWrapper resource) {
-        return inboundAmounts(toAssetId, resource).allPending();
-    }
-
-    public static long arrivedInboundAmount(CelestialAsset.ID toAssetId, ItemStackWrapper resource) {
-        return inboundAmounts(toAssetId, resource).arrived();
-    }
-
     private static void adjustInbound(LogisticsDelivery delivery, long pendingDelta, long arrivedDelta) {
         if (pendingDelta == 0L && arrivedDelta == 0L) return;
         CelestialAsset.ID destination = delivery.data.toAssetId();

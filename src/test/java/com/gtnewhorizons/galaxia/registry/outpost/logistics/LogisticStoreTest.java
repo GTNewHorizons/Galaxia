@@ -210,10 +210,17 @@ final class LogisticStoreTest {
                 0,
                 null));
 
-        assertEquals(12L, LogisticStore.inboundInTransitAmount(destination.assetId, resource));
-        assertEquals(0L, LogisticStore.arrivedInboundAmount(destination.assetId, resource));
-        assertEquals(11L, LogisticStore.inboundInTransitAmount(destination.assetId, otherResource));
-        assertEquals(13L, LogisticStore.inboundInTransitAmount(otherDestination.assetId, resource));
+        assertEquals(
+            new LogisticStore.InboundAmounts(12L, 0L),
+            LogisticStore.inboundAmounts(destination.assetId, resource));
+        assertEquals(
+            11L,
+            LogisticStore.inboundAmounts(destination.assetId, otherResource)
+                .allPending());
+        assertEquals(
+            13L,
+            LogisticStore.inboundAmounts(otherDestination.assetId, resource)
+                .allPending());
 
         LogisticStore.addDelivery(delivery(source, destination, resource, 3L, 0));
         assertEquals(
@@ -224,7 +231,10 @@ final class LogisticStoreTest {
         assertEquals(
             new LogisticStore.InboundAmounts(0L, 0L),
             LogisticStore.inboundAmounts(destination.assetId, resource));
-        assertEquals(0L, LogisticStore.inboundInTransitAmount(otherDestination.assetId, resource));
+        assertEquals(
+            0L,
+            LogisticStore.inboundAmounts(otherDestination.assetId, resource)
+                .allPending());
     }
 
     @Test

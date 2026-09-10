@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -290,19 +289,6 @@ public class ModuleInstance implements Buildable {
             throw new IllegalArgumentException("parallel must be at least 1");
         }
         this.parallel = parallel;
-    }
-
-    public ModuleTier nextTier() {
-        ModuleTier[] available = definition.tierData()
-            .keySet()
-            .toArray(new ModuleTier[0]);
-        Arrays.sort(available);
-        for (int i = 0; i < available.length; i++) {
-            if (available[i] == this.tier) {
-                return available[Math.min(i + 1, available.length - 1)];
-            }
-        }
-        return available[0];
     }
 
     public int cooldownTicks() {

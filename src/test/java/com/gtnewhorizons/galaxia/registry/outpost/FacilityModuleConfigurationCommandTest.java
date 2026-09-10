@@ -292,7 +292,7 @@ final class FacilityModuleConfigurationCommandTest {
         AutomatedFacility facility = facility();
         ModuleInstance storage = add(facility, FacilityModuleKind.STORAGE);
         ModuleInstance miner = add(facility, FacilityModuleKind.MINER);
-        ModuleTier storageTarget = storage.nextTier();
+        ModuleTier storageTarget = ModuleTier.EV;
 
         FacilityCommand.Result tier = facility.applyCommand(
             new FacilityCommand.PlanTierUpgrade(facility.assetId, List.of(storage.id), storageTarget, false),
@@ -346,7 +346,7 @@ final class FacilityModuleConfigurationCommandTest {
 
     private static ModuleOperationState waitingOperation(ModuleInstance module) {
         ModuleOperationPlan plan = new ModuleOperationPlan(
-            new IModuleOperation.Tier(module.nextTier()),
+            new IModuleOperation.Tier(module.tier()),
             20,
             Map.of(),
             false);
