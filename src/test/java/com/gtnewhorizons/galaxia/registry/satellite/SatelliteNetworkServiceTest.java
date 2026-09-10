@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
@@ -82,6 +83,48 @@ final class SatelliteNetworkServiceTest {
             1,
             state.links()
                 .size());
+    }
+
+    @Test
+    void liveNetworkIncludesCommunicationBodiesAndExcludesProspectingOnlyBodies() {
+        AsteroidFieldProfile profile = GalaxiaCelestialAPI.get(CelestialObjectId.FROZEN_BELT)
+            .orElseThrow()
+            .properties()
+            .asteroidFieldProfile();
+        var asteroids = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile);
+        CelestialObjectKey activeAsteroid = CelestialObjectKey.minorBody(
+            asteroids.get(0)
+                .id());
+        CelestialObjectKey prospectingAsteroid = CelestialObjectKey.minorBody(
+            asteroids.get(1)
+                .id());
+        CelestialObjectKey mars = CelestialObjectKey.registered(CelestialObjectId.MARS);
+        CelestialObjectKey egora = CelestialObjectKey.registered(CelestialObjectId.EGORA);
+        CelestialAssetStore.SERVER.addSatellites(TEAM, mars, SatelliteKind.COMMUNICATION, 1);
+        CelestialAssetStore.SERVER.addSatellites(TEAM, activeAsteroid, SatelliteKind.COMMUNICATION, 1);
+        CelestialAssetStore.SERVER.addSatellites(TEAM, prospectingAsteroid, SatelliteKind.PROSPECTING, 1);
+        CelestialAssetStore.SERVER.addSatellites(TEAM, egora, SatelliteKind.PROSPECTING, 1);
+
+        SatelliteNetworkState network = SatelliteNetworkService.rebuild(TEAM, 10.0D);
+
+        assertEquals(
+            Set.of(mars, activeAsteroid),
+            network.bodies()
+                .keySet());
+        assertEquals(
+            1,
+            network.links()
+                .size());
+
+        CelestialAssetStore.SERVER.deleteSatellites(TEAM, activeAsteroid, SatelliteKind.COMMUNICATION);
+        SatelliteNetworkState changed = SatelliteNetworkService.rebuild(TEAM, 10.0D);
+        assertEquals(
+            Set.of(mars),
+            changed.bodies()
+                .keySet());
+        assertTrue(
+            changed.links()
+                .isEmpty());
     }
 
     @Test

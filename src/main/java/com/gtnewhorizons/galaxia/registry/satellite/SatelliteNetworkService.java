@@ -48,12 +48,8 @@ public final class SatelliteNetworkService {
      * delegates to the snapshot builder that also accounts for buffered data traffic.
      */
     public static SatelliteNetworkState rebuild(UUID teamId, double orbitalTime) {
-        List<SatelliteNetworkGraph.Node> nodes = buildNodes(teamId, orbitalTime);
         Map<CelestialObjectKey, Long> capacityByBody = new HashMap<>();
-        for (SatelliteNetworkGraph.Node node : nodes) {
-            long capacity = CelestialAssetStore.SERVER.satelliteBandwidth(teamId, node.bodyKey());
-            if (capacity > 0L) capacityByBody.put(node.bodyKey(), capacity);
-        }
+        List<SatelliteNetworkGraph.Node> nodes = buildNodes(teamId, orbitalTime, capacityByBody);
         return rebuild(teamId, nodes, capacityByBody, runtime(teamId).buffers);
     }
 
@@ -199,24 +195,26 @@ public final class SatelliteNetworkService {
      * The graph is built from orbital-space positions, not screen-space positions. Zoom/culling should not change the
      * server-side topology or path capacity.
      */
-    private static List<SatelliteNetworkGraph.Node> buildNodes(UUID teamId, double orbitalTime) {
+    private static List<SatelliteNetworkGraph.Node> buildNodes(UUID teamId, double orbitalTime,
+        Map<CelestialObjectKey, Long> capacityByBody) {
         CelestialObject root = GalaxiaCelestialAPI.root();
-        List<SatelliteNetworkGraph.Node> nodes = GalaxiaCelestialAPI.getAllBodies()
-            .values()
-            .stream()
-            .filter(body -> body.objectClass() != CelestialObject.Class.GALAXY)
-            .filter(body -> body.objectClass() != CelestialObject.Class.STAR)
-            .map(body -> nodeFor(root, body, orbitalTime))
-            .toList();
-        Set<CelestialObjectKey> minorBodyKeys = minorSatelliteBodyKeys(teamId);
-        if (minorBodyKeys.isEmpty()) return nodes;
-        List<SatelliteNetworkGraph.Node> withMinorBodies = new ArrayList<>(nodes);
-        for (CelestialObjectKey key : minorBodyKeys) {
+        List<CelestialObject> bodies = new ArrayList<>(
+            GalaxiaCelestialAPI.getAllBodies()
+                .values());
+        for (CelestialObjectKey key : minorSatelliteBodyKeys(teamId)) {
             GalaxiaCelestialAPI.get(key)
-                .map(body -> nodeFor(root, body, orbitalTime))
-                .ifPresent(withMinorBodies::add);
+                .ifPresent(bodies::add);
         }
-        return List.copyOf(withMinorBodies);
+        List<SatelliteNetworkGraph.Node> nodes = new ArrayList<>();
+        for (CelestialObject body : bodies) {
+            if (body.objectClass() == CelestialObject.Class.GALAXY || body.objectClass() == CelestialObject.Class.STAR)
+                continue;
+            long capacity = CelestialAssetStore.SERVER.satelliteBandwidth(teamId, body.key());
+            if (capacity <= 0L) continue;
+            capacityByBody.put(body.key(), capacity);
+            nodes.add(nodeFor(root, body, orbitalTime));
+        }
+        return nodes;
     }
 
     private static SatelliteNetworkGraph.Node nodeFor(CelestialObject root, CelestialObject body, double orbitalTime) {
