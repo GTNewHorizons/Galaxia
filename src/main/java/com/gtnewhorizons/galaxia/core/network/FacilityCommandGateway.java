@@ -99,15 +99,14 @@ public final class FacilityCommandGateway {
 
     private static Actor normalize(EntityPlayerMP player) {
         if (player == null) return null;
-        UUID teamId = GTTeamsCompat.getTeamData(player)
-            .map(team -> team.getTeamId())
+        var team = GTTeamsCompat.getTeamData(player)
             .orElse(null);
         EnumSet<TeamAction> permissions = EnumSet.noneOf(TeamAction.class);
         for (TeamAction action : FACILITY_ACTIONS) {
-            if (GTTeamsCompat.hasPermission(player, action)) permissions.add(action);
+            if (GTTeamsCompat.hasPermission(team, player, action)) permissions.add(action);
         }
         return new Actor(
-            teamId,
+            team == null ? null : team.getTeamId(),
             permissions,
             new FacilityCommand.Authority(
                 player.capabilities.isCreativeMode,
