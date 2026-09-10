@@ -14,7 +14,7 @@ public final class ModuleFootprintProjection {
 
     private ModuleFootprintProjection() {}
 
-    private record Geometry(List<Segment> filled, List<Segment> outline) {}
+    private record Geometry(List<Segment> filled, List<Segment> outline, StationTileCoord firstTile) {}
 
     private static Geometry[][] buildGeometries() {
         ModuleShape[] shapes = ModuleShape.values();
@@ -22,7 +22,16 @@ public final class ModuleFootprintProjection {
         for (ModuleShape shape : shapes) {
             for (int rotation = 0; rotation < 4; rotation++) {
                 List<Segment> filled = List.copyOf(buildFilledSegments(shape, rotation));
-                geometries[shape.ordinal()][rotation] = new Geometry(filled, List.copyOf(buildOutlineSegments(filled)));
+                StationTileCoord firstTile = StationTileCoord.CORE;
+                for (StationTileCoord tile : shape.tiles(StationTileCoord.CORE, rotation)) {
+                    if (tile.dy() < firstTile.dy() || tile.dy() == firstTile.dy() && tile.dx() < firstTile.dx()) {
+                        firstTile = tile;
+                    }
+                }
+                geometries[shape.ordinal()][rotation] = new Geometry(
+                    filled,
+                    List.copyOf(buildOutlineSegments(filled)),
+                    firstTile);
             }
         }
         return geometries;
@@ -46,6 +55,11 @@ public final class ModuleFootprintProjection {
     public static List<Segment> filledSegments(ModuleShape shape, StationTileCoord anchor, int rotation,
         StationMapFrame frame) {
         return translated(geometry(shape, anchor, rotation).filled(), anchor, frame);
+    }
+
+    public static StationTileCoord firstTile(ModuleShape shape, StationTileCoord anchor, int rotation) {
+        StationTileCoord offset = geometry(shape, anchor, rotation).firstTile();
+        return StationTileCoord.of(anchor.dx() + offset.dx(), anchor.dy() + offset.dy());
     }
 
     private static List<Segment> buildFilledSegments(ModuleShape shape, int rotation) {

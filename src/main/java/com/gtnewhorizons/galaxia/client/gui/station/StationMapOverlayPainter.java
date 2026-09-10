@@ -50,12 +50,11 @@ final class StationMapOverlayPainter {
         if (moduleAlerts.isEmpty()) return;
         for (Map.Entry<StationTileCoord, PlacedTile> entry : tiles.entrySet()) {
             ModuleInstance module = moduleOf(entry.getValue());
-            if (module == null || !entry.getKey()
-                .equals(alertBadgeCoord(module, tiles))) {
-                continue;
-            }
+            if (module == null) continue;
             StationModuleAlert alert = moduleAlerts.get(module.id);
             if (alert == null) continue;
+            if (!entry.getKey()
+                .equals(alertBadgeCoord(module))) continue;
             drawModuleAlertIcon(frame.tileLocalX(entry.getKey()), frame.tileLocalY(entry.getKey()), alert);
         }
     }
@@ -254,17 +253,8 @@ final class StationMapOverlayPainter {
         return ModuleFootprintProjection.outlineSegments(module.shape(), module.anchor(), module.rotation(), frame);
     }
 
-    static StationTileCoord alertBadgeCoord(ModuleInstance module, Map<StationTileCoord, PlacedTile> tiles) {
-        StationTileCoord best = module.anchor();
-        for (Map.Entry<StationTileCoord, PlacedTile> entry : tiles.entrySet()) {
-            ModuleInstance tileModule = moduleOf(entry.getValue());
-            if (tileModule == null || !module.id.equals(tileModule.id)) continue;
-            StationTileCoord coord = entry.getKey();
-            if (coord.dy() < best.dy() || coord.dy() == best.dy() && coord.dx() < best.dx()) {
-                best = coord;
-            }
-        }
-        return best;
+    static StationTileCoord alertBadgeCoord(ModuleInstance module) {
+        return ModuleFootprintProjection.firstTile(module.shape(), module.anchor(), module.rotation());
     }
 
     static void drawDeconstructModuleOverlay(ModuleInstance module, boolean selected, StationMapFrame frame) {

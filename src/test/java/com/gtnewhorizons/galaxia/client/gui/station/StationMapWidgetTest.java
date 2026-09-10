@@ -44,7 +44,11 @@ final class StationMapWidgetTest {
                 tiles.put(tile, new PlacedTile(module, StationTileState.OCCUPIED_OPERATIONAL));
             }
 
-            assertTrue(tiles.containsKey(StationMapOverlayPainter.alertBadgeCoord(module, tiles)));
+            StationTileCoord badge = StationMapOverlayPainter.alertBadgeCoord(module);
+            assertTrue(tiles.containsKey(badge));
+            for (StationTileCoord tile : tiles.keySet()) {
+                assertTrue(tile.dy() > badge.dy() || tile.dy() == badge.dy() && tile.dx() >= badge.dx());
+            }
         }
     }
 
