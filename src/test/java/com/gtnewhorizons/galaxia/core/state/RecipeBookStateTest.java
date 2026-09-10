@@ -54,7 +54,7 @@ final class RecipeBookStateTest {
     @Test
     void malformedResourceAmountAndChanceAreRejected() {
         NBTTagCompound invalidAmount = RecipeBookState.encode(completeBook());
-        firstRecipeResource(invalidAmount, "itemInputs").setLong("amount", 0L);
+        firstRecipeResource(invalidAmount, "itemInputs").setLong("amount", -1L);
 
         NBTTagCompound invalidChance = RecipeBookState.encode(completeBook());
         firstRecipeResource(invalidChance, "itemOutputs").setInteger("chance", 10_001);
