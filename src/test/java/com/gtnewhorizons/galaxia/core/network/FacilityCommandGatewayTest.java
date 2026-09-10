@@ -551,8 +551,8 @@ final class FacilityCommandGatewayTest {
         }
 
         @Override
-        public void send(UUID recipientId, AssetStateFramePacket packet) {
-            deliveryCount++;
+        public void send(UUID recipientId, List<AssetStateFramePacket> frames) {
+            deliveryCount += frames.size();
         }
     }
 }

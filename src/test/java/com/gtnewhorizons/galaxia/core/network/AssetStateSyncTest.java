@@ -105,6 +105,27 @@ final class AssetStateSyncTest {
     }
 
     @Test
+    void failedPublicationRetriesOnlyTheRecipientThatDidNotReceiveIt() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
+        RecordingTransport transport = new RecordingTransport(facility);
+        transport.failNextSend = true;
+        AssetStateSync.Server sync = new AssetStateSync.Server(transport);
+
+        sync.publishInteractive(facility.assetId);
+        assertEquals(List.of(SECOND_RECIPIENT), transport.recipientIds());
+        transport.clearDeliveries();
+
+        sync.publishInteractive(facility.assetId);
+        assertEquals(List.of(FIRST_RECIPIENT), transport.recipientIds());
+        assertEquals(List.of(1L), transport.publishedRevisions);
+    }
+
+    @Test
     void resetRecipientLosesOnlyThatRecipientsPublicationBaseline() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
@@ -515,6 +536,7 @@ final class AssetStateSyncTest {
         private final List<Byte> syncTypes = new ArrayList<>();
         private final List<AssetSyncPacket> packets = new ArrayList<>();
         private boolean mutateAfterFirstDelivery;
+        private boolean failNextSend;
         private boolean online = true;
 
         private RecordingTransport(AutomatedFacility facility) {
@@ -530,7 +552,13 @@ final class AssetStateSyncTest {
         }
 
         @Override
-        public void send(UUID recipientId, AssetStateFramePacket frame) {
+        public void send(UUID recipientId, List<AssetStateFramePacket> frames) {
+            if (failNextSend) {
+                failNextSend = false;
+                throw new IllegalStateException("Simulated transport failure");
+            }
+            assertEquals(1, frames.size());
+            AssetStateFramePacket frame = frames.getFirst();
             assertEquals(1, frame.frameCount());
             ByteBuf framed = Unpooled.wrappedBuffer(frame.payload());
             AssetSyncPacket packet = new AssetSyncPacket();

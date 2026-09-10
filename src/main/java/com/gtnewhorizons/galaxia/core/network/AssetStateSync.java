@@ -283,7 +283,7 @@ public final class AssetStateSync {
         private boolean send(UUID recipientId, List<AssetStateFramePacket> frames) {
             if (frames.isEmpty()) return false;
             try {
-                for (AssetStateFramePacket frame : frames) transport.send(recipientId, frame);
+                transport.send(recipientId, frames);
                 return true;
             } catch (RuntimeException ex) {
                 LOG.warn(
@@ -519,7 +519,7 @@ public final class AssetStateSync {
 
         Collection<UUID> eligibleRecipients(UUID teamId);
 
-        void send(UUID recipientId, AssetStateFramePacket packet);
+        void send(UUID recipientId, List<AssetStateFramePacket> frames);
     }
 
     interface ClientTransport {
@@ -543,11 +543,11 @@ public final class AssetStateSync {
         }
 
         @Override
-        public void send(UUID recipientId, AssetStateFramePacket packet) {
+        public void send(UUID recipientId, List<AssetStateFramePacket> frames) {
             for (EntityPlayerMP player : MinecraftServer.getServer()
                 .getConfigurationManager().playerEntityList) {
                 if (player != null && recipientId.equals(player.getUniqueID())) {
-                    Galaxia.GALAXIA_NETWORK.sendTo(packet, player);
+                    for (AssetStateFramePacket frame : frames) Galaxia.GALAXIA_NETWORK.sendTo(frame, player);
                     return;
                 }
             }
