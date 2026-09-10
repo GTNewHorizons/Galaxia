@@ -15,6 +15,8 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
+import com.gtnewhorizons.galaxia.client.gui.station.ModuleUpgradeUiModel.Group;
+import com.gtnewhorizons.galaxia.client.gui.station.ModuleUpgradeUiModel.Option;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -164,9 +166,9 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
     }
 
     private void drawGroupLabels(ModuleInstance module) {
-        List<ModuleUpgradeGroup> groups = ModuleUpgradeUiModel.groups(module, controller.moduleUpgradeSelection());
+        List<Group> groups = ModuleUpgradeUiModel.groups(module, controller.moduleUpgradeSelection());
         int row = 0;
-        for (ModuleUpgradeGroup group : groups) {
+        for (Group group : groups) {
             ModuleConfigModalSupport.drawTrimmedLine(
                 group.title(),
                 ModuleConfigModalSupport.PANEL_PADDING,
@@ -235,9 +237,9 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
         ModuleInstance module = selectedModule();
         if (module == null) return null;
         int row = 0;
-        for (ModuleUpgradeGroup group : ModuleUpgradeUiModel.groups(module, controller.moduleUpgradeSelection())) {
+        for (Group group : ModuleUpgradeUiModel.groups(module, controller.moduleUpgradeSelection())) {
             int column = 0;
-            for (ModuleUpgradeOption option : group.options()) {
+            for (Option option : group.options()) {
                 if (slot == row * OPTION_COLUMNS + column) return new OptionRef(group, option);
                 column++;
             }
@@ -547,5 +549,5 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
         }
     }
 
-    private record OptionRef(ModuleUpgradeGroup group, ModuleUpgradeOption option) {}
+    private record OptionRef(Group group, Option option) {}
 }

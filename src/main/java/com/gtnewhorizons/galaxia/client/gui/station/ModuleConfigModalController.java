@@ -4,6 +4,7 @@ import java.util.Objects;
 
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.widget.ParentWidget;
+import com.gtnewhorizons.galaxia.client.gui.station.ModuleUpgradeUiModel.Selection;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
@@ -43,8 +44,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
     private boolean retargetQueued;
     private ModuleInstance.ID queuedRetargetModuleId;
     private LogisticsConfigAccessMode logisticsAccessMode = LogisticsConfigAccessMode.FULL;
-    private ModuleUpgradeSelection moduleUpgradeSelection = ModuleUpgradeSelection
-        .hammer(HammerVariant.BASE, ModuleTier.EV);
+    private Selection moduleUpgradeSelection = Selection.hammer(HammerVariant.BASE, ModuleTier.EV);
 
     ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y) {
         this(host, assetId, x, y, null, new StationOverlayCoordinator());
@@ -166,7 +166,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         this.minerBlacklistPage = 0;
         this.hammerUpgradeReserveItems = false;
         this.hammerUpgradeVoidRefund = false;
-        this.moduleUpgradeSelection = ModuleUpgradeSelection.hammer(HammerVariant.BASE, ModuleTier.EV);
+        this.moduleUpgradeSelection = Selection.hammer(HammerVariant.BASE, ModuleTier.EV);
         this.moduleOperationCancelArmed = false;
         this.logisticsAccessMode = LogisticsConfigAccessMode.FULL;
     }
@@ -292,7 +292,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         hammerUpgradeVoidRefund = !hammerUpgradeVoidRefund;
     }
 
-    ModuleUpgradeSelection moduleUpgradeSelection() {
+    Selection moduleUpgradeSelection() {
         return moduleUpgradeSelection;
     }
 

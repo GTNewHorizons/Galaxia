@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,35 +35,33 @@ final class ModuleUpgradeUiModel {
             && (module.component() instanceof ModuleHammer || module.component() instanceof ModuleMiner);
     }
 
-    static ModuleUpgradeSelection defaultSelection(ModuleInstance module) {
+    static Selection defaultSelection(ModuleInstance module) {
         if (module.component() instanceof ModuleHammer hammer) {
-            return ModuleUpgradeSelection.hammer(hammer.variant(), module.tier());
+            return Selection.hammer(hammer.variant(), module.tier());
         }
         if (module.component() instanceof ModuleMiner) {
-            return ModuleUpgradeSelection.miner(module.tier(), MinerFocusUiModel.defaultUpgradeTarget(module));
+            return Selection.miner(module.tier(), MinerFocusUiModel.defaultUpgradeTarget(module));
         }
         throw new IllegalArgumentException("Unsupported upgrade module: " + module.kind());
     }
 
-    static ModuleUpgradeSelection selectOption(ModuleInstance module, ModuleUpgradeSelection selection, String groupId,
-        String optionId) {
+    static Selection selectOption(ModuleInstance module, Selection selection, String groupId, String optionId) {
         return normalize(module, selection.with(groupId, optionId));
     }
 
-    static ModuleUpgradeSelection normalize(ModuleInstance module, ModuleUpgradeSelection selection) {
+    static Selection normalize(ModuleInstance module, Selection selection) {
         if (module.component() instanceof ModuleHammer) {
             HammerVariant variant = hammerVariant(selection);
             ModuleTier tier = hammerTier(selection);
-            return ModuleUpgradeSelection.hammer(variant, normalizeHammerTier(variant, tier));
+            return Selection.hammer(variant, normalizeHammerTier(variant, tier));
         }
         if (module.component() instanceof ModuleMiner) {
-            return ModuleUpgradeSelection
-                .miner(normalizeMinerTier(module, minerTier(selection)), minerFocusTier(selection));
+            return Selection.miner(normalizeMinerTier(module, minerTier(selection)), minerFocusTier(selection));
         }
         return selection;
     }
 
-    static List<ModuleUpgradeGroup> groups(ModuleInstance module, ModuleUpgradeSelection selection) {
+    static List<Group> groups(ModuleInstance module, Selection selection) {
         if (module.component() instanceof ModuleHammer) {
             return hammerGroups(selection);
         }
@@ -84,7 +83,7 @@ final class ModuleUpgradeUiModel {
         return ModuleHammer.tierForVariantSwitch(variant, tier);
     }
 
-    static Map<ItemStackWrapper, Long> upgradeMaterials(ModuleInstance module, ModuleUpgradeSelection selection) {
+    static Map<ItemStackWrapper, Long> upgradeMaterials(ModuleInstance module, Selection selection) {
         return module.constructionMaterials(
             module.component() instanceof ModuleHammer ? hammerTier(selection) : minerTier(selection));
     }
@@ -97,22 +96,22 @@ final class ModuleUpgradeUiModel {
             .contains(tier) ? tier : kind.defaultTier();
     }
 
-    static HammerVariant hammerVariant(ModuleUpgradeSelection selection) {
+    static HammerVariant hammerVariant(Selection selection) {
         String raw = selection.get(GROUP_HAMMER_VARIANT);
         return raw == null ? HammerVariant.BASE : HammerVariant.valueOf(raw);
     }
 
-    static ModuleTier hammerTier(ModuleUpgradeSelection selection) {
+    static ModuleTier hammerTier(Selection selection) {
         String raw = selection.get(GROUP_HAMMER_TIER);
         return raw == null ? ModuleTier.EV : ModuleTier.valueOf(raw);
     }
 
-    static ModuleTier minerTier(ModuleUpgradeSelection selection) {
+    static ModuleTier minerTier(Selection selection) {
         String raw = selection.get(GROUP_MINER_TIER);
         return raw == null ? ModuleTier.EV : ModuleTier.valueOf(raw);
     }
 
-    static MinerFocusTier minerFocusTier(ModuleUpgradeSelection selection) {
+    static MinerFocusTier minerFocusTier(Selection selection) {
         String raw = selection.get(GROUP_MINER_FOCUS_TIER);
         return raw == null ? MinerFocusTier.I : MinerFocusTier.valueOf(raw);
     }
@@ -155,53 +154,101 @@ final class ModuleUpgradeUiModel {
         return targets;
     }
 
-    private static List<ModuleUpgradeGroup> hammerGroups(ModuleUpgradeSelection selection) {
+    private static List<Group> hammerGroups(Selection selection) {
         HammerVariant selectedVariant = hammerVariant(selection);
         ModuleTier selectedTier = hammerTier(selection);
-        List<ModuleUpgradeOption> variants = new ArrayList<>();
+        List<Option> variants = new ArrayList<>();
         for (HammerVariant variant : HammerVariant.values()) {
-            variants.add(new ModuleUpgradeOption(variant.name(), variant.name(), variant == selectedVariant, true));
+            variants.add(new Option(variant.name(), variant.name(), variant == selectedVariant, true));
         }
-        List<ModuleUpgradeOption> tiers = new ArrayList<>();
+        List<Option> tiers = new ArrayList<>();
         for (ModuleTier tier : ModuleTier.values()) {
             if (tier == ModuleTier.NONE) continue;
             boolean enabled = ModuleHammer.supportsTier(selectedVariant, tier);
-            tiers.add(new ModuleUpgradeOption(tier.name(), tier.name(), tier == selectedTier, enabled));
+            tiers.add(new Option(tier.name(), tier.name(), tier == selectedTier, enabled));
         }
-        return List.of(
-            new ModuleUpgradeGroup(GROUP_HAMMER_VARIANT, "Variant", variants),
-            new ModuleUpgradeGroup(GROUP_HAMMER_TIER, "Tier", tiers));
+        return List
+            .of(new Group(GROUP_HAMMER_VARIANT, "Variant", variants), new Group(GROUP_HAMMER_TIER, "Tier", tiers));
     }
 
-    private static List<ModuleUpgradeGroup> minerGroups(ModuleInstance module, ModuleUpgradeSelection selection) {
+    private static List<Group> minerGroups(ModuleInstance module, Selection selection) {
         ModuleTier selectedModuleTier = minerTier(selection);
         MinerFocusTier selectedFocusTier = minerFocusTier(selection);
-        List<ModuleUpgradeOption> moduleTiers = new ArrayList<>();
+        List<Option> moduleTiers = new ArrayList<>();
         for (ModuleTier tier : module.kind()
             .allowedTiers()) {
             if (tier == ModuleTier.NONE) continue;
-            moduleTiers.add(new ModuleUpgradeOption(tier.name(), tier.name(), tier == selectedModuleTier, true));
+            moduleTiers.add(new Option(tier.name(), tier.name(), tier == selectedModuleTier, true));
         }
 
-        List<ModuleUpgradeOption> focusTiers = new ArrayList<>();
+        List<Option> focusTiers = new ArrayList<>();
         focusTiers.add(
-            new ModuleUpgradeOption(
+            new Option(
                 MinerFocusTier.NONE.name(),
                 "None",
                 selectedFocusTier == MinerFocusTier.NONE,
                 MinerFocusUiModel.canPlanTier(module, MinerFocusTier.NONE)));
         for (MinerFocusTier tier : new MinerFocusTier[] { MinerFocusTier.I, MinerFocusTier.II, MinerFocusTier.III }) {
             boolean enabled = MinerFocusUiModel.canPlanTier(module, tier);
-            focusTiers.add(new ModuleUpgradeOption(tier.name(), tier.name(), tier == selectedFocusTier, enabled));
+            focusTiers.add(new Option(tier.name(), tier.name(), tier == selectedFocusTier, enabled));
         }
         return List.of(
-            new ModuleUpgradeGroup(GROUP_MINER_TIER, "Tier", moduleTiers),
-            new ModuleUpgradeGroup(GROUP_MINER_FOCUS_TIER, "Focus Tier", focusTiers));
+            new Group(GROUP_MINER_TIER, "Tier", moduleTiers),
+            new Group(GROUP_MINER_FOCUS_TIER, "Focus Tier", focusTiers));
     }
 
     private static ModuleTier normalizeMinerTier(ModuleInstance module, ModuleTier tier) {
         return module.kind()
             .allowedTiers()
             .contains(tier) ? tier : module.tier();
+    }
+
+    record Group(String id, String title, List<Option> options) {
+
+        Group {
+            options = List.copyOf(options);
+        }
+    }
+
+    record Option(String id, String label, boolean selected, boolean enabled) {}
+
+    record Selection(Map<String, String> values) {
+
+        Selection {
+            values = Map.copyOf(values);
+        }
+
+        static Selection hammer(HammerVariant variant, ModuleTier tier) {
+            return new Selection(
+                Map.of(
+                    ModuleUpgradeUiModel.GROUP_HAMMER_VARIANT,
+                    variant.name(),
+                    ModuleUpgradeUiModel.GROUP_HAMMER_TIER,
+                    tier.name()));
+        }
+
+        static Selection minerFocus(MinerFocusTier tier) {
+            return new Selection(Map.of(ModuleUpgradeUiModel.GROUP_MINER_FOCUS_TIER, tier.name()));
+        }
+
+        static Selection miner(ModuleTier tier, MinerFocusTier focusTier) {
+            return new Selection(
+                Map.of(
+                    ModuleUpgradeUiModel.GROUP_MINER_TIER,
+                    tier.name(),
+                    ModuleUpgradeUiModel.GROUP_MINER_FOCUS_TIER,
+                    focusTier.name()));
+        }
+
+        @Nullable
+        String get(String groupId) {
+            return values.get(groupId);
+        }
+
+        Selection with(String groupId, String optionId) {
+            Map<String, String> copy = new LinkedHashMap<>(values);
+            copy.put(groupId, optionId);
+            return new Selection(copy);
+        }
     }
 }
