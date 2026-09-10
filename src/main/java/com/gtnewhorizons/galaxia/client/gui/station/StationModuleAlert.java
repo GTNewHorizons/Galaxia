@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -14,7 +15,6 @@ import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.BlockingReason;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepLedger;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 
 public record StationModuleAlert(Severity severity, String title, String message, @Nullable ResourceLocation icon) {
@@ -33,44 +33,30 @@ public record StationModuleAlert(Severity severity, String title, String message
         return new StationModuleAlert(Severity.RED, title, message, icon);
     }
 
-    public static List<StationModuleAlert> alertsFor(AutomatedFacility facility, ModuleInstance module) {
-        if (facility == null || module == null) return List.of();
-        if (module.blocking() == BlockingReason.UPKEEP_SHORTAGE) {
-            return List.of(
-                StationModuleAlert
-                    .critical("Upkeep", "Missing upkeep resources.", EnumTextures.ICON_STATION_ALERT_ERROR.get()));
-        }
-        UpkeepLedger.UpkeepSummary summary = facility.upkeepSummary();
-        UpkeepLedger.ModuleDemand demand = demandFor(summary, module);
-        if (demand == null) return List.of();
-        return UpkeepSettlement.preview(summary.moduleDemands(), facility.upkeepCredits(), facility)
-            .unpaidModuleIds()
-            .contains(module.id)
-                ? List.of(
-                    StationModuleAlert
-                        .warning("Upkeep", "Missing upkeep resources.", EnumTextures.ICON_STATION_ALERT_WARNING.get()))
-                : List.of();
-    }
-
     public static Map<ModuleInstance.ID, List<StationModuleAlert>> alerts(AutomatedFacility facility) {
         if (facility == null) return Map.of();
         Map<ModuleInstance.ID, List<StationModuleAlert>> result = new LinkedHashMap<>();
+        Set<ModuleInstance.ID> unpaid = null;
         for (ModuleInstance module : facility.modules()) {
-            List<StationModuleAlert> alerts = alertsFor(facility, module);
-            if (!alerts.isEmpty()) result.put(module.id, alerts);
+            StationModuleAlert alert;
+            if (module.blocking() == BlockingReason.UPKEEP_SHORTAGE) {
+                alert = critical("Upkeep", "Missing upkeep resources.", EnumTextures.ICON_STATION_ALERT_ERROR.get());
+            } else {
+                if (unpaid == null) {
+                    unpaid = Set.copyOf(
+                        UpkeepSettlement.preview(
+                            facility.upkeepSummary()
+                                .moduleDemands(),
+                            facility.upkeepCredits(),
+                            facility)
+                            .unpaidModuleIds());
+                }
+                if (!unpaid.contains(module.id)) continue;
+                alert = warning("Upkeep", "Missing upkeep resources.", EnumTextures.ICON_STATION_ALERT_WARNING.get());
+            }
+            result.put(module.id, List.of(alert));
         }
         return result.isEmpty() ? Map.of() : Collections.unmodifiableMap(result);
-    }
-
-    private static UpkeepLedger.ModuleDemand demandFor(UpkeepLedger.UpkeepSummary summary, ModuleInstance module) {
-        if (summary == null || module == null) return null;
-        for (UpkeepLedger.ModuleDemand demand : summary.moduleDemands()) {
-            if (module.id.equals(demand.moduleId()) && !demand.demand()
-                .isEmpty()) {
-                return demand;
-            }
-        }
-        return null;
     }
 
     public enum Severity {

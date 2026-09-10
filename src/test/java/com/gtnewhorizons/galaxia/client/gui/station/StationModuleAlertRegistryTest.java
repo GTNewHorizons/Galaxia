@@ -43,7 +43,8 @@ final class StationModuleAlertRegistryTest {
         ModuleInstance module = moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(1, 0), 1L);
         addModule(facility, module);
 
-        List<StationModuleAlert> alerts = StationModuleAlert.alertsFor(facility, module);
+        List<StationModuleAlert> alerts = StationModuleAlert.alerts(facility)
+            .getOrDefault(module.id, List.of());
 
         assertFalse(alerts.isEmpty());
         assertEquals(
@@ -60,7 +61,8 @@ final class StationModuleAlertRegistryTest {
 
         tickUpkeepMinute(facility);
 
-        List<StationModuleAlert> alerts = StationModuleAlert.alertsFor(facility, module);
+        List<StationModuleAlert> alerts = StationModuleAlert.alerts(facility)
+            .getOrDefault(module.id, List.of());
         assertFalse(alerts.isEmpty());
         assertEquals(
             StationModuleAlert.Severity.RED,
@@ -75,7 +77,8 @@ final class StationModuleAlertRegistryTest {
         addModule(facility, module);
         facility.insert(ItemStackWrapper.of(new ItemStack(Items.iron_ingot)), 1);
 
-        List<StationModuleAlert> alerts = StationModuleAlert.alertsFor(facility, module);
+        List<StationModuleAlert> alerts = StationModuleAlert.alerts(facility)
+            .getOrDefault(module.id, List.of());
 
         assertEquals(List.of(), alerts);
     }
@@ -91,8 +94,12 @@ final class StationModuleAlertRegistryTest {
         addModule(facility, low);
         facility.insert(ItemStackWrapper.of(new ItemStack(Items.iron_ingot)), 1);
 
-        assertEquals(List.of(), StationModuleAlert.alertsFor(facility, high));
-        List<StationModuleAlert> lowAlerts = StationModuleAlert.alertsFor(facility, low);
+        assertEquals(
+            List.of(),
+            StationModuleAlert.alerts(facility)
+                .getOrDefault(high.id, List.of()));
+        List<StationModuleAlert> lowAlerts = StationModuleAlert.alerts(facility)
+            .getOrDefault(low.id, List.of());
 
         assertFalse(lowAlerts.isEmpty());
         assertEquals(
@@ -109,7 +116,10 @@ final class StationModuleAlertRegistryTest {
         addModule(facility, module);
         facility.insert(upkeepItem, 1);
 
-        assertEquals(List.of(), StationModuleAlert.alertsFor(facility, module));
+        assertEquals(
+            List.of(),
+            StationModuleAlert.alerts(facility)
+                .getOrDefault(module.id, List.of()));
 
         tickUpkeepMinute(facility);
 
