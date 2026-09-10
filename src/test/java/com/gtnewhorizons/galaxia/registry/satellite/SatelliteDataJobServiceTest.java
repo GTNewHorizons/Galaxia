@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.satellite;
 
 import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.List;
@@ -223,6 +224,34 @@ final class SatelliteDataJobServiceTest {
 
         assertEquals(CelestialObjectKey.registered(CelestialObjectId.EGORA), producer.detectedCounterpartBodyKey());
         assertEquals(CelestialObjectKey.registered(CelestialObjectId.MARS), consumer.detectedCounterpartBodyKey());
+    }
+
+    @Test
+    void unchangedCounterpartsKeepFacilitiesCleanBetweenProductionCompletions() {
+        SatelliteDataBufferStore store = new SatelliteDataBufferStore();
+        AutomatedFacility firstSource = facility(CelestialObjectId.MARS);
+        AutomatedFacility secondSource = facility(CelestialObjectId.OVERWORLD);
+        AutomatedFacility destination = facility(CelestialObjectId.EGORA);
+        ModuleDebugDataGenerator firstProducer = addDebugModule(firstSource);
+        ModuleDebugDataGenerator secondProducer = addDebugModule(secondSource);
+        ModuleDebugDataGenerator consumer = addDebugModule(destination);
+        firstProducer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.RESEARCH, 10L, 100));
+        secondProducer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.RESEARCH, 10L, 100));
+        consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.RESEARCH, 10L, 1, null));
+        List<AutomatedFacility> facilities = List.of(firstSource, secondSource, destination);
+
+        tickUsage(TEAM, facilities, store, emptyNetwork());
+        assertEquals(key(CelestialObjectId.EGORA), firstProducer.detectedCounterpartBodyKey());
+        assertEquals(key(CelestialObjectId.EGORA), secondProducer.detectedCounterpartBodyKey());
+        assertEquals(key(CelestialObjectId.OVERWORLD), consumer.detectedCounterpartBodyKey());
+        facilities.forEach(AutomatedFacility::clean);
+
+        tickUsage(TEAM, facilities, store, emptyNetwork());
+
+        assertEquals(key(CelestialObjectId.OVERWORLD), consumer.detectedCounterpartBodyKey());
+        assertFalse(firstSource.isDirty());
+        assertFalse(secondSource.isDirty());
+        assertFalse(destination.isDirty());
     }
 
     @Test

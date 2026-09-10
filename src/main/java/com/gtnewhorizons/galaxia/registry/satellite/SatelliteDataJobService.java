@@ -41,11 +41,11 @@ public final class SatelliteDataJobService {
         if (teamId == null || endpoints == null || store == null || networkState == null) {
             return new Usage(Map.of(), Map.of());
         }
-        updateDetectedCounterparts(endpoints);
+        Map<SatelliteDataEndpointRegistry.Endpoint, CelestialObjectKey> counterparts = updateDetectedCounterparts(
+            endpoints);
         for (SatelliteDataEndpointRegistry.Endpoint producer : endpoints) {
             if (!producer.produces()) continue;
-            List<SatelliteDataEndpointRegistry.Endpoint> consumers = matchingConsumers(producer, endpoints);
-            if (consumers.isEmpty()) {
+            if (!counterparts.containsKey(producer)) {
                 producer.clearProduction();
                 continue;
             }
@@ -66,22 +66,25 @@ public final class SatelliteDataJobService {
      * production
      * so the debug panel cannot claim a producer/consumer exists when the transfer code would ignore it.
      */
-    private static void updateDetectedCounterparts(List<SatelliteDataEndpointRegistry.Endpoint> endpoints) {
-        for (SatelliteDataEndpointRegistry.Endpoint endpoint : endpoints) {
-            updateDetectedCounterpart(endpoint, null);
-        }
+    private static Map<SatelliteDataEndpointRegistry.Endpoint, CelestialObjectKey> updateDetectedCounterparts(
+        List<SatelliteDataEndpointRegistry.Endpoint> endpoints) {
+        Map<SatelliteDataEndpointRegistry.Endpoint, CelestialObjectKey> counterparts = new HashMap<>();
         for (SatelliteDataEndpointRegistry.Endpoint producer : endpoints) {
             if (!producer.produces()) continue;
             List<SatelliteDataEndpointRegistry.Endpoint> consumers = matchingConsumers(producer, endpoints);
             if (consumers.isEmpty()) continue;
-            updateDetectedCounterpart(
+            counterparts.put(
                 producer,
                 consumers.get(0)
                     .bodyKey());
             for (SatelliteDataEndpointRegistry.Endpoint consumer : consumers) {
-                updateDetectedCounterpart(consumer, producer.bodyKey());
+                counterparts.put(consumer, producer.bodyKey());
             }
         }
+        for (SatelliteDataEndpointRegistry.Endpoint endpoint : endpoints) {
+            updateDetectedCounterpart(endpoint, counterparts.get(endpoint));
+        }
+        return counterparts;
     }
 
     private static void completeProduction(SatelliteDataEndpointRegistry.Endpoint producer,
