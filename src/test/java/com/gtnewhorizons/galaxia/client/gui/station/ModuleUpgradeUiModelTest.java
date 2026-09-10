@@ -17,6 +17,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
@@ -37,6 +38,30 @@ final class ModuleUpgradeUiModelTest {
     @BeforeAll
     static void initRegistry() {
         GalaxiaTestBootstrap.ensureFacilityModules();
+    }
+
+    @Test
+    void minerUpgradePreviewMatchesMaterialsRequiredByServerPlan() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ModuleInstance module = minerModule();
+        addModule(facility, module);
+        ModuleUpgradeSelection selection = ModuleUpgradeSelection.miner(ModuleTier.IV, MinerFocusTier.I);
+        Map<ItemStackWrapper, Long> displayed = ModuleUpgradeUiModel.upgradeMaterials(module, selection);
+        assertEquals(
+            FacilityCommand.Status.CHANGED,
+            facility.applyCommand(
+                new FacilityCommand.PlanMinerFocusUpgrade(facility.assetId, module.id, ModuleTier.IV, MinerFocusTier.I),
+                FacilityCommand.Authority.NONE)
+                .status());
+        assertEquals(
+            module.operationOrNull()
+                .plan()
+                .materialCost(),
+            displayed);
     }
 
     @Test

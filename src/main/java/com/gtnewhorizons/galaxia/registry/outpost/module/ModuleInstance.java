@@ -319,7 +319,9 @@ public class ModuleInstance implements Buildable {
     }
 
     public Map<ItemStackWrapper, Long> constructionMaterials(ModuleTier targetTier) {
-        return FacilityModuleRegistry.operationCost(definition.getTierData(targetTier).constructionCost());
+        return FacilityModuleRegistry.operationCost(
+            definition.getTierData(targetTier)
+                .constructionCost());
     }
 
     public UpkeepDemand currentTierUpkeepDemand() {

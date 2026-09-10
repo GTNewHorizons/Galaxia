@@ -85,7 +85,8 @@ final class ModuleUpgradeUiModel {
     }
 
     static Map<ItemStackWrapper, Long> upgradeMaterials(ModuleInstance module, ModuleUpgradeSelection selection) {
-        return module.constructionMaterials(module.component() instanceof ModuleHammer ? hammerTier(selection) : module.tier());
+        return module.constructionMaterials(
+            module.component() instanceof ModuleHammer ? hammerTier(selection) : minerTier(selection));
     }
 
     static ModuleTier normalizeBuildTier(FacilityModuleKind kind, ModuleTier tier, HammerVariant hammerVariant) {
