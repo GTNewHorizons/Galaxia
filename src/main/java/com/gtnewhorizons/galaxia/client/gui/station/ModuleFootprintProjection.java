@@ -10,19 +10,54 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 public final class ModuleFootprintProjection {
 
+    private static final Geometry[][] GEOMETRIES = buildGeometries();
+
     private ModuleFootprintProjection() {}
+
+    private record Geometry(List<Segment> filled, List<Segment> outline) {}
+
+    private static Geometry[][] buildGeometries() {
+        ModuleShape[] shapes = ModuleShape.values();
+        Geometry[][] geometries = new Geometry[shapes.length][4];
+        for (ModuleShape shape : shapes) {
+            for (int rotation = 0; rotation < 4; rotation++) {
+                List<Segment> filled = List.copyOf(buildFilledSegments(shape, rotation));
+                geometries[shape.ordinal()][rotation] = new Geometry(filled, List.copyOf(buildOutlineSegments(filled)));
+            }
+        }
+        return geometries;
+    }
+
+    private static Geometry geometry(ModuleShape shape, StationTileCoord anchor, int rotation) {
+        if (!shape.fitsAt(anchor, rotation)) throw new IllegalArgumentException("Footprint extends beyond map bounds");
+        return GEOMETRIES[shape.ordinal()][ModuleShape.normalizeRotation(rotation)];
+    }
+
+    private static List<Segment> translated(List<Segment> segments, StationTileCoord anchor, StationMapFrame frame) {
+        int x = frame.tileLocalX(anchor);
+        int y = frame.tileLocalY(anchor);
+        List<Segment> translated = new ArrayList<>(segments.size());
+        for (Segment segment : segments) {
+            translated.add(new Segment(x + segment.x(), y + segment.y(), segment.width(), segment.height()));
+        }
+        return translated;
+    }
 
     public static List<Segment> filledSegments(ModuleShape shape, StationTileCoord anchor, int rotation,
         StationMapFrame frame) {
-        StationTileCoord[] tiles = shape.tiles(anchor, rotation);
+        return translated(geometry(shape, anchor, rotation).filled(), anchor, frame);
+    }
+
+    private static List<Segment> buildFilledSegments(ModuleShape shape, int rotation) {
+        StationTileCoord[] tiles = shape.tiles(StationTileCoord.CORE, rotation);
         Set<StationTileCoord> occupied = new HashSet<>();
         for (StationTileCoord tile : tiles) {
             occupied.add(tile);
         }
         List<Segment> segments = new ArrayList<>();
         for (StationTileCoord tile : tiles) {
-            int x = frame.tileLocalX(tile);
-            int y = frame.tileLocalY(tile);
+            int x = tile.dx() * StationMapFrame.TILE_STEP;
+            int y = tile.dy() * StationMapFrame.TILE_STEP;
             segments.add(new Segment(x, y, StationMapFrame.TILE_SIZE, StationMapFrame.TILE_SIZE));
             if (isOccupied(occupied, tile.dx() + 1, tile.dy())) {
                 segments.add(
@@ -55,7 +90,10 @@ public final class ModuleFootprintProjection {
 
     public static List<Segment> outlineSegments(ModuleShape shape, StationTileCoord anchor, int rotation,
         StationMapFrame frame) {
-        List<Segment> filledSegments = filledSegments(shape, anchor, rotation, frame);
+        return translated(geometry(shape, anchor, rotation).outline(), anchor, frame);
+    }
+
+    private static List<Segment> buildOutlineSegments(List<Segment> filledSegments) {
         if (filledSegments.isEmpty()) return List.of();
 
         int minX = Integer.MAX_VALUE;
@@ -85,8 +123,10 @@ public final class ModuleFootprintProjection {
 
     public static boolean contains(ModuleShape shape, StationTileCoord anchor, int rotation, int x, int y,
         StationMapFrame frame) {
-        for (Segment segment : filledSegments(shape, anchor, rotation, frame)) {
-            if (segment.contains(x, y)) return true;
+        int relativeX = x - frame.tileLocalX(anchor);
+        int relativeY = y - frame.tileLocalY(anchor);
+        for (Segment segment : geometry(shape, anchor, rotation).filled()) {
+            if (segment.contains(relativeX, relativeY)) return true;
         }
         return false;
     }
