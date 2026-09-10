@@ -1,6 +1,8 @@
 capture station-default
+assert-disabled 0/5/4
 move-widget 0/5/0
 click left
+assert-enabled 0/5/4
 capture station-inventory
 move-widget 0/5/2
 click left

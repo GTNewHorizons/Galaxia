@@ -61,6 +61,12 @@ public final class GalaxiaPreviewCatalog implements PreviewCatalog {
                     .actions("actions/recipe-input.txt"),
             scenario("rockets/editor-empty", "empty rocket editor", "rockets", RocketEditorUI.class,
                 RocketPreviews::emptyRocketEditor).tags("default", "state"),
+            scenario("rockets/editor", "rocket editor with a valid blueprint", "rockets", RocketEditorUI.class,
+                RocketPreviews::rocketEditor).tags("interaction", "state")
+                    .actions("actions/rocket-editor.txt")
+                    .knownFailure("interaction_error",
+                        "Missing preview texture: galaxia:textures/model/modules/fuel_tank_1/silo_icon.png",
+                        "The fuel tank selector references an unavailable silo icon"),
             scenario("rockets/editor-invalid", "invalid rocket editor", "rockets", RocketEditorUI.class,
                 RocketPreviews::invalidRocketEditor).tags("state"),
             scenario("rockets/module-assembler", "module assembler", "rockets", TileEntityModuleAssembler.class,

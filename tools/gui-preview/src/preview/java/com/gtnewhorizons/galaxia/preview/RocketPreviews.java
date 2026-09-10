@@ -14,6 +14,10 @@ final class RocketPreviews {
 
     private RocketPreviews() {}
 
+    static PreviewEntrypoint rocketEditor() {
+        return rocketEditor(BlueprintState.VALID);
+    }
+
     static PreviewEntrypoint emptyRocketEditor() {
         return rocketEditor(BlueprintState.EMPTY);
     }
