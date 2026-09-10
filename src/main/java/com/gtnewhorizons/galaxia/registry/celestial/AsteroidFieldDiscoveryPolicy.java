@@ -1,7 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.UUID;
@@ -24,12 +26,11 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledge
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
 
 /**
- * Stateless asteroid-field discovery policy.
+ * Asteroid-field discovery policy with shared immutable geometric candidates.
  * <p>
  * TLDR: selects which asteroid scan work to run next from the deterministic content
  * catalog plus the team's effective facts, and writes completed facts back through
- * {@link CelestialKnowledgeService}. It holds no team state of its own; the shared
- * knowledge owner is the only mutable store.
+ * {@link CelestialKnowledgeService}. Cached geometry contains no team facts.
  */
 final class AsteroidFieldDiscoveryPolicy implements CelestialDiscoveryDomain {
 
@@ -37,6 +38,10 @@ final class AsteroidFieldDiscoveryPolicy implements CelestialDiscoveryDomain {
     private static final int MEDIUM_DISCOVERY_IMPORTANCE = 20;
     private static final int SMALL_DISCOVERY_IMPORTANCE = 10;
     private static final double MINIMUM_SCAN_RADIUS = 0.0;
+    private final Map<CelestialObjectId, CandidateField> candidatesByField = new HashMap<>();
+
+    private record CandidateField(AsteroidFieldProfile profile,
+        Map<CelestialDiscoveryScanScope, List<AsteroidFieldNode>> scopes) {}
 
     @Override
     public boolean ownsDiscoveryAnchor(@Nonnull CelestialObjectKey anchorKey) {
@@ -70,31 +75,20 @@ final class AsteroidFieldDiscoveryPolicy implements CelestialDiscoveryDomain {
     public Optional<CelestialDiscoveryWork> nextDiscoveryWork(@Nonnull UUID teamId,
         @Nonnull CelestialDiscoveryScanScope scope) {
         AsteroidFieldProfile profile = requireProfile(scope);
-        CelestialObjectId beltId = scope.anchorKey()
-            .minorBodyId()
-            .parentBodyId();
-        List<AsteroidFieldNode> nodes = catalogNodes(beltId, profile);
-        Predicate<AsteroidFieldNode> inScope = scopePredicate(beltId, profile, scope.anchorKey(), scope.radius());
-        Comparator<AsteroidFieldNode> order = discoveryOrder();
-
-        Optional<AsteroidFieldNode> detection = firstScoped(
-            nodes,
-            inScope,
-            order,
-            node -> discoveryState(teamId, node) == DiscoveryState.HIDDEN);
+        List<AsteroidFieldNode> nodes = candidates(scope, profile);
+        Optional<AsteroidFieldNode> detection = nodes.stream()
+            .filter(node -> discoveryState(teamId, node) == DiscoveryState.HIDDEN)
+            .findFirst();
         if (detection.isPresent()) return detection.map(node -> work(node, CelestialDiscoveryStep.DETECTION));
 
         // Detection must finish across the whole scope before prospecting starts so
         // the UI can reveal existence before ore details.
-        if (hasDetectionWork(teamId, nodes, inScope)) return Optional.empty();
-
-        return firstScoped(
-            nodes,
-            inScope,
-            order,
-            node -> discoveryState(teamId, node) == DiscoveryState.DISCOVERED
-                && resourceKnowledge(teamId, node) == CelestialResourceKnowledgeState.UNKNOWN)
-                    .map(node -> work(node, CelestialDiscoveryStep.PROFILE));
+        return nodes.stream()
+            .filter(
+                node -> discoveryState(teamId, node) == DiscoveryState.DISCOVERED
+                    && resourceKnowledge(teamId, node) == CelestialResourceKnowledgeState.UNKNOWN)
+            .findFirst()
+            .map(node -> work(node, CelestialDiscoveryStep.PROFILE));
     }
 
     @Override
@@ -132,7 +126,7 @@ final class AsteroidFieldDiscoveryPolicy implements CelestialDiscoveryDomain {
         if (current.discoveryState() == DiscoveryState.HIDDEN) {
             throw new IllegalStateException("Cannot prospect hidden asteroid node: " + targetKey);
         }
-        if (hasDetectionWork(teamId, catalogNodes(beltId, profile), inScope)) {
+        if (hasDetectionWork(teamId, candidates(scope, profile))) {
             throw new IllegalStateException("Asteroid detection must finish before prospecting can start");
         }
         // A completed PROFILE scan is the only way to learn ore details.
@@ -150,9 +144,8 @@ final class AsteroidFieldDiscoveryPolicy implements CelestialDiscoveryDomain {
         return CelestialKnowledgeService.resourceKnowledge(teamId, CelestialObjectKey.minorBody(node.id()));
     }
 
-    private boolean hasDetectionWork(UUID teamId, List<AsteroidFieldNode> nodes, Predicate<AsteroidFieldNode> inScope) {
+    private boolean hasDetectionWork(UUID teamId, List<AsteroidFieldNode> nodes) {
         return nodes.stream()
-            .filter(inScope)
             .anyMatch(node -> discoveryState(teamId, node) == DiscoveryState.HIDDEN);
     }
 
@@ -160,18 +153,24 @@ final class AsteroidFieldDiscoveryPolicy implements CelestialDiscoveryDomain {
         return new CelestialDiscoveryWork(CelestialObjectKey.minorBody(node.id()), step);
     }
 
-    private static Optional<AsteroidFieldNode> firstScoped(List<AsteroidFieldNode> nodes,
-        Predicate<AsteroidFieldNode> inScope, Comparator<AsteroidFieldNode> order,
-        Predicate<AsteroidFieldNode> candidate) {
-        return nodes.stream()
-            .filter(inScope)
-            .sorted(order)
-            .filter(candidate)
-            .findFirst();
-    }
-
-    private static List<AsteroidFieldNode> catalogNodes(CelestialObjectId beltId, AsteroidFieldProfile profile) {
-        return AsteroidFieldResolver.resolveAll(beltId, profile);
+    private List<AsteroidFieldNode> candidates(CelestialDiscoveryScanScope scope, AsteroidFieldProfile profile) {
+        CelestialObjectId beltId = scope.anchorKey()
+            .minorBodyId()
+            .parentBodyId();
+        CandidateField field = candidatesByField.get(beltId);
+        if (field == null || !field.profile()
+            .equals(profile)) {
+            field = new CandidateField(profile, new HashMap<>());
+            candidatesByField.put(beltId, field);
+        }
+        return field.scopes()
+            .computeIfAbsent(
+                scope,
+                ignored -> AsteroidFieldResolver.resolveAll(beltId, profile)
+                    .stream()
+                    .filter(scopePredicate(beltId, profile, scope.anchorKey(), scope.radius()))
+                    .sorted(discoveryOrder())
+                    .toList());
     }
 
     // Inner-to-outer, importance-weighted ordering: a satellite parked on one
