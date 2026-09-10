@@ -178,7 +178,7 @@ public final class FacilityPersistenceManager {
         NBTTagCompound root = new NBTTagCompound();
         root.setInteger("version", ASSET_FORMAT_VERSION);
         NBTTagList assets = new NBTTagList();
-        for (CelestialAsset asset : CelestialAssetStore.allAssets()) {
+        for (CelestialAsset asset : CelestialAssetStore.SERVER.assetsViewInternal()) {
             assets.appendTag(AssetState.encode(CelestialAssetStore.getTeamId(asset.assetId), asset));
         }
         root.setTag("assets", assets);

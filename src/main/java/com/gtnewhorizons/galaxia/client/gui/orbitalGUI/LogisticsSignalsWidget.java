@@ -28,6 +28,7 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
@@ -435,7 +436,7 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
 
             tooltipLines.clear();
             tooltipLines.add(fullName);
-            for (CelestialAsset outpost : CelestialClient.allAssets()) {
+            for (CelestialAsset outpost : CelestialAssetStore.CLIENT.assetsViewInternal()) {
                 if (!isOutpostInScope(outpost, scope, viewRoot)) continue;
                 if (outpost == null) continue;
                 long stock = outpost instanceof Station station ? station.getCannonChestItems()

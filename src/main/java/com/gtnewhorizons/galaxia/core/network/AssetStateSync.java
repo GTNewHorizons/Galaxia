@@ -105,7 +105,7 @@ public final class AssetStateSync {
 
         public void publishPeriodic() {
             Map<InspectionScope, HammerDispatchPlanner.Inspection> inspections = new HashMap<>();
-            for (CelestialAsset asset : CelestialAssetStore.SERVER.allAssetsInternal()) {
+            for (CelestialAsset asset : CelestialAssetStore.SERVER.assetsViewInternal()) {
                 UUID teamId = CelestialAssetStore.SERVER.getTeamIdInternal(asset.assetId);
                 if (teamId != null && publish(teamId, asset, inspections)) asset.clean();
             }

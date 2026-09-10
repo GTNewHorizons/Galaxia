@@ -26,7 +26,7 @@ public final class SatelliteDiscoveryWorkerSource {
     public static List<CelestialDiscoveryWorkerContribution> prospectingWorkers(
         @Nonnull Function<CelestialObjectKey, OptionalLong> scopeRevision) {
         Map<WorkerKey, Integer> workerCounts = new LinkedHashMap<>();
-        for (CelestialAsset asset : CelestialAssetStore.allAssets()) {
+        for (CelestialAsset asset : CelestialAssetStore.SERVER.assetsViewInternal()) {
             if (!(asset instanceof Satellite satellite) || satellite.satelliteKind() != SatelliteKind.PROSPECTING) {
                 continue;
             }

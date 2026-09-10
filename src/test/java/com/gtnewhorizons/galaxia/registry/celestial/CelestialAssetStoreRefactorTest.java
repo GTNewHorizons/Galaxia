@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -41,6 +42,25 @@ final class CelestialAssetStoreRefactorTest {
     }
 
     // ── Instance isolation ──
+
+    @Test
+    void readViewTracksMembershipWhileTickSnapshotStaysDetached() {
+        CelestialAssetStore store = new CelestialAssetStore();
+        CelestialAsset first = createAsset(BODY_1);
+        CelestialAsset second = createAsset(BODY_2);
+        store.registerAssetInternal(TEAM_A, first);
+        var view = store.assetsViewInternal();
+        List<CelestialAsset> snapshot = store.allAssetsInternal();
+        store.registerAssetInternal(TEAM_A, second);
+        assertEquals(List.of(first, second), List.copyOf(view));
+        assertEquals(List.of(first), snapshot);
+        assertThrows(UnsupportedOperationException.class, view::clear);
+        store.destroyAssetInternal(first.assetId);
+        assertEquals(List.of(second), List.copyOf(view));
+        assertEquals(List.of(first), snapshot);
+        store.clearInternal();
+        assertTrue(view.isEmpty());
+    }
 
     @Test
     void serverAndClientAreSeparateInstances() {

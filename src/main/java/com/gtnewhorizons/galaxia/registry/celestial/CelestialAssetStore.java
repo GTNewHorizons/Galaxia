@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,6 +35,7 @@ public final class CelestialAssetStore {
     // ── Instance fields ──
 
     private final Map<CelestialAsset.ID, CelestialAsset> byId;
+    private final Collection<CelestialAsset> assetView;
 
     /** indexes for fast lookups **/
     private final Map<CelestialAsset.ID, UUID> teamById;
@@ -41,6 +44,7 @@ public final class CelestialAssetStore {
 
     CelestialAssetStore() {
         this.byId = new LinkedHashMap<>();
+        this.assetView = Collections.unmodifiableCollection(byId.values());
         this.teamById = new LinkedHashMap<>();
         this.bodyIndex = new LinkedHashMap<>();
         this.byBody = new LinkedHashMap<>();
@@ -159,6 +163,11 @@ public final class CelestialAssetStore {
 
     public List<CelestialAsset> allAssetsInternal() {
         return new ArrayList<>(byId.values());
+    }
+
+    /** Live read-only membership. Use a snapshot when callbacks can register or remove assets. */
+    public Collection<CelestialAsset> assetsViewInternal() {
+        return assetView;
     }
 
     public boolean destroyAssetInternal(CelestialAsset.ID assetId) {

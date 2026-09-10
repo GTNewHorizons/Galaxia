@@ -62,7 +62,7 @@ public class CelestialEventHandler {
         }
         celestialRuntime.tick();
 
-        List<LogisticSignal> signals = LogisticStore.collectSignals(CelestialAssetStore.allAssets());
+        List<LogisticSignal> signals = LogisticStore.collectSignals(CelestialAssetStore.SERVER.assetsViewInternal());
         LogisticStore.tickDeliveries();
         double orbitalTime = GalaxiaCelestialAPI.currentOrbitalTime();
 

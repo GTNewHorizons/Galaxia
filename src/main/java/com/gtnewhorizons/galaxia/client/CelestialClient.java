@@ -91,10 +91,6 @@ public final class CelestialClient {
         return CelestialAssetStore.CLIENT.getStateInternal(GTTeamsCompat.getTeam(), celestialObjectKey);
     }
 
-    public static List<CelestialAsset> allAssets() {
-        return CelestialAssetStore.CLIENT.allAssetsInternal();
-    }
-
     // ── Logistics mirror ──
 
     private static final List<LogisticsDelivery> deliveries = new ArrayList<>();
