@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.client.gui.station.layer;
 
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -16,8 +17,12 @@ import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.utils.GlStateManager;
+import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.client.gui.station.StationMapFrame;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureDefinition;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
@@ -30,6 +35,40 @@ public final class PlanetaryFeatureOverlayRenderer {
     private static final Map<ResourceLocation, TextureSize> textureSizeCache = new HashMap<>();
 
     private PlanetaryFeatureOverlayRenderer() {}
+
+    public static final class VisibleFeatures {
+
+        private CelestialObject body;
+        private CelestialAsset.Kind kind;
+        private long salt;
+        private int registrySize;
+        private List<StationMapFrame.TilePosition> tiles = List.of();
+        private List<List<PlanetaryFeatureKey>> features = List.of();
+
+        public List<List<PlanetaryFeatureKey>> project(AutomatedFacility facility,
+            List<StationMapFrame.TilePosition> visibleTiles) {
+            CelestialObject currentBody = GalaxiaCelestialAPI.get(facility.planetaryAnchorBodyKey)
+                .orElse(null);
+            int currentRegistrySize = PlanetaryFeatureRegistry.all()
+                .size();
+            if (body == currentBody && kind == facility.kind
+                && salt == facility.stationFeatureSalt()
+                && registrySize == currentRegistrySize
+                && tiles.equals(visibleTiles)) return features;
+
+            List<List<PlanetaryFeatureKey>> projected = new ArrayList<>(visibleTiles.size());
+            for (StationMapFrame.TilePosition tile : visibleTiles) {
+                projected.add(List.copyOf(facility.planetaryFeaturesAt(tile.dx(), tile.dy())));
+            }
+            body = currentBody;
+            kind = facility.kind;
+            salt = facility.stationFeatureSalt();
+            registrySize = currentRegistrySize;
+            tiles = List.copyOf(visibleTiles);
+            features = List.copyOf(projected);
+            return features;
+        }
+    }
 
     public static void draw(int tileX, int tileY, Iterable<PlanetaryFeatureKey> features) {
         if (features == null) return;

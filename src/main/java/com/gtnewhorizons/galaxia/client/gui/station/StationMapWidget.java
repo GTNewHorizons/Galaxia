@@ -21,6 +21,7 @@ import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.ConnectionLayerRenderer;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.ModuleLayerRenderer;
+import com.gtnewhorizons.galaxia.client.gui.station.layer.PlanetaryFeatureOverlayRenderer;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -47,6 +48,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
     private @Nullable StationTileCoord hovered;
     private @Nullable StationTileCoord pressedTile;
     private final List<StationMapFrame.TilePosition> visibleFeatureTiles = new ArrayList<>();
+    private final PlanetaryFeatureOverlayRenderer.VisibleFeatures featureProjection = new PlanetaryFeatureOverlayRenderer.VisibleFeatures();
     private final Set<StationTileCoord> expansionSlots = new LinkedHashSet<>();
     private @Nullable StationLayout cachedExpansionLayout;
     private long cachedExpansionLayoutVersion = -1L;
@@ -256,7 +258,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
 
         StationMapFrame frame = mapFrame();
 
-        StationMapOverlayPainter.drawFeatureOverlay(facility, frame, visibleFeatureTiles);
+        StationMapOverlayPainter.drawFeatureOverlay(facility, frame, visibleFeatureTiles, featureProjection);
 
         ConnectionLayerRenderer.draw(tiles, frame);
 

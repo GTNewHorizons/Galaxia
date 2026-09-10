@@ -34,13 +34,14 @@ final class StationMapOverlayPainter {
     private StationMapOverlayPainter() {}
 
     static void drawFeatureOverlay(AutomatedFacility facility, StationMapFrame frame,
-        List<StationMapFrame.TilePosition> visibleFeatureTiles) {
+        List<StationMapFrame.TilePosition> visibleFeatureTiles,
+        PlanetaryFeatureOverlayRenderer.VisibleFeatures featureProjection) {
         frame.collectVisibleTilePositions(visibleFeatureTiles);
-        for (StationMapFrame.TilePosition coord : visibleFeatureTiles) {
-            PlanetaryFeatureOverlayRenderer.draw(
-                frame.tileLocalX(coord.dx()),
-                frame.tileLocalY(coord.dy()),
-                facility.planetaryFeaturesAt(coord.dx(), coord.dy()));
+        var features = featureProjection.project(facility, visibleFeatureTiles);
+        for (int i = 0; i < visibleFeatureTiles.size(); i++) {
+            StationMapFrame.TilePosition coord = visibleFeatureTiles.get(i);
+            PlanetaryFeatureOverlayRenderer
+                .draw(frame.tileLocalX(coord.dx()), frame.tileLocalY(coord.dy()), features.get(i));
         }
     }
 
