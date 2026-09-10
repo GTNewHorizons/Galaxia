@@ -32,13 +32,12 @@ final class FacilityModuleSettings {
         }
     }
 
-    private final List<ModuleInstance> modules;
+    private final AutomatedFacility facility;
     private final Map<SettingsGroup.ID, SettingsGroup> groups = new LinkedHashMap<>();
     private long nextGroupId = 1;
 
-    FacilityModuleSettings(List<ModuleInstance> modules) {
-        if (modules == null) throw new IllegalArgumentException("Module list must not be null");
-        this.modules = modules;
+    FacilityModuleSettings(AutomatedFacility facility) {
+        this.facility = facility;
     }
 
     void restore(Collection<SettingsGroup> restoredGroups) {
@@ -51,7 +50,7 @@ final class FacilityModuleSettings {
         }
         Set<ModuleInstance.ID> moduleIds = new LinkedHashSet<>();
         Set<SettingsGroup.ID> populatedGroups = new LinkedHashSet<>();
-        for (ModuleInstance module : modules) {
+        for (ModuleInstance module : facility.modules()) {
             if (module == null || !moduleIds.add(module.id)) {
                 throw new IllegalArgumentException("Duplicate or null module during settings restore");
             }
@@ -136,7 +135,7 @@ final class FacilityModuleSettings {
     }
 
     void remove(ModuleInstance.ID moduleId) {
-        ModuleInstance module = module(moduleId);
+        ModuleInstance module = facility.moduleById(moduleId);
         if (module == null) return;
         SettingsGroup.ID groupId = sharedGroupId(module);
         if (groupId != null && membersOf(groupId).size() == 1) groups.remove(groupId);
@@ -285,7 +284,8 @@ final class FacilityModuleSettings {
     }
 
     List<ModuleInstance> members(SettingsGroup.ID groupId) {
-        return modules.stream()
+        return facility.modules()
+            .stream()
             .filter(module -> groupId != null && groupId.equals(sharedGroupId(module)))
             .toList();
     }
@@ -295,15 +295,9 @@ final class FacilityModuleSettings {
     }
 
     private ModuleInstance requireModule(ModuleInstance.ID moduleId) {
-        ModuleInstance module = module(moduleId);
+        ModuleInstance module = facility.moduleById(moduleId);
         if (module == null) throw new IllegalStateException("Missing settings module " + moduleId);
         return module;
-    }
-
-    private @Nullable ModuleInstance module(ModuleInstance.ID moduleId) {
-        if (moduleId == null) return null;
-        for (ModuleInstance module : modules) if (moduleId.equals(module.id)) return module;
-        return null;
     }
 
     private ModuleSettings captureSettings(ModuleInstance module) {

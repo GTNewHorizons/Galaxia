@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.outpost;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -66,6 +67,7 @@ public final class AutomatedFacility extends CelestialAsset {
     private Map<ItemStack, Long> constructionInventory = new LinkedHashMap<>();
 
     private final List<ModuleInstance> modules;
+    private final Map<ModuleInstance.ID, ModuleInstance> modulesById = new HashMap<>();
     private final StationLayout layout;
     private final LayoutCacheBundle layoutCache;
     private final FacilityModuleSettings moduleSettings;
@@ -98,7 +100,7 @@ public final class AutomatedFacility extends CelestialAsset {
         this.modules = new ArrayList<>();
         this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
         this.layoutCache = new LayoutCacheBundle(layout, modules);
-        this.moduleSettings = new FacilityModuleSettings(modules);
+        this.moduleSettings = new FacilityModuleSettings(this);
         this.stationFeatureSalt = createStationFeatureSalt(assetId, celestialBodyKey);
         this.energyStored = 0;
         this.ticks = 0;
@@ -832,6 +834,7 @@ public final class AutomatedFacility extends CelestialAsset {
     private void attachModuleWithoutRevision(ModuleInstance module,
         @Nullable ModuleInstance.SettingsBinding settingsPlan) {
         modules.add(module);
+        modulesById.put(module.id, module);
         module.setFacilityOwner(this);
         moduleConfigurationChanged();
         if (module.recipe() != null) {
@@ -931,11 +934,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public @Nullable ModuleInstance moduleById(@Nullable ModuleInstance.ID moduleId) {
-        if (moduleId == null) return null;
-        for (ModuleInstance module : modules) {
-            if (moduleId.equals(module.id)) return module;
-        }
-        return null;
+        return modulesById.get(moduleId);
     }
 
     private static FacilityCommand.Rejection boundResourceRejection(BoundKind kind, InventoryKey resource) {
@@ -1027,6 +1026,7 @@ public final class AutomatedFacility extends CelestialAsset {
             return;
         }
         modules.add(module);
+        modulesById.put(module.id, module);
         module.setFacilityOwner(this);
         moduleConfigurationChanged();
         if (moduleSettings.supports(module)) moduleSettings.attach(module, null);
@@ -1095,6 +1095,7 @@ public final class AutomatedFacility extends CelestialAsset {
         if (!modules.contains(module)) return;
         moduleSettings.remove(module.id);
         modules.remove(module);
+        modulesById.remove(module.id);
         module.setFacilityOwner(null);
         moduleConfigurationChanged();
         recipeScheduleStates.remove(module.id);
@@ -1106,6 +1107,7 @@ public final class AutomatedFacility extends CelestialAsset {
     public void clearModules() {
         for (ModuleInstance module : modules) module.setFacilityOwner(null);
         modules.clear();
+        modulesById.clear();
         moduleConfigurationChanged();
         moduleSettings.restore(List.of());
         recipeScheduleStates.clear();
@@ -1117,10 +1119,12 @@ public final class AutomatedFacility extends CelestialAsset {
         if (!modules.isEmpty()) throw new IllegalStateException("Facility modules must be empty before restore");
         List<ModuleInstance> restored = List.copyOf(restoredModules);
         modules.addAll(restored);
+        for (ModuleInstance module : restored) modulesById.put(module.id, module);
         try {
             moduleSettings.restore(restoredGroups);
         } catch (RuntimeException invalid) {
             modules.clear();
+            modulesById.clear();
             throw invalid;
         }
         for (ModuleInstance module : restored) {

@@ -45,6 +45,34 @@ final class FacilityModuleCommandTest {
     }
 
     @Test
+    void moduleLookupFollowsClearingAndRestoringFacilityState() {
+        AutomatedFacility facility = facility(CelestialAsset.Kind.AUTOMATED_STATION);
+        facility.applyCommand(
+            build(
+                facility,
+                FacilityModuleKind.STORAGE,
+                ModuleTier.HV,
+                List.of(ModulePlacement.at(StationTileCoord.of(1, 0)))),
+            DEBUG_AUTHORITY);
+        ModuleInstance module = facility.modules()
+            .get(0);
+        assertEquals(
+            ModuleTier.HV,
+            facility.moduleById(module.id)
+                .tier());
+
+        facility.clearModules();
+        assertNull(facility.moduleById(module.id));
+        facility.restoreModulesAndSettings(List.of(module), List.of());
+
+        assertEquals(
+            ModuleTier.HV,
+            facility.moduleById(module.id)
+                .tier());
+        assertNull(facility.moduleById(ModuleInstance.ID.create()));
+    }
+
+    @Test
     void multiBuildCommitsChainedPlacements() {
         AutomatedFacility facility = facility(CelestialAsset.Kind.AUTOMATED_STATION);
         StationTileCoord first = StationTileCoord.of(1, 0);
