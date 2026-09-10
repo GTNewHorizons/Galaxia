@@ -1373,11 +1373,10 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public long energyCapacity() {
-        long capacity = BASE_ENERGY_CAPACITY;
-        for (CapacityCluster cluster : layoutCache.getCapacityClusters(FacilityModuleKind.BATTERY)) {
-            capacity += cluster.effectiveCapacity();
-        }
-        return capacity;
+        return BASE_ENERGY_CAPACITY + layoutCache.getCapacityClusters(FacilityModuleKind.BATTERY)
+            .stream()
+            .mapToLong(CapacityCluster::effectiveCapacity)
+            .sum();
     }
 
     public void addEnergy(long delta) {
@@ -1392,29 +1391,24 @@ public final class AutomatedFacility extends CelestialAsset {
 
     @Override
     public boolean hasMiningCapability() {
-        for (ModuleInstance m : modules) {
-            if (m.kind() == FacilityModuleKind.MINER && m.isOperational()) return true;
-        }
-        return false;
+        return modules.stream()
+            .anyMatch(m -> m.kind() == FacilityModuleKind.MINER && m.isOperational());
     }
 
     @Override
     public boolean hasProductionCapability() {
-        for (ModuleInstance m : modules) {
-            if (m.kind()
-                .isProductionModule() && m.isOperational()) return true;
-        }
-        return false;
+        return modules.stream()
+            .anyMatch(
+                m -> m.kind()
+                    .isProductionModule() && m.isOperational());
     }
 
     @Override
     public WarningPriority warningPriority() {
         if (!isOperational()) return WarningPriority.NONE;
         if (energyStored <= 0L) return WarningPriority.NO_POWER;
-        for (ModuleInstance m : modules) {
-            if (m.isOperational()) return WarningPriority.NONE;
-        }
-        return WarningPriority.IDLE;
+        return modules.stream()
+            .anyMatch(ModuleInstance::isOperational) ? WarningPriority.NONE : WarningPriority.IDLE;
     }
 
     public void tick() {
@@ -1616,13 +1610,11 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private static boolean operationHasFullDeposit(ModuleOperationState operation,
         Map<ItemStackWrapper, Long> requested) {
-        for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
-            if (operation.depositedResources()
-                .getOrDefault(material.getKey(), 0L) < material.getValue()) {
-                return false;
-            }
-        }
-        return true;
+        return requested.entrySet()
+            .stream()
+            .allMatch(
+                material -> operation.depositedResources()
+                    .getOrDefault(material.getKey(), 0L) >= material.getValue());
     }
 
     private static boolean isCompletionRefund(ModuleOperationState operation) {
@@ -1682,19 +1674,17 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public long itemCapacity() {
-        long capacity = BASE_ITEM_CAPACITY;
-        for (CapacityCluster cluster : layoutCache.getCapacityClusters(FacilityModuleKind.STORAGE)) {
-            capacity += cluster.effectiveCapacity();
-        }
-        return capacity;
+        return BASE_ITEM_CAPACITY + layoutCache.getCapacityClusters(FacilityModuleKind.STORAGE)
+            .stream()
+            .mapToLong(CapacityCluster::effectiveCapacity)
+            .sum();
     }
 
     private long projectedItemCapacityAfterRemoving(ModuleInstance.ID moduleId) {
-        long capacity = BASE_ITEM_CAPACITY;
-        for (CapacityCluster cluster : layoutCache.getCapacityClustersExcluding(FacilityModuleKind.STORAGE, moduleId)) {
-            capacity = Math.addExact(capacity, cluster.effectiveCapacity());
-        }
-        return capacity;
+        return layoutCache.getCapacityClustersExcluding(FacilityModuleKind.STORAGE, moduleId)
+            .stream()
+            .mapToLong(CapacityCluster::effectiveCapacity)
+            .reduce(BASE_ITEM_CAPACITY, Math::addExact);
     }
 
     private DeconstructionRefund deconstructionRefund(ModuleInstance module) {

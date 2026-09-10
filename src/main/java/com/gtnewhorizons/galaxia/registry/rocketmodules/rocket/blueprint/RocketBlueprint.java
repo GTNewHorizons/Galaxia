@@ -46,23 +46,10 @@ public class RocketBlueprint {
     }
 
     public boolean canPlacePart(RocketPartInstance candidate) {
-        for (RocketPartInstance existing : parts) {
-            if (existing.overlaps(candidate)) {
-                return false;
-            }
-        }
-
-        if (parts.isEmpty()) {
-            return true;
-        }
-
-        for (RocketPartInstance existing : parts) {
-            if (candidate.isAdjacentTo(existing)) {
-                return true;
-            }
-        }
-
-        return false;
+        return parts.stream()
+            .noneMatch(existing -> existing.overlaps(candidate))
+            && (parts.isEmpty() || parts.stream()
+                .anyMatch(candidate::isAdjacentTo));
     }
 
     public NBTTagCompound serializeNBT() {

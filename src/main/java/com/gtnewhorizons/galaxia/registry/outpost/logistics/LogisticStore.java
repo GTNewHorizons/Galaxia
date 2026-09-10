@@ -45,24 +45,19 @@ public final class LogisticStore {
     }
 
     public static long inboundInTransitAmount(CelestialAsset.ID toAssetId, ItemStackWrapper resource) {
-        long total = 0L;
-        for (LogisticsDelivery task : activeDeliveries) {
-            if (!toAssetId.equals(task.data.toAssetId())) continue;
-            if (!resource.equals(task.data.resourceId())) continue;
-            total += task.data.amount();
-        }
-        return total;
+        return activeDeliveries.stream()
+            .filter(task -> toAssetId.equals(task.data.toAssetId()) && resource.equals(task.data.resourceId()))
+            .mapToLong(task -> task.data.amount())
+            .sum();
     }
 
     public static long arrivedInboundAmount(CelestialAsset.ID toAssetId, ItemStackWrapper resource) {
-        long total = 0L;
-        for (LogisticsDelivery task : activeDeliveries) {
-            if (!toAssetId.equals(task.data.toAssetId())) continue;
-            if (!resource.equals(task.data.resourceId())) continue;
-            if (!task.isArrived()) continue;
-            total += task.data.amount();
-        }
-        return total;
+        return activeDeliveries.stream()
+            .filter(
+                task -> toAssetId.equals(task.data.toAssetId()) && resource.equals(task.data.resourceId())
+                    && task.isArrived())
+            .mapToLong(task -> task.data.amount())
+            .sum();
     }
 
     public static void tickDeliveries() {
