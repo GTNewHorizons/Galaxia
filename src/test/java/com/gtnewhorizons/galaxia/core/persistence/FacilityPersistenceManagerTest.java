@@ -1003,14 +1003,8 @@ final class FacilityPersistenceManagerTest {
 
         AutomatedFacility loaded = (AutomatedFacility) CelestialAssetStore.findAsset(facility.assetId);
         assertNotNull(loaded);
-        assertEquals(
-            List.of("ore:iron", "ore:copper"),
-            loaded.filtersSnapshot()
-                .get(true));
-        assertEquals(
-            List.of(FluidRegistry.WATER.getName()),
-            loaded.filtersSnapshot()
-                .get(false));
+        assertEquals(List.of("ore:iron", "ore:copper"), loaded.filtersSnapshot(true));
+        assertEquals(List.of(FluidRegistry.WATER.getName()), loaded.filtersSnapshot(false));
     }
 
     @Test
@@ -1071,14 +1065,8 @@ final class FacilityPersistenceManagerTest {
         assertNotNull(loaded);
         assertEquals(storedItems, loaded.itemAmount(item));
         assertEquals(4096L, loaded.fluidAmount(fluid));
-        assertEquals(
-            List.of(itemFilter),
-            loaded.filtersSnapshot()
-                .get(true));
-        assertEquals(
-            List.of(fluidFilter),
-            loaded.filtersSnapshot()
-                .get(false));
+        assertEquals(List.of(itemFilter), loaded.filtersSnapshot(true));
+        assertEquals(List.of(fluidFilter), loaded.filtersSnapshot(false));
     }
 
     private static NBTTagCompound assetTag(FacilityPersistenceManager manager, UUID teamId, CelestialAsset.Kind kind,

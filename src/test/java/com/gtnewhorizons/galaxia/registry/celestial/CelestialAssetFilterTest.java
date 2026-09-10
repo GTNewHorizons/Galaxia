@@ -48,8 +48,7 @@ final class CelestialAssetFilterTest {
             key.toItemStack()
                 .getUnlocalizedName(),
             true);
-        List<String> filters = facility.filtersSnapshot()
-            .get(true);
+        List<String> filters = facility.filtersSnapshot(true);
         assertEquals(1, filters.size());
     }
 
@@ -60,9 +59,9 @@ final class CelestialAssetFilterTest {
             .getUnlocalizedName();
         facility.addFilter(name, true);
         facility.removeFilter(name, true);
-        assertFalse(
-            facility.filtersSnapshot()
-                .containsKey(true));
+        assertTrue(
+            facility.filtersSnapshot(true)
+                .isEmpty());
     }
 
     @Test
@@ -73,13 +72,12 @@ final class CelestialAssetFilterTest {
                 .getUnlocalizedName(),
             true);
         assertFalse(
-            facility.filtersSnapshot()
-                .get(true)
+            facility.filtersSnapshot(true)
                 .isEmpty());
         facility.clearFilters(true);
-        assertFalse(
-            facility.filtersSnapshot()
-                .containsKey(true));
+        assertTrue(
+            facility.filtersSnapshot(true)
+                .isEmpty());
     }
 
     @Test
@@ -92,8 +90,7 @@ final class CelestialAssetFilterTest {
             .getUnlocalizedName();
         facility.addFilter(aName, true);
         facility.restoreFilters(List.of(bName), true);
-        List<String> filters = facility.filtersSnapshot()
-            .get(true);
+        List<String> filters = facility.filtersSnapshot(true);
         assertEquals(1, filters.size());
         assertEquals(bName, filters.get(0));
     }
@@ -121,9 +118,8 @@ final class CelestialAssetFilterTest {
             key.toItemStack()
                 .getUnlocalizedName(),
             true);
-        var snapshot = facility.filtersSnapshot();
+        var snapshot = facility.filtersSnapshot(true);
         assertFalse(snapshot.isEmpty());
-        assertTrue(snapshot.containsKey(true));
     }
 
     @Test
@@ -135,8 +131,7 @@ final class CelestialAssetFilterTest {
             false);
         assertEquals(
             1,
-            facility.filtersSnapshot()
-                .get(false)
+            facility.filtersSnapshot(false)
                 .size());
         assertTrue(facility.allowsInsertion(water));
         facility.clearFilters(false);

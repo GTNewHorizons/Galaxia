@@ -403,8 +403,7 @@ final class AssetStateSyncTest {
         assertEquals("canonical", current.displayName());
         assertEquals(Buildable.Status.DISABLED, current.status());
         assertFalse(
-            current.filtersSnapshot()
-                .getOrDefault(true, List.of())
+            current.filtersSnapshot(true)
                 .contains("ore:old"));
         assertTrue(
             current.modules()

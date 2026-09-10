@@ -288,10 +288,7 @@ final class FacilityCommandGatewayTest {
             FacilityCommand.Status.CHANGED,
             gateway.execute(actor, second)
                 .status());
-        assertEquals(
-            List.of("stick", "diamond"),
-            facility.filtersSnapshot()
-                .get(true));
+        assertEquals(List.of("stick", "diamond"), facility.filtersSnapshot(true));
         assertEquals(
             FacilityCommand.Status.UNCHANGED,
             gateway.execute(actor, second)
@@ -303,10 +300,7 @@ final class FacilityCommandGatewayTest {
                     actor,
                     new FacilityCommand.SetFilter(facility.assetId, FacilityCommand.FilterKind.ITEM, "stick", false))
                 .status());
-        assertEquals(
-            List.of("diamond"),
-            facility.filtersSnapshot()
-                .get(true));
+        assertEquals(List.of("diamond"), facility.filtersSnapshot(true));
     }
 
     @Test

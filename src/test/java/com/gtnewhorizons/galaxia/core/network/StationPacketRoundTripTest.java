@@ -105,8 +105,7 @@ final class StationPacketRoundTripTest {
             decodedFacility.itemSnapshot()
                 .get(item));
         assertTrue(
-            decodedFacility.filtersSnapshot()
-                .get(true)
+            decodedFacility.filtersSnapshot(true)
                 .contains("ore:iron"));
         assertEquals(facility.logisticsConfig.snapshot(), decodedFacility.logisticsConfig.snapshot());
         assertEquals(TEAM, CelestialAssetStore.CLIENT.getTeamIdInternal(station.assetId));
@@ -170,8 +169,7 @@ final class StationPacketRoundTripTest {
             current.modules()
                 .isEmpty());
         assertTrue(
-            current.filtersSnapshot()
-                .getOrDefault(true, List.of())
+            current.filtersSnapshot(true)
                 .isEmpty());
     }
 

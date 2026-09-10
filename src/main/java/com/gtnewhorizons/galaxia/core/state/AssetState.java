@@ -175,8 +175,8 @@ public final class AssetState {
         current.clear();
         current.setStationFeatureSalt(replacement.stationFeatureSalt());
         current.restoreBounds(replacement.boundsSnapshot());
-        replacement.filtersSnapshot()
-            .forEach((items, filters) -> current.restoreFilters(filters, items));
+        current.restoreFilters(replacement.filtersSnapshot(true), true);
+        current.restoreFilters(replacement.filtersSnapshot(false), false);
         current.restoreModulesAndSettings(replacement.modules(), replacement.settingsGroups());
         current.restoreInventory(replacement.inventorySnapshot());
         current.loadUpkeepCredits(replacement.upkeepCredits());
@@ -196,9 +196,8 @@ public final class AssetState {
         out.setLong("energy", facility.getEnergyStored());
         out.setLong("featureSalt", facility.stationFeatureSalt());
         out.setTag("bounds", writeBounds(facility.boundsSnapshot()));
-        Map<Boolean, List<String>> filters = facility.filtersSnapshot();
-        out.setTag("itemFilters", writeStrings(filters.getOrDefault(true, List.of())));
-        out.setTag("fluidFilters", writeStrings(filters.getOrDefault(false, List.of())));
+        out.setTag("itemFilters", writeStrings(facility.filtersSnapshot(true)));
+        out.setTag("fluidFilters", writeStrings(facility.filtersSnapshot(false)));
         writeSettingsGroups(out, facility.settingsGroups());
 
         NBTTagList modules = new NBTTagList();

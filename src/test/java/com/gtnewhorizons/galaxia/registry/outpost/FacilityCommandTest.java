@@ -103,10 +103,7 @@ final class FacilityCommandTest {
 
         assertEquals(FacilityCommand.Status.REJECTED, result.status());
         assertEquals(FacilityCommand.Rejection.INVALID_FILTERS, result.rejection());
-        assertEquals(
-            List.of("minecraft:stick:0"),
-            facility.filtersSnapshot()
-                .get(true));
+        assertEquals(List.of("minecraft:stick:0"), facility.filtersSnapshot(true));
     }
 
     private static AutomatedFacility facility() {

@@ -219,13 +219,8 @@ final class FacilityInventory {
         return filter.remove(key);
     }
 
-    Map<Boolean, List<String>> filtersSnapshot() {
-        Map<Boolean, List<String>> result = new LinkedHashMap<>();
-        List<String> itemSerialized = itemFilter.serialize();
-        if (!itemSerialized.isEmpty()) result.put(true, itemSerialized);
-        List<String> fluidSerialized = fluidFilter.serialize();
-        if (!fluidSerialized.isEmpty()) result.put(false, fluidSerialized);
-        return result;
+    List<String> filtersSnapshot(boolean item) {
+        return (item ? itemFilter : fluidFilter).serialize();
     }
 
     boolean setFilters(List<String> filters, boolean item) {

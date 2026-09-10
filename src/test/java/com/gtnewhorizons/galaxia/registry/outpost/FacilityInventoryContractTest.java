@@ -230,13 +230,10 @@ final class FacilityInventoryContractTest {
             IllegalArgumentException.class,
             () -> facility.restoreFilters(List.of("galaxia.missing_fluid"), false));
 
-        assertEquals(
-            List.of("item.existing"),
-            facility.filtersSnapshot()
-                .get(true));
-        assertFalse(
-            facility.filtersSnapshot()
-                .containsKey(false));
+        assertEquals(List.of("item.existing"), facility.filtersSnapshot(true));
+        assertTrue(
+            facility.filtersSnapshot(false)
+                .isEmpty());
     }
 
     @Test
@@ -259,7 +256,12 @@ final class FacilityInventoryContractTest {
 
         assertEquals(0L, facility.itemAmount(item));
         assertEquals(0L, facility.fluidAmount(fluid));
-        assertEquals(Map.of(), facility.filtersSnapshot());
+        assertTrue(
+            facility.filtersSnapshot(true)
+                .isEmpty());
+        assertTrue(
+            facility.filtersSnapshot(false)
+                .isEmpty());
     }
 
     // Product contract: cancelling construction returns the exact reserved item, including NBT.

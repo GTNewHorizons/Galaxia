@@ -1815,8 +1815,8 @@ public final class AutomatedFacility extends CelestialAsset {
         if (inventory.removeFilter(key, item)) markDirty();
     }
 
-    public Map<Boolean, List<String>> filtersSnapshot() {
-        return inventory.filtersSnapshot();
+    public List<String> filtersSnapshot(boolean item) {
+        return inventory.filtersSnapshot(item);
     }
 
     public void restoreFilters(List<String> filters, boolean item) {
