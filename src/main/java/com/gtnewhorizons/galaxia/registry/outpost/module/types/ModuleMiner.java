@@ -170,6 +170,9 @@ public final class ModuleMiner extends TieredModuleComponent {
     }
 
     private static ItemStack chooseFocusedOre(ModuleMiner miner, List<ItemStack> candidates) {
+        if (miner.effectiveFocusBonusFor(miner.focusOreKey) == 0) {
+            return candidates.get(RANDOM.nextInt(candidates.size() * 100) / 100);
+        }
         int totalWeight = 0;
         int[] weights = new int[candidates.size()];
         for (int i = 0; i < candidates.size(); i++) {
