@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module.types;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -11,6 +12,7 @@ import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialBodyProperties;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
@@ -101,7 +103,7 @@ public final class ModuleMiner extends TieredModuleComponent {
         GalaxiaCelestialAPI.get(outpost.celestialObjectKey)
             .ifPresent(registration -> {
                 MiningFeatureEffects featureEffects = featureMiningEffects(instance, facility);
-                List<ItemStack> candidates = miningCandidates(instance, facility, featureEffects);
+                List<ItemStack> candidates = miningCandidates(registration.properties(), featureEffects);
                 if (candidates.isEmpty() && featureEffects.replacementRolls()
                     .isEmpty()) return;
                 advanceFocusAlignment();
@@ -111,14 +113,10 @@ public final class ModuleMiner extends TieredModuleComponent {
                     ItemStack chosen = replacement != null ? replacement
                         : candidates.isEmpty() ? null : chooseFocusedOre(this, candidates);
                     if (chosen == null) continue;
-                    String oreKey = ItemStackWrapper.of(chosen)
-                        .toKey();
-                    if (shouldVoidOre(instance, facility, oreKey)) continue;
+                    ItemStackWrapper ore = ItemStackWrapper.of(chosen);
+                    if (shouldVoidOre(instance, facility, ore.toKey())) continue;
                     if (!featureEffects.shouldKeepOutput(RANDOM)) continue;
-                    ItemStack ore = chosen.copy();
-                    ore.stackSize = 1;
-                    ItemStackWrapper oreWrapper = ItemStackWrapper.of(ore);
-                    if (oreWrapper != null) facility.insert(oreWrapper, 1L);
+                    facility.insert(ore, 1L);
                 }
             });
     }
@@ -126,7 +124,10 @@ public final class ModuleMiner extends TieredModuleComponent {
     public static List<ItemStack> possibleOutputs(@Nonnull ModuleInstance instance,
         @Nonnull AutomatedFacility facility) {
         MiningFeatureEffects featureEffects = featureMiningEffects(instance, facility);
-        List<ItemStack> outputs = new java.util.ArrayList<>(miningCandidates(instance, facility, featureEffects));
+        List<ItemStack> candidates = GalaxiaCelestialAPI.get(facility.celestialObjectKey)
+            .map(registration -> miningCandidates(registration.properties(), featureEffects))
+            .orElse(List.of());
+        List<ItemStack> outputs = new ArrayList<>(candidates);
         for (MiningFeatureEffects.ChanceStack roll : featureEffects.replacementRolls()) {
             ItemStack copy = roll.stack()
                 .copy();
@@ -136,20 +137,18 @@ public final class ModuleMiner extends TieredModuleComponent {
         return List.copyOf(outputs);
     }
 
-    private static List<ItemStack> miningCandidates(@Nonnull ModuleInstance instance,
-        @Nonnull AutomatedFacility facility, @Nonnull MiningFeatureEffects featureEffects) {
-        return GalaxiaCelestialAPI.get(facility.celestialObjectKey)
-            .map(registration -> {
-                var properties = registration.properties();
-                List<ItemStack> bodyOres = properties.getResolvedGtVeinOreStacks();
-                List<ItemStack> candidates = new java.util.ArrayList<>(
-                    bodyOres.size() + featureEffects.candidates()
-                        .size());
-                candidates.addAll(bodyOres);
-                candidates.addAll(featureEffects.candidates());
-                return List.copyOf(candidates);
-            })
-            .orElse(List.of());
+    private static List<ItemStack> miningCandidates(@Nonnull CelestialBodyProperties properties,
+        @Nonnull MiningFeatureEffects featureEffects) {
+        List<ItemStack> bodyOres = properties.getResolvedGtVeinOreStacks();
+        if (bodyOres.isEmpty()) return featureEffects.candidates();
+        if (featureEffects.candidates()
+            .isEmpty()) return bodyOres;
+        List<ItemStack> candidates = new ArrayList<>(
+            bodyOres.size() + featureEffects.candidates()
+                .size());
+        candidates.addAll(bodyOres);
+        candidates.addAll(featureEffects.candidates());
+        return candidates;
     }
 
     public static MiningFeatureEffects featureMiningEffects(@Nonnull ModuleInstance module,
