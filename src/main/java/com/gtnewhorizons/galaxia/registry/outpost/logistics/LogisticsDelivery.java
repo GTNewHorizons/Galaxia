@@ -208,7 +208,7 @@ public class LogisticsDelivery {
     }
 
     LogisticsDelivery tick() {
-        this.remainingTicks -= 1;
+        if (remainingTicks > 0) remainingTicks--;
         return this;
     }
 

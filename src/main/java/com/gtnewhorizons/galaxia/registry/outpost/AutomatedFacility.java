@@ -74,6 +74,7 @@ public final class AutomatedFacility extends CelestialAsset {
     private final Map<ModuleInstance.ID, RecipeBook.ScheduleState> recipeScheduleStates = new LinkedHashMap<>();
 
     private UpkeepLedger.UpkeepSummary upkeepSummary;
+    private Map<ItemStackWrapper, Long> operationMaterialNeeds;
     private UpkeepSettlement.Credits upkeepCredits = UpkeepSettlement.Credits.empty();
     private boolean settlingUpkeep;
     private boolean upkeepInventoryChanged;
@@ -229,6 +230,30 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public void moduleConfigurationChanged() {
         layoutCache.invalidate();
+        moduleOperationChanged();
+    }
+
+    public void moduleOperationChanged() {
+        operationMaterialNeeds = null;
+    }
+
+    public long operationMaterialNeed(ItemStackWrapper resource) {
+        if (operationMaterialNeeds == null) {
+            Map<ItemStackWrapper, Long> needed = new LinkedHashMap<>();
+            for (ModuleInstance module : modules) {
+                ModuleOperationState operation = module.operationOrNull();
+                if (operation == null || operation.phase() != ModuleOperationPhase.WAITING_FOR_MATERIALS) continue;
+                for (Map.Entry<ItemStackWrapper, Long> entry : operation.plan()
+                    .materialCost()
+                    .entrySet()) {
+                    long missing = entry.getValue() - operation.depositedResources()
+                        .getOrDefault(entry.getKey(), 0L);
+                    if (missing > 0L) needed.merge(entry.getKey(), missing, Math::addExact);
+                }
+            }
+            operationMaterialNeeds = needed;
+        }
+        return operationMaterialNeeds.getOrDefault(resource, 0L);
     }
 
     public long upkeepReserve(ItemStackWrapper item) {
@@ -967,7 +992,7 @@ public final class AutomatedFacility extends CelestialAsset {
             .spec() == IModuleOperation.CONSTRUCTION) {
             return requestModuleDeconstruction(module.id);
         }
-        operation.cancel();
+        module.setOperation(operation.cancel());
         markDirty();
         return FacilityCommand.Result.CHANGED;
     }

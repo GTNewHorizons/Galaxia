@@ -93,29 +93,15 @@ public final class LogisticStore {
     public static void tickDeliveries() {
         for (int i = activeDeliveries.size() - 1; i >= 0; i--) {
             LogisticsDelivery current = activeDeliveries.get(i);
-            CelestialAsset source = CelestialAssetStore.findAsset(current.data.fromAssetId());
-            CelestialAsset destination = CelestialAssetStore.findAsset(current.data.toAssetId());
-            if (destination == null) {
-                if (canReceiveCargo(source)) {
-                    deliverOrRetain(i, current, source, "refunded");
-                } else {
-                    removeOwnerlessDelivery(i, current);
-                }
-                continue;
-            }
             boolean wasArrived = current.isArrived();
             LogisticsDelivery ticked = current.tick();
             if (wasArrived != ticked.isArrived()) {
                 adjustInbound(ticked, 0L, ticked.isArrived() ? ticked.data.amount() : -ticked.data.amount());
             }
-            if (ticked.isArrived()) {
-                CelestialAsset recipient = canReceiveCargo(destination) ? destination : source;
-                if (canReceiveCargo(recipient)) {
-                    deliverOrRetain(i, ticked, recipient, recipient == destination ? "delivered" : "refunded");
-                } else {
-                    removeOwnerlessDelivery(i, ticked);
-                }
-            }
+            if (!ticked.isArrived()) continue;
+            CelestialAsset destination = CelestialAssetStore.findAsset(ticked.data.toAssetId());
+            if (canReceiveCargo(destination)) deliverOrRetain(i, ticked, destination);
+            else loseDelivery(i, ticked);
         }
     }
 
@@ -123,9 +109,9 @@ public final class LogisticStore {
         return asset instanceof AutomatedFacility || asset instanceof IDistributedInventory;
     }
 
-    private static void removeOwnerlessDelivery(int index, LogisticsDelivery delivery) {
+    private static void loseDelivery(int index, LogisticsDelivery delivery) {
         LOG.warn(
-            "[Logistics] Removing ownerless task {} from {} to {} containing {} x {} because neither endpoint can receive it",
+            "[Logistics] Lost delivery {} from {} to {} containing {} x {} because the destination cannot receive cargo",
             delivery.deliveryId,
             delivery.data.fromAssetId(),
             delivery.data.toAssetId(),
@@ -134,8 +120,7 @@ public final class LogisticStore {
         removeDelivery(index, delivery);
     }
 
-    private static void deliverOrRetain(int index, LogisticsDelivery delivery, CelestialAsset recipient,
-        String outcome) {
+    private static void deliverOrRetain(int index, LogisticsDelivery delivery, CelestialAsset recipient) {
         long accepted = insertCargo(recipient, delivery.data.resourceId(), delivery.data.amount());
         long remaining = delivery.data.amount() - accepted;
         if (remaining > 0L) {
@@ -143,9 +128,8 @@ public final class LogisticStore {
             delivery.setAmount(remaining);
         } else removeDelivery(index, delivery);
         LOG.debug(
-            "[Logistics] Task {} {} {} x {} to {}",
+            "[Logistics] Task {} delivered {} x {} to {}",
             delivery.deliveryId,
-            outcome,
             accepted,
             delivery.data.resourceId(),
             recipient.assetId);
@@ -204,13 +188,25 @@ public final class LogisticStore {
 
     private static long signalAmount(CelestialAsset asset, ItemStackWrapper resource, LogisticsResourceConfig config,
         long importStock) {
-        long lowerBound = asset instanceof AutomatedFacility facility ? facility.effectiveLowerBound(resource) : 0L;
-        long importTarget = config.isImportEnabled() ? Math.max(config.minReserve(), lowerBound) : 0L;
-        if (importTarget > 0L && importTarget > importStock) return importStock - importTarget;
+        long requested = requestedAmount(asset, resource, config, importStock);
+        if (requested > 0L) return -requested;
         if (!config.isSupplyEnabled()) return 0L;
         long supply = asset instanceof Station station ? station.getCannonSupplyAmount(resource, config.minReserve())
-            : importStock - Math.max(config.minReserve(), lowerBound);
+            : importStock - reserveFor(asset, resource, config);
         return Math.max(supply, 0L);
+    }
+
+    static long reserveFor(CelestialAsset asset, ItemStackWrapper resource, LogisticsResourceConfig config) {
+        return asset instanceof AutomatedFacility facility ? Math.addExact(
+            Math.max(config.minReserve(), facility.effectiveLowerBound(resource)),
+            facility.operationMaterialNeed(resource)) : config.minReserve();
+    }
+
+    static long requestedAmount(CelestialAsset asset, ItemStackWrapper resource, LogisticsResourceConfig config,
+        long stock) {
+        if (!config.isImportEnabled()) return 0L;
+        long missing = Math.max(0L, reserveFor(asset, resource, config) - stock);
+        return Math.max(0L, missing - inboundAmounts(asset.assetId, resource).allPending());
     }
 
     public static Map<CelestialObjectKey, List<LogisticSignal>> groupSignals(List<LogisticSignal> signals,

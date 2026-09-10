@@ -243,10 +243,11 @@ public class ModuleInstance implements Buildable {
 
     public void setOperation(ModuleOperationState operation) {
         this.operation = operation;
+        if (facilityOwner != null) facilityOwner.moduleOperationChanged();
     }
 
     public void clearOperation() {
-        this.operation = null;
+        setOperation(null);
     }
 
     public boolean canStartOperation() {

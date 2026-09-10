@@ -91,9 +91,32 @@ final class LogisticStoreTest {
     }
 
     @Test
-    void missingDestinationRefundsCargoToSurvivingSource() {
+    void lostReceiverDoesNotChangeFlightTimeOrReturnCargo() {
+        AutomatedFacility source = facility();
+        AutomatedFacility destination = facility();
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        CelestialAssetStore.registerAsset(UUID.randomUUID(), source);
+        LogisticsDelivery flight = delivery(source, destination, resource, 5L, 3);
+        LogisticStore.addDelivery(flight);
+        LogisticStore.tickDeliveries();
+        assertEquals(0L, source.itemAmount(resource));
+        assertEquals(2, flight.getRemainingTicks());
+        assertEquals(List.of(flight), LogisticStore.activeDeliveries());
+        LogisticStore.tickDeliveries();
+        LogisticStore.tickDeliveries();
+        assertTrue(
+            LogisticStore.activeDeliveries()
+                .isEmpty());
+        assertEquals(0L, source.itemAmount(resource));
+        assertEquals(
+            new LogisticStore.InboundAmounts(0, 0),
+            LogisticStore.inboundAmounts(destination.assetId, resource));
+    }
+
+    @Test
+    void missingDestinationLosesCargoWithoutRefundingSource() {
         DeliveryScenario scenario = deliveryScenario();
-        assertAfterEndpointLoss(scenario, scenario.source(), scenario.source());
+        assertAfterEndpointLoss(scenario, scenario.source(), null);
     }
 
     @Test
@@ -204,30 +227,22 @@ final class LogisticStoreTest {
         assertEquals(0L, LogisticStore.inboundInTransitAmount(otherDestination.assetId, resource));
     }
 
-    // Product contract: partial refunds retain pending cargo until the source can accept it.
     @Test
-    void partialRefundUpdatesPendingCargoBeforeItsOriginalArrivalTime() {
-        UUID teamId = UUID.randomUUID();
+    void requestsSubtractCargoAlreadyOnItsWay() {
         AutomatedFacility source = facility();
         AutomatedFacility destination = facility();
         ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
-        ItemStackWrapper filler = new ItemStackWrapper(Items.diamond, 0, null);
-        source.insert(filler, 998L);
-        CelestialAssetStore.registerAsset(teamId, source);
-        LogisticStore.addDelivery(delivery(source, destination, resource, 5L, 20));
+        destination.insert(resource, 3L);
+        destination.logisticsConfig.set(resource, new LogisticsResourceConfig(10, 1, true, false));
+        LogisticStore.addDelivery(delivery(source, destination, resource, 3L, 10));
 
-        LogisticStore.tickDeliveries();
-
-        assertEquals(2L, source.itemAmount(resource));
         assertEquals(
-            new LogisticStore.InboundAmounts(3L, 0L),
-            LogisticStore.inboundAmounts(destination.assetId, resource));
-        source.extract(filler, 3L);
-        LogisticStore.tickDeliveries();
-        assertEquals(5L, source.itemAmount(resource));
-        assertEquals(
-            new LogisticStore.InboundAmounts(0L, 0L),
-            LogisticStore.inboundAmounts(destination.assetId, resource));
+            -4L,
+            signalFor(LogisticStore.collectSignals(List.of(destination)), destination, resource).amount());
+        LogisticStore.addDelivery(delivery(source, destination, resource, 4L, 10));
+        assertTrue(
+            LogisticStore.collectSignals(List.of(destination))
+                .isEmpty());
     }
 
     @Test

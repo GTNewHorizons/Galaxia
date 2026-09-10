@@ -22,6 +22,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
@@ -43,8 +46,93 @@ final class ModuleConstructionTest {
 
     @AfterEach
     void clearRuntime() {
+        LogisticStore.clearDeliveries();
         CelestialAssetStore.SERVER.clearInternal();
         SatelliteNetworkService.clear();
+    }
+
+    @Test
+    void constructionRequestsMissingMaterialsOnlyWithImportEnabled() {
+        AutomatedFacility facility = facility();
+        ModuleInstance module = buildMiner(facility);
+        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(module.getConstructionCost());
+        ItemStackWrapper item = cost.keySet()
+            .iterator()
+            .next();
+        assertTrue(
+            LogisticStore.collectSignals(List.of(facility))
+                .isEmpty());
+        facility.logisticsConfig.set(item, new LogisticsResourceConfig(5, 1, true, false));
+        assertEquals(
+            -(cost.get(item) + 5L),
+            LogisticStore.collectSignals(List.of(facility))
+                .getFirst()
+                .amount());
+
+        facility.insert(item, 1L);
+        facility.tick();
+        assertEquals(
+            -(cost.get(item) + 4L),
+            LogisticStore.collectSignals(List.of(facility))
+                .getFirst()
+                .amount());
+        facility.applyCommand(
+            new FacilityCommand.CancelModuleOperation(facility.assetId, module.id),
+            FacilityCommand.Authority.NONE);
+        assertEquals(
+            -4L,
+            LogisticStore.collectSignals(List.of(facility))
+                .getFirst()
+                .amount());
+    }
+
+    @Test
+    void incomingConstructionMaterialsSuppressDuplicateOrdersAndFundConstruction() {
+        AutomatedFacility facility = facility();
+        ModuleInstance module = buildMiner(facility);
+        CelestialAssetStore.SERVER.registerAssetInternal(UUID.randomUUID(), facility);
+        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(module.getConstructionCost());
+        cost.forEach(
+            (item, amount) -> facility.logisticsConfig.set(item, new LogisticsResourceConfig(0, 1, true, true)));
+        List<LogisticSignal> requests = LogisticStore.collectSignals(List.of(facility));
+        assertEquals(cost.size(), requests.size());
+        for (LogisticSignal request : requests) {
+            assertEquals(-cost.get(request.resourceId()), request.amount());
+            LogisticStore.addDelivery(
+                LogisticsDelivery.createWithTrajectory(
+                    LogisticsDelivery.ID.create(),
+                    CelestialAsset.ID.create(),
+                    facility.assetId,
+                    request.resourceId(),
+                    request.magnitude(),
+                    1,
+                    request.scope(),
+                    facility.celestialObjectKey,
+                    facility.celestialObjectKey,
+                    0,
+                    0));
+        }
+        assertTrue(
+            LogisticStore.collectSignals(List.of(facility))
+                .isEmpty());
+
+        LogisticStore.tickDeliveries();
+        assertEquals(cost, facility.itemSnapshot());
+        assertTrue(
+            LogisticStore.activeDeliveries()
+                .isEmpty());
+        assertTrue(
+            LogisticStore.collectSignals(List.of(facility))
+                .isEmpty());
+        finishConstruction(facility, module);
+
+        assertTrue(module.isOperational());
+        assertTrue(
+            facility.itemSnapshot()
+                .isEmpty());
+        assertTrue(
+            LogisticStore.collectSignals(List.of(facility))
+                .isEmpty());
     }
 
     @Test
