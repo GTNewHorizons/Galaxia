@@ -113,7 +113,7 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
                 if (operation == SatelliteMutationOperation.ADD || operation == SatelliteMutationOperation.SET) {
                     // TODO: Remove this once satellite production is handled by normal gameplay.
                     if (!DebugActionAuthorization.isAuthorized(playerMp)) return;
-                } else if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.DESTROY_ASSET)) {
+                } else if (!GTTeamsCompat.hasPermission(debugTeamId, playerMp, TeamAction.DESTROY_ASSET)) {
                     return;
                 }
                 try {
