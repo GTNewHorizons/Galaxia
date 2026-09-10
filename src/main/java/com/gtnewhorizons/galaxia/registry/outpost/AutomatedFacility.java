@@ -809,7 +809,6 @@ public final class AutomatedFacility extends CelestialAsset {
         }
 
         List<ModuleInstance> prepared = new ArrayList<>(placements.size());
-        Map<ModuleInstance.ID, ModuleInstance.SettingsBinding> settingsPlans = new LinkedHashMap<>();
         boolean shouldInstantBuild = command.instantBuild() && authority.debugAuthorized();
         for (ModulePlacement placement : placements) {
             ModuleInstance module;
@@ -829,7 +828,7 @@ public final class AutomatedFacility extends CelestialAsset {
                 if (settingsPlan == null) {
                     return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_SETTINGS_GROUP);
                 }
-                settingsPlans.put(module.id, settingsPlan);
+                moduleSettings.attach(module, settingsPlan);
             }
             if (shouldInstantBuild) {
                 module.completeConstruction();
@@ -847,7 +846,7 @@ public final class AutomatedFacility extends CelestialAsset {
             prepared.add(module);
         }
         for (ModuleInstance module : prepared) {
-            attachModuleWithoutRevision(module, settingsPlans.get(module.id));
+            attachModuleWithoutRevision(module);
             layout.place(module);
         }
         markDirty();
@@ -888,16 +887,11 @@ public final class AutomatedFacility extends CelestialAsset {
         }
     }
 
-    private void attachModuleWithoutRevision(ModuleInstance module,
-        @Nullable ModuleInstance.SettingsBinding settingsPlan) {
+    private void attachModuleWithoutRevision(ModuleInstance module) {
         modules.add(module);
         modulesById.put(module.id, module);
         module.setFacilityOwner(this);
         moduleConfigurationChanged();
-        if (!FacilityModuleRegistry.get(module.kind())
-            .settingsGroups()) return;
-        if (settingsPlan == null) throw new IllegalStateException("Missing settings attachment for " + module.id);
-        moduleSettings.attach(module, settingsPlan);
     }
 
     public List<ModulePlacement> buildablePlacements(@Nullable FacilityModuleKind moduleKind,
