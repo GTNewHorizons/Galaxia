@@ -15,33 +15,56 @@ public class LeafScanWidget extends Widget<LeafScanWidget> {
     private final TileEntityOxygenCollector tile;
     private static final UITexture GRID_TEX = EnumTextures.MIRAGE.getImage();
     private static final UITexture DOT_TEX = EnumTextures.TENEBRAE.getImage();
-    private final int size = 81;
+    private static final int RADIUS = 4;
+    private static final int DIAMETER = RADIUS * 2 + 1;
+    private static final int CELL_SIZE = 9;
+    private static final int SIZE = DIAMETER * CELL_SIZE;
+    private final boolean[] leaves = new boolean[DIAMETER * DIAMETER];
 
     public LeafScanWidget(TileEntityOxygenCollector tile) {
         this.tile = tile;
-        size(size, size);
+        size(SIZE, SIZE);
         background(EnumTextures.SELECTION_FRAME.getImage());
+    }
+
+    @Override
+    public void onInit() {
+        super.onInit();
+        refreshLeaves();
+    }
+
+    @Override
+    public void onUpdate() {
+        super.onUpdate();
+        refreshLeaves();
+    }
+
+    private void refreshLeaves() {
+        for (int dx = -RADIUS; dx <= RADIUS; dx++) {
+            for (int dz = -RADIUS; dz <= RADIUS; dz++) {
+                leaves[(dx + RADIUS) * DIAMETER + dz + RADIUS] = hasLeafAt(dx, dz);
+            }
+        }
     }
 
     @Override
     public void draw(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
         super.draw(context, widgetTheme);
 
-        GRID_TEX.draw(context, 0, 0, size, size, widgetTheme.getTheme());
+        GRID_TEX.draw(context, 0, 0, SIZE, SIZE, widgetTheme.getTheme());
 
-        int radius = 4;
-        for (int dx = -radius; dx <= radius; dx++) {
-            for (int dz = -radius; dz <= radius; dz++) {
-                if (hasLeafAt(dx, dz)) {
-                    int px = (dx + radius) * 9;
-                    int py = (dz + radius) * 9;
+        for (int dx = -RADIUS; dx <= RADIUS; dx++) {
+            for (int dz = -RADIUS; dz <= RADIUS; dz++) {
+                if (leaves[(dx + RADIUS) * DIAMETER + dz + RADIUS]) {
+                    int px = (dx + RADIUS) * CELL_SIZE;
+                    int py = (dz + RADIUS) * CELL_SIZE;
                     DOT_TEX.withColorOverride(EnumColors.MAP_LEAF_GREEN.getColor())
-                        .draw(context, px, py, 9, 9, widgetTheme.getTheme());
+                        .draw(context, px, py, CELL_SIZE, CELL_SIZE, widgetTheme.getTheme());
                 }
             }
         }
         DOT_TEX.withColorOverride(EnumColors.MAP_MACHINE_BLUE.getColor())
-            .draw(context, 36, 36, 9, 9, widgetTheme.getTheme());
+            .draw(context, RADIUS * CELL_SIZE, RADIUS * CELL_SIZE, CELL_SIZE, CELL_SIZE, widgetTheme.getTheme());
     }
 
     private boolean hasLeafAt(int dx, int dz) {
