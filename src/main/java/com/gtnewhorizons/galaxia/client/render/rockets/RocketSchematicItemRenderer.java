@@ -6,7 +6,6 @@ import java.util.List;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.renderer.texture.TextureManager;
@@ -17,6 +16,7 @@ import net.minecraftforge.client.IItemRenderer;
 
 import org.lwjgl.opengl.GL11;
 
+import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemRocketSchematic;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAnalyzer;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAssembly;
@@ -160,26 +160,12 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
     }
 
     private static void drawQuad(TextureManager tm, ResourceLocation tex, float offset, float size, float z) {
-        tm.bindTexture(tex);
-        float end = offset + size;
-        Tessellator t = Tessellator.instance;
-        t.startDrawingQuads();
-        t.addVertexWithUV(offset, end, z, 0, 1);
-        t.addVertexWithUV(end, end, z, 1, 1);
-        t.addVertexWithUV(end, offset, z, 1, 0);
-        t.addVertexWithUV(offset, offset, z, 0, 0);
-        t.draw();
+        drawQuad(tm, tex, offset, offset, size, size, z);
     }
 
     private static void drawQuad(TextureManager tm, ResourceLocation tex, float x, float y, float w, float h, float z) {
         tm.bindTexture(tex);
-        Tessellator t = Tessellator.instance;
-        t.startDrawingQuads();
-        t.addVertexWithUV(x, y + h, z, 0, 1);
-        t.addVertexWithUV(x + w, y + h, z, 1, 1);
-        t.addVertexWithUV(x + w, y, z, 1, 0);
-        t.addVertexWithUV(x, y, z, 0, 0);
-        t.draw();
+        GuiDraw.drawTexture(x, y, x + w, y + h, 0f, 0f, 1f, 1f, z);
     }
 
     private static void drawTexts(RocketAssembly assembly, RocketBlueprint blueprint) {

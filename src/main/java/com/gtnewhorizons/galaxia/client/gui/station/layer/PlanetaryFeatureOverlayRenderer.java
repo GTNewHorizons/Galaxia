@@ -10,11 +10,11 @@ import java.util.Map;
 import javax.imageio.ImageIO;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.ResourceLocation;
 
 import org.lwjgl.opengl.GL11;
 
+import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.client.gui.station.StationMapFrame;
@@ -87,13 +87,7 @@ public final class PlanetaryFeatureOverlayRenderer {
         GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GL11.glColor4f(1f, 1f, 1f, 1f);
 
-        Tessellator tess = Tessellator.instance;
-        tess.startDrawingQuads();
-        tess.addVertexWithUV(x, y + height, 0, 0, 1);
-        tess.addVertexWithUV(x + width, y + height, 0, 1, 1);
-        tess.addVertexWithUV(x + width, y, 0, 1, 0);
-        tess.addVertexWithUV(x, y, 0, 0, 0);
-        tess.draw();
+        GuiDraw.drawTexture(x, y, x + width, y + height, 0f, 0f, 1f, 1f);
     }
 
     private static TextureSize textureSize(ResourceLocation texture) {

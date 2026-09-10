@@ -5,12 +5,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.util.ResourceLocation;
 
+import org.lwjgl.opengl.GL11;
+
+import com.cleanroommc.modularui.drawable.GuiDraw;
+import com.cleanroommc.modularui.utils.GlStateManager;
+import com.cleanroommc.modularui.utils.Platform;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.station.StationMapFrame;
-import com.gtnewhorizons.galaxia.client.gui.station.layer.ConnectorTextureBatchRenderer.Quad;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.StationTextureRegistry.ConnectorKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
@@ -57,11 +62,39 @@ public final class ConnectionLayerRenderer {
                 frame);
         }
 
-        ConnectorTextureBatchRenderer.draw(horizontalTexture, HORIZONTAL_QUADS);
-        ConnectorTextureBatchRenderer.draw(verticalTexture, VERTICAL_QUADS);
+        drawBatch(horizontalTexture, HORIZONTAL_QUADS);
+        drawBatch(verticalTexture, VERTICAL_QUADS);
         for (Map.Entry<ResourceLocation, List<Quad>> entry : CAPACITY_QUADS_BY_TEXTURE.entrySet()) {
-            ConnectorTextureBatchRenderer.draw(entry.getKey(), entry.getValue());
+            drawBatch(entry.getKey(), entry.getValue());
         }
+    }
+
+    private record Quad(int x, int y) {}
+
+    private static void drawBatch(ResourceLocation texture, List<Quad> quads) {
+        if (texture == null || quads.isEmpty()) return;
+        Minecraft.getMinecraft()
+            .getTextureManager()
+            .bindTexture(texture);
+        GlStateManager.enableTexture2D();
+        GlStateManager.enableBlend();
+        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GL11.glColor4f(1f, 1f, 1f, 1f);
+        Platform.startDrawing(Platform.DrawMode.QUADS, Platform.VertexFormat.POS_TEX, buffer -> {
+            for (Quad quad : quads) {
+                GuiDraw.drawTexture(
+                    buffer,
+                    quad.x(),
+                    quad.y(),
+                    quad.x() + StationMapFrame.CONNECTOR_SIZE,
+                    quad.y() + StationMapFrame.CONNECTOR_SIZE,
+                    0f,
+                    0f,
+                    1f,
+                    1f,
+                    0f);
+            }
+        });
     }
 
     private static void collectEdge(StationTileCoord coord, PlacedTile tile, PlacedTile neighbour,
@@ -82,7 +115,7 @@ public final class ConnectionLayerRenderer {
 
     private static void drawConnector(int x, int y, boolean active, boolean hasTexture, List<Quad> textureQuads) {
         if (active && hasTexture) {
-            textureQuads.add(new Quad(x, y, StationMapFrame.CONNECTOR_SIZE, StationMapFrame.CONNECTOR_SIZE));
+            textureQuads.add(new Quad(x, y));
             return;
         }
 
@@ -95,7 +128,7 @@ public final class ConnectionLayerRenderer {
         ResourceLocation texture = StationTextureRegistry.capacityConnectorTexture(kind, connectorKind);
         if (texture == null) return;
         CAPACITY_QUADS_BY_TEXTURE.computeIfAbsent(texture, ignored -> new ArrayList<>())
-            .add(new Quad(x, y, StationMapFrame.CONNECTOR_SIZE, StationMapFrame.CONNECTOR_SIZE));
+            .add(new Quad(x, y));
     }
 
     private static boolean connectorActive(PlacedTile a, PlacedTile b) {

@@ -9,7 +9,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
-import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
@@ -17,6 +16,7 @@ import net.minecraft.util.ResourceLocation;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 
+import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
@@ -259,13 +259,7 @@ final class ModuleConfigModalSupport {
         com.cleanroommc.modularui.utils.GlStateManager.enableBlend();
         com.cleanroommc.modularui.utils.GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GL11.glColor4f(1f, 1f, 1f, 1f);
-        Tessellator tessellator = Tessellator.instance;
-        tessellator.startDrawingQuads();
-        tessellator.addVertexWithUV(x, y + height, 0.0, 0.0, 1.0);
-        tessellator.addVertexWithUV(x + width, y + height, 0.0, 1.0, 1.0);
-        tessellator.addVertexWithUV(x + width, y, 0.0, 1.0, 0.0);
-        tessellator.addVertexWithUV(x, y, 0.0, 0.0, 0.0);
-        tessellator.draw();
+        GuiDraw.drawTexture(x, y, x + width, y + height, 0f, 0f, 1f, 1f);
     }
 
     private static String moduleDisplayName(ModuleInstance module) {

@@ -3,10 +3,10 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.Tessellator;
 
 import org.lwjgl.opengl.GL11;
 
+import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 
@@ -71,17 +71,15 @@ public final class StationCoreDirectionIndicator {
         GL11.glPushMatrix();
         GL11.glTranslated(centerX, centerY, 0.0);
         GL11.glRotatef(rotation, 0.0F, 0.0F, 1.0F);
-        drawTexturedQuad(-TEXTURE_WIDTH * 0.5, -TEXTURE_HEIGHT * 0.5, TEXTURE_WIDTH, TEXTURE_HEIGHT);
+        GuiDraw.drawTexture(
+            -TEXTURE_WIDTH * 0.5f,
+            -TEXTURE_HEIGHT * 0.5f,
+            TEXTURE_WIDTH * 0.5f,
+            TEXTURE_HEIGHT * 0.5f,
+            0f,
+            0f,
+            1f,
+            1f);
         GL11.glPopMatrix();
-    }
-
-    private static void drawTexturedQuad(double x, double y, int width, int height) {
-        Tessellator tessellator = Tessellator.instance;
-        tessellator.startDrawingQuads();
-        tessellator.addVertexWithUV(x, y + height, 0.0, 0.0, 1.0);
-        tessellator.addVertexWithUV(x + width, y + height, 0.0, 1.0, 1.0);
-        tessellator.addVertexWithUV(x + width, y, 0.0, 1.0, 0.0);
-        tessellator.addVertexWithUV(x, y, 0.0, 0.0, 0.0);
-        tessellator.draw();
     }
 }

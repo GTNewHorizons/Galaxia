@@ -5,11 +5,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
+import net.minecraft.util.ResourceLocation;
 
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.GlStateManager;
@@ -22,6 +25,7 @@ import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
@@ -33,7 +37,7 @@ import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 /**
  * Visual classification of an in-flight transfer package. Drives which sprite the orbital
  * renderer blits at the transfer point. New kinds are added by extending this enum and
- * wiring an entry in {@link TransferPackageIcons#texture}.
+ * supplying its texture in {@link #texture()}.
  */
 enum TransferPackageKind {
 
@@ -41,6 +45,12 @@ enum TransferPackageKind {
 
     String displayName() {
         return "Hammer Package";
+    }
+
+    ResourceLocation texture() {
+        return switch (this) {
+            case HAMMER -> EnumTextures.ICON_TRANSFER_HAMMER.get();
+        };
     }
 }
 
@@ -825,7 +835,17 @@ public final class InterplanetaryTransferSystem {
             if (!writeCurrentTransferPoint(transfer, currentTime, transferPoint) || !transferPoint.valid()) return;
             float sx = view.worldToScreenX(transferPoint.worldX());
             float sy = view.worldToScreenY(transferPoint.worldY());
-            TransferPackageIcons.drawCentered(transfer.packageKind(), sx, sy, PACKAGE_SPRITE_SIZE, alpha);
+            Minecraft.getMinecraft()
+                .getTextureManager()
+                .bindTexture(
+                    transfer.packageKind()
+                        .texture());
+            GlStateManager.enableTexture2D();
+            GlStateManager.enableBlend();
+            GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+            GL11.glColor4f(1f, 1f, 1f, alpha);
+            float half = PACKAGE_SPRITE_SIZE * 0.5f;
+            GuiDraw.drawTexture(sx - half, sy - half, sx + half, sy + half, 0f, 0f, 1f, 1f);
         }
 
     }
