@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.client.gui.station.ModuleFootprintProjection;
 import com.gtnewhorizons.galaxia.client.gui.station.StationMapFrame;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -27,7 +28,7 @@ final class ModuleLayerRendererTest {
             ModuleShape.L_2x2,
             ModuleTier.IV);
 
-        ModuleLayerRenderer.FootprintTextureBounds bounds = ModuleLayerRenderer.footprintTextureBounds(module, FRAME);
+        ModuleFootprintProjection.Segment bounds = ModuleLayerRenderer.footprintTextureBounds(module, FRAME);
 
         assertEquals(FRAME.tileLocalX(0), bounds.x());
         assertEquals(FRAME.tileLocalY(0), bounds.y());
@@ -46,7 +47,7 @@ final class ModuleLayerRendererTest {
             ModuleTier.IV);
         module.setRotation(1);
 
-        ModuleLayerRenderer.FootprintTextureBounds bounds = ModuleLayerRenderer.footprintTextureBounds(module, FRAME);
+        ModuleFootprintProjection.Segment bounds = ModuleLayerRenderer.footprintTextureBounds(module, FRAME);
 
         assertEquals(FRAME.tileLocalX(-1), bounds.x());
         assertEquals(FRAME.tileLocalY(0), bounds.y());
@@ -56,7 +57,7 @@ final class ModuleLayerRendererTest {
 
     @Test
     void footprintTextureBoundsCanBeComputedForPickerPreview() {
-        ModuleLayerRenderer.FootprintTextureBounds bounds = ModuleLayerRenderer
+        ModuleFootprintProjection.Segment bounds = ModuleLayerRenderer
             .footprintTextureBounds(ModuleShape.L_2x2, StationTileCoord.of(0, 0), 1, FRAME);
 
         assertEquals(FRAME.tileLocalX(-1), bounds.x());

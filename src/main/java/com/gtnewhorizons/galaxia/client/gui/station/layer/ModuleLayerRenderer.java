@@ -62,7 +62,7 @@ public final class ModuleLayerRenderer {
         for (PlacedTile tile : tiles.values()) {
             ModuleInstance module = tile == null ? null : tile.module();
             if (!shouldDrawFootprintTexture(module) || !drawn.add(module.id)) continue;
-            FootprintTextureBounds bounds = footprintTextureBounds(module, frame);
+            ModuleFootprintProjection.Segment bounds = footprintTextureBounds(module, frame);
             drawModuleTextureFootprint(bounds.x(), bounds.y(), bounds.width(), bounds.height(), module);
             drawFootprintOverlaySegments(module.shape(), module.anchor(), module.rotation(), frame, tile.state());
         }
@@ -93,7 +93,7 @@ public final class ModuleLayerRenderer {
     public static boolean drawPreviewFootprint(FacilityModuleKind kind, ModuleShape footprint, StationTileCoord anchor,
         int rotation, StationMapFrame frame) {
         if (kind == null || footprint == null || anchor == null) return false;
-        FootprintTextureBounds bounds = footprintTextureBounds(footprint, anchor, rotation, frame);
+        ModuleFootprintProjection.Segment bounds = footprintTextureBounds(footprint, anchor, rotation, frame);
         if (!drawModuleTextureFootprint(
             bounds.x(),
             bounds.y(),
@@ -107,15 +107,8 @@ public final class ModuleLayerRenderer {
             0.7f)) {
             return false;
         }
-        for (ModuleFootprintProjection.Segment segment : ModuleFootprintProjection
-            .filledSegments(footprint, anchor, rotation, frame)) {
-            Gui.drawRect(
-                segment.x(),
-                segment.y(),
-                segment.x() + segment.width(),
-                segment.y() + segment.height(),
-                EnumColors.MAP_COLOR_STATION_TILE_PREVIEW_DIM.getColor());
-        }
+        ModuleFootprintProjection
+            .drawFilled(footprint, anchor, rotation, frame, EnumColors.MAP_COLOR_STATION_TILE_PREVIEW_DIM.getColor());
         return true;
     }
 
@@ -139,28 +132,13 @@ public final class ModuleLayerRenderer {
         return new TextureRegion(u0, v0, (float) (column + 1) / width, (float) (row + 1) / height);
     }
 
-    static FootprintTextureBounds footprintTextureBounds(ModuleInstance module, StationMapFrame frame) {
+    static ModuleFootprintProjection.Segment footprintTextureBounds(ModuleInstance module, StationMapFrame frame) {
         return footprintTextureBounds(module.shape(), module.anchor(), module.rotation(), frame);
     }
 
-    static FootprintTextureBounds footprintTextureBounds(ModuleShape shape, StationTileCoord anchor, int rotation,
-        StationMapFrame frame) {
-        StationTileCoord[] tiles = shape.tiles(anchor, rotation);
-        int minDx = Integer.MAX_VALUE;
-        int minDy = Integer.MAX_VALUE;
-        int maxDx = Integer.MIN_VALUE;
-        int maxDy = Integer.MIN_VALUE;
-        for (StationTileCoord tile : tiles) {
-            minDx = Math.min(minDx, tile.dx());
-            minDy = Math.min(minDy, tile.dy());
-            maxDx = Math.max(maxDx, tile.dx());
-            maxDy = Math.max(maxDy, tile.dy());
-        }
-        int x = frame.tileLocalX(minDx);
-        int y = frame.tileLocalY(minDy);
-        int width = (maxDx - minDx) * StationMapFrame.TILE_STEP + StationMapFrame.TILE_SIZE;
-        int height = (maxDy - minDy) * StationMapFrame.TILE_STEP + StationMapFrame.TILE_SIZE;
-        return new FootprintTextureBounds(x, y, width, height);
+    static ModuleFootprintProjection.Segment footprintTextureBounds(ModuleShape shape, StationTileCoord anchor,
+        int rotation, StationMapFrame frame) {
+        return ModuleFootprintProjection.bounds(shape, anchor, rotation, frame);
     }
 
     static boolean shouldDrawFootprintTexture(ModuleInstance module) {
@@ -175,8 +153,6 @@ public final class ModuleLayerRenderer {
 
         private static final TextureRegion FULL = new TextureRegion(0f, 0f, 1f, 1f);
     }
-
-    record FootprintTextureBounds(int x, int y, int width, int height) {}
 
     private static StationModuleCategory categoryOf(PlacedTile tile) {
         if (tile == null) return StationModuleCategory.COMMAND;
@@ -314,15 +290,7 @@ public final class ModuleLayerRenderer {
         StationMapFrame frame, StationTileState state) {
         int color = stateOverlayColor(state);
         if (color == 0) return;
-        for (ModuleFootprintProjection.Segment segment : ModuleFootprintProjection
-            .filledSegments(shape, anchor, rotation, frame)) {
-            Gui.drawRect(
-                segment.x(),
-                segment.y(),
-                segment.x() + segment.width(),
-                segment.y() + segment.height(),
-                color);
-        }
+        ModuleFootprintProjection.drawFilled(shape, anchor, rotation, frame, color);
     }
 
     private static void drawStateOverlay(int x, int y, int width, int height, StationTileState state) {

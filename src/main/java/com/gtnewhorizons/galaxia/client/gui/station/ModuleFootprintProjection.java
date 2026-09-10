@@ -5,6 +5,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import net.minecraft.client.gui.Gui;
+
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -14,7 +16,7 @@ public final class ModuleFootprintProjection {
 
     private ModuleFootprintProjection() {}
 
-    private record Geometry(List<Segment> filled, List<Segment> outline, StationTileCoord firstTile) {}
+    private record Geometry(List<Segment> filled, List<Segment> outline, StationTileCoord firstTile, Segment bounds) {}
 
     private static Geometry[][] buildGeometries() {
         ModuleShape[] shapes = ModuleShape.values();
@@ -28,10 +30,12 @@ public final class ModuleFootprintProjection {
                         firstTile = tile;
                     }
                 }
+                Segment bounds = boundsOf(filled);
                 geometries[shape.ordinal()][rotation] = new Geometry(
                     filled,
-                    List.copyOf(buildOutlineSegments(filled)),
-                    firstTile);
+                    List.copyOf(buildOutlineSegments(filled, bounds)),
+                    firstTile,
+                    bounds);
             }
         }
         return geometries;
@@ -60,6 +64,38 @@ public final class ModuleFootprintProjection {
     public static StationTileCoord firstTile(ModuleShape shape, StationTileCoord anchor, int rotation) {
         StationTileCoord offset = geometry(shape, anchor, rotation).firstTile();
         return StationTileCoord.of(anchor.dx() + offset.dx(), anchor.dy() + offset.dy());
+    }
+
+    public static Segment bounds(ModuleShape shape, StationTileCoord anchor, int rotation, StationMapFrame frame) {
+        Segment bounds = geometry(shape, anchor, rotation).bounds();
+        return new Segment(
+            frame.tileLocalX(anchor) + bounds.x(),
+            frame.tileLocalY(anchor) + bounds.y(),
+            bounds.width(),
+            bounds.height());
+    }
+
+    public static void drawFilled(ModuleShape shape, StationTileCoord anchor, int rotation, StationMapFrame frame,
+        int color) {
+        draw(geometry(shape, anchor, rotation).filled(), anchor, frame, color);
+    }
+
+    public static void drawOutline(ModuleShape shape, StationTileCoord anchor, int rotation, StationMapFrame frame,
+        int color) {
+        draw(geometry(shape, anchor, rotation).outline(), anchor, frame, color);
+    }
+
+    private static void draw(List<Segment> segments, StationTileCoord anchor, StationMapFrame frame, int color) {
+        int x = frame.tileLocalX(anchor);
+        int y = frame.tileLocalY(anchor);
+        for (Segment segment : segments) {
+            Gui.drawRect(
+                x + segment.x(),
+                y + segment.y(),
+                x + segment.x() + segment.width(),
+                y + segment.y() + segment.height(),
+                color);
+        }
     }
 
     private static List<Segment> buildFilledSegments(ModuleShape shape, int rotation) {
@@ -107,9 +143,7 @@ public final class ModuleFootprintProjection {
         return translated(geometry(shape, anchor, rotation).outline(), anchor, frame);
     }
 
-    private static List<Segment> buildOutlineSegments(List<Segment> filledSegments) {
-        if (filledSegments.isEmpty()) return List.of();
-
+    private static Segment boundsOf(List<Segment> filledSegments) {
         int minX = Integer.MAX_VALUE;
         int minY = Integer.MAX_VALUE;
         int maxX = Integer.MIN_VALUE;
@@ -121,7 +155,13 @@ public final class ModuleFootprintProjection {
             maxY = Math.max(maxY, segment.y() + segment.height());
         }
 
-        boolean[][] filled = new boolean[maxY - minY][maxX - minX];
+        return new Segment(minX, minY, maxX - minX, maxY - minY);
+    }
+
+    private static List<Segment> buildOutlineSegments(List<Segment> filledSegments, Segment bounds) {
+        int minX = bounds.x();
+        int minY = bounds.y();
+        boolean[][] filled = new boolean[bounds.height()][bounds.width()];
         for (Segment segment : filledSegments) {
             markRect(filled, segment.x() - minX, segment.y() - minY, segment.width(), segment.height());
         }
