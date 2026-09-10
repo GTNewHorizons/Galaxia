@@ -1,13 +1,17 @@
 package com.gtnewhorizons.galaxia.registry.outpost.station;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.outpost.feature.ModuleFeatureModifierBuilder;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
@@ -18,6 +22,79 @@ final class LayoutCacheBundleTest {
     @BeforeAll
     static void init() {
         GalaxiaTestBootstrap.ensureFacilityModules();
+    }
+
+    // Product contract: coverage and upkeep share adjacency, including partially overlapping footprints.
+    @Test
+    void areaCoverageAndUpkeepAgreeForOverlappingFootprintsAndDisabledSources() {
+        ModuleInstance bay = FacilityModuleKind.MAINTENANCE_BAY
+            .create(StationTileCoord.of(5, 5), ModuleShape.QUAD_2x2, ModuleTier.NONE);
+        ModuleInstance target = FacilityModuleKind.STORAGE
+            .create(StationTileCoord.of(6, 5), ModuleShape.QUAD_2x2, ModuleTier.HV);
+        LayoutCacheBundle cache = new LayoutCacheBundle(null, List.of(bay, target));
+
+        assertFalse(
+            cache.getMaintenanceCoverage()
+                .contains(StationTileCoord.of(6, 5)));
+        assertTrue(
+            cache.getMaintenanceCoverage()
+                .contains(StationTileCoord.of(7, 5)));
+        assertEquals(100, upkeepMultiplier(cache, bay));
+        assertTrue(upkeepMultiplier(cache, target) < 100);
+
+        bay.setEnabled(false);
+        cache.invalidate();
+        assertTrue(
+            cache.getMaintenanceCoverage()
+                .isEmpty());
+        assertEquals(100, upkeepMultiplier(cache, target));
+    }
+
+    // Product contract: a source at the grid boundary affects only valid adjacent tiles.
+    @Test
+    void areaCoverageClipsToGridAndDoesNotStackIdenticalDiscounts() {
+        ModuleInstance first = FacilityModuleKind.MAINTENANCE_BAY.create(
+            StationTileCoord.of(StationTileCoord.MAX, StationTileCoord.MAX),
+            ModuleShape.SINGLE,
+            ModuleTier.NONE);
+        ModuleInstance second = FacilityModuleKind.MAINTENANCE_BAY.create(
+            StationTileCoord.of(StationTileCoord.MAX - 2, StationTileCoord.MAX),
+            ModuleShape.SINGLE,
+            ModuleTier.NONE);
+        ModuleInstance target = makeStorage(StationTileCoord.MAX - 1, StationTileCoord.MAX);
+        LayoutCacheBundle single = new LayoutCacheBundle(null, List.of(first));
+        LayoutCacheBundle both = new LayoutCacheBundle(null, List.of(first, second));
+
+        assertEquals(
+            3,
+            single.getMaintenanceCoverage()
+                .size());
+        assertEquals(upkeepMultiplier(single, target), upkeepMultiplier(both, target));
+        assertTrue(upkeepMultiplier(both, target) < 100);
+    }
+
+    private static int upkeepMultiplier(LayoutCacheBundle cache, ModuleInstance target) {
+        ModuleFeatureModifierBuilder builder = new ModuleFeatureModifierBuilder();
+        cache.applyAreaEffects(target, builder);
+        return builder.build(Map.of())
+            .upkeepMultiplierPercent();
+    }
+
+    // Product contract: available capacity follows structural layout replacement.
+    @Test
+    void totalCapacityTracksLayoutReplacement() {
+        StationLayout layout = new StationLayout();
+        layout.place(makeStorage(1, 0));
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout, List.of());
+        long initial = cache.totalCapacity(FacilityModuleKind.STORAGE);
+
+        StationLayout replacement = new StationLayout();
+        replacement.place(makeStorage(1, 0));
+        replacement.place(makeStorage(2, 0));
+        layout.loadFromSnapshot(replacement.snapshot());
+
+        assertTrue(cache.totalCapacity(FacilityModuleKind.STORAGE) > 2 * initial);
+        assertEquals(0L, cache.totalCapacity(FacilityModuleKind.HAMMER));
     }
 
     // ── Incremental capacity cluster tests ──
@@ -35,7 +112,7 @@ final class LayoutCacheBundleTest {
         StationLayout layout = new StationLayout();
         ModuleInstance m = makeStorage(1, 0);
         layout.place(m);
-        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout, List.of());
 
         List<CapacityCluster> clusters = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
         assertEquals(1, clusters.size());
@@ -57,7 +134,7 @@ final class LayoutCacheBundleTest {
         ModuleInstance b = makeStorage(2, 0);
         layout.place(a);
         layout.place(b);
-        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout, List.of());
 
         List<CapacityCluster> clusters = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
         assertEquals(1, clusters.size());
@@ -80,7 +157,7 @@ final class LayoutCacheBundleTest {
         ModuleInstance b = makeStorage(5, 5);
         layout.place(a);
         layout.place(b);
-        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout, List.of());
 
         List<CapacityCluster> clusters = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
         assertEquals(2, clusters.size());
@@ -93,7 +170,7 @@ final class LayoutCacheBundleTest {
         ModuleInstance b = makeStorage(2, 0, ModuleTier.IV); // 16384
         layout.place(a);
         layout.place(b);
-        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout, List.of());
 
         List<CapacityCluster> clusters = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
         assertEquals(1, clusters.size());
@@ -112,7 +189,7 @@ final class LayoutCacheBundleTest {
         layout.place(a);
         layout.place(b);
 
-        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout, List.of());
         assertEquals(
             1,
             cache.getCapacityClusters(FacilityModuleKind.STORAGE)
@@ -120,7 +197,6 @@ final class LayoutCacheBundleTest {
 
         // Remove b — cluster should shrink to just a
         layout.removeTileForModule(b.id);
-        cache.applyMutation(MutationKind.DECONSTRUCT, FacilityModuleKind.STORAGE);
         List<CapacityCluster> clusters = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
         assertEquals(1, clusters.size());
         assertEquals(
@@ -145,14 +221,13 @@ final class LayoutCacheBundleTest {
         layout.place(c);
         layout.place(b);
 
-        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout, List.of());
         assertEquals(
             1,
             cache.getCapacityClusters(FacilityModuleKind.STORAGE)
                 .size());
 
         layout.removeTileForModule(c.id);
-        cache.applyMutation(MutationKind.DECONSTRUCT, FacilityModuleKind.STORAGE);
         List<CapacityCluster> clusters = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
         assertEquals(2, clusters.size());
     }
@@ -167,14 +242,13 @@ final class LayoutCacheBundleTest {
         layout.place(makeStorage(2, 3));
         layout.place(makeStorage(1, 2));
 
-        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout, List.of());
         assertEquals(
             1,
             cache.getCapacityClusters(FacilityModuleKind.STORAGE)
                 .size());
 
         layout.removeTileForModule(center.id);
-        cache.applyMutation(MutationKind.DECONSTRUCT, FacilityModuleKind.STORAGE);
 
         assertEquals(
             4,
@@ -218,11 +292,10 @@ final class LayoutCacheBundleTest {
 
     private static void assertProjectionMatchesActualRemoval(StationLayout layout, ModuleInstance removed,
         int expectedClusterCount) {
-        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout, List.of());
         List<CapacityCluster> projected = cache.getCapacityClustersExcluding(FacilityModuleKind.STORAGE, removed.id);
 
         layout.removeTileForModule(removed.id);
-        cache.applyMutation(MutationKind.DECONSTRUCT, FacilityModuleKind.STORAGE);
         List<CapacityCluster> actual = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
 
         assertEquals(expectedClusterCount, projected.size());
@@ -239,7 +312,7 @@ final class LayoutCacheBundleTest {
         ModuleInstance b = makeStorage(3, 0);
         layout.place(a);
         layout.place(b);
-        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout, List.of());
         assertEquals(
             2,
             cache.getCapacityClusters(FacilityModuleKind.STORAGE)
@@ -247,7 +320,6 @@ final class LayoutCacheBundleTest {
 
         ModuleInstance bridge = makeStorage(2, 0);
         layout.place(bridge);
-        cache.applyMutation(MutationKind.PLACE, FacilityModuleKind.STORAGE);
         List<CapacityCluster> clusters = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
         assertEquals(1, clusters.size());
         assertEquals(

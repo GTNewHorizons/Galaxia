@@ -3,49 +3,46 @@ package com.gtnewhorizons.galaxia.registry.outpost.station;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import com.gtnewhorizons.galaxia.registry.outpost.feature.ModuleFeatureModifierBuilder;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
 public final class LayoutCacheBundle {
 
     private final @Nullable StationLayout layout;
+    private final List<ModuleInstance> modules;
     private long layoutVersion = Long.MIN_VALUE;
+    private long revision;
 
     private final Map<FacilityModuleKind, List<CapacityCluster>> capacityClusters = new EnumMap<>(
         FacilityModuleKind.class);
     private boolean capacityClustersDirty = true;
+    private final Map<FacilityModuleKind, Long> capacityTotals = new EnumMap<>(FacilityModuleKind.class);
 
-    private Set<StationTileCoord> maintenanceCoverage;
+    private Map<StationTileCoord, Integer> upkeepMultipliers = Map.of();
     private boolean maintenanceCoverageDirty = true;
 
-    public LayoutCacheBundle(@Nullable StationLayout layout) {
+    public LayoutCacheBundle(@Nullable StationLayout layout, List<ModuleInstance> modules) {
         this.layout = layout;
+        this.modules = modules;
     }
 
-    public void applyMutation(MutationKind mutation, FacilityModuleKind kind) {
-        switch (mutation) {
-            case PLACE, DECONSTRUCT -> {
-                capacityClustersDirty |= kind.isCapacityModule();
-                maintenanceCoverageDirty |= hasAreaEffects(kind);
-            }
-            case SET_TIER -> capacityClustersDirty |= kind.isCapacityModule();
-            case SET_ENABLED -> maintenanceCoverageDirty |= hasAreaEffects(kind);
-            case SET_PARALLEL -> {}
-        }
+    public void invalidate() {
+        capacityClustersDirty = true;
+        maintenanceCoverageDirty = true;
+        revision++;
     }
 
-    private static boolean hasAreaEffects(FacilityModuleKind kind) {
-        FacilityModuleRegistry.Definition definition = FacilityModuleRegistry.get(kind);
-        return definition != null && !definition.areaEffects()
-            .isEmpty();
+    public long revision() {
+        refreshLayoutVersion();
+        return revision;
     }
 
     public List<CapacityCluster> getCapacityClusters(FacilityModuleKind kind) {
@@ -67,15 +64,25 @@ public final class LayoutCacheBundle {
         return CapacityClusterBuilder.buildExcluding(layout, kind, excludedModuleId);
     }
 
+    public long totalCapacity(FacilityModuleKind kind) {
+        getCapacityClusters(kind);
+        return capacityTotals.getOrDefault(kind, 0L);
+    }
+
     private void rebuildCapacityClusters() {
         capacityClusters.clear();
+        capacityTotals.clear();
         if (layout == null) {
             capacityClustersDirty = false;
             return;
         }
         for (FacilityModuleKind k : FacilityModuleKind.values()) {
             if (k.isCapacityModule()) {
-                capacityClusters.put(k, new ArrayList<>(CapacityClusterBuilder.build(layout, k)));
+                List<CapacityCluster> clusters = new ArrayList<>(CapacityClusterBuilder.build(layout, k));
+                capacityClusters.put(k, clusters);
+                long total = 0L;
+                for (CapacityCluster cluster : clusters) total += cluster.effectiveCapacity();
+                capacityTotals.put(k, total);
             }
         }
         capacityClustersDirty = false;
@@ -88,20 +95,28 @@ public final class LayoutCacheBundle {
         if (maintenanceCoverageDirty) {
             rebuildMaintenanceCoverage();
         }
-        return Collections.unmodifiableSet(maintenanceCoverage);
+        return upkeepMultipliers.keySet();
+    }
+
+    public void applyAreaEffects(ModuleInstance target, ModuleFeatureModifierBuilder builder) {
+        if (target == null || target.anchorOrNull() == null) return;
+        getMaintenanceCoverage();
+        for (StationTileCoord tile : target.tiles()) {
+            Integer multiplier = upkeepMultipliers.get(tile);
+            if (multiplier != null) builder.minUpkeepMultiplierPercent(multiplier);
+        }
     }
 
     private void rebuildMaintenanceCoverage() {
-        maintenanceCoverage = new HashSet<>();
-        if (layout == null) {
-            maintenanceCoverageDirty = false;
-            return;
+        Map<StationTileCoord, Integer> multipliers = new HashMap<>();
+        for (ModuleInstance module : modules) {
+            module.areaEffects()
+                .forEach(
+                    effect -> effect.collectAffectedTiles(
+                        module,
+                        tile -> multipliers.merge(tile, effect.upkeepMultiplierPercent(), Math::min)));
         }
-        layout.forEachAnchor(
-            (coord, module) -> {
-                module.areaEffects()
-                    .forEach(effect -> effect.collectAffectedTiles(module, maintenanceCoverage::add));
-            });
+        upkeepMultipliers = Map.copyOf(multipliers);
         maintenanceCoverageDirty = false;
     }
 
@@ -109,8 +124,7 @@ public final class LayoutCacheBundle {
     private void refreshLayoutVersion() {
         if (layout == null || layoutVersion == layout.version()) return;
         layoutVersion = layout.version();
-        capacityClustersDirty = true;
-        maintenanceCoverageDirty = true;
+        invalidate();
     }
 
 }

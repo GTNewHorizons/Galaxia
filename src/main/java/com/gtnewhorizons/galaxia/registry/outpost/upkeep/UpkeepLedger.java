@@ -17,20 +17,26 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 
 public final class UpkeepLedger {
 
-    public @Nonnull UpkeepSummary summary(@Nonnull AutomatedFacility facility) {
+    private UpkeepLedger() {}
+
+    public static @Nonnull UpkeepSummary summary(@Nonnull AutomatedFacility facility) {
         Objects.requireNonNull(facility, "facility");
-        UpkeepDemand aggregate = UpkeepDemand.EMPTY;
+        UpkeepDemand.Builder aggregate = UpkeepDemand.builder();
         List<ModuleDemand> moduleDemands = new java.util.ArrayList<>();
         for (ModuleInstance module : facility.modules()) {
             if (!countsForUpkeep(module)) continue;
             UpkeepDemand baseDemand = module.currentTierUpkeepDemand();
             UpkeepDemand demand = facility.effectiveUpkeepDemand(module, baseDemand);
             if (demand.isEmpty()) continue;
-            aggregate = aggregate.plus(demand);
+            demand.itemsPerMinute()
+                .forEach(aggregate::item);
+            demand.fluidsPerMinute()
+                .forEach(aggregate::fluid);
             moduleDemands.add(new ModuleDemand(module.id, module.kind(), module.priorityOverride(), demand));
         }
-        if (aggregate.isEmpty() && moduleDemands.isEmpty()) return UpkeepSummary.EMPTY;
-        return new UpkeepSummary(aggregate.itemsPerMinute(), aggregate.fluidsPerMinute(), moduleDemands);
+        if (moduleDemands.isEmpty()) return UpkeepSummary.EMPTY;
+        UpkeepDemand totals = aggregate.build();
+        return new UpkeepSummary(totals.itemsPerMinute(), totals.fluidsPerMinute(), moduleDemands);
     }
 
     private static boolean countsForUpkeep(ModuleInstance module) {

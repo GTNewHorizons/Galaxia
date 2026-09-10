@@ -15,6 +15,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegist
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
@@ -63,6 +64,48 @@ final class AutomatedFacilityFeatureModifierTest {
                         .isEmpty());
             }
         }
+    }
+
+    @Test
+    void maintenanceCoverageAndGameplayRefreshTogetherAfterSourceChanges() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.OVERWORLD,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ModuleInstance bay = FacilityModuleKind.MAINTENANCE_BAY
+            .create(StationTileCoord.of(5, 5), ModuleShape.SINGLE, ModuleTier.NONE);
+        ModuleInstance target = FacilityModuleKind.STORAGE
+            .create(StationTileCoord.of(6, 5), ModuleShape.SINGLE, ModuleTier.HV);
+        addModule(facility, bay);
+        addModule(facility, target);
+        int discounted = facility.upkeepMultiplierPercent(target);
+        assertTrue(discounted < 100);
+        assertTrue(
+            facility.layoutCache()
+                .getMaintenanceCoverage()
+                .contains(target.anchor()));
+
+        bay.setEnabled(false);
+        assertEquals(100, facility.upkeepMultiplierPercent(target));
+        assertTrue(
+            facility.layoutCache()
+                .getMaintenanceCoverage()
+                .isEmpty());
+
+        bay.setEnabled(true);
+        assertEquals(discounted, facility.upkeepMultiplierPercent(target));
+        assertTrue(
+            facility.layoutCache()
+                .getMaintenanceCoverage()
+                .contains(target.anchor()));
+
+        facility.clearModules();
+        assertEquals(100, facility.upkeepMultiplierPercent(target));
+        assertTrue(
+            facility.layoutCache()
+                .getMaintenanceCoverage()
+                .isEmpty());
     }
 
     private static AutomatedFacility facilityWithModuleOnFeature(FacilityModuleKind kind, ModuleTier tier,

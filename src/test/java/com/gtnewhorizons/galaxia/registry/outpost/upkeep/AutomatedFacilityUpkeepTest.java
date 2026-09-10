@@ -57,6 +57,65 @@ final class AutomatedFacilityUpkeepTest {
     }
 
     @Test
+    void upkeepReserveTracksModuleAvailabilityAndReplacement() {
+        ModuleInstance module = moduleWithUpkeep(ModulePriority.NORMAL, "2");
+        AutomatedFacility facility = facilityWithModules(module);
+        assertEquals(20L, facility.upkeepReserve(UPKEEP_ITEM));
+
+        module.setEnabled(false);
+        assertEquals(0L, facility.upkeepReserve(UPKEEP_ITEM));
+        module.setEnabled(true);
+        assertEquals(20L, facility.upkeepReserve(UPKEEP_ITEM));
+        module.updateStatus(Buildable.Status.IN_CONSTRUCTION);
+        assertEquals(0L, facility.upkeepReserve(UPKEEP_ITEM));
+        module.completeConstruction();
+        assertEquals(20L, facility.upkeepReserve(UPKEEP_ITEM));
+        module.setComponent(null);
+        assertEquals(0L, facility.upkeepReserve(UPKEEP_ITEM));
+        module.setComponent(new TestTieredModule());
+        assertEquals(20L, facility.upkeepReserve(UPKEEP_ITEM));
+
+        facility.clearModules();
+        assertEquals(0L, facility.upkeepReserve(UPKEEP_ITEM));
+        facility.restoreModulesAndSettings(List.of(moduleWithUpkeep(ModulePriority.NORMAL, "3")), List.of());
+        assertEquals(30L, facility.upkeepReserve(UPKEEP_ITEM));
+    }
+
+    @Test
+    void priorityChangesApplyAfterDemandWasAlreadyRead() {
+        ModuleInstance first = moduleWithUpkeep(ModulePriority.NORMAL, "1");
+        ModuleInstance second = moduleWithUpkeep(ModulePriority.LOW, "1");
+        AutomatedFacility facility = facilityWithModules(first, second);
+        assertEquals(20L, facility.upkeepReserve(UPKEEP_ITEM));
+
+        second.setPriorityOverride(ModulePriority.HIGH);
+        facility.insert(UPKEEP_ITEM, 1L);
+        facility.settleUpkeep();
+
+        assertEquals(BlockingReason.UPKEEP_SHORTAGE, first.blocking());
+        assertEquals(BlockingReason.NONE, second.blocking());
+    }
+
+    @Test
+    void upkeepReserveTracksTierChanges() {
+        ModuleInstance module = moduleWithTierData(
+            ModulePriority.NORMAL,
+            Map.of(
+                ModuleTier.NONE,
+                tierDataBuilder().upkeepItem(UPKEEP_STACK, "1")
+                    .build(),
+                ModuleTier.HV,
+                tierDataBuilder().upkeepItem(UPKEEP_STACK, "3")
+                    .build()));
+        AutomatedFacility facility = facilityWithModules(module);
+        assertEquals(10L, facility.upkeepReserve(UPKEEP_ITEM));
+
+        module.setTier(ModuleTier.HV);
+
+        assertEquals(30L, facility.upkeepReserve(UPKEEP_ITEM));
+    }
+
+    @Test
     void manualUpkeepReserveOverridesDefaultDemandReserve() {
         AutomatedFacility facility = facilityWithModules(moduleWithUpkeep(ModulePriority.NORMAL, "2"));
 
@@ -287,9 +346,13 @@ final class AutomatedFacilityUpkeepTest {
     }
 
     private static ModuleInstance moduleWithTierData(ModulePriority priority, ModuleTierData tierData) {
+        return moduleWithTierData(priority, Map.of(ModuleTier.NONE, tierData));
+    }
+
+    private static ModuleInstance moduleWithTierData(ModulePriority priority, Map<ModuleTier, ModuleTierData> tiers) {
         FacilityModuleRegistry.Definition definition = new FacilityModuleRegistry.Definition(
             FacilityModuleKind.POWER,
-            Map.of(ModuleTier.NONE, tierData),
+            tiers,
             TestTieredModule::new,
             List.<ModulePanelAction>of(),
             false,

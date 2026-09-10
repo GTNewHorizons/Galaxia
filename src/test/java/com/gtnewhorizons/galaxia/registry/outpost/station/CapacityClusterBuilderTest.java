@@ -262,7 +262,7 @@ final class CapacityClusterBuilderTest {
             .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.EV);
         layout.place(hammer);
 
-        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout, List.of(hammer));
         assertTrue(
             cache.getCapacityClusters(FacilityModuleKind.HAMMER)
                 .isEmpty(),
@@ -276,7 +276,7 @@ final class CapacityClusterBuilderTest {
             .create(StationTileCoord.of(5, 5), ModuleShape.SINGLE, ModuleTier.NONE);
         layout.place(bay);
 
-        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout, List.of(bay));
         Set<StationTileCoord> coverage = cache.getMaintenanceCoverage();
         assertEquals(8, coverage.size(), "Enabled bay should cover 8 surrounding tiles");
         assertTrue(coverage.contains(StationTileCoord.of(6, 5))); // E
@@ -284,7 +284,7 @@ final class CapacityClusterBuilderTest {
 
         // Disable bay, coverage should shrink
         bay.setEnabled(false);
-        cache.applyMutation(MutationKind.SET_ENABLED, FacilityModuleKind.MAINTENANCE_BAY);
+        cache.invalidate();
         assertTrue(
             cache.getMaintenanceCoverage()
                 .isEmpty(),
@@ -306,7 +306,7 @@ final class CapacityClusterBuilderTest {
         layout.place(s2);
         layout.place(t1);
 
-        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout, List.of(s1, s2, t1));
         List<CapacityCluster> storageClusters = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
         List<CapacityCluster> tankClusters = cache.getCapacityClusters(FacilityModuleKind.TANK);
 
@@ -331,7 +331,7 @@ final class CapacityClusterBuilderTest {
             .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.HV);
         layout.place(storage);
 
-        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout, List.of(storage));
         List<CapacityCluster> first = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
         List<CapacityCluster> second = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
         // Same reference — cache was not rebuilt

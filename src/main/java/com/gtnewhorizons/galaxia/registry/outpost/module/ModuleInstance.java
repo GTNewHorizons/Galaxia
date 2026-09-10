@@ -28,6 +28,7 @@ public class ModuleInstance implements Buildable {
     private final Map<ItemStack, Long> consumedResources = new HashMap<>();
     private final FacilityModuleRegistry.Definition definition;
     private IModuleComponent component;
+    private @Nullable AutomatedFacility facilityOwner;
 
     private Buildable.Status status = Buildable.Status.IN_CONSTRUCTION;
     private int ticks = 0;
@@ -91,7 +92,17 @@ public class ModuleInstance implements Buildable {
     }
 
     public void setComponent(IModuleComponent component) {
+        if (this.component == component) return;
         this.component = component;
+        configurationChanged();
+    }
+
+    public void setFacilityOwner(@Nullable AutomatedFacility facilityOwner) {
+        this.facilityOwner = facilityOwner;
+    }
+
+    private void configurationChanged() {
+        if (facilityOwner != null) facilityOwner.moduleConfigurationChanged();
     }
 
     public @Nullable SettingsBinding settingsBinding() {
@@ -140,7 +151,9 @@ public class ModuleInstance implements Buildable {
 
     @Override
     public void updateStatus(Status status) {
+        if (this.status == status) return;
         this.status = status;
+        configurationChanged();
     }
 
     public int ticks() {
@@ -168,6 +181,7 @@ public class ModuleInstance implements Buildable {
     public void initAnchor(StationTileCoord anchor) {
         if (this.anchor != null) return;
         this.anchor = anchor;
+        configurationChanged();
     }
 
     public ModuleShape shape() {
@@ -179,7 +193,10 @@ public class ModuleInstance implements Buildable {
     }
 
     public void setRotation(int rotation) {
-        this.rotation = ModuleShape.normalizeRotation(rotation);
+        int normalized = ModuleShape.normalizeRotation(rotation);
+        if (this.rotation == normalized) return;
+        this.rotation = normalized;
+        configurationChanged();
     }
 
     public StationTileCoord[] tiles() {
@@ -191,7 +208,9 @@ public class ModuleInstance implements Buildable {
     }
 
     public void setTier(ModuleTier tier) {
+        if (this.tier == tier) return;
         this.tier = tier;
+        configurationChanged();
     }
 
     public ModulePriority priorityOverride() {
@@ -199,7 +218,9 @@ public class ModuleInstance implements Buildable {
     }
 
     public void setPriorityOverride(ModulePriority priorityOverride) {
+        if (this.priorityOverride == priorityOverride) return;
         this.priorityOverride = priorityOverride;
+        configurationChanged();
     }
 
     public boolean enabled() {
@@ -207,7 +228,9 @@ public class ModuleInstance implements Buildable {
     }
 
     public void setEnabled(boolean enabled) {
+        if (this.enabled == enabled) return;
         this.enabled = enabled;
+        configurationChanged();
     }
 
     public ModuleState state() {
@@ -243,7 +266,7 @@ public class ModuleInstance implements Buildable {
     }
 
     public void completeConstruction() {
-        this.status = Buildable.Status.OPERATIONAL;
+        updateStatus(Buildable.Status.OPERATIONAL);
         consumedResources.clear();
     }
 

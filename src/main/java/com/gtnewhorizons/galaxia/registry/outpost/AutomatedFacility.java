@@ -47,7 +47,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.CapacityCluster;
 import com.gtnewhorizons.galaxia.registry.outpost.station.LayoutCacheBundle;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
-import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
@@ -72,14 +71,14 @@ public final class AutomatedFacility extends CelestialAsset {
     private final FacilityModuleSettings moduleSettings;
     private final Map<ModuleInstance.ID, RecipeBook.ScheduleState> recipeScheduleStates = new LinkedHashMap<>();
 
-    private final UpkeepLedger upkeepLedger;
+    private UpkeepLedger.UpkeepSummary upkeepSummary;
     private UpkeepSettlement.Credits upkeepCredits = UpkeepSettlement.Credits.empty();
     private boolean settlingUpkeep;
     private boolean upkeepInventoryChanged;
 
     private long stationFeatureSalt;
     private final Map<ModuleInstance.ID, ModuleFeatureModifiers> featureModifiersByModule = new LinkedHashMap<>();
-    private long featureModifiersLayoutVersion = Long.MIN_VALUE;
+    private long derivedLayoutRevision = Long.MIN_VALUE;
     private long featureModifiersStationFeatureSalt = Long.MIN_VALUE;
 
     private long energyStored;
@@ -98,9 +97,8 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         this.modules = new ArrayList<>();
         this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
-        this.layoutCache = new LayoutCacheBundle(layout);
+        this.layoutCache = new LayoutCacheBundle(layout, modules);
         this.moduleSettings = new FacilityModuleSettings(modules);
-        this.upkeepLedger = new UpkeepLedger();
         this.stationFeatureSalt = createStationFeatureSalt(assetId, celestialBodyKey);
         this.energyStored = 0;
         this.ticks = 0;
@@ -222,7 +220,13 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public UpkeepLedger.UpkeepSummary upkeepSummary() {
-        return upkeepLedger.summary(this);
+        refreshDerivedState();
+        if (upkeepSummary == null) upkeepSummary = UpkeepLedger.summary(this);
+        return upkeepSummary;
+    }
+
+    public void moduleConfigurationChanged() {
+        layoutCache.invalidate();
     }
 
     public long upkeepReserve(ItemStackWrapper item) {
@@ -792,7 +796,6 @@ public final class AutomatedFacility extends CelestialAsset {
         for (ModuleInstance module : prepared) {
             attachModuleWithoutRevision(module, settingsPlans.get(module.id));
             layout.place(module);
-            layoutCache.applyMutation(MutationKind.PLACE, module.kind());
         }
         markDirty();
         SatelliteNetworkService.refreshFacilityEndpoints(this);
@@ -835,6 +838,8 @@ public final class AutomatedFacility extends CelestialAsset {
     private void attachModuleWithoutRevision(ModuleInstance module,
         @Nullable ModuleInstance.SettingsBinding settingsPlan) {
         modules.add(module);
+        module.setFacilityOwner(this);
+        moduleConfigurationChanged();
         if (module.recipe() != null) {
             recipeScheduleStates.put(module.id, RecipeBook.ScheduleState.RESET);
         }
@@ -1028,6 +1033,8 @@ public final class AutomatedFacility extends CelestialAsset {
             return;
         }
         modules.add(module);
+        module.setFacilityOwner(this);
+        moduleConfigurationChanged();
         if (moduleSettings.supports(module)) moduleSettings.attach(module, null);
         if (module.recipe() != null) {
             recipeScheduleStates.put(module.id, RecipeBook.ScheduleState.RESET);
@@ -1094,15 +1101,18 @@ public final class AutomatedFacility extends CelestialAsset {
         if (!modules.contains(module)) return;
         moduleSettings.remove(module.id);
         modules.remove(module);
+        module.setFacilityOwner(null);
+        moduleConfigurationChanged();
         recipeScheduleStates.remove(module.id);
         if (layout != null) layout.removeTileForModule(module.id);
-        layoutCache.applyMutation(MutationKind.DECONSTRUCT, module.kind());
         markDirty();
         SatelliteNetworkService.refreshFacilityEndpoints(this);
     }
 
     public void clearModules() {
+        for (ModuleInstance module : modules) module.setFacilityOwner(null);
         modules.clear();
+        moduleConfigurationChanged();
         moduleSettings.restore(List.of());
         recipeScheduleStates.clear();
         markDirty();
@@ -1120,18 +1130,16 @@ public final class AutomatedFacility extends CelestialAsset {
             throw invalid;
         }
         for (ModuleInstance module : restored) {
+            module.setFacilityOwner(this);
             if (module.recipe() != null) {
                 recipeScheduleStates.put(module.id, RecipeBook.ScheduleState.RESET);
             }
         }
+        moduleConfigurationChanged();
     }
 
     public Stream<ModuleInstance> forEachModule() {
         return modules.stream();
-    }
-
-    public List<ModuleInstance> modulesInternal() {
-        return modules;
     }
 
     public MinerSettings minerSettings(ModuleInstance module) {
@@ -1373,10 +1381,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public long energyCapacity() {
-        return BASE_ENERGY_CAPACITY + layoutCache.getCapacityClusters(FacilityModuleKind.BATTERY)
-            .stream()
-            .mapToLong(CapacityCluster::effectiveCapacity)
-            .sum();
+        return BASE_ENERGY_CAPACITY + layoutCache.totalCapacity(FacilityModuleKind.BATTERY);
     }
 
     public void addEnergy(long delta) {
@@ -1530,18 +1535,18 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public ModuleFeatureModifiers featureModifiers(ModuleInstance module) {
         if (module == null || module.anchorOrNull() == null) return ModuleFeatureModifiers.EMPTY;
-        refreshFeatureModifierCache();
+        refreshDerivedState();
         return featureModifiersByModule.computeIfAbsent(module.id, ignored -> computeFeatureModifiers(module));
     }
 
-    private void refreshFeatureModifierCache() {
-        long layoutVersion = layout != null ? layout.version() : Long.MIN_VALUE;
-        if (featureModifiersLayoutVersion == layoutVersion
-            && featureModifiersStationFeatureSalt == stationFeatureSalt) {
+    private void refreshDerivedState() {
+        long layoutRevision = layoutCache.revision();
+        if (derivedLayoutRevision == layoutRevision && featureModifiersStationFeatureSalt == stationFeatureSalt) {
             return;
         }
         featureModifiersByModule.clear();
-        featureModifiersLayoutVersion = layoutVersion;
+        upkeepSummary = null;
+        derivedLayoutRevision = layoutRevision;
         featureModifiersStationFeatureSalt = stationFeatureSalt;
     }
 
@@ -1561,10 +1566,7 @@ public final class AutomatedFacility extends CelestialAsset {
                 new FeatureModuleContext(module, entry.getKey(), entry.getValue(), tiles.length),
                 builder);
         }
-        for (ModuleInstance source : modules) {
-            source.areaEffects()
-                .forEach(effect -> effect.apply(source, module, builder));
-        }
+        layoutCache.applyAreaEffects(module, builder);
         return builder.build(counts);
     }
 
@@ -1581,12 +1583,8 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     private void applyOperationTarget(ModuleInstance module, ModuleOperationPlan plan) {
-        ModuleTier oldTier = module.tier();
         module.component()
             .applyOperationTarget(plan.spec(), module);
-        if (module.tier() != oldTier) {
-            layoutCache.applyMutation(MutationKind.SET_TIER, module.kind());
-        }
     }
 
     private Map<ItemStackWrapper, Long> completionRefund(ModuleOperationState operation) {
@@ -1674,10 +1672,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public long itemCapacity() {
-        return BASE_ITEM_CAPACITY + layoutCache.getCapacityClusters(FacilityModuleKind.STORAGE)
-            .stream()
-            .mapToLong(CapacityCluster::effectiveCapacity)
-            .sum();
+        return BASE_ITEM_CAPACITY + layoutCache.totalCapacity(FacilityModuleKind.STORAGE);
     }
 
     private long projectedItemCapacityAfterRemoving(ModuleInstance.ID moduleId) {
