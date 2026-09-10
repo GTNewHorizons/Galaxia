@@ -62,21 +62,25 @@ final class StationInventoryPanelModel {
                 new InventoryItemRow(
                     entry.getKey(),
                     entry.getValue(),
-                    facility == null ? 0L : facility.upkeepReserve(entry.getKey())));
+                    facility == null ? 0L : facility.upkeepReserve(entry.getKey()),
+                    entry.getKey()
+                        .toStack(1)
+                        .getDisplayName()));
         }
         if (facility != null) {
             for (ItemStackWrapper item : upkeepItems) {
                 if (!amounts.containsKey(item)) {
-                    sorted.add(new InventoryItemRow(item, 0L, facility.upkeepReserve(item)));
+                    sorted.add(
+                        new InventoryItemRow(
+                            item,
+                            0L,
+                            facility.upkeepReserve(item),
+                            item.toStack(1)
+                                .getDisplayName()));
                 }
             }
         }
-        sorted.sort(
-            Comparator.comparing(
-                row -> row.item()
-                    .toStack(1)
-                    .getDisplayName(),
-                String.CASE_INSENSITIVE_ORDER));
+        sorted.sort(Comparator.comparing(InventoryItemRow::displayName, String.CASE_INSENSITIVE_ORDER));
         return sorted;
     }
 
@@ -110,14 +114,11 @@ final class StationInventoryPanelModel {
                     facility.itemAmount(item),
                     facility.upkeepReserve(item),
                     facility.isUpkeepAutoOrderEnabled(item),
-                    upkeepReserveStatus(facility, summary, item)));
+                    upkeepReserveStatus(facility, summary, item),
+                    item.toStack(1)
+                        .getDisplayName()));
         }
-        result.sort(
-            Comparator.comparing(
-                row -> row.item()
-                    .toStack(1)
-                    .getDisplayName(),
-                String.CASE_INSENSITIVE_ORDER));
+        result.sort(Comparator.comparing(UpkeepItemRow::displayName, String.CASE_INSENSITIVE_ORDER));
         return result;
     }
 
@@ -151,10 +152,10 @@ final class StationInventoryPanelModel {
 
     private record BoundInput(boolean present, long amount, boolean valid) {}
 
-    record InventoryItemRow(ItemStackWrapper item, long amount, long upkeepReserve) {}
+    record InventoryItemRow(ItemStackWrapper item, long amount, long upkeepReserve, String displayName) {}
 
     record UpkeepItemRow(ItemStackWrapper item, UpkeepAmount perMinute, long stock, long reserve, boolean autoOrder,
-        UpkeepReserveStatus status) {}
+        UpkeepReserveStatus status, String displayName) {}
 
     record FluidRow(String fluidName, FluidKey fluidKey, long amount) {
 
