@@ -39,7 +39,7 @@ public final class ProductionModuleHelper {
 
     private static boolean tryProduce(AutomatedFacility outpost, SavedRecipe slot, Random random) {
         RecipeSnapshot recipe = slot.recipe();
-        Map<InventoryKey, Long> requiredInputs = totals(recipe.itemInputs(), recipe.fluidInputs());
+        Map<InventoryKey, Long> requiredInputs = recipe.requiredInputs();
         if (!allowsInputs(outpost, requiredInputs)) return false;
         if (!matchesRequestAmount(outpost, slot, recipe.itemOutputs(), recipe.fluidOutputs())) return false;
 
@@ -47,23 +47,11 @@ public final class ProductionModuleHelper {
         return allowsOutputs(outpost, selectedOutputs) && outpost.tryExchange(requiredInputs, selectedOutputs);
     }
 
-    private static Map<InventoryKey, Long> totals(List<Resource> first, List<Resource> second) {
-        if (first.isEmpty() && second.isEmpty()) return Map.of();
-        Map<InventoryKey, Long> totals = new HashMap<>();
-        merge(totals, first);
-        merge(totals, second);
-        return totals;
-    }
-
     private static Map<InventoryKey, Long> selectedOutputs(List<Resource> first, List<Resource> second, Random random) {
         Map<InventoryKey, Long> selected = new HashMap<>();
         mergeSelected(selected, first, random);
         mergeSelected(selected, second, random);
         return selected.isEmpty() ? Map.of() : selected;
-    }
-
-    private static void merge(Map<InventoryKey, Long> totals, List<Resource> resources) {
-        for (Resource resource : resources) totals.merge(resource.key(), resource.amount(), Long::sum);
     }
 
     private static void mergeSelected(Map<InventoryKey, Long> totals, List<Resource> resources, Random random) {

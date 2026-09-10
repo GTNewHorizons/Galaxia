@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Random;
@@ -17,6 +18,7 @@ import net.minecraftforge.fluids.FluidStack;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
@@ -52,6 +54,48 @@ final class RecipeSnapshotTest {
             .fluidStack();
         assertEquals(144, secondRead.amount);
         assertEquals("original", secondRead.tag.getString("state"));
+    }
+
+    @Test
+    void inputRequirementsCombineDuplicatesAndRetainNonConsumedItems() {
+        Item ingredient = new Item();
+        Item catalyst = new Item();
+        ItemStack[] inputs = { new ItemStack(ingredient, 2), new ItemStack(ingredient, 4), new ItemStack(catalyst, 0) };
+        RecipeSnapshot recipe = RecipeSnapshot.resolved(
+            (byte) 1,
+            0,
+            inputs,
+            null,
+            new FluidStack[] { new FluidStack(FluidRegistry.WATER, 100), new FluidStack(FluidRegistry.WATER, 50) },
+            null,
+            20,
+            8);
+
+        assertEquals(
+            3,
+            recipe.requiredInputs()
+                .size());
+        assertEquals(
+            6L,
+            recipe.requiredInputs()
+                .get(ItemStackWrapper.of(inputs[0])));
+        assertEquals(
+            0L,
+            recipe.requiredInputs()
+                .get(ItemStackWrapper.of(inputs[2])));
+        assertEquals(
+            150L,
+            recipe.requiredInputs()
+                .get(FluidKey.fromName("water")));
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> recipe.requiredInputs()
+                .clear());
+        inputs[0].stackSize = 99;
+        assertEquals(
+            6L,
+            recipe.requiredInputs()
+                .get(ItemStackWrapper.of(inputs[0])));
     }
 
     @Test

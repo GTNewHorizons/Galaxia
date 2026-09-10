@@ -1,7 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.outpost.recipe;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 
@@ -16,17 +18,44 @@ import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
-/** Self-contained recipe data used by recipe books and production modules. */
-public record RecipeSnapshot(byte recipeMapOrdinal, int recipeIndex, long contentHash, List<Resource> itemInputs,
-    List<Resource> itemOutputs, List<Resource> fluidInputs, List<Resource> fluidOutputs, int duration, int eut) {
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+import lombok.Value;
+import lombok.experimental.Accessors;
 
-    public RecipeSnapshot {
-        if (duration < 0) duration = 0;
-        if (eut < 0) eut = 0;
-        itemInputs = immutable(itemInputs);
-        itemOutputs = immutable(itemOutputs);
-        fluidInputs = immutable(fluidInputs);
-        fluidOutputs = immutable(fluidOutputs);
+/** Self-contained recipe data used by recipe books and production modules. */
+@Value
+@Accessors(fluent = true)
+public class RecipeSnapshot {
+
+    byte recipeMapOrdinal;
+    int recipeIndex;
+    long contentHash;
+    List<Resource> itemInputs;
+    List<Resource> itemOutputs;
+    List<Resource> fluidInputs;
+    List<Resource> fluidOutputs;
+    int duration;
+    int eut;
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    Map<InventoryKey, Long> requiredInputs;
+
+    public RecipeSnapshot(byte recipeMapOrdinal, int recipeIndex, long contentHash, List<Resource> itemInputs,
+        List<Resource> itemOutputs, List<Resource> fluidInputs, List<Resource> fluidOutputs, int duration, int eut) {
+        this.recipeMapOrdinal = recipeMapOrdinal;
+        this.recipeIndex = recipeIndex;
+        this.contentHash = contentHash;
+        this.duration = Math.max(0, duration);
+        this.eut = Math.max(0, eut);
+        this.itemInputs = immutable(itemInputs);
+        this.itemOutputs = immutable(itemOutputs);
+        this.fluidInputs = immutable(fluidInputs);
+        this.fluidOutputs = immutable(fluidOutputs);
+        Map<InventoryKey, Long> inputs = new HashMap<>();
+        for (Resource resource : this.itemInputs) inputs.merge(resource.key(), resource.amount(), Long::sum);
+        for (Resource resource : this.fluidInputs) inputs.merge(resource.key(), resource.amount(), Long::sum);
+        this.requiredInputs = Map.copyOf(inputs);
     }
 
     /** Creates an identity-only snapshot. Recipe books reject it until server content resolution completes. */
