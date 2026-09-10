@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import net.minecraft.item.Item;
@@ -84,6 +85,41 @@ final class UpkeepSettlementTest {
             result.credits()
                 .itemCredit(GOLD)
                 .toDisplayString());
+    }
+
+    @Test
+    void failedPaymentPreservesCreditsForLaterModulesAndPreviewDoesNotSpendThem() {
+        ItemStackWrapper missing = new ItemStackWrapper(new Item(), 0, null);
+        AutomatedFacility facility = facilityWithInventory(0);
+        UpkeepSettlement.Credits credits = new UpkeepSettlement.Credits(
+            Map.of(GOLD, UpkeepAmount.parse("0.5")),
+            Map.of());
+        UpkeepLedger.ModuleDemand blocked = module(
+            ModulePriority.HIGH,
+            UpkeepDemand.builder()
+                .item(GOLD, UpkeepAmount.parse("0.2"))
+                .item(missing, UpkeepAmount.ofWhole(1))
+                .build());
+        UpkeepLedger.ModuleDemand paid = module(
+            ModulePriority.NORMAL,
+            UpkeepDemand.builder()
+                .item(GOLD, UpkeepAmount.parse("0.3"))
+                .build());
+        List<UpkeepLedger.ModuleDemand> demands = List.of(blocked, paid);
+
+        UpkeepSettlement.Result preview = UpkeepSettlement.preview(demands, credits, facility);
+        UpkeepSettlement.Result result = UpkeepSettlement.settle(demands, credits, facility);
+
+        assertEquals(preview, result);
+        assertEquals(List.of(blocked.moduleId()), result.unpaidModuleIds());
+        assertTrue(
+            result.paidModuleIds()
+                .contains(paid.moduleId()));
+        assertEquals(
+            UpkeepAmount.parse("0.2"),
+            result.credits()
+                .itemCredit(GOLD));
+        assertEquals(UpkeepAmount.parse("0.5"), credits.itemCredit(GOLD));
     }
 
     private static UpkeepLedger.ModuleDemand module(ModulePriority priority, UpkeepDemand demand) {
