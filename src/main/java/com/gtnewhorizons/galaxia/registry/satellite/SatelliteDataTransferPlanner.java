@@ -283,16 +283,19 @@ public final class SatelliteDataTransferPlanner {
             .toList();
         List<Transfer> localTransfers = new ArrayList<>();
         /*
-         * If the same data requirement would flow both directions over any shared link, treat the overlap as local
-         * exchange at each producer instead. That avoids two matching jobs burning satellite bandwidth just to cross
-         * over
-         * each other on the same route.
+         * Reciprocal transfers of the same data can exchange locally at their producer bodies. Sharing an opposing
+         * link alone is insufficient because either sink may be on an intermediate body.
          */
         for (int left = 0; left < transfers.size(); left++) {
             Transfer leftTransfer = transfers.get(left);
             for (int right = left + 1; right < transfers.size(); right++) {
                 Transfer rightTransfer = transfers.get(right);
                 if (remainingDeciKb[left] <= 0L || remainingDeciKb[right] <= 0L) continue;
+                if (!leftTransfer.sourceBodyKey()
+                    .equals(rightTransfer.destinationBodyKey())
+                    || !rightTransfer.sourceBodyKey()
+                        .equals(leftTransfer.destinationBodyKey()))
+                    continue;
                 if (!leftTransfer.demandKey()
                     .equals(rightTransfer.demandKey())) {
                     continue;

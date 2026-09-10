@@ -276,7 +276,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 for (StationTileCoord target : targets) {
                     proposed.add(new ModulePlacement(target, controller.selectedTargetRotation(target)));
                 }
-                return facility.buildablePlacements(kind, shape, tier, proposed)
+                return facility.connectedBuildablePlacements(kind, shape, tier, proposed)
                     .stream()
                     .map(ModulePlacement::anchor)
                     .toList();

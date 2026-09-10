@@ -161,6 +161,34 @@ final class FacilityModuleCommandTest {
     }
 
     @Test
+    void removingAnEarlierPlacementKeepsTargetsConnectedThroughALaterPlacement() {
+        AutomatedFacility facility = facility(CelestialAsset.Kind.AUTOMATED_STATION);
+        List<ModulePlacement> remaining = List.of(
+            ModulePlacement.at(StationTileCoord.of(2, 0)),
+            ModulePlacement.at(StationTileCoord.of(2, 1)),
+            ModulePlacement.at(StationTileCoord.of(1, 1)),
+            ModulePlacement.at(StationTileCoord.of(0, 1)));
+
+        List<ModulePlacement> ordered = facility.connectedBuildablePlacements(
+            FacilityModuleKind.STORAGE,
+            FacilityModuleKind.STORAGE.defaultShape(),
+            ModuleTier.HV,
+            remaining);
+
+        assertEquals(remaining.size(), ordered.size());
+        assertTrue(ordered.containsAll(remaining));
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            facility
+                .applyCommand(build(facility, FacilityModuleKind.STORAGE, ModuleTier.HV, ordered), DEBUG_AUTHORITY));
+        for (ModulePlacement placement : remaining) {
+            assertTrue(
+                facility.stationLayout()
+                    .isOccupied(placement.anchor()));
+        }
+    }
+
+    @Test
     void lateInvalidBuildTargetRejectsWithoutAnyAggregateMutation() {
         AutomatedFacility facility = facility(CelestialAsset.Kind.AUTOMATED_OUTPOST);
         boolean dirtyBefore = facility.isDirty();

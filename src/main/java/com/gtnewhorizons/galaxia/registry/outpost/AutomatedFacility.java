@@ -927,6 +927,23 @@ public final class AutomatedFacility extends CelestialAsset {
         return List.copyOf(placements);
     }
 
+    public List<ModulePlacement> connectedBuildablePlacements(FacilityModuleKind moduleKind, ModuleShape shape,
+        ModuleTier tier, List<ModulePlacement> candidates) {
+        List<ModulePlacement> connected = buildablePlacements(moduleKind, shape, tier, candidates);
+        while (!connected.isEmpty() && connected.size() < Math.min(candidates.size(), MAX_BUILD_TARGETS)) {
+            Set<ModulePlacement> accepted = new HashSet<>(connected);
+            List<ModulePlacement> ordered = new ArrayList<>(candidates.size());
+            ordered.addAll(connected);
+            for (ModulePlacement candidate : candidates) {
+                if (!accepted.contains(candidate)) ordered.add(candidate);
+            }
+            List<ModulePlacement> expanded = buildablePlacements(moduleKind, shape, tier, ordered);
+            if (expanded.size() == connected.size()) break;
+            connected = expanded;
+        }
+        return connected;
+    }
+
     private @Nullable StationTileCoord[] validPlacementFootprint(ModuleShape shape, @Nullable ModulePlacement placement,
         @Nullable PlanetaryFeatureKey requiredFeature, Set<StationTileCoord> originalTiles,
         Set<StationTileCoord> plannedTiles) {

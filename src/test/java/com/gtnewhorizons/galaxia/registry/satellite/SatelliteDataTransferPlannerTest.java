@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.satellite;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -18,6 +19,50 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 final class SatelliteDataTransferPlannerTest {
 
     private static final UUID TEAM = UUID.fromString("00000000-0000-0000-0000-000000000107");
+
+    @Test
+    void opposingSharedEdgeDoesNotMoveRemoteSinksToProducerBodies() {
+        SatelliteDataBufferStore store = new SatelliteDataBufferStore();
+        SatelliteDataKey research = SatelliteDataKey.any(SatelliteDataType.RESEARCH);
+        // A -> B -> C -> D, producers at A/D and consumers at B/C
+        var a = key(CelestialObjectId.MARS);
+        var b = key(CelestialObjectId.EGORA);
+        var c = key(CelestialObjectId.FROZEN_BELT);
+        var d = key(CelestialObjectId.OVERWORLD);
+        var network = SatelliteNetworkCalculator.fromGraph(
+            TEAM,
+            1,
+            List.of(
+                node(CelestialObjectId.MARS, 0, 0),
+                node(CelestialObjectId.EGORA, 10, 0),
+                node(CelestialObjectId.FROZEN_BELT, 20, 0),
+                node(CelestialObjectId.OVERWORLD, 30, 0)),
+            List.of(
+                new SatelliteNetworkGraph.Edge(a, b),
+                new SatelliteNetworkGraph.Edge(b, c),
+                new SatelliteNetworkGraph.Edge(c, d)),
+            Map.of(a, 100L, b, 100L, c, 100L, d, 100L),
+            Map.of());
+        store.finishProduction(a, research, 4L);
+        store.finishProduction(d, research, 4L);
+        var demands = List.of(
+            demand(1L, CelestialObjectId.EGORA, research, 100L),
+            demand(2L, CelestialObjectId.FROZEN_BELT, research, 100L));
+        var plan = SatelliteDataTransferPlanner.plan(TEAM, network, store, demands);
+        var bodiesBySink = demands.stream()
+            .collect(
+                java.util.stream.Collectors
+                    .toMap(SatelliteDataTransferPlanner.Demand::sinkId, SatelliteDataTransferPlanner.Demand::bodyKey));
+        assertFalse(
+            plan.transfers()
+                .isEmpty());
+        for (var transfer : plan.transfers()) {
+            assertEquals(bodiesBySink.get(transfer.sinkId()), transfer.destinationBodyKey());
+            assertFalse(
+                transfer.path()
+                    .isEmpty());
+        }
+    }
 
     @Test
     void concreteOriginDemandTransfersBeforeAnyDemandForSameType() {
