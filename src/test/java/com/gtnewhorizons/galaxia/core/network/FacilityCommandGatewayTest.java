@@ -265,6 +265,97 @@ final class FacilityCommandGatewayTest {
     }
 
     @Test
+    void independentFilterEditsComposeWithoutClientRefresh() {
+        AutomatedFacility facility = facility();
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
+        FacilityCommandGateway.Actor actor = actor(TEAM, TeamAction.CONFIGURE_LOGISTICS);
+        FacilityCommand first = new FacilityCommand.SetFilter(
+            facility.assetId,
+            FacilityCommand.FilterKind.ITEM,
+            "stick",
+            true);
+        FacilityCommand second = new FacilityCommand.SetFilter(
+            facility.assetId,
+            FacilityCommand.FilterKind.ITEM,
+            "diamond",
+            true);
+
+        assertEquals(
+            FacilityCommand.Status.CHANGED,
+            gateway.execute(actor, first)
+                .status());
+        assertEquals(
+            FacilityCommand.Status.CHANGED,
+            gateway.execute(actor, second)
+                .status());
+        assertEquals(
+            List.of("stick", "diamond"),
+            facility.filtersSnapshot()
+                .get(true));
+        assertEquals(
+            FacilityCommand.Status.UNCHANGED,
+            gateway.execute(actor, second)
+                .status());
+        assertEquals(
+            FacilityCommand.Status.CHANGED,
+            gateway
+                .execute(
+                    actor,
+                    new FacilityCommand.SetFilter(facility.assetId, FacilityCommand.FilterKind.ITEM, "stick", false))
+                .status());
+        assertEquals(
+            List.of("diamond"),
+            facility.filtersSnapshot()
+                .get(true));
+    }
+
+    @Test
+    void independentBlacklistEditsComposeWithoutClientRefresh() {
+        AutomatedFacility facility = facility();
+        ModuleInstance miner = addMiner(facility, 1);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
+        FacilityCommandGateway.Actor actor = actor(TEAM, TeamAction.MODIFY_MODULE);
+        FacilityCommand first = new FacilityCommand.SetMinerOreBlacklisted(
+            facility.assetId,
+            miner.id,
+            "ore:iron",
+            true);
+        FacilityCommand second = new FacilityCommand.SetMinerOreBlacklisted(
+            facility.assetId,
+            miner.id,
+            "ore:gold",
+            true);
+
+        assertEquals(
+            FacilityCommand.Status.CHANGED,
+            gateway.execute(actor, first)
+                .status());
+        assertEquals(
+            FacilityCommand.Status.CHANGED,
+            gateway.execute(actor, second)
+                .status());
+        assertEquals(
+            Set.of("ore:iron", "ore:gold"),
+            facility.minerSettings(miner)
+                .blacklistedOreKeys());
+        assertEquals(
+            FacilityCommand.Status.UNCHANGED,
+            gateway.execute(actor, second)
+                .status());
+        assertEquals(
+            FacilityCommand.Status.CHANGED,
+            gateway
+                .execute(
+                    actor,
+                    new FacilityCommand.SetMinerOreBlacklisted(facility.assetId, miner.id, "ore:iron", false))
+                .status());
+        assertEquals(
+            Set.of("ore:gold"),
+            facility.minerSettings(miner)
+                .blacklistedOreKeys());
+    }
+
+    @Test
     void acceptedMinerBlacklistCommandsApplyInServerOrderAndIdenticalStateIsUnchanged() {
         AutomatedFacility facility = facility();
         ModuleInstance miner = addMiner(facility, 1);
@@ -401,6 +492,14 @@ final class FacilityCommandGatewayTest {
             facility,
             TeamAction.CONFIGURE_LOGISTICS,
             new FacilityCommand.ReplaceFilters(facility.assetId, FacilityCommand.FilterKind.ITEM, List.of("stick")));
+        assertMapped(
+            facility,
+            TeamAction.CONFIGURE_LOGISTICS,
+            new FacilityCommand.SetFilter(facility.assetId, FacilityCommand.FilterKind.ITEM, "stick", true));
+        assertMapped(
+            facility,
+            TeamAction.MODIFY_MODULE,
+            new FacilityCommand.SetMinerOreBlacklisted(facility.assetId, missingModule, "ore:iron", true));
         assertMapped(
             facility,
             TeamAction.CONFIGURE_LOGISTICS,

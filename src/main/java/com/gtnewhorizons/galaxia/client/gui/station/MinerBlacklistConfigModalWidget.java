@@ -17,7 +17,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
-import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 
 final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistConfigModalWidget> {
 
@@ -202,9 +201,7 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         if (module == null || facility == null || !(module.component() instanceof ModuleMiner)) return;
         settingsGroupSelector.closeMenu();
-        MinerSettings replacement = facility.minerSettings(module)
-            .withOreBlacklisted(oreKey, blacklisted);
-        CelestialClient.replaceMinerSettings(assetId, controller.moduleId(), replacement);
+        CelestialClient.setMinerOreBlacklisted(assetId, controller.moduleId(), oreKey, blacklisted);
     }
 
     private void toggleFocusOre(int rowIndex) {

@@ -329,6 +329,23 @@ public final class AutomatedFacility extends CelestialAsset {
         if (command instanceof FacilityCommand.ReplaceFilters replaceFilters) {
             return applyReplaceFilters(replaceFilters);
         }
+        if (command instanceof FacilityCommand.SetFilter setFilter) {
+            if (setFilter.kind() == null || setFilter.filterKey() == null) {
+                return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_FILTERS);
+            }
+            try {
+                boolean changed = inventory.setFilter(
+                    setFilter.filterKey(),
+                    setFilter.kind()
+                        .isItem(),
+                    setFilter.enabled());
+                if (!changed) return FacilityCommand.Result.UNCHANGED;
+            } catch (IllegalArgumentException invalidFilter) {
+                return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_FILTERS);
+            }
+            markDirty();
+            return FacilityCommand.Result.CHANGED;
+        }
         if (command instanceof FacilityCommand.PutLogisticsConfig putConfig) {
             return applyPutLogisticsConfig(putConfig);
         }
@@ -355,6 +372,7 @@ public final class AutomatedFacility extends CelestialAsset {
             else if (command instanceof FacilityCommand.CopyModuleSettings copy) moduleId = copy.sourceModuleId();
             else if (command instanceof FacilityCommand.ReplaceRecipeBook replace) moduleId = replace.moduleId();
             else if (command instanceof FacilityCommand.ReplaceMinerSettings replace) moduleId = replace.moduleId();
+            else if (command instanceof FacilityCommand.SetMinerOreBlacklisted set) moduleId = set.moduleId();
             else return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MALFORMED_COMMAND);
             if (moduleId == null && command instanceof FacilityCommand.ReplaceRecipeBook) {
                 return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INVALID_RECIPE_BOOK);
@@ -372,6 +390,10 @@ public final class AutomatedFacility extends CelestialAsset {
                 outcome = moduleSettings.replaceEffectiveSettings(module, replace.replacement());
             } else if (command instanceof FacilityCommand.ReplaceMinerSettings replace) {
                 outcome = moduleSettings.replaceEffectiveSettings(module, replace.replacement());
+            } else if (command instanceof FacilityCommand.SetMinerOreBlacklisted set) {
+                outcome = moduleSettings.replaceEffectiveSettings(
+                    module,
+                    minerSettings(module).withOreBlacklisted(set.oreKey(), set.blacklisted()));
             } else {
                 return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MALFORMED_COMMAND);
             }
@@ -381,8 +403,9 @@ public final class AutomatedFacility extends CelestialAsset {
                 ? FacilityCommand.Rejection.INVALID_MODULE_TARGETS
                 : command instanceof FacilityCommand.ReplaceRecipeBook ? FacilityCommand.Rejection.INVALID_RECIPE_BOOK
                     : command instanceof FacilityCommand.ReplaceMinerSettings
-                        ? FacilityCommand.Rejection.INVALID_MODULE_CONFIG
-                        : FacilityCommand.Rejection.INVALID_SETTINGS_GROUP;
+                        || command instanceof FacilityCommand.SetMinerOreBlacklisted
+                            ? FacilityCommand.Rejection.INVALID_MODULE_CONFIG
+                            : FacilityCommand.Rejection.INVALID_SETTINGS_GROUP;
             return FacilityCommand.Result.rejected(rejection);
         }
     }

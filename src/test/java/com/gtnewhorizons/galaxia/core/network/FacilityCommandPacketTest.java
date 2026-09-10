@@ -93,6 +93,8 @@ final class FacilityCommandPacketTest {
             new FacilityCommand.ClearInventoryResource(FACILITY_ID, fluid),
             new FacilityCommand.SetInventoryBound(FACILITY_ID, BoundKind.ITEM_LOWER, item, 9L),
             new FacilityCommand.ClearInventoryBound(FACILITY_ID, BoundKind.FLUID_UPPER, fluid),
+            new FacilityCommand.SetFilter(FACILITY_ID, FacilityCommand.FilterKind.ITEM, "stick", true),
+            new FacilityCommand.SetFilter(FACILITY_ID, FacilityCommand.FilterKind.FLUID, TEST_FLUID.getName(), false),
             new FacilityCommand.ReplaceFilters(
                 FACILITY_ID,
                 FacilityCommand.FilterKind.ITEM,
@@ -128,6 +130,8 @@ final class FacilityCommandPacketTest {
             new FacilityCommand.SetSettingsGroup(FACILITY_ID, MODULE_ID, new SettingsGroup.ID(7)),
             new FacilityCommand.SetSettingsGroup(FACILITY_ID, MODULE_ID, null),
             new FacilityCommand.CopyModuleSettings(FACILITY_ID, MODULE_ID, List.of(SECOND_MODULE_ID)),
+            new FacilityCommand.SetMinerOreBlacklisted(FACILITY_ID, MODULE_ID, "ore:iron", true),
+            new FacilityCommand.SetMinerOreBlacklisted(FACILITY_ID, MODULE_ID, "ore:gold", false),
             new FacilityCommand.ReplaceMinerSettings(
                 FACILITY_ID,
                 MODULE_ID,

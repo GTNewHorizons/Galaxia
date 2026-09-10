@@ -135,6 +135,11 @@ public final class FacilityCommandPacket implements IMessage {
             case "clear_inventory_resource" -> new FacilityCommand.ClearInventoryResource(facility, resource(data));
             case "set_inventory_bound" -> readSetBound(facility, data, false);
             case "clear_inventory_bound" -> readSetBound(facility, data, true);
+            case "set_filter" -> new FacilityCommand.SetFilter(
+                facility,
+                data.enumValue(FacilityCommand.FilterKind.class, "kind"),
+                bounded(data, "filter"),
+                data.bool("enabled"));
             case "replace_filters" -> new FacilityCommand.ReplaceFilters(
                 facility,
                 data.enumValue(FacilityCommand.FilterKind.class, "kind"),
@@ -183,6 +188,11 @@ public final class FacilityCommandPacket implements IMessage {
                 facility,
                 moduleId(data, "sourceModule"),
                 targets(data));
+            case "set_miner_ore_blacklisted" -> new FacilityCommand.SetMinerOreBlacklisted(
+                facility,
+                moduleId(data, "module"),
+                MinerSettings.requireOreKey(bounded(data, "ore")),
+                data.bool("blacklisted"));
             case "replace_miner_settings" -> new FacilityCommand.ReplaceMinerSettings(
                 facility,
                 moduleId(data, "module"),
@@ -243,6 +253,12 @@ public final class FacilityCommandPacket implements IMessage {
                 putEnum(data, "kind", value.kind());
                 putResource(data, value.resource());
                 yield "clear_inventory_bound";
+            }
+            case FacilityCommand.SetFilter value -> {
+                putEnum(data, "kind", value.kind());
+                putBounded(data, "filter", value.filterKey());
+                putBool(data, "enabled", value.enabled());
+                yield "set_filter";
             }
             case FacilityCommand.ReplaceFilters value -> {
                 putEnum(data, "kind", value.kind());
@@ -314,6 +330,12 @@ public final class FacilityCommandPacket implements IMessage {
                 putModuleId(data, "sourceModule", value.sourceModuleId());
                 data.setTag("targets", targets(value.targetModuleIds()));
                 yield "copy_module_settings";
+            }
+            case FacilityCommand.SetMinerOreBlacklisted value -> {
+                putModuleId(data, "module", value.moduleId());
+                putBounded(data, "ore", value.oreKey());
+                putBool(data, "blacklisted", value.blacklisted());
+                yield "set_miner_ore_blacklisted";
             }
             case FacilityCommand.ReplaceMinerSettings value -> {
                 putModuleId(data, "module", value.moduleId());

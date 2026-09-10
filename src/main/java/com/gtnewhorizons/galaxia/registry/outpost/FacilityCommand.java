@@ -38,6 +38,9 @@ public sealed interface FacilityCommand permits FacilityCommand.BuildCommand,Fac
     record ClearInventoryBound(CelestialAsset.ID facilityId, BoundKind kind, InventoryKey resource)
         implements InventoryCommand {}
 
+    record SetFilter(CelestialAsset.ID facilityId, FilterKind kind, String filterKey, boolean enabled)
+        implements LogisticsCommand {}
+
     record ReplaceFilters(CelestialAsset.ID facilityId, FilterKind kind, @Nullable List<String> filterKeys)
         implements LogisticsCommand {
 
@@ -97,6 +100,9 @@ public sealed interface FacilityCommand permits FacilityCommand.BuildCommand,Fac
     record ReplaceMinerSettings(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, MinerSettings replacement)
         implements ModuleSettingsCommand {}
 
+    record SetMinerOreBlacklisted(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, String oreKey,
+        boolean blacklisted) implements ModuleSettingsCommand {}
+
     record ConfigureHammer(CelestialAsset.ID facilityId, ModuleInstance.ID moduleId, AllowShootingConfig config,
         OrbitalTransferPlanner.RoutePriority priority) implements ModuleConfiguration {}
 
@@ -138,7 +144,7 @@ public sealed interface FacilityCommand permits FacilityCommand.BuildCommand,Fac
     }
 
     sealed interface LogisticsCommand
-        extends FacilityCommand permits ReplaceFilters,PutLogisticsConfig,RemoveLogisticsConfig {
+        extends FacilityCommand permits ReplaceFilters,SetFilter,PutLogisticsConfig,RemoveLogisticsConfig {
     }
 
     sealed interface ModuleConfiguration
@@ -148,7 +154,7 @@ public sealed interface FacilityCommand permits FacilityCommand.BuildCommand,Fac
     }
 
     sealed interface ModuleSettingsCommand extends
-        ModuleCommand permits CreateSettingsGroup,RenameSettingsGroup,SetSettingsGroup,CopyModuleSettings,ReplaceRecipeBook,ReplaceMinerSettings {
+        ModuleCommand permits CreateSettingsGroup,RenameSettingsGroup,SetSettingsGroup,CopyModuleSettings,ReplaceRecipeBook,ReplaceMinerSettings,SetMinerOreBlacklisted {
     }
 
     enum FilterKind {

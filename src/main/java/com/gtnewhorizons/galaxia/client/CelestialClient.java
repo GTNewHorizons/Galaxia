@@ -57,7 +57,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGe
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
-import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkClientState;
@@ -269,8 +268,9 @@ public final class CelestialClient {
         submit(new FacilityCommand.ClearInventoryBound(assetId, kind, resource));
     }
 
-    public static void replaceMinerSettings(ID assetId, ModuleInstance.ID moduleId, MinerSettings replacement) {
-        submit(new FacilityCommand.ReplaceMinerSettings(assetId, moduleId, replacement));
+    public static void setMinerOreBlacklisted(ID assetId, ModuleInstance.ID moduleId, String oreKey,
+        boolean blacklisted) {
+        submit(new FacilityCommand.SetMinerOreBlacklisted(assetId, moduleId, oreKey, blacklisted));
     }
 
     public static void updateModuleSettingsGroup(ID assetId, ModuleInstance.ID moduleId,
@@ -409,19 +409,21 @@ public final class CelestialClient {
     // ── Filter actions ──
 
     public static void addFilter(CelestialAsset.ID assetId, boolean isItem, String filterKey) {
-        AutomatedFacility facility = getByAssetId(assetId) instanceof AutomatedFacility af ? af : null;
-        if (facility == null) return;
-        List<String> filters = currentFilters(facility, isItem);
-        if (!filters.contains(filterKey)) filters.add(filterKey);
-        sendFilters(assetId, isItem, filters);
+        submit(
+            new FacilityCommand.SetFilter(
+                assetId,
+                isItem ? FacilityCommand.FilterKind.ITEM : FacilityCommand.FilterKind.FLUID,
+                filterKey,
+                true));
     }
 
     public static void removeFilter(CelestialAsset.ID assetId, boolean isItem, String filterKey) {
-        AutomatedFacility facility = getByAssetId(assetId) instanceof AutomatedFacility af ? af : null;
-        if (facility == null) return;
-        List<String> filters = currentFilters(facility, isItem);
-        filters.remove(filterKey);
-        sendFilters(assetId, isItem, filters);
+        submit(
+            new FacilityCommand.SetFilter(
+                assetId,
+                isItem ? FacilityCommand.FilterKind.ITEM : FacilityCommand.FilterKind.FLUID,
+                filterKey,
+                false));
     }
 
     public static void clearFilters(CelestialAsset.ID assetId, boolean isItem) {
@@ -430,12 +432,6 @@ public final class CelestialClient {
 
     public static void setFilters(CelestialAsset.ID assetId, boolean isItem, List<String> filterKeys) {
         sendFilters(assetId, isItem, filterKeys);
-    }
-
-    private static List<String> currentFilters(AutomatedFacility facility, boolean isItem) {
-        return new ArrayList<>(
-            facility.filtersSnapshot()
-                .getOrDefault(isItem, List.of()));
     }
 
     private static void sendFilters(CelestialAsset.ID assetId, boolean isItem, List<String> filterKeys) {

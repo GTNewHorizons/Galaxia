@@ -202,6 +202,11 @@ final class FacilityInventory {
         fluidFilter.clear();
     }
 
+    boolean setFilter(String key, boolean item, boolean enabled) {
+        validateFilters(Collections.singletonList(key), item);
+        return enabled ? addFilter(key, item) : removeFilter(key, item);
+    }
+
     boolean addFilter(String key, boolean item) {
         if (key == null) return false;
         ResourceFilter<?> filter = item ? itemFilter : fluidFilter;
