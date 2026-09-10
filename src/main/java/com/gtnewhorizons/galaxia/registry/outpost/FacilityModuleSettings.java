@@ -138,7 +138,7 @@ final class FacilityModuleSettings {
         ModuleInstance module = facility.moduleById(moduleId);
         if (module == null) return;
         SettingsGroup.ID groupId = sharedGroupId(module);
-        if (groupId != null && membersOf(groupId).size() == 1) groups.remove(groupId);
+        removeGroupIfEmpty(groupId, moduleId);
     }
 
     ModuleSettings effectiveSettings(ModuleInstance.ID moduleId) {
@@ -158,7 +158,7 @@ final class FacilityModuleSettings {
         SettingsGroup.ID oldGroupId = sharedGroupId(module);
         groups.put(groupId, new SettingsGroup(groupId, module.kind(), displayName, settings));
         module.setSettingsBinding(new ModuleInstance.SettingsBinding.Shared(groupId));
-        removeGroupIfEmpty(oldGroupId);
+        removeGroupIfEmpty(oldGroupId, null);
         return Outcome.changed(Set.of(module.id));
     }
 
@@ -178,7 +178,7 @@ final class FacilityModuleSettings {
         if (groupId.equals(oldGroupId)) return Outcome.unchanged();
         validateSettings(module, group.settings());
         module.setSettingsBinding(new ModuleInstance.SettingsBinding.Shared(groupId));
-        removeGroupIfEmpty(oldGroupId);
+        removeGroupIfEmpty(oldGroupId, null);
         return Outcome.changed(Set.of(module.id));
     }
 
@@ -189,7 +189,7 @@ final class FacilityModuleSettings {
         ModuleSettings settings = requireGroup(groupId).settings();
         validateSettings(module, settings);
         module.setSettingsBinding(new ModuleInstance.SettingsBinding.Private(settings));
-        removeGroupIfEmpty(groupId);
+        removeGroupIfEmpty(groupId, null);
         return Outcome.changed(Set.of(module.id));
     }
 
@@ -236,7 +236,10 @@ final class FacilityModuleSettings {
             if (oldGroupId != null) oldGroups.add(oldGroupId);
             target.setSettingsBinding(new ModuleInstance.SettingsBinding.Private(sourceSettings));
         }
-        oldGroups.forEach(this::removeGroupIfEmpty);
+        if (!oldGroups.isEmpty()) {
+            for (ModuleInstance module : facility.modules()) oldGroups.remove(sharedGroupId(module));
+            oldGroups.forEach(groups::remove);
+        }
     }
 
     boolean canCopySettings(ModuleInstance source, ModuleInstance target) {
@@ -350,13 +353,11 @@ final class FacilityModuleSettings {
             : null;
     }
 
-    private void removeGroupIfEmpty(@Nullable SettingsGroup.ID groupId) {
-        if (groupId != null && membersOf(groupId).isEmpty()) groups.remove(groupId);
-    }
-
-    private Set<ModuleInstance.ID> membersOf(SettingsGroup.ID groupId) {
-        Set<ModuleInstance.ID> memberIds = new LinkedHashSet<>();
-        for (ModuleInstance member : members(groupId)) memberIds.add(member.id);
-        return memberIds;
+    private void removeGroupIfEmpty(@Nullable SettingsGroup.ID groupId, @Nullable ModuleInstance.ID removedModuleId) {
+        if (groupId == null) return;
+        for (ModuleInstance module : facility.modules()) {
+            if (!module.id.equals(removedModuleId) && groupId.equals(sharedGroupId(module))) return;
+        }
+        groups.remove(groupId);
     }
 }
