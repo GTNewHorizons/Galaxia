@@ -85,10 +85,6 @@ public final class CelestialKnowledgeSyncPacket implements IMessage {
         int count = PacketUtil.readBoundedCount(buf, "celestial discovery snapshot", MAX_SCAN_SNAPSHOTS);
         List<CelestialDiscoveryScanSnapshot> decoded = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            UUID scanTeamId = PacketUtil.readId(buf);
-            if (!expectedTeamId.equals(scanTeamId)) {
-                throw new IllegalStateException("celestial discovery snapshot belongs to another team");
-            }
             CelestialObjectKey anchorKey = PacketUtil.readCelestialObjectKey(buf);
             double radius = buf.readDouble();
             long scopeRevision = buf.readLong();
@@ -104,7 +100,7 @@ public final class CelestialKnowledgeSyncPacket implements IMessage {
             long elapsedTicks = status == CelestialDiscoveryScanSnapshot.Status.ACTIVE ? buf.readLong() : 0;
             decoded.add(
                 new CelestialDiscoveryScanSnapshot(
-                    scanTeamId,
+                    expectedTeamId,
                     anchorKey,
                     radius,
                     scopeRevision,
@@ -118,7 +114,6 @@ public final class CelestialKnowledgeSyncPacket implements IMessage {
     }
 
     private static void writeScan(ByteBuf buf, CelestialDiscoveryScanSnapshot scan) {
-        PacketUtil.writeId(buf, scan.teamId());
         PacketUtil.writeCelestialObjectKey(buf, scan.anchorKey());
         buf.writeDouble(scan.radius());
         buf.writeLong(scan.scopeRevision());

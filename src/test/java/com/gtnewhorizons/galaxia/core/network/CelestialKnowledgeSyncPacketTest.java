@@ -141,13 +141,18 @@ final class CelestialKnowledgeSyncPacketTest {
     }
 
     @Test
-    void rejectsDiscoverySnapshotsFromAnotherTeam() {
+    void discoverySnapshotsUseThePacketTeam() {
         ByteBuf buf = directPayload();
         buf.writeInt(0);
         buf.writeInt(1);
-        writeScan(buf, activePlanetScan(new UUID(9L, 10L), CelestialObjectId.MARS, 10));
+        CelestialDiscoveryScanSnapshot expected = activePlanetScan(TEAM, CelestialObjectId.MARS, 10);
+        writeScan(buf, expected);
 
-        assertThrows(IllegalStateException.class, () -> new CelestialKnowledgeSyncPacket().fromBytes(buf));
+        CelestialKnowledgeSyncPacket packet = new CelestialKnowledgeSyncPacket();
+        packet.fromBytes(buf);
+        new CelestialKnowledgeSyncPacket.Handler().onMessage(packet, null);
+        assertEquals(List.of(expected), CelestialDiscoveryClientState.snapshots());
+        assertEquals(0, buf.readableBytes());
     }
 
     @Test
@@ -190,7 +195,6 @@ final class CelestialKnowledgeSyncPacketTest {
     }
 
     private static void writeScan(ByteBuf buf, CelestialDiscoveryScanSnapshot scan) {
-        PacketUtil.writeId(buf, scan.teamId());
         PacketUtil.writeCelestialObjectKey(buf, scan.anchorKey());
         buf.writeDouble(scan.radius());
         buf.writeLong(scan.scopeRevision());
