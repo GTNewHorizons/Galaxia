@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitResolver;
@@ -29,6 +30,19 @@ public record CelestialServerRuntime(CelestialDiscoveryScanService scans,
     public void tick() {
         SatelliteNetworkService.tickDataJobs();
         scans.tick(discoveryWorkers.get(), 1);
+    }
+
+    public void mergeTeams(UUID consumedTeam, UUID survivingTeam) {
+        if (consumedTeam.equals(survivingTeam)) return;
+        List<CelestialAsset> transferred = CelestialAssetStore.getTeamAssets(consumedTeam)
+            .values()
+            .stream()
+            .flatMap(java.util.Collection::stream)
+            .toList();
+        CelestialKnowledgeService.mergeTeams(consumedTeam, survivingTeam);
+        CelestialAssetStore.transferTeamAssets(consumedTeam, survivingTeam);
+        SatelliteNetworkService.mergeTeams(consumedTeam, survivingTeam, transferred);
+        scans.mergeTeams(consumedTeam, survivingTeam, discoveryWorkers.get());
     }
 
     /** Clears per-world state. Discovery domains are process-wide registrations from {@link #create()}. */

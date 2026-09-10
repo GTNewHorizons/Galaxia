@@ -260,7 +260,6 @@ public final class CelestialAssetStore {
     public void removeTeamInternal(UUID teamId) {
         Map<CelestialObjectKey, Set<CelestialAsset.ID>> teamAssets = bodyIndex.remove(teamId);
         if (teamAssets == null) return;
-        if (this == SERVER) SatelliteNetworkService.unregisterTeamEndpoints(teamId);
         for (Map.Entry<CelestialObjectKey, Set<CelestialAsset.ID>> ids : teamAssets.entrySet()) {
             for (CelestialAsset.ID id : ids.getValue()) {
                 byId.remove(id);
@@ -294,7 +293,6 @@ public final class CelestialAssetStore {
             }
             return existing;
         });
-        if (this == SERVER) SatelliteNetworkService.rebuildDataEndpointsFromAssets();
     }
 
     public int satelliteCount(UUID teamId, CelestialObjectKey bodyKey, SatelliteKind kind) {

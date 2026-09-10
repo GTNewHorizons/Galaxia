@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.satellite;
 
 import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -363,6 +364,51 @@ final class SatelliteNetworkServiceTest {
 
         assertEquals(CelestialObjectKey.registered(CelestialObjectId.EGORA), producer.detectedCounterpartBodyKey());
         assertEquals(CelestialObjectKey.registered(CelestialObjectId.MARS), consumer.detectedCounterpartBodyKey());
+    }
+
+    // Integration contract: team merge transfers assets/endpoints but only the survivor retains buffered data.
+    @Test
+    void runtimeMergeTransfersAssetsAndRetiresOnlyConsumedNetworkData() {
+        CelestialServerRuntime runtime = CelestialServerRuntime.create();
+        UUID consumedTeam = new UUID(21L, 22L);
+        AutomatedFacility survivingFacility = facility(CelestialObjectId.MARS);
+        AutomatedFacility consumedFacility = facility(CelestialObjectId.EGORA);
+        CelestialAssetStore.registerAsset(TEAM, survivingFacility);
+        CelestialAssetStore.registerAsset(consumedTeam, consumedFacility);
+        ModuleDebugDataGenerator survivingProducer = addDebugModule(survivingFacility);
+        survivingProducer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.RESEARCH, 70L, 1));
+        addDebugModule(survivingFacility)
+            .configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.RESEARCH, 1L, 1, null));
+        ModuleDebugDataGenerator consumedProducer = addDebugModule(consumedFacility);
+        consumedProducer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.COMMUNICATION, 40L, 1));
+        addDebugModule(consumedFacility)
+            .configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.COMMUNICATION, 1L, 1, null));
+        SatelliteNetworkService.refreshFacilityEndpoints(survivingFacility);
+        SatelliteNetworkService.refreshFacilityEndpoints(consumedFacility);
+        SatelliteNetworkService.tickDataJobs();
+        SatelliteDataKey survivingKey = survivingProducer.producedKey(survivingFacility.celestialObjectKey);
+        SatelliteDataKey consumedKey = consumedProducer.producedKey(consumedFacility.celestialObjectKey);
+        assertFalse(SatelliteNetworkService.canStartProcess(TEAM, survivingFacility.celestialObjectKey, survivingKey));
+        assertFalse(
+            SatelliteNetworkService.canStartProcess(consumedTeam, consumedFacility.celestialObjectKey, consumedKey));
+
+        runtime.mergeTeams(consumedTeam, TEAM);
+
+        assertSame(consumedFacility, CelestialAssetStore.findAsset(consumedFacility.assetId));
+        assertEquals(TEAM, CelestialAssetStore.getTeamId(consumedFacility.assetId));
+        assertEquals(TEAM, CelestialAssetStore.getTeamId(survivingFacility.assetId));
+        assertTrue(
+            CelestialAssetStore.getTeamAssets(consumedTeam)
+                .isEmpty());
+        assertFalse(SatelliteNetworkService.canStartProcess(TEAM, survivingFacility.celestialObjectKey, survivingKey));
+        assertTrue(
+            SatelliteNetworkService.canStartProcess(consumedTeam, consumedFacility.celestialObjectKey, consumedKey));
+        assertTrue(SatelliteNetworkService.canStartProcess(TEAM, consumedFacility.celestialObjectKey, consumedKey));
+
+        SatelliteNetworkService.tickDataJobs();
+        assertFalse(SatelliteNetworkService.canStartProcess(TEAM, consumedFacility.celestialObjectKey, consumedKey));
+        assertTrue(
+            SatelliteNetworkService.canStartProcess(consumedTeam, consumedFacility.celestialObjectKey, consumedKey));
     }
 
     @Test

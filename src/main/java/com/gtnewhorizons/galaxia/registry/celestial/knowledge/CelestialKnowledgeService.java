@@ -79,6 +79,27 @@ public final class CelestialKnowledgeService {
         FACTS_BY_TEAM.clear();
     }
 
+    public static void mergeTeams(@Nonnull UUID consumedTeam, @Nonnull UUID survivingTeam) {
+        requireTeamId(consumedTeam);
+        requireTeamId(survivingTeam);
+        if (consumedTeam.equals(survivingTeam)) return;
+        Map<CelestialObjectKey, CelestialKnowledgeFacts> merged = new LinkedHashMap<>(snapshot(survivingTeam));
+        snapshot(consumedTeam).forEach(merged::putIfAbsent);
+        merged.replaceAll((key, ignored) -> {
+            CelestialKnowledgeFacts consumed = facts(consumedTeam, key);
+            CelestialKnowledgeFacts surviving = facts(survivingTeam, key);
+            if (consumed.resourceKnowledgeState() == CelestialResourceKnowledgeState.PROFILE
+                || surviving.resourceKnowledgeState() == CelestialResourceKnowledgeState.PROFILE) {
+                return CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.PROFILE);
+            }
+            return consumed.discoveryState() == DiscoveryState.DISCOVERED
+                || surviving.discoveryState() == DiscoveryState.DISCOVERED ? CelestialKnowledgeFacts.discoveredUnknown()
+                    : CelestialKnowledgeFacts.hidden();
+        });
+        restore(survivingTeam, merged);
+        FACTS_BY_TEAM.remove(consumedTeam);
+    }
+
     @Nonnull
     public static Map<CelestialObjectKey, CelestialKnowledgeFacts> snapshot(@Nonnull UUID teamId) {
         requireTeamId(teamId);

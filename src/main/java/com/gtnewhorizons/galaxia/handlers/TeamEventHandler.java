@@ -11,7 +11,7 @@ import com.gtnewhorizon.gtnhlib.teams.TeamEvents.TeamCreateEvent;
 import com.gtnewhorizon.gtnhlib.teams.TeamEvents.TeamMergeEvent;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.AssetStateSync;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.PlayerEvent;
@@ -19,6 +19,11 @@ import cpw.mods.fml.common.gameevent.PlayerEvent;
 public final class TeamEventHandler {
 
     public static final Set<UUID> playersToClear = new HashSet<>();
+    private final CelestialServerRuntime celestialRuntime;
+
+    public TeamEventHandler(CelestialServerRuntime celestialRuntime) {
+        this.celestialRuntime = celestialRuntime;
+    }
 
     @SubscribeEvent
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
@@ -44,7 +49,6 @@ public final class TeamEventHandler {
             surviving.getTeamName(),
             surviving.getTeamId());
 
-        CelestialAssetStore.transferTeamAssets(consumed.getTeamId(), surviving.getTeamId());
-        CelestialAssetStore.removeTeam(consumed.getTeamId());
+        celestialRuntime.mergeTeams(consumed.getTeamId(), surviving.getTeamId());
     }
 }

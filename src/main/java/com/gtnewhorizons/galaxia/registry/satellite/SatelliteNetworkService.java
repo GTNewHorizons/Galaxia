@@ -145,18 +145,11 @@ public final class SatelliteNetworkService {
         for (TeamRuntime runtime : RUNTIMES.values()) runtime.endpoints.unregisterAsset(assetId);
     }
 
-    public static void unregisterTeamEndpoints(UUID teamId) {
-        RUNTIMES.remove(teamId);
-    }
-
-    /*
-     * Used after persisted assets are loaded. Runtime module edits update individual facilities, but world load needs a
-     * full pass to repopulate the endpoint registry from saved assets.
-     */
-    public static void rebuildDataEndpointsFromAssets() {
-        for (TeamRuntime runtime : RUNTIMES.values()) runtime.endpoints.clear();
-        for (CelestialAsset asset : CelestialAssetStore.allAssets()) {
-            refreshAssetEndpoints(CelestialAssetStore.getTeamId(asset.assetId), asset);
+    public static void mergeTeams(UUID consumedTeam, UUID survivingTeam, Iterable<CelestialAsset> transferredAssets) {
+        if (consumedTeam.equals(survivingTeam)) return;
+        RUNTIMES.remove(consumedTeam);
+        for (CelestialAsset asset : transferredAssets) {
+            if (asset instanceof AutomatedFacility facility) runtime(survivingTeam).endpoints.refreshFacility(facility);
         }
     }
 
