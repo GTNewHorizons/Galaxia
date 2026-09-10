@@ -34,13 +34,8 @@ public record CelestialServerRuntime(CelestialDiscoveryScanService scans,
 
     public void mergeTeams(UUID consumedTeam, UUID survivingTeam) {
         if (consumedTeam.equals(survivingTeam)) return;
-        List<CelestialAsset> transferred = CelestialAssetStore.getTeamAssets(consumedTeam)
-            .values()
-            .stream()
-            .flatMap(java.util.Collection::stream)
-            .toList();
         CelestialKnowledgeService.mergeTeams(consumedTeam, survivingTeam);
-        CelestialAssetStore.transferTeamAssets(consumedTeam, survivingTeam);
+        List<CelestialAsset> transferred = CelestialAssetStore.transferTeamAssets(consumedTeam, survivingTeam);
         SatelliteNetworkService.mergeTeams(consumedTeam, survivingTeam, transferred);
         scans.mergeTeams(consumedTeam, survivingTeam, discoveryWorkers.get());
     }

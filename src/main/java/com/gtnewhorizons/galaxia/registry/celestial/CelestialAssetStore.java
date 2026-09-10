@@ -120,8 +120,8 @@ public final class CelestialAssetStore {
         SERVER.removeTeamInternal(teamId);
     }
 
-    public static void transferTeamAssets(UUID fromTeamId, UUID toTeamId) {
-        SERVER.transferTeamAssetsInternal(fromTeamId, toTeamId);
+    public static List<CelestialAsset> transferTeamAssets(UUID fromTeamId, UUID toTeamId) {
+        return SERVER.transferTeamAssetsInternal(fromTeamId, toTeamId);
     }
 
     public static List<CelestialAsset> listAssetsInSystem(CelestialObjectKey systemKey, UUID teamId) {
@@ -283,13 +283,16 @@ public final class CelestialAssetStore {
         return byBody.getOrDefault(objectKey, Set.of());
     }
 
-    public void transferTeamAssetsInternal(UUID fromTeamId, UUID toTeamId) {
+    public List<CelestialAsset> transferTeamAssetsInternal(UUID fromTeamId, UUID toTeamId) {
         Map<CelestialObjectKey, Set<CelestialAsset.ID>> fromAssets = bodyIndex.remove(fromTeamId);
-        if (fromAssets == null || fromAssets.isEmpty()) return;
+        if (fromAssets == null || fromAssets.isEmpty()) return List.of();
 
+        List<CelestialAsset> transferred = new ArrayList<>();
         for (Set<CelestialAsset.ID> ids : fromAssets.values()) {
             for (CelestialAsset.ID id : ids) {
                 teamById.put(id, toTeamId);
+                CelestialAsset asset = byId.get(id);
+                if (asset != null) transferred.add(asset);
             }
         }
 
@@ -302,6 +305,7 @@ public final class CelestialAssetStore {
             }
             return existing;
         });
+        return List.copyOf(transferred);
     }
 
     public int satelliteCount(UUID teamId, CelestialObjectKey bodyKey, SatelliteKind kind) {

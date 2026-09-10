@@ -63,6 +63,31 @@ final class CelestialAssetStoreRefactorTest {
     }
 
     @Test
+    void transferReturnsMovedAssetsAndMergesTheirOwnershipIndexes() {
+        CelestialAssetStore store = new CelestialAssetStore();
+        CelestialAsset first = createAsset(BODY_1);
+        CelestialAsset second = createAsset(BODY_2);
+        CelestialAsset existing = createAsset(BODY_1);
+        store.registerAssetInternal(TEAM_A, first);
+        store.registerAssetInternal(TEAM_A, second);
+        store.registerAssetInternal(TEAM_B, existing);
+
+        List<CelestialAsset> transferred = store.transferTeamAssetsInternal(TEAM_A, TEAM_B);
+
+        assertEquals(Set.of(first, second), Set.copyOf(transferred));
+        assertEquals(TEAM_B, store.getTeamIdInternal(first.assetId));
+        assertEquals(TEAM_B, store.getTeamIdInternal(second.assetId));
+        assertEquals(Set.of(first, existing), Set.copyOf(store.getStateInternal(TEAM_B, BODY_1)));
+        assertEquals(List.of(second), store.getStateInternal(TEAM_B, BODY_2));
+        assertTrue(
+            store.getTeamAssetsInternal(TEAM_A)
+                .isEmpty());
+        assertTrue(
+            store.transferTeamAssetsInternal(TEAM_A, TEAM_B)
+                .isEmpty());
+    }
+
+    @Test
     void serverAndClientAreSeparateInstances() {
         CelestialAssetStore server = CelestialAssetStore.SERVER;
         CelestialAssetStore client = CelestialAssetStore.CLIENT;
