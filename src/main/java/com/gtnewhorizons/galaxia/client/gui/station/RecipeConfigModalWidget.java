@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTech5UnofficialNewHorizonsLoaded;
 
-import java.util.List;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
@@ -191,7 +190,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         String title = module != null ? ModuleConfigModalSupport.moduleTitle(module, "Recipes") : "Recipes";
         ModuleConfigModalSupport.drawFrame(title, WIDTH, HEIGHT);
 
-        int slotCount = slots().size();
+        int slotCount = editor.size();
         int color = canConfigureRecipes() ? EnumColors.MAP_COLOR_TEXT_BODY.getColor()
             : EnumColors.MAP_COLOR_TEXT_MUTED.getColor();
         ModuleConfigModalSupport
@@ -199,8 +198,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         ModuleConfigModalSupport.drawLine(modeLabel(), 116, BODY_TOP, color);
         drawHeader(color);
 
-        List<SavedRecipe> slots = slots();
-        if (slots.isEmpty()) {
+        if (slotCount == 0) {
             ModuleConfigModalSupport
                 .drawLine("No recipes configured", ModuleConfigModalSupport.PANEL_PADDING, ROW_TOP, color);
             return;
@@ -209,8 +207,8 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         int first = page * ROWS_PER_PAGE;
         for (int row = 0; row < ROWS_PER_PAGE; row++) {
             int slotIndex = first + row;
-            if (slotIndex >= slots.size()) break;
-            drawSlotRow(row, slotIndex, slots.get(slotIndex), color);
+            if (slotIndex >= slotCount) break;
+            drawSlotRow(row, slotIndex, editor.recipeAt(slotIndex), color);
         }
 
         drawRecipeRenameOverlay();
@@ -403,11 +401,11 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private boolean hasNextPage() {
-        return canConfigureRecipes() && (page + 1) * ROWS_PER_PAGE < slots().size();
+        return canConfigureRecipes() && (page + 1) * ROWS_PER_PAGE < editor.size();
     }
 
     private int maxPage() {
-        int size = slots().size();
+        int size = editor.size();
         return size == 0 ? 0 : (size - 1) / ROWS_PER_PAGE;
     }
 
@@ -528,18 +526,12 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private @Nullable SavedRecipe slotAtRow(int rowIndex) {
-        int slotIndex = slotIndexForRow(rowIndex);
-        List<SavedRecipe> slots = slots();
-        return slotIndex >= 0 && slotIndex < slots.size() ? slots.get(slotIndex) : null;
+        return editor.recipeAt(slotIndexForRow(rowIndex));
     }
 
     private int slotIndexForRow(int rowIndex) {
         if (rowIndex < 0 || rowIndex >= ROWS_PER_PAGE) return -1;
         return page * ROWS_PER_PAGE + rowIndex;
-    }
-
-    private List<SavedRecipe> slots() {
-        return editor.recipes();
     }
 
     private @Nullable FacilityModuleRegistry.Definition.Recipe selectedRecipe() {

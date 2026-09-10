@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -49,17 +50,12 @@ final class RecipeBookEditorModelTest {
 
         assertThrows(
             UnsupportedOperationException.class,
-            () -> editor.recipes()
+            () -> editor.replacement()
+                .recipes()
                 .clear());
         assertEquals(0, editor.selectedIndex());
         assertTrue(editor.rename(0, "  Renamed  "));
-        assertTrue(
-            editor.update(
-                0,
-                withEnabled(
-                    editor.recipes()
-                        .get(0),
-                    false)));
+        assertTrue(editor.update(0, withEnabled(editor.recipeAt(0), false)));
         assertTrue(editor.add(snapshot(2)));
         editor.cycleMode();
         editor.cycleNotDoablePolicy();
@@ -92,6 +88,16 @@ final class RecipeBookEditorModelTest {
         assertEquals("", added.displayName());
         assertEquals(RecipeSchedulerMode.ORDER, replacement.mode());
         assertEquals(NotDoablePolicy.BACK_TO_BEGINNING, replacement.notDoablePolicy());
+        editor.remove(0);
+        assertEquals(
+            3,
+            replacement.recipes()
+                .size());
+        assertEquals(
+            "Renamed",
+            replacement.recipes()
+                .getFirst()
+                .displayName());
     }
 
     @Test
@@ -103,10 +109,7 @@ final class RecipeBookEditorModelTest {
 
         assertFalse(editor.canAdd());
         assertFalse(editor.add(snapshot(RecipeBook.MAX_RECIPES)));
-        assertEquals(
-            RecipeBook.MAX_RECIPES,
-            editor.recipes()
-                .size());
+        assertEquals(RecipeBook.MAX_RECIPES, editor.size());
     }
 
     @Test
@@ -147,13 +150,14 @@ final class RecipeBookEditorModelTest {
         assertTrue(editor.rename(0, "   "));
         assertEquals(
             "",
-            editor.recipes()
-                .get(0)
+            editor.recipeAt(0)
                 .displayName());
         assertFalse(editor.rename(2, "Missing"));
         assertFalse(editor.update(-1, savedRecipe(4, "Invalid")));
         assertFalse(editor.remove(2));
         assertFalse(editor.select(2));
+        assertNull(editor.recipeAt(-1));
+        assertNull(editor.recipeAt(2));
     }
 
     @Test
@@ -182,10 +186,7 @@ final class RecipeBookEditorModelTest {
             facility.recipeBook(module)
                 .recipes()
                 .isEmpty());
-        assertEquals(
-            1,
-            editor.recipes()
-                .size());
+        assertEquals(1, editor.size());
     }
 
     private static SavedRecipe withEnabled(SavedRecipe recipe, boolean enabled) {

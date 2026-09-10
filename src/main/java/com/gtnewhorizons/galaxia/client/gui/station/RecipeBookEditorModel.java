@@ -36,8 +36,13 @@ final class RecipeBookEditorModel {
         return moduleId;
     }
 
-    List<SavedRecipe> recipes() {
-        return List.copyOf(recipes);
+    int size() {
+        return recipes.size();
+    }
+
+    @Nullable
+    SavedRecipe recipeAt(int index) {
+        return contains(index) ? recipes.get(index) : null;
     }
 
     RecipeSchedulerMode mode() {
@@ -54,7 +59,7 @@ final class RecipeBookEditorModel {
 
     @Nullable
     SavedRecipe selectedRecipe() {
-        return selectedIndex >= 0 ? recipes.get(selectedIndex) : null;
+        return recipeAt(selectedIndex);
     }
 
     boolean select(int index) {
