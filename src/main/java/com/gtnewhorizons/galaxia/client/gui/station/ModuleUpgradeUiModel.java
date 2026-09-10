@@ -3,11 +3,13 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.Nullable;
 
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
@@ -79,12 +81,11 @@ final class ModuleUpgradeUiModel {
     }
 
     static ModuleTier normalizeHammerTier(HammerVariant variant, ModuleTier tier) {
-        if (ModuleHammer.supportsTier(variant, tier)) return tier;
-        List<ModuleTier> allowed = hammerAllowedTiers(variant);
-        if (allowed.isEmpty()) {
-            throw new IllegalStateException("Hammer variant has no valid tiers: " + variant);
-        }
-        return allowed.get(0);
+        return ModuleHammer.tierForVariantSwitch(variant, tier);
+    }
+
+    static Map<ItemStackWrapper, Long> upgradeMaterials(ModuleInstance module, ModuleUpgradeSelection selection) {
+        return module.constructionMaterials(module.component() instanceof ModuleHammer ? hammerTier(selection) : module.tier());
     }
 
     static ModuleTier normalizeBuildTier(FacilityModuleKind kind, ModuleTier tier, HammerVariant hammerVariant) {

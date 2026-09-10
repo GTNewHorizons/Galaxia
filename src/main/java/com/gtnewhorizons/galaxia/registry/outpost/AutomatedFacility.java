@@ -641,13 +641,11 @@ public final class AutomatedFacility extends CelestialAsset {
         boolean voidCompletionRefund) {
         ModuleTierData sourceData = FacilityModuleRegistry.get(module.kind())
             .getTierData(module.tier());
-        ModuleTierData targetData = FacilityModuleRegistry.get(module.kind())
-            .getTierData(targetTier);
         return new ModuleOperationPlan(
             operation,
             sourceData.buildTicks(),
-            FacilityModuleRegistry.operationCost(targetData.constructionCost()),
-            FacilityModuleRegistry.operationCost(sourceData.constructionCost()),
+            module.constructionMaterials(targetTier),
+            module.constructionMaterials(module.tier()),
             sourceData.completionRefundPercent(),
             reserveItems,
             voidCompletionRefund);

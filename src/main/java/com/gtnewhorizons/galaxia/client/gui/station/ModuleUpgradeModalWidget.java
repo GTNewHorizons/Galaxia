@@ -431,15 +431,7 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
     }
 
     private Map<ItemStackWrapper, Long> upgradeCost(ModuleInstance module) {
-        ModuleTierData data;
-        if (module.component() instanceof ModuleHammer) {
-            data = FacilityModuleRegistry.get(module.kind())
-                .getTierData(ModuleUpgradeUiModel.hammerTier(controller.moduleUpgradeSelection()));
-        } else {
-            data = FacilityModuleRegistry.get(module.kind())
-                .getTierData(module.tier());
-        }
-        return FacilityModuleRegistry.operationCost(data.constructionCost());
+        return ModuleUpgradeUiModel.upgradeMaterials(module, controller.moduleUpgradeSelection());
     }
 
     private boolean hasCancellableBuild() {

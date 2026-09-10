@@ -14,6 +14,7 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -315,6 +316,10 @@ public class ModuleInstance implements Buildable {
 
     public Map<ItemStack, Long> getConstructionCost() {
         return currentTierData().constructionCost();
+    }
+
+    public Map<ItemStackWrapper, Long> constructionMaterials(ModuleTier targetTier) {
+        return FacilityModuleRegistry.operationCost(definition.getTierData(targetTier).constructionCost());
     }
 
     public UpkeepDemand currentTierUpkeepDemand() {
