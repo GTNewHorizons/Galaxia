@@ -127,6 +127,40 @@ final class AssetStateSyncTest {
     }
 
     @Test
+    void reconnectPublishesLatestStateAfterChangesWithoutRecipients() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
+        RecordingTransport transport = new RecordingTransport(facility);
+        AssetStateSync.Server sync = new AssetStateSync.Server(transport);
+        sync.publishPeriodic();
+        long firstRevision = transport.publishedRevisions.get(0);
+        transport.clearDeliveries();
+        transport.online = false;
+
+        facility.setEnergyStored(300L);
+        sync.publishPeriodic();
+        facility.setEnergyStored(700L);
+        sync.publishPeriodic();
+        assertTrue(transport.packets.isEmpty());
+
+        transport.online = true;
+        sync.publishFullTo(FIRST_RECIPIENT, facility.assetId);
+
+        assertEquals(List.of(FIRST_RECIPIENT), transport.recipientIds());
+        assertTrue(transport.publishedRevisions.get(0) > firstRevision);
+        AssetStateSync.Client client = new AssetStateSync.Client(ignored -> {});
+        receive(client, transport.packets.get(0));
+        assertEquals(
+            700L,
+            CelestialAssetStore.CLIENT.findAssetInternal(facility.assetId)
+                .getEnergyStored());
+    }
+
+    @Test
     void periodicPublicationRestoresUnchangedAssetAfterRecipientReset() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
@@ -482,6 +516,7 @@ final class AssetStateSyncTest {
         private final List<Byte> syncTypes = new ArrayList<>();
         private final List<AssetSyncPacket> packets = new ArrayList<>();
         private boolean mutateAfterFirstDelivery;
+        private boolean online = true;
 
         private RecordingTransport(AutomatedFacility facility) {
             this.facility = facility;
@@ -489,6 +524,7 @@ final class AssetStateSyncTest {
 
         @Override
         public Collection<UUID> eligibleRecipients(UUID teamId) {
+            if (!online) return List.of();
             if (TEAM.equals(teamId)) return List.of(FIRST_RECIPIENT, SECOND_RECIPIENT);
             if (OTHER_TEAM.equals(teamId)) return List.of(OTHER_RECIPIENT);
             return List.of();

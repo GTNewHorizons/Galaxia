@@ -29,35 +29,65 @@ public final class LogisticStore {
     private static final Logger LOG = LogManager.getLogger("Galaxia");
 
     private static final List<LogisticsDelivery> activeDeliveries = new ArrayList<>();
+    private static final List<LogisticsDelivery> deliveryView = Collections.unmodifiableList(activeDeliveries);
+    private static final Map<CelestialAsset.ID, Map<ItemStackWrapper, InboundAmounts>> inbound = new LinkedHashMap<>();
 
     private LogisticStore() {}
 
     public static List<LogisticsDelivery> activeDeliveries() {
-        return activeDeliveries;
+        return deliveryView;
     }
 
     public static void addDelivery(LogisticsDelivery delivery) {
         activeDeliveries.add(delivery);
+        adjustInbound(delivery, delivery.data.amount(), delivery.isArrived() ? delivery.data.amount() : 0L);
     }
 
     public static void clearDeliveries() {
         activeDeliveries.clear();
+        inbound.clear();
+    }
+
+    /** Pending cargo includes arrived cargo still waiting for inventory space. */
+    public record InboundAmounts(long allPending, long arrived) {
+
+        private static final InboundAmounts EMPTY = new InboundAmounts(0L, 0L);
+    }
+
+    public static InboundAmounts inboundAmounts(CelestialAsset.ID toAssetId, ItemStackWrapper resource) {
+        return inbound.getOrDefault(toAssetId, Map.of())
+            .getOrDefault(resource, InboundAmounts.EMPTY);
     }
 
     public static long inboundInTransitAmount(CelestialAsset.ID toAssetId, ItemStackWrapper resource) {
-        return activeDeliveries.stream()
-            .filter(task -> toAssetId.equals(task.data.toAssetId()) && resource.equals(task.data.resourceId()))
-            .mapToLong(task -> task.data.amount())
-            .sum();
+        return inboundAmounts(toAssetId, resource).allPending();
     }
 
     public static long arrivedInboundAmount(CelestialAsset.ID toAssetId, ItemStackWrapper resource) {
-        return activeDeliveries.stream()
-            .filter(
-                task -> toAssetId.equals(task.data.toAssetId()) && resource.equals(task.data.resourceId())
-                    && task.isArrived())
-            .mapToLong(task -> task.data.amount())
-            .sum();
+        return inboundAmounts(toAssetId, resource).arrived();
+    }
+
+    private static void adjustInbound(LogisticsDelivery delivery, long pendingDelta, long arrivedDelta) {
+        if (pendingDelta == 0L && arrivedDelta == 0L) return;
+        CelestialAsset.ID destination = delivery.data.toAssetId();
+        ItemStackWrapper resource = delivery.data.resourceId();
+        Map<ItemStackWrapper, InboundAmounts> resources = inbound
+            .computeIfAbsent(destination, ignored -> new LinkedHashMap<>());
+        InboundAmounts previous = resources.getOrDefault(resource, InboundAmounts.EMPTY);
+        InboundAmounts next = new InboundAmounts(
+            previous.allPending() + pendingDelta,
+            previous.arrived() + arrivedDelta);
+        if (next.allPending() == 0L && next.arrived() == 0L) {
+            resources.remove(resource);
+            if (resources.isEmpty()) inbound.remove(destination);
+        } else {
+            resources.put(resource, next);
+        }
+    }
+
+    private static void removeDelivery(int index, LogisticsDelivery delivery) {
+        adjustInbound(delivery, -delivery.data.amount(), delivery.isArrived() ? -delivery.data.amount() : 0L);
+        activeDeliveries.remove(index);
     }
 
     public static void tickDeliveries() {
@@ -73,7 +103,11 @@ public final class LogisticStore {
                 }
                 continue;
             }
+            boolean wasArrived = current.isArrived();
             LogisticsDelivery ticked = current.tick();
+            if (wasArrived != ticked.isArrived()) {
+                adjustInbound(ticked, 0L, ticked.isArrived() ? ticked.data.amount() : -ticked.data.amount());
+            }
             if (ticked.isArrived()) {
                 CelestialAsset recipient = canReceiveCargo(destination) ? destination : source;
                 if (canReceiveCargo(recipient)) {
@@ -97,15 +131,17 @@ public final class LogisticStore {
             delivery.data.toAssetId(),
             delivery.data.amount(),
             delivery.data.resourceId());
-        activeDeliveries.remove(index);
+        removeDelivery(index, delivery);
     }
 
     private static void deliverOrRetain(int index, LogisticsDelivery delivery, CelestialAsset recipient,
         String outcome) {
         long accepted = insertCargo(recipient, delivery.data.resourceId(), delivery.data.amount());
         long remaining = delivery.data.amount() - accepted;
-        if (remaining > 0L) delivery.setAmount(remaining);
-        else activeDeliveries.remove(index);
+        if (remaining > 0L) {
+            adjustInbound(delivery, -accepted, delivery.isArrived() ? -accepted : 0L);
+            delivery.setAmount(remaining);
+        } else removeDelivery(index, delivery);
         LOG.debug(
             "[Logistics] Task {} {} {} x {} to {}",
             delivery.deliveryId,

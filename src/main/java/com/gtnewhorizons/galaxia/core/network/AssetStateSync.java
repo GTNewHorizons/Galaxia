@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.core.network;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -27,7 +28,9 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.state.AssetState;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
@@ -83,6 +86,8 @@ public final class AssetStateSync {
 
     public static final class Server {
 
+        private record InspectionScope(UUID teamId, CelestialObjectKey systemKey) {}
+
         private final ServerTransport transport;
         private final Map<CelestialAsset.ID, Publication> publications = new LinkedHashMap<>();
         private final Map<RecipientAsset, Long> recipientCursors = new LinkedHashMap<>();
@@ -95,14 +100,14 @@ public final class AssetStateSync {
             CelestialAsset asset = CelestialAssetStore.SERVER.findAssetInternal(assetId);
             UUID teamId = CelestialAssetStore.SERVER.getTeamIdInternal(assetId);
             if (asset == null || teamId == null) return;
-            publish(teamId, asset);
+            publish(teamId, asset, new HashMap<>());
         }
 
         public void publishPeriodic() {
+            Map<InspectionScope, HammerDispatchPlanner.Inspection> inspections = new HashMap<>();
             for (CelestialAsset asset : CelestialAssetStore.SERVER.allAssetsInternal()) {
                 UUID teamId = CelestialAssetStore.SERVER.getTeamIdInternal(asset.assetId);
-                if (teamId != null) publish(teamId, asset);
-                asset.clean();
+                if (teamId != null && publish(teamId, asset, inspections)) asset.clean();
             }
         }
 
@@ -117,7 +122,9 @@ public final class AssetStateSync {
                         .syncType() != AssetSyncPacket.ASSET_REMOVED)
                     return;
             } else {
-                AssetSyncPacket candidate = statePacket(teamId, asset);
+                if (!transport.eligibleRecipients(teamId)
+                    .contains(recipientId)) return;
+                AssetSyncPacket candidate = statePacket(teamId, asset, new HashMap<>());
                 if (publication == null || !candidate.hasSameState(publication.packet())) {
                     long revision = nextRevision(publication);
                     publication = new Publication(teamId, candidate.withPublishedRevision(revision));
@@ -158,9 +165,12 @@ public final class AssetStateSync {
             }
         }
 
-        private void publish(UUID teamId, CelestialAsset asset) {
+        private boolean publish(UUID teamId, CelestialAsset asset,
+            Map<InspectionScope, HammerDispatchPlanner.Inspection> inspections) {
+            Collection<UUID> recipients = transport.eligibleRecipients(teamId);
+            if (recipients.isEmpty()) return false;
             CelestialAsset.ID assetId = asset.assetId;
-            AssetSyncPacket candidate = statePacket(teamId, asset);
+            AssetSyncPacket candidate = statePacket(teamId, asset, inspections);
             Publication previous = publications.get(assetId);
             boolean changed = previous == null || !candidate.hasSameState(previous.packet());
             Publication publication = previous;
@@ -172,8 +182,8 @@ public final class AssetStateSync {
                     LOG.warn("Asset {} state changed without dirty state; publishing recovery", assetId);
                 }
             }
-            if (publication == null) return;
-            for (UUID recipientId : transport.eligibleRecipients(teamId)) {
+            if (publication == null) return false;
+            for (UUID recipientId : recipients) {
                 if (recipientId == null) continue;
                 RecipientAsset key = new RecipientAsset(recipientId, assetId);
                 if (recipientCursors.getOrDefault(key, NO_PUBLICATION) == publication.packet()
@@ -185,6 +195,7 @@ public final class AssetStateSync {
                             .publishedRevision());
                 }
             }
+            return true;
         }
 
         private static long nextRevision(Publication publication) {
@@ -194,12 +205,16 @@ public final class AssetStateSync {
                         .publishedRevision());
         }
 
-        private static AssetSyncPacket statePacket(UUID teamId, CelestialAsset asset) {
+        private static AssetSyncPacket statePacket(UUID teamId, CelestialAsset asset,
+            Map<InspectionScope, HammerDispatchPlanner.Inspection> inspections) {
             Map<ModuleInstance.ID, HammerDispatchStatus.Status> statuses = asset instanceof AutomatedFacility facility
-                ? HammerDispatchStatus.inspectAll(
-                    facility,
-                    CelestialAssetStore.SERVER.listAssetsInSystemInternal(asset.systemKey, teamId),
-                    GalaxiaCelestialAPI.currentOrbitalTime())
+                ? inspections
+                    .computeIfAbsent(
+                        new InspectionScope(teamId, asset.systemKey),
+                        ignored -> new HammerDispatchPlanner.Inspection(
+                            CelestialAssetStore.SERVER.listAssetsInSystemInternal(asset.systemKey, teamId),
+                            GalaxiaCelestialAPI.currentOrbitalTime()))
+                    .inspectAll(facility)
                 : Map.of();
             return AssetSyncPacket.state(teamId, asset, statuses);
         }

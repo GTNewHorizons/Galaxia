@@ -59,6 +59,9 @@ final class LogisticStoreTest {
         LogisticStore.addDelivery(delivery(source, destination, delivered, 5L, 1));
         LogisticsDelivery pending = LogisticStore.activeDeliveries()
             .get(0);
+        assertEquals(
+            new LogisticStore.InboundAmounts(5L, 0L),
+            LogisticStore.inboundAmounts(destination.assetId, delivered));
         LogisticStore.tickDeliveries();
 
         assertEquals(2L, destination.itemAmount(delivered));
@@ -71,11 +74,17 @@ final class LogisticStoreTest {
             LogisticStore.activeDeliveries()
                 .get(0));
         assertEquals(3L, pending.data.amount());
+        assertEquals(
+            new LogisticStore.InboundAmounts(3L, 3L),
+            LogisticStore.inboundAmounts(destination.assetId, delivered));
 
         destination.extract(filler, 3);
         LogisticStore.tickDeliveries();
 
         assertEquals(5L, destination.itemAmount(delivered));
+        assertEquals(
+            new LogisticStore.InboundAmounts(0L, 0L),
+            LogisticStore.inboundAmounts(destination.assetId, delivered));
         assertTrue(
             LogisticStore.activeDeliveries()
                 .isEmpty());
@@ -179,6 +188,46 @@ final class LogisticStoreTest {
                 null));
 
         assertEquals(12L, LogisticStore.inboundInTransitAmount(destination.assetId, resource));
+        assertEquals(0L, LogisticStore.arrivedInboundAmount(destination.assetId, resource));
+        assertEquals(11L, LogisticStore.inboundInTransitAmount(destination.assetId, otherResource));
+        assertEquals(13L, LogisticStore.inboundInTransitAmount(otherDestination.assetId, resource));
+
+        LogisticStore.addDelivery(delivery(source, destination, resource, 3L, 0));
+        assertEquals(
+            new LogisticStore.InboundAmounts(15L, 3L),
+            LogisticStore.inboundAmounts(destination.assetId, resource));
+
+        LogisticStore.clearDeliveries();
+        assertEquals(
+            new LogisticStore.InboundAmounts(0L, 0L),
+            LogisticStore.inboundAmounts(destination.assetId, resource));
+        assertEquals(0L, LogisticStore.inboundInTransitAmount(otherDestination.assetId, resource));
+    }
+
+    // Product contract: partial refunds retain pending cargo until the source can accept it.
+    @Test
+    void partialRefundUpdatesPendingCargoBeforeItsOriginalArrivalTime() {
+        UUID teamId = UUID.randomUUID();
+        AutomatedFacility source = facility();
+        AutomatedFacility destination = facility();
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        ItemStackWrapper filler = new ItemStackWrapper(Items.diamond, 0, null);
+        source.insert(filler, 998L);
+        CelestialAssetStore.registerAsset(teamId, source);
+        LogisticStore.addDelivery(delivery(source, destination, resource, 5L, 20));
+
+        LogisticStore.tickDeliveries();
+
+        assertEquals(2L, source.itemAmount(resource));
+        assertEquals(
+            new LogisticStore.InboundAmounts(3L, 0L),
+            LogisticStore.inboundAmounts(destination.assetId, resource));
+        source.extract(filler, 3L);
+        LogisticStore.tickDeliveries();
+        assertEquals(5L, source.itemAmount(resource));
+        assertEquals(
+            new LogisticStore.InboundAmounts(0L, 0L),
+            LogisticStore.inboundAmounts(destination.assetId, resource));
     }
 
     @Test
@@ -374,6 +423,9 @@ final class LogisticStoreTest {
         assertTrue(
             LogisticStore.activeDeliveries()
                 .isEmpty());
+        assertEquals(
+            new LogisticStore.InboundAmounts(0L, 0L),
+            LogisticStore.inboundAmounts(scenario.destination().assetId, scenario.resource()));
     }
 
     private static LogisticsDelivery delivery(CelestialAsset source, CelestialAsset destination,

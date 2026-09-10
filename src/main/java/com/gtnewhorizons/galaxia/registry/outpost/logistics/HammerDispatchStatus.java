@@ -1,12 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.outpost.logistics;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
-
 public final class HammerDispatchStatus {
 
     private HammerDispatchStatus() {}
@@ -43,23 +36,6 @@ public final class HammerDispatchStatus {
                 throw new IllegalArgumentException("Invalid Hammer dispatch status");
             }
         }
-    }
-
-    public static Status evaluate(AutomatedFacility supplier, ModuleInstance hammerModule, Iterable<?> assets,
-        double orbitalTime) {
-        return HammerDispatchPlanner.inspect(supplier, hammerModule, assets, orbitalTime);
-    }
-
-    public static Map<ModuleInstance.ID, Status> inspectAll(AutomatedFacility supplier, Iterable<?> assets,
-        double orbitalTime) {
-        Map<ModuleInstance.ID, Status> statuses = new LinkedHashMap<>();
-        for (ModuleInstance module : supplier.forEachModule()
-            .toList()) {
-            if (module.component() instanceof ModuleHammer) {
-                statuses.put(module.id, evaluate(supplier, module, assets, orbitalTime));
-            }
-        }
-        return Map.copyOf(statuses);
     }
 
 }

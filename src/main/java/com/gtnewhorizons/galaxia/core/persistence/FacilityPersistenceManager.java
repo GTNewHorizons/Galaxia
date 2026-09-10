@@ -217,8 +217,7 @@ public final class FacilityPersistenceManager {
                         task.tofOrbitalOsu,
                         decodeTransferRoute(task.transferRoute)));
             }
-            LogisticStore.activeDeliveries()
-                .addAll(decoded);
+            decoded.forEach(LogisticStore::addDelivery);
         } catch (IOException | JsonParseException | IllegalArgumentException e) {
             LOG.error("[Logistics] Failed to load tasks from {}: {}", file, e.getMessage());
         }

@@ -1,12 +1,17 @@
 package com.gtnewhorizons.galaxia.registry.outpost.logistics;
 
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
+import javax.annotation.Nullable;
+
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
@@ -44,18 +49,59 @@ public final class HammerDispatchPlanner {
 
     private record RouteInspection(OrbitalTransferPlanner.TransferRoute route, boolean inspected) {}
 
-    public static HammerDispatchStatus.Status inspect(AutomatedFacility supplier, ModuleInstance hammerModule,
-        Iterable<?> assets, double orbitalTime) {
-        return inspectResult(supplier, hammerModule, assets, orbitalTime).toStatus();
+    private record RouteKey(CelestialObjectKey source, CelestialObjectKey destination,
+        OrbitalTransferPlanner.RoutePriority priority) {}
+
+    /** Shared calculations for one read-only inspection pass at a fixed orbital time. */
+    public static final class Inspection {
+
+        private final Iterable<?> assets;
+        private final double orbitalTime;
+        private final Map<RouteKey, RouteInspection> routes = new HashMap<>();
+        private final Map<CelestialAsset.ID, Map<InventoryKey, LogisticsResourceConfig>> configurations = new HashMap<>();
+
+        public Inspection(Iterable<?> assets, double orbitalTime) {
+            this.assets = assets;
+            this.orbitalTime = orbitalTime;
+        }
+
+        public Map<ModuleInstance.ID, HammerDispatchStatus.Status> inspectAll(AutomatedFacility supplier) {
+            Map<ModuleInstance.ID, HammerDispatchStatus.Status> statuses = new LinkedHashMap<>();
+            for (ModuleInstance module : supplier.modules()) {
+                if (module.component() instanceof ModuleHammer) {
+                    statuses.put(module.id, inspectResult(supplier, module, this).toStatus());
+                }
+            }
+            return Map.copyOf(statuses);
+        }
+
+        private Map<InventoryKey, LogisticsResourceConfig> configuration(CelestialAsset supplier) {
+            return configurations.computeIfAbsent(supplier.assetId, ignored -> supplier.logisticsConfig.snapshot());
+        }
+
+        private RouteInspection route(CelestialObject root, CelestialAsset supplier, CelestialAsset requester,
+            ModuleHammer hammer) {
+            RouteKey key = new RouteKey(
+                supplier.celestialObjectKey,
+                requester.celestialObjectKey,
+                hammer.routePriority());
+            return routes
+                .computeIfAbsent(key, ignored -> inspectRoute(root, supplier, requester, orbitalTime, hammer, null));
+        }
     }
 
-    private static Result inspectResult(AutomatedFacility supplier, ModuleInstance hammerModule, Iterable<?> assets,
-        double orbitalTime) {
+    public static HammerDispatchStatus.Status inspect(AutomatedFacility supplier, ModuleInstance hammerModule,
+        Iterable<?> assets, double orbitalTime) {
+        return inspectResult(supplier, hammerModule, new Inspection(assets, orbitalTime)).toStatus();
+    }
+
+    private static Result inspectResult(AutomatedFacility supplier, ModuleInstance hammerModule,
+        Inspection inspection) {
         if (supplier == null || hammerModule == null || !(hammerModule.component() instanceof ModuleHammer hammer)) {
             return new Result(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, 0L, 0L, 0L, 0, null);
         }
 
-        Map<InventoryKey, LogisticsResourceConfig> supplierConfigs = supplier.logisticsConfig.snapshot();
+        Map<InventoryKey, LogisticsResourceConfig> supplierConfigs = inspection.configuration(supplier);
         boolean hasExportConfig = supplierConfigs.values()
             .stream()
             .anyMatch(LogisticsResourceConfig::isSupplyEnabled);
@@ -75,7 +121,7 @@ public final class HammerDispatchPlanner {
                 continue;
             }
 
-            for (Object asset : assets) {
+            for (Object asset : inspection.assets) {
                 if (!(asset instanceof CelestialAsset requester)) continue;
                 if (supplier.assetId.equals(requester.assetId)) continue;
                 if (!Objects.equals(supplier.systemKey, requester.systemKey)) continue;
@@ -90,8 +136,9 @@ public final class HammerDispatchPlanner {
                     requesterCfg,
                     hammerModule,
                     hammer,
-                    orbitalTime,
-                    null).result();
+                    inspection.orbitalTime,
+                    null,
+                    inspection).result();
                 if (result.code() == HammerDispatchStatus.Code.WAITING_FOR_REQUEST
                     || result.code() == HammerDispatchStatus.Code.NO_SURPLUS_AFTER_RESERVE) continue;
                 if (result.code() == HammerDispatchStatus.Code.READY) return result;
@@ -145,7 +192,8 @@ public final class HammerDispatchPlanner {
             hammerModule,
             hammer,
             orbitalTime,
-            routeProfileTeamId);
+            routeProfileTeamId,
+            null);
         if (evaluation.routeInspected()) hammer.markRouteProbeAttempted();
         return evaluation.result();
     }
@@ -275,10 +323,6 @@ public final class HammerDispatchPlanner {
         return requester instanceof Station station && station.getTileController() == null;
     }
 
-    private static long arrivedInboundAmount(CelestialAsset requester, ItemStackWrapper resource) {
-        return destinationUnavailable(requester) ? 0L : LogisticStore.arrivedInboundAmount(requester.assetId, resource);
-    }
-
     private static long itemAmount(CelestialAsset asset, ItemStackWrapper resource) {
         if (asset instanceof AutomatedFacility facility) return facility.itemAmount(resource);
         if (asset instanceof IDistributedInventory physicalInventory) {
@@ -289,10 +333,12 @@ public final class HammerDispatchPlanner {
 
     private static CandidateEvaluation evaluateCandidateFor(CelestialAsset supplier, CelestialAsset requester,
         ItemStackWrapper resource, long availableSurplus, LogisticsResourceConfig requesterCfg,
-        ModuleInstance hammerModule, ModuleHammer hammer, double orbitalTime, UUID routeProfileTeamId) {
+        ModuleInstance hammerModule, ModuleHammer hammer, double orbitalTime, UUID routeProfileTeamId,
+        @Nullable Inspection inspection) {
         long requesterStock = itemAmount(requester, resource);
-        long inboundInTransit = LogisticStore.inboundInTransitAmount(requester.assetId, resource);
-        long arrivedInbound = arrivedInboundAmount(requester, resource);
+        LogisticStore.InboundAmounts inbound = LogisticStore.inboundAmounts(requester.assetId, resource);
+        long inboundInTransit = inbound.allPending();
+        long arrivedInbound = destinationUnavailable(requester) ? 0L : inbound.arrived();
         long requestedAmount = Math
             .max(0L, importTargetFor(requester, resource, requesterCfg) - requesterStock - inboundInTransit);
         if (requestedAmount <= 0L) {
@@ -319,7 +365,8 @@ public final class HammerDispatchPlanner {
         boolean shareAnchor = sameBody || GalaxiaCelestialAPI
             .sharesPlanetaryAnchor(root, supplier.celestialObjectKey, requester.celestialObjectKey);
         RouteInspection routeInspection = sameBody ? new RouteInspection(null, false)
-            : inspectRoute(root, supplier, requester, orbitalTime, hammer, routeProfileTeamId);
+            : inspection != null ? inspection.route(root, supplier, requester, hammer)
+                : inspectRoute(root, supplier, requester, orbitalTime, hammer, routeProfileTeamId);
         Result result = evaluateCandidate(
             supplier,
             requester,

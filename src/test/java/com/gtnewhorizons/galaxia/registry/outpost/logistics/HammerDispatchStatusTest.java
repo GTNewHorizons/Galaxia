@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.logistics;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -61,6 +62,65 @@ final class HammerDispatchStatusTest {
         assertEquals(80, HammerDispatchStatus.Code.BLOCKED_BY_DV_LIMIT.priority());
         assertEquals(80, HammerDispatchStatus.Code.BLOCKED_BY_TOF_LIMIT.priority());
         assertEquals(20, HammerDispatchStatus.Code.WAITING_FOR_REQUEST.priority());
+    }
+
+    @Test
+    void batchInspectionPreservesHammerEnergyAndSeesNewIncomingCargo() {
+        AutomatedFacility supplier = facility(CelestialObjectId.FROZEN_BELT);
+        AutomatedFacility requester = facility(CelestialObjectId.OVERWORLD);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 64, false, true));
+        requester.logisticsConfig.set(resource, new LogisticsResourceConfig(64, 64, true, false));
+        supplier.insert(resource, 128);
+        ModuleInstance charged = hammerModule(hammer(AllowShootingConfig.ALWAYS, HammerVariant.BIG, 1_000_000L));
+        ModuleInstance empty = hammerModule(hammer(AllowShootingConfig.ALWAYS, HammerVariant.BIG, 0L));
+        addModule(supplier, charged);
+        addModule(supplier, empty);
+        HammerDispatchPlanner.Inspection inspection = new HammerDispatchPlanner.Inspection(List.of(requester), 0.0);
+
+        var statuses = inspection.inspectAll(supplier);
+
+        assertEquals(
+            HammerDispatchStatus.Code.READY,
+            statuses.get(charged.id)
+                .code());
+        assertEquals(
+            HammerDispatchStatus.Code.NEED_ENERGY,
+            statuses.get(empty.id)
+                .code());
+        assertEquals(
+            statuses.get(charged.id)
+                .requiredEnergy(),
+            statuses.get(empty.id)
+                .requiredEnergy());
+        assertEquals(
+            64L,
+            statuses.get(charged.id)
+                .sendAmount());
+
+        LogisticStore.addDelivery(
+            LogisticsDelivery.createWithTrajectory(
+                supplier.assetId,
+                requester.assetId,
+                resource,
+                32L,
+                10,
+                LogisticSignal.Scope.SYSTEM,
+                supplier.celestialObjectKey,
+                requester.celestialObjectKey,
+                0.0,
+                0.0,
+                null));
+
+        assertEquals(
+            32L,
+            inspection.inspectAll(supplier)
+                .get(charged.id)
+                .sendAmount());
+        assertEquals(
+            32L,
+            HammerDispatchPlanner.planDispatch(supplier, charged, requester, resource, 0.0, null)
+                .sendAmount());
     }
 
     @Test
@@ -156,8 +216,8 @@ final class HammerDispatchStatusTest {
         supplier.insert(resource, 64);
         ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BIG, 1_000_000L);
 
-        HammerDispatchStatus.Status status = HammerDispatchStatus
-            .evaluate(supplier, hammerModule(hammer), List.of(requester), 0.0);
+        HammerDispatchStatus.Status status = HammerDispatchPlanner
+            .inspect(supplier, hammerModule(hammer), List.of(requester), 0.0);
 
         assertEquals(HammerDispatchStatus.Code.READY, status.code());
         assertEquals(0, hammer.routeProbeCooldownTicks());

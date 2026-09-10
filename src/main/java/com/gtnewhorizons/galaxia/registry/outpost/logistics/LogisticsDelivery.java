@@ -65,7 +65,7 @@ public class LogisticsDelivery {
             return amount;
         }
 
-        void setAmount(long amount) {
+        private void setAmount(long amount) {
             this.amount = amount;
         }
 
@@ -207,12 +207,12 @@ public class LogisticsDelivery {
             deliveryTicks);
     }
 
-    public LogisticsDelivery tick() {
+    LogisticsDelivery tick() {
         this.remainingTicks -= 1;
         return this;
     }
 
-    public LogisticsDelivery setAmount(long amount) {
+    LogisticsDelivery setAmount(long amount) {
         this.data.setAmount(amount);
         return this;
     }
