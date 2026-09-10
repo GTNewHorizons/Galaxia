@@ -170,8 +170,6 @@ public final class LogisticStore {
 
     private static void collectSignals(CelestialAsset asset, List<LogisticSignal> signals) {
         Map<ItemStackWrapper, Long> snapshot = itemSnapshot(asset);
-        Map<ItemStackWrapper, Long> cannonItems = asset instanceof Station station ? station.getCannonChestItems()
-            : Map.of();
         Set<ItemStackWrapper> allResources = new LinkedHashSet<>();
         for (InventoryKey key : asset.logisticsConfig.snapshot()
             .keySet()) {
