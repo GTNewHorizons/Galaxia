@@ -92,7 +92,10 @@ public final class RecipeIntentMatcher {
         for (ItemStack hard : hardSlots) {
             if (hard == null) continue;
             for (int i = 0; i < resources.size(); i++) {
-                if (!consumed[i] && exactItemMatch(hard, resources.get(i).itemStack())) {
+                if (!consumed[i] && matchesItem(
+                    hard,
+                    resources.get(i)
+                        .itemStack())) {
                     consumed[i] = true;
                     break;
                 }
@@ -107,19 +110,17 @@ public final class RecipeIntentMatcher {
             if (hard == null) continue;
             String hardName = fluidName(hard);
             for (int i = 0; i < resources.size(); i++) {
-                if (!consumed[i] && hardName != null && hardName.equals(fluidName(resources.get(i).fluidStack()))) {
+                if (!consumed[i] && hardName != null
+                    && hardName.equals(
+                        fluidName(
+                            resources.get(i)
+                                .fluidStack()))) {
                     consumed[i] = true;
                     break;
                 }
             }
         }
         return consumed;
-    }
-
-    private static boolean exactItemMatch(ItemStack hard, ItemStack recipeStack) {
-        return hard != null && recipeStack != null
-            && hard.getItem() == recipeStack.getItem()
-            && hard.getItemDamage() == recipeStack.getItemDamage();
     }
 
     private static boolean matchesItems(ItemStack[] hardSlots, ItemStack[] recipeStacks) {

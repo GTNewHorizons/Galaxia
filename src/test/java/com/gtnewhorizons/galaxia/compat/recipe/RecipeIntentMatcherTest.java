@@ -1,11 +1,13 @@
 package com.gtnewhorizons.galaxia.compat.recipe;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.oredict.OreDictionary;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -97,6 +99,30 @@ final class RecipeIntentMatcherTest {
                 .get(0)
                 .itemStack()
                 .getItemDamage());
+    }
+
+    @Test
+    void matchingWildcardIngredientIsAlreadyProvidedForGhostHints() {
+        Item item = new Item();
+        ItemStack supplied = new ItemStack(item, 1, 4);
+        GTRecipe recipe = TestGTRecipes.recipe(
+            new ItemStack[] { new ItemStack(item, 1, OreDictionary.WILDCARD_VALUE) },
+            null,
+            null,
+            null,
+            null,
+            20,
+            30);
+        var result = RecipeIntentMatcher
+            .match(GTRecipeMapId.DISTILLERY, new GTRecipe[] { recipe }, new ItemStack[] { supplied }, null, null, null);
+
+        assertEquals(RecipeIntentMatcher.Status.SINGLE_MATCH, result.status());
+        assertArrayEquals(
+            new boolean[] { true },
+            RecipeIntentMatcher.providedItemSlots(
+                result.snapshot()
+                    .itemInputs(),
+                new ItemStack[] { supplied }));
     }
 
     @Test
