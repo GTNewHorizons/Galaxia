@@ -76,6 +76,7 @@ public final class SatelliteDataTransferPlanner {
         Map<SatelliteNetworkGraph.Edge, Long> usedByEdge = new HashMap<>();
         Map<CelestialObjectKey, Long> usedByBody = new HashMap<>();
         Map<ModuleInstance.ID, Long> remainingDemand = new HashMap<>();
+        Map<SatelliteNetworkGraph.DirectedEdge, SatelliteNetworkCalculator.WidestPath> paths = new HashMap<>();
         for (Demand demand : demands) remainingDemand.put(demand.sinkId(), demand.deciKb());
         /*
          * The planner is intentionally stateless: it reads the current produced/demand buffers and returns the
@@ -84,7 +85,7 @@ public final class SatelliteDataTransferPlanner {
          * capacity accounting, and persistence stay separated.
          */
         for (SatelliteDataBufferStore.Entry produced : store.producedEntries()) {
-            List<Route> routes = routesForProducedData(networkState, demands, remainingDemand, produced);
+            List<Route> routes = routesForProducedData(networkState, demands, remainingDemand, produced, paths);
             List<Route> localRoutes = new ArrayList<>();
             List<Route> remoteRoutes = new ArrayList<>();
             for (Route route : routes) {
@@ -110,14 +111,15 @@ public final class SatelliteDataTransferPlanner {
     }
 
     private static List<Route> routesForProducedData(SatelliteNetworkState networkState, List<Demand> demands,
-        Map<ModuleInstance.ID, Long> remainingDemand, SatelliteDataBufferStore.Entry produced) {
+        Map<ModuleInstance.ID, Long> remainingDemand, SatelliteDataBufferStore.Entry produced,
+        Map<SatelliteNetworkGraph.DirectedEdge, SatelliteNetworkCalculator.WidestPath> paths) {
         List<SatelliteDataKey> demandKeys = demands.stream()
             .filter(demand -> remainingDemand.getOrDefault(demand.sinkId(), 0L) > 0L)
             .map(Demand::key)
             .toList();
         // Origin-specific demand wins over "any origin" demand for the same data type.
         List<SatelliteDataKey> matchedKeys = SatelliteDataKey.matchingDemandKeys(produced.key(), demandKeys);
-        return routesForKeys(networkState, produced, demands, remainingDemand, matchedKeys);
+        return routesForKeys(networkState, produced, demands, remainingDemand, matchedKeys, paths);
     }
 
     /*
@@ -126,14 +128,15 @@ public final class SatelliteDataTransferPlanner {
      */
     private static List<Route> routesForKeys(SatelliteNetworkState networkState,
         SatelliteDataBufferStore.Entry produced, List<Demand> demands, Map<ModuleInstance.ID, Long> remainingDemand,
-        List<SatelliteDataKey> keys) {
+        List<SatelliteDataKey> keys,
+        Map<SatelliteNetworkGraph.DirectedEdge, SatelliteNetworkCalculator.WidestPath> paths) {
         if (keys.isEmpty()) return List.of();
         Set<SatelliteDataKey> allowedKeys = new HashSet<>(keys);
         List<Route> routes = new ArrayList<>();
         for (Demand demand : demands) {
             if (remainingDemand.getOrDefault(demand.sinkId(), 0L) <= 0L || !allowedKeys.contains(demand.key()))
                 continue;
-            Route route = route(networkState, produced.bodyKey(), demand);
+            Route route = route(networkState, produced.bodyKey(), demand, paths);
             if (route != null) routes.add(route);
         }
         routes.sort(
@@ -417,10 +420,13 @@ public final class SatelliteDataTransferPlanner {
         return left + right;
     }
 
-    private static Route route(SatelliteNetworkState networkState, CelestialObjectKey from, Demand demand) {
+    private static Route route(SatelliteNetworkState networkState, CelestialObjectKey from, Demand demand,
+        Map<SatelliteNetworkGraph.DirectedEdge, SatelliteNetworkCalculator.WidestPath> paths) {
+        if (demand.bodyKey() == null) return null;
         if (from.equals(demand.bodyKey())) return new Route(demand, List.of(), 0L);
-        SatelliteNetworkCalculator.WidestPath path = SatelliteNetworkCalculator
-            .widestPath(from, demand.bodyKey(), networkState);
+        SatelliteNetworkCalculator.WidestPath path = paths.computeIfAbsent(
+            new SatelliteNetworkGraph.DirectedEdge(from, demand.bodyKey()),
+            edge -> SatelliteNetworkCalculator.widestPath(edge.from(), edge.to(), networkState));
         if (path.capacityKbps() <= 0L) return null;
         return new Route(demand, path.edges(), path.capacityKbps());
     }
