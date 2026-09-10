@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.Set;
 
 import net.minecraft.util.StatCollector;
 
@@ -13,21 +15,29 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 public enum FacilityModuleKind {
 
-    HAMMER,
-    MINER,
-    POWER,
-    STORAGE,
-    TANK,
-    BATTERY,
-    MAINTENANCE_BAY,
-    MACERATOR,
-    CENTRIFUGE,
-    ELECTROLYZER,
-    CHEMICAL_REACTOR,
-    ASSEMBLER,
-    DISTILLERY,
-    GEOTHERMAL_GENERATOR,
-    DEBUG_DATA_GENERATOR;
+    HAMMER(ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV, ModuleTier.ZPM, ModuleTier.UV),
+    MINER(ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV),
+    POWER(ModuleTier.NONE),
+    STORAGE(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV),
+    TANK(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV),
+    BATTERY(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV),
+    MAINTENANCE_BAY(ModuleTier.NONE),
+    MACERATOR(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV),
+    CENTRIFUGE(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV),
+    ELECTROLYZER(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV),
+    CHEMICAL_REACTOR(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV),
+    ASSEMBLER(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV),
+    DISTILLERY(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV),
+    GEOTHERMAL_GENERATOR(ModuleTier.HV),
+    DEBUG_DATA_GENERATOR(ModuleTier.HV);
+
+    private final ModuleTier defaultTier;
+    private final Set<ModuleTier> allowedTiers;
+
+    FacilityModuleKind(ModuleTier defaultTier, ModuleTier... additionalTiers) {
+        this.defaultTier = defaultTier;
+        this.allowedTiers = Collections.unmodifiableSet(EnumSet.of(defaultTier, additionalTiers));
+    }
 
     private static final EnumSet<FacilityModuleKind> CAPACITY_KINDS = EnumSet.noneOf(FacilityModuleKind.class);
 
@@ -81,29 +91,12 @@ public enum FacilityModuleKind {
         return FacilityModuleRegistry.create(ModuleInstance.ID.create(), this, anchor, shape, tier);
     }
 
-    public EnumSet<ModuleTier> allowedTiers() {
-        return switch (this) {
-            case HAMMER -> EnumSet.of(ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV, ModuleTier.ZPM, ModuleTier.UV);
-            case MINER -> EnumSet.of(ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV);
-            case POWER -> EnumSet.of(ModuleTier.NONE);
-            case GEOTHERMAL_GENERATOR -> EnumSet.of(ModuleTier.HV);
-            case STORAGE, TANK, BATTERY -> EnumSet.of(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV);
-            case MAINTENANCE_BAY -> EnumSet.of(ModuleTier.NONE);
-            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> EnumSet
-                .of(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV);
-            case DEBUG_DATA_GENERATOR -> EnumSet.of(ModuleTier.HV);
-        };
+    public Set<ModuleTier> allowedTiers() {
+        return allowedTiers;
     }
 
     public ModuleTier defaultTier() {
-        return switch (this) {
-            case HAMMER, MINER -> ModuleTier.EV;
-            case POWER -> ModuleTier.NONE;
-            case GEOTHERMAL_GENERATOR -> ModuleTier.HV;
-            case STORAGE, TANK, BATTERY -> ModuleTier.HV;
-            case MAINTENANCE_BAY -> ModuleTier.NONE;
-            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY, DEBUG_DATA_GENERATOR -> ModuleTier.HV;
-        };
+        return defaultTier;
     }
 
     public ModuleShape defaultShape() {

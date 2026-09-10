@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.interfaces;
 
+import javax.annotation.Nullable;
+
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
@@ -43,6 +45,10 @@ public interface IModuleComponent {
 
     default IModuleOperation prepareOperationTarget(ModuleInstance module, FacilityCommand.ModuleCommand request) {
         throw unsupportedCommand(request);
+    }
+
+    default boolean canUpgradeTo(ModuleInstance module, ModuleTier targetTier, @Nullable HammerVariant targetVariant) {
+        return false;
     }
 
     default void applyOperationTarget(IModuleOperation spec, ModuleInstance module) {

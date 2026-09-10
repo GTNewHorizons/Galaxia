@@ -13,7 +13,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -129,25 +128,11 @@ final class ModuleUpgradeUiModel {
         StationLayout layout = facility.stationLayout();
         if (layout == null) return false;
         ModuleInstance target = layout.moduleAt(coord);
-        if (target == null || source.kind() != target.kind()) return false;
-        ModuleOperationState operation = target.operationOrNull();
-        if (operation != null && !operation.phase()
-            .isTerminal()) {
-            return false;
-        }
-        if (source.component() instanceof ModuleHammer) {
-            if (!(target.component() instanceof ModuleHammer targetHammer)) return false;
-            if (targetHammerVariant == null || !ModuleHammer.supportsTier(targetHammerVariant, targetTier)) {
-                return false;
-            }
-            return targetHammer.variant() != targetHammerVariant || target.tier() != targetTier;
-        }
-        if (targetHammerVariant != null || !target.kind()
-            .allowedTiers()
-            .contains(targetTier)) {
-            return false;
-        }
-        return target.tier() != targetTier;
+        return target != null && source.kind() == target.kind()
+            && target.canStartOperation()
+            && target.component() != null
+            && target.component()
+                .canUpgradeTo(target, targetTier, targetHammerVariant);
     }
 
     static List<ModuleInstance.ID> confirmedTargets(AutomatedFacility facility, ModuleInstance source,

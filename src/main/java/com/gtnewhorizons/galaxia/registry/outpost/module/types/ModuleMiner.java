@@ -23,6 +23,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegist
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
@@ -77,18 +78,19 @@ public final class ModuleMiner extends TieredModuleComponent {
         if (!(request instanceof FacilityCommand.PlanMinerFocusUpgrade plan)) {
             return super.prepareOperationTarget(module, request);
         }
-        if (plan.targetModuleTier() == null || plan.targetFocusTier() == null
-            || !module.kind()
-                .allowedTiers()
-                .contains(plan.targetModuleTier())) {
+        if (!canPlanFocusUpgrade(module, plan.targetModuleTier(), plan.targetFocusTier())) {
             throw new IllegalArgumentException("Invalid miner focus operation target");
         }
-        String targetOreKey = focusOreKey;
-        if (module.tier() == plan.targetModuleTier() && focusTier == plan.targetFocusTier()
-            && Objects.equals(targetOreKey, focusOreKey)) {
-            throw new IllegalArgumentException("Miner focus operation target is unchanged");
-        }
-        return new IModuleOperation.MinerFocus(plan.targetModuleTier(), plan.targetFocusTier(), targetOreKey);
+        return new IModuleOperation.MinerFocus(plan.targetModuleTier(), plan.targetFocusTier(), focusOreKey);
+    }
+
+    public boolean canPlanFocusUpgrade(ModuleInstance module, ModuleTier targetModuleTier,
+        MinerFocusTier targetFocusTier) {
+        return targetModuleTier != null && targetFocusTier != null
+            && module.kind()
+                .allowedTiers()
+                .contains(targetModuleTier)
+            && (module.tier() != targetModuleTier || focusTier != targetFocusTier);
     }
 
     @Override

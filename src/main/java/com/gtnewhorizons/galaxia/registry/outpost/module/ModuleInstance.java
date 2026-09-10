@@ -261,6 +261,15 @@ public class ModuleInstance implements Buildable {
         this.operation = null;
     }
 
+    public boolean canStartOperation() {
+        return operation == null || operation.phase()
+            .isTerminal()
+            && operation.depositedResources()
+                .isEmpty()
+            && operation.refundBuffer()
+                .isEmpty();
+    }
+
     public boolean isOperational() {
         return status == Buildable.Status.OPERATIONAL;
     }

@@ -578,13 +578,7 @@ public final class AutomatedFacility extends CelestialAsset {
             }
             ModuleInstance module = moduleById(targetId);
             if (module == null) return FacilityCommand.Rejection.MODULE_NOT_FOUND;
-            ModuleOperationState operation = module.operationOrNull();
-            if (operation != null && (!operation.phase()
-                .isTerminal()
-                || !operation.depositedResources()
-                    .isEmpty()
-                || !operation.refundBuffer()
-                    .isEmpty())) {
+            if (!module.canStartOperation()) {
                 return FacilityCommand.Rejection.MODULE_OPERATION_ACTIVE;
             }
             plans.put(module, null);

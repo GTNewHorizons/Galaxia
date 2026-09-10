@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Map;
+
+import net.minecraft.init.Items;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -14,11 +17,16 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -328,6 +336,30 @@ final class ModuleUpgradeUiModelTest {
                 ModuleTier.IV,
                 HammerVariant.BASE,
                 List.of(target.anchor(), target.anchor())));
+    }
+
+    @Test
+    void completedOperationWithUnsettledMaterialsCannotBeSelectedForAnotherUpgrade() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ModuleInstance module = hammerModule();
+        addModule(facility, module);
+        facility.stationLayout()
+            .place(module);
+        var materials = Map.of(new ItemStackWrapper(Items.iron_ingot, 0, null), 1L);
+        var plan = new ModuleOperationPlan(
+            new IModuleOperation.Hammer(ModuleTier.IV, HammerVariant.BASE),
+            1,
+            materials,
+            true);
+        module.setOperation(ModuleOperationState.restore(plan, ModuleOperationPhase.COMPLETE, 1, materials, Map.of()));
+
+        assertFalse(
+            ModuleUpgradeUiModel
+                .isCompatibleTarget(facility, module, ModuleTier.LuV, HammerVariant.BASE, module.anchor()));
     }
 
     private static ModuleInstance hammerModule() {

@@ -113,12 +113,17 @@ public final class ModuleHammer implements IModuleComponent {
         if (!(request instanceof FacilityCommand.PlanHammerUpgrade plan)) {
             return IModuleComponent.super.prepareOperationTarget(module, request);
         }
-        if (plan.targetVariant() == null || plan.targetTier() == null
-            || plan.targetVariant() == variant && plan.targetTier() == module.tier()) {
+        if (!canUpgradeTo(module, plan.targetTier(), plan.targetVariant())) {
             throw new IllegalArgumentException("Invalid hammer operation target");
         }
-        requireTier(plan.targetVariant(), plan.targetTier());
         return new IModuleOperation.Hammer(plan.targetTier(), plan.targetVariant());
+    }
+
+    @Override
+    public boolean canUpgradeTo(ModuleInstance module, ModuleTier targetTier, HammerVariant targetVariant) {
+        return targetVariant != null && targetTier != null
+            && (targetVariant != variant || targetTier != module.tier())
+            && supportsTier(targetVariant, targetTier);
     }
 
     public static boolean supportsTier(@Nonnull HammerVariant variant, @Nonnull ModuleTier tier) {
