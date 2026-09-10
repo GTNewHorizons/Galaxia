@@ -93,12 +93,15 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
             .size(SELECT_WIDTH, GROUP_BUTTON_HEIGHT);
         child(dropdown);
         child(
-            currentGroupButton("Rename", this::editName).pos(GROUP_BUTTON_X + SELECT_WIDTH, GROUP_BUTTON_Y)
-                .size(ACTION_WIDTH, GROUP_BUTTON_HEIGHT));
+            currentGroupButton(
+                net.minecraft.util.StatCollector.translateToLocal("galaxia.gui.station.settings_group.rename"),
+                this::editName).pos(GROUP_BUTTON_X + SELECT_WIDTH, GROUP_BUTTON_Y)
+                    .size(ACTION_WIDTH, GROUP_BUTTON_HEIGHT));
         child(
-            currentGroupButton("Members", this::showMembers)
-                .pos(GROUP_BUTTON_X + SELECT_WIDTH + ACTION_WIDTH, GROUP_BUTTON_Y)
-                .size(ACTION_WIDTH, GROUP_BUTTON_HEIGHT));
+            currentGroupButton(
+                net.minecraft.util.StatCollector.translateToLocal("galaxia.gui.station.settings_group.members"),
+                this::showMembers).pos(GROUP_BUTTON_X + SELECT_WIDTH + ACTION_WIDTH, GROUP_BUTTON_Y)
+                    .size(ACTION_WIDTH, GROUP_BUTTON_HEIGHT));
 
         child(
             new ButtonWidget<>().onMousePressed(button -> button == 0)

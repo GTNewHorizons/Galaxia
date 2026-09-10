@@ -2,6 +2,8 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTech5UnofficialNewHorizonsLoaded;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
@@ -13,6 +15,8 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.value.StringValue;
 import com.cleanroommc.modularui.widget.ParentWidget;
+import com.cleanroommc.modularui.widget.ScrollWidget;
+import com.cleanroommc.modularui.widget.scroll.VerticalScrollData;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
@@ -20,8 +24,13 @@ import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeInputScreen;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot.Resource;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 
 final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget> {
@@ -43,6 +52,8 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private static final int REMOVE_X = 394;
     private static final int ENABLE_WIDTH = 40;
     private static final int RECIPE_WIDTH = 148;
+    private static final int DETAILS_X = 232;
+    private static final int DETAILS_WIDTH = 64;
     private static final int SMALL_FIELD_WIDTH = 46;
     private static final int REMOVE_WIDTH = 38;
     private static final int PAGE_BUTTON_WIDTH = 28;
@@ -78,6 +89,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private boolean renameOpen;
     private String recipeNameInput = "";
     private @Nullable TextFieldWidget recipeNameField;
+    private @Nullable RecipeDetails details;
 
     RecipeConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller,
         @Nullable StationTilePickerController tilePickerController, RecipeBookEditorModel editor) {
@@ -101,6 +113,11 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             child(
                 new RecipeNameClickWidget(rowIndex).pos(RECIPE_X, rowY)
                     .size(RECIPE_WIDTH, BUTTON_HEIGHT));
+            child(
+                ModuleConfigModalSupport
+                    .button(() -> canUseRow(rowIndex), () -> detailText("open"), () -> openDetails(rowIndex))
+                    .pos(DETAILS_X, rowY)
+                    .size(DETAILS_WIDTH, BUTTON_HEIGHT));
             child(
                 numberField(rowIndex, Field.PRIORITY).pos(PRIORITY_X, rowY)
                     .size(SMALL_FIELD_WIDTH, BUTTON_HEIGHT));
@@ -189,6 +206,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         ModuleInstance module = selectedModule();
         String title = module != null ? ModuleConfigModalSupport.moduleTitle(module, "Recipes") : "Recipes";
         ModuleConfigModalSupport.drawFrame(title, WIDTH, HEIGHT);
+        if (details != null) return;
 
         int slotCount = editor.size();
         int color = canConfigureRecipes() ? EnumColors.MAP_COLOR_TEXT_BODY.getColor()
@@ -293,7 +311,249 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private boolean isRecipeListOpen() {
-        return controller.isRecipeConfigOpen();
+        return controller.isRecipeConfigOpen() && details == null;
+    }
+
+    private void openDetails(int rowIndex) {
+        SavedRecipe recipe = slotAtRow(rowIndex);
+        if (recipe == null) return;
+        settingsGroupSelector.closeMenu();
+        details = new RecipeDetails(recipe);
+        child(
+            details.pos(0, 0)
+                .size(WIDTH, HEIGHT));
+        scheduleResize();
+    }
+
+    private void closeDetails() {
+        if (details == null) return;
+        remove(details);
+        details = null;
+    }
+
+    private static String detailText(String key) {
+        return StatCollector.translateToLocal("galaxia.gui.station.recipe.details." + key);
+    }
+
+    private final class RecipeDetails extends ParentWidget<RecipeDetails> {
+
+        private static final int CONTENT_X = 8;
+        private static final int CONTENT_Y = 58;
+        private static final int CONTENT_WIDTH = WIDTH - CONTENT_X * 2;
+        private static final int CONTENT_HEIGHT = 156;
+        private static final int RESOURCE_ROW_HEIGHT = 30;
+        private static final int BOUND_LABEL_Y = 222;
+        private static final int BOUND_CONTROL_Y = 254;
+        private static final int AMOUNT_WIDTH = 100;
+        private static final int BOUND_BUTTON_WIDTH = 54;
+        private static final int CONTROL_GAP = 6;
+        private static final int BOUND_LABEL_SPACING = 14;
+        private static final int RESOURCE_TEXT_PADDING = 4;
+        private static final int RESOURCE_NAME_Y = 3;
+        private static final int RESOURCE_AMOUNT_Y = 16;
+        private static final int SCROLLBAR_GAP = 6;
+        private static final int MAX_BOUND_DIGITS = 19;
+
+        private @Nullable Resource selectedResource;
+        private boolean input;
+        private String boundInput = "";
+        private final TextFieldWidget amountField;
+
+        private RecipeDetails(SavedRecipe saved) {
+            overlay((ctx, x, y, w, h, theme) -> {
+                ModuleConfigModalSupport.drawTrimmedLine(
+                    RecipeSlotUiModel.slotTitle(saved),
+                    x + CONTENT_X,
+                    y + BODY_TOP,
+                    CONTENT_WIDTH,
+                    EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
+                if (selectedResource != null) {
+                    ModuleConfigModalSupport.drawTrimmedLine(
+                        resourceName(selectedResource),
+                        x + CONTENT_X,
+                        y + BOUND_LABEL_Y,
+                        CONTENT_WIDTH,
+                        EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+                    ModuleConfigModalSupport.drawLine(
+                        detailText(input ? "lower" : "upper") + ": " + currentBoundText(),
+                        x + CONTENT_X,
+                        y + BOUND_LABEL_Y + BOUND_LABEL_SPACING,
+                        EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
+                }
+            });
+            ParentWidget<?> rows = new ParentWidget<>().widthRel(1f);
+            int row = 0;
+            row = appendResources(
+                rows,
+                saved.recipe()
+                    .itemInputs(),
+                true,
+                row);
+            row = appendResources(
+                rows,
+                saved.recipe()
+                    .fluidInputs(),
+                true,
+                row);
+            row = appendResources(
+                rows,
+                saved.recipe()
+                    .itemOutputs(),
+                false,
+                row);
+            row = appendResources(
+                rows,
+                saved.recipe()
+                    .fluidOutputs(),
+                false,
+                row);
+            int contentHeight = row * RESOURCE_ROW_HEIGHT;
+            rows.height(contentHeight);
+            VerticalScrollData scrollData = new VerticalScrollData();
+            scrollData.setScrollSize(contentHeight);
+            ScrollWidget<?> scroll = new ScrollWidget<>(scrollData).pos(CONTENT_X, CONTENT_Y)
+                .size(CONTENT_WIDTH, CONTENT_HEIGHT);
+            scroll.child(rows);
+            child(scroll);
+            amountField = new TextFieldWidget().setMaxLength(MAX_BOUND_DIGITS)
+                .setPattern(INTEGER_PATTERN)
+                .autoUpdateOnChange(true)
+                .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
+                .background(
+                    (ctx, x, y, w, h, theme) -> BorderedRect.draw(
+                        x,
+                        y,
+                        w,
+                        h,
+                        EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+                        EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()))
+                .value(new StringValue.Dynamic(() -> boundInput, value -> boundInput = value))
+                .setFocusOnGuiOpen(false)
+                .setEnabledIf(w -> selectedResource != null);
+            child(
+                amountField.pos(CONTENT_X, BOUND_CONTROL_Y)
+                    .size(AMOUNT_WIDTH, BUTTON_HEIGHT));
+            child(
+                ModuleConfigModalSupport.button(this::canApplyBound, () -> detailText("set"), this::applyBound)
+                    .pos(CONTENT_X + AMOUNT_WIDTH + CONTROL_GAP, BOUND_CONTROL_Y)
+                    .size(BOUND_BUTTON_WIDTH, BUTTON_HEIGHT));
+            child(
+                ModuleConfigModalSupport.button(this::hasBound, () -> detailText("clear"), this::clearBound)
+                    .pos(CONTENT_X + AMOUNT_WIDTH + BOUND_BUTTON_WIDTH + CONTROL_GAP * 2, BOUND_CONTROL_Y)
+                    .size(BOUND_BUTTON_WIDTH, BUTTON_HEIGHT));
+            child(
+                ModuleConfigModalSupport
+                    .button(() -> true, () -> detailText("back"), RecipeConfigModalWidget.this::closeDetails)
+                    .pos(CONTENT_X, FOOTER_Y)
+                    .size(BOUND_BUTTON_WIDTH, BUTTON_HEIGHT));
+        }
+
+        private int appendResources(ParentWidget<?> rows, List<Resource> resources, boolean isInput, int firstRow) {
+            int row = firstRow;
+            for (Resource resource : resources) {
+                String name = resourceName(resource);
+                String chance = BigDecimal.valueOf(resource.effectiveChance(), 2)
+                    .stripTrailingZeros()
+                    .toPlainString();
+                String amount = StatCollector.translateToLocalFormatted(
+                    "galaxia.gui.station.recipe.details." + (isInput ? "input_amount" : "output_amount"),
+                    resource.amount(),
+                    resource.key() instanceof FluidKey ? "L" : "",
+                    chance);
+                rows.child(new com.cleanroommc.modularui.widgets.ButtonWidget<>().overlay((ctx, x, y, w, h, theme) -> {
+                    int border = selectedResource == resource && input == isInput
+                        ? EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()
+                        : EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor();
+                    BorderedRect.draw(x, y, w, h, EnumColors.MAP_COLOR_ROW_BG.getColor(), border);
+                    ModuleConfigModalSupport.drawTrimmedLine(
+                        name,
+                        x + RESOURCE_TEXT_PADDING,
+                        y + RESOURCE_NAME_Y,
+                        w - RESOURCE_TEXT_PADDING * 2,
+                        EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+                    ModuleConfigModalSupport.drawTrimmedLine(
+                        amount,
+                        x + RESOURCE_TEXT_PADDING,
+                        y + RESOURCE_AMOUNT_Y,
+                        w - RESOURCE_TEXT_PADDING * 2,
+                        EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+                })
+                    .tooltip(t -> {
+                        t.addLine(name);
+                        t.addLine(amount);
+                    })
+                    .onMousePressed(button -> {
+                        if (button != 0) return false;
+                        selectedResource = resource;
+                        input = isInput;
+                        boundInput = hasBound() ? currentBoundText() : "";
+                        amountField.setText(boundInput);
+                        return true;
+                    })
+                    .pos(0, row++ * RESOURCE_ROW_HEIGHT)
+                    .widthRelOffset(1f, -SCROLLBAR_GAP)
+                    .height(RESOURCE_ROW_HEIGHT));
+            }
+            return row;
+        }
+
+        private String resourceName(Resource resource) {
+            return resource.key() instanceof ItemStackWrapper item ? item.toStack(1)
+                .getDisplayName()
+                : ((FluidKey) resource.key()).fluid()
+                    .getLocalizedName(resource.fluidStack());
+        }
+
+        private @Nullable InventoryBounds bounds() {
+            AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
+            return facility == null || selectedResource == null ? null : facility.getBound(selectedResource.key());
+        }
+
+        private boolean hasBound() {
+            InventoryBounds bounds = bounds();
+            return bounds != null && (input ? bounds.hasLow() : bounds.hasUpper());
+        }
+
+        private String currentBoundText() {
+            InventoryBounds bounds = bounds();
+            return bounds == null || !(input ? bounds.hasLow() : bounds.hasUpper()) ? detailText("unset")
+                : Long.toString(input ? bounds.low() : bounds.upper());
+        }
+
+        private long parsedAmount() {
+            try {
+                return Long.parseLong(amountField.getText());
+            } catch (NumberFormatException invalid) {
+                return -1L;
+            }
+        }
+
+        private boolean canApplyBound() {
+            InventoryBounds bounds = bounds();
+            long amount = parsedAmount();
+            return bounds != null && amount >= 0L
+                && (input ? amount <= bounds.upperOrDefault() : amount >= bounds.lowOrDefault());
+        }
+
+        private BoundKind boundKind(Resource resource) {
+            boolean item = resource.key() instanceof ItemStackWrapper;
+            return input ? (item ? BoundKind.ITEM_LOWER : BoundKind.FLUID_LOWER)
+                : (item ? BoundKind.ITEM_UPPER : BoundKind.FLUID_UPPER);
+        }
+
+        private void applyBound() {
+            Resource resource = selectedResource;
+            if (resource == null || !canApplyBound()) return;
+            CelestialClient.setInventoryBound(assetId, boundKind(resource), resource.key(), parsedAmount());
+        }
+
+        private void clearBound() {
+            Resource resource = selectedResource;
+            if (resource == null || !hasBound()) return;
+            CelestialClient.clearInventoryBound(assetId, boundKind(resource), resource.key());
+            boundInput = "";
+            amountField.setText(boundInput);
+        }
     }
 
     private boolean canUseRow(int rowIndex) {

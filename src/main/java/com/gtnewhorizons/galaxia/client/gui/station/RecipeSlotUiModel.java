@@ -45,10 +45,6 @@ final class RecipeSlotUiModel {
         return Math.max(min, Math.min(max, parsed));
     }
 
-    static @Nullable String fluidSlotAmountText(@Nullable Resource resource) {
-        return resource != null && resource.key() instanceof FluidKey ? resource.amount() + "L" : null;
-    }
-
     private static @Nullable String resourceSummary(List<Resource> items, List<Resource> fluids) {
         String item = itemSummary(items);
         String fluid = fluidSummary(fluids);

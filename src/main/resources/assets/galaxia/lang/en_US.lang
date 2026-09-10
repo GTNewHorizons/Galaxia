@@ -666,3 +666,15 @@ galaxia.gui.common.filling=Filling
 galaxia.gui.common.active=Active
 galaxia.gui.common.idle=Idle
 galaxia.facility.command.rejected=Facility command rejected and logged.
+
+galaxia.gui.station.recipe.details.open=Details
+galaxia.gui.station.recipe.details.lower=Input lower bound
+galaxia.gui.station.recipe.details.upper=Output upper bound
+galaxia.gui.station.recipe.details.set=Set
+galaxia.gui.station.recipe.details.clear=Clear
+galaxia.gui.station.recipe.details.back=Back
+galaxia.gui.station.recipe.details.unset=Not set
+galaxia.gui.station.recipe.details.input_amount=Input: %s%s
+galaxia.gui.station.recipe.details.output_amount=Output: %s%s, chance: %s%%
+galaxia.gui.station.settings_group.rename=Rename
+galaxia.gui.station.settings_group.members=Members
