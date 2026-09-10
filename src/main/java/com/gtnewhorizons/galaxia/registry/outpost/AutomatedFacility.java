@@ -1684,8 +1684,9 @@ public final class AutomatedFacility extends CelestialAsset {
         Map<ItemStackWrapper, Long> byItem = new LinkedHashMap<>();
         long total = 0L;
         try {
-            for (Map.Entry<ItemStack, Long> entry : module.getConstructionCost()
-                .entrySet()) {
+            Map<ItemStack, Long> refundable = module.isInConstruction() ? module.getConstructionInventory()
+                : module.getConstructionCost();
+            for (Map.Entry<ItemStack, Long> entry : refundable.entrySet()) {
                 if (entry.getKey() == null || entry.getValue() == null || entry.getValue() < 0L) return null;
                 if (entry.getValue() == 0L) continue;
                 ItemStackWrapper item = ItemStackWrapper.of(entry.getKey());

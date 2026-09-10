@@ -45,6 +45,39 @@ final class FacilityModuleCommandTest {
     }
 
     @Test
+    void deconstructingUnpaidConstructionDoesNotCreateMaterials() {
+        AutomatedFacility facility = facility(CelestialAsset.Kind.AUTOMATED_OUTPOST);
+        FacilityCommand.Authority survival = new FacilityCommand.Authority(false, false);
+        FacilityCommand.BuildModules command = new FacilityCommand.BuildModules(
+            facility.assetId,
+            FacilityModuleKind.MINER,
+            FacilityModuleKind.MINER.defaultShape(),
+            physicalSpec(FacilityModuleKind.MINER, ModuleTier.EV),
+            null,
+            false,
+            List.of(ModulePlacement.at(StationTileCoord.of(1, 0))));
+        assertSame(FacilityCommand.Result.CHANGED, facility.applyCommand(command, survival));
+        ModuleInstance module = facility.modules()
+            .getFirst();
+        assertEquals(Buildable.Status.IN_CONSTRUCTION, module.status());
+        assertTrue(
+            facility.itemSnapshot()
+                .isEmpty());
+
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            facility
+                .applyCommand(new FacilityCommand.RequestModuleDeconstruction(facility.assetId, module.id), survival));
+
+        assertTrue(
+            facility.itemSnapshot()
+                .isEmpty());
+        assertTrue(
+            facility.modules()
+                .isEmpty());
+    }
+
+    @Test
     void moduleLookupFollowsClearingAndRestoringFacilityState() {
         AutomatedFacility facility = facility(CelestialAsset.Kind.AUTOMATED_STATION);
         facility.applyCommand(
