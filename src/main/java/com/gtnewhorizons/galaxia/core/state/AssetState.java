@@ -187,7 +187,6 @@ public final class AssetState {
                         .snapshot());
         }
         current.setEnergyStored(replacement.getEnergyStored());
-        current.restoreRecipeScheduleStates(replacement.recipeScheduleStates());
     }
 
     private static NBTTagCompound encodeFacility(AutomatedFacility facility) {
@@ -201,7 +200,7 @@ public final class AssetState {
         writeSettingsGroups(out, facility.settingsGroups());
 
         NBTTagList modules = new NBTTagList();
-        for (ModuleInstance module : facility.modules()) modules.appendTag(writeModule(facility, module));
+        for (ModuleInstance module : facility.modules()) modules.appendTag(writeModule(module));
         out.setTag("modules", modules);
         out.setTag("inventory", writeResources(facility.inventorySnapshot()));
         out.setTag(
@@ -228,13 +227,12 @@ public final class AssetState {
         facility.restoreFilters(readStrings(in, "itemFilters"), true);
         facility.restoreFilters(readStrings(in, "fluidFilters"), false);
 
-        Map<ModuleInstance.ID, RecipeBook.ScheduleState> schedules = new LinkedHashMap<>();
         Map<ModuleInstance.ID, ModuleInstance> modules = new LinkedHashMap<>();
         List<ModuleInstance> restoredModules = new ArrayList<>();
         NBTTagList moduleTags = in.compounds("modules");
         for (int i = 0; i < moduleTags.tagCount(); i++) {
             NbtReader moduleIn = in.element("modules", i, moduleTags.getCompoundTagAt(i));
-            ModuleInstance module = readModule(facility, moduleIn, schedules);
+            ModuleInstance module = readModule(moduleIn);
             if (modules.put(module.id, module) != null)
                 throw fail(moduleIn.path() + ".id", "duplicate module ID " + module.id);
             restoredModules.add(module);
@@ -246,11 +244,10 @@ public final class AssetState {
             new UpkeepSettlement.Credits(readItemCredits(in, "upkeepItems"), readFluidCredits(in, "upkeepFluids")));
         restoreAnchors(facility, modules, in, "anchors");
         facility.setEnergyStored(energyStored);
-        facility.restoreRecipeScheduleStates(schedules);
         return facility;
     }
 
-    private static NBTTagCompound writeModule(AutomatedFacility facility, ModuleInstance module) {
+    private static NBTTagCompound writeModule(ModuleInstance module) {
         NBTTagCompound out = new NBTTagCompound();
         out.setString("id", module.id.toString());
         out.setString(
@@ -284,7 +281,7 @@ public final class AssetState {
         out.setTag("data", writeModuleData(module));
         ModuleOperationState operation = module.operationOrNull();
         if (operation != null) out.setTag("operation", writeOperation(operation));
-        RecipeBook.ScheduleState schedule = module.recipe() != null ? facility.recipeScheduleState(module) : null;
+        RecipeBook.ScheduleState schedule = module.recipe() != null ? module.recipeScheduleState() : null;
         if (schedule != null) {
             NBTTagCompound scheduleTag = new NBTTagCompound();
             scheduleTag.setInteger("cursor", schedule.orderCursor() & 0xFF);
@@ -300,8 +297,7 @@ public final class AssetState {
         return out;
     }
 
-    private static ModuleInstance readModule(AutomatedFacility facility, NbtReader in,
-        Map<ModuleInstance.ID, RecipeBook.ScheduleState> schedules) {
+    private static ModuleInstance readModule(NbtReader in) {
         NBTTagCompound tag = in.tag();
         String path = in.path();
         ModuleInstance.ID id;
@@ -335,13 +331,14 @@ public final class AssetState {
         if (tag.hasKey("operation")) {
             module.setOperation(readOperation(kind, id, in.compound("operation")));
         }
+        if (module.recipe() != null && !tag.hasKey("schedule"))
+            throw fail(path + ".schedule", "missing recipe schedule");
         if (tag.hasKey("schedule")) {
             if (module.recipe() == null) {
                 throw fail(path + ".schedule", "non-recipe module has schedule state");
             }
             NbtReader schedule = in.compound("schedule");
-            schedules.put(
-                id,
+            module.restoreRecipeScheduleState(
                 new RecipeBook.ScheduleState(
                     (byte) schedule.integer("cursor", 0, RecipeBook.MAX_RECIPES - 1),
                     (byte) schedule.integer("remaining", 0, Byte.MAX_VALUE)));

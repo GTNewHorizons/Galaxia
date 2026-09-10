@@ -50,11 +50,11 @@ final class RecipeBookOwnershipCommandTest {
 
         RecipeBook.ScheduleState firstSchedule = new RecipeBook.ScheduleState((byte) 1, (byte) 2);
         RecipeBook.ScheduleState secondSchedule = new RecipeBook.ScheduleState((byte) 3, (byte) 4);
-        facility.restoreRecipeScheduleState(first, firstSchedule);
-        facility.restoreRecipeScheduleState(second, secondSchedule);
+        first.restoreRecipeScheduleState(firstSchedule);
+        second.restoreRecipeScheduleState(secondSchedule);
 
-        assertEquals(firstSchedule, facility.recipeScheduleState(first));
-        assertEquals(secondSchedule, facility.recipeScheduleState(second));
+        assertEquals(firstSchedule, first.recipeScheduleState());
+        assertEquals(secondSchedule, second.recipeScheduleState());
     }
 
     @Test
@@ -63,8 +63,8 @@ final class RecipeBookOwnershipCommandTest {
         ModuleInstance first = addMacerator(facility, moduleId(1), StationTileCoord.of(1, 0));
         ModuleInstance second = addMacerator(facility, moduleId(2), StationTileCoord.of(4, 0));
         createGroupWithMember(facility, first, second);
-        facility.restoreRecipeScheduleState(first, new RecipeBook.ScheduleState((byte) 1, (byte) 2));
-        facility.restoreRecipeScheduleState(second, new RecipeBook.ScheduleState((byte) 3, (byte) 4));
+        first.restoreRecipeScheduleState(new RecipeBook.ScheduleState((byte) 1, (byte) 2));
+        second.restoreRecipeScheduleState(new RecipeBook.ScheduleState((byte) 3, (byte) 4));
         RecipeBook replacement = book("Replacement", 1);
 
         FacilityCommand.Result result = facility.applyCommand(
@@ -74,8 +74,8 @@ final class RecipeBookOwnershipCommandTest {
         assertSame(FacilityCommand.Result.CHANGED, result);
         assertEquals(replacement, facility.recipeBook(first));
         assertSame(facility.recipeBook(first), facility.recipeBook(second));
-        assertEquals(RESET_SCHEDULE, facility.recipeScheduleState(first));
-        assertEquals(RESET_SCHEDULE, facility.recipeScheduleState(second));
+        assertEquals(RESET_SCHEDULE, first.recipeScheduleState());
+        assertEquals(RESET_SCHEDULE, second.recipeScheduleState());
     }
 
     @Test
@@ -88,7 +88,7 @@ final class RecipeBookOwnershipCommandTest {
             facility.applyCommand(
                 new FacilityCommand.ReplaceRecipeBook(facility.assetId, module.id, replacement),
                 FacilityCommand.Authority.NONE));
-        facility.restoreRecipeScheduleState(module, new RecipeBook.ScheduleState((byte) 2, (byte) 3));
+        module.restoreRecipeScheduleState(new RecipeBook.ScheduleState((byte) 2, (byte) 3));
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.ReplaceRecipeBook(facility.assetId, module.id, replacement),
@@ -96,7 +96,7 @@ final class RecipeBookOwnershipCommandTest {
 
         assertSame(FacilityCommand.Result.UNCHANGED, result);
         assertEquals(replacement, facility.recipeBook(module));
-        assertEquals(new RecipeBook.ScheduleState((byte) 2, (byte) 3), facility.recipeScheduleState(module));
+        assertEquals(new RecipeBook.ScheduleState((byte) 2, (byte) 3), module.recipeScheduleState());
     }
 
     @Test
@@ -105,7 +105,7 @@ final class RecipeBookOwnershipCommandTest {
         ModuleInstance module = addMacerator(facility, moduleId(1), StationTileCoord.of(1, 0));
         RecipeBook before = facility.recipeBook(module);
         RecipeBook.ScheduleState scheduleBefore = new RecipeBook.ScheduleState((byte) 2, (byte) 2);
-        facility.restoreRecipeScheduleState(module, scheduleBefore);
+        module.restoreRecipeScheduleState(scheduleBefore);
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.ReplaceRecipeBook(facility.assetId, moduleId(999), book("Missing module", 2)),
@@ -114,7 +114,7 @@ final class RecipeBookOwnershipCommandTest {
         assertEquals(FacilityCommand.Status.REJECTED, result.status());
         assertEquals(FacilityCommand.Rejection.MODULE_NOT_FOUND, result.rejection());
         assertEquals(before, facility.recipeBook(module));
-        assertEquals(scheduleBefore, facility.recipeScheduleState(module));
+        assertEquals(scheduleBefore, module.recipeScheduleState());
     }
 
     @Test

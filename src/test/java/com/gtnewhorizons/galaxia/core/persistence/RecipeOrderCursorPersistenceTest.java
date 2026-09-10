@@ -76,7 +76,7 @@ final class RecipeOrderCursorPersistenceTest {
         assertEquals(RecipeSchedulerMode.ORDER, loadedBook.mode(), "ORDER mode must survive");
         assertEquals(
             new RecipeBook.ScheduleState((byte) 1, (byte) 3),
-            decoded.recipeScheduleState(loaded),
+            loaded.recipeScheduleState(),
             "schedule state must survive independently of the recipe book");
 
         // Verify recipe slot content survived
@@ -121,7 +121,7 @@ final class RecipeOrderCursorPersistenceTest {
             station.applyCommand(
                 new FacilityCommand.ReplaceRecipeBook(station.assetId, macerator.id, book),
                 FacilityCommand.Authority.NONE));
-        station.restoreRecipeScheduleState(macerator, new RecipeBook.ScheduleState((byte) 1, (byte) 3));
+        macerator.restoreRecipeScheduleState(new RecipeBook.ScheduleState((byte) 1, (byte) 3));
 
         return macerator;
     }

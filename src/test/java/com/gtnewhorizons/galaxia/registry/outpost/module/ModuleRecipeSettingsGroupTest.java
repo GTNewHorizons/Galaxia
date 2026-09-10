@@ -89,7 +89,7 @@ final class ModuleRecipeSettingsGroupTest {
         addModule(facility, target);
         replace(facility, source.id, book(RecipeSchedulerMode.ORDER));
         replace(facility, target.id, book(RecipeSchedulerMode.RANDOM));
-        facility.restoreRecipeScheduleState(target, new RecipeBook.ScheduleState((byte) 4, (byte) 2));
+        target.restoreRecipeScheduleState(new RecipeBook.ScheduleState((byte) 4, (byte) 2));
 
         FacilityCommand.Result result = facility.applyCommand(
             new FacilityCommand.CopyModuleSettings(facility.assetId, source.id, List.of(target.id)),
@@ -100,7 +100,7 @@ final class ModuleRecipeSettingsGroupTest {
             RecipeSchedulerMode.ORDER,
             facility.recipeBook(target)
                 .mode());
-        assertEquals(RecipeBook.ScheduleState.RESET, facility.recipeScheduleState(target));
+        assertEquals(RecipeBook.ScheduleState.RESET, target.recipeScheduleState());
     }
 
     private static void replace(AutomatedFacility facility, ModuleInstance.ID moduleId, RecipeBook book) {

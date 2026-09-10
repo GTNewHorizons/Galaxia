@@ -1804,7 +1804,7 @@ final class FacilityPersistenceManagerTest {
             station.applyCommand(
                 new FacilityCommand.ReplaceRecipeBook(station.assetId, macerator.id, expectedBook),
                 FacilityCommand.Authority.NONE));
-        station.restoreRecipeScheduleState(macerator, new RecipeBook.ScheduleState((byte) 0, (byte) 1));
+        macerator.restoreRecipeScheduleState(new RecipeBook.ScheduleState((byte) 0, (byte) 1));
 
         NBTTagCompound encoded = facilityTag(station);
         AutomatedFacility decoded = emptyReplacement(station);
@@ -1817,7 +1817,7 @@ final class FacilityPersistenceManagerTest {
             .orElseThrow();
         RecipeBook decodedBook = decoded.recipeBook(decodedMacerator);
         assertEquals(expectedBook, decodedBook);
-        assertEquals(new RecipeBook.ScheduleState((byte) 0, (byte) 1), decoded.recipeScheduleState(decodedMacerator));
+        assertEquals(new RecipeBook.ScheduleState((byte) 0, (byte) 1), decodedMacerator.recipeScheduleState());
         SavedRecipe decodedSlot = decodedBook.recipes()
             .get(0);
         RecipeSnapshot decodedSnapshot = decodedSlot.recipe();

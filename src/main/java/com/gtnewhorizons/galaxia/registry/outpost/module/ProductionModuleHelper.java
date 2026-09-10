@@ -26,14 +26,13 @@ public final class ProductionModuleHelper {
 
     private static void execute(ModuleInstance instance, AutomatedFacility outpost, Random random) {
         RecipeBook book = outpost.recipeBook(instance);
-        RecipeBook.ScheduleState scheduleState = outpost.recipeScheduleState(instance);
+        RecipeBook.ScheduleState scheduleState = instance.recipeScheduleState();
         RecipeBook.Selection selection = book.select(scheduleState, random)
             .orElse(null);
         if (selection == null) return;
 
         boolean produced = tryProduce(outpost, selection.recipe(), random);
-        outpost.installRecipeScheduleState(
-            instance,
+        instance.restoreRecipeScheduleState(
             produced ? book.advanceAfterSuccess(scheduleState, selection)
                 : book.advanceAfterFailure(scheduleState, selection));
     }

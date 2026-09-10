@@ -15,6 +15,7 @@ import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
@@ -27,6 +28,7 @@ public class ModuleInstance implements Buildable {
     private final FacilityModuleRegistry.Definition definition;
     private IModuleComponent component;
     private @Nullable AutomatedFacility facilityOwner;
+    private @Nullable RecipeBook.ScheduleState recipeScheduleState;
 
     private Buildable.Status status = Buildable.Status.IN_CONSTRUCTION;
     private int ticks = 0;
@@ -80,6 +82,7 @@ public class ModuleInstance implements Buildable {
         ModuleShape shape, ModuleTier tier) {
         this.id = id;
         this.definition = definition;
+        this.recipeScheduleState = definition.recipe() == null ? null : RecipeBook.ScheduleState.RESET;
         this.anchor = anchor;
         this.shape = shape;
         this.tier = tier;
@@ -87,6 +90,17 @@ public class ModuleInstance implements Buildable {
 
     public IModuleComponent component() {
         return component;
+    }
+
+    public RecipeBook.ScheduleState recipeScheduleState() {
+        if (recipeScheduleState == null) throw new IllegalStateException("Non-recipe module has no schedule " + id);
+        return recipeScheduleState;
+    }
+
+    public void restoreRecipeScheduleState(RecipeBook.ScheduleState state) {
+        if (recipeScheduleState == null || state == null)
+            throw new IllegalStateException("Invalid recipe schedule for " + id);
+        recipeScheduleState = state;
     }
 
     public void setComponent(IModuleComponent component) {

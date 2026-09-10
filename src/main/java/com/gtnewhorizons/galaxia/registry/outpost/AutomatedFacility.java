@@ -71,7 +71,6 @@ public final class AutomatedFacility extends CelestialAsset {
     private final StationLayout layout;
     private final LayoutCacheBundle layoutCache;
     private final FacilityModuleSettings moduleSettings;
-    private final Map<ModuleInstance.ID, RecipeBook.ScheduleState> recipeScheduleStates = new LinkedHashMap<>();
 
     private UpkeepLedger.UpkeepSummary upkeepSummary;
     private Map<ItemStackWrapper, Long> operationMaterialNeeds;
@@ -895,9 +894,6 @@ public final class AutomatedFacility extends CelestialAsset {
         modulesById.put(module.id, module);
         module.setFacilityOwner(this);
         moduleConfigurationChanged();
-        if (module.recipe() != null) {
-            recipeScheduleStates.put(module.id, RecipeBook.ScheduleState.RESET);
-        }
         if (!FacilityModuleRegistry.get(module.kind())
             .settingsGroups()) return;
         if (settingsPlan == null) throw new IllegalStateException("Missing settings attachment for " + module.id);
@@ -1092,9 +1088,6 @@ public final class AutomatedFacility extends CelestialAsset {
         module.setFacilityOwner(this);
         moduleConfigurationChanged();
         if (moduleSettings.supports(module)) moduleSettings.attach(module, null);
-        if (module.recipe() != null) {
-            recipeScheduleStates.put(module.id, RecipeBook.ScheduleState.RESET);
-        }
         LOG.debug(
             "[PERSIST] addModule: added {} id={} anchor=({},{}) shape={} status={} (total={})",
             module.kind(),
@@ -1164,7 +1157,7 @@ public final class AutomatedFacility extends CelestialAsset {
         modulesById.remove(module.id);
         module.setFacilityOwner(null);
         moduleConfigurationChanged();
-        recipeScheduleStates.remove(module.id);
+
         if (layout != null) layout.removeTileForModule(module.id);
         markDirty();
         SatelliteNetworkService.refreshFacilityEndpoints(this);
@@ -1176,7 +1169,7 @@ public final class AutomatedFacility extends CelestialAsset {
         modulesById.clear();
         moduleConfigurationChanged();
         moduleSettings.restore(List.of());
-        recipeScheduleStates.clear();
+
         markDirty();
     }
 
@@ -1195,9 +1188,6 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         for (ModuleInstance module : restored) {
             module.setFacilityOwner(this);
-            if (module.recipe() != null) {
-                recipeScheduleStates.put(module.id, RecipeBook.ScheduleState.RESET);
-            }
         }
         moduleConfigurationChanged();
     }
@@ -1226,45 +1216,6 @@ public final class AutomatedFacility extends CelestialAsset {
         return moduleSettings.recipeBook(module.id);
     }
 
-    public RecipeBook.ScheduleState recipeScheduleState(ModuleInstance module) {
-        requireRecipeModule(module, "Recipe schedule requested");
-        RecipeBook.ScheduleState state = recipeScheduleStates.get(module.id);
-        if (state == null) throw new IllegalStateException("Recipe module missing schedule state " + module.id);
-        return state;
-    }
-
-    public void restoreRecipeScheduleState(ModuleInstance module, RecipeBook.ScheduleState scheduleState) {
-        requireRecipeModule(module, "Recipe schedule restore requested");
-        if (scheduleState == null) throw new IllegalStateException("Recipe schedule state must not be null");
-        recipeScheduleStates.put(module.id, scheduleState);
-    }
-
-    public void installRecipeScheduleState(ModuleInstance module, RecipeBook.ScheduleState scheduleState) {
-        restoreRecipeScheduleState(module, scheduleState);
-    }
-
-    public Map<ModuleInstance.ID, RecipeBook.ScheduleState> recipeScheduleStates() {
-        Map<ModuleInstance.ID, RecipeBook.ScheduleState> scheduleStates = new LinkedHashMap<>();
-        for (ModuleInstance module : modules) {
-            if (module.recipe() == null) continue;
-            scheduleStates.put(module.id, recipeScheduleState(module));
-        }
-        return Collections.unmodifiableMap(scheduleStates);
-    }
-
-    public void restoreRecipeScheduleStates(Map<ModuleInstance.ID, RecipeBook.ScheduleState> scheduleStates) {
-        if (scheduleStates == null) throw new IllegalStateException("Missing facility recipe schedule states");
-        Map<ModuleInstance.ID, RecipeBook.ScheduleState> remaining = new LinkedHashMap<>(scheduleStates);
-        for (ModuleInstance module : modules) {
-            if (module.recipe() != null) {
-                restoreRecipeScheduleState(module, remaining.remove(module.id));
-            }
-        }
-        if (!remaining.isEmpty()) {
-            throw new IllegalStateException("Recipe schedule state references missing module " + remaining.keySet());
-        }
-    }
-
     private void requireRecipeModule(ModuleInstance module, String action) {
         if (module == null || module.recipe() == null || moduleById(module.id) == null) {
             throw new IllegalStateException(action + " for non-recipe module " + (module == null ? "null" : module.id));
@@ -1273,9 +1224,9 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private void resetRecipeSchedules(Set<ModuleInstance.ID> moduleIds) {
         for (ModuleInstance.ID moduleId : moduleIds) {
-            if (recipeScheduleStates.containsKey(moduleId)) {
-                recipeScheduleStates.put(moduleId, RecipeBook.ScheduleState.RESET);
-            }
+            ModuleInstance module = moduleById(moduleId);
+            if (module != null && module.recipe() != null)
+                module.restoreRecipeScheduleState(RecipeBook.ScheduleState.RESET);
         }
     }
 

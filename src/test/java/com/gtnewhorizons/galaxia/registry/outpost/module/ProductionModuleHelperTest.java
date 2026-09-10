@@ -49,13 +49,13 @@ final class ProductionModuleHelperTest {
         ItemStackWrapper output = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
         facility.insert(input, 1L);
         RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
-        facility.restoreRecipeScheduleState(module, before);
+        module.restoreRecipeScheduleState(before);
 
         execute(facility, module);
 
         assertEquals(0L, facility.itemAmount(input));
         assertEquals(1L, facility.itemAmount(output));
-        assertEquals(new RecipeBook.ScheduleState((byte) 1, (byte) 1), facility.recipeScheduleState(module));
+        assertEquals(new RecipeBook.ScheduleState((byte) 1, (byte) 1), module.recipeScheduleState());
     }
 
     @Test
@@ -63,11 +63,11 @@ final class ProductionModuleHelperTest {
         AutomatedFacility facility = facility();
         ModuleInstance module = installBook(facility, orderBook(recipe(Items.diamond, Items.iron_ingot, 1)));
         RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
-        facility.restoreRecipeScheduleState(module, before);
+        module.restoreRecipeScheduleState(before);
 
         execute(facility, module);
 
-        assertEquals(before, facility.recipeScheduleState(module));
+        assertEquals(before, module.recipeScheduleState());
     }
 
     @Test
@@ -84,12 +84,12 @@ final class ProductionModuleHelperTest {
             new FacilityCommand.SetInventoryBound(facility.assetId, BoundKind.ITEM_LOWER, input, 100L),
             FacilityCommand.Authority.NONE);
         RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
-        facility.restoreRecipeScheduleState(module, before);
+        module.restoreRecipeScheduleState(before);
 
         execute(facility, module);
 
         assertEquals(105L, facility.itemAmount(input));
-        assertEquals(before, facility.recipeScheduleState(module));
+        assertEquals(before, module.recipeScheduleState());
     }
 
     @Test
@@ -106,12 +106,12 @@ final class ProductionModuleHelperTest {
                 LogisticsConfigAccessMode.FULL),
             FacilityCommand.Authority.NONE);
         RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
-        facility.restoreRecipeScheduleState(module, before);
+        module.restoreRecipeScheduleState(before);
 
         execute(facility, module);
 
         assertEquals(5L, facility.itemAmount(input));
-        assertEquals(before, facility.recipeScheduleState(module));
+        assertEquals(before, module.recipeScheduleState());
     }
 
     @Test
@@ -129,13 +129,13 @@ final class ProductionModuleHelperTest {
         facility.insert(input, 1L);
         facility.insert(output, 5L);
         RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
-        facility.restoreRecipeScheduleState(module, before);
+        module.restoreRecipeScheduleState(before);
 
         execute(facility, module);
 
         assertEquals(1L, facility.itemAmount(input));
         assertEquals(5L, facility.itemAmount(output));
-        assertEquals(before, facility.recipeScheduleState(module));
+        assertEquals(before, module.recipeScheduleState());
     }
 
     @Test
@@ -146,12 +146,12 @@ final class ProductionModuleHelperTest {
         facility.insert(input, 1L);
         facility.addFilter(new ItemStack(Items.gold_ingot).getUnlocalizedName(), true);
         RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
-        facility.restoreRecipeScheduleState(module, before);
+        module.restoreRecipeScheduleState(before);
 
         execute(facility, module);
 
         assertEquals(1L, facility.itemAmount(input));
-        assertEquals(before, facility.recipeScheduleState(module));
+        assertEquals(before, module.recipeScheduleState());
     }
 
     private static void execute(AutomatedFacility facility, ModuleInstance module) {
@@ -175,7 +175,7 @@ final class ProductionModuleHelperTest {
             facility.insert(ItemStackWrapper.of(new ItemStack(Items.gold_ingot)), 1L);
             facility.insert(ItemStackWrapper.of(new ItemStack(Items.stick)), 1L);
             var inventoryBefore = facility.inventorySnapshot();
-            facility.restoreRecipeScheduleState(module, new RecipeBook.ScheduleState((byte) 1, (byte) 3));
+            module.restoreRecipeScheduleState(new RecipeBook.ScheduleState((byte) 1, (byte) 3));
 
             execute(facility, module);
 
@@ -183,7 +183,7 @@ final class ProductionModuleHelperTest {
             assertEquals(inventoryBefore, facility.inventorySnapshot());
             assertEquals(
                 expected,
-                facility.recipeScheduleState(module)
+                module.recipeScheduleState()
                     .orderCursor());
             execute(facility, module);
             Item output = policy == NotDoablePolicy.SKIP ? Items.feather : Items.coal;
