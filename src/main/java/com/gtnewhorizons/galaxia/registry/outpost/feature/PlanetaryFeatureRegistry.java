@@ -7,14 +7,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.types.MagmaPoolFeature;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.types.MineralVeinFeature;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.types.RareCrystalFormationFeature;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.types.RegolithFlatsFeature;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.types.StableBedrockFeature;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.types.SubsurfaceIcePocketFeature;
-import com.gtnewhorizons.galaxia.registry.outpost.feature.types.ThermalSinkZoneFeature;
-import com.gtnewhorizons.galaxia.registry.outpost.feature.types.VolatileDepositFeature;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 
 public final class PlanetaryFeatureRegistry {
@@ -24,18 +23,30 @@ public final class PlanetaryFeatureRegistry {
     private static final PlanetaryFeature MINERAL_VEIN_FEATURE = new MineralVeinFeature();
     private static final PlanetaryFeature SUBSURFACE_ICE_POCKET_FEATURE = new SubsurfaceIcePocketFeature();
     private static final PlanetaryFeature MAGMA_POOL_FEATURE = new MagmaPoolFeature();
-    private static final PlanetaryFeature VOLATILE_DEPOSIT_FEATURE = new VolatileDepositFeature();
     private static final PlanetaryFeature RARE_CRYSTAL_FORMATION_FEATURE = new RareCrystalFormationFeature();
-    private static final PlanetaryFeature THERMAL_SINK_ZONE_FEATURE = new ThermalSinkZoneFeature();
 
     public static final PlanetaryFeatureDefinition REGOLITH_FLATS = REGOLITH_FLATS_FEATURE.definition();
     public static final PlanetaryFeatureDefinition STABLE_BEDROCK = STABLE_BEDROCK_FEATURE.definition();
     public static final PlanetaryFeatureDefinition MINERAL_VEIN = MINERAL_VEIN_FEATURE.definition();
     public static final PlanetaryFeatureDefinition SUBSURFACE_ICE_POCKET = SUBSURFACE_ICE_POCKET_FEATURE.definition();
     public static final PlanetaryFeatureDefinition MAGMA_POOL = MAGMA_POOL_FEATURE.definition();
-    public static final PlanetaryFeatureDefinition VOLATILE_DEPOSIT = VOLATILE_DEPOSIT_FEATURE.definition();
+    public static final PlanetaryFeatureDefinition VOLATILE_DEPOSIT = PlanetaryFeatureDefinition
+        .builder("volatile_deposit")
+        .displayName("Volatile Deposit")
+        .description("Chemical volatile pocket")
+        .texture(GalaxiaAPI.LocationGalaxia("textures/gui/station/features/volatile_deposit.png"))
+        .layer(PlanetaryFeatureLayer.RESOURCE)
+        .placement(PlanetaryFeaturePlacement.clusteredPatch(5.0, 2.0))
+        .build();
     public static final PlanetaryFeatureDefinition RARE_CRYSTAL_FORMATION = RARE_CRYSTAL_FORMATION_FEATURE.definition();
-    public static final PlanetaryFeatureDefinition THERMAL_SINK_ZONE = THERMAL_SINK_ZONE_FEATURE.definition();
+    public static final PlanetaryFeatureDefinition THERMAL_SINK_ZONE = PlanetaryFeatureDefinition
+        .builder("thermal_sink_zone")
+        .displayName("Thermal Sink Zone")
+        .description("Naturally heat-absorbing terrain")
+        .texture(GalaxiaAPI.LocationGalaxia("textures/gui/station/features/thermal_sink_zone.png"))
+        .layer(PlanetaryFeatureLayer.ENVIRONMENT)
+        .placement(PlanetaryFeaturePlacement.patch(12.0, 5.0))
+        .build();
 
     private static final Map<PlanetaryFeatureKey, PlanetaryFeatureDefinition> FEATURES = new LinkedHashMap<>();
     private static final Map<PlanetaryFeatureKey, PlanetaryFeature> BEHAVIORS = new LinkedHashMap<>();
@@ -51,9 +62,9 @@ public final class PlanetaryFeatureRegistry {
         register(MINERAL_VEIN_FEATURE);
         register(SUBSURFACE_ICE_POCKET_FEATURE);
         register(MAGMA_POOL_FEATURE);
-        register(VOLATILE_DEPOSIT_FEATURE);
+        register(VOLATILE_DEPOSIT);
         register(RARE_CRYSTAL_FORMATION_FEATURE);
-        register(THERMAL_SINK_ZONE_FEATURE);
+        register(THERMAL_SINK_ZONE);
     }
 
     public static synchronized PlanetaryFeature register(PlanetaryFeature feature) {
