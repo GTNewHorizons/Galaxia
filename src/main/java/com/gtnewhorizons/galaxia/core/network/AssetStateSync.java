@@ -155,8 +155,11 @@ public final class AssetStateSync {
             long revision = nextRevision(previous);
             Publication removal = new Publication(teamId, AssetSyncPacket.assetRemoved(assetId, revision));
             publications.put(assetId, removal);
+            List<AssetStateFramePacket> frames = null;
             for (UUID recipientId : transport.eligibleRecipients(teamId)) {
-                if (recipientId != null && send(recipientId, removal.packet())) {
+                if (recipientId == null) continue;
+                if (frames == null) frames = prepareFrames(removal.packet());
+                if (send(recipientId, frames)) {
                     recipientCursors.put(
                         new RecipientAsset(recipientId, assetId),
                         removal.packet()
@@ -183,12 +186,14 @@ public final class AssetStateSync {
                 }
             }
             if (publication == null) return false;
+            List<AssetStateFramePacket> frames = null;
             for (UUID recipientId : recipients) {
                 if (recipientId == null) continue;
                 RecipientAsset key = new RecipientAsset(recipientId, assetId);
                 if (recipientCursors.getOrDefault(key, NO_PUBLICATION) == publication.packet()
                     .publishedRevision()) continue;
-                if (send(recipientId, publication.packet())) {
+                if (frames == null) frames = prepareFrames(publication.packet());
+                if (send(recipientId, frames)) {
                     recipientCursors.put(
                         key,
                         publication.packet()
@@ -260,13 +265,31 @@ public final class AssetStateSync {
         }
 
         private boolean send(UUID recipientId, AssetSyncPacket packet) {
+            return send(recipientId, prepareFrames(packet));
+        }
+
+        private static List<AssetStateFramePacket> prepareFrames(AssetSyncPacket packet) {
             try {
-                for (AssetStateFramePacket frame : frame(packet)) transport.send(recipientId, frame);
-                return true;
+                return frame(packet);
             } catch (RuntimeException ex) {
                 LOG.warn(
                     "Rejected oversized or malformed asset publication for {}: {}",
                     packet.assetId(),
+                    ex.getMessage());
+                return List.of();
+            }
+        }
+
+        private boolean send(UUID recipientId, List<AssetStateFramePacket> frames) {
+            if (frames.isEmpty()) return false;
+            try {
+                for (AssetStateFramePacket frame : frames) transport.send(recipientId, frame);
+                return true;
+            } catch (RuntimeException ex) {
+                LOG.warn(
+                    "Failed asset publication for {}: {}",
+                    frames.getFirst()
+                        .assetId(),
                     ex.getMessage());
                 return false;
             }
