@@ -41,8 +41,8 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     private static final int ACTION_BUTTON_HEIGHT = 20;
     private static final int ACTION_BUTTON_COLUMN_GAP = 8;
     private static final int ACTION_BUTTON_ROW_GAP = 6;
-    private static final int ACTION_GRID_WIDTH = ACTION_BUTTON_WIDTH * ModulePanelActionLayout.COLUMNS
-        + ACTION_BUTTON_COLUMN_GAP;
+    private static final int ACTION_COLUMNS = 2;
+    private static final int ACTION_GRID_WIDTH = ACTION_BUTTON_WIDTH * ACTION_COLUMNS + ACTION_BUTTON_COLUMN_GAP;
     private static final int DESTROY_MULTIPLE_TOGGLE_HEIGHT = 14;
     private static final int DESTROY_MULTIPLE_TOGGLE_Y = DESTROY_BUTTON_Y - DESTROY_MULTIPLE_TOGGLE_HEIGHT - 4;
     private static final int DESTROY_MULTIPLE_CHECKBOX_SIZE = 10;
@@ -84,9 +84,9 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
             createDestroyButton().pos(DESTROY_BUTTON_X, DESTROY_BUTTON_Y)
                 .size(DESTROY_BUTTON_WIDTH, DESTROY_BUTTON_HEIGHT));
         for (int slot = 0; slot < ModulePanelAction.values().length; slot++) {
-            ModulePanelActionLayout.Cell cell = ModulePanelActionLayout.cellForIndex(slot);
-            int actionX = DESTROY_BUTTON_X + cell.column() * (ACTION_BUTTON_WIDTH + ACTION_BUTTON_COLUMN_GAP);
-            int actionY = ACTION_BUTTON_START_Y + cell.row() * (ACTION_BUTTON_HEIGHT + ACTION_BUTTON_ROW_GAP);
+            int actionX = DESTROY_BUTTON_X + slot % ACTION_COLUMNS * (ACTION_BUTTON_WIDTH + ACTION_BUTTON_COLUMN_GAP);
+            int actionY = ACTION_BUTTON_START_Y
+                + slot / ACTION_COLUMNS * (ACTION_BUTTON_HEIGHT + ACTION_BUTTON_ROW_GAP);
             int actionSlot = slot;
             child(
                 createModuleActionButton(actionSlot).pos(actionX, actionY)

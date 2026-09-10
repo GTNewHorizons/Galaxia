@@ -2,7 +2,8 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.List;
 import java.util.Map;
@@ -43,14 +44,11 @@ final class StationModuleAlertRegistryTest {
         ModuleInstance module = moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(1, 0), 1L);
         addModule(facility, module);
 
-        List<StationModuleAlert> alerts = StationModuleAlert.alerts(facility)
-            .getOrDefault(module.id, List.of());
+        StationModuleAlert alerts = StationModuleAlert.alerts(facility)
+            .get(module.id);
 
-        assertFalse(alerts.isEmpty());
-        assertEquals(
-            StationModuleAlert.Severity.YELLOW,
-            alerts.get(0)
-                .severity());
+        assertNotNull(alerts);
+        assertEquals(StationModuleAlert.Severity.YELLOW, alerts.severity());
     }
 
     @Test
@@ -61,13 +59,10 @@ final class StationModuleAlertRegistryTest {
 
         tickUpkeepMinute(facility);
 
-        List<StationModuleAlert> alerts = StationModuleAlert.alerts(facility)
-            .getOrDefault(module.id, List.of());
-        assertFalse(alerts.isEmpty());
-        assertEquals(
-            StationModuleAlert.Severity.RED,
-            alerts.get(0)
-                .severity());
+        StationModuleAlert alerts = StationModuleAlert.alerts(facility)
+            .get(module.id);
+        assertNotNull(alerts);
+        assertEquals(StationModuleAlert.Severity.RED, alerts.severity());
     }
 
     @Test
@@ -77,10 +72,10 @@ final class StationModuleAlertRegistryTest {
         addModule(facility, module);
         facility.insert(ItemStackWrapper.of(new ItemStack(Items.iron_ingot)), 1);
 
-        List<StationModuleAlert> alerts = StationModuleAlert.alerts(facility)
-            .getOrDefault(module.id, List.of());
+        StationModuleAlert alerts = StationModuleAlert.alerts(facility)
+            .get(module.id);
 
-        assertEquals(List.of(), alerts);
+        assertNull(alerts);
     }
 
     @Test
@@ -94,18 +89,14 @@ final class StationModuleAlertRegistryTest {
         addModule(facility, low);
         facility.insert(ItemStackWrapper.of(new ItemStack(Items.iron_ingot)), 1);
 
-        assertEquals(
-            List.of(),
+        assertNull(
             StationModuleAlert.alerts(facility)
-                .getOrDefault(high.id, List.of()));
-        List<StationModuleAlert> lowAlerts = StationModuleAlert.alerts(facility)
-            .getOrDefault(low.id, List.of());
+                .get(high.id));
+        StationModuleAlert lowAlerts = StationModuleAlert.alerts(facility)
+            .get(low.id);
 
-        assertFalse(lowAlerts.isEmpty());
-        assertEquals(
-            StationModuleAlert.Severity.YELLOW,
-            lowAlerts.get(0)
-                .severity());
+        assertNotNull(lowAlerts);
+        assertEquals(StationModuleAlert.Severity.YELLOW, lowAlerts.severity());
     }
 
     @Test
@@ -116,10 +107,9 @@ final class StationModuleAlertRegistryTest {
         addModule(facility, module);
         facility.insert(upkeepItem, 1);
 
-        assertEquals(
-            List.of(),
+        assertNull(
             StationModuleAlert.alerts(facility)
-                .getOrDefault(module.id, List.of()));
+                .get(module.id));
 
         tickUpkeepMinute(facility);
 

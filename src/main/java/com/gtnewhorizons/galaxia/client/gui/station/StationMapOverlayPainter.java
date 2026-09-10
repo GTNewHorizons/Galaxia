@@ -46,7 +46,7 @@ final class StationMapOverlayPainter {
     }
 
     static void drawModuleAlerts(Map<StationTileCoord, PlacedTile> tiles,
-        Map<ModuleInstance.ID, List<StationModuleAlert>> moduleAlerts, StationMapFrame frame) {
+        Map<ModuleInstance.ID, StationModuleAlert> moduleAlerts, StationMapFrame frame) {
         if (moduleAlerts.isEmpty()) return;
         for (Map.Entry<StationTileCoord, PlacedTile> entry : tiles.entrySet()) {
             ModuleInstance module = moduleOf(entry.getValue());
@@ -54,7 +54,7 @@ final class StationMapOverlayPainter {
                 .equals(alertBadgeCoord(module, tiles))) {
                 continue;
             }
-            StationModuleAlert alert = firstAlert(moduleAlerts, module);
+            StationModuleAlert alert = moduleAlerts.get(module.id);
             if (alert == null) continue;
             drawModuleAlertIcon(frame.tileLocalX(entry.getKey()), frame.tileLocalY(entry.getKey()), alert);
         }
@@ -215,30 +215,26 @@ final class StationMapOverlayPainter {
     }
 
     static void drawModuleAlertTooltip(Map<StationTileCoord, PlacedTile> tiles,
-        Map<ModuleInstance.ID, List<StationModuleAlert>> moduleAlerts, @Nullable StationTileCoord hovered,
-        int localMouseX, int localMouseY, StationMapFrame frame) {
+        Map<ModuleInstance.ID, StationModuleAlert> moduleAlerts, @Nullable StationTileCoord hovered, int localMouseX,
+        int localMouseY, StationMapFrame frame) {
         if (moduleAlerts.isEmpty() || hovered == null) return;
         PlacedTile tile = tiles.get(hovered);
         ModuleInstance module = moduleOf(tile);
         if (module == null) return;
-        List<StationModuleAlert> alerts = moduleAlerts.get(module.id);
-        if (alerts == null || alerts.isEmpty()) return;
+        StationModuleAlert alert = moduleAlerts.get(module.id);
+        if (alert == null) return;
 
         FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
         int maxTextWidth = Math.max(40, Math.min(180, frame.widgetWidth() - 20));
-        int tooltipWidth = 40;
-        for (StationModuleAlert alert : alerts) {
-            tooltipWidth = Math.max(tooltipWidth, fr.getStringWidth(fr.trimStringToWidth(alert.title(), maxTextWidth)));
-            tooltipWidth = Math
-                .max(tooltipWidth, fr.getStringWidth(fr.trimStringToWidth(alert.message(), maxTextWidth)));
-        }
-        tooltipWidth += 12;
-        int tooltipHeight = 8 + alerts.size() * (fr.FONT_HEIGHT * 2 + 6);
+        String title = fr.trimStringToWidth(alert.title(), maxTextWidth);
+        String message = fr.trimStringToWidth(alert.message(), maxTextWidth);
+        int tooltipWidth = Math.max(40, Math.max(fr.getStringWidth(title), fr.getStringWidth(message))) + 12;
+        int tooltipHeight = 8 + fr.FONT_HEIGHT * 2 + 6;
         int tooltipX = Math.min(localMouseX + 10, frame.widgetWidth() - tooltipWidth - 2);
         int tooltipY = Math.min(localMouseY + 10, frame.widgetHeight() - tooltipHeight - 2);
         tooltipX = Math.max(2, tooltipX);
         tooltipY = Math.max(2, tooltipY);
-        boolean red = hasRedAlert(alerts);
+        boolean red = alert.severity() == StationModuleAlert.Severity.RED;
         BorderedRect.draw(
             tooltipX,
             tooltipY,
@@ -248,14 +244,9 @@ final class StationMapOverlayPainter {
             red ? EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_BLOCKING.getColor()
                 : EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_WARNING.getColor());
         int textY = tooltipY + 4;
-        for (StationModuleAlert alert : alerts) {
-            String title = fr.trimStringToWidth(alert.title(), maxTextWidth);
-            String message = fr.trimStringToWidth(alert.message(), maxTextWidth);
-            fr.drawStringWithShadow(title, tooltipX + 6, textY, alertTitleColor(alert));
-            textY += fr.FONT_HEIGHT + 2;
-            fr.drawStringWithShadow(message, tooltipX + 6, textY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-            textY += fr.FONT_HEIGHT + 4;
-        }
+        fr.drawStringWithShadow(title, tooltipX + 6, textY, alertTitleColor(alert));
+        textY += fr.FONT_HEIGHT + 2;
+        fr.drawStringWithShadow(message, tooltipX + 6, textY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
     }
 
     static List<ModuleFootprintProjection.Segment> moduleOverlaySegments(ModuleInstance module, StationMapFrame frame) {
@@ -311,25 +302,12 @@ final class StationMapOverlayPainter {
         ModuleConfigModalSupport.renderTextureIcon(icon, tileX + 2, tileY + 2, ALERT_ICON_SIZE, ALERT_ICON_SIZE);
     }
 
-    private static @Nullable StationModuleAlert firstAlert(
-        Map<ModuleInstance.ID, List<StationModuleAlert>> moduleAlerts, ModuleInstance module) {
-        List<StationModuleAlert> alerts = moduleAlerts.get(module.id);
-        return alerts == null || alerts.isEmpty() ? null : alerts.get(0);
-    }
-
     private static @Nullable ModuleInstance moduleOf(@Nullable PlacedTile tile) {
         return tile == null ? null : tile.module();
     }
 
     private static ResourceLocation defaultAlertIcon(StationModuleAlert.Severity severity) {
         return severity == StationModuleAlert.Severity.RED ? DEFAULT_RED_ALERT_ICON : DEFAULT_ALERT_ICON;
-    }
-
-    private static boolean hasRedAlert(List<StationModuleAlert> alerts) {
-        for (StationModuleAlert alert : alerts) {
-            if (alert.severity() == StationModuleAlert.Severity.RED) return true;
-        }
-        return false;
     }
 
     private static int alertTitleColor(StationModuleAlert alert) {

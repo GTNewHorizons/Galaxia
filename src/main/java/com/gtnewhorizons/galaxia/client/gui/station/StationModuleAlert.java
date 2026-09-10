@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -33,9 +32,9 @@ public record StationModuleAlert(Severity severity, String title, String message
         return new StationModuleAlert(Severity.RED, title, message, icon);
     }
 
-    public static Map<ModuleInstance.ID, List<StationModuleAlert>> alerts(AutomatedFacility facility) {
+    public static Map<ModuleInstance.ID, StationModuleAlert> alerts(AutomatedFacility facility) {
         if (facility == null) return Map.of();
-        Map<ModuleInstance.ID, List<StationModuleAlert>> result = new LinkedHashMap<>();
+        Map<ModuleInstance.ID, StationModuleAlert> result = new LinkedHashMap<>();
         Set<ModuleInstance.ID> unpaid = null;
         for (ModuleInstance module : facility.modules()) {
             StationModuleAlert alert;
@@ -54,7 +53,7 @@ public record StationModuleAlert(Severity severity, String title, String message
                 if (!unpaid.contains(module.id)) continue;
                 alert = warning("Upkeep", "Missing upkeep resources.", EnumTextures.ICON_STATION_ALERT_WARNING.get());
             }
-            result.put(module.id, List.of(alert));
+            result.put(module.id, alert);
         }
         return result.isEmpty() ? Map.of() : Collections.unmodifiableMap(result);
     }

@@ -253,7 +253,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
 
         updateHover(layout);
         Map<StationTileCoord, PlacedTile> tiles = layout.snapshot();
-        Map<ModuleInstance.ID, List<StationModuleAlert>> moduleAlerts = StationModuleAlert.alerts(facility);
+        Map<ModuleInstance.ID, StationModuleAlert> moduleAlerts = StationModuleAlert.alerts(facility);
         updateExpansionSlots(layout);
 
         StationMapFrame frame = mapFrame();
