@@ -91,6 +91,33 @@ final class LogisticStoreTest {
     }
 
     @Test
+    void signalsFollowExplicitResourceConfigurationIncludingAbsentStock() {
+        AutomatedFacility facility = facility();
+        ItemStackWrapper stocked = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        ItemStackWrapper missing = new ItemStackWrapper(Items.gold_ingot, 0, null);
+        ItemStackWrapper disabled = new ItemStackWrapper(Items.diamond, 0, null);
+        facility.insert(stocked, 20);
+        facility.insert(disabled, 10);
+        assertTrue(
+            LogisticStore.collectSignals(List.of(facility))
+                .isEmpty());
+
+        facility.logisticsConfig.set(missing, new LogisticsResourceConfig(5, 1, true, false));
+        facility.logisticsConfig.set(stocked, new LogisticsResourceConfig(3, 1, false, true));
+        facility.logisticsConfig.set(disabled, LogisticsResourceConfig.DEFAULT);
+        List<LogisticSignal> signals = LogisticStore.collectSignals(List.of(facility));
+        assertEquals(2, signals.size());
+        assertEquals(-5L, signalFor(signals, facility, missing).amount());
+        assertEquals(17L, signalFor(signals, facility, stocked).amount());
+
+        facility.logisticsConfig.reset(missing);
+        facility.logisticsConfig.reset(stocked);
+        assertTrue(
+            LogisticStore.collectSignals(List.of(facility))
+                .isEmpty());
+    }
+
+    @Test
     void lostReceiverDoesNotChangeFlightTimeOrReturnCargo() {
         AutomatedFacility source = facility();
         AutomatedFacility destination = facility();

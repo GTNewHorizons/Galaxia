@@ -3,7 +3,6 @@ package com.gtnewhorizons.galaxia.registry.outpost.logistics;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -145,19 +144,16 @@ public final class LogisticStore {
     }
 
     private static void collectSignals(CelestialAsset asset, List<LogisticSignal> signals) {
-        Map<ItemStackWrapper, Long> snapshot = itemSnapshot(asset);
-        Set<ItemStackWrapper> allResources = new LinkedHashSet<>();
-        for (InventoryKey key : asset.logisticsConfig.snapshot()
-            .keySet()) {
-            if (key instanceof ItemStackWrapper item) {
-                allResources.add(item);
-            }
-        }
-        allResources.addAll(snapshot.keySet());
-
-        for (ItemStackWrapper resource : allResources) {
+        Set<InventoryKey> configuredResources = asset.logisticsConfig.configuredResources();
+        if (configuredResources.isEmpty()) return;
+        Map<ItemStackWrapper, Long> snapshot = asset instanceof IDistributedInventory physicalInventory
+            ? physicalInventory.aggregatedItems()
+            : Map.of();
+        for (InventoryKey key : configuredResources) {
+            if (!(key instanceof ItemStackWrapper resource)) continue;
             LogisticsResourceConfig config = asset.logisticsConfig.get(resource);
-            long importStock = snapshot.getOrDefault(resource, 0L);
+            long importStock = asset instanceof AutomatedFacility facility ? facility.itemAmount(resource)
+                : snapshot.getOrDefault(resource, 0L);
             long amount = signalAmount(asset, resource, config, importStock);
             if (amount == 0L) continue;
             signals.add(
@@ -170,12 +166,6 @@ public final class LogisticStore {
                     asset.celestialObjectKey,
                     asset.planetaryAnchorBodyKey));
         }
-    }
-
-    private static Map<ItemStackWrapper, Long> itemSnapshot(CelestialAsset asset) {
-        if (asset instanceof AutomatedFacility facility) return facility.itemSnapshot();
-        if (asset instanceof IDistributedInventory physicalInventory) return physicalInventory.aggregatedItems();
-        return Map.of();
     }
 
     private static long signalAmount(CelestialAsset asset, ItemStackWrapper resource, LogisticsResourceConfig config,

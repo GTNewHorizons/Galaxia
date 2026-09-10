@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.outpost;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Per-outpost map of {@link LogisticsResourceConfig}, keyed by {@link ItemStackWrapper}.
@@ -14,6 +15,12 @@ import java.util.Map;
 public final class LogisticsConfiguration {
 
     private final Map<InventoryKey, LogisticsResourceConfig> configs = new LinkedHashMap<>();
+    private final Set<InventoryKey> configuredResources = Collections.unmodifiableSet(configs.keySet());
+
+    /** Live read-only view of explicitly configured resources. */
+    public Set<InventoryKey> configuredResources() {
+        return configuredResources;
+    }
 
     /** Returns the config for a resource, or {@link LogisticsResourceConfig#DEFAULT} if absent. */
     public LogisticsResourceConfig get(InventoryKey key) {
