@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.compat.recipe;
 
 import java.lang.reflect.Field;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
@@ -15,7 +16,6 @@ import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
-import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.FluidTank;
 
@@ -332,7 +332,7 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
     }
 
     private static void applyItemGhosts(List<Resource> resources, ItemStackHandler[] hard, ItemStackHandler[] ghost) {
-        boolean[] consumed = consumeHardItems(resources, hard);
+        boolean[] consumed = RecipeIntentMatcher.providedItemSlots(resources, itemStacks(hard));
         for (int i = 0; i < ghost.length; i++) {
             ItemStack recipe = i < resources.size() ? resources.get(i)
                 .itemStack() : null;
@@ -344,26 +344,8 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
         }
     }
 
-    private static boolean[] consumeHardItems(List<Resource> resources, ItemStackHandler[] hard) {
-        boolean[] consumed = new boolean[resources.size()];
-        for (ItemStackHandler handler : hard) {
-            ItemStack hardStack = handler.getStackInSlot(0);
-            if (hardStack == null) continue;
-            for (int i = 0; i < resources.size(); i++) {
-                if (!consumed[i] && itemMatches(
-                    hardStack,
-                    resources.get(i)
-                        .itemStack())) {
-                    consumed[i] = true;
-                    break;
-                }
-            }
-        }
-        return consumed;
-    }
-
     private void applyFluidGhosts(List<Resource> resources, FluidTank[] hard, FluidTank[] ghost) {
-        boolean[] consumed = consumeHardFluids(resources, hard);
+        boolean[] consumed = RecipeIntentMatcher.providedFluidSlots(resources, fluidStacks(hard));
         for (int i = 0; i < ghost.length; i++) {
             FluidStack recipe = i < resources.size() ? resources.get(i)
                 .fluidStack() : null;
@@ -372,24 +354,6 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
                 ghost[i].fill(recipe, true);
             }
         }
-    }
-
-    private static boolean[] consumeHardFluids(List<Resource> resources, FluidTank[] hard) {
-        boolean[] consumed = new boolean[resources.size()];
-        for (FluidTank tank : hard) {
-            FluidStack hardStack = tank.getFluid();
-            if (hardStack == null) continue;
-            for (int i = 0; i < resources.size(); i++) {
-                if (!consumed[i] && fluidMatches(
-                    hardStack,
-                    resources.get(i)
-                        .fluidStack())) {
-                    consumed[i] = true;
-                    break;
-                }
-            }
-        }
-        return consumed;
     }
 
     private static ItemStack[] itemStacks(ItemStackHandler[] handlers) {
@@ -422,37 +386,6 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
         one.stackSize = 1;
         FluidStack fluid = FluidInteractions.getFluidForItem(one);
         return fluid != null && fluid.amount > 0;
-    }
-
-    private static boolean itemMatches(ItemStack hard, ItemStack recipeStack) {
-        return hard != null && recipeStack != null
-            && hard.getItem() == recipeStack.getItem()
-            && hard.getItemDamage() == recipeStack.getItemDamage();
-    }
-
-    private static boolean fluidMatches(FluidStack hard, FluidStack recipeStack) {
-        String hardName = fluidName(hard);
-        return hardName != null && hardName.equals(fluidName(recipeStack));
-    }
-
-    private static String fluidName(FluidStack stack) {
-        Fluid fluid = fluidType(stack);
-        return fluid != null ? fluid.getName() : null;
-    }
-
-    private static Fluid fluidType(FluidStack stack) {
-        if (stack == null) return null;
-        try {
-            return stack.getFluid();
-        } catch (RuntimeException ignored) {
-            try {
-                Field field = FluidStack.class.getDeclaredField("fluid");
-                field.setAccessible(true);
-                return (Fluid) field.get(stack);
-            } catch (ReflectiveOperationException e) {
-                return null;
-            }
-        }
     }
 
     private static ButtonWidget<?> btn(String label, Runnable action) {

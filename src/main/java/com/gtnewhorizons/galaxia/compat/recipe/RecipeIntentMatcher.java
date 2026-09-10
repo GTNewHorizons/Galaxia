@@ -12,6 +12,7 @@ import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.oredict.OreDictionary;
 
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot.Resource;
 
 import gregtech.api.util.GTRecipe;
 
@@ -84,6 +85,41 @@ public final class RecipeIntentMatcher {
         if (stacks == null) return false;
         for (FluidStack stack : stacks) if (stack != null) return true;
         return false;
+    }
+
+    public static boolean[] providedItemSlots(List<Resource> resources, ItemStack[] hardSlots) {
+        boolean[] consumed = new boolean[resources.size()];
+        for (ItemStack hard : hardSlots) {
+            if (hard == null) continue;
+            for (int i = 0; i < resources.size(); i++) {
+                if (!consumed[i] && exactItemMatch(hard, resources.get(i).itemStack())) {
+                    consumed[i] = true;
+                    break;
+                }
+            }
+        }
+        return consumed;
+    }
+
+    public static boolean[] providedFluidSlots(List<Resource> resources, FluidStack[] hardSlots) {
+        boolean[] consumed = new boolean[resources.size()];
+        for (FluidStack hard : hardSlots) {
+            if (hard == null) continue;
+            String hardName = fluidName(hard);
+            for (int i = 0; i < resources.size(); i++) {
+                if (!consumed[i] && hardName != null && hardName.equals(fluidName(resources.get(i).fluidStack()))) {
+                    consumed[i] = true;
+                    break;
+                }
+            }
+        }
+        return consumed;
+    }
+
+    private static boolean exactItemMatch(ItemStack hard, ItemStack recipeStack) {
+        return hard != null && recipeStack != null
+            && hard.getItem() == recipeStack.getItem()
+            && hard.getItemDamage() == recipeStack.getItemDamage();
     }
 
     private static boolean matchesItems(ItemStack[] hardSlots, ItemStack[] recipeStacks) {
