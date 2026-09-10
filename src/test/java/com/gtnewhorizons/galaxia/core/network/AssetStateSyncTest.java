@@ -552,13 +552,13 @@ final class AssetStateSyncTest {
         }
 
         @Override
-        public void send(UUID recipientId, List<AssetStateFramePacket> frames) {
+        public void send(UUID recipientId, List<? extends cpw.mods.fml.common.network.simpleimpl.IMessage> frames) {
             if (failNextSend) {
                 failNextSend = false;
                 throw new IllegalStateException("Simulated transport failure");
             }
             assertEquals(1, frames.size());
-            AssetStateFramePacket frame = frames.getFirst();
+            AssetStateFramePacket frame = (AssetStateFramePacket) frames.getFirst();
             assertEquals(1, frame.frameCount());
             ByteBuf framed = Unpooled.wrappedBuffer(frame.payload());
             AssetSyncPacket packet = new AssetSyncPacket();

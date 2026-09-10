@@ -33,6 +33,13 @@ public final class TeamEventHandler {
     }
 
     @SubscribeEvent
+    public void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.player instanceof EntityPlayerMP player) {
+            AssetStateSync.SERVER.forgetRecipient(player.getUniqueID());
+        }
+    }
+
+    @SubscribeEvent
     public void onTeamCreate(TeamCreateEvent event) {
         Galaxia.LOG.info("[Teams] Team created: {} ({})", event.team.getTeamName(), event.team.getTeamId());
     }

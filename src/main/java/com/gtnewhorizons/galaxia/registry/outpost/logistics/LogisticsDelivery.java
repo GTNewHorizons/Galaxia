@@ -225,6 +225,23 @@ public class LogisticsDelivery {
         return this.remainingTicks;
     }
 
+    public LogisticsDelivery snapshot() {
+        return new LogisticsDelivery(
+            deliveryId,
+            new Data(
+                data.fromAssetId,
+                data.toAssetId,
+                data.resourceId,
+                data.amount,
+                data.scope,
+                data.fromBodyKey,
+                data.toBodyKey,
+                data.departureOrbitalTime,
+                data.tofOrbitalOsu,
+                data.transferRoute),
+            remainingTicks);
+    }
+
     public record ID(UUID id) implements WithUUID {
 
         public static ID create() {

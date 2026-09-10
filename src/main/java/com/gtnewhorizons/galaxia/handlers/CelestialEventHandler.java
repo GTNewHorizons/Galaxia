@@ -117,7 +117,7 @@ public class CelestialEventHandler {
                     .collect(Collectors.toList());
                 return LogisticsSyncPacket.from(relevantDeliveries, LogisticStore.signalsOwnedBy(team, signals));
             });
-            Galaxia.GALAXIA_NETWORK.sendTo(logisticsPacket, player);
+            AssetStateSync.SERVER.publishLogistics(playerId, playerTeam, logisticsPacket);
         }
         AssetStateSync.SERVER.publishPeriodic();
     }

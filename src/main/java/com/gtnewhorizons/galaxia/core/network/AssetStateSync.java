@@ -91,9 +91,19 @@ public final class AssetStateSync {
         private final ServerTransport transport;
         private final Map<CelestialAsset.ID, Publication> publications = new LinkedHashMap<>();
         private final Map<RecipientAsset, Long> recipientCursors = new LinkedHashMap<>();
+        private final Map<UUID, LogisticsPublication> recipientLogistics = new HashMap<>();
 
         Server(ServerTransport transport) {
             this.transport = transport;
+        }
+
+        public void publishLogistics(UUID recipientId, UUID teamId, LogisticsSyncPacket packet) {
+            LogisticsPublication previous = recipientLogistics.get(recipientId);
+            LogisticsSyncPacket update = packet
+                .changesSince(previous != null && teamId.equals(previous.teamId()) ? previous.packet() : null);
+            if (update != null && send(recipientId, List.of(update))) {
+                recipientLogistics.put(recipientId, new LogisticsPublication(teamId, packet));
+            }
         }
 
         public void publishInteractive(CelestialAsset.ID assetId) {
@@ -226,9 +236,14 @@ public final class AssetStateSync {
 
         public void resetRecipient(UUID recipientId) {
             if (recipientId == null) return;
+            forgetRecipient(recipientId);
+            send(recipientId, AssetSyncPacket.clear());
+        }
+
+        public void forgetRecipient(UUID recipientId) {
             recipientCursors.keySet()
                 .removeIf(key -> recipientId.equals(key.recipientId()));
-            send(recipientId, AssetSyncPacket.clear());
+            recipientLogistics.remove(recipientId);
         }
 
         public static List<AssetStateFramePacket> frame(AssetSyncPacket packet) {
@@ -280,22 +295,20 @@ public final class AssetStateSync {
             }
         }
 
-        private boolean send(UUID recipientId, List<AssetStateFramePacket> frames) {
+        private boolean send(UUID recipientId, List<? extends IMessage> frames) {
             if (frames.isEmpty()) return false;
             try {
                 transport.send(recipientId, frames);
                 return true;
             } catch (RuntimeException ex) {
-                LOG.warn(
-                    "Failed asset publication for {}: {}",
-                    frames.getFirst()
-                        .assetId(),
-                    ex.getMessage());
+                LOG.warn("Failed state publication to {}: {}", recipientId, ex.getMessage());
                 return false;
             }
         }
 
         private record Publication(UUID teamId, AssetSyncPacket packet) {}
+
+        private record LogisticsPublication(UUID teamId, LogisticsSyncPacket packet) {}
 
         private record RecipientAsset(UUID recipientId, CelestialAsset.ID assetId) {}
     }
@@ -519,7 +532,7 @@ public final class AssetStateSync {
 
         Collection<UUID> eligibleRecipients(UUID teamId);
 
-        void send(UUID recipientId, List<AssetStateFramePacket> frames);
+        void send(UUID recipientId, List<? extends IMessage> frames);
     }
 
     interface ClientTransport {
@@ -543,11 +556,11 @@ public final class AssetStateSync {
         }
 
         @Override
-        public void send(UUID recipientId, List<AssetStateFramePacket> frames) {
+        public void send(UUID recipientId, List<? extends IMessage> frames) {
             for (EntityPlayerMP player : MinecraftServer.getServer()
                 .getConfigurationManager().playerEntityList) {
                 if (player != null && recipientId.equals(player.getUniqueID())) {
-                    for (AssetStateFramePacket frame : frames) Galaxia.GALAXIA_NETWORK.sendTo(frame, player);
+                    for (IMessage frame : frames) Galaxia.GALAXIA_NETWORK.sendTo(frame, player);
                     return;
                 }
             }

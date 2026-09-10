@@ -551,7 +551,7 @@ final class FacilityCommandGatewayTest {
         }
 
         @Override
-        public void send(UUID recipientId, List<AssetStateFramePacket> frames) {
+        public void send(UUID recipientId, List<? extends cpw.mods.fml.common.network.simpleimpl.IMessage> frames) {
             deliveryCount += frames.size();
         }
     }

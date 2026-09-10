@@ -5,6 +5,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.client.Minecraft;
 
 import com.gtnewhorizons.galaxia.client.CelestialClient;
@@ -26,6 +28,8 @@ public final class LogisticsSyncPacket implements IMessage {
 
     private List<LogisticsDelivery> deliveries;
     private List<LogisticSignal> signals;
+    private boolean updateDeliveries = true;
+    private boolean updateSignals = true;
 
     public LogisticsSyncPacket() {}
 
@@ -35,15 +39,43 @@ public final class LogisticsSyncPacket implements IMessage {
         pkt.deliveries = new ArrayList<>(activeDeliveries.size());
         for (LogisticsDelivery t : activeDeliveries) {
             if (t.data.resourceId() == null) continue;
-            pkt.deliveries.add(t);
+            pkt.deliveries.add(t.snapshot());
         }
 
         pkt.signals = List.copyOf(signals);
         return pkt;
     }
 
+    @Nullable
+    LogisticsSyncPacket changesSince(@Nullable LogisticsSyncPacket previous) {
+        if (previous == null) return this;
+        boolean deliveriesChanged = !sameDeliveries(previous);
+        boolean signalsChanged = !signals.equals(previous.signals);
+        if (!deliveriesChanged && !signalsChanged) return null;
+        if (deliveriesChanged && signalsChanged) return this;
+        LogisticsSyncPacket update = new LogisticsSyncPacket();
+        update.updateDeliveries = deliveriesChanged;
+        update.updateSignals = signalsChanged;
+        update.deliveries = deliveriesChanged ? deliveries : List.of();
+        update.signals = signalsChanged ? signals : List.of();
+        return update;
+    }
+
+    private boolean sameDeliveries(LogisticsSyncPacket other) {
+        if (deliveries.size() != other.deliveries.size()) return false;
+        for (int i = 0; i < deliveries.size(); i++) {
+            LogisticsDelivery left = deliveries.get(i);
+            LogisticsDelivery right = other.deliveries.get(i);
+            // Flight rendering uses orbital timestamps, not the server's ticking delivery countdown
+            if (!left.deliveryId.equals(right.deliveryId) || !left.data.equals(right.data)) return false;
+        }
+        return true;
+    }
+
     @Override
     public void toBytes(ByteBuf buf) {
+        buf.writeBoolean(updateDeliveries);
+        buf.writeBoolean(updateSignals);
         Map<ItemStackWrapper, Integer> resources = new LinkedHashMap<>();
         for (LogisticsDelivery delivery : deliveries) {
             resources.putIfAbsent(delivery.data.resourceId(), resources.size());
@@ -85,6 +117,8 @@ public final class LogisticsSyncPacket implements IMessage {
 
     @Override
     public void fromBytes(ByteBuf buf) {
+        updateDeliveries = buf.readBoolean();
+        updateSignals = buf.readBoolean();
         int resourceCount = PacketUtil.readBoundedCount(buf, "logistics resources", buf.readableBytes());
         List<ItemStackWrapper> resources = new ArrayList<>(resourceCount);
         for (int i = 0; i < resourceCount; i++) {
@@ -143,8 +177,8 @@ public final class LogisticsSyncPacket implements IMessage {
         public IMessage onMessage(LogisticsSyncPacket packet, MessageContext ctx) {
             Minecraft.getMinecraft()
                 .func_152344_a(() -> {
-                    CelestialClient.updateClientDeliveries(packet.deliveries);
-                    CelestialClient.updateClientSignals(packet.signals);
+                    if (packet.updateDeliveries) CelestialClient.updateClientDeliveries(packet.deliveries);
+                    if (packet.updateSignals) CelestialClient.updateClientSignals(packet.signals);
                 });
             return null;
         }
