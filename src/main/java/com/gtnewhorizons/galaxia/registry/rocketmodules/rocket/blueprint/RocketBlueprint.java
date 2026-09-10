@@ -24,9 +24,7 @@ public class RocketBlueprint {
     public RocketBlueprint copy() {
         RocketBlueprint copy = new RocketBlueprint();
         copy.name = this.name;
-        for (RocketPartInstance part : parts) {
-            copy.parts.add(part.copy());
-        }
+        copy.parts.addAll(parts);
         return copy;
     }
 

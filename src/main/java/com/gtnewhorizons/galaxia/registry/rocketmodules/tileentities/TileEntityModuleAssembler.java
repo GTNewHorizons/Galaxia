@@ -119,12 +119,12 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
     private void tryStartNextTask() {
         if (productionQueue.isEmpty() || activeTask != null) return;
 
-        // copying the queue to avoid concurrent modification exceptions
-        for (ProductionTask task : new ArrayList<>(productionQueue)) {
+        for (var iterator = productionQueue.iterator(); iterator.hasNext();) {
+            ProductionTask task = iterator.next();
             if (hasInStock(
                 task.part()
                     .def())) {
-                productionQueue.remove(task);
+                iterator.remove();
                 consumeFromStock(
                     task.part()
                         .def());
@@ -171,7 +171,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
      * Called by GantryAPI/TileEntitySilo to enqueue a single-part production job.
      */
     public void enqueueProduction(RocketPartInstance part, TileEntitySilo silo) {
-        productionQueue.offer(new ProductionTask(part.copy(), silo));
+        productionQueue.offer(new ProductionTask(part, silo));
         markDirty();
     }
 
