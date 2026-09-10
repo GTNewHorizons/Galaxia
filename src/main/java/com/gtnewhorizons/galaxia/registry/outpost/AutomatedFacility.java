@@ -809,7 +809,19 @@ public final class AutomatedFacility extends CelestialAsset {
                 }
                 settingsPlans.put(module.id, settingsPlan);
             }
-            if (shouldInstantBuild) module.completeConstruction();
+            if (shouldInstantBuild) {
+                module.completeConstruction();
+            } else {
+                module.setOperation(
+                    ModuleOperationState.waiting(
+                        new ModuleOperationPlan(
+                            IModuleOperation.CONSTRUCTION,
+                            module.allTierData()
+                                .get(module.tier())
+                                .buildTicks(),
+                            FacilityModuleRegistry.operationCost(module.getConstructionCost()),
+                            true)));
+            }
             prepared.add(module);
         }
         for (ModuleInstance module : prepared) {
@@ -951,6 +963,10 @@ public final class AutomatedFacility extends CelestialAsset {
             && operation.phase() != ModuleOperationPhase.BUILDING) {
             return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MODULE_OPERATION_NOT_CANCELLABLE);
         }
+        if (operation.plan()
+            .spec() == IModuleOperation.CONSTRUCTION) {
+            return requestModuleDeconstruction(module.id);
+        }
         operation.cancel();
         markDirty();
         return FacilityCommand.Result.CHANGED;
@@ -1075,7 +1091,11 @@ public final class AutomatedFacility extends CelestialAsset {
     private FacilityCommand.Result requestModuleDeconstruction(ModuleInstance.ID moduleId) {
         ModuleInstance module = moduleById(moduleId);
         if (module == null) return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MODULE_NOT_FOUND);
-        if (module.operationOrNull() != null) {
+        ModuleOperationState operation = module.operationOrNull();
+        if (operation != null && (operation.plan()
+            .spec() != IModuleOperation.CONSTRUCTION
+            || operation.phase() != ModuleOperationPhase.WAITING_FOR_MATERIALS
+                && operation.phase() != ModuleOperationPhase.BUILDING)) {
             return FacilityCommand.Result.rejected(FacilityCommand.Rejection.MODULE_OPERATION_ACTIVE);
         }
 
@@ -1604,6 +1624,11 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     private void applyOperationTarget(ModuleInstance module, ModuleOperationPlan plan) {
+        if (plan.spec() == IModuleOperation.CONSTRUCTION) {
+            module.completeConstruction();
+            SatelliteNetworkService.refreshFacilityEndpoints(this);
+            return;
+        }
         module.component()
             .applyOperationTarget(plan.spec(), module);
     }
@@ -1707,8 +1732,14 @@ public final class AutomatedFacility extends CelestialAsset {
         Map<ItemStackWrapper, Long> byItem = new LinkedHashMap<>();
         long total = 0L;
         try {
-            Map<ItemStack, Long> refundable = module.isInConstruction() ? module.getConstructionInventory()
-                : module.getConstructionCost();
+            if (module.isInConstruction()) {
+                if (module.operationOrNull() != null) byItem.putAll(
+                    module.operationOrNull()
+                        .depositedResources());
+                for (long amount : byItem.values()) total = Math.addExact(total, amount);
+                return new DeconstructionRefund(Collections.unmodifiableMap(byItem), total);
+            }
+            Map<ItemStack, Long> refundable = module.getConstructionCost();
             for (Map.Entry<ItemStack, Long> entry : refundable.entrySet()) {
                 if (entry.getKey() == null || entry.getValue() == null || entry.getValue() < 0L) return null;
                 if (entry.getValue() == 0L) continue;

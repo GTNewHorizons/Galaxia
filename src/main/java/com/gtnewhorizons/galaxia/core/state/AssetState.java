@@ -283,7 +283,6 @@ public final class AssetState {
                 .name());
         out.setInteger("rotation", module.rotation());
         out.setTag("data", writeModuleData(module));
-        out.setTag("construction", writeConstructionInventory(module.getConstructionInventory()));
         ModuleOperationState operation = module.operationOrNull();
         if (operation != null) out.setTag("operation", writeOperation(operation));
         RecipeBook.ScheduleState schedule = module.recipe() != null ? facility.recipeScheduleState(module) : null;
@@ -334,10 +333,6 @@ public final class AssetState {
         } else if (tag.hasKey("parallel")) {
             throw fail(path + ".parallel", kind + " does not support parallel execution");
         }
-        module.clearConsumedResources();
-        module.getConstructionInventory()
-            .putAll(readConstructionInventory(in, "construction"));
-
         if (tag.hasKey("operation")) {
             module.setOperation(readOperation(kind, id, in.compound("operation")));
         }
@@ -487,6 +482,8 @@ public final class AssetState {
         IModuleOperation spec = plan.spec();
         if (spec == IModuleOperation.DECONSTRUCTION) {
             out.setString("type", "DECONSTRUCTION");
+        } else if (spec == IModuleOperation.CONSTRUCTION) {
+            out.setString("type", "CONSTRUCTION");
         } else if (spec instanceof IModuleOperation.Hammer hammer) {
             out.setString("type", "HAMMER");
             out.setString(
@@ -543,6 +540,7 @@ public final class AssetState {
         IModuleOperation spec;
         switch (type) {
             case "DECONSTRUCTION" -> spec = IModuleOperation.DECONSTRUCTION;
+            case "CONSTRUCTION" -> spec = IModuleOperation.CONSTRUCTION;
             case "HAMMER" -> {
                 if (moduleKind != FacilityModuleKind.HAMMER) throw fail(path, "hammer operation on " + moduleKind);
                 spec = new IModuleOperation.Hammer(

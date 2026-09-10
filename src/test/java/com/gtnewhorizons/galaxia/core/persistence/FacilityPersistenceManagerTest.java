@@ -179,12 +179,6 @@ final class FacilityPersistenceManagerTest {
         assetItem.setTagCompound(assetItemTag);
         facility.setConstructionInventory(Map.of(assetItem, 9L));
 
-        NBTTagCompound moduleItemTag = new NBTTagCompound();
-        moduleItemTag.setString("owner", "module");
-        ItemStack moduleItem = new ItemStack(Items.diamond);
-        moduleItem.setTagCompound(moduleItemTag);
-        hammer.getConstructionInventory()
-            .put(moduleItem, 11L);
         hammer.setTicks(17);
         hammer.setPriorityOverride(ModulePriority.CRITICAL);
         hammer.setEnabled(false);
@@ -208,12 +202,14 @@ final class FacilityPersistenceManagerTest {
         ItemStackWrapper actualCostItem = new ItemStackWrapper(Items.emerald, 0, costTag);
         Map<ItemStackWrapper, Long> actualMaterialCost = Map.of(actualCostItem, 73L);
         hammer.setOperation(
-            ModuleOperationState.waiting(
-                new ModuleOperationPlan(
-                    new IModuleOperation.Hammer(ModuleTier.LuV, HammerVariant.BIG),
-                    37,
-                    actualMaterialCost,
-                    true)));
+            ModuleOperationState
+                .waiting(
+                    new ModuleOperationPlan(
+                        new IModuleOperation.Hammer(ModuleTier.LuV, HammerVariant.BIG),
+                        37,
+                        actualMaterialCost,
+                        true))
+                .withDepositedResources(Map.of(actualCostItem, 11L)));
 
         AssetState.Decoded facilityState = AssetState.decode(AssetState.encode(teamId, facility));
         AutomatedFacility decoded = (AutomatedFacility) facilityState.asset();
@@ -247,22 +243,9 @@ final class FacilityPersistenceManagerTest {
                 .iterator()
                 .next());
         assertEquals(
-            1,
-            decodedHammer.getConstructionInventory()
-                .size());
-        assertEquals(
-            ItemStackWrapper.of(moduleItem),
-            ItemStackWrapper.of(
-                decodedHammer.getConstructionInventory()
-                    .keySet()
-                    .iterator()
-                    .next()));
-        assertEquals(
-            11L,
-            decodedHammer.getConstructionInventory()
-                .values()
-                .iterator()
-                .next());
+            Map.of(actualCostItem, 11L),
+            decodedHammer.operationOrNull()
+                .depositedResources());
         assertEquals(17, decodedHammer.ticks());
         assertEquals(ModulePriority.CRITICAL, decodedHammer.priorityOverride());
         assertFalse(decodedHammer.enabled());

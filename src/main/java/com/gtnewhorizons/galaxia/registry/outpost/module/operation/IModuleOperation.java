@@ -6,9 +6,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 
-public sealed interface IModuleOperation permits IModuleOperation.Tier,IModuleOperation.Hammer,IModuleOperation.MinerFocus,IModuleOperation.Deconstruction {
+public sealed interface IModuleOperation permits IModuleOperation.Tier,IModuleOperation.Hammer,IModuleOperation.MinerFocus,IModuleOperation.Deconstruction,IModuleOperation.Construction {
 
     IModuleOperation DECONSTRUCTION = Deconstruction.INSTANCE;
+    IModuleOperation CONSTRUCTION = Construction.INSTANCE;
 
     default @Nullable ModuleTier targetTier() {
         return null;
@@ -43,6 +44,10 @@ public sealed interface IModuleOperation permits IModuleOperation.Tier,IModuleOp
     }
 
     enum Deconstruction implements IModuleOperation {
+        INSTANCE
+    }
+
+    enum Construction implements IModuleOperation {
         INSTANCE
     }
 }

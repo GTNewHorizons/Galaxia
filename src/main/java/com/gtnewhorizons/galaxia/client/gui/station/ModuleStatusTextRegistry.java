@@ -194,6 +194,9 @@ final class ModuleStatusTextRegistry {
         if (spec == IModuleOperation.DECONSTRUCTION) {
             return StatCollector.translateToLocal("galaxia.module.operation.deconstruction_pending");
         }
+        if (spec == IModuleOperation.CONSTRUCTION) {
+            return StatCollector.translateToLocal("galaxia.module.operation.construction_pending");
+        }
         return "Operation pending";
     }
 

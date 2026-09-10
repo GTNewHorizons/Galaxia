@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -25,7 +24,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
 public class ModuleInstance implements Buildable {
 
     public final ID id;
-    private final Map<ItemStack, Long> consumedResources = new HashMap<>();
     private final FacilityModuleRegistry.Definition definition;
     private IModuleComponent component;
     private @Nullable AutomatedFacility facilityOwner;
@@ -131,18 +129,8 @@ public class ModuleInstance implements Buildable {
     }
 
     @Override
-    public void clearConsumedResources() {
-        consumedResources.clear();
-    }
-
-    @Override
     public Map<ItemStack, Long> getRequiredResources() {
         return currentTierData().constructionCost();
-    }
-
-    @Override
-    public Map<ItemStack, Long> getConstructionInventory() {
-        return consumedResources;
     }
 
     public Buildable.Status status() {
@@ -272,11 +260,6 @@ public class ModuleInstance implements Buildable {
 
     public boolean isOperational() {
         return status == Buildable.Status.OPERATIONAL;
-    }
-
-    public void completeConstruction() {
-        updateStatus(Buildable.Status.OPERATIONAL);
-        consumedResources.clear();
     }
 
     public long getDisplayedPowerEuPerTick() {
