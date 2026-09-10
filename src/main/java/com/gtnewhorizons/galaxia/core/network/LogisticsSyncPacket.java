@@ -1,7 +1,9 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.client.Minecraft;
 
@@ -30,7 +32,7 @@ public final class LogisticsSyncPacket implements IMessage {
     public static LogisticsSyncPacket from(List<LogisticsDelivery> activeDeliveries, List<LogisticSignal> signals) {
         LogisticsSyncPacket pkt = new LogisticsSyncPacket();
 
-        pkt.deliveries = new java.util.ArrayList<>(activeDeliveries.size());
+        pkt.deliveries = new ArrayList<>(activeDeliveries.size());
         for (LogisticsDelivery t : activeDeliveries) {
             if (t.data.resourceId() == null) continue;
             pkt.deliveries.add(t);
@@ -42,13 +44,23 @@ public final class LogisticsSyncPacket implements IMessage {
 
     @Override
     public void toBytes(ByteBuf buf) {
+        Map<ItemStackWrapper, Integer> resources = new LinkedHashMap<>();
+        for (LogisticsDelivery delivery : deliveries) {
+            resources.putIfAbsent(delivery.data.resourceId(), resources.size());
+        }
+        for (LogisticSignal signal : signals) {
+            resources.putIfAbsent(signal.resourceId(), resources.size());
+        }
+        buf.writeInt(resources.size());
+        for (ItemStackWrapper resource : resources.keySet()) PacketUtil.writeInventoryKey(buf, resource);
+
         buf.writeInt(deliveries.size());
         for (LogisticsDelivery t : deliveries) {
             LogisticsDelivery.Data d = t.data;
             PacketUtil.writeId(buf, t.deliveryId);
             PacketUtil.writeId(buf, d.fromAssetId());
             PacketUtil.writeId(buf, d.toAssetId());
-            PacketUtil.writeInventoryKey(buf, d.resourceId());
+            buf.writeInt(resources.get(d.resourceId()));
             buf.writeLong(d.amount());
             buf.writeInt(t.getRemainingTicks());
             PacketUtil.writeEnum(buf, d.scope());
@@ -63,7 +75,7 @@ public final class LogisticsSyncPacket implements IMessage {
         for (LogisticSignal signal : signals) {
             PacketUtil.writeId(buf, signal.outpostAssetId());
             PacketUtil.writeCelestialObjectKey(buf, signal.systemKey());
-            PacketUtil.writeInventoryKey(buf, signal.resourceId());
+            buf.writeInt(resources.get(signal.resourceId()));
             buf.writeLong(signal.amount());
             PacketUtil.writeEnum(buf, signal.scope());
             PacketUtil.writeCelestialObjectKey(buf, signal.bodyKey());
@@ -73,13 +85,18 @@ public final class LogisticsSyncPacket implements IMessage {
 
     @Override
     public void fromBytes(ByteBuf buf) {
+        int resourceCount = PacketUtil.readBoundedCount(buf, "logistics resources", buf.readableBytes());
+        List<ItemStackWrapper> resources = new ArrayList<>(resourceCount);
+        for (int i = 0; i < resourceCount; i++) {
+            resources.add((ItemStackWrapper) PacketUtil.readInventoryKey(buf));
+        }
         int deliveryCount = buf.readInt();
         deliveries = new ArrayList<>(deliveryCount);
         for (int i = 0; i < deliveryCount; i++) {
             LogisticsDelivery.ID deliveryId = PacketUtil.readDeliveryId(buf);
             CelestialAsset.ID fromAssetId = PacketUtil.readAssetId(buf);
             CelestialAsset.ID toAssetId = PacketUtil.readAssetId(buf);
-            ItemStackWrapper resourceId = (ItemStackWrapper) PacketUtil.readInventoryKey(buf);
+            ItemStackWrapper resourceId = resources.get(buf.readInt());
             long amount = buf.readLong();
             int remainingTicks = buf.readInt();
             LogisticSignal.Scope scope = PacketUtil.readEnum(buf, LogisticSignal.Scope.class);
@@ -111,7 +128,7 @@ public final class LogisticsSyncPacket implements IMessage {
                 new LogisticSignal(
                     PacketUtil.readAssetId(buf),
                     PacketUtil.readCelestialObjectKey(buf),
-                    (ItemStackWrapper) PacketUtil.readInventoryKey(buf),
+                    resources.get(buf.readInt()),
                     buf.readLong(),
                     PacketUtil.readEnum(buf, LogisticSignal.Scope.class),
                     PacketUtil.readCelestialObjectKey(buf),

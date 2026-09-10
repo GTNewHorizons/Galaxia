@@ -2,7 +2,9 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -30,6 +32,84 @@ final class LogisticsSyncPacketTest {
     @BeforeAll
     static void initRegistries() {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
+    }
+
+    @Test
+    void repeatedResourcesKeepBulkSignalsCompactWithoutLosingIdentity() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        List<LogisticSignal> signals = new ArrayList<>();
+        List<LogisticsDelivery> deliveries = new ArrayList<>();
+        for (int i = 0; i < 512; i++) {
+            ItemStack stack = new ItemStack(Items.iron_ingot, 1, i % 2);
+            NBTTagCompound tag = new NBTTagCompound();
+            tag.setInteger("variant", i % 4);
+            stack.setTagCompound(tag);
+            ItemStackWrapper resource = ItemStackWrapper.of(stack);
+            signals.add(
+                new LogisticSignal(
+                    CelestialAsset.ID.create(),
+                    facility.systemKey,
+                    resource,
+                    i - 256L,
+                    LogisticSignal.Scope.SYSTEM,
+                    facility.celestialObjectKey,
+                    facility.planetaryAnchorBodyKey));
+            if (i < 4) deliveries.add(
+                LogisticsDelivery.createWithTrajectory(
+                    LogisticsDelivery.ID.create(),
+                    facility.assetId,
+                    CelestialAsset.ID.create(),
+                    resource,
+                    i + 1L,
+                    30,
+                    LogisticSignal.Scope.SYSTEM,
+                    facility.celestialObjectKey,
+                    facility.celestialObjectKey,
+                    2.0,
+                    3.0));
+        }
+        byte[] encoded = encode(LogisticsSyncPacket.from(deliveries, signals));
+
+        assertArrayEquals(encoded, reencode(encoded));
+        // Compactness regression budget, not Forge's transport limit
+        assertTrue(encoded.length < 32 * 1024, "Bulk signal payload: " + encoded.length);
+    }
+
+    @Test
+    void hundredsOfDistinctResourceIdentitiesSurviveRoundTrip() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        List<LogisticSignal> signals = new ArrayList<>();
+        for (int i = 0; i < 300; i++) {
+            ItemStack stack = new ItemStack(Items.iron_ingot);
+            NBTTagCompound tag = new NBTTagCompound();
+            tag.setInteger("variant", i);
+            stack.setTagCompound(tag);
+            signals.add(
+                new LogisticSignal(
+                    CelestialAsset.ID.create(),
+                    facility.systemKey,
+                    ItemStackWrapper.of(stack),
+                    i + 1L,
+                    LogisticSignal.Scope.SYSTEM,
+                    facility.celestialObjectKey,
+                    facility.planetaryAnchorBodyKey));
+        }
+        byte[] encoded = encode(LogisticsSyncPacket.from(List.of(), signals));
+        assertArrayEquals(encoded, reencode(encoded));
+    }
+
+    @Test
+    void emptySnapshotRoundTrips() {
+        byte[] encoded = encode(LogisticsSyncPacket.from(List.of(), List.of()));
+        assertArrayEquals(encoded, reencode(encoded));
     }
 
     @Test
@@ -92,16 +172,23 @@ final class LogisticsSyncPacketTest {
 
     private static byte[] encode(LogisticsSyncPacket packet) {
         ByteBuf buffer = Unpooled.buffer();
-        packet.toBytes(buffer);
-        return bytes(buffer);
+        try {
+            packet.toBytes(buffer);
+            return bytes(buffer);
+        } finally {
+            buffer.release();
+        }
     }
 
     private static byte[] reencode(byte[] firstEncoding) {
         LogisticsSyncPacket decoded = new LogisticsSyncPacket();
-        decoded.fromBytes(Unpooled.wrappedBuffer(firstEncoding));
-        ByteBuf reencoded = Unpooled.buffer();
-        decoded.toBytes(reencoded);
-        return bytes(reencoded);
+        ByteBuf input = Unpooled.wrappedBuffer(firstEncoding);
+        try {
+            decoded.fromBytes(input);
+            return encode(decoded);
+        } finally {
+            input.release();
+        }
     }
 
     private static byte[] bytes(ByteBuf buffer) {
