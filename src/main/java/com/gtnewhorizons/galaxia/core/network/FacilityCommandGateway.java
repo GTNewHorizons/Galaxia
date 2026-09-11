@@ -78,6 +78,7 @@ public final class FacilityCommandGateway {
                     replace.moduleId(),
                     map.resolveBook(replace.replacement()));
             } catch (IllegalArgumentException invalidRecipe) {
+                LOG.warn("Could not resolve recipe book for facility {}", replace.facilityId(), invalidRecipe);
                 return rejected(command, FacilityCommand.Rejection.INVALID_RECIPE_BOOK);
             }
         }
@@ -131,7 +132,11 @@ public final class FacilityCommandGateway {
         String commandType = command == null ? "unknown"
             : command.getClass()
                 .getSimpleName();
-        LOG.warn("Facility command {} rejected: {}", commandType, rejection);
+        LOG.warn(
+            "Facility command {} for {} rejected: {}",
+            commandType,
+            command == null ? null : command.facilityId(),
+            rejection);
     }
 
     record Actor(UUID teamId, Set<TeamAction> permissions, FacilityCommand.Authority authority) {

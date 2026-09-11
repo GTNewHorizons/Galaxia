@@ -1,9 +1,10 @@
 package com.gtnewhorizons.galaxia.core.network;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -15,6 +16,10 @@ import net.minecraft.nbt.NBTSizeTracker;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.nbt.NBTTagString;
+
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.gtnewhorizons.galaxia.core.state.InventoryKeyState;
 import com.gtnewhorizons.galaxia.core.state.ModuleSettingsState;
@@ -52,6 +57,8 @@ import io.netty.buffer.ByteBuf;
 
 public final class FacilityCommandPacket implements IMessage {
 
+    private static final Logger LOG = LogManager.getLogger(FacilityCommandPacket.class);
+
     static final int MAX_MESSAGE_BODY_BYTES = 32_765;
     static final int COMPRESSED_LENGTH_PREFIX_BYTES = 2;
     static final int MAX_COMPRESSED_NBT_BYTES = MAX_MESSAGE_BODY_BYTES - COMPRESSED_LENGTH_PREFIX_BYTES;
@@ -81,11 +88,19 @@ public final class FacilityCommandPacket implements IMessage {
         }
         destination.writeShort(payload.length);
         destination.writeBytes(payload);
+        LOG.debug(
+            "Encoded facility command {} for {}: {} compressed bytes",
+            command.getClass()
+                .getSimpleName(),
+            command.facilityId(),
+            payload.length);
     }
 
     @Override
     public void fromBytes(ByteBuf source) {
         command = null;
+        int messageBytes = source == null ? 0 : source.readableBytes();
+        String stage = "message framing";
         try {
             if (source == null || source.readableBytes() < COMPRESSED_LENGTH_PREFIX_BYTES
                 || source.readableBytes() > MAX_MESSAGE_BODY_BYTES) {
@@ -97,9 +112,18 @@ public final class FacilityCommandPacket implements IMessage {
             }
             byte[] payload = new byte[length];
             source.readBytes(payload);
-            command = decodeEnvelope(decompress(payload));
+            stage = "NBT decompression";
+            NBTTagCompound envelope = decompress(payload);
+            stage = "command envelope validation";
+            command = decodeEnvelope(envelope);
         } catch (RuntimeException malformedPacket) {
             command = null;
+            LOG.warn(
+                "FacilityCommandPacket decode failed during {}: {} message bytes, {} unread bytes",
+                stage,
+                messageBytes,
+                source == null ? 0 : source.readableBytes(),
+                malformedPacket);
             if (source != null) source.skipBytes(source.readableBytes());
         }
     }
@@ -663,20 +687,21 @@ public final class FacilityCommandPacket implements IMessage {
         try {
             return CompressedStreamTools.compress(envelope);
         } catch (IOException invalid) {
-            throw malformed("Could not compress facility command NBT");
+            throw new IllegalArgumentException("Could not compress facility command NBT", invalid);
         }
     }
 
     private static NBTTagCompound decompress(byte[] payload) {
-        try {
+        ByteArrayInputStream compressed = new ByteArrayInputStream(payload);
+        try (DataInputStream input = new DataInputStream(new GzipCompressorInputStream(compressed, false))) {
             NBTTagCompound envelope = CompressedStreamTools
-                .func_152457_a(payload, new NBTSizeTracker(MAX_DECOMPRESSED_NBT_BYTES));
+                .func_152456_a(input, new NBTSizeTracker(MAX_DECOMPRESSED_NBT_BYTES));
             if (envelope == null) throw malformed("Null facility command NBT");
-            if (!Arrays.equals(payload, compress(envelope)))
-                throw malformed("Non-canonical or trailing compressed NBT");
+            if (input.read() != -1 || compressed.available() != 0)
+                throw malformed("Trailing facility command NBT or compressed data");
             return envelope;
         } catch (IOException | RuntimeException invalid) {
-            throw malformed("Malformed compressed facility command NBT");
+            throw new IllegalArgumentException("Malformed compressed facility command NBT", invalid);
         }
     }
 

@@ -78,6 +78,19 @@ final class FacilityCommandPacketTest {
     }
 
     @Test
+    void acceptsValidGzipMetadataWithoutChangingTheCommand() throws Exception {
+        FacilityCommand command = new FacilityCommand.ClearInventoryResource(
+            FACILITY_ID,
+            new FluidKey(TEST_FLUID, null));
+        ByteBuf encoded = wire(envelope(command));
+        // GZIP MTIME follows the four-byte signature/method/flags header, after our length prefix.
+        encoded.setByte(Short.BYTES + 4, 1);
+        FacilityCommandPacket decoded = new FacilityCommandPacket();
+        decoded.fromBytes(encoded);
+        assertEquals(command, decoded.command());
+    }
+
+    @Test
     void everyFacilityCommandVariantRoundTripsThroughItsTypedWirePayload() {
         ItemStack taggedStack = new ItemStack(Items.stick);
         taggedStack.stackTagCompound = new NBTTagCompound();
