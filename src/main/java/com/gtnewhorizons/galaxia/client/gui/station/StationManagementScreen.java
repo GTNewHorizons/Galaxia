@@ -118,6 +118,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         boolean creativeBuildMode = pendingCreativeBuildMode;
         boolean isAutomatedFacility = CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility;
         StationOverlayCoordinator overlayCoordinator = new StationOverlayCoordinator();
+        panel.onUpdateListener(w -> overlayCoordinator.processDeferredActions());
         int overlayX = LEFT_PANEL_WIDTH + PADDING * 2;
 
         panel.child(
@@ -316,12 +317,6 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
 
         private ModalInputBlocker(StationOverlayCoordinator overlayCoordinator) {
             this.overlayCoordinator = overlayCoordinator;
-        }
-
-        @Override
-        public void onUpdate() {
-            super.onUpdate();
-            overlayCoordinator.processDeferredActions();
         }
 
         @Override

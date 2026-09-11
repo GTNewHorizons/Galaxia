@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTech5UnofficialNewHorizonsLoaded;
 
+import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -9,6 +10,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
@@ -907,6 +910,36 @@ public class OrbitalView {
             return this;
         }
 
+        /** Returns the body's visible interaction bounds in widget-local coordinates from the last rendered frame. */
+        public @Nullable Rectangle visibleBodyBounds(CelestialObjectKey key) {
+            for (OrbitalScene.ScreenBodyBounds bounds : sceneFrame.screenBodies) {
+                if (!key.equals(
+                    bounds.body()
+                        .key())
+                    || !isVisibleInCurrentLayer(bounds.body())) continue;
+                int left = (int) Math.ceil(bounds.centerX() - bounds.interactionRadius());
+                int top = (int) Math.ceil(bounds.centerY() - bounds.interactionRadius());
+                int right = (int) Math.floor(bounds.centerX() + bounds.interactionRadius()) + 1;
+                int bottom = (int) Math.floor(bounds.centerY() + bounds.interactionRadius()) + 1;
+                Rectangle visible = new Rectangle(left, top, right - left, bottom - top)
+                    .intersection(new Rectangle(0, 0, getArea().width, getArea().height));
+                return visible.isEmpty() ? null : visible;
+            }
+            return null;
+        }
+
+        /** Resolves a body for the requested mouse button, respecting controls drawn inside the map. */
+        public @Nullable CelestialObjectKey interactableBodyAt(float localX, float localY, int mouseButton) {
+            if (dragging || assetUiState.isAssetActionsOpen()
+                || (contextMenuState.isOpen() && (mouseButton != 1 || isPointInContextMenu((int) localX, (int) localY)))
+                || transferSimulatorState.isWaitingForPick()
+                || (transferSimulatorState.isOpen()
+                    && transferSimulatorWidget.isPointInPanel((int) localX, (int) localY))
+                || (mouseButton == 0 && findTransferAtLocal((int) localX, (int) localY) != null)) return null;
+            CelestialObject body = findBodyAtLocal(localX, localY);
+            return body == null || !isVisibleInCurrentLayer(body) ? null : body.key();
+        }
+
         public OrbitalMapWidget attachRenameField(TextFieldWidget field) {
             this.renameField = field;
             return this;
@@ -1115,8 +1148,6 @@ public class OrbitalView {
                     dragging = false;
                     dragEnabledForCurrentPress = false;
                     pressedBodyCandidate = null;
-                    if (isPointInContextMenu(localMouseX, localMouseY)) return true;
-                    closeContextMenu();
                     return true;
                 }
                 if (button != 0) return false;

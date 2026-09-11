@@ -129,7 +129,8 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
         ContextMenuLayout layout = getLayout(body, state.x(), state.y(), getArea().width, getArea().height);
         if (layout == null) return;
 
-        ParentWidget<?> root = new ParentWidget<>().pos(layout.left(), layout.top())
+        ParentWidget<?> root = new ParentWidget<>().name("starmap.context.menu")
+            .pos(layout.left(), layout.top())
             .size(layout.right() - layout.left(), layout.bottom() - layout.top());
 
         PassiveBackgroundLayer backgroundLayer = new PassiveBackgroundLayer().pos(0, 0)
@@ -162,7 +163,10 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
 
         if (action.enabled()) {
             row.child(
-                new ButtonWidget<>().pos(ROW_HOVER_INSET_X, ROW_HOVER_INSET_Y)
+                new ButtonWidget<>().name(
+                    "starmap.context." + action.actionType()
+                        .name())
+                    .pos(ROW_HOVER_INSET_X, ROW_HOVER_INSET_Y)
                     .widthRelOffset(1f, -ROW_HOVER_INSET_X * 2)
                     .height(height - ROW_HOVER_INSET_Y * 2)
                     .background(IDrawable.EMPTY)

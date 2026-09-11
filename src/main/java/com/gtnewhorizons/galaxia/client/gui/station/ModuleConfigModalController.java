@@ -4,6 +4,7 @@ import java.util.Objects;
 
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.widget.ParentWidget;
+import com.cleanroommc.modularui.widget.sizer.Unit;
 import com.gtnewhorizons.galaxia.client.gui.station.ModuleUpgradeUiModel.Selection;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -147,8 +148,8 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
     }
 
     private void mount(ParentWidget<?> widget, int width, int height) {
-        widget.left(x)
-            .top(y)
+        widget.left(() -> Math.max(0, Math.min(x, host.getArea().width - width)), Unit.Measure.PIXEL)
+            .top(() -> Math.max(0, Math.min(y, host.getArea().height - height)), Unit.Measure.PIXEL)
             .width(width)
             .height(height);
         modal = widget;

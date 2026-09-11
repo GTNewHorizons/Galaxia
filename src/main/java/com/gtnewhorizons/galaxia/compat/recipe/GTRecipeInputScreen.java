@@ -97,6 +97,8 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
     private String statusText = "Put items to find a recipe";
     private @Nullable String statusDetailText;
     private int statusColor = c(EnumColors.MAP_COLOR_TEXT_MUTED);
+    private final @Nullable GuiScreen returnScreen = pendingReturnScreen;
+    private @Nullable ModularScreen screen;
 
     public static void open(ModuleInstance module, Predicate<RecipeSnapshot> onConfirm) {
         pendingModule = module;
@@ -159,7 +161,14 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
     @Override
     @SideOnly(Side.CLIENT)
     public ModularScreen createScreen(GuiData d, ModularPanel p) {
-        return new ModularScreen(Galaxia.MODID, p);
+        screen = new ModularScreen(Galaxia.MODID, p) {
+
+            @Override
+            public void onOpen() {
+                getContext().setParentScreen(returnScreen);
+            }
+        }.openParentOnClose(true);
+        return screen;
     }
 
     @Override
@@ -189,13 +198,18 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
 
         int btnY = height - 26;
         panel.child(
-            btn("Cancel", this::cancel).pos(6, btnY)
+            btn("Cancel", this::cancel).name("recipe.input.cancel")
+                .pos(6, btnY)
                 .size(58, 20));
         panel.child(
-            btn("NEI", this::openNeiRecipeMap).pos(68, btnY)
+            btn("NEI", this::openNeiRecipeMap).name("recipe.input.nei")
+                .pos(68, btnY)
                 .size(40, 20));
         panel.child(
-            btn("Confirm", this::confirm).pos(width - 64, btnY)
+            btn(StatCollector.translateToLocal("galaxia.gui.station.recipe.add"), this::confirm)
+                .name("recipe.input.add")
+                .tooltip(t -> t.addLine(StatCollector.translateToLocal("galaxia.gui.station.recipe.add_hint")))
+                .pos(width - 64, btnY)
                 .size(58, 20));
         return panel;
     }
@@ -307,12 +321,14 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
     }
 
     private void cancel() {
-        GuiScreen returnScreen = pendingReturnScreen;
+        if (screen == null) return;
         pendingModule = null;
         pendingOnConfirm = null;
         pendingReturnScreen = null;
-        Minecraft.getMinecraft()
-            .displayGuiScreen(returnScreen);
+        // NEI may have replaced the parent while returning to this screen.
+        screen.getContext()
+            .setParentScreen(returnScreen);
+        screen.close();
     }
 
     private void confirm() {

@@ -1,9 +1,12 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
+import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
@@ -327,12 +330,15 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         return false;
     }
 
+    public @Nullable Rectangle creativeButtonBounds() {
+        return shouldShowCreativeButton()
+            ? new Rectangle(18, CREATIVE_BUTTON_TOP, getCreativeButtonWidth() + 1, LAYER_BUTTON_HEIGHT + 1)
+            : null;
+    }
+
     private boolean handleCreativeButtonClick(int localX, int localY) {
-        if (!shouldShowCreativeButton()) return false;
-        int width = getCreativeButtonWidth();
-        if (localY >= CREATIVE_BUTTON_TOP && localY <= CREATIVE_BUTTON_TOP + LAYER_BUTTON_HEIGHT
-            && localX >= 18
-            && localX <= 18 + width) {
+        Rectangle bounds = creativeButtonBounds();
+        if (bounds != null && bounds.contains(localX, localY)) {
             map.toggleCreativeBuildMode();
             rowLayoutsDirty = true;
             return true;

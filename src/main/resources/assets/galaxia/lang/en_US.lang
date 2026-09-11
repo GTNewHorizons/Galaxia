@@ -605,6 +605,8 @@ galaxia.satellite.tooltip.count=%s: %d
 #### Machine GUI
 # Station Recipe GUI
 galaxia.gui.station.recipe.save=Save
+galaxia.gui.station.recipe.add=Add
+galaxia.gui.station.recipe.add_hint=Add to the recipe list, then press Save in the module configuration
 galaxia.gui.station.recipe.not_doable_policy.label=Blocked: %s
 galaxia.gui.station.recipe.not_doable_policy.skip=Skip
 galaxia.gui.station.recipe.not_doable_policy.back_to_beginning=Restart order
@@ -674,7 +676,7 @@ galaxia.gui.station.recipe.details.set=Set
 galaxia.gui.station.recipe.details.clear=Clear
 galaxia.gui.station.recipe.details.back=Back
 galaxia.gui.station.recipe.details.unset=Not set
-galaxia.gui.station.recipe.details.input_amount=Input: %s%s
-galaxia.gui.station.recipe.details.output_amount=Output: %s%s, chance: %s%%
+galaxia.gui.station.recipe.details.unavailable=The original recipe is unavailable or has changed
+galaxia.gui.station.recipe.details.select_resource=Select an input or output slot to configure its inventory bound
 galaxia.gui.station.settings_group.rename=Rename
 galaxia.gui.station.settings_group.members=Members

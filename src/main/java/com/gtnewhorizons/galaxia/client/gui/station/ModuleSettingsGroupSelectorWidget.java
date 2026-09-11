@@ -15,6 +15,7 @@ import com.cleanroommc.modularui.widget.scroll.VerticalScrollData;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.menu.DropdownWidget;
+import com.cleanroommc.modularui.widgets.menu.Menu;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
@@ -77,7 +78,7 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
                 .setEnabledIf(w -> available()));
 
         dropdownOptions = groupOptions();
-        dropdown = new DropdownWidget<>("module_settings_group", GroupOption.class);
+        dropdown = new GroupDropdown();
         dropdown.value(new ObjectValue.Dynamic<>(GroupOption.class, this::selectedOption, this::select))
             .options(dropdownOptions)
             .maxVerticalMenuSize(112)
@@ -86,9 +87,12 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
                     selected) -> new TextWidget<>(
                         selected ? IKey.dynamic(this::currentGroupName) : IKey.dynamic(() -> groupOptionLabel(option)))
                             .color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
+                            .name(
+                                selected ? "settings.group.selected" : option.create() ? "settings.group.create" : null)
                             .widthRel(1f)
-                            .heightRel(1f))
+                            .height(GROUP_BUTTON_HEIGHT))
             .setEnabledIf(w -> available() && action == GroupNameAction.NONE)
+            .name("settings.group.selector")
             .pos(GROUP_BUTTON_X, GROUP_BUTTON_Y)
             .size(SELECT_WIDTH, GROUP_BUTTON_HEIGHT);
         child(dropdown);
@@ -208,6 +212,7 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
             text("Group name", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(MODAL_PAD, 25)
                 .size(NAME_WIDTH, 12));
         nameField = new TextFieldWidget().setMaxLength(32)
+            .name("settings.group.name")
             .autoUpdateOnChange(false)
             .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
             .background(background(EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor()))
@@ -220,10 +225,12 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
         int saveX = MODAL_PAD + NAME_WIDTH + 6;
         overlay.child(
             ModuleConfigModalSupport.button(this::canSave, "Save", this::saveName)
+                .name("settings.group.save")
                 .pos(saveX, 38)
                 .size(42, FIELD_HEIGHT));
         overlay.child(
             ModuleConfigModalSupport.button(() -> action != GroupNameAction.NONE, "Cancel", this::closeOverlay)
+                .name("settings.group.cancel")
                 .pos(saveX + 46, 38)
                 .size(50, FIELD_HEIGHT));
         overlay.scheduleResize();
@@ -359,6 +366,18 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
     private static com.cleanroommc.modularui.api.drawable.IDrawable background(int color) {
         return (ctx, x, y, w, h, ignoredTheme) -> BorderedRect
             .draw(x, y, w, h, color, EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
+    }
+
+    private static final class GroupDropdown extends DropdownWidget<GroupOption, GroupDropdown> {
+
+        GroupDropdown() {
+            super("module_settings_group", GroupOption.class);
+        }
+
+        @Override
+        protected Menu<?> createMenu() {
+            return super.createMenu().width(GROUP_BUTTON_WIDTH);
+        }
     }
 
     private record GroupOption(SettingsGroup.ID groupId, boolean create) {}

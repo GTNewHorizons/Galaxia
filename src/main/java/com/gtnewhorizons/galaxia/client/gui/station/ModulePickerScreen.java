@@ -222,15 +222,16 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     }
 
     private ButtonWidget<?> createKindButton(FacilityModuleKind kind) {
-        return new ButtonWidget<>().background(
+        return new ButtonWidget<>().name("module.kind." + kind.name())
+            .background(
 
-            (ctx, x, y, w, h, ignoredTheme) -> BorderedRect.draw(
-                x,
-                y,
-                w,
-                h,
-                EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()))
+                (ctx, x, y, w, h, ignoredTheme) -> BorderedRect.draw(
+                    x,
+                    y,
+                    w,
+                    h,
+                    EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()))
             .hoverBackground(
 
                 (ctx, x, y, w, h, ignoredTheme) -> BorderedRect.draw(
@@ -267,7 +268,8 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                     () -> {
                         pendingSelectedTier = optionTier;
                         normalizeSelectedTier(kind);
-                    }).pos(x, y)
+                    }).name("module.tier." + optionTier.name())
+                        .pos(x, y)
                         .size(SPEC_SMALL_BUTTON_WIDTH, SPEC_BUTTON_HEIGHT));
             x += SPEC_SMALL_BUTTON_WIDTH + SPEC_BUTTON_GAP;
         }
@@ -285,7 +287,8 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                         () -> {
                             pendingHammerVariant = optionVariant;
                             normalizeSelectedTier(kind);
-                        }).pos(x, y)
+                        }).name("module.hammer." + optionVariant.name())
+                            .pos(x, y)
                             .size(SPEC_BUTTON_WIDTH, SPEC_BUTTON_HEIGHT));
                 x += SPEC_BUTTON_WIDTH + SPEC_BUTTON_GAP;
             }
@@ -331,6 +334,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                 .size(SPEC_BACK_WIDTH, 20));
         panel.child(
             ModuleConfigModalSupport.button(() -> true, "Build", this::confirmSelectedBuild)
+                .name("module.build")
                 .pos(PANEL_WIDTH - PANEL_PADDING - SPEC_BUILD_WIDTH, SPEC_FOOTER_Y)
                 .size(SPEC_BUILD_WIDTH, 20));
     }

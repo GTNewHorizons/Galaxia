@@ -464,8 +464,7 @@ public final class StarmapAssetActions {
             return pendingAssetCreation != null || pendingAssetDestruction != null
                 || pendingConstructionCancellation != null
                 || pendingResourceTransfer != null
-                || pendingAssetRename != null
-                || pendingSatelliteDeletion != null;
+                || pendingAssetRename != null;
         }
 
         void openAssetActions(CelestialObject body) {
@@ -1088,15 +1087,18 @@ public final class StarmapAssetActions {
             int modalWidth = bounds.right() - bounds.left();
             int btnY = bounds.bottom() - bounds.top() - 34;
             modal.child(
-                createFooterButton(cancelLabel, true, cancelAction).pos(18, btnY)
+                createFooterButton(cancelLabel, true, cancelAction).name("asset.cancel")
+                    .pos(18, btnY)
                     .size(btnWidth, FOOTER_BUTTON_HEIGHT));
             if (confirmDanger) {
                 modal.child(
-                    createDangerFooterButton(confirmLabel, confirmAction).pos(modalWidth - 18 - btnWidth, btnY)
+                    createDangerFooterButton(confirmLabel, confirmAction).name("asset.confirm")
+                        .pos(modalWidth - 18 - btnWidth, btnY)
                         .size(btnWidth, FOOTER_BUTTON_HEIGHT));
             } else {
                 modal.child(
-                    createFooterButton(confirmLabel, true, confirmAction).pos(modalWidth - 18 - btnWidth, btnY)
+                    createFooterButton(confirmLabel, true, confirmAction).name("asset.confirm")
+                        .pos(modalWidth - 18 - btnWidth, btnY)
                         .size(btnWidth, FOOTER_BUTTON_HEIGHT));
             }
         }
@@ -1191,7 +1193,8 @@ public final class StarmapAssetActions {
                     deconstruction ? "Send To..." : "Cancel Build",
                     // TODO: Localize
                     true,
-                    () -> handleConstructionAction(asset)).pos(rowWidth - ROW_ACTION_BUTTON_RIGHT_INSET, ROW_ICON_Y));
+                    () -> handleConstructionAction(asset)).name("asset.constructionAction." + asset.assetId)
+                        .pos(rowWidth - ROW_ACTION_BUTTON_RIGHT_INSET, ROW_ICON_Y));
             return row;
         }
 
@@ -1222,7 +1225,7 @@ public final class StarmapAssetActions {
                         // TODO: Localize
                         "Manage",
                         true,
-                        () -> callbacks.openStationManagement(asset))
+                        () -> callbacks.openStationManagement(asset)).name("asset.manage." + asset.assetId)
                             .pos(buttonX - ROW_SECONDARY_ACTION_OFFSET, ROW_ICON_Y));
             }
             row.child(
@@ -1324,7 +1327,7 @@ public final class StarmapAssetActions {
                 } else {
                     callbacks.deleteSatelliteAmount(state.assetActionsBody, kind, amount);
                 }
-            }, true);
+            }, true).name("asset.satellite.delete." + kind + "." + amount + (armed ? ".confirm" : ""));
         }
 
         private ButtonWidget<?> createNameButton(CelestialAsset asset, int width) {
@@ -1447,7 +1450,8 @@ public final class StarmapAssetActions {
 
         private ButtonWidget<?> createAssetKindButton(CelestialAsset.Kind kind, String tooltip, boolean enabled,
             Runnable action) {
-            return createIconButton(kind, StarmapActionGlyph.NONE, tooltip, enabled, action);
+            return createIconButton(kind, StarmapActionGlyph.NONE, tooltip, enabled, action)
+                .name("asset.create." + kind.name());
         }
 
         private ButtonWidget<?> createGlyphButton(StarmapActionGlyph glyph, String tooltip, boolean enabled,
@@ -1461,7 +1465,8 @@ public final class StarmapAssetActions {
                 if (currentTab == tab) return;
                 currentTab = tab;
                 markStructureDirty();
-            }, false).background(createTabButtonBackground(selected, false))
+            }, false).name("asset.tab." + tab)
+                .background(createTabButtonBackground(selected, false))
                 .hoverBackground(createTabButtonBackground(selected, true));
         }
 

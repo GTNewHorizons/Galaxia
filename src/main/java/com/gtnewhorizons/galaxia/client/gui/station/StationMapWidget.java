@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -486,6 +487,21 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
         if (layout.isOccupied(coord)) return coord;
         if (StationPlacementValidator.validate(layout, coord) == StationPlacementValidator.Result.OK) return coord;
         return null;
+    }
+
+    public Rectangle tileBounds(StationTileCoord coordinate) {
+        StationMapFrame frame = mapFrame();
+        return new Rectangle(
+            frame.tileLocalX(coordinate),
+            frame.tileLocalY(coordinate),
+            StationMapFrame.TILE_SIZE,
+            StationMapFrame.TILE_SIZE);
+    }
+
+    public @Nullable StationTileCoord interactableTileAt(int localX, int localY) {
+        AutomatedFacility facility = resolveFacility();
+        if (facility == null || isInputBlocked() || !mapFrame().contains(localX, localY)) return null;
+        return hitTest(facility.stationLayout(), localX, localY);
     }
 
     private StationMapFrame mapFrame() {

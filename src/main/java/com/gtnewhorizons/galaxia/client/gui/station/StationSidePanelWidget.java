@@ -298,7 +298,20 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     }
 
     private ButtonWidget<?> createModuleActionButton(int slot) {
-        return new ButtonWidget<>().background((ctx, x, y, w, h, ignoredTheme) -> {
+        class ActionButton extends ButtonWidget<ActionButton> {
+
+            @Override
+            public @Nullable String getName() {
+                ModulePanelAction action = actionAtSlot(slot);
+                return action == null ? null : action.name();
+            }
+
+            @Override
+            public boolean isName(String name) {
+                return name != null && name.equals(getName());
+            }
+        }
+        return new ActionButton().background((ctx, x, y, w, h, ignoredTheme) -> {
             if (isPickerActive()) return;
             ModulePanelAction action = actionAtSlot(slot);
             if (action == null) return;
