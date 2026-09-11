@@ -367,7 +367,7 @@ public final class HammerDispatchPlanner {
         double orbitalTime, ModuleHammer hammer, UUID routeProfileTeamId) {
         CelestialObject srcBody = GalaxiaCelestialAPI.findBodyByKey(root, supplier.celestialObjectKey);
         CelestialObject dstBody = GalaxiaCelestialAPI.findBodyByKey(root, requester.celestialObjectKey);
-        CelestialObject attractor = srcBody != null ? GalaxiaCelestialAPI.findStar(root, srcBody) : null;
+        CelestialObject attractor = GalaxiaCelestialAPI.findStar(root, supplier.celestialObjectKey);
         if (srcBody == null || dstBody == null || attractor == null) return new RouteInspection(null, false);
 
         boolean shouldProfile = routeProfileTeamId != null;

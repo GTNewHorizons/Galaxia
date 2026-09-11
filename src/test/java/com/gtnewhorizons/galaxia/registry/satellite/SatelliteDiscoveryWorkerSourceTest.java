@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.satellite;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.OptionalLong;
@@ -53,6 +54,35 @@ final class SatelliteDiscoveryWorkerSourceTest {
                     2,
                     SatelliteDiscoveryWorkerSource.PROSPECTING_EFFECT_PER_WORKER)),
             contributions);
+    }
+
+    /** Bug regression: an unfinished or disabled satellite cannot perform prospecting scans. */
+    @Test
+    void prospectingRequiresAnOperationalSatellite() {
+        CelestialAsset satellite = CelestialAsset.create(
+            ANCHOR,
+            CelestialAsset.Kind.SATELLITE,
+            Buildable.Status.CONSTRUCTION_SITE,
+            SatelliteKind.PROSPECTING);
+        CelestialAssetStore.registerAsset(TEAM, satellite);
+
+        assertTrue(
+            SatelliteDiscoveryWorkerSource
+                .prospectingWorkers(anchor -> ANCHOR.equals(anchor) ? OptionalLong.of(7L) : OptionalLong.empty())
+                .isEmpty());
+
+        satellite.updateStatus(Buildable.Status.OPERATIONAL);
+        assertEquals(
+            1,
+            SatelliteDiscoveryWorkerSource
+                .prospectingWorkers(anchor -> ANCHOR.equals(anchor) ? OptionalLong.of(7L) : OptionalLong.empty())
+                .size());
+
+        satellite.updateStatus(Buildable.Status.DISABLED);
+        assertTrue(
+            SatelliteDiscoveryWorkerSource
+                .prospectingWorkers(anchor -> ANCHOR.equals(anchor) ? OptionalLong.of(7L) : OptionalLong.empty())
+                .isEmpty());
     }
 
     private static void registerProspectingSatellite() {
