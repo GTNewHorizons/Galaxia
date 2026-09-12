@@ -1,0 +1,4 @@
+capture permissions-default
+move-widget 0/5/0/0/1
+click left
+capture permission-toggled
