@@ -15,7 +15,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayerMP;
 
 import org.lwjgl.input.Keyboard;
-import org.lwjgl.opengl.Display;
 
 import com.cleanroommc.modularui.screen.viewport.LocatedWidget;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
@@ -207,11 +206,6 @@ public final class StarmapGameTests {
     @GameTest(timeoutTicks = 1200)
     public static void mapRetainsSelectionAndPanelsAcrossWindowResize(GameTestHelper helper) {
         var sequence = GuiTestSupport.openMap(helper, 5)
-            .client("retain original window size", c -> {
-                int width = Display.getWidth();
-                int height = Display.getHeight();
-                c.afterTest(() -> GuiTestSupport.resizeWindow(width, height));
-            })
             .step("select Overworld before resize")
             .click(ClientTarget.of("Overworld", c -> GuiTestSupport.bodyTarget(BODY)))
             .awaitClient("selection ready before resize", c -> {
@@ -222,10 +216,9 @@ public final class StarmapGameTests {
             .step("open signals before resize")
             .click(control("starmap.toolbar.signals"));
         for (int[] dimensions : List.of(new int[] { 2400, 1280 }, new int[] { 1281, 721 })) {
-            sequence
-                .client(
-                    "resize open map to " + dimensions[0] + "x" + dimensions[1],
-                    c -> GuiTestSupport.resizeWindow(dimensions[0], dimensions[1]))
+            sequence.step("resize open map to " + dimensions[0] + "x" + dimensions[1])
+                .withinTicks(150)
+                .resizeWindow(dimensions[0], dimensions[1])
                 .withinTicks(150)
                 .awaitClient("selection and panels survive resize", c -> {
                     Minecraft mc = Minecraft.getMinecraft();

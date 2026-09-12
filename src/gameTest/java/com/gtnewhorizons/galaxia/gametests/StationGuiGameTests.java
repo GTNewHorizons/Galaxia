@@ -3,12 +3,12 @@ package com.gtnewhorizons.galaxia.gametests;
 import static com.gtnewhorizons.galaxia.gametests.GuiTestSupport.control;
 import static com.gtnewhorizons.galaxia.gametests.GuiTestSupport.findNamedWidget;
 import static com.gtnewhorizons.galaxia.gametests.GuiTestSupport.namedTarget;
-import static com.gtnewhorizons.galaxia.gametests.GuiTestSupport.resizeWindow;
 
 import java.awt.Point;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
@@ -158,6 +158,7 @@ public final class StationGuiGameTests {
                 c.afterTest(fixture::cleanup);
                 fixture.rememberClientSettings();
             });
+        if (fixture.guiScale == 2) sequence.resizeWindow(1281, 721);
         return GuiTestSupport
             .openFacility(
                 sequence,
@@ -411,7 +412,7 @@ public final class StationGuiGameTests {
             .click(control("recipe.toggle.0"))
             .withinTicks(150)
             .step("close while the window changes size")
-            .click(ClientTarget.of("recipe.close during resize", c -> fixture.resizeWhileResolvingClose()))
+            .click(ClientTarget.of("recipe.close during resize", fixture::resizeWhileResolvingClose))
             .awaitClient("resized configuration closed", c -> {
                 if (findNamedWidget("recipe.close") != null) throw new AssertionError("Configuration is still open");
                 if (Display.getWidth() != 1600 || Display.getHeight() != 900) {
@@ -481,9 +482,7 @@ public final class StationGuiGameTests {
         private boolean originalGuiDebug;
         private boolean initialized;
         private String groupName;
-        private int originalWindowWidth;
-        private int originalWindowHeight;
-        private boolean resized;
+        private CompletableFuture<Void> windowResize;
 
         StationFixture() {
             this(false);
@@ -611,12 +610,9 @@ public final class StationGuiGameTests {
 
         void rememberClientSettings() {
             Minecraft mc = Minecraft.getMinecraft();
-            originalWindowWidth = Display.getWidth();
-            originalWindowHeight = Display.getHeight();
             originalGuiScale = mc.gameSettings.guiScale;
             originalGuiDebug = ModularUIConfig.guiDebugMode;
             initialized = true;
-            if (guiScale == 2) resizeWindow(1281, 721);
         }
 
         void captureStationScreen() {
@@ -628,8 +624,6 @@ public final class StationGuiGameTests {
         void cleanup() {
             CelestialAssetStore.CLIENT.destroyAssetInternal(assetId);
             if (initialized) {
-                if (Display.getWidth() != originalWindowWidth || Display.getHeight() != originalWindowHeight)
-                    resizeWindow(originalWindowWidth, originalWindowHeight);
                 Minecraft.getMinecraft().gameSettings.guiScale = originalGuiScale;
                 ModularUIConfig.guiDebugMode = originalGuiDebug;
             }
@@ -757,12 +751,14 @@ public final class StationGuiGameTests {
             return namedTarget("settings.group.save");
         }
 
-        ClickTarget resizeWhileResolvingClose() {
-            ClickTarget target = namedTarget("recipe.close");
-            if (target != null && !resized) {
-                resized = true;
-                resizeWindow(1600, 900);
+        ClickTarget resizeWhileResolvingClose(ClientTest client) {
+            if (windowResize != null) {
+                if (!windowResize.isDone()) return null;
+                windowResize.join();
+                return namedTarget("recipe.close");
             }
+            ClickTarget target = namedTarget("recipe.close");
+            if (target != null) windowResize = client.resizeWindow(1600, 900);
             return target;
         }
 

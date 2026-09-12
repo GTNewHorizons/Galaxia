@@ -9,9 +9,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.event.GuiOpenEvent;
 import net.minecraftforge.common.MinecraftForge;
 
-import org.lwjgl.LWJGLException;
 import org.lwjgl.opengl.Display;
-import org.lwjgl.opengl.DisplayMode;
 
 import com.cleanroommc.modularui.ModularUIConfig;
 import com.cleanroommc.modularui.api.widget.IWidget;
@@ -72,6 +70,7 @@ final class GuiTestSupport {
             player.inventory.setInventorySlotContents(slot, new ItemStack(GalaxiaItemList.ITEM_GALACTIC_MAP.getItem()));
             player.inventoryContainer.detectAndSendChanges();
         })
+            .withinTicks(300)
             .awaitClient("held map synchronized", c -> {
                 ItemStack held = Minecraft.getMinecraft().thePlayer.getHeldItem();
                 if (held == null || held.getItem() != GalaxiaItemList.ITEM_GALACTIC_MAP.getItem()) {
@@ -238,7 +237,9 @@ final class GuiTestSupport {
                     "map.dismissContext",
                     point,
                     () -> map.isValid() && map.getPanel()
-                        .isBelowMouse(map));
+                        .isBelowMouse(map)
+                        && !menuWidget.getPanel()
+                            .isBelowMouse(menuWidget));
             }
         }
         return null;
@@ -297,14 +298,6 @@ final class GuiTestSupport {
             () -> widget.isValid() && widget.areAncestorsEnabled()
                 && widget.getPanel()
                     .isBelowMouse(widget));
-    }
-
-    static void resizeWindow(int width, int height) {
-        try {
-            Display.setDisplayMode(new DisplayMode(width, height));
-        } catch (LWJGLException failure) {
-            throw new AssertionError("Could not resize the test window", failure);
-        }
     }
 
     static Rectangle widgetBounds(IWidget widget) {
