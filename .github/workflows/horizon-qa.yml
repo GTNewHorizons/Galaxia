@@ -56,7 +56,8 @@ jobs:
       - name: Install virtual display and software OpenGL
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb xauth mesa-utils libgl1-mesa-dri libasound2t64 libopenal1
+          sudo apt-get install -y xvfb xauth x11-xserver-utils mesa-utils libgl1-mesa-dri libasound2t64 libopenal1
+          xvfb-run -a --server-args='-screen 0 1280x720x24' xrandr --query
           xvfb-run -a glxinfo -B
 
       - name: Build Horizon QA
