@@ -20,6 +20,7 @@ import org.jetbrains.annotations.Nullable;
 import com.cardinalstar.cubicchunks.api.worldgen.IWorldGenerator;
 import com.cardinalstar.cubicchunks.world.ICubicWorldProvider;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.BiomeMatrixGenerator;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.ChunkProviderGalaxiaPlanet;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.CubicChunkProviderGalaxiaPlanet;
 
@@ -157,6 +158,10 @@ public class WorldProviderSpace extends WorldProvider implements ICubicWorldProv
             biomes = biggerMatrix;
         }
         biomes[x][z] = biome;
+    }
+
+    public void addBiomeMatrix(BiomeMatrixGenerator biomeMatrixGenerator) {
+        biomes = biomeMatrixGenerator.createBiomeMatrix();
     }
 
     /**

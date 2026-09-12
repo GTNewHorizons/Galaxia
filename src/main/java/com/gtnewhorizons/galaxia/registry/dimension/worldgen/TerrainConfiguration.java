@@ -10,6 +10,8 @@ import net.minecraft.init.Blocks;
 
 import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
 import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.TerrainModifier;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.TerrainModifierEntry;
 
 import lombok.Getter;
 
@@ -25,7 +27,7 @@ public final class TerrainConfiguration {
     private final TerrainFeature[] microFeatures;
 
     /**
-     * Constructor to initalize terrain feature lists
+     * Constructor to initialize terrain feature lists
      */
     private TerrainConfiguration(List<TerrainFeature> features) {
         this.allFeatures = features.toArray(new TerrainFeature[0]);
@@ -102,6 +104,7 @@ public final class TerrainConfiguration {
         private double scaleMultiplier = 1.0;
         private final Map<String, Object> custom = new HashMap<>();
         private ImmutableBlockMeta replacementBlock = new BlockMeta(Blocks.stone);
+        private TerrainModifierEntry modifierEntry;
 
         /**
          * Constructs with a parent builder and a preset
@@ -164,6 +167,11 @@ public final class TerrainConfiguration {
             return this;
         }
 
+        public FeatureConfigurator modifier(TerrainModifier modifier, double minimum, double maximum) {
+            modifierEntry = new TerrainModifierEntry(modifier, minimum, maximum);
+            return this;
+        }
+
         /**
          * The final stage building of the feature itself based on all parameters previously given
          *
@@ -173,7 +181,13 @@ public final class TerrainConfiguration {
             double finalHeight = (height > 0 ? height : 1) * scaleMultiplier;
             double finalWidth = (width > 0 ? width : 1) * scaleMultiplier;
 
-            TerrainFeature feature = new TerrainFeature(preset, finalHeight, finalWidth, custom, replacementBlock);
+            TerrainFeature feature = new TerrainFeature(
+                preset,
+                finalHeight,
+                finalWidth,
+                custom,
+                replacementBlock,
+                modifierEntry);
 
             parent.features.add(feature);
             return parent;

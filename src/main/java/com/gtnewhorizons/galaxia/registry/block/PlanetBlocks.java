@@ -69,6 +69,12 @@ public final class PlanetBlocks {
             .harvest(1)
             .build();
 
+    public static final Block MOON_DIORITE = PlanetBlockBuilder.create("moon/moon_diorite")
+        .dropSelf()
+        .hardness(2.0F)
+        .harvest(1)
+        .build();
+
     /*
      * MARS blocks
      */
