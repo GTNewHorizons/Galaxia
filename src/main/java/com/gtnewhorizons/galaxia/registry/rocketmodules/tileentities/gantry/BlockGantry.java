@@ -22,6 +22,7 @@ public class BlockGantry extends BlockUpdatable implements ITileEntityProvider {
         super(Material.iron);
         this.setHardness(1.5F);
         this.setResistance(10.0f);
+        this.setBlockTextureName("galaxia:machine/launchpad_sheeting");
     }
 
     @Override
