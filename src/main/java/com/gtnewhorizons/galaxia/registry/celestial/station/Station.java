@@ -14,6 +14,7 @@ import net.minecraft.world.WorldServer;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
@@ -148,8 +149,19 @@ public class Station extends CelestialAsset {
         if (world == null) return null;
 
         if (controller.getTE(world) instanceof TileStation s) return s;
-        Galaxia.LOG.error("[Station] Something that should not be a controller is registered as such");
 
+        // A station absorbed into another station's graph keeps its own asset even though it is no longer the
+        // graph controller, so dismantling it leaves an orphaned operational asset behind. Destroy it on first
+        // detection instead of logging an error every tick. Chunk-unloaded controllers are skipped here: the
+        // tile's invalidate() already disabled the asset, so this path is not reached for a normal chunk unload.
+        if (world.getChunkProvider()
+            .chunkExists(controller.x() >> 4, controller.z() >> 4)) {
+            Galaxia.LOG.error(
+                "[Station] Controller at {} is not a TileStation; destroying orphaned station {}",
+                controller,
+                assetId);
+            CelestialAssetStore.destroyAsset(assetId);
+        }
         return null;
     }
 }

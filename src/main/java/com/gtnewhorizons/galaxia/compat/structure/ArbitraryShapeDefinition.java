@@ -54,6 +54,7 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
     private T tile;
     @Getter
     private int volume;
+    @Getter
     private final boolean enclosed;
 
     // ── Boundary elements (keyed by Block, define the shell) ──────────────────
@@ -278,8 +279,11 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
         boolean isEnclosed = checkEnclosed(tile, world, placedFacing);
         if (isEnclosed) {
             this.tile = tile;
-            this.volume = (enclosedVisited.size() + coarseVisited.size() * coarseRadius * coarseRadius * coarseRadius)
-                - structureElements.size();
+            // Interior air volume: shells (enclosedVisited, block granularity, minus the
+            // boundary wall blocks it also collected) plus fully-enclosed coarse chunks.
+            // Each coarse cell is a chunk of CHUNK_SIZE³ blocks.
+            this.volume = (enclosedVisited.size() - structureBlocks.size())
+                + coarseInterior.size() * CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 
             if (!interiorElements.isEmpty()) {
                 scanInteriorElements(tile, world);

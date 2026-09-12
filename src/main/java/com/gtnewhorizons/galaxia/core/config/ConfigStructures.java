@@ -13,6 +13,9 @@ public class ConfigStructures {
     @Config.LangKey("galaxia.config.category.structures_open")
     public static final Open open = new Open();
 
+    @Config.LangKey("galaxia.config.category.airlock")
+    public static final Airlock airlock = new Airlock();
+
     public static class Enclosed {
 
         @Config.LangKey("galaxia.config.structures.enclosed_radius")
@@ -27,5 +30,12 @@ public class ConfigStructures {
         @Config.DefaultInt(64)
         @Config.RangeInt(min = 1, max = 511)
         public int searchRadius;
+    }
+
+    public static class Airlock {
+
+        @Config.LangKey("galaxia.config.structures.open_on_normal_click")
+        @Config.DefaultBoolean(true)
+        public boolean openOnNormalClick;
     }
 }
