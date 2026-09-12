@@ -8,7 +8,6 @@ import java.awt.Point;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
@@ -58,7 +57,9 @@ import codechicken.nei.recipe.GuiOverlayButton;
 import codechicken.nei.recipe.GuiRecipe;
 import codechicken.nei.recipe.GuiRecipeButton;
 import codechicken.nei.recipe.NEIRecipeWidget;
+import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
+import cpw.mods.fml.common.gameevent.TickEvent;
 import gregtech.nei.GTNEIDefaultHandler;
 
 @GameTestHolder(value = "galaxia", clientOnly = true, requiredMods = { "gregtech", "NotEnoughItems" })
@@ -408,11 +409,13 @@ public final class StationGuiGameTests {
     @GameTest(timeoutTicks = 600)
     public static void resizingDuringCloseDoesNotSaveDraft(GameTestHelper helper) {
         StationFixture fixture = new StationFixture(true, 2);
+        ResizeDuringClose resize = new ResizeDuringClose();
         openConfiguration(helper, fixture).step("modify recipe draft")
             .click(control("recipe.toggle.0"))
+            .client("arm resize after positioning close", c -> resize.arm(c))
             .withinTicks(150)
             .step("close while the window changes size")
-            .click(ClientTarget.of("recipe.close during resize", fixture::resizeWhileResolvingClose))
+            .click(ClientTarget.of("recipe.close during resize", c -> resize.closeTarget()))
             .awaitClient("resized configuration closed", c -> {
                 if (findNamedWidget("recipe.close") != null) throw new AssertionError("Configuration is still open");
                 if (Display.getWidth() != 1600 || Display.getHeight() != 900) {
@@ -482,7 +485,6 @@ public final class StationGuiGameTests {
         private boolean originalGuiDebug;
         private boolean initialized;
         private String groupName;
-        private CompletableFuture<Void> windowResize;
 
         StationFixture() {
             this(false);
@@ -751,17 +753,51 @@ public final class StationGuiGameTests {
             return namedTarget("settings.group.save");
         }
 
-        ClickTarget resizeWhileResolvingClose(ClientTest client) {
-            if (windowResize != null) {
-                if (!windowResize.isDone()) return null;
-                windowResize.join();
-                return namedTarget("recipe.close");
-            }
-            ClickTarget target = namedTarget("recipe.close");
-            if (target != null) windowResize = client.resizeWindow(1600, 900);
-            return target;
+    }
+
+    /** Sends a real resize after positioning, while the click remains pending in Horizon's serial queue. */
+    public static final class ResizeDuringClose {
+
+        private ClientTest client;
+        private boolean positioned;
+        private boolean requested;
+
+        void arm(ClientTest client) {
+            this.client = client;
+            FMLCommonHandler.instance()
+                .bus()
+                .register(this);
+            client.afterTest(
+                () -> FMLCommonHandler.instance()
+                    .bus()
+                    .unregister(this));
         }
 
+        @SubscribeEvent
+        public void afterFrame(TickEvent.RenderTickEvent event) {
+            if (event.phase != TickEvent.Phase.END || !positioned || requested) return;
+            IWidget close = findNamedWidget("recipe.close");
+            if (close == null || !close.getPanel()
+                .isBelowMouse(close)) return;
+            client.requestWindowResize(1600, 900);
+            requested = true;
+        }
+
+        ClickTarget closeTarget() {
+            IWidget close = findNamedWidget("recipe.close");
+            if (close == null) return null;
+            return new ClickTarget(close, GuiTestSupport.widgetBounds(close), () -> {
+                positioned = true;
+                return requested && Display.getWidth() == 1600
+                    && Display.getHeight() == 900
+                    && Minecraft.getMinecraft().displayWidth == 1600
+                    && Minecraft.getMinecraft().displayHeight == 900
+                    && close.isValid()
+                    && close.areAncestorsEnabled()
+                    && close.getPanel()
+                        .isBelowMouse(close);
+            });
+        }
     }
 
     private static ModularScreen requireScreen(String name) {

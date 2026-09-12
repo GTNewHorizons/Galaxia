@@ -37,7 +37,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: GTNewHorizons/Horizon-QA
-          ref: 40b680c2d4343045bc57a81ebff84fa7e760086f
+          ref: 6209ae74fc4f66d78310bd6d59e5ef6cdedeb56c
           path: horizonqa
           fetch-depth: 0
           persist-credentials: false
