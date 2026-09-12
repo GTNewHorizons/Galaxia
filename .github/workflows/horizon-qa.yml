@@ -1,0 +1,116 @@
+name: Horizon QA
+
+on:
+  pull_request:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: horizon-qa-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  client-tests:
+    name: Horizon QA
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: galaxia
+        shell: bash
+    env:
+      LIBGL_ALWAYS_SOFTWARE: 'true'
+      ALSOFT_DRIVERS: 'null'
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: galaxia
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check out Horizon QA client support
+        uses: actions/checkout@v5
+        with:
+          repository: GTNewHorizons/Horizon-QA
+          ref: dc9b43d9afd78c094ddc95cd01b3b17eaaca9b4e
+          path: horizonqa
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: |
+            8
+            17
+            21
+            25
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Install virtual display and software OpenGL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth mesa-utils libgl1-mesa-dri libasound2t64 libopenal1
+          xvfb-run -a glxinfo -B
+
+      - name: Build Horizon QA
+        run: |
+          chmod +x gradlew ../horizonqa/gradlew
+          ../horizonqa/gradlew -p ../horizonqa jar --no-daemon --max-workers=2 --console=plain
+          shopt -s nullglob
+          jars=(../horizonqa/build/libs/*-dev.jar)
+          if (( ${#jars[@]} != 1 )); then
+            echo 'Expected exactly one Horizon QA development JAR' >&2
+            exit 1
+          fi
+          echo "HORIZON_QA_JAR=$(realpath "${jars[0]}")" >> "$GITHUB_ENV"
+
+      - name: Prepare client
+        run: |
+          ./gradlew classes setupDecompWorkspace --no-daemon --max-workers=2 --console=plain \
+            -PusesMixinDebug=false "-PhorizonQaJar=$HORIZON_QA_JAR"
+
+      - name: Run all Galaxia client scenarios
+        run: |
+          report_dir="$PWD/build/horizonqa/ci"
+          mkdir -p "$report_dir"
+          set -o pipefail
+          timeout --signal=TERM --kill-after=30s 15m \
+            xvfb-run -a --server-args='-screen 0 1280x720x24' \
+            ./gradlew runClient --no-daemon --max-workers=2 --console=plain \
+              -PusesMixinDebug=false "-PhorizonQaJar=$HORIZON_QA_JAR" \
+              --init-script ../horizonqa/scripts/client-test-isolation.init.gradle \
+              -PhorizonQaClientTask=runClient "-PhorizonQaClientReportDir=$report_dir" \
+              --mcJvmArgs=-Dhorizonqa.mode=ci \
+              --mcJvmArgs=-Dhorizonqa.client=true \
+              --mcJvmArgs=-Dhorizonqa.world=normal \
+              --mcJvmArgs=-Dhorizonqa.tests=galaxia \
+              "--mcJvmArgs=-Dhorizonqa.reportDir=$report_dir" \
+              --mcArgs=--width --mcArgs=1280 --mcArgs=--height --mcArgs=720 \
+              2>&1 | tee "$report_dir/launch.log"
+
+      - name: Validate completed suite
+        if: ${{ !cancelled() }}
+        run: python3 scripts/check-horizon-qa.py build/horizonqa/ci/horizonqa-result.json
+
+      - name: Upload client reports and diagnostics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: horizon-qa-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            galaxia/build/horizonqa/ci/*.json
+            galaxia/build/horizonqa/ci/*.xml
+            galaxia/build/horizonqa/ci/*.html
+            galaxia/build/horizonqa/ci/*.log
+            galaxia/build/horizonqa/ci/**/*.png
+            galaxia/build/horizonqa/ci/game/logs/
+            galaxia/build/horizonqa/ci/game/crash-reports/
