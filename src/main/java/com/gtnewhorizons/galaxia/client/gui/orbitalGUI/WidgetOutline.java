@@ -1,8 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
-import net.minecraft.client.gui.Gui;
-
-import com.cleanroommc.modularui.screen.viewport.GuiContext;
+import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
@@ -12,16 +10,7 @@ public final class WidgetOutline {
     private WidgetOutline() {}
 
     public static ParentWidget<?> create(ParentWidget<?> target, int thickness, int color) {
-        return create(target, thickness, color, color, color, color);
-    }
-
-    public static ParentWidget<?> create(ParentWidget<?> target, int thickness, int topColor, int rightColor,
-        int bottomColor, int leftColor) {
-        return new OutlineOverlayWidget(target, thickness, topColor, rightColor, bottomColor, leftColor);
-    }
-
-    private static void drawSolid(GuiContext context, int x, int y, int width, int height, int color) {
-        Gui.drawRect(x, y, x + width, y + height, color);
+        return new OutlineOverlayWidget(target, thickness, color);
     }
 
     private static final class OutlineOverlayWidget extends ParentWidget<OutlineOverlayWidget> {
@@ -29,30 +18,12 @@ public final class WidgetOutline {
         private final ParentWidget<?> target;
         private final int thickness;
 
-        private OutlineOverlayWidget(ParentWidget<?> target, int thickness, int topColor, int rightColor,
-            int bottomColor, int leftColor) {
+        private OutlineOverlayWidget(ParentWidget<?> target, int thickness, int color) {
             this.target = target;
             this.thickness = thickness;
-            child(
-                new BorderEdgeWidget(topColor).left(0)
-                    .top(0)
-                    .widthRel(1f)
-                    .height(thickness));
-            child(
-                new BorderEdgeWidget(leftColor).left(0)
-                    .top(0)
-                    .width(thickness)
-                    .heightRel(1f));
-            child(
-                new BorderEdgeWidget(rightColor).right(0)
-                    .top(0)
-                    .width(thickness)
-                    .heightRel(1f));
-            child(
-                new BorderEdgeWidget(bottomColor).left(0)
-                    .bottom(0)
-                    .widthRel(1f)
-                    .height(thickness));
+            background(
+                new Rectangle().hollow(thickness)
+                    .color(color));
         }
 
         @Override
@@ -90,27 +61,4 @@ public final class WidgetOutline {
         }
     }
 
-    private static final class BorderEdgeWidget extends ParentWidget<BorderEdgeWidget> {
-
-        private final int color;
-
-        private BorderEdgeWidget(int color) {
-            this.color = color;
-        }
-
-        @Override
-        public boolean canHover() {
-            return false;
-        }
-
-        @Override
-        public boolean canHoverThrough() {
-            return true;
-        }
-
-        @Override
-        public void drawBackground(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
-            drawSolid(context, 0, 0, getArea().width, getArea().height, color);
-        }
-    }
 }

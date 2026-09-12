@@ -3,12 +3,15 @@ package com.gtnewhorizons.galaxia.core;
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.FMLBusRegister;
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.ForgeBusRegister;
 
+import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.MinecraftForgeClient;
 
+import com.cleanroommc.modularui.api.IMuiScreen;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.GalaxiaKeyBinds;
+import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.GalacticMapWidget;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryItemRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryPlacementPreviewHandler;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryRenderer;
@@ -35,7 +38,9 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityR
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantry;
 
+import codechicken.nei.VisiblityData;
 import codechicken.nei.api.API;
+import codechicken.nei.api.INEIGuiAdapter;
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.client.registry.RenderingRegistry;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
@@ -107,6 +112,20 @@ public class ClientProxy extends CommonProxy {
         GalaxiaMultiblockHandler handler = new GalaxiaMultiblockHandler();
         API.registerRecipeHandler(handler);
         API.registerUsageHandler(handler);
+        API.registerNEIGuiHandler(new INEIGuiAdapter() {
+
+            @Override
+            public VisiblityData modifyVisiblity(GuiContainer gui, VisiblityData visibility) {
+                if (gui instanceof IMuiScreen modular) {
+                    var screen = modular.getScreen();
+                    if (GalacticMapWidget.SCREEN_NAME.equals(screen.getName())
+                        || Galaxia.MODID.equals(screen.getOwner())
+                            && (!visibility.showWidgets || !visibility.showItemSection || !visibility.showItemPanel))
+                        visibility.showNEI = false;
+                }
+                return visibility;
+            }
+        });
     }
 
     @Override

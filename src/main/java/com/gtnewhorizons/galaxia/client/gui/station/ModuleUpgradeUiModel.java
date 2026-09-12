@@ -162,10 +162,8 @@ final class ModuleUpgradeUiModel {
             variants.add(new Option(variant.name(), variant.name(), variant == selectedVariant, true));
         }
         List<Option> tiers = new ArrayList<>();
-        for (ModuleTier tier : ModuleTier.values()) {
-            if (tier == ModuleTier.NONE) continue;
-            boolean enabled = ModuleHammer.supportsTier(selectedVariant, tier);
-            tiers.add(new Option(tier.name(), tier.name(), tier == selectedTier, enabled));
+        for (ModuleTier tier : hammerAllowedTiers(selectedVariant)) {
+            tiers.add(new Option(tier.name(), tier.name(), tier == selectedTier, true));
         }
         return List
             .of(new Group(GROUP_HAMMER_VARIANT, "Variant", variants), new Group(GROUP_HAMMER_TIER, "Tier", tiers));

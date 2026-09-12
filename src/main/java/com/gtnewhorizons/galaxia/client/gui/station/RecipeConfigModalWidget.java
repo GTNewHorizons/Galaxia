@@ -105,10 +105,11 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         this.controller = controller;
         this.tilePickerController = tilePickerController;
         this.editor = editor;
+        // Finish native dropdown input before disposing its configuration owner.
         this.settingsGroupSelector = new ModuleSettingsGroupSelectorWidget(assetId, controller, () -> {
             ModuleInstance module = selectedModule();
             return module != null ? module.kind() : null;
-        }, this::isRecipeListOpen, WIDTH, controller::close);
+        }, this::isRecipeListOpen, WIDTH, () -> controller.requestRetargetTo(null));
 
         for (int row = 0; row < ROWS_PER_PAGE; row++) {
             int rowY = ROW_TOP + row * ROW_HEIGHT;

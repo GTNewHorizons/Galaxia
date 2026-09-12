@@ -11,7 +11,7 @@ import com.cleanroommc.modularui.factory.GuiFactories;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.GalacticChartGui;
+import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.GalacticMapWidget;
 
 public class ItemGalacticMap extends Item implements IGuiHolder<GuiData> {
 
@@ -26,6 +26,6 @@ public class ItemGalacticMap extends Item implements IGuiHolder<GuiData> {
 
     @Override
     public ModularPanel buildUI(GuiData guiData, PanelSyncManager syncManager, UISettings uiSettings) {
-        return new GalacticChartGui().build(syncManager, guiData.getPlayer());
+        return GalacticMapWidget.build(syncManager, guiData.getPlayer());
     }
 }

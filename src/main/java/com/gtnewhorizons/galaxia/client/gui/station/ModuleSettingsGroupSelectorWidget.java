@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
@@ -371,7 +372,8 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
     private static final class GroupDropdown extends DropdownWidget<GroupOption, GroupDropdown> {
 
         GroupDropdown() {
-            super("module_settings_group", GroupOption.class);
+            // Panel handlers outlive replaced configuration widgets within the station screen.
+            super("module_settings_group_" + UUID.randomUUID(), GroupOption.class);
         }
 
         @Override

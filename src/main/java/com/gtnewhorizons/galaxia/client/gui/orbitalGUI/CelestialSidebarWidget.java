@@ -105,7 +105,8 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     @Override
     public void onInit() {
         super.onInit();
-        searchField = new TextFieldWidget().left(14)
+        searchField = new TextFieldWidget().name("starmap.sidebar.search")
+            .left(14)
             .top(SEARCH_FIELD_TOP)
             .right(8)
             .height(16)

@@ -92,6 +92,7 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
                 .size(voidRefund.width(), voidRefund.height()));
         child(
             ModuleConfigModalSupport.button(this::canConfirm, "Confirm", this::confirm)
+                .name("module.upgrade.confirm")
                 .pos(confirm.x(), confirm.y())
                 .size(confirm.width(), confirm.height()));
         child(
@@ -180,7 +181,25 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
     }
 
     private ButtonWidget<?> createOptionButton(int slot) {
-        return new ButtonWidget<>()
+        class OptionButton extends ButtonWidget<OptionButton> {
+
+            @Override
+            public @Nullable String getName() {
+                OptionRef ref = optionRef(slot);
+                return ref == null ? null
+                    : "module.upgrade." + ref.group()
+                        .id()
+                        + "."
+                        + ref.option()
+                            .id();
+            }
+
+            @Override
+            public boolean isName(String name) {
+                return name != null && name.equals(getName());
+            }
+        }
+        return new OptionButton()
             .background((ctx, x, y, w, h, ignoredTheme) -> drawOptionButton(x, y, w, h, optionRef(slot), false))
             .hoverBackground((ctx, x, y, w, h, ignoredTheme) -> drawOptionButton(x, y, w, h, optionRef(slot), true))
             .overlay((ctx, x, y, w, h, ignoredTheme) -> drawOptionLabel(x, y, w, h, optionRef(slot)))

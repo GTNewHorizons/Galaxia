@@ -56,8 +56,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
  */
 public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsWidget> {
 
-    private static final int PANEL_X = 10;
-    private static final int PANEL_Y = 30;
     private static final int PANEL_W = 348;
     private static final int ROW_H = 22;
     private static final int MAX_VISIBLE_ROWS = 20;
@@ -138,13 +136,6 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         return true;
     }
 
-    boolean isPointInPanel(int localX, int localY) {
-        if (!panelRoot.isEnabled()) return false;
-        return localX >= PANEL_X && localX <= PANEL_X + getArea().width
-            && localY >= PANEL_Y
-            && localY <= PANEL_Y + getArea().height;
-    }
-
     private CelestialObject currentViewRoot() {
         CelestialObject viewRoot = viewRootSupplier.get();
         return viewRoot == null ? galaxyRoot : viewRoot;
@@ -175,7 +166,6 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         panelRoot.removeAll();
         scrollWidget = null;
         scrollData = null;
-        pos(PANEL_X, PANEL_Y);
         size(PANEL_W, panelH);
         panelRoot.size(PANEL_W, panelH);
         panelRoot.setEnabled(true);

@@ -51,8 +51,6 @@ import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
  */
 public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemAssetPanelWidget> {
 
-    private static final int PANEL_X = 10;
-    private static final int PANEL_Y = 30;
     private static final int PANEL_W = 348;
     private static final int HEADER_H = 24;
     private static final int CONTROLS_H = 22;
@@ -143,8 +141,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         String signature = buildStructureSignature();
         boolean structureChanged = !signature.equals(lastStructureSignature) || viewRoot != lastViewRoot
             || currentFilter != lastFilter
-            || currentSort != lastSort
-            || rowsContainer == null;
+            || currentSort != lastSort;
         if (structureChanged) {
             rebuildPanel(viewRoot);
             lastStructureSignature = signature;
@@ -286,7 +283,6 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         panelRoot.removeAll();
         scrollWidget = null;
         scrollData = null;
-        pos(PANEL_X, PANEL_Y);
         size(PANEL_W, panelH);
         panelRoot.size(PANEL_W, panelH);
         panelRoot.setEnabled(true);
@@ -310,7 +306,9 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         panelRoot.child(
             cycleButton(
                 () -> "Filter: " + currentFilter.getDisplayName(),
-                () -> currentFilter = cycleEnum(currentFilter, SystemAssetFilter.values())).pos(PANEL_PAD_X, controlsY)
+                () -> currentFilter = cycleEnum(currentFilter, SystemAssetFilter.values()))
+                    .name("starmap.assets.filter")
+                    .pos(PANEL_PAD_X, controlsY)
                     .size(FILTER_BTN_W, CTRL_BTN_H));
         panelRoot.child(
             cycleButton(

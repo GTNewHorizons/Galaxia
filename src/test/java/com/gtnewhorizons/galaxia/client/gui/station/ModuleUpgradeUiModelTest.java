@@ -113,35 +113,38 @@ final class ModuleUpgradeUiModelTest {
     }
 
     @Test
-    void hammerTierOptionsExposeDisabledBlockedTiers() {
-        Selection selection = Selection.hammer(HammerVariant.BIG, ModuleTier.ZPM);
+    void hammerUpgradeOffersOnlyTheSelectedVariantsBuildTiers() {
+        for (HammerVariant variant : HammerVariant.values()) {
+            List<ModuleTier> allowed = ModuleUpgradeUiModel.hammerAllowedTiers(variant);
+            ModuleTier selected = allowed.getLast();
+            Group tierGroup = ModuleUpgradeUiModel.groups(hammerModule(), Selection.hammer(variant, selected))
+                .stream()
+                .filter(
+                    group -> group.id()
+                        .equals(ModuleUpgradeUiModel.GROUP_HAMMER_TIER))
+                .findFirst()
+                .orElseThrow();
 
-        Group tierGroup = ModuleUpgradeUiModel.groups(hammerModule(), selection)
-            .stream()
-            .filter(
-                group -> group.id()
-                    .equals(ModuleUpgradeUiModel.GROUP_HAMMER_TIER))
-            .findFirst()
-            .orElseThrow();
-
-        Option ev = tierGroup.options()
-            .stream()
-            .filter(
-                option -> option.id()
-                    .equals(ModuleTier.EV.name()))
-            .findFirst()
-            .orElseThrow();
-        Option zpm = tierGroup.options()
-            .stream()
-            .filter(
-                option -> option.id()
-                    .equals(ModuleTier.ZPM.name()))
-            .findFirst()
-            .orElseThrow();
-
-        assertFalse(ev.enabled());
-        assertTrue(zpm.enabled());
-        assertTrue(zpm.selected());
+            assertEquals(
+                allowed.stream()
+                    .map(Enum::name)
+                    .toList(),
+                tierGroup.options()
+                    .stream()
+                    .map(Option::id)
+                    .toList());
+            assertTrue(
+                tierGroup.options()
+                    .stream()
+                    .allMatch(Option::enabled));
+            assertEquals(
+                List.of(selected.name()),
+                tierGroup.options()
+                    .stream()
+                    .filter(Option::selected)
+                    .map(Option::id)
+                    .toList());
+        }
     }
 
     @Test
