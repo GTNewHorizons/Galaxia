@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.preview;
 
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.GalacticChartGui;
+import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.GalacticMapWidget;
 import dev.modularui.preview.PreviewEntrypoint;
 
 final class StarmapPreviews {
@@ -8,9 +8,9 @@ final class StarmapPreviews {
     private StarmapPreviews() {}
 
     static PreviewEntrypoint overview() {
-        return PreviewEntrypoint.of(GalacticChartGui.class, context -> {
+        return PreviewEntrypoint.of(GalacticMapWidget.class, context -> {
             PreviewSupport.initializeStarmap();
-            return new GalacticChartGui().build(PreviewSupport.sync(context), PreviewSupport.player());
+            return GalacticMapWidget.build(PreviewSupport.sync(context), PreviewSupport.player());
         });
     }
 }

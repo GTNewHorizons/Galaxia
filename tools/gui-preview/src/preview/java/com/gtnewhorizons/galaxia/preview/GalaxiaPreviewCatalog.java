@@ -2,7 +2,7 @@ package com.gtnewhorizons.galaxia.preview;
 
 import com.gtnewhorizons.galaxia.client.gui.TeamPermissionScreen;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.GalacticChartGui;
+import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.GalacticMapWidget;
 import com.gtnewhorizons.galaxia.client.gui.station.ModulePickerScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
 import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeInputScreen;
@@ -25,7 +25,7 @@ public final class GalaxiaPreviewCatalog implements PreviewCatalog {
     @Override
     public List<PreviewScenario> scenarios() {
         return List.of(
-            scenario("starmap/default", "galactic starmap", "starmap", GalacticChartGui.class, StarmapPreviews::overview)
+            scenario("starmap/default", "galactic starmap", "starmap", GalacticMapWidget.class, StarmapPreviews::overview)
                 .tags("default", "interaction")
                 .actions("actions/starmap.txt")
                 .expectAssets("galaxia:textures/gui/bodyicons/icon_mars.png")
