@@ -13,10 +13,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 final class OrbitalPlanetTrackingControllerTest {
 
     @Test
-    void disabledHierarchyClickTracksPlanetWithoutOpeningHierarchy() {
+    void defaultClickTracksPlanetWithoutOpeningHierarchy() {
         CelestialObject planet = body(CelestialObjectId.OVERWORLD, "Overworld", CelestialObject.Class.PLANET);
         OrbitalPlanetTrackingController controller = new OrbitalPlanetTrackingController();
-        controller.setClickMode(OrbitalMapClickMode.FOLLOW);
 
         OrbitalPlanetTrackingController.ClickAction action = controller.clickBody(planet, true);
 
@@ -26,9 +25,10 @@ final class OrbitalPlanetTrackingControllerTest {
     }
 
     @Test
-    void normalClickAllowsHierarchySelection() {
+    void explicitlySelectedHierarchyModeAllowsHierarchySelection() {
         CelestialObject star = body(CelestialObjectId.ILIA, "Ilia", CelestialObject.Class.STAR);
         OrbitalPlanetTrackingController controller = new OrbitalPlanetTrackingController();
+        controller.setClickMode(OrbitalMapClickMode.HIERARCHY);
 
         OrbitalPlanetTrackingController.ClickAction action = controller.clickBody(star, true);
 

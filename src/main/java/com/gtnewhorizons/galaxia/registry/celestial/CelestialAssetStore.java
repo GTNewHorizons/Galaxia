@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -11,7 +13,7 @@ import java.util.UUID;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
@@ -33,6 +35,7 @@ public final class CelestialAssetStore {
     // ── Instance fields ──
 
     private final Map<CelestialAsset.ID, CelestialAsset> byId;
+    private final Collection<CelestialAsset> assetView;
 
     /** indexes for fast lookups **/
     private final Map<CelestialAsset.ID, UUID> teamById;
@@ -41,6 +44,7 @@ public final class CelestialAssetStore {
 
     CelestialAssetStore() {
         this.byId = new LinkedHashMap<>();
+        this.assetView = Collections.unmodifiableCollection(byId.values());
         this.teamById = new LinkedHashMap<>();
         this.bodyIndex = new LinkedHashMap<>();
         this.byBody = new LinkedHashMap<>();
@@ -84,14 +88,6 @@ public final class CelestialAssetStore {
         return SERVER.enableAssetInternal(assetId);
     }
 
-    public static boolean destroyAsset(CelestialAsset.ID assetId) {
-        return SERVER.destroyAssetInternal(assetId);
-    }
-
-    public static boolean cancelConstruction(CelestialAsset.ID assetId) {
-        return SERVER.cancelConstructionInternal(assetId);
-    }
-
     public static boolean startDeconstruction(CelestialAsset.ID assetId) {
         return SERVER.startDeconstructionInternal(assetId);
     }
@@ -124,8 +120,8 @@ public final class CelestialAssetStore {
         SERVER.removeTeamInternal(teamId);
     }
 
-    public static void transferTeamAssets(UUID fromTeamId, UUID toTeamId) {
-        SERVER.transferTeamAssetsInternal(fromTeamId, toTeamId);
+    public static List<CelestialAsset> transferTeamAssets(UUID fromTeamId, UUID toTeamId) {
+        return SERVER.transferTeamAssetsInternal(fromTeamId, toTeamId);
     }
 
     public static List<CelestialAsset> listAssetsInSystem(CelestialObjectKey systemKey, UUID teamId) {
@@ -169,6 +165,11 @@ public final class CelestialAssetStore {
         return new ArrayList<>(byId.values());
     }
 
+    /** Live read-only membership. Use a snapshot when callbacks can register or remove assets. */
+    public Collection<CelestialAsset> assetsViewInternal() {
+        return assetView;
+    }
+
     public boolean destroyAssetInternal(CelestialAsset.ID assetId) {
         CelestialAsset asset = byId.remove(assetId);
         if (asset == null) return false;
@@ -192,8 +193,6 @@ public final class CelestialAssetStore {
             bodyIds.remove(assetId);
             if (bodyIds.isEmpty()) byBody.remove(asset.celestialObjectKey);
         }
-        LogisticStore.removeSignalsFor(assetId);
-
         return true;
     }
 
@@ -213,20 +212,20 @@ public final class CelestialAssetStore {
 
     public boolean cancelConstructionInternal(CelestialAsset.ID assetId) {
         CelestialAsset asset = byId.get(assetId);
-        if (asset == null || asset.status() != Buildable.Status.CONSTRUCTION_SITE) return false;
+        if (!(asset instanceof AutomatedFacility) || asset.status() != Buildable.Status.CONSTRUCTION_SITE) return false;
         return destroyAssetInternal(assetId);
     }
 
     public boolean startDeconstructionInternal(CelestialAsset.ID assetId) {
         CelestialAsset asset = byId.get(assetId);
-        if (asset == null || asset.status() != Buildable.Status.CONSTRUCTION_SITE) return false;
+        if (!(asset instanceof AutomatedFacility) || asset.status() != Buildable.Status.CONSTRUCTION_SITE) return false;
         asset.updateStatus(CelestialAsset.Status.DECONSTRUCTION);
         return true;
     }
 
     public boolean completeConstructionInternal(CelestialAsset.ID assetId) {
         CelestialAsset asset = byId.get(assetId);
-        if (asset == null || asset.status() != Buildable.Status.CONSTRUCTION_SITE) return false;
+        if (!(asset instanceof AutomatedFacility) || asset.status() != Buildable.Status.CONSTRUCTION_SITE) return false;
         asset.completeConstruction();
         return true;
     }
@@ -242,12 +241,14 @@ public final class CelestialAssetStore {
     public boolean addToConstructionInventoryInternal(CelestialAsset.ID assetId, ItemStack stack, long amount) {
         if (stack == null || amount <= 0) return false;
         CelestialAsset asset = byId.get(assetId);
-        if (asset == null || asset.status() != Buildable.Status.CONSTRUCTION_SITE) return false;
+        if (!(asset instanceof AutomatedFacility facility) || asset.status() != Buildable.Status.CONSTRUCTION_SITE)
+            return false;
 
-        asset.setConstructionInventory(mergeIntoConstructionInventory(asset.constructionInventory(), stack, amount));
+        facility.setConstructionInventory(
+            mergeIntoConstructionInventory(facility.getConstructionInventory(), stack, amount));
 
-        if (asset.isConstructionSatisfied()) {
-            asset.updateStatus(Buildable.Status.OPERATIONAL);
+        if (facility.isConstructionSatisfied()) {
+            facility.updateStatus(Buildable.Status.OPERATIONAL);
         }
         return true;
     }
@@ -268,7 +269,6 @@ public final class CelestialAssetStore {
     public void removeTeamInternal(UUID teamId) {
         Map<CelestialObjectKey, Set<CelestialAsset.ID>> teamAssets = bodyIndex.remove(teamId);
         if (teamAssets == null) return;
-        if (this == SERVER) SatelliteNetworkService.unregisterTeamEndpoints(teamId);
         for (Map.Entry<CelestialObjectKey, Set<CelestialAsset.ID>> ids : teamAssets.entrySet()) {
             for (CelestialAsset.ID id : ids.getValue()) {
                 byId.remove(id);
@@ -283,13 +283,16 @@ public final class CelestialAssetStore {
         return byBody.getOrDefault(objectKey, Set.of());
     }
 
-    public void transferTeamAssetsInternal(UUID fromTeamId, UUID toTeamId) {
+    public List<CelestialAsset> transferTeamAssetsInternal(UUID fromTeamId, UUID toTeamId) {
         Map<CelestialObjectKey, Set<CelestialAsset.ID>> fromAssets = bodyIndex.remove(fromTeamId);
-        if (fromAssets == null || fromAssets.isEmpty()) return;
+        if (fromAssets == null || fromAssets.isEmpty()) return List.of();
 
+        List<CelestialAsset> transferred = new ArrayList<>();
         for (Set<CelestialAsset.ID> ids : fromAssets.values()) {
             for (CelestialAsset.ID id : ids) {
                 teamById.put(id, toTeamId);
+                CelestialAsset asset = byId.get(id);
+                if (asset != null) transferred.add(asset);
             }
         }
 
@@ -302,7 +305,7 @@ public final class CelestialAssetStore {
             }
             return existing;
         });
-        if (this == SERVER) SatelliteNetworkService.rebuildDataEndpointsFromAssets();
+        return List.copyOf(transferred);
     }
 
     public int satelliteCount(UUID teamId, CelestialObjectKey bodyKey, SatelliteKind kind) {

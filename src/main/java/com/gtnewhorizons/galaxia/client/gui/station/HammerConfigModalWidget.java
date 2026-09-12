@@ -3,19 +3,18 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nullable;
+
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.value.StringValue;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
-import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
-import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -49,6 +48,7 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
+    private @Nullable HammerDispatchStatus.Status dispatchStatus;
 
     HammerConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller) {
         this.assetId = assetId;
@@ -89,6 +89,18 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
     }
 
     @Override
+    public void onInit() {
+        super.onInit();
+        refreshDispatchStatus();
+    }
+
+    @Override
+    public void onUpdate() {
+        super.onUpdate();
+        refreshDispatchStatus();
+    }
+
+    @Override
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
         if (!controller.isHammerOpen()) return;
         ModuleConfigModalSupport.drawFrame(title(), WIDTH, HEIGHT);
@@ -101,11 +113,10 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
                 EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
             return;
         }
-        AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
-        HammerDispatchStatus.Status status = HammerDispatchStatus
-            .evaluate(facility, module, CelestialClient.allOutposts(), GalaxiaCelestialAPI.currentOrbitalTime());
+        HammerDispatchStatus.Status status = dispatchStatus;
+        if (status == null) return;
         int y = ModuleConfigModalSupport.drawTrimmedLine(
-            dispatchStatusLine(status),
+            ModuleStatusTextRegistry.hammerDispatchStatusLine(status),
             ModuleConfigModalSupport.PANEL_PADDING,
             BODY_TOP,
             WIDTH - ModuleConfigModalSupport.PANEL_PADDING * 2,
@@ -121,9 +132,19 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
         drawControls(hammer);
     }
 
+    private void refreshDispatchStatus() {
+        if (!controller.isHammerOpen()) {
+            dispatchStatus = null;
+            return;
+        }
+        ModuleInstance module = selectedModule();
+        dispatchStatus = module == null || !(module.component() instanceof ModuleHammer) ? null
+            : CelestialClient.hammerDispatchStatus(assetId, module.id);
+    }
+
     private void openLogistics() {
         if (selectedModule() == null) return;
-        controller.openLogistics(controller.moduleIndex());
+        controller.openLogistics(controller.moduleId());
     }
 
     private boolean hasCancellableOperation() {
@@ -175,14 +196,14 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
             .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
             .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
             .background(
-                ModuleConfigModalSupport.drawable(
-                    (ctx, x, y, w, h) -> BorderedRect.draw(
-                        x,
-                        y,
-                        w,
-                        h,
-                        EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                        EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
+
+                (ctx, x, y, w, h, ignoredTheme) -> BorderedRect.draw(
+                    x,
+                    y,
+                    w,
+                    h,
+                    EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()))
             .value(new StringValue.Dynamic(this::thresholdText, this::setThresholdText))
             .setFocusOnGuiOpen(false)
             .setEnabledIf(w -> canUseThresholdField());
@@ -239,20 +260,23 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
             case WHEN_DV_UNDER -> AllowShootingConfig.Mode.WHEN_TOF_UNDER;
             case WHEN_TOF_UNDER -> AllowShootingConfig.Mode.ALWAYS;
         };
-        CelestialClient.updateModuleConfig(
+        CelestialClient.configureHammer(
             assetId,
-            controller.moduleIndex(),
-            AssetModuleUpdatePacket.ConfigAction.SET_ALLOW_SHOOTING_MODE,
-            next);
+            controller.moduleId(),
+            new AllowShootingConfig(
+                next,
+                hammer.config()
+                    .threshold()),
+            hammer.routePriority());
     }
 
     private void toggleRoutePriority() {
         ModuleHammer hammer = selectedHammer();
         if (hammer == null) return;
-        CelestialClient.updateModuleConfig(
+        CelestialClient.configureHammer(
             assetId,
-            controller.moduleIndex(),
-            AssetModuleUpdatePacket.ConfigAction.SET_ROUTE_PRIORITY,
+            controller.moduleId(),
+            hammer.config(),
             hammer.routePriority()
                 .toggled());
     }
@@ -295,31 +319,16 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
     }
 
     private void updateThreshold(double value) {
-        CelestialClient.updateModuleConfig(
+        ModuleHammer hammer = selectedHammer();
+        if (hammer == null) return;
+        CelestialClient.configureHammer(
             assetId,
-            controller.moduleIndex(),
-            AssetModuleUpdatePacket.ConfigAction.SET_ALLOW_SHOOTING_THRESHOLD,
-            value);
-    }
-
-    private String dispatchStatusLine(HammerDispatchStatus.Status status) {
-        return switch (status.code()) {
-            case READY -> "Dispatch: ready";
-            case WAITING_FOR_REQUEST -> "Dispatch: waiting for request";
-            case NO_EXPORT_CONFIG -> "Dispatch: export disabled";
-            case NO_SURPLUS_AFTER_RESERVE -> "Dispatch: no surplus after reserve";
-            case DESTINATION_LACKS_PACKAGE_SPACE -> "Dispatch: destination lacks package space " + status.sendAmount()
-                + "/"
-                + status.orderSize();
-            case DESTINATION_CAPACITY_BLOCKED -> "Dispatch: destination full, " + status.sendAmount() + " arrived";
-            case NEED_BIG_HAMMER -> "Dispatch: need BIG Hammer";
-            case ROUTE_UNAVAILABLE -> "Dispatch: route unavailable";
-            case BLOCKED_BY_DV_LIMIT -> "Dispatch: blocked by dV limit";
-            case BLOCKED_BY_TOF_LIMIT -> "Dispatch: blocked by TOF limit";
-            case NEED_ENERGY -> "Dispatch: need " + ModuleConfigModalSupport.formatEu(status.requiredEnergy())
-                + " EU, buffer "
-                + ModuleConfigModalSupport.formatEu(status.storedEnergy());
-        };
+            controller.moduleId(),
+            new AllowShootingConfig(
+                hammer.config()
+                    .mode(),
+                value),
+            hammer.routePriority());
     }
 
     private ModuleHammer selectedHammer() {

@@ -4,10 +4,10 @@ import java.math.BigInteger;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Stream;
 
-import net.minecraft.item.ItemStack;
+import javax.annotation.Nullable;
+
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.WorldServer;
 
@@ -18,18 +18,16 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
-import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
-public class Station extends CelestialAsset {
+public class Station extends CelestialAsset implements IDistributedInventory {
 
     private BlockPos controller;
 
     public Station(ID assetId, CelestialObjectKey celestialObjectKey, Status status) {
-        super(assetId, celestialObjectKey, Kind.STATION, status, null);
+        super(assetId, celestialObjectKey, Kind.STATION, status);
     }
 
     public Station(ID assetId, CelestialObjectId celestialObjectId, Status status) {
@@ -41,6 +39,7 @@ public class Station extends CelestialAsset {
     }
 
     public void setController(BlockPos controller) {
+        if (java.util.Objects.equals(this.controller, controller)) return;
         this.controller = controller;
         markDirty();
     }
@@ -51,20 +50,6 @@ public class Station extends CelestialAsset {
         if (teController == null) return;
 
         teController.tick();
-
-        // TODO: Make this happen only when contents change or something, otherwise performance will be horrible
-        getCannonChestItems().forEach(
-            (item, amount) -> logisticsConfig.set(
-                item,
-                LogisticsResourceConfig.DEFAULT.withOrderSize((int) (long) amount)
-                    .withSupplyEnabled(true)));
-
-        LogisticStore.updateSignalsForFacility(this);
-    }
-
-    @Override
-    public long updateContents(InventoryKey item, long delta, boolean sync) {
-        return updateContents(item, delta);
     }
 
     @Override
@@ -73,6 +58,16 @@ public class Station extends CelestialAsset {
         if (teController == null) return List.of();
 
         return teController.getConnectedInventories();
+    }
+
+    @Override
+    public long insertIntoOwnStorage(ItemStackWrapper item, long target) {
+        return 0L;
+    }
+
+    @Override
+    public long insertIntoOwnFluidStorage(FluidKey fluid, long target) {
+        return 0L;
     }
 
     @Override
@@ -110,6 +105,20 @@ public class Station extends CelestialAsset {
             .map(TileHammerCannon::getModuleInstance);
     }
 
+    @Nullable
+    public TileHammerCannon findHammerCannon(ModuleInstance module) {
+        if (module == null) return null;
+        TileStation ctrl = getTileController();
+        if (ctrl == null) return null;
+        StationGraph graph = ctrl.getGraph();
+        if (graph == null) return null;
+        return graph.getAttachments(TileHammerCannon.class)
+            .filter(TileHammerCannon::isStructureValid)
+            .filter(cannon -> module.equals(cannon.getModuleInstance()))
+            .findFirst()
+            .orElse(null);
+    }
+
     public Map<ItemStackWrapper, Long> getCannonChestItems() {
         Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
         TileStation ctrl = getTileController();
@@ -118,19 +127,21 @@ public class Station extends CelestialAsset {
         if (graph == null) return result;
         graph.getAttachments(TileHammerCannon.class)
             .filter(TileHammerCannon::isStructureValid)
-            .flatMap(
-                c -> c.getChestInventories()
-                    .stream())
-            .filter(Objects::nonNull)
-            .forEach(inv -> {
-                for (int s = 0; s < inv.getSizeInventory(); s++) {
-                    ItemStack stack = inv.getStackInSlot(s);
-                    if (stack == null) continue;
-                    ItemStackWrapper key = ItemStackWrapper.of(stack);
-                    if (key != null) result.merge(key, (long) stack.stackSize, Long::sum);
-                }
-            });
+            .forEach(
+                cannon -> cannon.getPackageItems()
+                    .forEach((key, amount) -> result.merge(key, amount, Long::sum)));
         return result;
+    }
+
+    public long getCannonSupplyAmount(ItemStackWrapper resource, long reserve) {
+        TileStation ctrl = getTileController();
+        if (ctrl == null) return 0L;
+        StationGraph graph = ctrl.getGraph();
+        if (graph == null) return 0L;
+        return graph.getAttachments(TileHammerCannon.class)
+            .filter(TileHammerCannon::isStructureValid)
+            .mapToLong(cannon -> Math.max(cannon.getPackageAmount(resource) - reserve, 0L))
+            .sum();
     }
 
     /** Public so network handlers can route filter mutations. */

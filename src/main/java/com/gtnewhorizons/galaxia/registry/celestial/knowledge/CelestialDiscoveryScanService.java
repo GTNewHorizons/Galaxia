@@ -38,6 +38,63 @@ public final class CelestialDiscoveryScanService {
         completedScopes.clear();
     }
 
+    /** Knowledge is merged first so the domain selects work from the team's combined discoveries. */
+    public void mergeTeams(@Nonnull UUID consumedTeam, @Nonnull UUID survivingTeam,
+        List<CelestialDiscoveryWorkerContribution> workers) {
+        if (consumedTeam.equals(survivingTeam)) return;
+        List<CelestialDiscoveryScanSnapshot> candidates = new ArrayList<>(snapshots(consumedTeam));
+        candidates.addAll(snapshots(survivingTeam));
+        Map<ScanKey, CelestialDiscoveryScanScope> scopes = new LinkedHashMap<>();
+        // Without active workers, a surviving team's scope takes precedence for a shared scan key.
+        for (CelestialDiscoveryScanSnapshot snapshot : candidates) {
+            scopes.put(new ScanKey(survivingTeam, snapshot.anchorKey(), snapshot.capability()), snapshot.scope());
+        }
+        for (CelestialDiscoveryWorkerContribution worker : workers) {
+            if (!worker.teamId()
+                .equals(survivingTeam)) continue;
+            ScanKey key = new ScanKey(
+                survivingTeam,
+                worker.scope()
+                    .anchorKey(),
+                worker.capability());
+            if (scopes.containsKey(key)) scopes.put(key, worker.scope());
+        }
+        List<CelestialDiscoveryScanSnapshot> merged = new ArrayList<>();
+        scopes.forEach((key, scope) -> {
+            CelestialDiscoveryWork work = domainResolver.apply(scope)
+                .nextDiscoveryWork(survivingTeam, scope)
+                .orElse(null);
+            if (work == null) {
+                merged.add(CelestialDiscoveryScanSnapshot.complete(survivingTeam, scope, key.capability()));
+                return;
+            }
+            long elapsedTicks = 0L;
+            for (CelestialDiscoveryScanSnapshot candidate : candidates) {
+                if (candidate.capability() == key.capability() && candidate.anchorKey()
+                    .equals(scope.anchorKey())
+                    && candidate.status() == CelestialDiscoveryScanSnapshot.Status.ACTIVE
+                    && candidate.targetKey()
+                        .equals(work.targetKey())
+                    && candidate.step() == work.step()) {
+                    elapsedTicks = Math.max(elapsedTicks, candidate.elapsedTicks());
+                }
+            }
+            merged.add(
+                new CelestialDiscoveryScanSnapshot(
+                    survivingTeam,
+                    scope.anchorKey(),
+                    scope.radius(),
+                    scope.revision(),
+                    key.capability(),
+                    CelestialDiscoveryScanSnapshot.Status.ACTIVE,
+                    work.targetKey(),
+                    work.step(),
+                    elapsedTicks));
+        });
+        restore(survivingTeam, merged);
+        restore(consumedTeam, List.of());
+    }
+
     public List<CelestialDiscoveryScanSnapshot> snapshots(@Nonnull UUID teamId) {
         if (teamId == null) throw new IllegalArgumentException("team id is required");
         List<CelestialDiscoveryScanSnapshot> snapshots = new ArrayList<>();

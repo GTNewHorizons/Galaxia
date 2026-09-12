@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +12,7 @@ import javax.annotation.Nullable;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.item.ItemStack;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
@@ -24,8 +26,6 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
-import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -33,6 +33,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 
 final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPanelWidget>
@@ -98,9 +99,9 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             .color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
             .shadow(true)
             .pos(8, 48);
-    private final Map<String, Boolean> amountModes = new LinkedHashMap<>();
-    private final Map<String, String> amountInputs = new LinkedHashMap<>();
-    private final Map<String, String> upkeepReserveInputs = new LinkedHashMap<>();
+    private final Map<ItemStackWrapper, Boolean> amountModes = new LinkedHashMap<>();
+    private final Map<ItemStackWrapper, String> amountInputs = new LinkedHashMap<>();
+    private final Map<ItemStackWrapper, String> upkeepReserveInputs = new LinkedHashMap<>();
     private @Nullable ItemStackWrapper selectedBoundItem;
     private @Nullable FluidKey selectedBoundFluid;
     private String inputBoundAmount = "";
@@ -111,7 +112,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private final @Nullable ModuleConfigModalController configController;
     private final BooleanSupplier visibleSupplier;
     private boolean open;
-    private String rowStructureSignature = "";
+    private @Nullable RowStructure rowStructure;
     private Map<ItemStackWrapper, Long> cachedItemAmounts = Map.of();
     private Map<FluidKey, Long> cachedFluidAmounts = Map.of();
     private @Nullable ItemStackWrapper selectedInteractionItem;
@@ -171,15 +172,16 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         ScrollWidget<?> scroll = new ScrollWidget<>(scrollData).pos(SCROLL_X, SCROLL_Y)
             .size(SCROLL_WIDTH, SCROLL_HEIGHT)
             .background(
-                drawable(
-                    (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_SCROLL_BG.getColor())));
+
+                (ctx, x, y, w, h, ignoredTheme) -> Gui
+                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_SCROLL_BG.getColor()));
         scroll.child(scrollContent);
         panelRoot.child(scroll);
         emptyInventoryText.setEnabled(false);
         panelRoot.child(emptyInventoryText);
         boundEditorRoot.pos(0, 0)
             .size(PANEL_WIDTH, PANEL_HEIGHT)
-            .overlay(drawable((ctx, x, y, w, h) -> drawBoundEditorOverlay(x, y, w, h)))
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> drawBoundEditorOverlay(x, y, w, h))
             .setEnabled(false);
         boundEditorRoot.child(
             boundField(true).pos(BOUND_FIELD_X, BOUND_EDITOR_Y + 34)
@@ -227,23 +229,30 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             disablePanelContent();
             return;
         }
-        IDistributedInventory distributed = distributed();
-        if (distributed == null) {
+        CelestialAsset inventoryOwner = inventoryOwner();
+        if (inventoryOwner == null) {
             open = false;
             return;
         }
-        cachedItemAmounts = distributed.aggregatedItems();
-        cachedFluidAmounts = distributed.aggregatedFluids();
-        List<StationInventoryPanelModel.InventoryItemRow> itemRows = rows(distributed);
-        List<StationInventoryPanelModel.FluidRow> fluidRows = fluidRows(distributed);
-        AutomatedFacility af = af();
-        List<StationInventoryPanelModel.UpkeepItemRow> upkeepRows = af == null ? List.of()
-            : StationInventoryPanelModel.upkeepItemRows(af);
+        AutomatedFacility facility = inventoryOwner instanceof AutomatedFacility af ? af : null;
+        if (facility != null) {
+            cachedItemAmounts = facility.itemSnapshot();
+            cachedFluidAmounts = facility.fluidAmounts();
+        } else {
+            IDistributedInventory physicalInventory = (IDistributedInventory) inventoryOwner;
+            cachedItemAmounts = physicalInventory.aggregatedItems();
+            cachedFluidAmounts = physicalInventory.aggregatedFluids();
+        }
+        List<StationInventoryPanelModel.InventoryItemRow> itemRows = StationInventoryPanelModel
+            .inventoryRows(cachedItemAmounts, facility);
+        List<StationInventoryPanelModel.FluidRow> fluidRows = StationInventoryPanelModel.fluidRows(cachedFluidAmounts);
+        List<StationInventoryPanelModel.UpkeepItemRow> upkeepRows = facility == null ? List.of()
+            : StationInventoryPanelModel.upkeepItemRows(facility);
         refreshAmountInputs(itemRows, upkeepRows);
-        String nextSignature = rowStructureSignature(itemRows, fluidRows, upkeepRows);
-        if (!panelRoot.isEnabled() || !nextSignature.equals(rowStructureSignature)) {
+        RowStructure nextStructure = rowStructure(itemRows, fluidRows, upkeepRows);
+        if (!panelRoot.isEnabled() || !nextStructure.equals(rowStructure)) {
             rebuildPanel(itemRows, fluidRows, upkeepRows);
-            rowStructureSignature = nextSignature;
+            rowStructure = nextStructure;
         }
         boundEditorRoot.setEnabled(isBoundEditorOpen());
         itemInteractionRoot.setEnabled(isItemInteractionOpen());
@@ -294,7 +303,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         boundEditorRoot.setEnabled(false);
         itemInteractionRoot.setEnabled(false);
         selectedInteractionItem = null;
-        rowStructureSignature = "";
+        rowStructure = null;
         cachedItemAmounts = Map.of();
         cachedFluidAmounts = Map.of();
     }
@@ -384,10 +393,8 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         int y = 0;
         if (resourceMode == ResourceMode.ITEMS) {
             for (StationInventoryPanelModel.InventoryItemRow row : itemRows) {
-                String rowKey = row.item()
-                    .toKey();
-                amountModes.putIfAbsent(rowKey, false);
-                amountInputs.putIfAbsent(rowKey, Long.toString(row.amount()));
+                amountModes.putIfAbsent(row.item(), false);
+                amountInputs.putIfAbsent(row.item(), Long.toString(row.amount()));
                 scrollContent.child(buildRow(row).pos(0, y));
                 y += ROW_HEIGHT + ROW_GAP;
             }
@@ -411,13 +418,13 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private ParentWidget<?> buildRow(StationInventoryPanelModel.InventoryItemRow row) {
         ItemStackWrapper wrapper = row.item();
         ItemStack displayStack = wrapper.toStack(1);
-        String rowKey = wrapper.toKey();
         ParentWidget<?> rowWidget = new ParentWidget<>().widthRel(1f)
             .height(ROW_HEIGHT)
             .background(
-                drawable(
-                    (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())));
-        rowWidget.child(drawable((ctx, x, y, w, h) -> {
+
+                (ctx, x, y, w, h, ignoredTheme) -> Gui
+                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor()));
+        rowWidget.child(((IDrawable) (ctx, x, y, w, h, ignoredTheme) -> {
             ModuleConfigModalSupport.renderItemIcon(displayStack, x, y + 4);
             renderBoundMarkers(wrapper, x, y + 4);
         }).asWidget()
@@ -425,15 +432,14 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             .size(16, ROW_HEIGHT)
             .tooltip(t -> t.addLine(displayStack.getDisplayName())));
         rowWidget.child(
-            drawable(
-                (ctx, x, y, w, h) -> ModuleConfigModalSupport.drawTrimmedLine(
-                    displayStack.getDisplayName(),
-                    x,
-                    y + 8,
-                    NAME_WIDTH,
-                    EnumColors.MAP_COLOR_TEXT_BODY.getColor())).asWidget()
-                        .pos(NAME_X, 0)
-                        .size(NAME_WIDTH, ROW_HEIGHT));
+            ((IDrawable) (ctx, x, y, w, h, ignoredTheme) -> ModuleConfigModalSupport.drawTrimmedLine(
+                displayStack.getDisplayName(),
+                x,
+                y + 8,
+                NAME_WIDTH,
+                EnumColors.MAP_COLOR_TEXT_BODY.getColor())).asWidget()
+                    .pos(NAME_X, 0)
+                    .size(NAME_WIDTH, ROW_HEIGHT));
         rowWidget.child(
             ModuleConfigModalSupport
                 .textureIconButton(
@@ -469,24 +475,24 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                 .pos(BOUNDS_X, 3)
                 .size(BOUNDS_WIDTH, 18));
         rowWidget.child(
-            amountField(rowKey, wrapper).pos(AMOUNT_INPUT_X, 3)
+            amountField(wrapper).pos(AMOUNT_INPUT_X, 3)
                 .size(AMOUNT_INPUT_WIDTH, 18));
         rowWidget.child(
             ModuleConfigModalSupport
                 .textureIconButton(
-                    () -> isAmountMode(rowKey),
+                    () -> isAmountMode(wrapper),
                     EnumTextures.ICON_STATION_INVENTORY_AMOUNT.get(),
                     "Delete amount",
-                    () -> setAmountMode(rowKey, false))
+                    () -> setAmountMode(wrapper, false))
                 .pos(MODE_BUTTON_X, 3)
                 .size(MODE_BUTTON_WIDTH, 18));
         rowWidget.child(
             ModuleConfigModalSupport
                 .textureIconButton(
-                    () -> !isAmountMode(rowKey),
+                    () -> !isAmountMode(wrapper),
                     EnumTextures.ICON_STATION_INVENTORY_ALL.get(),
                     "Void all",
-                    () -> setAmountMode(rowKey, true))
+                    () -> setAmountMode(wrapper, true))
                 .pos(MODE_BUTTON_X, 3)
                 .size(MODE_BUTTON_WIDTH, 18));
         rowWidget.child(
@@ -504,27 +510,27 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private ParentWidget<?> buildUpkeepRow(StationInventoryPanelModel.UpkeepItemRow row) {
         ItemStackWrapper wrapper = row.item();
         ItemStack displayStack = wrapper.toStack(1);
-        String rowKey = wrapper.toKey();
         ParentWidget<?> rowWidget = new ParentWidget<>().widthRel(1f)
             .height(ROW_HEIGHT)
             .background(
-                drawable(
-                    (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())));
+
+                (ctx, x, y, w, h, ignoredTheme) -> Gui
+                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor()));
         rowWidget.child(
-            drawable((ctx, x, y, w, h) -> ModuleConfigModalSupport.renderItemIcon(displayStack, x, y + 4)).asWidget()
-                .pos(ICON_X, 0)
-                .size(16, ROW_HEIGHT)
-                .tooltip(t -> t.addLine(displayStack.getDisplayName())));
+            ((IDrawable) (ctx, x, y, w, h, ignoredTheme) -> ModuleConfigModalSupport
+                .renderItemIcon(displayStack, x, y + 4)).asWidget()
+                    .pos(ICON_X, 0)
+                    .size(16, ROW_HEIGHT)
+                    .tooltip(t -> t.addLine(displayStack.getDisplayName())));
         rowWidget.child(
-            drawable(
-                (ctx, x, y, w, h) -> ModuleConfigModalSupport.drawTrimmedLine(
-                    displayStack.getDisplayName(),
-                    x,
-                    y + 8,
-                    NAME_WIDTH,
-                    EnumColors.MAP_COLOR_TEXT_BODY.getColor())).asWidget()
-                        .pos(NAME_X, 0)
-                        .size(NAME_WIDTH, ROW_HEIGHT));
+            ((IDrawable) (ctx, x, y, w, h, ignoredTheme) -> ModuleConfigModalSupport.drawTrimmedLine(
+                displayStack.getDisplayName(),
+                x,
+                y + 8,
+                NAME_WIDTH,
+                EnumColors.MAP_COLOR_TEXT_BODY.getColor())).asWidget()
+                    .pos(NAME_X, 0)
+                    .size(NAME_WIDTH, ROW_HEIGHT));
         rowWidget.child(
             new TextWidget<>(
                 IKey.dynamic(
@@ -538,7 +544,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                 .shadow(true)
                 .pos(UPKEEP_STOCK_X, 8));
         rowWidget.child(
-            upkeepReserveField(wrapper, rowKey).pos(UPKEEP_RESERVE_INPUT_X, 3)
+            upkeepReserveField(wrapper).pos(UPKEEP_RESERVE_INPUT_X, 3)
                 .size(AMOUNT_INPUT_WIDTH, 18));
         rowWidget.child(
             ModuleConfigModalSupport
@@ -558,9 +564,10 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         ParentWidget<?> rowWidget = new ParentWidget<>().widthRel(1f)
             .height(ROW_HEIGHT)
             .background(
-                drawable(
-                    (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())));
-        rowWidget.child(drawable((ctx, x, y, w, h) -> {
+
+                (ctx, x, y, w, h, ignoredTheme) -> Gui
+                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor()));
+        rowWidget.child(((IDrawable) (ctx, x, y, w, h, ignoredTheme) -> {
             renderFluidIcon(fluidName, x, y + 4);
             renderFluidBoundMarkers(fluidKey, x, y + 4);
         }).asWidget()
@@ -568,12 +575,10 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             .size(16, ROW_HEIGHT)
             .tooltip(t -> t.addLine(fluidName)));
         rowWidget.child(
-            drawable(
-                (ctx, x, y, w, h) -> ModuleConfigModalSupport
-                    .drawTrimmedLine(fluidName, x, y + 8, NAME_WIDTH, EnumColors.MAP_COLOR_TEXT_BODY.getColor()))
-                        .asWidget()
-                        .pos(NAME_X, 0)
-                        .size(NAME_WIDTH, ROW_HEIGHT));
+            ((IDrawable) (ctx, x, y, w, h, ignoredTheme) -> ModuleConfigModalSupport
+                .drawTrimmedLine(fluidName, x, y + 8, NAME_WIDTH, EnumColors.MAP_COLOR_TEXT_BODY.getColor())).asWidget()
+                    .pos(NAME_X, 0)
+                    .size(NAME_WIDTH, ROW_HEIGHT));
         rowWidget.child(
             new TextWidget<>(IKey.dynamic(() -> formatAmount(currentFluidAmount(fluidKey))))
                 .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
@@ -591,7 +596,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         return rowWidget;
     }
 
-    private TextFieldWidget amountField(String rowKey, ItemStackWrapper wrapper) {
+    private TextFieldWidget amountField(ItemStackWrapper wrapper) {
         return new TextFieldWidget().setMaxLength(9)
             .setPattern(INTEGER_PATTERN)
             .setDefaultNumber(0)
@@ -602,23 +607,23 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
             .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
             .background(
-                ModuleConfigModalSupport.drawable(
-                    (ctx, x, y, w, h) -> BorderedRect.draw(
-                        x,
-                        y,
-                        w,
-                        h,
-                        EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                        EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
+
+                (ctx, x, y, w, h, ignoredTheme) -> BorderedRect.draw(
+                    x,
+                    y,
+                    w,
+                    h,
+                    EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()))
             .value(
                 new StringValue.Dynamic(
-                    () -> amountInputs.getOrDefault(rowKey, "0"),
-                    text -> { amountInputs.put(rowKey, text == null ? "" : text); }))
+                    () -> amountInputs.getOrDefault(wrapper, "0"),
+                    text -> { amountInputs.put(wrapper, text == null ? "" : text); }))
             .setFocusOnGuiOpen(false)
-            .setEnabledIf(w -> isAmountMode(rowKey));
+            .setEnabledIf(w -> isAmountMode(wrapper));
     }
 
-    private TextFieldWidget upkeepReserveField(ItemStackWrapper wrapper, String rowKey) {
+    private TextFieldWidget upkeepReserveField(ItemStackWrapper wrapper) {
         return new TextFieldWidget().setMaxLength(9)
             .setPattern(INTEGER_PATTERN)
             .setDefaultNumber(0)
@@ -628,7 +633,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             .autoUpdateOnChange(true)
             .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
             .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
-            .background(ModuleConfigModalSupport.drawable((ctx, x, y, w, h) -> {
+            .background((ctx, x, y, w, h, ignoredTheme) -> {
                 if (!isUpkeepItem(wrapper)) return;
                 BorderedRect.draw(
                     x,
@@ -637,11 +642,11 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                     h,
                     EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
                     upkeepReserveBorderColor(wrapper));
-            }))
+            })
             .value(
                 new StringValue.Dynamic(
-                    () -> upkeepReserveInputs.getOrDefault(rowKey, Long.toString(currentUpkeepReserve(wrapper))),
-                    text -> updateUpkeepReserveInput(wrapper, rowKey, text)))
+                    () -> upkeepReserveInputs.getOrDefault(wrapper, Long.toString(currentUpkeepReserve(wrapper))),
+                    text -> updateUpkeepReserveInput(wrapper, text)))
             .tooltipDynamic(t -> {
                 StationInventoryPanelModel.UpkeepReserveStatus status = upkeepReserveStatus(wrapper);
                 if (status.level() != StationInventoryPanelModel.UpkeepReserveLevel.NONE) {
@@ -664,14 +669,9 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
             .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
             .background(
-                ModuleConfigModalSupport.drawable(
-                    (ctx, x, y, w, h) -> BorderedRect.draw(
-                        x,
-                        y,
-                        w,
-                        h,
-                        EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                        boundFieldBorderColor())))
+
+                (ctx, x, y, w, h, ignoredTheme) -> BorderedRect
+                    .draw(x, y, w, h, EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(), boundFieldBorderColor()))
             .tooltipDynamic(t -> { if (!boundsInputValid()) t.addLine("Lower bound cannot exceed upper bound."); })
             .value(new StringValue.Dynamic(() -> input ? inputBoundAmount : outputBoundAmount, text -> {
                 if (input) {
@@ -705,26 +705,25 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         resourceMode = mode;
         closeBoundEditor();
         closeItemInteractions();
-        rowStructureSignature = "";
+        rowStructure = null;
     }
 
     private String toggleLabel() {
         return open ? "Close Inv" : "Inventory";
     }
 
-    private void setAmountMode(String rowKey, boolean amountMode) {
+    private void setAmountMode(ItemStackWrapper rowKey, boolean amountMode) {
         amountModes.put(rowKey, amountMode);
     }
 
-    private boolean isAmountMode(String rowKey) {
+    private boolean isAmountMode(ItemStackWrapper rowKey) {
         return amountModes.getOrDefault(rowKey, false);
     }
 
     private void voidRow(ItemStackWrapper wrapper) {
         if (assetId == null) return;
-        String rowKey = wrapper.toKey();
         long amount = StationInventoryPanelModel
-            .voidAmount(isAmountMode(rowKey), currentAmount(wrapper), amountInputs.getOrDefault(rowKey, ""));
+            .voidAmount(isAmountMode(wrapper), currentAmount(wrapper), amountInputs.getOrDefault(wrapper, ""));
         if (amount <= 0L) return;
         if (amount >= currentAmount(wrapper)) {
             CelestialClient.removeInventory(assetId, wrapper);
@@ -838,16 +837,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         BoundKind kind = selectedBoundItem != null ? (low ? BoundKind.ITEM_LOWER : BoundKind.ITEM_UPPER)
             : (low ? BoundKind.FLUID_LOWER : BoundKind.FLUID_UPPER);
         InventoryKey resource = selectedBoundItem != null ? selectedBoundItem : selectedBoundFluid;
-        AutomatedFacility af = af();
-        if (af != null) {
-            if (!af.trySetBound(resource, amount, low)) return;
-        }
-        CelestialClient.updateInventoryBound(
-            assetId,
-            AssetModuleUpdatePacket.ConfigAction.SET_INVENTORY_BOUND,
-            kind,
-            resource,
-            amount);
+        CelestialClient.setInventoryBound(assetId, kind, resource, amount);
     }
 
     private void clearBound(boolean low) {
@@ -855,16 +845,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         BoundKind kind = selectedBoundItem != null ? (low ? BoundKind.ITEM_LOWER : BoundKind.ITEM_UPPER)
             : (low ? BoundKind.FLUID_LOWER : BoundKind.FLUID_UPPER);
         InventoryKey resource = selectedBoundItem != null ? selectedBoundItem : selectedBoundFluid;
-        AutomatedFacility af = af();
-        if (af != null) {
-            af.clearBound(resource, low);
-        }
-        CelestialClient.updateInventoryBound(
-            assetId,
-            AssetModuleUpdatePacket.ConfigAction.CLEAR_INVENTORY_BOUND,
-            kind,
-            resource,
-            0L);
+        CelestialClient.clearInventoryBound(assetId, kind, resource);
         if (low) {
             inputBoundAmount = "";
             if (inputBoundField != null) inputBoundField.setText("");
@@ -924,33 +905,21 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         return assetId != null && CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility af ? af : null;
     }
 
-    private @Nullable IDistributedInventory distributed() {
+    private @Nullable CelestialAsset inventoryOwner() {
         CelestialAsset asset = assetId != null ? CelestialClient.getByAssetId(assetId) : null;
-        return asset instanceof IDistributedInventory d ? d : null;
-    }
-
-    private List<StationInventoryPanelModel.InventoryItemRow> rows(IDistributedInventory distributed) {
-        return StationInventoryPanelModel.inventoryRows(distributed);
-    }
-
-    private List<StationInventoryPanelModel.FluidRow> fluidRows(IDistributedInventory distributed) {
-        return StationInventoryPanelModel.fluidRows(distributed);
+        return asset instanceof AutomatedFacility || asset instanceof IDistributedInventory ? asset : null;
     }
 
     private void refreshAmountInputs(List<StationInventoryPanelModel.InventoryItemRow> rows,
         List<StationInventoryPanelModel.UpkeepItemRow> upkeepRows) {
         for (StationInventoryPanelModel.InventoryItemRow row : rows) {
-            String rowKey = row.item()
-                .toKey();
-            if (!isAmountMode(rowKey)) {
-                amountInputs.put(rowKey, Long.toString(row.amount()));
+            ItemStackWrapper item = row.item();
+            if (!isAmountMode(item)) {
+                amountInputs.put(item, Long.toString(row.amount()));
             }
         }
         for (StationInventoryPanelModel.UpkeepItemRow row : upkeepRows) {
-            upkeepReserveInputs.putIfAbsent(
-                row.item()
-                    .toKey(),
-                Long.toString(row.reserve()));
+            upkeepReserveInputs.putIfAbsent(row.item(), Long.toString(row.reserve()));
         }
     }
 
@@ -970,30 +939,31 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         AutomatedFacility af = af();
         if (af == null) return;
         boolean enabled = !af.isUpkeepAutoOrderEnabled(wrapper);
-        af.setUpkeepAutoOrder(wrapper, enabled);
-        if (assetId != null) {
-            CelestialClient.updateLogisticsConfig(
-                assetId,
-                wrapper,
-                af.logisticsConfig.get(wrapper),
-                LogisticsConfigAccessMode.IMPORT_ONLY);
+        LogisticsResourceConfig current = af.logisticsConfig.get(wrapper);
+        LogisticsResourceConfig updated;
+        if (enabled) {
+            int reserve = (int) Math.min(Integer.MAX_VALUE, af.upkeepReserve(wrapper));
+            int orderSize = current == LogisticsResourceConfig.DEFAULT ? 64 : current.orderSize();
+            updated = new LogisticsResourceConfig(reserve, orderSize, true, false);
+        } else {
+            updated = current.withImportEnabled(false)
+                .withSupplyEnabled(false);
         }
+        CelestialClient.updateLogisticsConfig(assetId, wrapper, updated, LogisticsConfigAccessMode.IMPORT_ONLY);
     }
 
-    private void updateUpkeepReserveInput(ItemStackWrapper wrapper, String rowKey, String text) {
+    private void updateUpkeepReserveInput(ItemStackWrapper wrapper, String text) {
         String value = text == null ? "" : text;
-        upkeepReserveInputs.put(rowKey, value);
+        upkeepReserveInputs.put(wrapper, value);
         AutomatedFacility af = af();
         if (af != null) {
             long amount = parseAmount(value);
-            af.setUpkeepReserve(wrapper, amount);
-            if (assetId != null) {
-                CelestialClient.updateLogisticsConfig(
-                    assetId,
-                    wrapper,
-                    af.logisticsConfig.get(wrapper),
-                    LogisticsConfigAccessMode.IMPORT_ONLY);
-            }
+            CelestialClient.updateLogisticsConfig(
+                assetId,
+                wrapper,
+                af.logisticsConfig.get(wrapper)
+                    .withMinReserve((int) Math.min(Integer.MAX_VALUE, amount)),
+                LogisticsConfigAccessMode.IMPORT_ONLY);
         }
     }
 
@@ -1016,31 +986,22 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         };
     }
 
-    private String rowStructureSignature(List<StationInventoryPanelModel.InventoryItemRow> itemRows,
+    private RowStructure rowStructure(List<StationInventoryPanelModel.InventoryItemRow> itemRows,
         List<StationInventoryPanelModel.FluidRow> fluidRows,
         List<StationInventoryPanelModel.UpkeepItemRow> upkeepRows) {
-        StringBuilder signature = new StringBuilder((itemRows.size() + fluidRows.size() + upkeepRows.size()) * 24);
-        signature.append(resourceMode)
-            .append(':');
+        List<ItemStackWrapper> items = new ArrayList<>(itemRows.size());
         for (StationInventoryPanelModel.InventoryItemRow row : itemRows) {
-            signature.append(
-                row.item()
-                    .toKey())
-                .append(';');
+            items.add(row.item());
         }
-        signature.append('|');
+        List<String> fluids = new ArrayList<>(fluidRows.size());
         for (StationInventoryPanelModel.FluidRow row : fluidRows) {
-            signature.append(row.fluidName())
-                .append(';');
+            fluids.add(row.fluidName());
         }
-        signature.append('|');
+        List<ItemStackWrapper> upkeepItems = new ArrayList<>(upkeepRows.size());
         for (StationInventoryPanelModel.UpkeepItemRow row : upkeepRows) {
-            signature.append(
-                row.item()
-                    .toKey())
-                .append(';');
+            upkeepItems.add(row.item());
         }
-        return signature.toString();
+        return new RowStructure(resourceMode, List.copyOf(items), List.copyOf(fluids), List.copyOf(upkeepItems));
     }
 
     private void renderBoundMarkers(ItemStackWrapper wrapper, int x, int y) {
@@ -1086,13 +1047,12 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         return (amount / 1_000_000L) + "M";
     }
 
-    private com.cleanroommc.modularui.api.drawable.IDrawable drawable(DrawableCommand cmd) {
-        return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
-    }
-
     private enum ResourceMode {
         ITEMS,
         FLUIDS,
         UPKEEP
     }
+
+    private record RowStructure(ResourceMode resourceMode, List<ItemStackWrapper> items, List<String> fluids,
+        List<ItemStackWrapper> upkeepItems) {}
 }

@@ -22,4 +22,12 @@ final class FacilityModuleKindTest {
         assertTrue(FacilityModuleKind.POWER.isAllowedOn(CelestialAsset.Kind.AUTOMATED_STATION));
         assertFalse(FacilityModuleKind.POWER.isAllowedOn(CelestialAsset.Kind.STATION));
     }
+
+    @Test
+    void productionKindsIncludeHammerMinerAndRecipeModules() {
+        assertTrue(FacilityModuleKind.HAMMER.isProductionModule());
+        assertTrue(FacilityModuleKind.MINER.isProductionModule());
+        assertTrue(FacilityModuleKind.MACERATOR.isProductionModule());
+        assertFalse(FacilityModuleKind.POWER.isProductionModule());
+    }
 }

@@ -166,7 +166,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
             System.out.println(
                 "[SILO] Requesting production: " + part.def()
                     .name());
-            GantryAPI.requestProduction(part.copy(), moduleAssembler, this);
+            GantryAPI.requestProduction(part, moduleAssembler, this);
         }
 
         sync();
@@ -191,7 +191,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
 
         boolean accepted = currentBuildOrder.markDelivered(part);
         if (accepted) {
-            assembledBlueprint.addPart(part.copy());
+            assembledBlueprint.addPart(part);
 
             if (currentBuildOrder.isComplete()) {
                 buildStatus = RocketBuildStatus.READY;
@@ -325,7 +325,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         EntityRocket rocket = getOrCreateEntityRocket();
         if (rocket == null) return;
 
-        rocket.setBlueprint(assembledBlueprint.copy());
+        rocket.setBlueprint(assembledBlueprint);
         rocket.setDestination(destination);
         rocket.setTargetSilo(this);
         rocket.initializeSeats();
@@ -341,7 +341,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     public void returnModules() {
         if (moduleAssembler == null || worldObj.isRemote) return;
         for (RocketPartInstance part : assembledBlueprint.getParts()) {
-            GantryAPI.injectModule(part.copy(), moduleAssembler, this, true);
+            GantryAPI.injectModule(part, moduleAssembler, this, true);
         }
 
         this.designBlueprint.clear();
@@ -397,7 +397,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
             && structureValid
             && buildStatus == RocketBuildStatus.READY) {
             EntityRocket rocket = getOrCreateEntityRocket();
-            rocket.setBlueprint(assembledBlueprint.copy());
+            rocket.setBlueprint(assembledBlueprint);
             rocket.setDestination(destination);
             rocket.setTargetSilo(this);
             worldObj.spawnEntityInWorld(rocket);

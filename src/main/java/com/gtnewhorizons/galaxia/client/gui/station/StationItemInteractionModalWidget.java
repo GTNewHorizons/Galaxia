@@ -17,7 +17,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
@@ -59,7 +58,7 @@ final class StationItemInteractionModalWidget extends ParentWidget<StationItemIn
         this.lines = layoutLines(StationItemInteractionModel.forItem(facility, item));
         this.onClose = onClose;
         size(WIDTH, HEIGHT);
-        overlay(ModuleConfigModalSupport.drawable((ctx, x, y, w, h) -> drawModal(x, y)));
+        overlay((ctx, x, y, w, h, ignoredTheme) -> drawModal(x, y));
         child(
             ModuleConfigModalSupport.iconButton(() -> true, CLOSE_ICON, "Close", onClose)
                 .pos(WIDTH - 24, 4)
@@ -71,7 +70,7 @@ final class StationItemInteractionModalWidget extends ParentWidget<StationItemIn
                     .y() + ROW_HEIGHT);
         scrollData.setScrollSize(contentHeight);
         scrollContent.height(contentHeight)
-            .overlay(ModuleConfigModalSupport.drawable((ctx, x, y, w, h) -> drawContent(x, y)));
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> drawContent(x, y));
         ScrollWidget<?> scroll = new ScrollWidget<>(scrollData).pos(CONTENT_X, CONTENT_Y)
             .size(CONTENT_WIDTH, CONTENT_HEIGHT);
         scroll.child(scrollContent);
@@ -197,20 +196,18 @@ final class StationItemInteractionModalWidget extends ParentWidget<StationItemIn
             configController.openCoreLogistics();
             return;
         }
-        int moduleIndex = ModuleConfigModalSupport.moduleIndex(assetId, entry.targetModuleId());
-        if (moduleIndex < 0) return;
-        ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
+        ModuleInstance module = ModuleConfigModalSupport.module(assetId, entry.targetModuleId());
         if (module == null) return;
         if (module.component() instanceof ModuleHammer) {
-            configController.openHammer(moduleIndex);
-        } else if (module.component() instanceof IRecipeModule) {
-            configController.openRecipeConfig(moduleIndex);
+            configController.openHammer(module.id);
+        } else if (module.recipe() != null) {
+            configController.openRecipeConfig(module.id);
         } else if (module.component() instanceof ModuleMiner) {
-            configController.openMinerBlacklist(moduleIndex);
+            configController.openMinerBlacklist(module.id);
         } else if (module.component() instanceof ModuleDebugDataGenerator) {
-            configController.openDebugDataGenerator(moduleIndex);
+            configController.openDebugDataGenerator(module.id);
         } else {
-            configController.openUpgrade(moduleIndex);
+            configController.openUpgrade(module.id);
         }
     }
 

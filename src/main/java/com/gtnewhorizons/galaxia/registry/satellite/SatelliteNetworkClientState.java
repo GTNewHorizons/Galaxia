@@ -15,8 +15,9 @@ public final class SatelliteNetworkClientState {
     }
 
     public static void update(SatelliteNetworkState state) {
-        if (state != null && (!state.teamId()
-            .equals(current.teamId()) || state.revision() >= current.revision())) {
+        if (state == null || current.equals(state)) return;
+        if (!state.teamId()
+            .equals(current.teamId()) || state.revision() >= current.revision()) {
             current = state;
         }
     }

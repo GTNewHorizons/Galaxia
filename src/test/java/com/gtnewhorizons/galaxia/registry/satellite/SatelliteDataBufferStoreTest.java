@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
-import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
@@ -16,8 +15,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 
 final class SatelliteDataBufferStoreTest {
-
-    private static final UUID TEAM = UUID.fromString("00000000-0000-0000-0000-000000000106");
 
     @Test
     void originDataKeyIsDistinctFromAnyDataKeyAndMatchesOriginDemandFirst() {
@@ -78,24 +75,22 @@ final class SatelliteDataBufferStoreTest {
         SatelliteDataKey anyProspecting = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
 
         store.finishProduction(
-            TEAM,
             CelestialObjectKey.registered(CelestialObjectId.MARS),
             egoraProspecting,
             SatelliteBandwidthFormatter.kilobits(15L));
 
         assertEquals(
             SatelliteBandwidthFormatter.kilobits(15L),
-            store.pendingDeciKb(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), egoraProspecting));
-        assertFalse(store.canStart(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), egoraProspecting, 10L));
-        assertTrue(store.canStart(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), anyProspecting, 10L));
+            store.pendingDeciKb(CelestialObjectKey.registered(CelestialObjectId.MARS), egoraProspecting));
+        assertFalse(store.canStart(CelestialObjectKey.registered(CelestialObjectId.MARS), egoraProspecting, 10L));
+        assertTrue(store.canStart(CelestialObjectKey.registered(CelestialObjectId.MARS), anyProspecting, 10L));
 
         store.drain(
-            TEAM,
             CelestialObjectKey.registered(CelestialObjectId.MARS),
             egoraProspecting,
             SatelliteBandwidthFormatter.kilobits(6L));
 
-        assertTrue(store.canStart(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), egoraProspecting, 10L));
+        assertTrue(store.canStart(CelestialObjectKey.registered(CelestialObjectId.MARS), egoraProspecting, 10L));
     }
 
     @Test
@@ -104,12 +99,11 @@ final class SatelliteDataBufferStoreTest {
         SatelliteDataKey key = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
 
         store.finishProduction(
-            TEAM,
             CelestialObjectKey.registered(CelestialObjectId.MARS),
             key,
             SatelliteBandwidthFormatter.kilobits(15L));
 
-        assertFalse(store.canStart(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), key, 10L));
-        assertTrue(store.canStart(TEAM, CelestialObjectKey.registered(CelestialObjectId.MARS), key, 20L));
+        assertFalse(store.canStart(CelestialObjectKey.registered(CelestialObjectId.MARS), key, 10L));
+        assertTrue(store.canStart(CelestialObjectKey.registered(CelestialObjectId.MARS), key, 20L));
     }
 }

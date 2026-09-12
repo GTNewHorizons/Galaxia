@@ -129,7 +129,8 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
         ContextMenuLayout layout = getLayout(body, state.x(), state.y(), getArea().width, getArea().height);
         if (layout == null) return;
 
-        ParentWidget<?> root = new ParentWidget<>().pos(layout.left(), layout.top())
+        ParentWidget<?> root = new ParentWidget<>().name("starmap.context.menu")
+            .pos(layout.left(), layout.top())
             .size(layout.right() - layout.left(), layout.bottom() - layout.top());
 
         PassiveBackgroundLayer backgroundLayer = new PassiveBackgroundLayer().pos(0, 0)
@@ -162,14 +163,17 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
 
         if (action.enabled()) {
             row.child(
-                new ButtonWidget<>().pos(ROW_HOVER_INSET_X, ROW_HOVER_INSET_Y)
+                new ButtonWidget<>().name(
+                    "starmap.context." + action.actionType()
+                        .name())
+                    .pos(ROW_HOVER_INSET_X, ROW_HOVER_INSET_Y)
                     .widthRelOffset(1f, -ROW_HOVER_INSET_X * 2)
                     .height(height - ROW_HOVER_INSET_Y * 2)
                     .background(IDrawable.EMPTY)
                     .hoverBackground(
-                        drawable(
-                            (context, x, y, w, h) -> Gui
-                                .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor())))
+
+                        (context, x, y, w, h, ignoredTheme) -> Gui
+                            .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor()))
                     .onMousePressed(mouseButton -> {
                         if (mouseButton != 0) return true;
                         handleAction(body, action);
@@ -274,14 +278,10 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
     }
 
     private IDrawable createMenuBackgroundDrawable() {
-        return drawable((context, x, y, width, height) -> {
+        return (context, x, y, width, height, ignoredTheme) -> {
             Gui.drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_MODAL_BG.getColor());
             Gui.drawRect(x, y, x + width, y + HEADER_HEIGHT, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
-        });
-    }
-
-    private IDrawable drawable(DrawableCommand drawCommand) {
-        return (context, x, y, width, height, widgetTheme) -> drawCommand.draw(context, x, y, width, height);
+        };
     }
 
     public enum ContextMenuActionType {

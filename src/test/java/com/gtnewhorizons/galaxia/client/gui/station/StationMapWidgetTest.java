@@ -44,7 +44,11 @@ final class StationMapWidgetTest {
                 tiles.put(tile, new PlacedTile(module, StationTileState.OCCUPIED_OPERATIONAL));
             }
 
-            assertTrue(tiles.containsKey(StationMapOverlayPainter.alertBadgeCoord(module, tiles)));
+            StationTileCoord badge = StationMapOverlayPainter.alertBadgeCoord(module);
+            assertTrue(tiles.containsKey(badge));
+            for (StationTileCoord tile : tiles.keySet()) {
+                assertTrue(tile.dy() > badge.dy() || tile.dy() == badge.dy() && tile.dx() >= badge.dx());
+            }
         }
     }
 
@@ -59,9 +63,8 @@ final class StationMapWidgetTest {
             ModuleTier.EV);
         layout.place(module);
 
-        int x = StationMapViewport.tileLeftX(0, 200, 0, 0, 0) + StationMapViewport.TILE_SIZE / 2;
-        int y = StationMapViewport.tileTopY(0, 200, 0, 0) + StationMapViewport.TILE_SIZE
-            + StationMapViewport.CONNECTOR_GAP / 2;
+        int x = FRAME.tileLocalX(0) + StationMapFrame.TILE_SIZE / 2;
+        int y = FRAME.tileLocalY(0) + StationMapFrame.TILE_SIZE + StationMapFrame.CONNECTOR_GAP / 2;
 
         assertEquals(StationTileCoord.CORE, StationMapHitTester.hitTestModuleFootprint(layout, x, y, FRAME));
     }
@@ -77,10 +80,8 @@ final class StationMapWidgetTest {
             ModuleTier.EV);
         layout.place(module);
 
-        int x = StationMapViewport.tileLeftX(0, 200, 0, 0, 0) + StationMapViewport.TILE_SIZE
-            + StationMapViewport.CONNECTOR_GAP / 2;
-        int y = StationMapViewport.tileTopY(0, 200, 0, 0) + StationMapViewport.TILE_SIZE
-            + StationMapViewport.CONNECTOR_GAP / 2;
+        int x = FRAME.tileLocalX(0) + StationMapFrame.TILE_SIZE + StationMapFrame.CONNECTOR_GAP / 2;
+        int y = FRAME.tileLocalY(0) + StationMapFrame.TILE_SIZE + StationMapFrame.CONNECTOR_GAP / 2;
 
         assertEquals(StationTileCoord.CORE, StationMapHitTester.hitTestModuleFootprint(layout, x, y, FRAME));
     }
@@ -96,8 +97,8 @@ final class StationMapWidgetTest {
             ModuleTier.EV);
         layout.place(module);
 
-        int x = StationMapViewport.tileLeftX(0, 200, 0, 0, 0) + StationMapViewport.TILE_SIZE / 2;
-        int y = StationMapViewport.tileTopY(1, 200, 0, 0) + StationMapViewport.TILE_SIZE / 2;
+        int x = FRAME.tileLocalX(0) + StationMapFrame.TILE_SIZE / 2;
+        int y = FRAME.tileLocalY(1) + StationMapFrame.TILE_SIZE / 2;
 
         assertEquals(StationTileCoord.CORE, StationMapHitTester.hitTestModuleFootprint(layout, x, y, FRAME));
     }
@@ -113,8 +114,8 @@ final class StationMapWidgetTest {
             ModuleTier.EV);
         layout.place(module);
 
-        int x = StationMapViewport.tileLeftX(1, 200, 0, 0, 0) + StationMapViewport.TILE_SIZE / 2;
-        int y = StationMapViewport.tileTopY(0, 200, 0, 0) + StationMapViewport.TILE_SIZE / 2;
+        int x = FRAME.tileLocalX(1) + StationMapFrame.TILE_SIZE / 2;
+        int y = FRAME.tileLocalY(0) + StationMapFrame.TILE_SIZE / 2;
 
         assertNull(StationMapHitTester.hitTestModuleFootprint(layout, x, y, FRAME));
     }
@@ -126,7 +127,7 @@ final class StationMapWidgetTest {
             FacilityModuleKind.MAINTENANCE_BAY,
             StationTileCoord.CORE,
             ModuleShape.SINGLE,
-            ModuleTier.EV);
+            ModuleTier.NONE);
         ModuleInstance macerator = FacilityModuleRegistry.create(
             ModuleInstance.ID.create(),
             FacilityModuleKind.MACERATOR,
@@ -159,39 +160,4 @@ final class StationMapWidgetTest {
                         .equals(StationTileCoord.of(1, 0))));
     }
 
-    @Test
-    void maintenanceCoverageFillsWholeAdjacentModuleFootprint() {
-        ModuleInstance maintenanceBay = FacilityModuleRegistry.create(
-            ModuleInstance.ID.create(),
-            FacilityModuleKind.MAINTENANCE_BAY,
-            StationTileCoord.CORE,
-            ModuleShape.SINGLE,
-            ModuleTier.EV);
-        ModuleInstance macerator = FacilityModuleRegistry.create(
-            ModuleInstance.ID.create(),
-            FacilityModuleKind.MACERATOR,
-            StationTileCoord.of(1, 0),
-            ModuleShape.L_2x2,
-            ModuleTier.EV);
-        Map<StationTileCoord, PlacedTile> tiles = new LinkedHashMap<>();
-        tiles.put(StationTileCoord.CORE, new PlacedTile(maintenanceBay, StationTileState.OCCUPIED_OPERATIONAL));
-        for (StationTileCoord tile : macerator.tiles()) {
-            tiles.put(tile, new PlacedTile(macerator, StationTileState.OCCUPIED_OPERATIONAL));
-        }
-        StationMapFrame frame = new StationMapFrame(240, 240, 0, 0, 0, 0, 0);
-
-        List<ModuleFootprintProjection.Segment> segments = StationMapOverlayPainter
-            .maintenanceCoverageFillSegments(StationTileCoord.CORE, tiles, frame);
-        int x = StationMapViewport.tileLeftX(1, 240, 0, 0, 0) + StationMapViewport.TILE_SIZE / 2;
-        int y = StationMapViewport.tileTopY(0, 240, 0, 0) + StationMapViewport.TILE_SIZE / 2;
-
-        assertTrue(covers(segments, x, y));
-    }
-
-    private static boolean covers(List<ModuleFootprintProjection.Segment> segments, int x, int y) {
-        for (ModuleFootprintProjection.Segment segment : segments) {
-            if (segment.contains(x, y)) return true;
-        }
-        return false;
-    }
 }

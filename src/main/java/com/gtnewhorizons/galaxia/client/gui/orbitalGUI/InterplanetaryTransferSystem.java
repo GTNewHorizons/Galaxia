@@ -5,12 +5,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
+import net.minecraft.util.ResourceLocation;
 
 import org.lwjgl.opengl.GL11;
 
-import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.GlStateManager;
@@ -23,6 +25,7 @@ import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
@@ -34,7 +37,7 @@ import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 /**
  * Visual classification of an in-flight transfer package. Drives which sprite the orbital
  * renderer blits at the transfer point. New kinds are added by extending this enum and
- * wiring an entry in {@link TransferPackageIcons#texture}.
+ * supplying its texture in {@link #texture()}.
  */
 enum TransferPackageKind {
 
@@ -42,6 +45,12 @@ enum TransferPackageKind {
 
     String displayName() {
         return "Hammer Package";
+    }
+
+    ResourceLocation texture() {
+        return switch (this) {
+            case HAMMER -> EnumTextures.ICON_TRANSFER_HAMMER.get();
+        };
     }
 }
 
@@ -248,14 +257,6 @@ public final class InterplanetaryTransferSystem {
         return OrbitalTransferPlanner.sampleTransferArcInto(ax, ay, rx1, ry1, vx1, vy1, tof, mu, outXs, outYs, n);
     }
 
-    // -----------------------------------------------------------------------
-    // Helper methods (delegates to shared OrbitalTransferPlanner)
-    // -----------------------------------------------------------------------
-
-    private static CelestialObject findHostStar(CelestialObject root, CelestialObject target) {
-        return GalaxiaCelestialAPI.findStar(root, target);
-    }
-
     public static LambertStressReport runLambertStress(CelestialObject root, CelestialObject star, double globalTime,
         int simulations, double maxDvLimit) {
         int requested = Math.max(0, simulations);
@@ -434,8 +435,8 @@ public final class InterplanetaryTransferSystem {
             return;
         }
 
-        CelestialObject star = findHostStar(root, origin);
-        CelestialObject destStar = findHostStar(root, dest);
+        CelestialObject star = GalaxiaCelestialAPI.findStar(root, origin);
+        CelestialObject destStar = GalaxiaCelestialAPI.findStar(root, dest);
         if (star == null || star != destStar) {
             state.clearPreview();
             return;
@@ -623,8 +624,8 @@ public final class InterplanetaryTransferSystem {
             CelestialObject destinationBody, String transferName, String inventorySummary, double departureTime,
             double duration) {
             if (root == null || sourceBody == null || destinationBody == null) return null;
-            CelestialObject star = findHostStar(root, sourceBody);
-            CelestialObject destStar = findHostStar(root, destinationBody);
+            CelestialObject star = GalaxiaCelestialAPI.findStar(root, sourceBody);
+            CelestialObject destStar = GalaxiaCelestialAPI.findStar(root, destinationBody);
             if (star == null || star != destStar) return null;
 
             double tof = Math.max(1.0, duration);
@@ -834,7 +835,17 @@ public final class InterplanetaryTransferSystem {
             if (!writeCurrentTransferPoint(transfer, currentTime, transferPoint) || !transferPoint.valid()) return;
             float sx = view.worldToScreenX(transferPoint.worldX());
             float sy = view.worldToScreenY(transferPoint.worldY());
-            TransferPackageIcons.drawCentered(transfer.packageKind(), sx, sy, PACKAGE_SPRITE_SIZE, alpha);
+            Minecraft.getMinecraft()
+                .getTextureManager()
+                .bindTexture(
+                    transfer.packageKind()
+                        .texture());
+            GlStateManager.enableTexture2D();
+            GlStateManager.enableBlend();
+            GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+            GL11.glColor4f(1f, 1f, 1f, alpha);
+            float half = PACKAGE_SPRITE_SIZE * 0.5f;
+            GuiDraw.drawTexture(sx - half, sy - half, sx + half, sy + half, 0f, 0f, 1f, 1f);
         }
 
     }
@@ -1224,9 +1235,9 @@ public final class InterplanetaryTransferSystem {
                 .widthRel(1f)
                 .heightRel(1f)
                 .background(
-                    drawable(
-                        (ctx, x, y, w, h) -> Gui
-                            .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_MODAL_BG.getColor())));
+
+                    (ctx, x, y, w, h, ignoredTheme) -> Gui
+                        .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_MODAL_BG.getColor()));
             panel.child(backgroundLayer);
             panel.child(WidgetOutline.create(backgroundLayer, 3, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
 
@@ -1286,7 +1297,7 @@ public final class InterplanetaryTransferSystem {
             panel.child(
                 new PassiveLayer().pos(80, 112)
                     .size(INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT)
-                    .background(drawable((ctx, x, y, w, h) -> {
+                    .background((ctx, x, y, w, h, ignoredTheme) -> {
                         BorderedRect.draw(
                             x,
                             y,
@@ -1294,7 +1305,7 @@ public final class InterplanetaryTransferSystem {
                             h,
                             EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
                             EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
-                    })));
+                    }));
 
             panel.child(
                 createButton(
@@ -1440,22 +1451,21 @@ public final class InterplanetaryTransferSystem {
             return new PassiveLayer().pos(CONTENT_X, y)
                 .size(PANEL_WIDTH - CONTENT_X * 2, 1)
                 .background(
-                    drawable(
-                        (ctx, x, yy, w, h) -> Gui
-                            .drawRect(x, yy, x + w, yy + 1, EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor())));
+
+                    (ctx, x, yy, w, h, ignoredTheme) -> Gui
+                        .drawRect(x, yy, x + w, yy + 1, EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor()));
         }
 
         private ButtonWidget<?> createButton(String label, int backgroundColor, int borderColor, Runnable onClick) {
-            return new ButtonWidget<>()
-                .background(
-                    drawable((ctx, x, y, w, h) -> { BorderedRect.draw(x, y, w, h, backgroundColor, borderColor); }))
+            return new ButtonWidget<>().background(
+
+                (ctx, x, y, w, h, ignoredTheme) -> { BorderedRect.draw(x, y, w, h, backgroundColor, borderColor); })
                 .hoverBackground(
-                    drawable(
-                        (ctx, x, y, w, h) -> {
-                            BorderedRect
-                                .draw(x, y, w, h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor(), borderColor);
-                        }))
-                .overlay(drawable((ctx, x, y, w, h) -> {
+
+                    (ctx, x, y, w, h, ignoredTheme) -> {
+                        BorderedRect.draw(x, y, w, h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor(), borderColor);
+                    })
+                .overlay((ctx, x, y, w, h, ignoredTheme) -> {
                     net.minecraft.client.gui.FontRenderer fr = net.minecraft.client.Minecraft
                         .getMinecraft().fontRenderer;
                     int textW = fr.getStringWidth(label);
@@ -1464,7 +1474,7 @@ public final class InterplanetaryTransferSystem {
                         x + (w - textW) / 2,
                         y + (h - fr.FONT_HEIGHT) / 2 + 1,
                         EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-                }))
+                })
                 .onMousePressed(btn -> {
                     if (btn != 0) return false;
                     onClick.run();
@@ -1476,9 +1486,6 @@ public final class InterplanetaryTransferSystem {
             return body == null ? fallback : body.displayName();
         }
 
-        private IDrawable drawable(DrawableCommand cmd) {
-            return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
-        }
     }
 
     // -----------------------------------------------------------------------
@@ -1579,9 +1586,9 @@ public final class InterplanetaryTransferSystem {
                 .widthRel(1f)
                 .heightRel(1f)
                 .background(
-                    drawable(
-                        (ctx, x, y, w, h) -> Gui
-                            .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_TRANSFER_TOOLTIP_BG.getColor())));
+
+                    (ctx, x, y, w, h, ignoredTheme) -> Gui
+                        .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_TRANSFER_TOOLTIP_BG.getColor()));
             rootPanel.child(backgroundLayer);
             rootPanel.child(WidgetOutline.create(backgroundLayer, 3, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
 
@@ -1628,9 +1635,6 @@ public final class InterplanetaryTransferSystem {
             rootPanel.pos(left, top);
         }
 
-        private IDrawable drawable(DrawableCommand cmd) {
-            return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
-        }
     }
 
     // -----------------------------------------------------------------------

@@ -6,17 +6,16 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 
-public final class ModuleHammer implements IModuleComponent, IParallelModule {
+public final class ModuleHammer implements IModuleComponent {
 
     public static final long EU_PER_DV = 10_000L;
     public static final long MIN_SHOT_ENERGY_EU = EU_PER_DV;
@@ -27,8 +26,6 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
     private static final ModuleTier[] BIG_TIERS = { ModuleTier.LuV, ModuleTier.ZPM, ModuleTier.UV };
 
     public final FacilityModuleKind kind;
-
-    private byte parallel = 1;
 
     private final int maxBatchSize;
     private OrbitalTransferPlanner.RoutePriority routePriority;
@@ -56,13 +53,13 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
         setEnergyStored(energyStored);
     }
 
-    public static void charge(ModuleInstance instance, CelestialAsset asset) {
-        ModuleHammer hammer = (ModuleHammer) instance.component();
-        long charge = hammer.chargeRate(instance) * Math.max(1, instance.cooldownTicks());
-        if (hammer.chargeFrom(asset, charge)) {
+    @Override
+    public void runCycle(ModuleInstance instance, CelestialAsset asset) {
+        long charge = chargeRate(instance) * Math.max(1, instance.cooldownTicks());
+        if (chargeFrom(asset, charge)) {
             // This only makes sense for the facility since station save everything to nbt
             if (asset instanceof AutomatedFacility facility) {
-                facility.markModuleDirty(instance.id);
+                facility.markDirty();
             }
         }
     }
@@ -79,6 +76,56 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
         return supportsTier(targetVariant, currentTier) ? currentTier : tiersFor(targetVariant)[0];
     }
 
+    @Override
+    public void applyBuildPhysicalSpec(ModuleInstance module, BuildPhysicalSpec spec) {
+        if (!(spec instanceof BuildPhysicalSpec.Hammer hammerSpec) || hammerSpec.tier() == null
+            || hammerSpec.variant() == null
+            || hammerSpec.tier() != module.tier()) {
+            throw new IllegalArgumentException("Invalid hammer build physical spec");
+        }
+        requireTier(hammerSpec.variant(), hammerSpec.tier());
+        setVariant(hammerSpec.variant());
+    }
+
+    @Override
+    public BuildPhysicalSpec buildPhysicalSpec(ModuleInstance module) {
+        return new BuildPhysicalSpec.Hammer(module.tier(), variant);
+    }
+
+    @Override
+    public boolean applyConfigurationTransition(ModuleInstance module,
+        FacilityCommand.ModuleConfiguration configuration) {
+        if (configuration instanceof FacilityCommand.ConfigureHammer configure) {
+            if (configure.config() == null || configure.priority() == null) {
+                throw new IllegalArgumentException("Missing hammer configuration");
+            }
+            if (configure.config()
+                .equals(config) && configure.priority() == routePriority) return false;
+            config = configure.config();
+            routePriority = configure.priority();
+            return true;
+        }
+        return IModuleComponent.super.applyConfigurationTransition(module, configuration);
+    }
+
+    @Override
+    public IModuleOperation prepareOperationTarget(ModuleInstance module, FacilityCommand.ModuleCommand request) {
+        if (!(request instanceof FacilityCommand.PlanHammerUpgrade plan)) {
+            return IModuleComponent.super.prepareOperationTarget(module, request);
+        }
+        if (!canUpgradeTo(module, plan.targetTier(), plan.targetVariant())) {
+            throw new IllegalArgumentException("Invalid hammer operation target");
+        }
+        return new IModuleOperation.Hammer(plan.targetTier(), plan.targetVariant());
+    }
+
+    @Override
+    public boolean canUpgradeTo(ModuleInstance module, ModuleTier targetTier, HammerVariant targetVariant) {
+        return targetVariant != null && targetTier != null
+            && (targetVariant != variant || targetTier != module.tier())
+            && supportsTier(targetVariant, targetTier);
+    }
+
     public static boolean supportsTier(@Nonnull HammerVariant variant, @Nonnull ModuleTier tier) {
         for (ModuleTier t : tiersFor(variant)) {
             if (t == tier) return true;
@@ -93,7 +140,7 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
     public static int chargeTicks(@Nonnull HammerVariant variant, @Nonnull ModuleTierData data) {
         if (data.variantChargeTicks() != null) {
             Integer override = data.variantChargeTicks()
-                .get(variant.name());
+                .get(variant);
             if (override != null) return override;
         }
         if (data.chargeTicks() != null) return data.chargeTicks();
@@ -102,12 +149,12 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
 
     @Override
     public void applyOperationTarget(IModuleOperation spec, ModuleInstance module) {
-        if (!(spec instanceof HammerModuleOperation hammerSpec)) {
+        if (!(spec instanceof IModuleOperation.Hammer hammerSpec)) {
             throw new IllegalStateException(
                 "HAMMER cannot handle " + spec.getClass()
                     .getSimpleName());
         }
-        HammerVariant targetVariant = HammerVariant.valueOf(hammerSpec.targetVariantKey());
+        HammerVariant targetVariant = hammerSpec.targetVariant();
         ModuleTier targetTier = hammerSpec.targetTier();
         requireTier(targetVariant, targetTier);
         this.variant = targetVariant;
@@ -119,7 +166,7 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
     public int cooldownTicks(ModuleInstance module, ModuleTierData data) {
         if (data.variantCooldowns() != null) {
             Integer override = data.variantCooldowns()
-                .get(variant.name());
+                .get(variant);
             if (override != null) return override;
         }
         return data.cooldownTicks();
@@ -132,10 +179,6 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
 
     public AllowShootingConfig config() {
         return config;
-    }
-
-    public void setConfig(@Nonnull AllowShootingConfig newConfig) {
-        this.config = newConfig;
     }
 
     public OrbitalTransferPlanner.RoutePriority routePriority() {
@@ -212,7 +255,7 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
 
     public boolean trySpendShotEnergy(ModuleInstance module, AutomatedFacility outpost, long amount) {
         if (!trySpendShotEnergy(amount)) return false;
-        outpost.markModuleDirty(module.id);
+        outpost.markDirty();
         return true;
     }
 
@@ -236,10 +279,6 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
         return maxBatchSize;
     }
 
-    public void setRoutePriority(@Nonnull OrbitalTransferPlanner.RoutePriority routePriority) {
-        this.routePriority = routePriority;
-    }
-
     public void setVariant(@Nonnull HammerVariant variant) {
         this.variant = variant;
         setEnergyStored(energyStored);
@@ -256,13 +295,4 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
         };
     }
 
-    @Override
-    public byte getParallel() {
-        return parallel;
-    }
-
-    @Override
-    public void setParallel(byte parallel) {
-        this.parallel = parallel;
-    }
 }

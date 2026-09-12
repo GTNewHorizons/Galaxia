@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.satellite;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -8,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
@@ -56,10 +59,16 @@ final class SatelliteNetworkServiceTest {
 
     @Test
     void rebuildStoresDerivedSnapshotAndKeepsRevisionWhenContentIsUnchanged() {
-        SatelliteNetworkState state = SatelliteNetworkService
-            .rebuild(TEAM, nodes(), capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L), Map.of());
-        SatelliteNetworkState unchanged = SatelliteNetworkService
-            .rebuild(TEAM, nodes(), capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L), Map.of());
+        SatelliteNetworkState state = SatelliteNetworkService.rebuild(
+            TEAM,
+            nodes(),
+            capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L),
+            new SatelliteDataBufferStore());
+        SatelliteNetworkState unchanged = SatelliteNetworkService.rebuild(
+            TEAM,
+            nodes(),
+            capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L),
+            new SatelliteDataBufferStore());
 
         assertSame(state, SatelliteNetworkService.current(TEAM));
         assertSame(state, unchanged);
@@ -77,12 +86,60 @@ final class SatelliteNetworkServiceTest {
     }
 
     @Test
-    void rebuildIncrementsRevisionWhenCapacityChanges() {
-        SatelliteNetworkState first = SatelliteNetworkService
-            .rebuild(TEAM, nodes(), capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L), Map.of());
+    void liveNetworkIncludesCommunicationBodiesAndExcludesProspectingOnlyBodies() {
+        AsteroidFieldProfile profile = GalaxiaCelestialAPI.get(CelestialObjectId.FROZEN_BELT)
+            .orElseThrow()
+            .properties()
+            .asteroidFieldProfile();
+        var asteroids = AsteroidFieldResolver.resolveAll(CelestialObjectId.FROZEN_BELT, profile);
+        CelestialObjectKey activeAsteroid = CelestialObjectKey.minorBody(
+            asteroids.get(0)
+                .id());
+        CelestialObjectKey prospectingAsteroid = CelestialObjectKey.minorBody(
+            asteroids.get(1)
+                .id());
+        CelestialObjectKey mars = CelestialObjectKey.registered(CelestialObjectId.MARS);
+        CelestialObjectKey egora = CelestialObjectKey.registered(CelestialObjectId.EGORA);
+        CelestialAssetStore.SERVER.addSatellites(TEAM, mars, SatelliteKind.COMMUNICATION, 1);
+        CelestialAssetStore.SERVER.addSatellites(TEAM, activeAsteroid, SatelliteKind.COMMUNICATION, 1);
+        CelestialAssetStore.SERVER.addSatellites(TEAM, prospectingAsteroid, SatelliteKind.PROSPECTING, 1);
+        CelestialAssetStore.SERVER.addSatellites(TEAM, egora, SatelliteKind.PROSPECTING, 1);
 
-        SatelliteNetworkState changed = SatelliteNetworkService
-            .rebuild(TEAM, nodes(), capacity(CelestialObjectId.MARS, 20L, CelestialObjectId.OVERWORLD, 10L), Map.of());
+        SatelliteNetworkState network = SatelliteNetworkService.rebuild(TEAM, 10.0D);
+
+        assertEquals(
+            Set.of(mars, activeAsteroid),
+            network.bodies()
+                .keySet());
+        assertEquals(
+            1,
+            network.links()
+                .size());
+
+        CelestialAssetStore.SERVER.deleteSatellites(TEAM, activeAsteroid, SatelliteKind.COMMUNICATION);
+        SatelliteNetworkState changed = SatelliteNetworkService.rebuild(TEAM, 10.0D);
+        assertEquals(
+            Set.of(mars),
+            changed.bodies()
+                .keySet());
+        assertTrue(
+            changed.links()
+                .isEmpty());
+    }
+
+    @Test
+    void rebuildIncrementsRevisionWhenCapacityChanges() {
+        SatelliteNetworkState first = SatelliteNetworkService.rebuild(
+            TEAM,
+            nodes(),
+            capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L),
+            new SatelliteDataBufferStore());
+
+        SatelliteNetworkState changed = SatelliteNetworkService.rebuild(
+            TEAM,
+            nodes(),
+            capacity(CelestialObjectId.MARS, 20L, CelestialObjectId.OVERWORLD, 10L),
+            new SatelliteDataBufferStore());
 
         assertEquals(first.revision() + 1, changed.revision());
         assertEquals(20L, changed.capacityKbps(CelestialObjectKey.registered(CelestialObjectId.MARS)));
@@ -93,15 +150,13 @@ final class SatelliteNetworkServiceTest {
         SatelliteDataBufferStore store = new SatelliteDataBufferStore();
         SatelliteDataKey prospecting = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
         store.finishProduction(
-            TEAM,
             CelestialObjectKey.registered(CelestialObjectId.MARS),
             prospecting,
             SatelliteBandwidthFormatter.kilobits(100L));
-        store.requestData(
-            TEAM,
-            CelestialObjectKey.registered(CelestialObjectId.OVERWORLD),
-            prospecting,
-            SatelliteBandwidthFormatter.kilobits(100L));
+        AutomatedFacility destination = facility(CelestialObjectId.OVERWORLD);
+        addDebugModule(destination)
+            .configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.PROSPECTING, 100L, 1, null));
+        SatelliteNetworkService.refreshAssetEndpoints(TEAM, destination);
 
         SatelliteNetworkState state = SatelliteNetworkService
             .rebuild(TEAM, nodes(), capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L), store);
@@ -150,7 +205,6 @@ final class SatelliteNetworkServiceTest {
 
         SatelliteDataKey prospecting = SatelliteDataKey.any(SatelliteDataType.PROSPECTING);
         store.finishProduction(
-            TEAM,
             CelestialObjectKey.registered(CelestialObjectId.MARS),
             prospecting,
             SatelliteBandwidthFormatter.kilobits(25L));
@@ -355,10 +409,58 @@ final class SatelliteNetworkServiceTest {
         assertEquals(CelestialObjectKey.registered(CelestialObjectId.MARS), consumer.detectedCounterpartBodyKey());
     }
 
+    // Integration contract: team merge transfers assets/endpoints but only the survivor retains buffered data.
+    @Test
+    void runtimeMergeTransfersAssetsAndRetiresOnlyConsumedNetworkData() {
+        CelestialServerRuntime runtime = CelestialServerRuntime.create();
+        UUID consumedTeam = new UUID(21L, 22L);
+        AutomatedFacility survivingFacility = facility(CelestialObjectId.MARS);
+        AutomatedFacility consumedFacility = facility(CelestialObjectId.EGORA);
+        CelestialAssetStore.registerAsset(TEAM, survivingFacility);
+        CelestialAssetStore.registerAsset(consumedTeam, consumedFacility);
+        ModuleDebugDataGenerator survivingProducer = addDebugModule(survivingFacility);
+        survivingProducer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.RESEARCH, 70L, 1));
+        addDebugModule(survivingFacility)
+            .configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.RESEARCH, 1L, 1, null));
+        ModuleDebugDataGenerator consumedProducer = addDebugModule(consumedFacility);
+        consumedProducer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.COMMUNICATION, 40L, 1));
+        addDebugModule(consumedFacility)
+            .configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.COMMUNICATION, 1L, 1, null));
+        SatelliteNetworkService.refreshFacilityEndpoints(survivingFacility);
+        SatelliteNetworkService.refreshFacilityEndpoints(consumedFacility);
+        SatelliteNetworkService.tickDataJobs();
+        SatelliteDataKey survivingKey = survivingProducer.producedKey(survivingFacility.celestialObjectKey);
+        SatelliteDataKey consumedKey = consumedProducer.producedKey(consumedFacility.celestialObjectKey);
+        assertFalse(SatelliteNetworkService.canStartProcess(TEAM, survivingFacility.celestialObjectKey, survivingKey));
+        assertFalse(
+            SatelliteNetworkService.canStartProcess(consumedTeam, consumedFacility.celestialObjectKey, consumedKey));
+
+        runtime.mergeTeams(consumedTeam, TEAM);
+
+        assertSame(consumedFacility, CelestialAssetStore.findAsset(consumedFacility.assetId));
+        assertEquals(TEAM, CelestialAssetStore.getTeamId(consumedFacility.assetId));
+        assertEquals(TEAM, CelestialAssetStore.getTeamId(survivingFacility.assetId));
+        assertTrue(
+            CelestialAssetStore.getTeamAssets(consumedTeam)
+                .isEmpty());
+        assertFalse(SatelliteNetworkService.canStartProcess(TEAM, survivingFacility.celestialObjectKey, survivingKey));
+        assertTrue(
+            SatelliteNetworkService.canStartProcess(consumedTeam, consumedFacility.celestialObjectKey, consumedKey));
+        assertTrue(SatelliteNetworkService.canStartProcess(TEAM, consumedFacility.celestialObjectKey, consumedKey));
+
+        SatelliteNetworkService.tickDataJobs();
+        assertFalse(SatelliteNetworkService.canStartProcess(TEAM, consumedFacility.celestialObjectKey, consumedKey));
+        assertTrue(
+            SatelliteNetworkService.canStartProcess(consumedTeam, consumedFacility.celestialObjectKey, consumedKey));
+    }
+
     @Test
     void worldLoadClearsCachedSatelliteNetworkState(@TempDir Path tempDir) {
-        SatelliteNetworkService
-            .rebuild(TEAM, nodes(), capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L), Map.of());
+        SatelliteNetworkService.rebuild(
+            TEAM,
+            nodes(),
+            capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L),
+            new SatelliteDataBufferStore());
 
         new FacilityPersistenceManager(CelestialServerRuntime.create()).loadFromSaveDirectory(tempDir.toFile());
 
@@ -404,7 +506,7 @@ final class SatelliteNetworkServiceTest {
             ModuleShape.SINGLE,
             ModuleTier.HV);
         module.updateStatus(Buildable.Status.OPERATIONAL);
-        facility.addModule(module);
+        addModule(facility, module);
         return (ModuleDebugDataGenerator) module.component();
     }
 }

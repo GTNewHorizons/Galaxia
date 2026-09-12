@@ -11,10 +11,12 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import dev.modularui.preview.PreviewEntrypoint;
 import gregtech.api.recipe.RecipeMaps;
+import java.util.List;
 
 final class FacilityPreviews {
 
@@ -38,7 +40,7 @@ final class FacilityPreviews {
             PreviewSupport.setStaticField(ModulePickerScreen.class, "pendingInstantBuild", false);
             PreviewSupport.setStaticField(ModulePickerScreen.class, "pendingMultipleBuild", false);
             PreviewSupport.setStaticField(ModulePickerScreen.class, "pendingSelectedKind", null);
-            PreviewSupport.setStaticField(ModulePickerScreen.class, "pendingSettingsGroupId", (short) 0);
+            PreviewSupport.setStaticField(ModulePickerScreen.class, "pendingSettingsGroupId", null);
             return new ModulePickerScreen()
                 .buildUI(PreviewSupport.guiData(), PreviewSupport.sync(context), PreviewSupport.settings());
         });
@@ -47,8 +49,6 @@ final class FacilityPreviews {
     static PreviewEntrypoint recipeInput() {
         return PreviewEntrypoint.of(GTRecipeInputScreen.class, context -> {
             FacilityState state = createFacility();
-            PreviewSupport.setStaticField(GTRecipeInputScreen.class, "pendingAssetId", state.facility().assetId);
-            PreviewSupport.setStaticField(GTRecipeInputScreen.class, "pendingModuleIndex", 0);
             PreviewSupport.setStaticField(GTRecipeInputScreen.class, "pendingModule", state.module());
             GTRecipeInputScreen screen = new GTRecipeInputScreen();
             return screen.buildUI(PreviewSupport.guiData(), PreviewSupport.sync(context), PreviewSupport.settings());
@@ -68,7 +68,8 @@ final class FacilityPreviews {
         ModuleInstance module = FacilityModuleKind.MACERATOR
             .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.HV);
         facility.stationLayout().place(module);
-        facility.addModule(module);
+        module.setSettingsBinding(new ModuleInstance.SettingsBinding.Private(RecipeBook.empty()));
+        facility.restoreModulesAndSettings(List.of(module), List.of());
         CelestialClient.add(facility);
         return new FacilityState(facility, module);
     }

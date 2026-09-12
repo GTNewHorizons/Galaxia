@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.item.ItemStack;
@@ -26,9 +28,11 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
@@ -52,8 +56,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
  */
 public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsWidget> {
 
-    private static final int PANEL_X = 10;
-    private static final int PANEL_Y = 30;
     private static final int PANEL_W = 348;
     private static final int ROW_H = 22;
     private static final int MAX_VISIBLE_ROWS = 20;
@@ -78,10 +80,10 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
     private VerticalScrollData scrollData;
 
     private int lastDataRevision = Integer.MIN_VALUE;
-    private String lastStructureSignature = "";
+    private @Nullable SignalStructure lastStructure;
     private ParentWidget<?> rowsContainer;
     private String cachedTitle = "";
-    private final Map<String, SignalRowState> rowStates = new LinkedHashMap<>();
+    private final Map<ItemStackWrapper, SignalRowState> rowStates = new LinkedHashMap<>();
 
     LogisticsSignalsWidget(CelestialObject galaxyRoot, Supplier<CelestialObject> viewRootSupplier,
         Supplier<Boolean> openSupplier) {
@@ -105,7 +107,7 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
                 rowsContainer = null;
                 rowStates.clear();
                 lastDataRevision = Integer.MIN_VALUE;
-                lastStructureSignature = "";
+                lastStructure = null;
                 size(0, 0);
                 panelRoot.scheduleResize();
                 scheduleResize();
@@ -122,23 +124,16 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         List<SignalRow> rows = aggregateSignals(scope, viewRoot);
         updateRowStates(rows, scope, viewRoot);
 
-        String structureSignature = buildStructureSignature(rows);
-        if (!structureSignature.equals(lastStructureSignature) || rowsContainer == null) {
+        SignalStructure structure = buildStructure(rows);
+        if (!structure.equals(lastStructure) || rowsContainer == null) {
             rebuildPanel(scope, viewRoot, rows);
-            lastStructureSignature = structureSignature;
+            lastStructure = structure;
         }
     }
 
     @Override
     public boolean canHoverThrough() {
         return true;
-    }
-
-    boolean isPointInPanel(int localX, int localY) {
-        if (!panelRoot.isEnabled()) return false;
-        return localX >= PANEL_X && localX <= PANEL_X + getArea().width
-            && localY >= PANEL_Y
-            && localY <= PANEL_Y + getArea().height;
     }
 
     private CelestialObject currentViewRoot() {
@@ -154,22 +149,14 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         return r == 0 ? Integer.MAX_VALUE : r;
     }
 
-    private String buildStructureSignature(List<SignalRow> rows) {
-        StringBuilder sig = new StringBuilder(rows.size() * 24);
-        sig.append(rows.size())
-            .append('|');
+    private SignalStructure buildStructure(List<SignalRow> rows) {
         int rowsToShow = Math.min(MAX_VISIBLE_ROWS, rows.size());
+        List<SignalStructureRow> visibleRows = new ArrayList<>(rowsToShow);
         for (int i = 0; i < rowsToShow; i++) {
             SignalRow row = rows.get(i);
-            sig.append(
-                row.item()
-                    .toKey())
-                .append(':')
-                .append(row.net() >= 0 ? '+' : '-')
-                .append(row.net())
-                .append('|');
+            visibleRows.add(new SignalStructureRow(row.item(), row.net()));
         }
-        return sig.toString();
+        return new SignalStructure(rows.size(), List.copyOf(visibleRows));
     }
 
     private void rebuildPanel(ViewScope scope, CelestialObject viewRoot, List<SignalRow> rows) {
@@ -179,16 +166,15 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         panelRoot.removeAll();
         scrollWidget = null;
         scrollData = null;
-        pos(PANEL_X, PANEL_Y);
         size(PANEL_W, panelH);
         panelRoot.size(PANEL_W, panelH);
         panelRoot.setEnabled(true);
         ParentWidget<?> backgroundLayer = new ParentWidget<>().pos(0, 0)
             .size(PANEL_W, panelH)
-            .background(drawable((ctx, x, y, w, h) -> {
+            .background((ctx, x, y, w, h, ignoredTheme) -> {
                 Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_MODAL_BG.getColor());
                 Gui.drawRect(x, y, x + w, y + 24, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
-            }));
+            });
         panelRoot.child(backgroundLayer);
         panelRoot.child(WidgetOutline.create(backgroundLayer, 3, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
 
@@ -239,10 +225,9 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
 
     private void updateRowStates(List<SignalRow> rows, ViewScope scope, CelestialObject viewRoot) {
         cachedTitle = buildScopeLabel(scope, viewRoot);
-        Map<String, SignalRowState> nextStates = new HashMap<>();
+        Map<ItemStackWrapper, SignalRowState> nextStates = new HashMap<>();
         for (SignalRow row : rows) {
-            String key = row.item()
-                .toKey();
+            ItemStackWrapper key = row.item();
             SignalRowState state = rowStates.get(key);
             if (state == null) {
                 state = new SignalRowState(row.item());
@@ -252,25 +237,19 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         }
         rowStates.clear();
         for (SignalRow row : rows) {
-            SignalRowState state = nextStates.get(
-                row.item()
-                    .toKey());
-            if (state != null) rowStates.put(
-                row.item()
-                    .toKey(),
-                state);
+            SignalRowState state = nextStates.get(row.item());
+            if (state != null) rowStates.put(row.item(), state);
         }
     }
 
     private ParentWidget<?> buildSignalRow(SignalRow row) {
-        SignalRowState state = rowStates.get(
-            row.item()
-                .toKey());
+        SignalRowState state = rowStates.get(row.item());
         ParentWidget<?> rowWidget = new ParentWidget<>().widthRel(1f)
             .height(ROW_H)
             .background(
-                drawable(
-                    (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())));
+
+                (ctx, x, y, w, h, ignoredTheme) -> Gui
+                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor()));
 
         if (state == null) return rowWidget;
 
@@ -281,12 +260,11 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         });
 
         rowWidget.child(
-            drawable(
-                (ctx, bx, by, bw, bh) -> {
-                    if (state.displayStack != null) renderItemIcon(state.displayStack, bx + 1, by + 3);
-                }).asWidget()
-                    .pos(COL_ICON, 0)
-                    .size(16, ROW_H));
+            ((IDrawable) (ctx, bx, by, bw, bh, ignoredTheme) -> {
+                if (state.displayStack != null) renderItemIcon(state.displayStack, bx + 1, by + 3);
+            }).asWidget()
+                .pos(COL_ICON, 0)
+                .size(16, ROW_H));
 
         rowWidget.child(
             new TextWidget<>(IKey.dynamic(() -> state.trimmedName)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
@@ -349,7 +327,7 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
     }
 
     private List<SignalRow> aggregateSignals(ViewScope scope, CelestialObject viewRoot) {
-        Map<String, Long> signalData;
+        Map<ItemStackWrapper, Long> signalData;
         switch (scope) {
             case SYSTEM:
                 signalData = CelestialClient.clientSignalsForSystem(viewRoot.key());
@@ -366,10 +344,8 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         }
 
         Map<ItemStackWrapper, long[]> acc = new LinkedHashMap<>();
-        for (Map.Entry<String, Long> e : signalData.entrySet()) {
-            ItemStackWrapper item = ItemStackWrapper.fromKey(e.getKey());
-            if (item == null) continue;
-            acc.put(item, new long[] { e.getValue(), 0L });
+        for (Map.Entry<ItemStackWrapper, Long> e : signalData.entrySet()) {
+            acc.put(e.getKey(), new long[] { e.getValue(), 0L });
         }
 
         for (LogisticsDelivery delivery : CelestialClient.clientDeliveries()) {
@@ -387,10 +363,6 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
             Comparator.comparingLong((SignalRow r) -> r.net())
                 .reversed());
         return rows;
-    }
-
-    private IDrawable drawable(DrawableCommand cmd) {
-        return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
     }
 
     private static void renderItemIcon(ItemStack stack, int x, int y) {
@@ -454,11 +426,12 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
 
             tooltipLines.clear();
             tooltipLines.add(fullName);
-            for (CelestialAsset outpost : CelestialClient.allAssets()) {
+            for (CelestialAsset outpost : CelestialAssetStore.CLIENT.assetsViewInternal()) {
                 if (!isOutpostInScope(outpost, scope, viewRoot)) continue;
                 if (outpost == null) continue;
                 long stock = outpost instanceof Station station ? station.getCannonChestItems()
-                    .getOrDefault(item, 0L) : outpost.getItemAmount(item);
+                    .getOrDefault(item, 0L)
+                    : outpost instanceof AutomatedFacility facility ? facility.itemAmount(item) : 0L;
                 LogisticsResourceConfig cfg = outpost.logisticsConfig.get(item);
                 if (stock == 0 && cfg.minReserve() == 0 && !cfg.isImportEnabled() && !cfg.isSupplyEnabled()) continue;
                 long localNet = stock - cfg.minReserve();
@@ -478,4 +451,8 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
     }
 
     private record SignalRow(ItemStackWrapper item, long net, long inTransit) {}
+
+    private record SignalStructure(int totalRows, List<SignalStructureRow> visibleRows) {}
+
+    private record SignalStructureRow(ItemStackWrapper item, long net) {}
 }

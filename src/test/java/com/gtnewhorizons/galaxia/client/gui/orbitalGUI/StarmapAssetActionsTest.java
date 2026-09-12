@@ -40,7 +40,6 @@ final class StarmapAssetActionsTest {
     void asteroidAssetActionsAllowOutpostButRejectAutomatedStationCreation() {
         StarmapAssetActions.OrbitalAssetUiState state = new StarmapAssetActions.OrbitalAssetUiState();
         StarmapAssetActions.OrbitalAssetActionController controller = new StarmapAssetActions.OrbitalAssetActionController(
-            new StarmapAssetActions.OrbitalAssetSupport(),
             new TestCallbacks(),
             new TestStarmapView());
         CelestialObject asteroid = CelestialRegistry
@@ -64,7 +63,6 @@ final class StarmapAssetActionsTest {
     void hiddenAsteroidAssetActionsDoNotQueueAssetCreation() {
         StarmapAssetActions.OrbitalAssetUiState state = new StarmapAssetActions.OrbitalAssetUiState();
         StarmapAssetActions.OrbitalAssetActionController controller = new StarmapAssetActions.OrbitalAssetActionController(
-            new StarmapAssetActions.OrbitalAssetSupport(),
             new TestCallbacks(),
             new TestStarmapView());
         CelestialObject hiddenAsteroid = hiddenAsteroid();
@@ -79,7 +77,6 @@ final class StarmapAssetActionsTest {
     void registeredBodyUsesEffectiveDiscoveredDefaultWithoutExplicitSync() {
         StarmapAssetActions.OrbitalAssetUiState state = new StarmapAssetActions.OrbitalAssetUiState();
         StarmapAssetActions.OrbitalAssetActionController controller = new StarmapAssetActions.OrbitalAssetActionController(
-            new StarmapAssetActions.OrbitalAssetSupport(),
             new TestCallbacks(),
             new TestStarmapView());
         CelestialObject mars = CelestialRegistry.get(CelestialObjectId.MARS)
@@ -127,6 +124,6 @@ final class StarmapAssetActionsTest {
 
         @Override
         public void createResourceTransfer(CelestialObject sourceBody, CelestialAsset sourceAsset,
-            StationTransferTarget target) {}
+            CelestialAsset target) {}
     }
 }

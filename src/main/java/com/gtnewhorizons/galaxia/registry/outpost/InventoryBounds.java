@@ -4,14 +4,14 @@ import java.util.Objects;
 
 public final class InventoryBounds {
 
-    private static long NO_BOUNDS = -1;
+    private static final long NO_BOUNDS = -1;
 
     public static InventoryBounds invalid() {
         return new InventoryBounds(NO_BOUNDS, NO_BOUNDS);
     }
 
-    private long low;
-    private long up;
+    private final long low;
+    private final long up;
 
     public InventoryBounds(long low, long up) {
         if (low != NO_BOUNDS && up != NO_BOUNDS && low > up) {
@@ -31,20 +31,6 @@ public final class InventoryBounds {
 
     public boolean inBounds(long amount) {
         return lowOrDefault() <= amount && amount <= upperOrDefault();
-    }
-
-    public void setLow(long newLow) {
-        if (newLow != NO_BOUNDS && up != NO_BOUNDS && newLow > up) {
-            throw new IllegalStateException("Can't have a low bound higher than the high one");
-        }
-        low = newLow;
-    }
-
-    public void setUppper(long newHigh) {
-        if (low != NO_BOUNDS && newHigh != NO_BOUNDS && low > newHigh) {
-            throw new IllegalStateException("Can't have a low bound higher than the high one");
-        }
-        up = newHigh;
     }
 
     public long upper() {
@@ -69,14 +55,6 @@ public final class InventoryBounds {
 
     public boolean hasUpper() {
         return up != NO_BOUNDS;
-    }
-
-    public void removeLow() {
-        low = NO_BOUNDS;
-    }
-
-    public void removeUpper() {
-        up = NO_BOUNDS;
     }
 
     public boolean isInvalid() {

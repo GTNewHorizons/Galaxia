@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -13,7 +14,9 @@ import java.util.function.UnaryOperator;
 
 import javax.annotation.Nullable;
 
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -122,11 +125,6 @@ final class StationTilePickerController {
         return active && !selected.isEmpty();
     }
 
-    boolean isCompatible(StationTileCoord coord) {
-        if (!active || coord == null) return false;
-        return isCompatibleNormalized(normalize(coord));
-    }
-
     boolean isCompatibleNormalized(StationTileCoord normalized) {
         return active && normalized != null
             && (selected.containsKey(normalized)
@@ -137,10 +135,6 @@ final class StationTilePickerController {
         if (!active || coord == null) return false;
         StationTileCoord normalized = normalize(coord);
         return normalized != null && selected.containsKey(normalized);
-    }
-
-    boolean toggle(StationTileCoord coord) {
-        return toggleNormalized(normalize(coord));
     }
 
     boolean toggleNormalized(StationTileCoord normalized) {
@@ -176,10 +170,6 @@ final class StationTilePickerController {
         return selected.getOrDefault(coord, ModuleShape.normalizeRotation(footprintRotation));
     }
 
-    Map<StationTileCoord, Integer> selectedTargetRotations() {
-        return Collections.unmodifiableMap(selected);
-    }
-
     @Nullable
     FacilityModuleKind previewModuleKind() {
         return previewModuleKind;
@@ -203,6 +193,25 @@ final class StationTilePickerController {
 
     void cancel() {
         clear();
+    }
+
+    static StationTileCoord normalizeModuleTarget(AutomatedFacility facility, StationTileCoord coord) {
+        if (facility == null || coord == null || facility.stationLayout() == null) return coord;
+        ModuleInstance module = facility.stationLayout()
+            .moduleAt(coord);
+        return module == null ? coord : module.anchor();
+    }
+
+    static List<ModuleInstance.ID> moduleIds(AutomatedFacility facility, List<StationTileCoord> coords) {
+        if (facility == null || facility.stationLayout() == null || coords == null) return List.of();
+        Set<ModuleInstance.ID> ids = new LinkedHashSet<>();
+        for (StationTileCoord coord : coords) {
+            ModuleInstance module = coord == null ? null
+                : facility.stationLayout()
+                    .moduleAt(coord);
+            if (module != null) ids.add(module.id);
+        }
+        return List.copyOf(ids);
     }
 
     private void clear() {

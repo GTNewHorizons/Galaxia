@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,6 +19,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanScope;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryStep;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryWork;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
@@ -131,6 +133,110 @@ final class AsteroidFieldDiscoveryPolicyTest {
                 .noneMatch(
                     candidate -> candidate.targetKey()
                         .equals(CelestialObjectKey.minorBody(far.id()))));
+    }
+
+    // Product contract: priority remains size then orbital depth while fresh team facts change pending work.
+    @Test
+    void repeatedSelectionUsesLiveKnowledgeAndPreservesDiscoveryPriority() {
+        AsteroidFieldNode earlier = nodes.stream()
+            .filter(node -> node.sizeClass() == AsteroidSizeClass.MEDIUM)
+            .min(Comparator.comparingDouble(AsteroidFieldNode::orbitalDepth01))
+            .orElseThrow();
+        AsteroidFieldNode later = nodes.stream()
+            .filter(node -> node.sizeClass() == AsteroidSizeClass.MEDIUM)
+            .max(Comparator.comparingDouble(AsteroidFieldNode::orbitalDepth01))
+            .orElseThrow();
+        AsteroidFieldNode small = firstHidden(AsteroidSizeClass.SMALL);
+        for (AsteroidFieldNode node : nodes) {
+            CelestialKnowledgeService.putFacts(
+                TEAM,
+                CelestialObjectKey.minorBody(node.id()),
+                CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.PROFILE));
+        }
+        for (AsteroidFieldNode node : List.of(earlier, later, small)) {
+            CelestialKnowledgeService
+                .putFacts(TEAM, CelestialObjectKey.minorBody(node.id()), CelestialKnowledgeFacts.hidden());
+        }
+        CelestialDiscoveryScanScope scope = wideScope(small);
+
+        for (AsteroidFieldNode expected : List.of(earlier, later, small)) {
+            CelestialDiscoveryWork work = policy.nextDiscoveryWork(TEAM, scope)
+                .orElseThrow();
+            assertEquals(CelestialObjectKey.minorBody(expected.id()), work.targetKey());
+            assertEquals(CelestialDiscoveryStep.DETECTION, work.step());
+            policy.completeDiscoveryWork(TEAM, scope, work);
+        }
+        assertEquals(
+            CelestialDiscoveryStep.PROFILE,
+            policy.nextDiscoveryWork(TEAM, scope)
+                .orElseThrow()
+                .step());
+    }
+
+    // Product contract: selection respects the requested scope even after another scope was queried.
+    @Test
+    void repeatedSelectionSeparatesScopesAndRejectsStaleRevision() {
+        AsteroidFieldNode anchor = firstHidden(AsteroidSizeClass.SMALL);
+        CelestialDiscoveryScanScope wide = wideScope(anchor);
+        policy.nextDiscoveryWork(TEAM, wide)
+            .orElseThrow();
+        CelestialDiscoveryScanScope tight = nodeOnlyScope(anchor);
+
+        assertEquals(
+            CelestialObjectKey.minorBody(anchor.id()),
+            policy.nextDiscoveryWork(TEAM, tight)
+                .orElseThrow()
+                .targetKey());
+        CelestialDiscoveryScanScope stale = new CelestialDiscoveryScanScope(
+            tight.anchorKey(),
+            tight.radius(),
+            tight.revision() + 1);
+        assertThrows(IllegalStateException.class, () -> policy.nextDiscoveryWork(TEAM, stale));
+        assertEquals(
+            CelestialObjectKey.minorBody(anchor.id()),
+            policy.nextDiscoveryWork(TEAM, tight)
+                .orElseThrow()
+                .targetKey());
+    }
+
+    // Product contract: shared geometry never shares knowledge, and profiling still waits for detection.
+    @Test
+    void reusedScopeReadsEachTeamsFactsAndRetainsCompletionGuard() {
+        AsteroidFieldNode anchor = firstHidden(AsteroidSizeClass.MEDIUM);
+        CelestialDiscoveryScanScope scope = nodeOnlyScope(anchor);
+        CelestialDiscoveryWork detection = policy.nextDiscoveryWork(TEAM, scope)
+            .orElseThrow();
+        UUID otherTeam = new UUID(80L, 81L);
+        policy.completeDiscoveryWork(TEAM, scope, detection);
+
+        assertEquals(
+            CelestialDiscoveryStep.PROFILE,
+            policy.nextDiscoveryWork(TEAM, scope)
+                .orElseThrow()
+                .step());
+        assertEquals(
+            CelestialDiscoveryStep.DETECTION,
+            policy.nextDiscoveryWork(otherTeam, scope)
+                .orElseThrow()
+                .step());
+        assertThrows(
+            IllegalStateException.class,
+            () -> policy.completeDiscoveryWork(
+                otherTeam,
+                scope,
+                new CelestialDiscoveryWork(detection.targetKey(), CelestialDiscoveryStep.PROFILE)));
+        CelestialDiscoveryScanScope wide = wideScope(anchor);
+        assertEquals(
+            CelestialDiscoveryStep.DETECTION,
+            policy.nextDiscoveryWork(TEAM, wide)
+                .orElseThrow()
+                .step());
+        assertThrows(
+            IllegalStateException.class,
+            () -> policy.completeDiscoveryWork(
+                TEAM,
+                wide,
+                new CelestialDiscoveryWork(detection.targetKey(), CelestialDiscoveryStep.PROFILE)));
     }
 
     private CelestialDiscoveryScanScope wideScope(AsteroidFieldNode anchor) {

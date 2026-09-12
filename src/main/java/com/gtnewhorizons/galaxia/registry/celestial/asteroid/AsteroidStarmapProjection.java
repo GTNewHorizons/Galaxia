@@ -12,8 +12,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
 
-public record AsteroidStarmapProjection(@Nonnull CelestialObject body, @Nonnull MinorCelestialBodyId id,
-    @Nonnull AsteroidNodeKind nodeKind, @Nonnull AsteroidSizeClass sizeClass, @Nonnull DiscoveryState detectionState,
+public record AsteroidStarmapProjection(@Nonnull CelestialObject body, @Nonnull AsteroidNodeKind nodeKind,
+    @Nonnull AsteroidSizeClass sizeClass, @Nonnull DiscoveryState detectionState,
     @Nonnull CelestialResourceKnowledgeState oreKnowledgeState, @Nonnull Optional<String> visibleOreProfileId,
     @Nonnull List<String> visibleGtOreVeinIds, @Nonnull AsteroidAppearanceProfile appearanceProfile,
     boolean debugHidden, boolean scanInProgress, boolean sensorRevealed) {

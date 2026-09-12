@@ -1,0 +1,193 @@
+package com.gtnewhorizons.galaxia.registry.outpost;
+
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+
+import java.util.List;
+import java.util.UUID;
+
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
+
+/** Product and integration contracts for recipe-book replacement commands. */
+final class RecipeBookOwnershipCommandTest {
+
+    private static final RecipeBook.ScheduleState RESET_SCHEDULE = new RecipeBook.ScheduleState((byte) 0, (byte) 0);
+
+    @BeforeAll
+    static void init() {
+        GalaxiaTestBootstrap.ensureFacilityModules();
+    }
+
+    @Test
+    void sharedModulesExposeOneEffectiveBookWhileSchedulesRemainPerModule() {
+        AutomatedFacility facility = facility();
+        ModuleInstance first = addMacerator(facility, moduleId(1), StationTileCoord.of(1, 0));
+        ModuleInstance second = addMacerator(facility, moduleId(2), StationTileCoord.of(4, 0));
+        createGroupWithMember(facility, first, second);
+
+        assertSame(facility.recipeBook(first), facility.recipeBook(second));
+
+        RecipeBook.ScheduleState firstSchedule = new RecipeBook.ScheduleState((byte) 1, (byte) 2);
+        RecipeBook.ScheduleState secondSchedule = new RecipeBook.ScheduleState((byte) 3, (byte) 4);
+        first.restoreRecipeScheduleState(firstSchedule);
+        second.restoreRecipeScheduleState(secondSchedule);
+
+        assertEquals(firstSchedule, first.recipeScheduleState());
+        assertEquals(secondSchedule, second.recipeScheduleState());
+    }
+
+    @Test
+    void acceptedGroupReplacementIsAtomicAndResetsAllMemberSchedules() {
+        AutomatedFacility facility = facility();
+        ModuleInstance first = addMacerator(facility, moduleId(1), StationTileCoord.of(1, 0));
+        ModuleInstance second = addMacerator(facility, moduleId(2), StationTileCoord.of(4, 0));
+        createGroupWithMember(facility, first, second);
+        first.restoreRecipeScheduleState(new RecipeBook.ScheduleState((byte) 1, (byte) 2));
+        second.restoreRecipeScheduleState(new RecipeBook.ScheduleState((byte) 3, (byte) 4));
+        RecipeBook replacement = book("Replacement", 1);
+
+        FacilityCommand.Result result = facility.applyCommand(
+            new FacilityCommand.ReplaceRecipeBook(facility.assetId, second.id, replacement),
+            FacilityCommand.Authority.NONE);
+
+        assertSame(FacilityCommand.Result.CHANGED, result);
+        assertEquals(replacement, facility.recipeBook(first));
+        assertSame(facility.recipeBook(first), facility.recipeBook(second));
+        assertEquals(RESET_SCHEDULE, first.recipeScheduleState());
+        assertEquals(RESET_SCHEDULE, second.recipeScheduleState());
+    }
+
+    @Test
+    void equalReplacementIsUnchangedAndPreservesSchedule() {
+        AutomatedFacility facility = facility();
+        ModuleInstance module = addMacerator(facility, moduleId(1), StationTileCoord.of(1, 0));
+        RecipeBook replacement = book("Same", 1);
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            facility.applyCommand(
+                new FacilityCommand.ReplaceRecipeBook(facility.assetId, module.id, replacement),
+                FacilityCommand.Authority.NONE));
+        module.restoreRecipeScheduleState(new RecipeBook.ScheduleState((byte) 2, (byte) 3));
+
+        FacilityCommand.Result result = facility.applyCommand(
+            new FacilityCommand.ReplaceRecipeBook(facility.assetId, module.id, replacement),
+            FacilityCommand.Authority.NONE);
+
+        assertSame(FacilityCommand.Result.UNCHANGED, result);
+        assertEquals(replacement, facility.recipeBook(module));
+        assertEquals(new RecipeBook.ScheduleState((byte) 2, (byte) 3), module.recipeScheduleState());
+    }
+
+    @Test
+    void missingModuleIsRejectedWithoutMutation() {
+        AutomatedFacility facility = facility();
+        ModuleInstance module = addMacerator(facility, moduleId(1), StationTileCoord.of(1, 0));
+        RecipeBook before = facility.recipeBook(module);
+        RecipeBook.ScheduleState scheduleBefore = new RecipeBook.ScheduleState((byte) 2, (byte) 2);
+        module.restoreRecipeScheduleState(scheduleBefore);
+
+        FacilityCommand.Result result = facility.applyCommand(
+            new FacilityCommand.ReplaceRecipeBook(facility.assetId, moduleId(999), book("Missing module", 2)),
+            FacilityCommand.Authority.NONE);
+
+        assertEquals(FacilityCommand.Status.REJECTED, result.status());
+        assertEquals(FacilityCommand.Rejection.MODULE_NOT_FOUND, result.rejection());
+        assertEquals(before, facility.recipeBook(module));
+        assertEquals(scheduleBefore, module.recipeScheduleState());
+    }
+
+    @Test
+    void acceptedCompleteReplacementsExecuteInServerOrderAndLastBookWins() {
+        AutomatedFacility facility = facility();
+        ModuleInstance module = addMacerator(facility, moduleId(1), StationTileCoord.of(1, 0));
+        RecipeBook first = book("First", 1);
+        RecipeBook second = book("Second", 2);
+        assertNotEquals(first, second);
+
+        FacilityCommand.Result firstResult = facility.applyCommand(
+            new FacilityCommand.ReplaceRecipeBook(facility.assetId, module.id, first),
+            FacilityCommand.Authority.NONE);
+        FacilityCommand.Result secondResult = facility.applyCommand(
+            new FacilityCommand.ReplaceRecipeBook(facility.assetId, module.id, second),
+            FacilityCommand.Authority.NONE);
+
+        assertSame(FacilityCommand.Result.CHANGED, firstResult);
+        assertSame(FacilityCommand.Result.CHANGED, secondResult);
+        assertEquals(second, facility.recipeBook(module));
+    }
+
+    private static SettingsGroup.ID createGroupWithMember(AutomatedFacility facility, ModuleInstance first,
+        ModuleInstance second) {
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            facility.applyCommand(
+                new FacilityCommand.CreateSettingsGroup(facility.assetId, first.id, "Shared macerators"),
+                FacilityCommand.Authority.NONE));
+        SettingsGroup.ID groupId = ((ModuleInstance.SettingsBinding.Shared) first.settingsBinding()).groupId();
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            facility.applyCommand(
+                new FacilityCommand.SetSettingsGroup(facility.assetId, second.id, groupId),
+                FacilityCommand.Authority.NONE));
+        return groupId;
+    }
+
+    private static RecipeBook book(String name, int recipeIndex) {
+        RecipeSnapshot snapshot = RecipeSnapshot.resolved(
+            (byte) 1,
+            recipeIndex,
+            new ItemStack[] { new ItemStack(new Item(), 1, 0) },
+            new ItemStack[] { new ItemStack(new Item(), recipeIndex + 1, 0) },
+            null,
+            null,
+            100,
+            32);
+        SavedRecipe recipe = new SavedRecipe(snapshot, true, 0L, (byte) 1, (byte) 1, name);
+        return new RecipeBook(List.of(recipe), RecipeSchedulerMode.ORDER, NotDoablePolicy.SKIP);
+    }
+
+    private static AutomatedFacility facility() {
+        return new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
+    }
+
+    private static ModuleInstance addMacerator(AutomatedFacility facility, ModuleInstance.ID moduleId,
+        StationTileCoord anchor) {
+        FacilityModuleKind kind = FacilityModuleKind.MACERATOR;
+        ModuleInstance module = FacilityModuleRegistry
+            .create(moduleId, kind, anchor, kind.defaultShape(), kind.defaultTier());
+        module.completeConstruction();
+        addModule(facility, module);
+        facility.stationLayout()
+            .place(module);
+        return module;
+    }
+
+    private static ModuleInstance.ID moduleId(long value) {
+        return new ModuleInstance.ID(new UUID(0L, value));
+    }
+}

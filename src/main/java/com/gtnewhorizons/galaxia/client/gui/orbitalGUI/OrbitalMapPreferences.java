@@ -58,13 +58,13 @@ final class OrbitalMapPreferences {
 
     OrbitalMapClickMode clickMode(String worldKey, String playerKey) {
         JsonObject playerPreferences = playerPreferences(worldKey, playerKey, false);
-        if (playerPreferences == null) return OrbitalMapClickMode.HIERARCHY;
+        if (playerPreferences == null) return OrbitalMapClickMode.FOLLOW;
         return OrbitalMapClickMode.fromJson(playerPreferences.get(KEY_CLICK_MODE));
     }
 
     void setClickMode(String worldKey, String playerKey, OrbitalMapClickMode clickMode) {
         playerPreferences(worldKey, playerKey, true)
-            .addProperty(KEY_CLICK_MODE, (clickMode == null ? OrbitalMapClickMode.HIERARCHY : clickMode).name());
+            .addProperty(KEY_CLICK_MODE, (clickMode == null ? OrbitalMapClickMode.FOLLOW : clickMode).name());
         save();
     }
 

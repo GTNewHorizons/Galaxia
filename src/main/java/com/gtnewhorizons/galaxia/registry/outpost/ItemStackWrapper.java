@@ -17,6 +17,10 @@ public record ItemStackWrapper(Item item, int meta, NBTTagCompound nbt) implemen
 
     private static final Logger LOG = LogManager.getLogger("Galaxia");
 
+    public ItemStackWrapper {
+        nbt = copy(nbt);
+    }
+
     public static ItemStackWrapper of(ItemStack stack) {
         if (stack == null || stack.getItem() == null) {
             return null;
@@ -24,8 +28,7 @@ public record ItemStackWrapper(Item item, int meta, NBTTagCompound nbt) implemen
         return new ItemStackWrapper(
             stack.getItem(),
             stack.getItemDamage(),
-            stack.hasTagCompound() ? (NBTTagCompound) stack.getTagCompound()
-                .copy() : null);
+            stack.hasTagCompound() ? stack.getTagCompound() : null);
     }
 
     public String toKey() {
@@ -68,10 +71,13 @@ public record ItemStackWrapper(Item item, int meta, NBTTagCompound nbt) implemen
 
     public ItemStack toStack(long amount) {
         ItemStack stack = new ItemStack(item, (int) amount, meta);
-        if (nbt != null) {
-            stack.setTagCompound((NBTTagCompound) nbt.copy());
-        }
+        stack.setTagCompound(copy(nbt));
         return stack;
+    }
+
+    @Override
+    public NBTTagCompound nbt() {
+        return copy(nbt);
     }
 
     @Override
@@ -95,5 +101,9 @@ public record ItemStackWrapper(Item item, int meta, NBTTagCompound nbt) implemen
 
     public ItemStack toItemStack() {
         return new ItemStack(item, 1, meta);
+    }
+
+    private static NBTTagCompound copy(NBTTagCompound value) {
+        return value == null ? null : (NBTTagCompound) value.copy();
     }
 }

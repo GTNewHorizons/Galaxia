@@ -1,23 +1,19 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
-import com.gtnewhorizons.galaxia.client.CelestialClient;
+import net.minecraft.util.StatCollector;
+
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus;
 import com.gtnewhorizons.galaxia.registry.outpost.module.BlockingReason;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
@@ -25,33 +21,16 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 final class ModuleStatusTextRegistry {
 
-    private static final List<Provider> PROVIDERS = new ArrayList<>();
-
-    static {
-        register(ModuleStatusTextRegistry::appendSelectedTileText);
-        register(ModuleStatusTextRegistry::appendModuleRuntimeText);
-        register(ModuleStatusTextRegistry::appendMinerStatusText);
-        register(ModuleStatusTextRegistry::appendHammerStatusText);
-        register(ModuleStatusTextRegistry::appendOperationStatusText);
-    }
-
     private ModuleStatusTextRegistry() {}
-
-    static void register(Provider provider) {
-        if (provider == null) throw new IllegalArgumentException("Module status text provider must not be null");
-        PROVIDERS.add(provider);
-    }
 
     static Lines collect(Context context) {
         Lines lines = new Lines();
-        for (Provider provider : PROVIDERS) {
-            provider.append(context, lines);
-        }
+        appendSelectedTileText(context, lines);
+        appendModuleRuntimeText(context, lines);
+        appendMinerStatusText(context, lines);
+        appendHammerStatusText(context, lines);
+        appendOperationStatusText(context, lines);
         return lines;
-    }
-
-    static List<Provider> providers() {
-        return Collections.unmodifiableList(PROVIDERS);
     }
 
     private static void appendSelectedTileText(Context context, Lines lines) {
@@ -88,11 +67,8 @@ final class ModuleStatusTextRegistry {
             hammer.shotCooldownTicks() > 0 ? EnumColors.MAP_COLOR_TEXT_WARNING.getColor()
                 : EnumColors.MAP_COLOR_TEXT_BODY.getColor());
 
-        HammerDispatchStatus.Status status = HammerDispatchStatus.evaluate(
-            context.facility(),
-            module,
-            CelestialClient.allOutposts(),
-            GalaxiaCelestialAPI.currentOrbitalTime());
+        HammerDispatchStatus.Status status = context.hammerDispatchStatus();
+        if (status == null) return;
         lines.line(
             hammerDispatchStatusLine(status),
             status.code() == HammerDispatchStatus.Code.READY ? EnumColors.MAP_COLOR_TEXT_BODY.getColor()
@@ -198,28 +174,33 @@ final class ModuleStatusTextRegistry {
     }
 
     private static String operationTargetLine(IModuleOperation spec) {
-        if (spec instanceof HammerModuleOperation hammerSpec) {
-            return "Target: " + hammerSpec.targetVariantKey()
+        if (spec instanceof IModuleOperation.Hammer hammerSpec) {
+            return "Target: " + hammerSpec.targetVariant()
                 + " "
                 + hammerSpec.targetTier()
                     .name();
         }
-        if (spec instanceof MinerFocusOperation minerSpec) {
-            String line = "Target focus: " + minerSpec.targetFocusTierKey();
+        if (spec instanceof IModuleOperation.MinerFocus minerSpec) {
+            String line = "Target focus: " + minerSpec.targetFocusTier();
             if (minerSpec.targetFocusOreKey() != null) {
                 line += " " + minerSpec.targetFocusOreKey();
             }
             return line;
         }
-        if (spec instanceof ModuleTierOperation tierSpec) {
+        if (spec instanceof IModuleOperation.Tier tierSpec) {
             return "Target tier: " + tierSpec.targetTier()
                 .name();
         }
-        return "Target tier: " + spec.targetTier()
-            .name();
+        if (spec == IModuleOperation.DECONSTRUCTION) {
+            return StatCollector.translateToLocal("galaxia.module.operation.deconstruction_pending");
+        }
+        if (spec == IModuleOperation.CONSTRUCTION) {
+            return StatCollector.translateToLocal("galaxia.module.operation.construction_pending");
+        }
+        return "Operation pending";
     }
 
-    private static String hammerDispatchStatusLine(HammerDispatchStatus.Status status) {
+    static String hammerDispatchStatusLine(HammerDispatchStatus.Status status) {
         return switch (status.code()) {
             case READY -> "Dispatch: ready";
             case WAITING_FOR_REQUEST -> "Dispatch: waiting for request";
@@ -239,12 +220,8 @@ final class ModuleStatusTextRegistry {
         };
     }
 
-    interface Provider {
-
-        void append(Context context, Lines lines);
-    }
-
-    record Context(AutomatedFacility facility, StationTileCoord selected, PlacedTile tile, ModuleInstance module) {}
+    record Context(AutomatedFacility facility, StationTileCoord selected, PlacedTile tile, ModuleInstance module,
+        @javax.annotation.Nullable HammerDispatchStatus.Status hammerDispatchStatus) {}
 
     static final class Lines {
 

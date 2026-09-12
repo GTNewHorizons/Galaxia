@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -19,6 +20,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -28,11 +30,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePanelAction;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
@@ -54,11 +55,14 @@ final class StationItemInteractionModelTest {
         ItemStackWrapper resource = ItemStackWrapper.of(input);
         ModuleInstance first = createMachine(StationTileCoord.of(1, 0));
         ModuleInstance second = createMachine(StationTileCoord.of(2, 0));
-        facility.addModule(first);
-        facility.addModule(second);
-        facility.setRecipeConfig(first, config(input, output));
-        SettingsGroup group = facility.createSettingsGroupForModule(first, "Dust line");
-        facility.assignSettingsGroup(second, group.id());
+        addModule(facility, first);
+        addModule(facility, second);
+        assertEquals(
+            FacilityCommand.Result.CHANGED,
+            facility.applyCommand(
+                new FacilityCommand.ReplaceRecipeBook(facility.assetId, first.id, recipeBook(input, output)),
+                FacilityCommand.Authority.NONE));
+        SettingsGroup.ID groupId = createSharedGroup(facility, first, second, "Dust line");
 
         List<StationItemInteractionModel.Entry> entries = StationItemInteractionModel.forItem(facility, resource);
         List<StationItemInteractionModel.Entry> consumers = entries.stream()
@@ -70,23 +74,22 @@ final class StationItemInteractionModelTest {
         StationItemInteractionModel.Entry consumer = consumers.get(0);
         assertEquals("Dust line", consumer.label());
         assertEquals(2, consumer.count());
-        assertEquals(group.id(), consumer.groupId());
+        assertEquals(groupId, consumer.groupId());
         assertNotNull(consumer.targetModuleId());
     }
 
     @Test
-    void logisticsAndGroupedUpkeepDescribeItemInteractions() {
+    void logisticsAndHammerInteractionsExcludeModulesWithoutUpkeep() {
         assumeTrue(FacilityModuleKind.MACERATOR.isAvailable());
         AutomatedFacility facility = createFacility();
         ItemStackWrapper resource = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
         facility.logisticsConfig.set(resource, new LogisticsResourceConfig(128, 64, true, true));
-        facility.addModule(createHammer(StationTileCoord.of(0, 0)));
+        addModule(facility, createHammer(StationTileCoord.of(0, 0)));
         ModuleInstance first = createMachine(StationTileCoord.of(1, 0));
         ModuleInstance second = createMachine(StationTileCoord.of(2, 0));
-        facility.addModule(first);
-        facility.addModule(second);
-        SettingsGroup group = facility.createSettingsGroupForModule(first, "Dust line");
-        facility.assignSettingsGroup(second, group.id());
+        addModule(facility, first);
+        addModule(facility, second);
+        createSharedGroup(facility, first, second, "Dust line");
 
         List<StationItemInteractionModel.Entry> entries = StationItemInteractionModel.forItem(facility, resource);
 
@@ -98,25 +101,20 @@ final class StationItemInteractionModelTest {
         assertTrue(
             entries.stream()
                 .anyMatch(entry -> entry.role() == StationItemInteractionModel.Role.HAMMER_EXPORT));
-        StationItemInteractionModel.Entry upkeep = entries.stream()
-            .filter(entry -> entry.section() == StationItemInteractionModel.Section.UPKEEP)
-            .filter(entry -> entry.kind() == FacilityModuleKind.MACERATOR)
-            .findFirst()
-            .orElseThrow();
-        assertEquals(2, upkeep.count());
-        assertEquals(0, upkeep.groupId());
         assertTrue(
-            upkeep.amountPerMinute()
-                .microUnitsPerMinute() > 0);
+            entries.stream()
+                .noneMatch(
+                    entry -> entry.section() == StationItemInteractionModel.Section.UPKEEP
+                        && entry.kind() == FacilityModuleKind.MACERATOR));
     }
 
     @Test
     void upkeepSplitsSameKindModulesWithDifferentDemand() {
         AutomatedFacility facility = createFacility();
         ItemStackWrapper resource = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
-        facility.addModule(moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(1, 0), 1L));
-        facility.addModule(moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(2, 0), 1L));
-        facility.addModule(moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(3, 0), 2L));
+        addModule(facility, moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(1, 0), 1L));
+        addModule(facility, moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(2, 0), 1L));
+        addModule(facility, moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(3, 0), 2L));
 
         List<Integer> counts = StationItemInteractionModel.forItem(facility, resource)
             .stream()
@@ -130,12 +128,12 @@ final class StationItemInteractionModelTest {
     }
 
     @Test
-    void upkeepAggregatesSameKindModulesWithoutSettingsGroup() {
+    void modulesWithoutExplicitUpkeepDoNotCreateEntries() {
         AutomatedFacility facility = createFacility();
         ItemStackWrapper resource = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
-        facility.addModule(createModule(FacilityModuleKind.POWER, StationTileCoord.of(1, 0)));
-        facility.addModule(createModule(FacilityModuleKind.POWER, StationTileCoord.of(2, 0)));
-        facility.addModule(createModule(FacilityModuleKind.POWER, StationTileCoord.of(3, 0)));
+        addModule(facility, createModule(FacilityModuleKind.POWER, StationTileCoord.of(1, 0)));
+        addModule(facility, createModule(FacilityModuleKind.POWER, StationTileCoord.of(2, 0)));
+        addModule(facility, createModule(FacilityModuleKind.POWER, StationTileCoord.of(3, 0)));
 
         List<StationItemInteractionModel.Entry> upkeepEntries = StationItemInteractionModel.forItem(facility, resource)
             .stream()
@@ -143,13 +141,7 @@ final class StationItemInteractionModelTest {
             .filter(entry -> entry.kind() == FacilityModuleKind.POWER)
             .toList();
 
-        assertEquals(1, upkeepEntries.size());
-        StationItemInteractionModel.Entry upkeep = upkeepEntries.get(0);
-        assertEquals(3, upkeep.count());
-        assertEquals(0, upkeep.groupId());
-        assertTrue(
-            upkeep.amountPerMinute()
-                .microUnitsPerMinute() > 0);
+        assertTrue(upkeepEntries.isEmpty());
     }
 
     private static AutomatedFacility createFacility() {
@@ -158,6 +150,21 @@ final class StationItemInteractionModelTest {
             CelestialObjectId.PROXIMA_CENTAURI,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
+    }
+
+    private static SettingsGroup.ID createSharedGroup(AutomatedFacility facility, ModuleInstance first,
+        ModuleInstance second, String displayName) {
+        FacilityCommand.Result created = facility.applyCommand(
+            new FacilityCommand.CreateSettingsGroup(facility.assetId, first.id, displayName),
+            FacilityCommand.Authority.NONE);
+        assertEquals(FacilityCommand.Status.CHANGED, created.status());
+        SettingsGroup.ID groupId = ((ModuleInstance.SettingsBinding.Shared) first.settingsBinding()).groupId();
+        assertNotNull(groupId);
+        FacilityCommand.Result joined = facility.applyCommand(
+            new FacilityCommand.SetSettingsGroup(facility.assetId, second.id, groupId),
+            FacilityCommand.Authority.NONE);
+        assertEquals(FacilityCommand.Status.CHANGED, joined.status());
+        return groupId;
     }
 
     private static ModuleInstance createMachine(StationTileCoord anchor) {
@@ -195,22 +202,19 @@ final class StationItemInteractionModelTest {
         return module;
     }
 
-    private static RecipeConfig config(ItemStack input, ItemStack output) {
-        SavedRecipeList recipes = new SavedRecipeList();
-        recipes.add(
-            new SavedRecipe(
-                RecipeSnapshot
-                    .resolved((byte) 0, 0, new ItemStack[] { input }, new ItemStack[] { output }, null, null, 100, 32),
-                true,
-                0L,
-                (byte) 0,
-                (byte) 1));
-        return new RecipeConfig(recipes, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0);
+    private static RecipeBook recipeBook(ItemStack input, ItemStack output) {
+        SavedRecipe recipe = new SavedRecipe(
+            RecipeSnapshot
+                .resolved((byte) 1, 0, new ItemStack[] { input }, new ItemStack[] { output }, null, null, 100, 32),
+            true,
+            0L,
+            (byte) 0,
+            (byte) 1);
+        return new RecipeBook(List.of(recipe), RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP);
     }
 
     private static ModuleInstance moduleWithUpkeep(FacilityModuleKind kind, StationTileCoord anchor, long itemAmount) {
         ModuleTierData tierData = ModuleTierData.builder()
-            .addedEnergyCapacity(0L)
             .powerDraw(0L)
             .cooldown(20)
             .cost(Map.of(new ItemStack(Items.iron_ingot), 1L))
@@ -219,11 +223,11 @@ final class StationItemInteractionModelTest {
         FacilityModuleRegistry.Definition definition = new FacilityModuleRegistry.Definition(
             kind,
             Map.of(ModuleTier.NONE, tierData),
-            (module, facility) -> {},
             TestTieredModule::new,
             List.<ModulePanelAction>of(),
             false,
-            List.of());
+            List.of(),
+            null);
         ModuleInstance module = new ModuleInstance(
             ModuleInstance.ID.create(),
             definition,

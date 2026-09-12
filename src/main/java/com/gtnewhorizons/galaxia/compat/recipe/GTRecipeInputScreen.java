@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.compat.recipe;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -14,7 +15,6 @@ import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
-import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.FluidTank;
 
@@ -42,19 +42,13 @@ import com.cleanroommc.modularui.widgets.ProgressWidget;
 import com.cleanroommc.modularui.widgets.slot.FluidSlot;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
-import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot.Resource;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.GuiCraftingRecipe;
@@ -76,9 +70,8 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
     private static final int FOOTER_H = 52;
     private static final int SLOT = 18;
 
-    static volatile @Nullable CelestialAsset.ID pendingAssetId;
-    static volatile int pendingModuleIndex = -1;
     static volatile @Nullable ModuleInstance pendingModule;
+    static volatile @Nullable Predicate<RecipeSnapshot> pendingOnConfirm;
     static volatile @Nullable GuiScreen pendingReturnScreen;
 
     private final ItemStackHandler[] itemInputs;
@@ -104,11 +97,12 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
     private String statusText = "Put items to find a recipe";
     private @Nullable String statusDetailText;
     private int statusColor = c(EnumColors.MAP_COLOR_TEXT_MUTED);
+    private final @Nullable GuiScreen returnScreen = pendingReturnScreen;
+    private @Nullable ModularScreen screen;
 
-    public static void open(CelestialAsset.ID assetId, int moduleIndex, ModuleInstance module) {
-        pendingAssetId = assetId;
-        pendingModuleIndex = moduleIndex;
+    public static void open(ModuleInstance module, Predicate<RecipeSnapshot> onConfirm) {
         pendingModule = module;
+        pendingOnConfirm = onConfirm;
         pendingReturnScreen = Minecraft.getMinecraft().currentScreen;
         resetFactoryHolder();
         FACTORY.openClient();
@@ -123,9 +117,8 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
     }
 
     public GTRecipeInputScreen() {
-        String mapName = pendingModule != null && pendingModule.component() instanceof IRecipeModule rm
-            ? rm.getRecipeMapName()
-            : null;
+        String mapName = pendingModule != null && pendingModule.recipe() != null ? pendingModule.recipe()
+            .mapName() : null;
         GTRecipeMapId id = GTRecipeMapId.fromRecipeMapName(mapName);
         this.mapId = id != null ? id : GTRecipeMapId.INVALID;
         gregtech.api.recipe.RecipeMap<?> map = GTRecipeMapId.findRecipeMap(this.mapId);
@@ -168,7 +161,14 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
     @Override
     @SideOnly(Side.CLIENT)
     public ModularScreen createScreen(GuiData d, ModularPanel p) {
-        return new ModularScreen(Galaxia.MODID, p);
+        screen = new ModularScreen(Galaxia.MODID, p) {
+
+            @Override
+            public void onOpen() {
+                getContext().setParentScreen(returnScreen);
+            }
+        }.openParentOnClose(true);
+        return screen;
     }
 
     @Override
@@ -183,7 +183,7 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
             .disableThemeBackground(true)
             .disableHoverThemeBackground(true);
         ModuleInstance module = pendingModule;
-        if (module == null || !(module.component() instanceof IRecipeModule)) {
+        if (module == null || module.recipe() == null) {
             addFrame(panel, "No recipe module", width, height);
             return panel;
         }
@@ -198,13 +198,18 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
 
         int btnY = height - 26;
         panel.child(
-            btn("Cancel", this::cancel).pos(6, btnY)
+            btn("Cancel", this::cancel).name("recipe.input.cancel")
+                .pos(6, btnY)
                 .size(58, 20));
         panel.child(
-            btn("NEI", this::openNeiRecipeMap).pos(68, btnY)
+            btn("NEI", this::openNeiRecipeMap).name("recipe.input.nei")
+                .pos(68, btnY)
                 .size(40, 20));
         panel.child(
-            btn("Confirm", this::confirm).pos(width - 64, btnY)
+            btn(StatCollector.translateToLocal("galaxia.gui.station.recipe.add"), this::confirm)
+                .name("recipe.input.add")
+                .tooltip(t -> t.addLine(StatCollector.translateToLocal("galaxia.gui.station.recipe.add_hint")))
+                .pos(width - 64, btnY)
                 .size(58, 20));
         return panel;
     }
@@ -307,8 +312,8 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
                 statusText = neiUsage(snapshot.eut());
                 statusDetailText = neiDuration(snapshot.duration());
                 statusColor = c(EnumColors.MAP_COLOR_SIDEBAR_CONFIRM_TEXT_ENABLED);
-                applyItemGhosts(snapshot.inputs(), itemInputs, ghostItemInputs);
-                applyItemGhosts(snapshot.outputs(), itemOutputs, ghostItemOutputs);
+                applyItemGhosts(snapshot.itemInputs(), itemInputs, ghostItemInputs);
+                applyItemGhosts(snapshot.itemOutputs(), itemOutputs, ghostItemOutputs);
                 applyFluidGhosts(snapshot.fluidInputs(), fluidInputs, ghostFluidInputs);
                 applyFluidGhosts(snapshot.fluidOutputs(), fluidOutputs, ghostFluidOutputs);
             }
@@ -316,30 +321,22 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
     }
 
     private void cancel() {
-        Minecraft.getMinecraft()
-            .displayGuiScreen(pendingReturnScreen);
+        if (screen == null) return;
+        pendingModule = null;
+        pendingOnConfirm = null;
+        pendingReturnScreen = null;
+        // NEI may have replaced the parent while returning to this screen.
+        screen.getContext()
+            .setParentScreen(returnScreen);
+        screen.close();
     }
 
     private void confirm() {
         RecipeSnapshot snapshot = match.snapshot();
-        CelestialAsset.ID assetId = pendingAssetId;
         ModuleInstance module = pendingModule;
-        if (snapshot == null || assetId == null || module == null || !(module.component() instanceof IRecipeModule rm))
-            return;
-        int slotIndex = 0;
-        RecipeConfig cfg = rm.getRecipeConfig();
-        if (cfg != null) slotIndex = cfg.savedRecipes()
-            .size();
-        if (slotIndex < 0
-            || slotIndex >= com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList.MAX_SAVED_RECIPES) return;
-        SavedRecipe slot = new SavedRecipe(snapshot, true, 0L, (byte) 1, (byte) 1);
-        CelestialClient.updateModuleRecipeSlot(
-            assetId,
-            pendingModuleIndex,
-            AssetModuleUpdatePacket.ConfigAction.ADD_RECIPE_SLOT,
-            (byte) slotIndex,
-            slot);
-        cancel();
+        Predicate<RecipeSnapshot> onConfirm = pendingOnConfirm;
+        if (snapshot == null || module == null || module.recipe() == null || onConfirm == null) return;
+        if (onConfirm.test(snapshot)) cancel();
     }
 
     private void clearGhosts() {
@@ -349,58 +346,29 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
         for (FluidTank tank : ghostFluidOutputs) tank.drain(Integer.MAX_VALUE, true);
     }
 
-    private static void applyItemGhosts(ItemStack[] recipeStacks, ItemStackHandler[] hard, ItemStackHandler[] ghost) {
-        boolean[] consumed = consumeHardItems(recipeStacks, hard);
+    private static void applyItemGhosts(List<Resource> resources, ItemStackHandler[] hard, ItemStackHandler[] ghost) {
+        boolean[] consumed = RecipeIntentMatcher.providedItemSlots(resources, itemStacks(hard));
         for (int i = 0; i < ghost.length; i++) {
-            ItemStack recipe = recipeStacks != null && i < recipeStacks.length ? recipeStacks[i] : null;
+            ItemStack recipe = i < resources.size() ? resources.get(i)
+                .itemStack() : null;
             boolean alreadyProvided = i < consumed.length && consumed[i];
             if (recipe != null && hard[i].getStackInSlot(0) == null && !alreadyProvided) {
-                ItemStack copy = recipe.copy();
-                copy.stackSize = 1;
-                ghost[i].setStackInSlot(0, copy);
+                recipe.stackSize = 1;
+                ghost[i].setStackInSlot(0, recipe);
             }
         }
     }
 
-    private static boolean[] consumeHardItems(ItemStack[] recipeStacks, ItemStackHandler[] hard) {
-        boolean[] consumed = recipeStacks != null ? new boolean[recipeStacks.length] : new boolean[0];
-        for (ItemStackHandler handler : hard) {
-            ItemStack hardStack = handler.getStackInSlot(0);
-            if (hardStack == null || recipeStacks == null) continue;
-            for (int i = 0; i < recipeStacks.length; i++) {
-                if (!consumed[i] && itemMatches(hardStack, recipeStacks[i])) {
-                    consumed[i] = true;
-                    break;
-                }
-            }
-        }
-        return consumed;
-    }
-
-    private void applyFluidGhosts(FluidStack[] recipeStacks, FluidTank[] hard, FluidTank[] ghost) {
-        boolean[] consumed = consumeHardFluids(recipeStacks, hard);
+    private void applyFluidGhosts(List<Resource> resources, FluidTank[] hard, FluidTank[] ghost) {
+        boolean[] consumed = RecipeIntentMatcher.providedFluidSlots(resources, fluidStacks(hard));
         for (int i = 0; i < ghost.length; i++) {
-            FluidStack recipe = recipeStacks != null && i < recipeStacks.length ? recipeStacks[i] : null;
+            FluidStack recipe = i < resources.size() ? resources.get(i)
+                .fluidStack() : null;
             boolean alreadyProvided = i < consumed.length && consumed[i];
             if (recipe != null && hard[i].getFluid() == null && !alreadyProvided) {
-                ghost[i].fill(copyFluid(recipe), true);
+                ghost[i].fill(recipe, true);
             }
         }
-    }
-
-    private static boolean[] consumeHardFluids(FluidStack[] recipeStacks, FluidTank[] hard) {
-        boolean[] consumed = recipeStacks != null ? new boolean[recipeStacks.length] : new boolean[0];
-        for (FluidTank tank : hard) {
-            FluidStack hardStack = tank.getFluid();
-            if (hardStack == null || recipeStacks == null) continue;
-            for (int i = 0; i < recipeStacks.length; i++) {
-                if (!consumed[i] && fluidMatches(hardStack, recipeStacks[i])) {
-                    consumed[i] = true;
-                    break;
-                }
-            }
-        }
-        return consumed;
     }
 
     private static ItemStack[] itemStacks(ItemStackHandler[] handlers) {
@@ -435,60 +403,15 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
         return fluid != null && fluid.amount > 0;
     }
 
-    private static boolean itemMatches(ItemStack hard, ItemStack recipeStack) {
-        return hard != null && recipeStack != null
-            && hard.getItem() == recipeStack.getItem()
-            && hard.getItemDamage() == recipeStack.getItemDamage();
-    }
-
-    private static boolean fluidMatches(FluidStack hard, FluidStack recipeStack) {
-        String hardName = fluidName(hard);
-        return hardName != null && hardName.equals(fluidName(recipeStack));
-    }
-
-    private static FluidStack copyFluid(FluidStack stack) {
-        if (stack == null) return null;
-        try {
-            return stack.copy();
-        } catch (RuntimeException e) {
-            Fluid fluid = fluidType(stack);
-            return fluid != null ? new FluidStack(fluid, stack.amount) : null;
-        }
-    }
-
-    private static String fluidName(FluidStack stack) {
-        Fluid fluid = fluidType(stack);
-        return fluid != null ? fluid.getName() : null;
-    }
-
-    private static Fluid fluidType(FluidStack stack) {
-        if (stack == null) return null;
-        try {
-            return stack.getFluid();
-        } catch (RuntimeException ignored) {
-            try {
-                Field field = FluidStack.class.getDeclaredField("fluid");
-                field.setAccessible(true);
-                return (Fluid) field.get(stack);
-            } catch (ReflectiveOperationException e) {
-                return null;
-            }
-        }
-    }
-
     private static ButtonWidget<?> btn(String label, Runnable action) {
-        return new ButtonWidget<>().overlay(drawable((ctx, x, y, w, h) -> {
+        return new ButtonWidget<>().overlay((ctx, x, y, w, h, ignoredTheme) -> {
             FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
             fr.drawString(label, x + (w - fr.getStringWidth(label)) / 2, y + (h - fr.FONT_HEIGHT) / 2 + 1, 0xFF1E2530);
-        }))
+        })
             .onMouseTapped(b -> {
                 if (b == 0) action.run();
                 return true;
             });
-    }
-
-    private static IDrawable drawable(DrawableCommand cmd) {
-        return (ctx, x, y, w, h, t) -> cmd.draw(ctx, x, y, w, h);
     }
 
     private static int c(EnumColors color) {
@@ -518,8 +441,9 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
         String name = map.unlocalizedName;
         if (name == null || name.isEmpty()) return new String[0];
 
-        if (module != null && module.component() instanceof IRecipeModule recipeModule) {
-            List<String> extra = recipeModule.getAdditionalNeiTransferIdents();
+        if (module != null && module.recipe() != null) {
+            List<String> extra = module.recipe()
+                .additionalNeiTransferIdents();
             if (!extra.isEmpty()) {
                 String[] all = new String[1 + extra.size()];
                 all[0] = name;

@@ -2,12 +2,12 @@ package com.gtnewhorizons.galaxia.registry.outpost;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 public final class ResourceFilter<T> implements Predicate<T> {
 
-    private final List<Predicate<String>> stringPredicates = new ArrayList<>();
     private final List<String> serialized = new ArrayList<>();
 
     private final Function<T, String> encoder;
@@ -17,44 +17,32 @@ public final class ResourceFilter<T> implements Predicate<T> {
     }
 
     /** Exact match against the encoded form of a typed value. */
-    public void add(T value) {
-        add(encoder.apply(value));
+    public boolean add(T value) {
+        return add(encoder.apply(value));
     }
 
     /** Exact match against a raw string. */
-    public void add(String value) {
-        if (serialized.contains(value)) return;
-        stringPredicates.add(s -> s.equals(value));
-        serialized.add(value);
+    public boolean add(String value) {
+        if (serialized.contains(value)) return false;
+        return serialized.add(value);
     }
 
-    public void remove(T value) {
-        remove(encoder.apply(value));
+    public boolean remove(T value) {
+        return remove(encoder.apply(value));
     }
 
-    /**
-     * Removes the first entry whose serialized form equals {@code value}.
-     * Both parallel lists are updated atomically so they stay in sync.
-     */
-    public void remove(String value) {
-        int index = serialized.indexOf(value);
-        if (index >= 0) {
-            serialized.remove(index);
-            stringPredicates.remove(index); // Bug fix: was missing entirely
-        }
+    /** Removes the first entry whose serialized form equals {@code value}. */
+    public boolean remove(String value) {
+        return serialized.remove(value);
     }
 
     /**
      * Replaces the current state with the entries produced by a previous
-     * {@link #serialize()} call, reconstructing all predicates from their
-     * serialized prefix.
+     * {@link #serialize()} call.
      */
     public void load(List<String> entries) {
         clear();
-        for (String entry : entries) {
-            stringPredicates.add(s -> s.equals(entry));
-            serialized.add(entry);
-        }
+        serialized.addAll(entries);
     }
 
     public List<String> serialize() {
@@ -66,27 +54,14 @@ public final class ResourceFilter<T> implements Predicate<T> {
         if (isEmpty()) {
             return true;
         }
-        String text = encoder.apply(value);
-        for (Predicate<String> predicate : stringPredicates) {
-            if (predicate.test(text)) {
-                return true;
-            }
-        }
-        return false;
+        return serialized.contains(Objects.requireNonNull(encoder.apply(value)));
     }
 
     public void clear() {
-        stringPredicates.clear();
         serialized.clear();
     }
 
-    /**
-     * Returns {@code true} when no filters have been added.
-     * Bug fix: was {@code stringPredicates.isEmpty()}, which returned {@code true}
-     * even after plain {@link #add} calls, because those never populated
-     * {@code stringPredicates}. Since the lists are always kept in sync,
-     * either one is a valid check; {@code serialized} is the canonical source.
-     */
+    /** Returns {@code true} when no filters have been added. */
     public boolean isEmpty() {
         return serialized.isEmpty();
     }

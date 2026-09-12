@@ -3,10 +3,10 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.Tessellator;
 
 import org.lwjgl.opengl.GL11;
 
+import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 
@@ -20,20 +20,17 @@ public final class StationCoreDirectionIndicator {
 
     public record Arrow(int tipX, int tipY, double unitX, double unitY) {}
 
-    public static @Nullable Arrow towardCore(int width, int height, int contentLeft, int contentRightPadding,
-        int contentVerticalPadding, int panX, int panY) {
-        int left = contentLeft + EDGE_INSET;
-        int right = width - contentRightPadding - EDGE_INSET;
-        int top = contentVerticalPadding + EDGE_INSET;
-        int bottom = height - contentVerticalPadding - EDGE_INSET;
+    public static @Nullable Arrow towardCore(StationMapFrame frame) {
+        int left = frame.contentLeft() + EDGE_INSET;
+        int right = frame.widgetWidth() - frame.contentRightPadding() - EDGE_INSET;
+        int top = frame.contentVerticalPadding() + EDGE_INSET;
+        int bottom = frame.widgetHeight() - frame.contentVerticalPadding() - EDGE_INSET;
         if (right <= left || bottom <= top) return null;
 
         double centerX = (left + right) * 0.5;
         double centerY = (top + bottom) * 0.5;
-        double coreX = StationMapViewport.tileLeftX(0, width, contentLeft, contentRightPadding, panX)
-            + StationMapViewport.TILE_SIZE * 0.5;
-        double coreY = StationMapViewport.tileTopY(0, height, contentVerticalPadding, panY)
-            + StationMapViewport.TILE_SIZE * 0.5;
+        double coreX = frame.tileLocalX(0) + StationMapFrame.TILE_SIZE * 0.5;
+        double coreY = frame.tileLocalY(0) + StationMapFrame.TILE_SIZE * 0.5;
         double dx = coreX - centerX;
         double dy = coreY - centerY;
         double length = Math.hypot(dx, dy);
@@ -57,13 +54,7 @@ public final class StationCoreDirectionIndicator {
         return new Arrow(roundedTipX, roundedTipY, tipToCoreX / tipToCoreLength, tipToCoreY / tipToCoreLength);
     }
 
-    public static boolean tileIntersectsScreen(int tileX, int tileY, int width, int height) {
-        return tileX < width && tileX + StationMapViewport.TILE_SIZE > 0
-            && tileY < height
-            && tileY + StationMapViewport.TILE_SIZE > 0;
-    }
-
-    public static void draw(Arrow arrow, int fillColor, int borderColor) {
+    public static void draw(Arrow arrow) {
         if (arrow == null) return;
 
         double centerX = arrow.tipX() - arrow.unitX() * (TEXTURE_WIDTH * 0.5);
@@ -80,17 +71,15 @@ public final class StationCoreDirectionIndicator {
         GL11.glPushMatrix();
         GL11.glTranslated(centerX, centerY, 0.0);
         GL11.glRotatef(rotation, 0.0F, 0.0F, 1.0F);
-        drawTexturedQuad(-TEXTURE_WIDTH * 0.5, -TEXTURE_HEIGHT * 0.5, TEXTURE_WIDTH, TEXTURE_HEIGHT);
+        GuiDraw.drawTexture(
+            -TEXTURE_WIDTH * 0.5f,
+            -TEXTURE_HEIGHT * 0.5f,
+            TEXTURE_WIDTH * 0.5f,
+            TEXTURE_HEIGHT * 0.5f,
+            0f,
+            0f,
+            1f,
+            1f);
         GL11.glPopMatrix();
-    }
-
-    private static void drawTexturedQuad(double x, double y, int width, int height) {
-        Tessellator tessellator = Tessellator.instance;
-        tessellator.startDrawingQuads();
-        tessellator.addVertexWithUV(x, y + height, 0.0, 0.0, 1.0);
-        tessellator.addVertexWithUV(x + width, y + height, 0.0, 1.0, 1.0);
-        tessellator.addVertexWithUV(x + width, y, 0.0, 1.0, 0.0);
-        tessellator.addVertexWithUV(x, y, 0.0, 0.0, 0.0);
-        tessellator.draw();
     }
 }

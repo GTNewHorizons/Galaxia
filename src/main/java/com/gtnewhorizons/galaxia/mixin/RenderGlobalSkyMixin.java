@@ -3,7 +3,10 @@ package com.gtnewhorizons.galaxia.mixin;
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+
+import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.OpenGlHelper;
@@ -47,6 +50,16 @@ public abstract class RenderGlobalSkyMixin {
 
     @Unique
     private static final ResourceLocation GALAXIA_EMPTY_SKY = LocationGalaxia("textures/sky/empty.png");
+
+    @Unique
+    private List<CelestialBody> galaxia$sourceBodies;
+
+    @Unique
+    private List<CelestialBody> galaxia$drawBodies;
+
+    @Unique
+    @Nullable
+    private CelestialBody galaxia$primaryLightSource;
 
     private static final List<CelestialBody> DEFAULT_OVERWORLD_BODIES = SkyBuilder.builder()
         .addBody(
@@ -154,40 +167,40 @@ public abstract class RenderGlobalSkyMixin {
         GL11.glRotatef(-90F, 0F, 1F, 0F);
         OpenGlHelper.glBlendFunc(775, 1, 1, 0);
 
-        List<Float> angles = new ArrayList<>();
-        for (CelestialBody body : bodies) {
-            float angle = (float) (((timeWithPartial + body.phaseOffsetTicks()) % body.orbitalPeriodTicks())
-                / (double) body.orbitalPeriodTicks());
-            angles.add(angle);
-        }
-
-        float primarySunAngle = 0.0f;
-        for (int i = 0; i < bodies.size(); i++) {
-            if (bodies.get(i)
-                .isMainLightSource()) {
-                primarySunAngle = angles.get(i);
-                break;
-            }
-        }
-
-        // sorting for eclipses
-        List<Integer> indices = new ArrayList<>();
-        for (int i = 0; i < bodies.size(); i++) indices.add(i);
-        indices.sort(
-            (i1, i2) -> Double.compare(
-                bodies.get(i2)
-                    .distance(),
-                bodies.get(i1)
-                    .distance()));
-
-        for (int idx : indices) {
-            drawCelestialBody(t, bodies.get(idx), angles.get(idx), primarySunAngle);
+        galaxia$prepareBodies(bodies);
+        float primarySunAngle = galaxia$primaryLightSource == null ? 0.0f
+            : galaxia$orbitalAngle(galaxia$primaryLightSource, timeWithPartial);
+        for (CelestialBody body : galaxia$drawBodies) {
+            drawCelestialBody(t, body, galaxia$orbitalAngle(body, timeWithPartial), primarySunAngle);
         }
 
         GL11.glPopMatrix(); // base | sky
         GL11.glPushMatrix(); // base | sky | dummy
         // Vanilla will glPopMatrix() after drawing its invisible moon quad,
         // consuming this dummy push and leaving the stack correct.
+    }
+
+    @Unique
+    private void galaxia$prepareBodies(List<CelestialBody> bodies) {
+        if (galaxia$sourceBodies == bodies) return;
+        galaxia$sourceBodies = bodies;
+        galaxia$primaryLightSource = null;
+        for (CelestialBody body : bodies) {
+            if (body.isMainLightSource()) {
+                galaxia$primaryLightSource = body;
+                break;
+            }
+        }
+        galaxia$drawBodies = new ArrayList<>(bodies);
+        galaxia$drawBodies.sort(
+            Comparator.comparingDouble(CelestialBody::distance)
+                .reversed());
+    }
+
+    @Unique
+    private static float galaxia$orbitalAngle(CelestialBody body, double timeWithPartial) {
+        return (float) (((timeWithPartial + body.phaseOffsetTicks()) % body.orbitalPeriodTicks())
+            / (double) body.orbitalPeriodTicks());
     }
 
     /**

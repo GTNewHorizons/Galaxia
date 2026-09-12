@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -63,7 +64,7 @@ final class ModuleConfigModalControllerTest {
     void retargetingSameMinerUpgradeModulePreservesSelectedFocusTier() {
         TestFacility test = facilityWith(FacilityModuleKind.MINER, ModuleTier.EV);
         ModuleConfigModalController controller = controllerFor(test.facility());
-        controller.openUpgrade(0);
+        controller.openUpgrade(test.module().id);
         controller.selectModuleUpgradeOption(ModuleUpgradeUiModel.GROUP_MINER_FOCUS_TIER, MinerFocusTier.III.name());
 
         controller.retargetTo(test.module());
@@ -78,7 +79,7 @@ final class ModuleConfigModalControllerTest {
     void retargetingSameHammerUpgradeModulePreservesSelectedTierAndFlags() {
         TestFacility test = facilityWith(FacilityModuleKind.HAMMER, ModuleTier.EV);
         ModuleConfigModalController controller = controllerFor(test.facility());
-        controller.openUpgrade(0);
+        controller.openUpgrade(test.module().id);
         controller.selectModuleUpgradeOption(ModuleUpgradeUiModel.GROUP_HAMMER_TIER, ModuleTier.IV.name());
         controller.toggleHammerUpgradeReserveItems();
         controller.toggleHammerUpgradeVoidRefund();
@@ -98,13 +99,12 @@ final class ModuleConfigModalControllerTest {
         TestFacility test = facilityWith(FacilityModuleKind.HAMMER, ModuleTier.EV);
         ModuleInstance miner = FacilityModuleKind.MINER
             .create(StationTileCoord.of(2, 0), ModuleShape.SINGLE, ModuleTier.EV);
-        test.facility()
-            .addModule(miner);
+        addModule(test.facility(), miner);
         test.facility()
             .stationLayout()
             .place(miner);
         ModuleConfigModalController controller = controllerFor(test.facility());
-        controller.openHammer(0);
+        controller.openHammer(test.module().id);
 
         controller.requestRetargetTo(miner);
 
@@ -120,10 +120,10 @@ final class ModuleConfigModalControllerTest {
         TestFacility test = facilityWith(FacilityModuleKind.HAMMER, ModuleTier.EV);
         ModuleConfigModalController controller = controllerFor(test.facility());
 
-        controller.openUpgrade(0);
+        controller.openUpgrade(test.module().id);
         assertTrue(controller.isModuleUpgradeOpen());
 
-        controller.openUpgrade(0);
+        controller.openUpgrade(test.module().id);
         assertFalse(controller.isOpen());
     }
 
@@ -140,7 +140,7 @@ final class ModuleConfigModalControllerTest {
 
     @Test
     void debugDataGeneratorConfigModalCapturesHover() {
-        TestFacility test = facilityWith(FacilityModuleKind.DEBUG_DATA_GENERATOR, ModuleTier.EV);
+        TestFacility test = facilityWith(FacilityModuleKind.DEBUG_DATA_GENERATOR, ModuleTier.HV);
         ModuleConfigModalController controller = controllerFor(test.facility());
 
         DebugDataGeneratorConfigModalWidget widget = new DebugDataGeneratorConfigModalWidget(
@@ -169,7 +169,7 @@ final class ModuleConfigModalControllerTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         ModuleInstance module = kind.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, tier);
-        facility.addModule(module);
+        addModule(facility, module);
         facility.stationLayout()
             .place(module);
         return new TestFacility(facility, module);

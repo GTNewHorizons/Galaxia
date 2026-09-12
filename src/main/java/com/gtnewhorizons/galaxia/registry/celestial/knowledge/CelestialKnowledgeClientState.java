@@ -54,23 +54,24 @@ public final class CelestialKnowledgeClientState {
     }
 
     public static void apply(Map<CelestialObjectKey, CelestialKnowledgeFacts> newFacts) {
-        revision++;
-        if (newFacts == null || newFacts.isEmpty()) {
-            facts = Map.of();
-            return;
-        }
         Map<CelestialObjectKey, CelestialKnowledgeFacts> copy = new LinkedHashMap<>();
-        newFacts.forEach((key, value) -> {
-            if (key == null) throw new IllegalArgumentException("knowledge key cannot be null");
-            if (value == null) throw new IllegalArgumentException("knowledge facts cannot be null");
-            copy.put(key, value);
-        });
-        facts = Map.copyOf(copy);
+        if (newFacts != null) {
+            newFacts.forEach((key, value) -> {
+                if (key == null) throw new IllegalArgumentException("knowledge key cannot be null");
+                if (value == null) throw new IllegalArgumentException("knowledge facts cannot be null");
+                copy.put(key, value);
+            });
+        }
+        Map<CelestialObjectKey, CelestialKnowledgeFacts> updated = Map.copyOf(copy);
+        if (facts.equals(updated)) return;
+        facts = updated;
+        revision++;
     }
 
     public static void clear() {
-        revision++;
+        if (facts.isEmpty()) return;
         facts = Map.of();
+        revision++;
     }
 
     /** Synced-only discovery view; membership must not change from client defaults. */

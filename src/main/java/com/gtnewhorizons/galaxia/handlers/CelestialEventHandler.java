@@ -1,22 +1,18 @@
 package com.gtnewhorizons.galaxia.handlers;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.AssetStateSync;
 import com.gtnewhorizons.galaxia.core.network.CelestialKnowledgeSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
@@ -26,8 +22,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
-import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
-import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -41,7 +35,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
-import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkState;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
@@ -69,6 +62,7 @@ public class CelestialEventHandler {
         }
         celestialRuntime.tick();
 
+        List<LogisticSignal> signals = LogisticStore.collectSignals(CelestialAssetStore.SERVER.assetsViewInternal());
         LogisticStore.tickDeliveries();
         double orbitalTime = GalaxiaCelestialAPI.currentOrbitalTime();
 
@@ -78,15 +72,13 @@ public class CelestialEventHandler {
         // different planetary anchors -> BIG HAMMER
         for (Map.Entry<CelestialObjectKey, List<LogisticSignal>> entry : LogisticStore
             // TODO: Use different scopes also?
-            .allSignalsForScope(LogisticSignal.Scope.SYSTEM)
+            .groupSignals(signals, LogisticSignal.Scope.SYSTEM)
             .entrySet()) {
 
             handleSignal(entry.getValue(), orbitalTime, profileHammerTrajectoryLoad);
         }
 
         HammerTrajectoryLoadTracker.endTick();
-
-        syncSatelliteNetworks(orbitalTime);
 
         syncCooldownTicks--;
         if (syncCooldownTicks > 0) return;
@@ -96,6 +88,9 @@ public class CelestialEventHandler {
             syncHammerTrajectoryLoadDebug();
         }
 
+        Map<UUID, SatelliteNetworkSyncPacket> satellitePackets = new HashMap<>();
+        Map<UUID, CelestialKnowledgeSyncPacket> knowledgePackets = new HashMap<>();
+        Map<UUID, LogisticsSyncPacket> logisticsPackets = new HashMap<>();
         for (EntityPlayerMP player : MinecraftServer.getServer()
             .getConfigurationManager().playerEntityList) {
             if (player == null) continue;
@@ -104,48 +99,27 @@ public class CelestialEventHandler {
             UUID playerId = player.getUniqueID();
             final boolean toClear = TeamEventHandler.playersToClear.remove(playerId);
             if (toClear) {
-                Galaxia.GALAXIA_NETWORK.sendTo(AssetSyncPacket.clear(), player);
-                // Wait until next sync just to be sure this gets first, otherwise it could easily become a race
-                continue;
-            }
-            Map<CelestialObjectKey, Set<CelestialAsset>> teamAssets = CelestialAssetStore.getTeamAssets(playerTeam);
-            if (teamAssets == null) continue;
-            Set<CelestialAsset> aggregatedAssets = teamAssets.values()
-                .stream()
-                .flatMap(Set::stream)
-                .collect(Collectors.toSet());
-
-            List<AssetSyncPacket> playerOutpostPackets = new ArrayList<>();
-            for (CelestialAsset asset : aggregatedAssets) {
-                playerOutpostPackets.addAll(AssetSyncPacket.figureOutWhatToSend(asset, playerId));
-            }
-            // TODO: make aggregate packet for this
-            for (AssetSyncPacket pkt : playerOutpostPackets) {
-                Galaxia.GALAXIA_NETWORK.sendTo(pkt, player);
-            }
-            for (CelestialAsset asset : aggregatedAssets) {
-                asset.clean();
+                AssetStateSync.SERVER.resetRecipient(playerId);
             }
 
-            List<LogisticsDelivery> relevantDeliveries = LogisticStore.activeDeliveries()
-                .stream()
-                .filter(d -> CelestialAssetStore.isOwnedBy(playerTeam, d.data.fromAssetId()))
-                .collect(Collectors.toList());
-
-            Galaxia.GALAXIA_NETWORK.sendTo(LogisticsSyncPacket.from(relevantDeliveries), player);
+            SatelliteNetworkSyncPacket satellitePacket = satellitePackets.computeIfAbsent(
+                playerTeam,
+                team -> new SatelliteNetworkSyncPacket(SatelliteNetworkService.rebuild(team, orbitalTime)));
+            Galaxia.GALAXIA_NETWORK.sendTo(satellitePacket, player);
+            CelestialKnowledgeSyncPacket knowledgePacket = knowledgePackets.computeIfAbsent(
+                playerTeam,
+                team -> CelestialKnowledgeSyncPacket.forTeam(team, celestialRuntime.scans()));
+            Galaxia.GALAXIA_NETWORK.sendTo(knowledgePacket, player);
+            LogisticsSyncPacket logisticsPacket = logisticsPackets.computeIfAbsent(playerTeam, team -> {
+                List<LogisticsDelivery> relevantDeliveries = LogisticStore.activeDeliveries()
+                    .stream()
+                    .filter(d -> CelestialAssetStore.isOwnedBy(team, d.data.fromAssetId()))
+                    .collect(Collectors.toList());
+                return LogisticsSyncPacket.from(relevantDeliveries, LogisticStore.signalsOwnedBy(team, signals));
+            });
+            AssetStateSync.SERVER.publishLogistics(playerId, playerTeam, logisticsPacket);
         }
-    }
-
-    private static void syncSatelliteNetworks(double orbitalTime) {
-        for (EntityPlayerMP player : MinecraftServer.getServer()
-            .getConfigurationManager().playerEntityList) {
-            if (player == null) continue;
-            if (TeamEventHandler.playersToClear.contains(player.getUniqueID())) continue;
-            UUID playerTeam = GTTeamsCompat.getTeam(player);
-            SatelliteNetworkState satelliteNetwork = SatelliteNetworkService.rebuild(playerTeam, orbitalTime);
-            Galaxia.GALAXIA_NETWORK.sendTo(new SatelliteNetworkSyncPacket(satelliteNetwork), player);
-            Galaxia.GALAXIA_NETWORK.sendTo(CelestialKnowledgeSyncPacket.forTeam(playerTeam), player);
-        }
+        AssetStateSync.SERVER.publishPeriodic();
     }
 
     private boolean hasCreativeProfilerViewer() {
@@ -188,6 +162,8 @@ public class CelestialEventHandler {
                 if (supplier == null) continue;
                 CelestialAsset requester = CelestialAssetStore.findAsset(request.outpostAssetId());
                 if (requester == null) continue;
+                if (!CelestialAssetStore.isOwnedBy(CelestialAssetStore.getTeamId(supplier.assetId), requester.assetId))
+                    continue;
 
                 if (handleDispatch(
                     supplier,
@@ -205,20 +181,7 @@ public class CelestialEventHandler {
         double orbitalTime, boolean profileHammerTrajectoryLoad) {
 
         boolean sameBody = supplier.celestialObjectKey.equals(requester.celestialObjectKey);
-
-        Map<ModuleInstance, TileHammerCannon> moduleCannon = null;
-        if (supplier instanceof Station station) {
-            TileStation ctrl = station.getTileController();
-            StationGraph graph = ctrl != null ? ctrl.getGraph() : null;
-            if (graph == null) return false;
-            moduleCannon = new HashMap<>();
-            for (TileHammerCannon c : graph.getAttachments(TileHammerCannon.class)
-                .toList()) {
-                if (c.isStructureValid()) {
-                    moduleCannon.put(c.getModuleInstance(), c);
-                }
-            }
-        }
+        Station station = supplier instanceof Station physicalStation ? physicalStation : null;
 
         UUID routeProfileTeamId = profileHammerTrajectoryLoad ? CelestialAssetStore.getTeamId(supplier.assetId) : null;
 
@@ -229,8 +192,8 @@ public class CelestialEventHandler {
             if (!hammer.canFire()) continue;
             if (!sameBody && !hammer.canPlanRoute(module)) continue;
 
-            TileHammerCannon cannon = moduleCannon != null ? moduleCannon.get(module) : null;
-            if (moduleCannon != null && cannon == null) continue;
+            TileHammerCannon cannon = station != null ? station.findHammerCannon(module) : null;
+            if (station != null && cannon == null) continue;
 
             if (cannon != null) {
                 ResourceFilter<ItemStackWrapper> filter = cannon.getFilter();
@@ -238,34 +201,18 @@ public class CelestialEventHandler {
             }
 
             HammerDispatchPlanner.Result result = HammerDispatchPlanner
-                .evaluate(supplier, module, requester, resource, orbitalTime, routeProfileTeamId);
+                .planDispatch(supplier, module, requester, resource, orbitalTime, routeProfileTeamId);
 
             HammerDispatchPlanner.Plan plan = result.plan();
             if (result.code() != HammerDispatchStatus.Code.READY || plan == null) continue;
 
             if (supplier instanceof AutomatedFacility af) {
-                if (af.updateContents(plan.resource(), -plan.sendAmount(), true) <= 0L) continue;
+                if (af.extract(plan.resource(), plan.sendAmount()) <= 0L) continue;
                 if (!hammer.trySpendShotEnergy(module, af, plan.requiredEnergy())) {
                     throw new IllegalStateException("HAMMER shot energy became inconsistent");
                 }
-            } else if (moduleCannon != null) {
-                long remaining = plan.sendAmount();
-                for (TileHammerCannon c : moduleCannon.values()) {
-                    for (IInventory inv : c.getChestInventories()) {
-                        for (int slot = 0; slot < inv.getSizeInventory() && remaining > 0; slot++) {
-                            ItemStack stack = inv.getStackInSlot(slot);
-                            if (stack != null && resource.item() == stack.getItem()
-                                && resource.meta() == stack.getItemDamage()) {
-                                long deduct = Math.min(remaining, stack.stackSize);
-                                stack.stackSize -= (int) deduct;
-                                if (stack.stackSize <= 0) inv.setInventorySlotContents(slot, null);
-                                remaining -= deduct;
-                            }
-                        }
-                    }
-                    c.markDirty();
-                }
-                if (remaining > 0) continue;
+            } else if (station != null) {
+                if (!cannon.tryExtractPackage(plan.resource(), plan.sendAmount())) continue;
                 if (!hammer.trySpendShotEnergy(plan.requiredEnergy())) {
                     throw new IllegalStateException("HAMMER shot energy became inconsistent");
                 }

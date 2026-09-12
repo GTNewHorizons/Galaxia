@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.outpost.module.types;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteBandwidthFormatter;
@@ -50,6 +51,19 @@ public final class ModuleDebugDataGenerator extends TieredModuleComponent {
     public void configure(Config config) {
         this.config = config == null ? Config.produce(SatelliteDataType.PROSPECTING, 10L, 20) : config;
         this.jobProgressTicks = 0;
+    }
+
+    @Override
+    public boolean applyConfigurationTransition(ModuleInstance module,
+        FacilityCommand.ModuleConfiguration configuration) {
+        if (!(configuration instanceof FacilityCommand.ConfigureDebugDataGenerator configure)) {
+            return super.applyConfigurationTransition(module, configuration);
+        }
+        if (configure.config() == null) throw new IllegalArgumentException("Missing debug data generator config");
+        if (configure.config()
+            .equals(config)) return false;
+        configure(configure.config());
+        return true;
     }
 
     public void restore(Config config, int jobProgressTicks, long consumedDeciKb,

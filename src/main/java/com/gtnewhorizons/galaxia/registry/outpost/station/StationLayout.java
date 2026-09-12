@@ -200,6 +200,11 @@ public final class StationLayout {
      * Counts orthogonal same-kind neighbors of a module at the given coordinate.
      */
     public static int countOrthogonalNeighbors(StationLayout layout, StationTileCoord coord, FacilityModuleKind kind) {
+        return countOrthogonalNeighbors(layout, coord, kind, null);
+    }
+
+    static int countOrthogonalNeighbors(StationLayout layout, StationTileCoord coord, FacilityModuleKind kind,
+        @Nullable ModuleInstance.ID excludedModuleId) {
         int count = 0;
         for (int i = 0; i < DX.length; i++) {
             int ndx = coord.dx() + DX[i];
@@ -211,7 +216,8 @@ public final class StationLayout {
             }
             StationTileCoord ncoord = StationTileCoord.of(ndx, ndy);
             ModuleInstance neighborModule = layout.moduleAt(ncoord);
-            if (neighborModule != null && neighborModule.kind() == kind) {
+            if (neighborModule != null && neighborModule.kind() == kind
+                && !neighborModule.id.equals(excludedModuleId)) {
                 count++;
             }
         }

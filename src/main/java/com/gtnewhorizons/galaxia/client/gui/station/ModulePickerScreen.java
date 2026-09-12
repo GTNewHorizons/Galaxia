@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 import javax.annotation.Nullable;
 
@@ -11,7 +12,6 @@ import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
-import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.GuiData;
 import com.cleanroommc.modularui.factory.SimpleGuiFactory;
@@ -27,7 +27,6 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.WidgetOutline;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
@@ -109,7 +108,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private static volatile ModuleTier pendingSelectedTier = ModuleTier.NONE;
     private static volatile HammerVariant pendingHammerVariant = HammerVariant.BASE;
     private static volatile MinerFocusTier pendingMinerFocusTier = MinerFocusTier.NONE;
-    private static volatile short pendingSettingsGroupId;
+    private static volatile @Nullable SettingsGroup.ID pendingSettingsGroupId;
     private static volatile boolean pendingInstantBuild;
     private static volatile boolean pendingMultipleBuild;
 
@@ -119,7 +118,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         pendingInstantBuild = instantBuild;
         pendingMultipleBuild = false;
         pendingSelectedKind = null;
-        pendingSettingsGroupId = 0;
+        pendingSettingsGroupId = null;
         FACTORY.openClient();
     }
 
@@ -135,11 +134,11 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         ModularPanel panel = ModularPanel.defaultPanel("galaxia_station_module_picker", PANEL_WIDTH, PANEL_HEIGHT);
         ParentWidget<?> backgroundLayer = new PassiveBackgroundLayer().pos(0, 0)
             .sizeRel(FULL_REL, FULL_REL)
-            .background(drawable((ctx, x, y, w, h) -> {
+            .background((ctx, x, y, w, h, ignoredTheme) -> {
                 net.minecraft.client.gui.Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_MODAL_BG.getColor());
                 net.minecraft.client.gui.Gui
                     .drawRect(x, y, x + w, y + HEADER_HEIGHT, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
-            }));
+            });
         panel.child(backgroundLayer);
         panel.child(WidgetOutline.create(backgroundLayer, 3, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
 
@@ -212,8 +211,8 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     }
 
     private ButtonWidget<?> createMultipleToggle() {
-        return new ButtonWidget<>().background(drawable((ctx, x, y, w, h) -> drawMultipleToggle(x, y, w, h, false)))
-            .hoverBackground(drawable((ctx, x, y, w, h) -> drawMultipleToggle(x, y, w, h, true)))
+        return new ButtonWidget<>().background((ctx, x, y, w, h, ignoredTheme) -> drawMultipleToggle(x, y, w, h, false))
+            .hoverBackground((ctx, x, y, w, h, ignoredTheme) -> drawMultipleToggle(x, y, w, h, true))
             .onMouseTapped(mouseButton -> {
                 if (mouseButton != 0) return false;
                 pendingMultipleBuild = !pendingMultipleBuild;
@@ -223,26 +222,26 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     }
 
     private ButtonWidget<?> createKindButton(FacilityModuleKind kind) {
-        return new ButtonWidget<>()
+        return new ButtonWidget<>().name("module.kind." + kind.name())
             .background(
-                drawable(
-                    (ctx, x, y, w, h) -> BorderedRect.draw(
-                        x,
-                        y,
-                        w,
-                        h,
-                        EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                        EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
+
+                (ctx, x, y, w, h, ignoredTheme) -> BorderedRect.draw(
+                    x,
+                    y,
+                    w,
+                    h,
+                    EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()))
             .hoverBackground(
-                drawable(
-                    (ctx, x, y, w, h) -> BorderedRect.draw(
-                        x,
-                        y,
-                        w,
-                        h,
-                        EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor(),
-                        EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
-            .overlay(drawable((ctx, x, y, w, h) -> drawKindButton(kind, x, y, w, h)))
+
+                (ctx, x, y, w, h, ignoredTheme) -> BorderedRect.draw(
+                    x,
+                    y,
+                    w,
+                    h,
+                    EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor(),
+                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()))
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> drawKindButton(kind, x, y, w, h))
             .onMouseTapped(mouseButton -> {
                 if (mouseButton != 0) return false;
                 selectKind(kind);
@@ -269,7 +268,8 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                     () -> {
                         pendingSelectedTier = optionTier;
                         normalizeSelectedTier(kind);
-                    }).pos(x, y)
+                    }).name("module.tier." + optionTier.name())
+                        .pos(x, y)
                         .size(SPEC_SMALL_BUTTON_WIDTH, SPEC_BUTTON_HEIGHT));
             x += SPEC_SMALL_BUTTON_WIDTH + SPEC_BUTTON_GAP;
         }
@@ -287,7 +287,8 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                         () -> {
                             pendingHammerVariant = optionVariant;
                             normalizeSelectedTier(kind);
-                        }).pos(x, y)
+                        }).name("module.hammer." + optionVariant.name())
+                            .pos(x, y)
                             .size(SPEC_BUTTON_WIDTH, SPEC_BUTTON_HEIGHT));
                 x += SPEC_BUTTON_WIDTH + SPEC_BUTTON_GAP;
             }
@@ -317,7 +318,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                 createChoiceButton(
                     option::label,
                     () -> true,
-                    () -> pendingSettingsGroupId == option.groupId(),
+                    () -> Objects.equals(pendingSettingsGroupId, option.groupId()),
                     () -> pendingSettingsGroupId = option.groupId()).pos(x, y)
                         .size(SPEC_BUTTON_WIDTH + 24, SPEC_BUTTON_HEIGHT));
             x += SPEC_BUTTON_WIDTH + 24 + SPEC_BUTTON_GAP;
@@ -333,6 +334,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                 .size(SPEC_BACK_WIDTH, 20));
         panel.child(
             ModuleConfigModalSupport.button(() -> true, "Build", this::confirmSelectedBuild)
+                .name("module.build")
                 .pos(PANEL_WIDTH - PANEL_PADDING - SPEC_BUILD_WIDTH, SPEC_FOOTER_Y)
                 .size(SPEC_BUILD_WIDTH, 20));
     }
@@ -342,7 +344,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         pendingSelectedTier = kind.defaultTier();
         pendingHammerVariant = HammerVariant.BASE;
         pendingMinerFocusTier = MinerFocusTier.NONE;
-        pendingSettingsGroupId = 0;
+        pendingSettingsGroupId = null;
         normalizeSelectedTier(kind);
     }
 
@@ -409,29 +411,28 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private ButtonWidget<?> createChoiceButton(java.util.function.Supplier<String> labelSupplier,
         java.util.function.BooleanSupplier enabledSupplier, java.util.function.BooleanSupplier selectedSupplier,
         Runnable onClick) {
-        return new ButtonWidget<>()
-            .background(
-                drawable(
-                    (ctx, x, y, w, h) -> drawChoiceButton(
-                        labelSupplier.get(),
-                        x,
-                        y,
-                        w,
-                        h,
-                        enabledSupplier.getAsBoolean(),
-                        selectedSupplier.getAsBoolean(),
-                        false)))
+        return new ButtonWidget<>().background(
+
+            (ctx, x, y, w, h, ignoredTheme) -> drawChoiceButton(
+                labelSupplier.get(),
+                x,
+                y,
+                w,
+                h,
+                enabledSupplier.getAsBoolean(),
+                selectedSupplier.getAsBoolean(),
+                false))
             .hoverBackground(
-                drawable(
-                    (ctx, x, y, w, h) -> drawChoiceButton(
-                        labelSupplier.get(),
-                        x,
-                        y,
-                        w,
-                        h,
-                        enabledSupplier.getAsBoolean(),
-                        selectedSupplier.getAsBoolean(),
-                        true)))
+
+                (ctx, x, y, w, h, ignoredTheme) -> drawChoiceButton(
+                    labelSupplier.get(),
+                    x,
+                    y,
+                    w,
+                    h,
+                    enabledSupplier.getAsBoolean(),
+                    selectedSupplier.getAsBoolean(),
+                    true))
             .onMousePressed(mouseButton -> {
                 if (mouseButton != 0 || !enabledSupplier.getAsBoolean()) return false;
                 onClick.run();
@@ -469,14 +470,12 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
 
     private static List<GroupOption> groupOptions(AutomatedFacility facility, FacilityModuleKind kind) {
         FacilityModuleRegistry.Definition definition = FacilityModuleRegistry.get(kind);
-        if (definition == null || !definition.settingsGroups()) return List.of(new GroupOption("No Group", (short) 0));
+        if (definition == null || !definition.settingsGroups()) return List.of(new GroupOption("No Group", null));
         List<GroupOption> options = new ArrayList<>();
-        options.add(new GroupOption("No Group", (short) 0));
+        options.add(new GroupOption("No Group", null));
         facility.settingsGroups()
-            .groups()
-            .values()
             .stream()
-            .filter(group -> group.kind() == kind && group.isJoinable())
+            .filter(group -> group.kind() == kind)
             .sorted(Comparator.comparing(SettingsGroup::displayName, String.CASE_INSENSITIVE_ORDER))
             .limit(8)
             .forEach(group -> options.add(new GroupOption(group.displayName(), group.id())));
@@ -621,13 +620,9 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         pendingSelectedTier = ModuleTier.NONE;
         pendingHammerVariant = HammerVariant.BASE;
         pendingMinerFocusTier = MinerFocusTier.NONE;
-        pendingSettingsGroupId = 0;
+        pendingSettingsGroupId = null;
         pendingInstantBuild = false;
         pendingMultipleBuild = false;
-    }
-
-    private IDrawable drawable(DrawableCommand cmd) {
-        return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
     }
 
     private static final class PassiveBackgroundLayer extends ParentWidget<PassiveBackgroundLayer> {
@@ -715,5 +710,5 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         }
     }
 
-    private record GroupOption(String label, short groupId) {}
+    private record GroupOption(String label, SettingsGroup.ID groupId) {}
 }

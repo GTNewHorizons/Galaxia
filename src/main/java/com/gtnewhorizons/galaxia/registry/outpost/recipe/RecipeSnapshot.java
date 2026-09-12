@@ -1,69 +1,75 @@
 package com.gtnewhorizons.galaxia.registry.outpost.recipe;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Random;
+
+import javax.annotation.Nullable;
+
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
-/**
- * Self-contained recipe data snapshot. Created by the picker GUI when
- * the player selects a recipe. The execution pipeline reads directly
- * from this record — zero GT5 imports.
- *
- * <p>
- * {@link #contentHash} enables validation on server restart:
- * if the hash changed, the recipe was modified by a mod update.
- */
-public record RecipeSnapshot(byte recipeMapOrdinal, int recipeIndex, long contentHash, ItemStack[] inputs,
-    ItemStack[] outputs, FluidStack[] fluidInputs, FluidStack[] fluidOutputs, int[] outputChances,
-    int[] fluidOutputChances, int duration, int eut) {
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
-    public RecipeSnapshot {
-        if (duration < 0) duration = 0;
-        if (eut < 0) eut = 0;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+import lombok.Value;
+import lombok.experimental.Accessors;
+
+/** Self-contained recipe data used by recipe books and production modules. */
+@Value
+@Accessors(fluent = true)
+public class RecipeSnapshot {
+
+    byte recipeMapOrdinal;
+    int recipeIndex;
+    long contentHash;
+    List<Resource> itemInputs;
+    List<Resource> itemOutputs;
+    List<Resource> fluidInputs;
+    List<Resource> fluidOutputs;
+    int duration;
+    int eut;
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    Map<InventoryKey, Long> requiredInputs;
+
+    public RecipeSnapshot(byte recipeMapOrdinal, int recipeIndex, long contentHash, List<Resource> itemInputs,
+        List<Resource> itemOutputs, List<Resource> fluidInputs, List<Resource> fluidOutputs, int duration, int eut) {
+        this.recipeMapOrdinal = recipeMapOrdinal;
+        this.recipeIndex = recipeIndex;
+        this.contentHash = contentHash;
+        this.duration = Math.max(0, duration);
+        this.eut = Math.max(0, eut);
+        this.itemInputs = immutable(itemInputs);
+        this.itemOutputs = immutable(itemOutputs);
+        this.fluidInputs = immutable(fluidInputs);
+        this.fluidOutputs = immutable(fluidOutputs);
+        Map<InventoryKey, Long> inputs = new HashMap<>();
+        for (Resource resource : this.itemInputs) inputs.merge(resource.key(), resource.amount(), Long::sum);
+        for (Resource resource : this.fluidInputs) inputs.merge(resource.key(), resource.amount(), Long::sum);
+        this.requiredInputs = Map.copyOf(inputs);
     }
 
-    public RecipeSnapshot(byte recipeMapOrdinal, int recipeIndex, long contentHash, ItemStack[] inputs,
-        ItemStack[] outputs, FluidStack[] fluidInputs, FluidStack[] fluidOutputs, int duration, int eut) {
-        this(
-            recipeMapOrdinal,
-            recipeIndex,
-            contentHash,
-            inputs,
-            outputs,
-            fluidInputs,
-            fluidOutputs,
-            null,
-            null,
-            duration,
-            eut);
-    }
-
-    public RecipeSnapshot(byte recipeMapOrdinal, int recipeIndex, long contentHash, ItemStack[] inputs,
-        ItemStack[] outputs, FluidStack[] fluidInputs, FluidStack[] fluidOutputs, int[] outputChances, int duration,
-        int eut) {
-        this(
-            recipeMapOrdinal,
-            recipeIndex,
-            contentHash,
-            inputs,
-            outputs,
-            fluidInputs,
-            fluidOutputs,
-            outputChances,
-            null,
-            duration,
-            eut);
-    }
-
-    public RecipeSnapshot(byte recipeMapOrdinal, int recipeIndex, long contentHash, ItemStack[] inputs,
-        ItemStack[] outputs, int duration, int eut) {
-        this(recipeMapOrdinal, recipeIndex, contentHash, inputs, outputs, null, null, null, null, duration, eut);
-    }
-
-    /** Backward-compat: creates a snapshot without resolved inputs/outputs (loaded from old persistence). */
+    /** Creates an identity-only snapshot. Recipe books reject it until server content resolution completes. */
     public static RecipeSnapshot unresolved(byte recipeMapOrdinal, int recipeIndex, long contentHash) {
-        return new RecipeSnapshot(recipeMapOrdinal, recipeIndex, contentHash, null, null, null, null, null, null, 0, 0);
+        return new RecipeSnapshot(
+            recipeMapOrdinal,
+            recipeIndex,
+            contentHash,
+            List.of(),
+            List.of(),
+            List.of(),
+            List.of(),
+            0,
+            0);
     }
 
     public static RecipeSnapshot resolved(byte recipeMapOrdinal, int recipeIndex, ItemStack[] inputs,
@@ -90,98 +96,250 @@ public record RecipeSnapshot(byte recipeMapOrdinal, int recipeIndex, long conten
     public static RecipeSnapshot resolved(byte recipeMapOrdinal, int recipeIndex, ItemStack[] inputs,
         ItemStack[] outputs, FluidStack[] fluidInputs, FluidStack[] fluidOutputs, int[] outputChances,
         int[] fluidOutputChances, int duration, int eut) {
+        List<Resource> resolvedItemInputs = itemResources(inputs, null);
+        List<Resource> resolvedItemOutputs = itemResources(outputs, outputChances);
+        List<Resource> resolvedFluidInputs = fluidResources(fluidInputs, null);
+        List<Resource> resolvedFluidOutputs = fluidResources(fluidOutputs, fluidOutputChances);
         return new RecipeSnapshot(
             recipeMapOrdinal,
             recipeIndex,
             computeContentHash(
-                inputs,
-                outputs,
-                fluidInputs,
-                fluidOutputs,
-                outputChances,
-                fluidOutputChances,
+                resolvedItemInputs,
+                resolvedItemOutputs,
+                resolvedFluidInputs,
+                resolvedFluidOutputs,
                 duration,
                 eut),
-            inputs,
-            outputs,
-            fluidInputs,
-            fluidOutputs,
-            outputChances,
-            fluidOutputChances,
+            resolvedItemInputs,
+            resolvedItemOutputs,
+            resolvedFluidInputs,
+            resolvedFluidOutputs,
             duration,
             eut);
     }
 
-    public static long computeContentHash(ItemStack[] inputs, ItemStack[] outputs, FluidStack[] fluidInputs,
-        FluidStack[] fluidOutputs, int duration, int eut) {
-        return computeContentHash(inputs, outputs, fluidInputs, fluidOutputs, null, duration, eut);
+    void validateForBook() {
+        if (Byte.toUnsignedInt(recipeMapOrdinal) == 0) {
+            throw new IllegalArgumentException("Recipe map ordinal must identify a supported map");
+        }
+        if (recipeIndex < 0) throw new IllegalArgumentException("Recipe index must be non-negative");
+        if (duration <= 0) throw new IllegalArgumentException("Recipe duration must be positive");
+        validateKind(itemInputs, ItemStackWrapper.class, "itemInputs");
+        validateKind(itemOutputs, ItemStackWrapper.class, "itemOutputs");
+        validateKind(fluidInputs, FluidKey.class, "fluidInputs");
+        validateKind(fluidOutputs, FluidKey.class, "fluidOutputs");
+        validateInputs(itemInputs, "itemInputs");
+        validateInputs(fluidInputs, "fluidInputs");
+        validateOutputs(itemOutputs, "itemOutputs");
+        validateOutputs(fluidOutputs, "fluidOutputs");
+        if (itemInputs.isEmpty() && itemOutputs.isEmpty() && fluidInputs.isEmpty() && fluidOutputs.isEmpty()) {
+            throw new IllegalArgumentException("Recipe snapshot has no resolved content");
+        }
+        long expectedHash = computeContentHash(itemInputs, itemOutputs, fluidInputs, fluidOutputs, duration, eut);
+        if (contentHash != expectedHash) {
+            throw new IllegalArgumentException("Recipe snapshot content hash does not match resolved content");
+        }
     }
 
-    public static long computeContentHash(ItemStack[] inputs, ItemStack[] outputs, FluidStack[] fluidInputs,
-        FluidStack[] fluidOutputs, int[] outputChances, int duration, int eut) {
-        return computeContentHash(inputs, outputs, fluidInputs, fluidOutputs, outputChances, null, duration, eut);
+    private static List<Resource> immutable(@Nullable List<Resource> resources) {
+        return resources == null ? List.of() : List.copyOf(resources);
     }
 
-    public static long computeContentHash(ItemStack[] inputs, ItemStack[] outputs, FluidStack[] fluidInputs,
-        FluidStack[] fluidOutputs, int[] outputChances, int[] fluidOutputChances, int duration, int eut) {
+    private static List<Resource> itemResources(@Nullable ItemStack[] stacks, @Nullable int[] chances) {
+        validateChanceCount(stacks == null ? 0 : stacks.length, chances);
+        if (stacks == null || stacks.length == 0) return List.of();
+        List<Resource> resources = new ArrayList<>(stacks.length);
+        for (int i = 0; i < stacks.length; i++) {
+            ItemStack stack = stacks[i];
+            ItemStackWrapper key = ItemStackWrapper.of(stack);
+            long amount = stack == null ? 0L : stack.stackSize;
+            resources.add(chances == null ? new Resource(key, amount) : new Resource(key, amount, chances[i]));
+        }
+        return List.copyOf(resources);
+    }
+
+    private static List<Resource> fluidResources(@Nullable FluidStack[] stacks, @Nullable int[] chances) {
+        validateChanceCount(stacks == null ? 0 : stacks.length, chances);
+        if (stacks == null || stacks.length == 0) return List.of();
+        List<Resource> resources = new ArrayList<>(stacks.length);
+        for (int i = 0; i < stacks.length; i++) {
+            FluidStack stack = stacks[i];
+            FluidKey key = stack == null ? null : FluidKey.of(stack);
+            long amount = stack == null ? 0L : stack.amount;
+            resources.add(chances == null ? new Resource(key, amount) : new Resource(key, amount, chances[i]));
+        }
+        return List.copyOf(resources);
+    }
+
+    private static void validateChanceCount(int resourceCount, @Nullable int[] chances) {
+        if (chances != null && chances.length != resourceCount) {
+            throw new IllegalArgumentException("Recipe output chance count does not match outputs");
+        }
+    }
+
+    private static void validateKind(List<Resource> resources, Class<? extends InventoryKey> kind, String field) {
+        for (Resource resource : resources) {
+            if (!kind.isInstance(resource.key())) {
+                throw new IllegalArgumentException("Recipe " + field + " contains the wrong resource type");
+            }
+        }
+    }
+
+    private static void validateInputs(List<Resource> resources, String field) {
+        for (Resource resource : resources) {
+            if (resource.amount() == 0L && !(resource.key() instanceof ItemStackWrapper)) {
+                throw new IllegalArgumentException("Only item inputs can be non-consumed recipe resources");
+            }
+            if (resource.hasChance()) {
+                throw new IllegalArgumentException("Recipe " + field + " must not contain output chances");
+            }
+        }
+    }
+
+    private static void validateOutputs(List<Resource> resources, String field) {
+        if (resources.isEmpty()) return;
+        boolean hasChance = resources.get(0)
+            .hasChance();
+        for (Resource resource : resources) {
+            if (resource.amount() == 0L) throw new IllegalArgumentException("Recipe outputs must be positive");
+            if (hasChance != resource.hasChance()) {
+                throw new IllegalArgumentException("Recipe " + field + " mixes present and absent output chances");
+            }
+        }
+    }
+
+    private static long computeContentHash(List<Resource> itemInputs, List<Resource> itemOutputs,
+        List<Resource> fluidInputs, List<Resource> fluidOutputs, int duration, int eut) {
         long hash = 1L;
-        hash = hashItems(hash, inputs);
-        hash = hashItems(hash, outputs);
-        hash = hashOutputChances(hash, outputChances);
+        hash = hashItems(hash, itemInputs);
+        hash = hashItems(hash, itemOutputs);
+        hash = hashChances(hash, itemOutputs);
         hash = hashFluids(hash, fluidInputs);
         hash = hashFluids(hash, fluidOutputs);
-        hash = hashOutputChances(hash, fluidOutputChances);
+        hash = hashChances(hash, fluidOutputs);
         hash = hash * 31 + duration;
-        hash = hash * 31 + eut;
-        return hash;
+        return hash * 31 + eut;
     }
 
-    public static long computeContentHash(ItemStack[] inputs, ItemStack[] outputs, int duration, int eut) {
-        return computeContentHash(inputs, outputs, null, null, duration, eut);
-    }
-
-    private static long hashItems(long hash, ItemStack[] stacks) {
-        if (stacks == null) return hash;
-        for (ItemStack stack : stacks) {
-            if (stack == null) continue;
-            hash = hash * 31 + Item.getIdFromItem(stack.getItem());
-            hash = hash * 31 + stack.getItemDamage();
-            hash = hash * 31 + stack.stackSize;
+    private static long hashItems(long hash, List<Resource> resources) {
+        for (Resource resource : resources) {
+            ItemStackWrapper item = (ItemStackWrapper) resource.key();
+            hash = hash * 31 + Item.getIdFromItem(item.item());
+            hash = hash * 31 + item.meta();
+            hash = hash * 31 + resource.amount();
+            hash = hash * 31 + Objects.hashCode(item.nbt());
         }
         return hash;
     }
 
-    private static long hashOutputChances(long hash, int[] chances) {
-        if (chances == null) return hash;
-        for (int chance : chances) {
-            hash = hash * 31 + chance;
+    private static long hashFluids(long hash, List<Resource> resources) {
+        for (Resource resource : resources) {
+            FluidKey fluid = (FluidKey) resource.key();
+            Fluid fluidType = fluid.fluid();
+            hash = hash * 31 + (fluidType == null ? 0
+                : fluidType.getName()
+                    .hashCode());
+            hash = hash * 31 + resource.amount();
+            hash = hash * 31 + Objects.hashCode(fluid.tag());
         }
         return hash;
     }
 
-    private static long hashFluids(long hash, FluidStack[] fluids) {
-        if (fluids == null) return hash;
-        for (FluidStack fluid : fluids) {
-            if (fluid == null) continue;
-            Fluid fluidType = fluidType(fluid);
-            hash = hash * 31 + (fluidType != null ? fluidType.getName()
-                .hashCode() : fluid.getFluidID());
-            hash = hash * 31 + fluid.amount;
+    private static long hashChances(long hash, List<Resource> resources) {
+        for (Resource resource : resources) {
+            if (resource.hasChance()) hash = hash * 31 + resource.effectiveChance();
         }
         return hash;
     }
 
-    private static Fluid fluidType(FluidStack stack) {
-        try {
-            return stack.getFluid();
-        } catch (RuntimeException ignored) {
-            try {
-                var field = FluidStack.class.getDeclaredField("fluid");
-                field.setAccessible(true);
-                return (Fluid) field.get(stack);
-            } catch (ReflectiveOperationException e) {
-                return null;
+    public static final class Resource {
+
+        private static final int NO_CHANCE = -1;
+        private static final int MAX_CHANCE = 10_000;
+
+        private final InventoryKey key;
+        private final long amount;
+        private final int chance;
+
+        public Resource(InventoryKey key, long amount) {
+            this(key, amount, NO_CHANCE, true);
+        }
+
+        public Resource(InventoryKey key, long amount, int chance) {
+            this(key, amount, chance, false);
+        }
+
+        private Resource(InventoryKey key, long amount, int chance, boolean absentChance) {
+            this.key = validKey(key);
+            this.amount = validAmount(amount);
+            this.chance = validChance(chance, absentChance);
+        }
+
+        private static InventoryKey validKey(InventoryKey key) {
+            if (key == null) throw new IllegalArgumentException("Recipe resource key must not be null");
+            if ((key instanceof ItemStackWrapper item && item.item() == null)
+                || (key instanceof FluidKey fluid && fluid.fluid() == null)) {
+                throw new IllegalArgumentException("Recipe resource key must identify an item or fluid");
             }
+            return key;
+        }
+
+        private static long validAmount(long amount) {
+            if (amount < 0L || amount > Integer.MAX_VALUE) {
+                throw new IllegalArgumentException("Recipe resource amount must be between 0 and 2147483647");
+            }
+            return amount;
+        }
+
+        private static int validChance(int chance, boolean absentChance) {
+            if (absentChance) return NO_CHANCE;
+            if (chance < 0 || chance > MAX_CHANCE) {
+                throw new IllegalArgumentException("Recipe resource chance must be between 0 and 10000");
+            }
+            return chance;
+        }
+
+        public InventoryKey key() {
+            return key;
+        }
+
+        public long amount() {
+            return amount;
+        }
+
+        public boolean hasChance() {
+            return chance != NO_CHANCE;
+        }
+
+        public int effectiveChance() {
+            return hasChance() ? chance : MAX_CHANCE;
+        }
+
+        public boolean shouldProduce(Random random) {
+            if (!hasChance()) return true;
+            if (chance == 0) return false;
+            if (chance >= MAX_CHANCE) return true;
+            return random.nextInt(MAX_CHANCE) < chance;
+        }
+
+        public @Nullable ItemStack itemStack() {
+            return key instanceof ItemStackWrapper item ? item.toStack((int) amount) : null;
+        }
+
+        public @Nullable FluidStack fluidStack() {
+            return key instanceof FluidKey fluid ? fluid.toStack((int) amount) : null;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (this == other) return true;
+            if (!(other instanceof Resource resource)) return false;
+            return amount == resource.amount && chance == resource.chance && key.equals(resource.key);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(key, amount, chance);
         }
     }
 }

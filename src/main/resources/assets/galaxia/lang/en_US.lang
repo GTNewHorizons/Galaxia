@@ -30,6 +30,7 @@ galaxia.celestial.proxima_centauri=Proxima Centauri
 galaxia.celestial.romulus=Romulus
 galaxia.celestial.remus=Remus
 galaxia.celestial.egora=Egora
+galaxia.celestial.tenebrae=Tenebrae
 galaxia.celestial.mars=Mars
 galaxia.celestial.moon=Moon
 galaxia.celestial.frozen_belt=Frozen Belt
@@ -271,6 +272,15 @@ galaxia.gui.orbital.click_mode.follow=Follow
 galaxia.gui.orbital.click_mode.tooltip=Changes planet click mode between opening hierarchy and following the selected planet
 galaxia.gui.orbital.context_menu.manage_assets=Manage assets
 galaxia.gui.orbital.asset.create.unsupported_body=Cannot create assets on this celestial body
+galaxia.gui.orbital.asset.name=Asset name
+galaxia.gui.orbital.toolbar.signals.closed=Signals
+galaxia.gui.orbital.toolbar.signals.open=Signals ▲
+galaxia.gui.orbital.toolbar.transfers.show=Show Transfers
+galaxia.gui.orbital.toolbar.transfers.hide=Hide Transfers
+galaxia.gui.orbital.toolbar.satellites.show=Show Sat Links
+galaxia.gui.orbital.toolbar.satellites.hide=Hide Sat Links
+galaxia.gui.orbital.toolbar.assets.closed=Assets
+galaxia.gui.orbital.toolbar.assets.open=Assets ▲
 galaxia.gui.orbital.pinned_info.label.name=Name
 galaxia.gui.orbital.pinned_info.label.type=Type
 galaxia.gui.orbital.pinned_info.label.landable=Landable
@@ -285,6 +295,8 @@ galaxia.gui.orbital.pinned_info.danger.radiation=Radiation
 galaxia.gui.orbital.pinned_info.danger.heat=Extreme heat
 galaxia.gui.orbital.pinned_info.danger.cold=Extreme cold
 galaxia.gui.orbital.pinned_info.danger.remote=Remote operations only
+galaxia.module.operation.deconstruction_pending=Deconstruction pending
+galaxia.module.operation.construction_pending=Construction pending
 galaxia.gui.orbital.pinned_info.surface.undefined=Unknown
 galaxia.gui.orbital.pinned_info.ore.unknown=Unknown
 galaxia.gui.orbital.pinned_info.ore.undefined=No ore data
@@ -600,6 +612,14 @@ galaxia.satellite.action.delete_prospecting=Delete prospecting satellites
 galaxia.satellite.tooltip.count=%s: %d
 
 #### Machine GUI
+# Station Recipe GUI
+galaxia.gui.station.recipe.save=Save
+galaxia.gui.station.recipe.add=Add
+galaxia.gui.station.recipe.add_hint=Add to the recipe list, then press Save in the module configuration
+galaxia.gui.station.recipe.not_doable_policy.label=Blocked: %s
+galaxia.gui.station.recipe.not_doable_policy.skip=Skip
+galaxia.gui.station.recipe.not_doable_policy.back_to_beginning=Restart order
+
 # Oxygen Collector GUI
 galaxia.gui.oxygen_collector.title=Oxygen Collector
 galaxia.gui.oxygen_collector.leaves_in_range=Leaves in range: %s
@@ -656,3 +676,16 @@ galaxia.gui.common.generating=Generating
 galaxia.gui.common.filling=Filling
 galaxia.gui.common.active=Active
 galaxia.gui.common.idle=Idle
+galaxia.facility.command.rejected=Facility command rejected and logged.
+
+galaxia.gui.station.recipe.details.open=Details
+galaxia.gui.station.recipe.details.lower=Input lower bound
+galaxia.gui.station.recipe.details.upper=Output upper bound
+galaxia.gui.station.recipe.details.set=Set
+galaxia.gui.station.recipe.details.clear=Clear
+galaxia.gui.station.recipe.details.back=Back
+galaxia.gui.station.recipe.details.unset=Not set
+galaxia.gui.station.recipe.details.unavailable=The original recipe is unavailable or has changed
+galaxia.gui.station.recipe.details.select_resource=Select an input or output slot to configure its inventory bound
+galaxia.gui.station.settings_group.rename=Rename
+galaxia.gui.station.settings_group.members=Members
