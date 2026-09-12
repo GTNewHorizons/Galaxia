@@ -283,7 +283,7 @@ public class CelestialEventHandler {
                 supplier.celestialObjectKey,
                 requester.celestialObjectKey,
                 orbitalTime,
-                plan.tofOrbitalSeconds(),
+                plan.tofOrbitalOsu(),
                 plan.route());
             LogisticStore.addDelivery(task);
             return true;

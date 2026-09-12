@@ -84,7 +84,7 @@ public final class LogisticsSyncPacket implements IMessage {
             PacketUtil.writeCelestialObjectKey(buf, d.fromBodyKey());
             PacketUtil.writeCelestialObjectKey(buf, d.toBodyKey());
             buf.writeDouble(d.departureOrbitalTime());
-            buf.writeDouble(d.tofOrbitalSeconds());
+            buf.writeDouble(d.tofOrbitalOsu());
             writeTransferRoute(buf, d.transferRoute());
         }
 
@@ -107,7 +107,7 @@ public final class LogisticsSyncPacket implements IMessage {
             CelestialObjectKey fromBodyKey = PacketUtil.readCelestialObjectKey(buf);
             CelestialObjectKey toBodyKey = PacketUtil.readCelestialObjectKey(buf);
             double departureOrbitalTime = buf.readDouble();
-            double tofOrbitalSeconds = buf.readDouble();
+            double tofOrbitalOsu = buf.readDouble();
             OrbitalTransferPlanner.TransferRoute transferRoute = readTransferRoute(buf);
             deliveries.add(
                 LogisticsDelivery.createWithTrajectory(
@@ -121,7 +121,7 @@ public final class LogisticsSyncPacket implements IMessage {
                     fromBodyKey,
                     toBodyKey,
                     departureOrbitalTime,
-                    tofOrbitalSeconds,
+                    tofOrbitalOsu,
                     transferRoute));
         }
 
