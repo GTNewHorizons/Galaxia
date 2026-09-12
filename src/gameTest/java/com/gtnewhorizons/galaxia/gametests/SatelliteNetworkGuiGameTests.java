@@ -61,6 +61,8 @@ public final class SatelliteNetworkGuiGameTests {
                 if (GuiTestSupport.map()
                     .isCreativeBuildModeEnabled()) throw new AssertionError("Expected Debug initially off");
                 c.afterTest(fixture::cleanupClient);
+                CelestialAssetStore.CLIENT.assetsViewInternal()
+                    .forEach(asset -> fixture.clientBaseline.add(asset.assetId));
             })
             .step("enable Debug through sidebar")
             .click(ClientTarget.of("sidebar.debug", c -> GuiTestSupport.sidebarDebugTarget()))
@@ -112,6 +114,7 @@ public final class SatelliteNetworkGuiGameTests {
         private final List<CelestialObjectKey> bodies = new ArrayList<>();
         private final List<CelestialObjectKey> asteroidCandidates = new ArrayList<>();
         private final Set<CelestialAsset.ID> baseline = new HashSet<>();
+        private final Set<CelestialAsset.ID> clientBaseline = new HashSet<>();
         private final Map<CelestialObjectKey, CelestialKnowledgeFacts> priorFacts = new LinkedHashMap<>();
         private final Map<CelestialObjectKey, Map<SatelliteKind, Set<CelestialAsset.ID>>> created = new LinkedHashMap<>();
         private UUID team;
@@ -206,7 +209,25 @@ public final class SatelliteNetworkGuiGameTests {
                 .map(Satellite.class::cast)
                 .toList();
             if (matches.size() != expectedCount) throw new AssertionError(
-                "Expected " + expectedCount + " GUI-created " + kind + " at " + body + ", got " + matches.size());
+                "Expected " + expectedCount
+                    + " GUI-created "
+                    + kind
+                    + " at "
+                    + body
+                    + ", got "
+                    + matches.size()
+                    + ", client="
+                    + client
+                    + ", actual IDs="
+                    + matches.stream()
+                        .map(asset -> asset.assetId)
+                        .toList()
+                    + ", server-created IDs="
+                    + created.get(body)
+                    + ", initial server IDs="
+                    + baseline
+                    + ", initial client IDs="
+                    + clientBaseline);
             Set<CelestialAsset.ID> actual = new HashSet<>();
             for (Satellite satellite : matches) {
                 if (!satellite.isOperational() || !body.equals(satellite.celestialObjectKey)

@@ -57,7 +57,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb xauth x11-xserver-utils mesa-utils libgl1-mesa-dri libasound2t64 libopenal1
-          xvfb-run -a --server-args='-screen 0 1280x720x24' xrandr --query
+          xvfb-run -a --server-args='-screen 0 2560x1440x24' xrandr --query
           xvfb-run -a glxinfo -B
 
       - name: Build Horizon QA
@@ -83,7 +83,7 @@ jobs:
           mkdir -p "$report_dir"
           set -o pipefail
           timeout --signal=TERM --kill-after=30s 15m \
-            xvfb-run -a --server-args='-screen 0 1280x720x24' \
+            xvfb-run -a --server-args='-screen 0 2560x1440x24' \
             ./gradlew runClient --no-daemon --max-workers=2 --console=plain \
               -PusesMixinDebug=false "-PhorizonQaJar=$HORIZON_QA_JAR" \
               --init-script ../horizonqa/scripts/client-test-isolation.init.gradle \
