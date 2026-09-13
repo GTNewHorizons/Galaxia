@@ -14,6 +14,9 @@ public class GalaxiaKeyBinds {
     public static final KeyBinding LAUNCH_ROCKET = register(
         new KeyBinding("key.galaxia.launch_rocket", Keyboard.KEY_SPACE, "key.categories.galaxia"));
 
+    public static final KeyBinding OPEN_OFFSCREEN_STARMAP = register(
+        new KeyBinding("key.galaxia.starmap_offscreen", Keyboard.KEY_G, "key.categories.galaxia"));
+
     private static KeyBinding register(KeyBinding binding) {
         ClientRegistry.registerKeyBinding(binding);
         return binding;

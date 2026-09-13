@@ -5,6 +5,7 @@ import net.minecraft.entity.player.EntityPlayer;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.client.GalaxiaKeyBinds;
+import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.OffscreenStarmapGui;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.RocketLaunchPacket;
 import com.gtnewhorizons.galaxia.core.network.ToggleRCSPacket;
@@ -33,6 +34,10 @@ public class KeyHandler {
             if (player.ridingEntity instanceof EntityRocket rocket) {
                 Galaxia.GALAXIA_NETWORK.sendToServer(new RocketLaunchPacket(rocket.getEntityId()));
             }
+        }
+
+        if (GalaxiaKeyBinds.OPEN_OFFSCREEN_STARMAP.isPressed()) {
+            OffscreenStarmapGui.FACTORY.toggleOffscreen();
         }
     }
 }
