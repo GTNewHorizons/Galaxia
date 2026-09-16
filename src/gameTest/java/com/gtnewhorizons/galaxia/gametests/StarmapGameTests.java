@@ -95,6 +95,15 @@ public final class StarmapGameTests {
                     throw new AssertionError("Earth navigation did not expose Moon");
                 earthZoom[0] = map.getDisplayZoomMultiplier();
             })
+            .click(
+                ClientTarget
+                    .of("Sol", c -> GuiTestSupport.bodyTarget(CelestialObjectKey.registered(CelestialObjectId.SOL))))
+            .awaitClient("unselected Earth no longer shows hidden moons", c -> {
+                var map = GuiTestSupport.map();
+                if (map.visibleBodyBounds(BODY) == null) throw new AssertionError("Earth left the viewport");
+                if (map.visibleBodyBounds(moon) != null) throw new AssertionError("Unselected Earth still shows Moon");
+            })
+            .click(ClientTarget.of("Earth", c -> GuiTestSupport.bodyTarget(BODY)))
             .click(ClientTarget.of("Moon marker", c -> GuiTestSupport.bodyTarget(moon)))
             .awaitClient("Moon selected through its marker", c -> {
                 var map = GuiTestSupport.map();

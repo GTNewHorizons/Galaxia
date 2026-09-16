@@ -5,6 +5,8 @@ import java.util.EnumMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.util.ResourceLocation;
@@ -431,19 +433,23 @@ public class OrbitalScene {
             this.view = view;
         }
 
-        OrbitalSceneFrame buildInto(OrbitalSceneFrame frame, CelestialObject viewRoot, double globalTime,
-            float labelAlpha) {
+        OrbitalSceneFrame buildInto(OrbitalSceneFrame frame, CelestialObject viewRoot,
+            @Nullable CelestialObject selectedBody, double globalTime, float labelAlpha) {
             frame.resetForReuse();
             double[] viewOrigin = callbacks.getViewOrigin(viewRoot);
             if (viewOrigin == null) viewOrigin = ZERO_VIEW_ORIGIN;
             collectRecursive(frame, viewRoot, null, viewOrigin[0], viewOrigin[1], globalTime, labelAlpha);
             if (viewRoot.objectClass() != CelestialObject.Class.GALAXY && labelAlpha > 0.02f)
-                registerHiddenChildren(frame);
+                registerHiddenChildren(frame, selectedBody);
             return frame;
         }
 
-        private void registerHiddenChildren(OrbitalSceneFrame frame) {
+        private void registerHiddenChildren(OrbitalSceneFrame frame, @Nullable CelestialObject selectedBody) {
+            if (selectedBody == null) return;
             for (ScreenBodyBounds parent : frame.screenBodies) {
+                if (!parent.body()
+                    .key()
+                    .equals(selectedBody.key())) continue;
                 if (parent.body()
                     .isAsteroid()
                     || parent.body()

@@ -1910,7 +1910,7 @@ public class OrbitalView {
             GlStateManager.disableTexture2D();
             GL11.glEnable(GL11.GL_LINE_SMOOTH);
             float labelAlpha = (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 2.5);
-            sceneFrame = sceneFrameBuilder.buildInto(sceneFrame, viewRoot, clock.time(), labelAlpha);
+            sceneFrame = sceneFrameBuilder.buildInto(sceneFrame, viewRoot, focusedBody, clock.time(), labelAlpha);
             syncRenderedLogisticsTransfers();
             if (transferSimulatorState.isOpen() && !transferSimulatorState.isWaitingForPick()
                 && viewRoot.objectClass() == CelestialObject.Class.STAR) {
