@@ -42,12 +42,7 @@ final class CelestialPlayableDimensionProfileTest {
             .collect(Collectors.toSet());
 
         assertEquals(
-            Set.of(
-                DimensionEnum.MARS,
-                DimensionEnum.MOON,
-                DimensionEnum.FROZEN_BELT,
-                DimensionEnum.OVERWORLD,
-                DimensionEnum.OVERWORLD_ORBIT),
+            Set.of(DimensionEnum.MARS, DimensionEnum.MOON, DimensionEnum.FROZEN_BELT, DimensionEnum.OVERWORLD),
             playableDimensions);
 
     }
