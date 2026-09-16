@@ -473,7 +473,6 @@ public class OrbitalView {
         private static final double LERP_SPEED = 0.045;
         private static final double PENDING_LAYER_CENTER_LERP_SPEED = 0.08;
         private static final double LAYER_SWITCH_LERP_SPEED = 0.036;
-        private static final float ISO_BASE_CUBE_SIZE = 42f;
         private static final float ISO_SPACING = 90f;
         private static final float ISO_OFFSET = 110f;
         private static final float ISO_Y_OFFSET = 20f;
@@ -483,6 +482,12 @@ public class OrbitalView {
         private static final int CLICK_DRAG_THRESHOLD = 6;
         private static final float MAP_ICON_BASE_SCALE = 18f;
         private static final float MAP_ICON_ZOOM_SCALE = 0.8f;
+        private static final float MAP_STAR_MIN_RADIUS = 10f;
+        private static final float MAP_GAS_GIANT_MIN_RADIUS = 8f;
+        private static final float MAP_PLANET_MIN_RADIUS = 6f;
+        private static final float MAP_MOON_MIN_RADIUS = 4f;
+        private static final float MAP_OTHER_MIN_RADIUS = 3f;
+        private static final float MAP_RADIUS_RANGE = 2f;
         private static final float GALAXY_MAP_STAR_SPRITE_SIZE = 0.5f;
 
         public OrbitalMapWidget(CelestialObject root) {
@@ -1382,20 +1387,9 @@ public class OrbitalView {
             return a + (b - a) * t;
         }
 
-        private float getCubeSizeForBody(CelestialObject body) {
-            if (focusedBody == null) return body.spriteSize() <= 0.0001f ? ISO_BASE_CUBE_SIZE
-                : (float) (ISO_BASE_CUBE_SIZE * Math.sqrt(body.spriteSize()));
-            double focusSize = focusedBody.spriteSize();
-            if (focusSize <= 0.0001) return body.spriteSize() <= 0.0001f ? ISO_BASE_CUBE_SIZE
-                : (float) (ISO_BASE_CUBE_SIZE * Math.sqrt(body.spriteSize()));
-            double scale = body.spriteSize() / focusSize;
-            return (float) (ISO_BASE_CUBE_SIZE * scale);
-        }
-
         private float getSpriteRadius(CelestialObject body) {
             if (body != null && body.isAsteroid()) {
-                // Asteroids use relative zoom so their apparent size tracks the
-                // current focused system instead of being clamped like planet icons.
+                // Relative zoom lets distant asteroids disappear, while close markers remain compact.
                 return mapAsteroidSpriteRadiusForRelativeZoom(
                     body,
                     getDisplaySpriteSize(body),
@@ -1422,8 +1416,15 @@ public class OrbitalView {
 
         private static float mapSpriteRadiusForScale(CelestialObject body, float spriteSize, double scale) {
             if (spriteSize <= 0.0001f) return 2f;
+            float minimum = switch (body.objectClass()) {
+                case STAR -> MAP_STAR_MIN_RADIUS;
+                case GAS_GIANT -> MAP_GAS_GIANT_MIN_RADIUS;
+                case PLANET -> MAP_PLANET_MIN_RADIUS;
+                case MOON -> MAP_MOON_MIN_RADIUS;
+                default -> MAP_OTHER_MIN_RADIUS;
+            };
             float radius = spriteSize * (MAP_ICON_BASE_SCALE + (float) scale * MAP_ICON_ZOOM_SCALE);
-            return Math.max(2.0f, radius);
+            return Math.min(minimum * MAP_RADIUS_RANGE, Math.max(minimum, radius));
         }
 
         private float getDisplaySpriteSize(CelestialObject body) {
@@ -1468,9 +1469,7 @@ public class OrbitalView {
 
         private float getRenderedBodyRadius(CelestialObject body) {
             if (getRenderTexture(body) != null && getDisplaySpriteSize(body) > 0.0001f) {
-                float spriteR = getSpriteRadius(body);
-                float cubeR = getCubeSizeForBody(body) * 0.5f;
-                return lerp(spriteR, cubeR, (float) viewState.isometricProgress);
+                return getSpriteRadius(body);
             }
             return body == viewRoot ? 11f : 7f;
         }
