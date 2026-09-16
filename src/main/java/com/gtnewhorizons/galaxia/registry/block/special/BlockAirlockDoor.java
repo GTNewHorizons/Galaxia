@@ -5,6 +5,7 @@ import net.minecraft.block.material.Material;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.IIcon;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
@@ -17,6 +18,8 @@ import com.gtnewhorizons.galaxia.registry.block.PlacementHelper;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockOpenable;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
 
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
 public class BlockAirlockDoor extends BlockOpenable {
@@ -53,6 +56,14 @@ public class BlockAirlockDoor extends BlockOpenable {
             case NORTH, SOUTH -> ORIENT_Z;
             default -> ORIENT_Y;
         };
+    }
+
+    @Override
+    @SideOnly(Side.CLIENT)
+    public IIcon getIcon(int side, int meta) {
+        return orientationForAxis(ForgeDirection.getOrientation(side)) == getOrientation(meta) ? blockIcon
+            : GalaxiaBlocksEnum.AIRLOCK_CASING.get()
+                .getIcon(side, 0);
     }
 
     @Override

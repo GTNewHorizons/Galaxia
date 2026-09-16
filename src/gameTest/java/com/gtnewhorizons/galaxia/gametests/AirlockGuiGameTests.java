@@ -4,8 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.block.Block;
+import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Blocks;
+import net.minecraft.inventory.InventoryBasic;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
 import net.minecraftforge.client.event.ClientChatReceivedEvent;
@@ -13,6 +16,8 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.factory.GuiFactories;
+import com.gtnewhorizon.structurelib.structure.IItemSource;
+import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
@@ -30,6 +35,194 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 public final class AirlockGuiGameTests {
 
     private AirlockGuiGameTests() {}
+
+    /** Product contract: rotating the slab keeps the door face on its broad surfaces and metal on its edges. */
+    @GameTest(timeoutTicks = 600)
+    public static void rotatedDoorsUseSeparateEdgeTexture(GameTestHelper helper) {
+        Fixture fixture = new Fixture();
+        ClientTest.scenario(helper)
+            .server("display door panels on all three axes", () -> {
+                fixture.prepare(helper);
+                for (int a = 0; a < 3; a++) for (int b = 0; b < 3; b++) {
+                    fixture.place(
+                        a,
+                        3 + b,
+                        8,
+                        GalaxiaBlocksEnum.AIRLOCK_DOOR.get(),
+                        BlockAirlockDoor.encodeMeta(false, BlockAirlockDoor.ORIENT_Z));
+                    fixture.place(
+                        6,
+                        3 + a,
+                        7 + b,
+                        GalaxiaBlocksEnum.AIRLOCK_DOOR.get(),
+                        BlockAirlockDoor.encodeMeta(false, BlockAirlockDoor.ORIENT_X));
+                    fixture.place(
+                        10 + a,
+                        4,
+                        7 + b,
+                        GalaxiaBlocksEnum.AIRLOCK_DOOR.get(),
+                        BlockAirlockDoor.encodeMeta(false, BlockAirlockDoor.ORIENT_Y));
+                }
+                fixture.place(16, 10, 0, GalaxiaBlocksEnum.AIRLOCK_CASING.get(), 0);
+                fixture.player.playerNetServerHandler.setPlayerLocation(fixture.x + 16.5, 139, fixture.z + 0.5, 50, 30);
+            })
+            .awaitClient("door display reaches the client", c -> {
+                if (Minecraft.getMinecraft().theWorld.getBlock(fixture.x + 6, 132, fixture.z + 8)
+                    != GalaxiaBlocksEnum.AIRLOCK_DOOR.get()) {
+                    throw new AssertionError("Door display is not loaded");
+                }
+            })
+            .client("show the texture comparison without HUD or clouds", c -> {
+                var settings = Minecraft.getMinecraft().gameSettings;
+                boolean oldHud = settings.hideGUI;
+                boolean oldClouds = settings.clouds;
+                c.afterTest(() -> {
+                    settings.hideGUI = oldHud;
+                    settings.clouds = oldClouds;
+                });
+                settings.hideGUI = true;
+                settings.clouds = false;
+            })
+            .capture("airlock-axis-textures")
+            .client("only the broad faces use the connected door texture", c -> {
+                Block door = GalaxiaBlocksEnum.AIRLOCK_DOOR.get();
+                for (ForgeDirection axis : new ForgeDirection[] { ForgeDirection.UP, ForgeDirection.NORTH,
+                    ForgeDirection.EAST }) {
+                    for (boolean open : new boolean[] { false, true }) {
+                        int meta = BlockAirlockDoor.encodeMeta(open, BlockAirlockDoor.orientationForAxis(axis));
+                        var front = door.getIcon(axis.ordinal(), meta);
+                        if (front == null || front != door.getIcon(
+                            axis.getOpposite()
+                                .ordinal(),
+                            meta)) {
+                            throw new AssertionError("Opposite broad faces must share the door texture");
+                        }
+                        for (ForgeDirection side : ForgeDirection.VALID_DIRECTIONS) {
+                            if (side != axis && side != axis.getOpposite()
+                                && door.getIcon(side.ordinal(), meta) == front) {
+                                throw new AssertionError("A thin edge is incorrectly using the connected door texture");
+                            }
+                        }
+                    }
+                }
+            })
+            .succeed();
+    }
+
+    /** Bug regression: the controller's client-visible state follows opening and closing without reopening a GUI. */
+    @GameTest(timeoutTicks = 600)
+    public static void controllerStateTracksDoorTransitions(GameTestHelper helper) {
+        Fixture fixture = new Fixture();
+        ClientTest.scenario(helper)
+            .server("build rooms", () -> fixture.build(helper))
+            .awaitServer("rooms ready", fixture::assertRoomsReady)
+            .awaitClient("controller reaches the client", c -> fixture.assertClientOpen(false))
+            .server("open with redstone", () -> fixture.power(true))
+            .awaitServer("door opens on the server", () -> fixture.assertOpen(true))
+            .awaitClient("controller shows the open state", c -> fixture.assertClientOpen(true))
+            .server("close with redstone", () -> fixture.power(false))
+            .awaitServer("door closes on the server", () -> fixture.assertOpen(false))
+            .awaitClient("controller shows the closed state", c -> fixture.assertClientOpen(false))
+            .succeed();
+    }
+
+    /** Bug regression: ordinary door items build the orientation selected by the airlock, not the player's facing. */
+    @GameTest(timeoutTicks = 400)
+    public static void survivalConstructionUsesNormalDoorItems(GameTestHelper helper) {
+        Fixture fixture = new Fixture();
+        ClientTest.scenario(helper)
+            .server("construct doors in each orientation using normal inventory items", () -> {
+                fixture.prepare(helper);
+                for (ForgeDirection facing : new ForgeDirection[] { ForgeDirection.NORTH, ForgeDirection.EAST,
+                    ForgeDirection.UP }) {
+                    fixture.prepareConstruction(facing);
+                    int built = fixture.lock()
+                        .survivalConstruct(null, 64, fixture.buildEnvironment());
+                    if (built <= 0) throw new AssertionError("No construction progress with normal materials");
+                    fixture.lock()
+                        .updateEntity();
+                    if (!fixture.lock()
+                        .isStructureValid()) {
+                        throw new AssertionError("Survival construction did not complete for " + facing);
+                    }
+                    fixture.clearBlocks();
+                }
+            })
+            .succeed();
+    }
+
+    /** Bug regression: rebuilding one missing panel skips the correct panels and consumes only its replacement. */
+    @GameTest(timeoutTicks = 400)
+    public static void survivalConstructionResumesPastCorrectDoors(GameTestHelper helper) {
+        Fixture fixture = new Fixture();
+        ClientTest.scenario(helper)
+            .server("repair a missing panel without replacing correct doors", () -> {
+                fixture.prepare(helper);
+                fixture.prepareConstruction(ForgeDirection.NORTH);
+                fixture.lock()
+                    .construct(null, false);
+                BlockPos missing = fixture.placed.stream()
+                    .filter(
+                        pos -> fixture.world.getBlock(pos.x(), pos.y(), pos.z())
+                            == GalaxiaBlocksEnum.AIRLOCK_DOOR.get())
+                    .reduce((first, second) -> second)
+                    .orElseThrow();
+                fixture.world.setBlockToAir(missing.x(), missing.y(), missing.z());
+                InventoryBasic materials = fixture.materials();
+                int built = fixture.lock()
+                    .survivalConstruct(
+                        null,
+                        64,
+                        ISurvivalBuildEnvironment.create(IItemSource.fromInventory(materials), fixture.player));
+                if (built != 1 || materials.getStackInSlot(1).stackSize != 63) {
+                    throw new AssertionError("Repair must replace exactly one door using one normal door item");
+                }
+                fixture.lock()
+                    .updateEntity();
+                if (!fixture.lock()
+                    .isStructureValid()) throw new AssertionError("Repaired airlock did not form");
+            })
+            .succeed();
+    }
+
+    /** Bug regression: a valid one-block-wide doorway supports proximity opening without a ticking-tile crash. */
+    @GameTest(timeoutTicks = 400)
+    public static void narrowDoorwaySupportsProximityOpening(GameTestHelper helper) {
+        Fixture fixture = new Fixture();
+        ClientTest.scenario(helper)
+            .server("build a narrow standalone airlock", () -> {
+                fixture.prepare(helper);
+                for (int dx = 0; dx <= 2; dx++) for (int dy = 3; dy <= 6; dy++) {
+                    boolean frame = dx == 0 || dx == 2 || dy == 3 || dy == 6;
+                    fixture.place(
+                        dx,
+                        dy,
+                        6,
+                        frame ? GalaxiaBlocksEnum.AIRLOCK_CASING.get() : GalaxiaBlocksEnum.AIRLOCK_DOOR.get(),
+                        frame ? 0 : BlockAirlockDoor.encodeMeta(false, BlockAirlockDoor.ORIENT_Z));
+                }
+                fixture.place(1, 3, 6, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0);
+                fixture.lock()
+                    .setFacing(ForgeDirection.NORTH);
+                fixture.lock()
+                    .updateEntity();
+                if (!fixture.lock()
+                    .isStructureValid()) throw new AssertionError("Narrow doorway did not form");
+                fixture.player.setPositionAndUpdate(fixture.x + 1.5, 132, fixture.z + 5.5);
+            })
+            .server("open safely when a player approaches", () -> {
+                TileEntityAirlock lock = fixture.lock();
+                try {
+                    lock.setProximityOpening(true);
+                    lock.updateEntity();
+                    if (!lock.isOpen()) throw new AssertionError("Narrow doorway did not detect the player");
+                } finally {
+                    // A regression must fail this scenario without crashing subsequent world ticks.
+                    lock.setProximityOpening(false);
+                }
+            })
+            .succeed();
+    }
 
     /** Product contract: a room breach overrides sustained redstone and repairs restore automatic opening. */
     @GameTest(timeoutTicks = 1200)
@@ -180,7 +373,7 @@ public final class AirlockGuiGameTests {
         private long safetyCheckEnd;
         private boolean unexpectedDoorState;
 
-        void build(GameTestHelper helper) {
+        void prepare(GameTestHelper helper) {
             world = helper.getWorld();
             player = (EntityPlayerMP) world.playerEntities.get(0);
             x = (int) player.posX + 32;
@@ -191,6 +384,10 @@ public final class AirlockGuiGameTests {
                 for (BlockPos pos : placed) world.setBlockToAir(pos.x(), pos.y(), pos.z());
                 player.setPositionAndUpdate(oldX, oldY, oldZ);
             });
+        }
+
+        void build(GameTestHelper helper) {
+            prepare(helper);
             for (int dx = 0; dx <= 6; dx++) for (int dy = 0; dy <= 6; dy++) for (int dz = 0; dz <= 12; dz++) {
                 if (!world.isAirBlock(x + dx, 128 + dy, z + dz)) {
                     throw new AssertionError("Fixture space is occupied");
@@ -222,6 +419,45 @@ public final class AirlockGuiGameTests {
             BlockPos pos = new BlockPos(x + dx, 128 + dy, z + dz);
             if (!placed.contains(pos)) placed.add(pos);
             world.setBlock(pos.x(), pos.y(), pos.z(), block, meta, 3);
+        }
+
+        void clearBlocks() {
+            for (BlockPos pos : placed) world.setBlockToAir(pos.x(), pos.y(), pos.z());
+            placed.clear();
+        }
+
+        void prepareConstruction(ForgeDirection facing) {
+            place(1, 3, 6, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0);
+            lock().setFacing(facing);
+            TileEntityAirlock.STRUCTURE_DEFINITION.iterate(
+                TileEntityAirlock.STRUCTURE_PIECE_MAIN,
+                world,
+                lock().getCurrentFacing(),
+                x + 1,
+                131,
+                z + 6,
+                TileEntityAirlock.CONTROLLER_OFFSET_X,
+                TileEntityAirlock.CONTROLLER_OFFSET_Y,
+                TileEntityAirlock.CONTROLLER_OFFSET_Z,
+                (_, _, bx, by, bz, _, _, _) -> {
+                    BlockPos pos = new BlockPos(bx, by, bz);
+                    if (!placed.contains(pos)) {
+                        if (!world.isAirBlock(bx, by, bz)) throw new AssertionError("Construction space is occupied");
+                        placed.add(pos);
+                    }
+                    return true;
+                });
+        }
+
+        InventoryBasic materials() {
+            InventoryBasic inventory = new InventoryBasic("Airlock materials", false, 2);
+            inventory.setInventorySlotContents(0, new ItemStack(GalaxiaBlocksEnum.AIRLOCK_CASING.get(), 64));
+            inventory.setInventorySlotContents(1, new ItemStack(GalaxiaBlocksEnum.AIRLOCK_DOOR.get(), 64));
+            return inventory;
+        }
+
+        ISurvivalBuildEnvironment buildEnvironment() {
+            return ISurvivalBuildEnvironment.create(IItemSource.fromInventory(materials()), player);
         }
 
         TileEntityAirlock lock() {
@@ -295,6 +531,14 @@ public final class AirlockGuiGameTests {
             BlockAirlockDoor door = (BlockAirlockDoor) GalaxiaBlocksEnum.AIRLOCK_DOOR.get();
             if (door.isOpen(world, x + 3, 131, z + 6) != expected) {
                 throw new AssertionError("Door blocks disagree with the controller");
+            }
+        }
+
+        void assertClientOpen(boolean expected) {
+            if (!(Minecraft.getMinecraft().theWorld.getTileEntity(x + 1, 131, z + 6) instanceof TileEntityAirlock lock)
+                || !lock.isStructureValid()
+                || lock.isOpen() != expected) {
+                throw new AssertionError("Client controller must display open=" + expected);
             }
         }
     }

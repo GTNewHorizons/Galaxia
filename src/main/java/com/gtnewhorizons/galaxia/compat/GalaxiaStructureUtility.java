@@ -13,6 +13,7 @@ import com.gtnewhorizon.structurelib.structure.AutoPlaceEnvironment;
 import com.gtnewhorizon.structurelib.structure.IStructureElement;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizon.structurelib.structure.adders.ITileAdder;
+import com.gtnewhorizon.structurelib.util.ItemStackPredicate.NBTMode;
 import com.gtnewhorizons.galaxia.compat.structure.IExtendedStructureElement;
 
 public class GalaxiaStructureUtility {
@@ -105,9 +106,10 @@ public class GalaxiaStructureUtility {
      * Structure element for a block whose meta must both validate against the tile entity and be recomputed for
      * placement (hints and construction). {@code validMeta} decides whether an already-placed meta is acceptable;
      * {@code placeMeta} computes the meta to place when (re)building the structure.
+     * {@code itemMeta} identifies the inventory item consumed during survival construction.
      */
-    public static <T> IExtendedStructureElement<T> ofBlockWithMeta(Block block, BiPredicate<T, Integer> validMeta,
-        ToIntFunction<T> placeMeta) {
+    public static <T> IExtendedStructureElement<T> ofBlockWithMeta(Block block, int itemMeta,
+        BiPredicate<T, Integer> validMeta, ToIntFunction<T> placeMeta) {
         if (block == null || validMeta == null || placeMeta == null) {
             throw new IllegalArgumentException();
         }
@@ -142,9 +144,12 @@ public class GalaxiaStructureUtility {
             @Override
             public IStructureElement.PlaceResult survivalPlaceBlock(T t, World world, int x, int y, int z,
                 ItemStack trigger, AutoPlaceEnvironment env) {
-                return StructureUtility.survivalPlaceBlock(
-                    block,
-                    placeMeta.applyAsInt(t),
+                if (check(t, world, x, y, z)) return PlaceResult.SKIP;
+                PlaceResult result = StructureUtility.survivalPlaceBlock(
+                    new ItemStack(block, 1, itemMeta),
+                    NBTMode.EXACT,
+                    null,
+                    false,
                     world,
                     x,
                     y,
@@ -152,6 +157,10 @@ public class GalaxiaStructureUtility {
                     env.getSource(),
                     env.getActor(),
                     env.getChatter());
+                if (result == PlaceResult.ACCEPT && world.getBlock(x, y, z) == block) {
+                    world.setBlockMetadataWithNotify(x, y, z, placeMeta.applyAsInt(t), 3);
+                }
+                return result;
             }
         };
     }

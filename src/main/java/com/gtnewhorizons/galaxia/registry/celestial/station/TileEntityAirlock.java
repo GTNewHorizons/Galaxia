@@ -119,6 +119,7 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
             'D',
             GalaxiaStructureUtility.ofBlockWithMeta(
                 GalaxiaBlocksEnum.AIRLOCK_DOOR.get(),
+                0,
                 (t, meta) -> BlockAirlockDoor.getOrientation(meta) == BlockAirlockDoor.orientationForAxis(
                     t.getCurrentFacing()
                         .getRelativeBackInWorld()),
@@ -293,7 +294,7 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
      * and behind the wall so that players approaching from either side are detected.
      */
     private AxisAlignedBB computeDoorwayAABB() {
-        if (xMin == INVALID || xMax == INVALID || yMin == INVALID || yMax == INVALID) return null;
+        if (xMin >= xMax || yMin >= yMax) return null;
 
         double[] bounds = { Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE, -Double.MAX_VALUE, -Double.MAX_VALUE,
             -Double.MAX_VALUE };
@@ -501,6 +502,7 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
     }
 
     private void setDoorState(boolean open) {
+        boolean changed = isOpen() != open;
         state = open ? AirlockState.OPEN : AirlockState.CLOSED;
         if (!open) manualSealOverride = false;
 
@@ -532,6 +534,9 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
         // doorBounds[4], doorBounds[5]);
         notifyDirtySeal();
         this.markDirty();
+        if (changed && worldObj != null && !worldObj.isRemote) {
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        }
     }
 
     private void notifyDirtySeal() {
