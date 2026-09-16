@@ -3,14 +3,11 @@ package com.gtnewhorizons.galaxia.compat;
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTech5UnofficialNewHorizonsLoaded;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 
@@ -21,8 +18,14 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import gregtech.api.enums.Materials;
 import gregtech.api.enums.OreMixes;
 import gregtech.api.enums.OrePrefixes;
+import gregtech.api.enums.SmallOres;
+import gregtech.api.enums.StoneCategory;
+import gregtech.api.enums.StoneType;
+import gregtech.api.interfaces.IOreMaterial;
 import gregtech.api.util.GTOreDictUnificator;
 import gregtech.common.OreMixBuilder;
+import gregtech.common.ores.OreInfo;
+import gregtech.common.ores.OreManager;
 
 public final class GTCompat {
 
@@ -31,52 +34,46 @@ public final class GTCompat {
 
     private GTCompat() {}
 
-    public static List<String> getGtVeinOres(@Nonnull String veinId) {
-        if (!isGregTech5UnofficialNewHorizonsLoaded() || veinId.isEmpty()) return List.of();
+    public static List<ItemStack> getGtOreDepositStacks(@Nonnull String... depositIds) {
+        if (!isGregTech5UnofficialNewHorizonsLoaded()) return List.of();
 
-        OreMixes oreMix = null;
-        for (OreMixes mix : OreMixes.values()) {
-            OreMixBuilder builder = mix.oreMixBuilder;
-            if (builder != null && veinId.equals(builder.oreMixName)) {
-                oreMix = mix;
+        List<ItemStack> ores = new ArrayList<>();
+        for (String depositId : depositIds) {
+            if (depositId == null || depositId.isEmpty()) continue;
+            if (depositId.startsWith("ore.small.")) {
+                ItemStack stack = getSmallOreStack(depositId);
+                if (stack != null) ores.add(stack);
+                continue;
+            }
+            for (OreMixes mix : OreMixes.values()) {
+                OreMixBuilder builder = mix.oreMixBuilder;
+                if (builder == null || !depositId.equals(builder.oreMixName)) continue;
+                OrePrefixes prefix = builder.stoneCategories.contains(StoneCategory.Ice) ? OrePrefixes.orePackedIce
+                    : OrePrefixes.ore;
+                for (var material : new IOreMaterial[] { builder.primary, builder.secondary, builder.between,
+                    builder.sporadic }) {
+                    if (material == null) continue;
+                    ItemStack stack = material.getPart(prefix, 1);
+                    if (stack != null) ores.add(stack);
+                }
                 break;
             }
         }
-        if (oreMix == null) return List.of();
-
-        OreMixBuilder builder = oreMix.oreMixBuilder;
-        if (builder == null) return List.of();
-
-        List<String> ores = new ArrayList<>();
-        ores.add(getMaterialName(builder.primary));
-        ores.add(getMaterialName(builder.secondary));
-        ores.add(getMaterialName(builder.between));
-        ores.add(getMaterialName(builder.sporadic));
-        ores.removeIf(s -> s == null || s.isEmpty());
-        return Collections.unmodifiableList(ores);
+        return ores;
     }
 
-    private static String getMaterialName(Object material) {
-        if (material == null) return "";
-        try {
-            Materials mat = (Materials) material;
-            String internalName = mat.getInternalName();
-            if (internalName != null && !internalName.isEmpty()) return internalName;
-            String localizedName = mat.getLocalizedName();
-            if (localizedName != null && !localizedName.isEmpty()) return localizedName;
-        } catch (Exception ignored) {}
-        return material.toString();
-    }
-
-    public static List<ItemStack> getGtOreDepositStacks(@Nonnull String... veinIDs) {
-        return Arrays.stream(veinIDs)
-            .filter(id -> id != null && !id.isEmpty())
-            .map(GTCompat::getGtVeinOres)
-            .flatMap(
-                ores -> ores.stream()
-                    .map(GTCompat::getGtOreStack))
-            .filter(stack -> stack != null)
-            .collect(Collectors.toList());
+    private static ItemStack getSmallOreStack(String depositId) {
+        for (SmallOres ore : SmallOres.values()) {
+            var builder = ore.smallOreBuilder;
+            if (!depositId.equals(builder.smallOreName)) continue;
+            try (OreInfo<IOreMaterial> info = OreInfo.getNewInfo()) {
+                info.material = builder.ore;
+                info.stoneType = StoneType.Stone;
+                info.isSmall = true;
+                return OreManager.getStack(info, 1);
+            }
+        }
+        return null;
     }
 
     public static List<ItemStack> getGtOreStacks(@Nonnull String... materialNames) {
