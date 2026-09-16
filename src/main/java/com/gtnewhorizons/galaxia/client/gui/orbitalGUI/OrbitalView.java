@@ -31,6 +31,7 @@ import com.cleanroommc.modularui.screen.viewport.LocatedWidget;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.GlStateManager;
+import com.cleanroommc.modularui.utils.Interpolation;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
@@ -203,6 +204,12 @@ public class OrbitalView {
 
     public static final class OrbitalViewState {
 
+        private static final long FOLLOW_CLICK_GRACE_NANOS = 50_000_000L;
+        private static final long FOLLOW_CENTER_DURATION_NANOS = 300_000_000L;
+        private boolean centeringOnFollowedBody;
+        private long followStartedNanos;
+        private double followOffsetX, followOffsetY;
+
         double cameraX, cameraY, zoomLevel, targetCameraX, targetCameraY, targetZoomLevel, isometricProgress,
             targetIsometricProgress;
 
@@ -212,8 +219,10 @@ public class OrbitalView {
         }
 
         void step(double lerpSpeed) {
-            cameraX = lerp(cameraX, targetCameraX, lerpSpeed);
-            cameraY = lerp(cameraY, targetCameraY, lerpSpeed);
+            if (!centeringOnFollowedBody) {
+                cameraX = lerp(cameraX, targetCameraX, lerpSpeed);
+                cameraY = lerp(cameraY, targetCameraY, lerpSpeed);
+            }
             zoomLevel = lerp(zoomLevel, targetZoomLevel, lerpSpeed);
             isometricProgress = lerp(isometricProgress, targetIsometricProgress, lerpSpeed);
         }
@@ -227,12 +236,14 @@ public class OrbitalView {
         }
 
         void reset(boolean resetCameraToOrigin) {
+            centeringOnFollowedBody = false;
             isometricProgress = 0.0;
             targetIsometricProgress = 0.0;
             if (resetCameraToOrigin) setCamera(0.0, 0.0);
         }
 
         void setCamera(double x, double y) {
+            centeringOnFollowedBody = false;
             cameraX = x;
             cameraY = y;
             targetCameraX = x;
@@ -240,13 +251,49 @@ public class OrbitalView {
         }
 
         void syncCameraToTarget() {
+            centeringOnFollowedBody = false;
             cameraX = targetCameraX;
             cameraY = targetCameraY;
         }
 
+        void beginFollowing(double x, double y, long nowNanos) {
+            targetCameraX = x;
+            targetCameraY = y;
+            followOffsetX = x - cameraX;
+            followOffsetY = y - cameraY;
+            followStartedNanos = nowNanos;
+            centeringOnFollowedBody = true;
+        }
+
+        void beginLayerTransition(double x, double y) {
+            centeringOnFollowedBody = false;
+            targetCameraX = x;
+            targetCameraY = y;
+            targetZoomLevel = zoomLevel;
+            targetIsometricProgress = 0.0;
+        }
+
+        void follow(double x, double y, long nowNanos) {
+            targetCameraX = x;
+            targetCameraY = y;
+            double remaining = 0.0;
+            if (centeringOnFollowedBody) {
+                double progress = Math.max(
+                    0.0,
+                    Math.min(
+                        1.0,
+                        (double) (nowNanos - followStartedNanos - FOLLOW_CLICK_GRACE_NANOS)
+                            / FOLLOW_CENTER_DURATION_NANOS));
+                remaining = Interpolation.QUINT_INOUT.interpolate(1f, 0f, (float) progress);
+                centeringOnFollowedBody = progress < 1.0;
+            }
+            // Preserve the body's screen offset during the click grace period, including orbital movement.
+            cameraX = x - followOffsetX * remaining;
+            cameraY = y - followOffsetY * remaining;
+        }
+
         void syncToTargets() {
-            cameraX = targetCameraX;
-            cameraY = targetCameraY;
+            syncCameraToTarget();
             zoomLevel = targetZoomLevel;
             isometricProgress = targetIsometricProgress;
         }
@@ -358,7 +405,7 @@ public class OrbitalView {
         @FunctionalInterface
         public interface BodySelectionListener {
 
-            void onBodySelected(CelestialObject body);
+            void onBodySelected(CelestialObject body, boolean enterSystem);
         }
 
         private final CelestialObject root;
@@ -1059,9 +1106,11 @@ public class OrbitalView {
                 transitionState = transitionState
                     .beginPending(targetLayer, anchorBody, viewState.zoomLevel, transitionTargetZoom);
                 pendingFocusBody = null;
-                viewState.targetIsometricProgress = 0.0;
-                centerOnBody(anchorBody);
-                viewState.targetZoomLevel = transitionTargetZoom;
+                focusedBody = anchorBody;
+                focusedTransfer = null;
+                isFollowing = false;
+                double[] pos = getAbsoluteWorldPos(anchorBody);
+                if (pos != null) viewState.beginLayerTransition(pos[0], pos[1]);
                 return;
             }
             applyLayerSwitch(targetLayer, targetLayer);
@@ -1170,6 +1219,7 @@ public class OrbitalView {
                 lastMouseY = pressMouseY;
                 InterplanetaryTransferJob clickedTransfer = findTransferAtLocal(pressMouseX, pressMouseY);
                 if (clickedTransfer != null) {
+                    viewState.centeringOnFollowedBody = false;
                     focusedTransfer = clickedTransfer;
                     focusedBody = null;
                     isFollowing = true;
@@ -1335,8 +1385,7 @@ public class OrbitalView {
             if (dx == 0.0 && dy == 0.0) return;
             viewState.cameraX -= dx / getScale();
             viewState.cameraY -= dy / getScale();
-            viewState.targetCameraX = viewState.cameraX;
-            viewState.targetCameraY = viewState.cameraY;
+            viewState.setCamera(viewState.cameraX, viewState.cameraY);
             isFollowing = false;
             focusedTransfer = null;
             planetTrackingController.onManualCameraMoved();
@@ -1504,13 +1553,17 @@ public class OrbitalView {
             OrbitalPlanetTrackingController.ClickAction action = planetTrackingController
                 .clickBody(clickedBody, opensSystemFromGalaxy);
             switch (action) {
-                case TRACK_ONLY -> centerOnBody(clickedBody);
+                case TRACK_ONLY -> {
+                    centerOnBody(clickedBody);
+                    if (bodySelectionListener != null) bodySelectionListener.onBodySelected(clickedBody, false);
+                }
                 case FOCUS_AND_SELECT -> {
                     focusOn(clickedBody);
-                    if (bodySelectionListener != null) bodySelectionListener.onBodySelected(clickedBody);
+                    if (bodySelectionListener != null) bodySelectionListener.onBodySelected(clickedBody, false);
                 }
                 case SELECT_ONLY -> {
-                    if (bodySelectionListener != null) bodySelectionListener.onBodySelected(clickedBody);
+                    if (bodySelectionListener != null)
+                        bodySelectionListener.onBodySelected(clickedBody, opensSystemFromGalaxy);
                 }
             }
             return true;
@@ -1526,14 +1579,12 @@ public class OrbitalView {
 
         private void centerOnBody(CelestialObject body) {
             if (body == null) return;
+            boolean changedTarget = !isFollowing || !sameBody(focusedBody, body);
             focusedBody = body;
             focusedTransfer = null;
             isFollowing = true;
             double[] pos = getAbsoluteWorldPos(body);
-            if (pos != null) {
-                viewState.targetCameraX = pos[0];
-                viewState.targetCameraY = pos[1];
-            }
+            if (pos != null && changedTarget) viewState.beginFollowing(pos[0], pos[1], System.nanoTime());
             viewState.targetIsometricProgress = 0.0;
         }
 
@@ -1543,6 +1594,7 @@ public class OrbitalView {
         }
 
         private void setFocusImmediately(CelestialObject body) {
+            viewState.centeringOnFollowedBody = false;
             focusedBody = body;
             focusedTransfer = null;
             isFollowing = true;
@@ -1774,6 +1826,7 @@ public class OrbitalView {
                 pendingFocusBody = null;
             }
             if (transitionState.hasPending() && isReadyForPendingLayerSwitch()) {
+                viewState.syncCameraToTarget();
                 CelestialObject targetLayer = transitionState.pendingTarget();
                 CelestialObject anchorBody = transitionState.pendingAnchor();
                 float currentAnchorSpriteSize = getDisplaySpriteSize(anchorBody);
@@ -1798,9 +1851,7 @@ public class OrbitalView {
             } else if (isFollowing && focusedBody != null) {
                 double[] pos = getAbsoluteWorldPos(focusedBody);
                 if (pos != null) {
-                    viewState.targetCameraX = pos[0];
-                    viewState.targetCameraY = pos[1];
-                    viewState.syncCameraToTarget();
+                    viewState.follow(pos[0], pos[1], System.nanoTime());
                 }
             }
             Gui.drawRect(0, 0, getArea().width, getArea().height, EnumColors.MapBackground.getColor());

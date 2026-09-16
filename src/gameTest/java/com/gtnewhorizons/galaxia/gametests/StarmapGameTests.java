@@ -17,13 +17,18 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import org.lwjgl.input.Keyboard;
 
 import com.cleanroommc.modularui.screen.viewport.LocatedWidget;
+import com.cleanroommc.modularui.utils.TreeUtil;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
+import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.CelestialSidebarWidget;
+import com.gtnewhorizons.galaxia.compat.GTCompat;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.network.AssetStateSync;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
@@ -34,8 +39,14 @@ import com.gtnewhorizons.horizonqa.api.client.ClickTarget;
 import com.gtnewhorizons.horizonqa.api.client.ClientTarget;
 import com.gtnewhorizons.horizonqa.api.client.ClientTest;
 
+import bartworks.system.material.WerkstoffLoader;
 import codechicken.nei.LayoutManager;
 import codechicken.nei.NEIClientConfig;
+import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
+import cpw.mods.fml.common.gameevent.TickEvent;
+import gregtech.api.enums.OrePrefixes;
+import gregtech.api.util.GTUtility;
 
 @GameTestHolder(value = "galaxia", clientOnly = true, requiredMods = { "gregtech", "NotEnoughItems" })
 public final class StarmapGameTests {
@@ -43,6 +54,290 @@ public final class StarmapGameTests {
     private static final CelestialObjectKey BODY = CelestialObjectKey.registered(CelestialObjectId.OVERWORLD);
 
     private StarmapGameTests() {}
+
+    /** Bug regression: Ross and Ra ore pools resolve to real items, including BartWorks ores. */
+    @GameTest(timeoutTicks = 300)
+    public static void rossAndRaOrePoolsResolveRegisteredItems(GameTestHelper helper) {
+        GuiTestSupport.openMap(helper)
+            .client("registered planetary resources are available without discovery", c -> {
+                for (var id : List.of(
+                    CelestialObjectId.ROSS_128_B,
+                    CelestialObjectId.ROSS_128_BA,
+                    CelestialObjectId.HORUS,
+                    CelestialObjectId.ANUBIS,
+                    CelestialObjectId.NEPER,
+                    CelestialObjectId.MAAHES,
+                    CelestialObjectId.SETH,
+                    CelestialObjectId.MEHEN_BELT)) {
+                    var properties = CelestialRegistry.get(id)
+                        .orElseThrow()
+                        .properties();
+                    for (String vein : properties.gtOreDepositIds()) {
+                        if (GTCompat.getGtOreDepositStacks(vein)
+                            .isEmpty()) throw new AssertionError(id + ": no registered ore items for " + vein);
+                    }
+                }
+                var thorianite = WerkstoffLoader.Thorianit.get(OrePrefixes.ore);
+                if (thorianite == null) throw new AssertionError("BartWorks thorianite ore is not registered");
+                var rossOres = CelestialRegistry.get(CelestialObjectId.ROSS_128_B)
+                    .orElseThrow()
+                    .properties()
+                    .getResolvedGtOreStacks();
+                if (rossOres.stream()
+                    .noneMatch(ore -> GTUtility.areStacksEqual(ore, thorianite)))
+                    throw new AssertionError("Ross 128 b is missing its BartWorks thorianite ore");
+            })
+            .succeed();
+    }
+
+    /** Integration contract: each mapped system can be entered from the galaxy and exposes its planets. */
+    @GameTest(timeoutTicks = 2400)
+    public static void everyMappedSystemOpensThroughGalaxyNavigation(GameTestHelper helper) {
+        var sequence = GuiTestSupport.openMap(helper);
+        for (var id : List.of(
+            CelestialObjectId.VEGA,
+            CelestialObjectId.BARNARDA,
+            CelestialObjectId.TCETI_A,
+            CelestialObjectId.ALPHA_CENTAURI_A,
+            CelestialObjectId.ROSS_128,
+            CelestialObjectId.RA,
+            CelestialObjectId.VAEL,
+            CelestialObjectId.ILIA,
+            CelestialObjectId.SOL)) {
+            var key = CelestialObjectKey.registered(id);
+            sequence.click(ClientTarget.of("galaxy", c -> sidebarLayerTarget(false)))
+                .click(ClientTarget.of("star " + id, c -> GuiTestSupport.bodyTarget(key)))
+                .click(ClientTarget.of("enter " + id, c -> sidebarLayerTarget(true)))
+                .awaitClient("system and planets visible: " + id, c -> {
+                    var map = GuiTestSupport.map();
+                    if (!key.equals(
+                        map.getViewRoot()
+                            .key()))
+                        throw new AssertionError("Wrong system for " + id);
+                    var planets = CelestialRegistry.getChildren(key)
+                        .stream()
+                        .filter(
+                            body -> body.objectClass() == CelestialObject.Class.PLANET
+                                || body.objectClass() == CelestialObject.Class.GAS_GIANT)
+                        .toList();
+                    if (planets.isEmpty()) throw new AssertionError("Empty system: " + id);
+                    if (planets.stream()
+                        .noneMatch(planet -> map.visibleBodyBounds(planet.key()) != null))
+                        throw new AssertionError("No planet markers in system: " + id);
+                });
+        }
+        // The whole-system view includes Eris. Inner planets become individually visible after zooming.
+        sequence.awaitClient("Sol overview settled before zoom", c -> {
+            if (Math.abs(
+                GuiTestSupport.map()
+                    .getDisplayZoomMultiplier() - 1.0)
+                > 0.01) throw new AssertionError("Sol overview is still zooming");
+        });
+        for (int step = 0; step < 24; step++) {
+            sequence.step("zoom into the inner Solar System")
+                .scroll(
+                    ClientTarget.of(
+                        "Sol",
+                        c -> GuiTestSupport.bodyTarget(CelestialObjectKey.registered(CelestialObjectId.SOL))),
+                    120);
+        }
+        sequence.awaitClient("Mercury visible after zoom", c -> {
+            if (GuiTestSupport.map()
+                .visibleBodyBounds(CelestialObjectKey.registered(CelestialObjectId.MERCURY)) == null)
+                throw new AssertionError("Missing Mercury marker after zoom");
+        })
+            .succeed();
+    }
+
+    /** Bug regression: selecting a star changes the system button destination without entering immediately. */
+    @GameTest(timeoutTicks = 900)
+    public static void systemButtonEntersSelectedStar(GameTestHelper helper) {
+        enterSelectedStar(helper, false);
+    }
+
+    /** Bug regression: a second click at the original position enters the selected star in Follow mode. */
+    @GameTest(timeoutTicks = 900)
+    public static void repeatedStarClickEntersSelectedSystem(GameTestHelper helper) {
+        enterSelectedStar(helper, true);
+    }
+
+    private static void enterSelectedStar(GameTestHelper helper, boolean clickStarAgain) {
+        var sequence = GuiTestSupport.openMap(helper);
+        for (CelestialObjectId id : List.of(CelestialObjectId.VEGA, CelestialObjectId.ALPHA_CENTAURI_A)) {
+            var key = CelestialObjectKey.registered(id);
+            Point originalClick = new Point();
+            Rectangle[] previousBounds = new Rectangle[1];
+            var motion = new SystemEntryMotion(key);
+            sequence.click(ClientTarget.of("galaxy layer", c -> sidebarLayerTarget(false)))
+                .awaitClient("galaxy layer visible", c -> {
+                    if (GuiTestSupport.map()
+                        .getViewRoot()
+                        .key()
+                        .registeredBodyId() != CelestialObjectId.NOVUM_CAELUM)
+                        throw new AssertionError("Galaxy button did not open the galaxy");
+                    Rectangle bounds = GuiTestSupport.map()
+                        .visibleBodyBounds(key);
+                    boolean settled = bounds != null && bounds.equals(previousBounds[0]);
+                    previousBounds[0] = bounds;
+                    if (!settled) throw new AssertionError("Star marker is still moving into the galaxy overview");
+                })
+                .client("observe system entry motion", c -> {
+                    FMLCommonHandler.instance()
+                        .bus()
+                        .register(motion);
+                    c.afterTest(
+                        () -> FMLCommonHandler.instance()
+                            .bus()
+                            .unregister(motion));
+                })
+                .async(
+                    "select star and enter its system",
+                    c -> c.click(0, "select star " + id, ignored -> GuiTestSupport.bodyTarget(key))
+                        .thenCompose(ignored -> {
+                            var context = GuiTestSupport.map()
+                                .getContext();
+                            originalClick.setLocation(context.getAbsMouseX(), context.getAbsMouseY());
+                            if (GuiTestSupport.map()
+                                .getViewRoot()
+                                .key()
+                                .registeredBodyId() != CelestialObjectId.NOVUM_CAELUM)
+                                throw new AssertionError("Following a star must not enter its system immediately");
+                            return clickStarAgain ? c.click(0, client -> originalClick)
+                                : c.click(0, "enter selected system", client -> sidebarLayerTarget(true));
+                        }))
+                .awaitClient("selected star system entered", c -> {
+                    if (!key.equals(
+                        GuiTestSupport.map()
+                            .getViewRoot()
+                            .key()))
+                        throw new AssertionError(
+                            "Did not enter " + id
+                                + " after clicking "
+                                + originalClick
+                                + ", current marker="
+                                + GuiTestSupport.map()
+                                    .visibleBodyBounds(key));
+                })
+                .client("entry keeps the star moving toward the center", c -> {
+                    FMLCommonHandler.instance()
+                        .bus()
+                        .unregister(motion);
+                    if (motion.samples < 2) throw new AssertionError("No rendered camera motion was observed");
+                    if (motion.maxRetreat > 2.0)
+                        throw new AssertionError("Star moved away from the center by " + motion.maxRetreat + " pixels");
+                });
+        }
+        sequence.succeed();
+    }
+
+    /** Bug regression probe: observe the rendered marker, without changing camera state or input. */
+    public static final class SystemEntryMotion {
+
+        private final CelestialObjectKey key;
+        private double previousDistance = Double.NaN;
+        private double maxRetreat;
+        private int samples;
+
+        SystemEntryMotion(CelestialObjectKey key) {
+            this.key = key;
+        }
+
+        @SubscribeEvent
+        public void rendered(TickEvent.RenderTickEvent event) {
+            if (event.phase != TickEvent.Phase.END) return;
+            var map = GuiTestSupport.map();
+            if (map == null || map.getViewRoot()
+                .objectClass() != CelestialObject.Class.GALAXY
+                || map.getFocusedBody() == null
+                || !key.equals(
+                    map.getFocusedBody()
+                        .key()))
+                return;
+            Rectangle bounds = map.visibleBodyBounds(key);
+            if (bounds == null) return;
+            double distance = Math.hypot(
+                bounds.getCenterX() - map.getArea().width / 2.0,
+                bounds.getCenterY() - map.getArea().height / 2.0);
+            if (samples > 0) maxRetreat = Math.max(maxRetreat, distance - previousDistance);
+            previousDistance = distance;
+            samples++;
+        }
+    }
+
+    private static ClickTarget sidebarLayerTarget(boolean system) {
+        var screen = GuiTestSupport.requireScreen("galactic_orbital_map");
+        var sidebar = TreeUtil.flatListByType(screen.getMainPanel(), CelestialSidebarWidget.class)
+            .getFirst();
+        var matrix = LocatedWidget.of(sidebar)
+            .getTransformationMatrix();
+        return new ClickTarget(
+            sidebar,
+            new Rectangle(matrix.transformX(system ? 110 : 40, 23), matrix.transformY(system ? 110 : 40, 23), 1, 1),
+            () -> sidebar.isValid() && sidebar.getPanel()
+                .isBelowMouse(sidebar));
+    }
+
+    /** Integration contract: registered planets and moons remain selectable through live map input. */
+    @GameTest(timeoutTicks = 1800)
+    public static void selectsSolarSystemAndNearbyBodies(GameTestHelper helper) {
+        var sequence = GuiTestSupport.openMap(helper);
+        for (CelestialObjectId id : List.of(
+            CelestialObjectId.MERCURY,
+            CelestialObjectId.JUPITER,
+            CelestialObjectId.IO,
+            CelestialObjectId.PLUTO,
+            CelestialObjectId.BARNARD_C,
+            CelestialObjectId.CENTAURI_BB,
+            CelestialObjectId.TCETI_E,
+            CelestialObjectId.VEGA_B)) {
+            CelestialObjectKey key = CelestialObjectKey.registered(id);
+            sequence.client("prepare parent view for " + id, c -> {
+                var body = CelestialRegistry.get(key)
+                    .orElseThrow();
+                var parent = CelestialRegistry.get(body.parentKey())
+                    .orElseThrow();
+                GuiTestSupport.map()
+                    .showLayer(parent);
+                GuiTestSupport.map()
+                    .focusOn(parent);
+            })
+                .awaitClient("parent overview settled", c -> {
+                    if (Math.abs(
+                        GuiTestSupport.map()
+                            .getDisplayZoomMultiplier() - 1.0)
+                        > 0.01) {
+                        throw new AssertionError("Parent overview is still zooming");
+                    }
+                });
+            int zoomSteps = switch (id) {
+                case MERCURY -> 24;
+                case JUPITER -> 8;
+                default -> -4;
+            };
+            for (int step = 0; step < Math.abs(zoomSteps); step++) {
+                sequence.step("frame the orbit of " + id)
+                    .scroll(
+                        ClientTarget.of(
+                            "parent of " + id,
+                            c -> GuiTestSupport.bodyTarget(
+                                CelestialRegistry.get(key)
+                                    .orElseThrow()
+                                    .parentKey())),
+                        zoomSteps > 0 ? 120 : -120);
+            }
+            sequence.withinTicks(200)
+                .step("select " + id + " through map input")
+                .click(ClientTarget.of("orbital body " + id, c -> GuiTestSupport.bodyTarget(key)))
+                .awaitClient(id + " selected", c -> {
+                    var selected = GuiTestSupport.map()
+                        .getFocusedBody();
+                    if (selected == null || !key.equals(selected.key())) {
+                        throw new AssertionError("Map input did not select " + id);
+                    }
+                });
+        }
+        sequence.succeed();
+    }
 
     /** Integration contract: text entry owns keys while focused, and screen shortcuts execute once elsewhere. */
     @GameTest(timeoutTicks = 600)
