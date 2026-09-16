@@ -17,14 +17,13 @@ import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import lombok.Setter;
 
+// TODO: Remove this completely, for now it stays since it's used in the rooms GUI
 public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncHandler> {
 
     public static final String KEY = "station_graph_sync";
     private static final int OP_FULL_SYNC = 1;
 
-    private static volatile StationGraphSyncHandler activeClientHandler;
     private volatile EnergySnapshot snapshot = new EnergySnapshot(0, 0, 0, 0, 0, 0);
-
     private EnergySnapshot lastSent;
     private int syncTicker;
 
@@ -37,7 +36,6 @@ public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncH
     @Override
     public void init(String key, PanelSyncManager syncManager) {
         super.init(key, syncManager);
-        if (syncManager.isClient()) activeClientHandler = this;
     }
 
     @Override
@@ -53,7 +51,6 @@ public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncH
 
     @Override
     public void dispose() {
-        if (this == activeClientHandler) activeClientHandler = null;
         if (station != null) {
             station.clearActiveGraphSyncHandler(this);
             station = null;
@@ -66,9 +63,9 @@ public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncH
     }
 
     public void triggerFullSync() {
-        if (getSyncManager() == null || getSyncManager().isClient() || station == null) return;
+        if (getSyncManager() == null || getSyncManager().isClient()) return;
 
-        StationGraph graph = station.getGraph();
+        StationGraph graph = station != null ? station.getGraph() : null;
         long stored = 0, capacity = 0;
         int count = 0;
         long fluidStored = 0, fluidCapacity = 0;
@@ -127,12 +124,12 @@ public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncH
         long fluidCapacity = buf.readLong();
         int fluidCount = buf.readInt();
         snapshot = new EnergySnapshot(count, stored, capacity, fluidStored, fluidCapacity, fluidCount);
+
     }
 
     @SideOnly(Side.CLIENT)
-    public static EnergySnapshot getSnapshot() {
-        StationGraphSyncHandler h = activeClientHandler;
-        return h != null ? h.snapshot : new EnergySnapshot(0, 0, 0, 0, 0, 0);
+    public EnergySnapshot getSnapshot() {
+        return snapshot;
     }
 
     private static long saturatedAdd(long accumulator, BigInteger value) {

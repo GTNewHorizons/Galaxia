@@ -9,7 +9,6 @@ import com.gtnewhorizons.galaxia.registry.block.base.BlockConfigurable;
 import com.gtnewhorizons.galaxia.registry.block.machine.BlockOxygenCollector;
 import com.gtnewhorizons.galaxia.registry.block.machine.BlockOxygenFiller;
 import com.gtnewhorizons.galaxia.registry.block.machine.BlockOxygenPylon;
-import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockCasing;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockController;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockDoor;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockFumarole;
@@ -124,7 +123,7 @@ public enum GalaxiaBlocksEnum {
     SPACE_STATION_PANEL(new BlockCasing("space_station/space_station_panel")),
     RUSTY_IRON_BLOCK(new BlockCasing("rusty_iron_block")),
     SPACE_STATION_BLOCK(new BlockCasing("space_station/space_station_block")),
-    AIRLOCK_CASING(new BlockAirlockCasing()),
+    AIRLOCK_CASING(new BlockCasing("machine/airlock_casing")),
     LAUNCHPAD_FRAMEBOX(new BlockCasing("machine/launchpad_framebox").glass()),
     LAUNCHPAD_REINFORCEMENT(new BlockCasing("machine/launchpad_reinforcement")),
     LAUNCHPAD_ASSEMBLING_CASING(new BlockCasing("machine/launchpad_assembling_casing")),

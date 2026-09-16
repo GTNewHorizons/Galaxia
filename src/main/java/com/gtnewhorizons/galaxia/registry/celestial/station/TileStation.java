@@ -57,9 +57,14 @@ public class TileStation extends TileStationBase<TileStation> {
 
     public static final long BASE_EUT_PER_BLOCK = 8;
 
+    @Getter
     private IStationBehavior behavior = GalaxiaBehaviors.ROOM.get();
 
     private StationGraphSyncHandler activeGraphSyncHandler;
+
+    public StationGraphSyncHandler getActiveGraphSyncHandler() {
+        return activeGraphSyncHandler;
+    }
 
     public void clearActiveGraphSyncHandler(StationGraphSyncHandler handler) {
         if (activeGraphSyncHandler == handler) {
@@ -107,6 +112,10 @@ public class TileStation extends TileStationBase<TileStation> {
 
     public boolean isOxygenated() {
         return isSealed() && oxygenLevel >= 100;
+    }
+
+    public double getOxygenLevel() {
+        return oxygenLevel;
     }
 
     public void addOxygenator(int x, int y, int z) {
@@ -213,8 +222,7 @@ public class TileStation extends TileStationBase<TileStation> {
     protected boolean attemptBoot() {
         if (controllerFlag == Role.MAIN) {
             initController();
-            super.attemptBoot();
-            return true;
+            return super.attemptBoot();
         }
 
         // Try secondary boot — find an existing controller graph via airlocks
@@ -234,14 +242,12 @@ public class TileStation extends TileStationBase<TileStation> {
         }
 
         if (controllerFlag == Role.SECONDARY) {
-            super.attemptBoot();
-            return false;
+            return super.attemptBoot();
         }
 
         controllerFlag = Role.MAIN;
         initController();
-        super.attemptBoot();
-        return true;
+        return super.attemptBoot();
     }
 
     private void initController() {
@@ -324,6 +330,7 @@ public class TileStation extends TileStationBase<TileStation> {
         super.tick();
         Station station = getBackingStation();
         if (station == null) return;
+
         if (station.tryConsumeEnergy(
             oxygenators.size() * OXYGENATOR_EUT + coolingCoils.size() * COIL_COOLING_EUT
                 + heatingCoils.size() * COIL_HEATING_EUT
@@ -348,6 +355,11 @@ public class TileStation extends TileStationBase<TileStation> {
 
     public boolean isMainController() {
         return graph != null && graph.getController() == this;
+    }
+
+    /** True when this station booted as its own graph's main controller, false for absorbed secondaries. */
+    public boolean isPrimary() {
+        return controllerFlag == Role.MAIN;
     }
 
     public StationGraph getGraph() {
