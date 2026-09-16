@@ -81,59 +81,55 @@ public class AirlockGUI {
             true,
             (subSyncManager, subSyncHandler) -> buildSettingsPanel(tile, subSyncManager, subSyncHandler));
 
-        return StationPanel.defaultPanel("galaxia:airlock_controller", PANEL_WIDTH, PANEL_HEIGHT)
-            .child(
-                Flow.col()
-                    .full()
-                    .padding(PANEL_PAD)
-                    .child(
-                        new StationHeaderWidget(
-                            IKey.lang("galaxia.gui.airlock_controller.title")
-                                .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor()),
-                            new DynamicDrawable(
-                                () -> new Rectangle().color(
-                                    structureValidSync.getBoolValue() ? EnumColors.MAP_COLOR_SIGNAL_POSITIVE.getColor()
-                                        : EnumColors.MAP_COLOR_SIGNAL_NEGATIVE.getColor()))).fullWidth()
-                                            .button(StationButtonWidget.refreshButton(tile))
-                                            .button(StationButtonWidget.settingsButton(settingsHandler)))
-                    .child(
-                        new AirlockScreenWidget(
-                            roomA,
-                            roomB,
-                            doorOpenSync::getBoolValue,
-                            structureValidSync::getBoolValue).fullWidth()
-                                .height(SCREEN_HEIGHT))
-                    .child(
-                        Flow.row()
-                            // .size(PANEL_WIDTH - 2 * PANEL_PAD, TOGGLE_ROW_HEIGHT)
-                            .padding(PANEL_PAD)
-                            .coverChildren()
-                            .childPadding(TOGGLE_GAP)
-                            .child(
-                                StationButtonWidget.toggleButton(
-                                    proximityOpeningSync,
-                                    "galaxia.gui.airlock_controller.toggle.proximity_opening.tooltip",
-                                    GuiTextures.MOVE_TO))
-                            .child(
-                                StationButtonWidget.toggleButton(
-                                    proximityAutoCloseSync,
-                                    "galaxia.gui.airlock_controller.toggle.proximity_auto_close.tooltip",
-                                    GuiTextures.STOP))
-                            .child(
-                                StationButtonWidget.toggleButton(
-                                    redstoneControlSync,
-                                    "galaxia.gui.airlock_controller.toggle.redstone_control.tooltip",
-                                    GuiTextures.WRENCH))
-                            .child(
-                                StationButtonWidget.toggleButton(
-                                    manualClickSync,
-                                    "galaxia.gui.airlock_controller.toggle.manual_click.tooltip",
-                                    GuiTextures.MAIN_HANDLE))
-                            .child(
-                                StationButtonWidget.toggleButton(
-                                    autoSealSync,
-                                    "galaxia.gui.airlock_controller.toggle.auto_seal.tooltip",
-                                    GuiTextures.LOCKED))));
+        return panel("galaxia:airlock_controller", PANEL_WIDTH, PANEL_HEIGHT).child(
+            Flow.col()
+                .full()
+                .padding(PANEL_PAD)
+                .child(
+                    new StationHeaderWidget(
+                        IKey.lang("galaxia.gui.airlock_controller.title")
+                            .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor()),
+                        new DynamicDrawable(
+                            () -> new Rectangle().color(
+                                structureValidSync.getBoolValue() ? EnumColors.MAP_COLOR_SIGNAL_POSITIVE.getColor()
+                                    : EnumColors.MAP_COLOR_SIGNAL_NEGATIVE.getColor()))).fullWidth()
+                                        .button(StationButtonWidget.refreshButton(tile))
+                                        .button(StationButtonWidget.settingsButton(settingsHandler)))
+                .child(
+                    new AirlockScreenWidget(roomA, roomB, doorOpenSync::getBoolValue, structureValidSync::getBoolValue)
+                        .fullWidth()
+                        .height(SCREEN_HEIGHT))
+                .child(
+                    Flow.row()
+                        // .size(PANEL_WIDTH - 2 * PANEL_PAD, TOGGLE_ROW_HEIGHT)
+                        .padding(PANEL_PAD)
+                        .coverChildren()
+                        .childPadding(TOGGLE_GAP)
+                        .child(
+                            StationButtonWidget.toggleButton(
+                                proximityOpeningSync,
+                                "galaxia.gui.airlock_controller.toggle.proximity_opening.tooltip",
+                                GuiTextures.MOVE_TO))
+                        .child(
+                            StationButtonWidget.toggleButton(
+                                proximityAutoCloseSync,
+                                "galaxia.gui.airlock_controller.toggle.proximity_auto_close.tooltip",
+                                GuiTextures.STOP))
+                        .child(
+                            StationButtonWidget.toggleButton(
+                                redstoneControlSync,
+                                "galaxia.gui.airlock_controller.toggle.redstone_control.tooltip",
+                                GuiTextures.WRENCH))
+                        .child(
+                            StationButtonWidget.toggleButton(
+                                manualClickSync,
+                                "galaxia.gui.airlock_controller.toggle.manual_click.tooltip",
+                                GuiTextures.MAIN_HANDLE))
+                        .child(
+                            StationButtonWidget.toggleButton(
+                                autoSealSync,
+                                "galaxia.gui.airlock_controller.toggle.auto_seal.tooltip",
+                                GuiTextures.LOCKED))));
     }
 
     /**
@@ -244,31 +240,38 @@ public class AirlockGUI {
         syncManager.syncValue("closeDelay", closeDelaySync);
         syncManager.syncValue("proximityRange", proximityRangeSync);
 
-        return StationPanel.defaultPanel("galaxia:airlock_settings", SETTINGS_WIDTH, SETTINGS_HEIGHT)
-            .child(
-                new StationSettingsWidget(
-                    IKey.lang("galaxia.gui.airlock_controller.settings.title")
-                        .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor()),
-                    settingsHandler).numberSetting(
-                        IKey.lang("galaxia.gui.airlock_controller.settings.check_interval")
-                            .color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor()),
-                        checkIntervalSync,
-                        TileEntityAirlock.MIN_CHECK_INTERVAL,
-                        TileEntityAirlock.MAX_CHECK_INTERVAL)
+        return panel("galaxia:airlock_settings", SETTINGS_WIDTH, SETTINGS_HEIGHT).child(
+            new StationSettingsWidget(
+                IKey.lang("galaxia.gui.airlock_controller.settings.title")
+                    .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor()),
+                settingsHandler).numberSetting(
+                    IKey.lang("galaxia.gui.airlock_controller.settings.check_interval")
+                        .color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor()),
+                    checkIntervalSync,
+                    TileEntityAirlock.MIN_CHECK_INTERVAL,
+                    TileEntityAirlock.MAX_CHECK_INTERVAL)
 
-                        .numberSetting(
-                            IKey.lang("galaxia.gui.airlock_controller.settings.close_delay")
-                                .color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor()),
-                            closeDelaySync,
-                            TileEntityAirlock.MIN_CLOSE_DELAY,
-                            TileEntityAirlock.MAX_CLOSE_DELAY)
-                        .numberSetting(
-                            IKey.lang("galaxia.gui.airlock_controller.settings.proximity_range")
-                                .color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor()),
-                            proximityRangeSync,
-                            TileEntityAirlock.MIN_PROXIMITY_RANGE,
-                            TileEntityAirlock.MAX_PROXIMITY_RANGE)
-                        .footer(resetButton(checkIntervalSync, closeDelaySync, proximityRangeSync).marginTop(4)));
+                    .numberSetting(
+                        IKey.lang("galaxia.gui.airlock_controller.settings.close_delay")
+                            .color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor()),
+                        closeDelaySync,
+                        TileEntityAirlock.MIN_CLOSE_DELAY,
+                        TileEntityAirlock.MAX_CLOSE_DELAY)
+                    .numberSetting(
+                        IKey.lang("galaxia.gui.airlock_controller.settings.proximity_range")
+                            .color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor()),
+                        proximityRangeSync,
+                        TileEntityAirlock.MIN_PROXIMITY_RANGE,
+                        TileEntityAirlock.MAX_PROXIMITY_RANGE)
+                    .footer(resetButton(checkIntervalSync, closeDelaySync, proximityRangeSync).marginTop(4)));
+    }
+
+    private static ModularPanel panel(String name, int width, int height) {
+        return new ModularPanel(name).size(width, height)
+            .background(
+                new Rectangle().color(EnumColors.STATION_PANEL_BG.getColor()),
+                new Rectangle().hollow(2)
+                    .color(EnumColors.AIRLOCK_PANEL_BORDER.getColor()));
     }
 
     private static ButtonWidget<?> resetButton(IntSyncValue checkIntervalSync, IntSyncValue closeDelaySync,
