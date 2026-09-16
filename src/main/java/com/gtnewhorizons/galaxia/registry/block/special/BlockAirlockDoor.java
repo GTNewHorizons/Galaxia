@@ -116,7 +116,9 @@ public class BlockAirlockDoor extends BlockOpenable {
     @Override
     public void setOpen(World world, int x, int y, int z, boolean open) {
         int meta = world.getBlockMetadata(x, y, z);
-        world.setBlockMetadataWithNotify(x, y, z, encodeMeta(open, getOrientation(meta)), 3);
+        if (world.setBlockMetadataWithNotify(x, y, z, encodeMeta(open, getOrientation(meta)), 3)) {
+            world.func_147451_t(x, y, z);
+        }
     }
 
     @Override

@@ -34,7 +34,6 @@ public abstract class BlockOpenable extends BlockUpdatable {
 
     @Override
     public final boolean getUseNeighborBrightness() {
-        // This propagates light updates correctly transitioning from opaque -> transparent
         return true;
     }
 
