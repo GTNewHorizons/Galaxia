@@ -68,7 +68,7 @@ public final class GTCompat {
         return material.toString();
     }
 
-    public static List<ItemStack> getGtVeinOreStacks(@Nonnull String... veinIDs) {
+    public static List<ItemStack> getGtOreDepositStacks(@Nonnull String... veinIDs) {
         return Arrays.stream(veinIDs)
             .filter(id -> id != null && !id.isEmpty())
             .map(GTCompat::getGtVeinOres)

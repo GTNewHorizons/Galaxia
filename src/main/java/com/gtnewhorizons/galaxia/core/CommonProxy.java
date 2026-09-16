@@ -146,15 +146,15 @@ public class CommonProxy {
         int stackCount = 0;
         for (CelestialObject body : GalaxiaCelestialAPI.getAll()) {
             var properties = body.properties();
-            if (!properties.hasGtOreVeinIds()) continue;
+            if (!properties.hasGtOreDepositIds()) continue;
 
             bodyCount++;
-            List<ItemStack> gtOres = properties.getResolvedGtVeinOreStacks();
+            List<ItemStack> gtOres = properties.getResolvedGtOreStacks();
             if (gtOres.isEmpty()) {
                 Galaxia.LOG.error(
                     "[GT_ORE_AUDIT] {} declares GT ore veins {} but resolved no GT ore stacks",
                     body.key(),
-                    properties.gtOreVeinIds());
+                    properties.gtOreDepositIds());
                 continue;
             }
 
@@ -163,7 +163,7 @@ public class CommonProxy {
                 "[GT_ORE_AUDIT] {} resolved {} GT ore stacks from {}",
                 body.key(),
                 gtOres.size(),
-                properties.gtOreVeinIds());
+                properties.gtOreDepositIds());
         }
         Galaxia.LOG.info(
             "[GT_ORE_AUDIT] verified {} celestial bodies with GT ore vein IDs, {} resolved stacks",

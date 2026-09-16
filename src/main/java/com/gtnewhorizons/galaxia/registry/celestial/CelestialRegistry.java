@@ -204,7 +204,7 @@ public final class CelestialRegistry {
                         .temperature(288)
                         .radiation(0.05)
                         .oreProfile("undefined")
-                        .gtOreVeinIds("ore.mix.lapis", "ore.mix.iron", "ore.mix.redstone")
+                        .gtOreDepositIds("ore.mix.lapis", "ore.mix.iron", "ore.mix.redstone")
                         .metadata("surface", "undefined")
                         .metadata("status", "placeholder_homeworld"))
                 .featureTileChance(0.20)
@@ -339,7 +339,7 @@ public final class CelestialRegistry {
                         .temperature(288)
                         .radiation(0.00)
                         .oreProfile("undefined")
-                        .gtOreVeinIds("ore.mix.lapis", "ore.mix.iron", "ore.mix.redstone")
+                        .gtOreDepositIds("ore.mix.lapis", "ore.mix.iron", "ore.mix.redstone")
                         .metadata("surface", "undefined")
                         .metadata("status", "placeholder_homeworld"))
                 .playableDimensionProfile(
