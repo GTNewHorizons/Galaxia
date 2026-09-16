@@ -30,6 +30,7 @@ final class CelestialDiscoveryScanServiceTest {
 
     private PlanetDiscoveryDomain provider;
     private CelestialDiscoveryScanService service;
+    private static final UUID CONSUMED_TEAM = new UUID(30L, 31L);
 
     @BeforeAll
     static void initCelestialRegistry() {
@@ -78,6 +79,95 @@ final class CelestialDiscoveryScanServiceTest {
         assertEquals(1, completed.size());
         assertEquals(DiscoveryState.DISCOVERED, provider.state);
         assertEquals(1, provider.completionCount);
+    }
+
+    // Product contract: identical discovery work keeps the greatest progress rather than adding it.
+    @Test
+    void teamMergeKeepsMaximumProgressForCurrentWork() {
+        service.restore(TEAM, List.of(mergeSnapshot(TEAM, SCOPE, CelestialDiscoveryStep.DETECTION, 200L)));
+        service.restore(
+            CONSUMED_TEAM,
+            List.of(mergeSnapshot(CONSUMED_TEAM, SCOPE, CelestialDiscoveryStep.DETECTION, 500L)));
+
+        service.mergeTeams(CONSUMED_TEAM, TEAM, List.of(worker(SCOPE, 1, 1.0)));
+
+        assertEquals(
+            500L,
+            service.snapshots(TEAM)
+                .get(0)
+                .elapsedTicks());
+        assertEquals(List.of(), service.snapshots(CONSUMED_TEAM));
+        service.tick(List.of(worker(SCOPE, 1, 1.0)), CelestialDiscoveryStep.DETECTION.durationTicks() - 500);
+        assertEquals(DiscoveryState.DISCOVERED, provider.state);
+    }
+
+    // Product contract: merged knowledge determines the next step, not the larger unrelated progress value.
+    @Test
+    void teamMergeUsesSelectedWorkAndCurrentWorkerScope() {
+        service.restore(TEAM, List.of(mergeSnapshot(TEAM, SCOPE, CelestialDiscoveryStep.PROFILE, 900L)));
+        service.restore(
+            CONSUMED_TEAM,
+            List.of(mergeSnapshot(CONSUMED_TEAM, SCOPE, CelestialDiscoveryStep.DETECTION, 200L)));
+        service.mergeTeams(CONSUMED_TEAM, TEAM, List.of());
+        assertEquals(
+            CelestialDiscoveryStep.DETECTION,
+            service.snapshots(TEAM)
+                .get(0)
+                .step());
+        assertEquals(
+            200L,
+            service.snapshots(TEAM)
+                .get(0)
+                .elapsedTicks());
+
+        CelestialDiscoveryScanScope currentScope = new CelestialDiscoveryScanScope(PLANET, 0.5, SCOPE.revision());
+        service.restore(TEAM, List.of(mergeSnapshot(TEAM, SCOPE, CelestialDiscoveryStep.DETECTION, 600L)));
+        service.restore(
+            CONSUMED_TEAM,
+            List.of(mergeSnapshot(CONSUMED_TEAM, currentScope, CelestialDiscoveryStep.DETECTION, 300L)));
+        service.mergeTeams(CONSUMED_TEAM, TEAM, List.of(worker(currentScope, 1, 1.0)));
+        assertEquals(
+            currentScope,
+            service.snapshots(TEAM)
+                .get(0)
+                .scope());
+        assertEquals(
+            600L,
+            service.snapshots(TEAM)
+                .get(0)
+                .elapsedTicks());
+    }
+
+    // Product contract: already discovered work becomes a completed scope after knowledge is combined.
+    @Test
+    void teamMergeRetiresProgressWhenDomainHasNoRemainingWork() {
+        service.restore(
+            CONSUMED_TEAM,
+            List.of(mergeSnapshot(CONSUMED_TEAM, SCOPE, CelestialDiscoveryStep.DETECTION, 200L)));
+        provider.state = DiscoveryState.DISCOVERED;
+
+        service.mergeTeams(CONSUMED_TEAM, TEAM, List.of());
+
+        assertEquals(
+            CelestialDiscoveryScanSnapshot.Status.COMPLETE,
+            service.snapshots(TEAM)
+                .get(0)
+                .status());
+        assertEquals(List.of(), service.snapshots(CONSUMED_TEAM));
+    }
+
+    private static CelestialDiscoveryScanSnapshot mergeSnapshot(UUID team, CelestialDiscoveryScanScope scope,
+        CelestialDiscoveryStep step, long elapsed) {
+        return new CelestialDiscoveryScanSnapshot(
+            team,
+            scope.anchorKey(),
+            scope.radius(),
+            scope.revision(),
+            CelestialDiscoveryCapability.PROSPECTING,
+            CelestialDiscoveryScanSnapshot.Status.ACTIVE,
+            PLANET,
+            step,
+            elapsed);
     }
 
     @Test

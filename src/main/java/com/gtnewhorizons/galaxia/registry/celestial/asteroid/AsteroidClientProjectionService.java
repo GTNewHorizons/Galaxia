@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.celestial.asteroid;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -18,7 +17,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
-import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryScanSnapshot;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState.CelestialDiscoveryView;
@@ -33,22 +31,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledge
  */
 public final class AsteroidClientProjectionService {
 
-    private final Map<CelestialObjectKey, CachedProjections> cache = new LinkedHashMap<>();
     private boolean includeHidden;
-
-    private record CachedProjections(List<CelestialObject> canonicalSiblings, int knowledgeRevision,
-        int discoveryRevision, List<CelestialDiscoveryScanSnapshot> scanSnapshots, boolean includeHidden,
-        List<AsteroidStarmapProjection> projections, Map<CelestialObjectKey, AsteroidStarmapProjection> byBodyId) {
-
-        boolean matches(List<CelestialObject> currentSiblings, int currentKnowledgeRevision,
-            int currentDiscoveryRevision, List<CelestialDiscoveryScanSnapshot> currentScans,
-            boolean currentIncludeHidden) {
-            return canonicalSiblings == currentSiblings && knowledgeRevision == currentKnowledgeRevision
-                && discoveryRevision == currentDiscoveryRevision
-                && scanSnapshots.equals(currentScans)
-                && includeHidden == currentIncludeHidden;
-        }
-    }
 
     /**
      * Discovery view that keeps synced {@code discoveryState} facts intact while
@@ -71,19 +54,26 @@ public final class AsteroidClientProjectionService {
         };
     }
 
-    public Optional<AsteroidStarmapProjection> projectionFor(@Nullable CelestialObject body,
+    public Map<CelestialObjectKey, AsteroidStarmapProjection> projectionLookup(@Nullable CelestialObjectKey parentKey,
         @Nonnull List<CelestialObject> canonicalSiblings, @Nonnull List<CelestialDiscoveryScanSnapshot> scanSnapshots) {
-        if (body == null || !body.key()
-            .isMinorBody()) return Optional.empty();
-        CelestialObjectKey parentKey = body.parentKey();
-        if (parentKey == null) return Optional.empty();
+        if (parentKey == null || !parentKey.isRegistered()) return Map.of();
         return CelestialRegistry.get(parentKey.registeredBodyId())
             .filter(
                 belt -> belt.properties()
                     .asteroidFieldProfile() != null)
             .map(
-                belt -> projections(belt, canonicalSiblings, scanSnapshots).byBodyId()
-                    .get(body.key()));
+                belt -> decorate(
+                    belt,
+                    canonicalSiblings,
+                    includeHidden,
+                    scanTargets(parentKey, scanSnapshots),
+                    sensorRevealTargets(belt, scanSnapshots)).stream()
+                        .collect(
+                            Collectors.toUnmodifiableMap(
+                                projection -> projection.body()
+                                    .key(),
+                                Function.identity())))
+            .orElse(Map.of());
     }
 
     public boolean includeHidden() {
@@ -92,7 +82,6 @@ public final class AsteroidClientProjectionService {
 
     public void setIncludeHidden(boolean value) {
         includeHidden = value;
-        cache.clear();
     }
 
     public void toggleIncludeHidden() {
@@ -101,42 +90,6 @@ public final class AsteroidClientProjectionService {
 
     public void clear() {
         includeHidden = false;
-        cache.clear();
-    }
-
-    private CachedProjections projections(CelestialObject belt, List<CelestialObject> canonicalSiblings,
-        List<CelestialDiscoveryScanSnapshot> scanSnapshots) {
-        int knowledgeRevision = CelestialKnowledgeClientState.revision();
-        int discoveryRevision = CelestialDiscoveryClientState.revision();
-        CachedProjections cached = cache.get(belt.key());
-        if (cached != null
-            && cached.matches(canonicalSiblings, knowledgeRevision, discoveryRevision, scanSnapshots, includeHidden))
-            return cached;
-
-        Set<MinorCelestialBodyId> scanTargets = scanTargets(belt.key(), scanSnapshots);
-        Set<MinorCelestialBodyId> sensorRevealTargets = sensorRevealTargets(belt, scanSnapshots);
-        List<AsteroidStarmapProjection> projections = decorate(
-            belt,
-            canonicalSiblings,
-            includeHidden,
-            scanTargets,
-            sensorRevealTargets);
-        Map<CelestialObjectKey, AsteroidStarmapProjection> byBodyId = projections.stream()
-            .collect(
-                Collectors.toUnmodifiableMap(
-                    projection -> projection.body()
-                        .key(),
-                    Function.identity()));
-        CachedProjections rebuilt = new CachedProjections(
-            canonicalSiblings,
-            knowledgeRevision,
-            discoveryRevision,
-            scanSnapshots,
-            includeHidden,
-            projections,
-            byBodyId);
-        cache.put(belt.key(), rebuilt);
-        return rebuilt;
     }
 
     /**
@@ -198,7 +151,6 @@ public final class AsteroidClientProjectionService {
 
         return new AsteroidStarmapProjection(
             body,
-            node.id(),
             node.kind(),
             node.sizeClass(),
             detectionState,

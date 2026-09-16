@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.celestial.knowledge;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.UUID;
 
@@ -81,6 +82,37 @@ final class CelestialKnowledgeServiceTest {
         CelestialKnowledgeService.putFacts(TEAM_A, asteroid, CelestialKnowledgeFacts.discoveredUnknown());
         assertEquals(DiscoveryState.DISCOVERED, CelestialKnowledgeService.discoveryState(TEAM_A, asteroid));
         assertEquals(DiscoveryState.HIDDEN, CelestialKnowledgeService.discoveryState(TEAM_B, asteroid));
+    }
+
+    // Product contract: merge retains both teams' effective knowledge and retires consumed facts.
+    @Test
+    void mergeUnionsStoredKnowledgeAndDefinitionDefaults() {
+        CelestialObjectKey mars = CelestialObjectKey.registered(CelestialObjectId.MARS);
+        CelestialObjectKey asteroid = CelestialObjectKey.minorBody(firstMediumHidden().id());
+        CelestialObjectKey overworld = CelestialObjectKey.registered(CelestialObjectId.OVERWORLD);
+        CelestialKnowledgeService.putFacts(TEAM_A, mars, CelestialKnowledgeFacts.hidden());
+        CelestialKnowledgeService.putFacts(
+            TEAM_A,
+            asteroid,
+            CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.PROFILE));
+        CelestialKnowledgeService.putFacts(TEAM_B, asteroid, CelestialKnowledgeFacts.discoveredUnknown());
+        CelestialKnowledgeService.putFacts(
+            TEAM_B,
+            overworld,
+            CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.PROFILE));
+
+        CelestialKnowledgeService.mergeTeams(TEAM_A, TEAM_B);
+
+        assertEquals(CelestialKnowledgeFacts.discoveredUnknown(), CelestialKnowledgeService.facts(TEAM_B, mars));
+        assertEquals(
+            CelestialResourceKnowledgeState.PROFILE,
+            CelestialKnowledgeService.resourceKnowledge(TEAM_B, asteroid));
+        assertEquals(
+            CelestialResourceKnowledgeState.PROFILE,
+            CelestialKnowledgeService.resourceKnowledge(TEAM_B, overworld));
+        assertTrue(
+            CelestialKnowledgeService.snapshot(TEAM_A)
+                .isEmpty());
     }
 
     @Test

@@ -16,6 +16,7 @@ import net.minecraft.item.ItemStack;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.value.StringValue;
@@ -27,6 +28,7 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -94,8 +96,9 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         ScrollWidget<?> scroll = new ScrollWidget<>(scrollData).pos(SCROLL_X, SCROLL_Y)
             .size(SCROLL_WIDTH, SCROLL_HEIGHT)
             .background(
-                ModuleConfigModalSupport.drawable(
-                    (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_SCROLL_BG.getColor())));
+
+                (ctx, x, y, w, h, ignoredTheme) -> Gui
+                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_SCROLL_BG.getColor()));
         scroll.child(scrollContent);
         child(scroll);
         addHeaderTooltip(NAME_X, NAME_WIDTH, "Tracked item");
@@ -176,11 +179,11 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         ParentWidget<?> row = new ParentWidget<>().widthRelOffset(1f, -SCROLLBAR_GAP)
             .height(ROW_HEIGHT)
             .background(
-                ModuleConfigModalSupport.drawable(
-                    (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())));
+
+                (ctx, x, y, w, h, ignoredTheme) -> Gui
+                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor()));
         row.child(
-            ModuleConfigModalSupport.drawable((ctx, x, y, w, h) -> drawRowText(asset, entry, x, y, w))
-                .asWidget()
+            ((IDrawable) (ctx, x, y, w, h, ignoredTheme) -> drawRowText(asset, entry, x, y, w)).asWidget()
                 .pos(0, 0)
                 .widthRel(1f)
                 .height(ROW_HEIGHT));
@@ -288,10 +291,10 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
 
     private static long stockAmount(CelestialAsset asset, ItemStackWrapper wrapper) {
         if (asset instanceof AutomatedFacility af) {
-            return af.getItemAmount(wrapper);
+            return af.itemAmount(wrapper);
         }
-        return asset.aggregatedItems()
-            .getOrDefault(wrapper, 0L);
+        return asset instanceof IDistributedInventory physicalInventory ? physicalInventory.aggregatedItems()
+            .getOrDefault(wrapper, 0L) : 0L;
     }
 
     private TextFieldWidget amountField(int rowIndex, boolean reserve) {
@@ -305,14 +308,14 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
             .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
             .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
             .background(
-                ModuleConfigModalSupport.drawable(
-                    (ctx, x, y, w, h) -> com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect.draw(
-                        x,
-                        y,
-                        w,
-                        h,
-                        EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                        EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
+
+                (ctx, x, y, w, h, ignoredTheme) -> com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect.draw(
+                    x,
+                    y,
+                    w,
+                    h,
+                    EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()))
             .value(
                 new StringValue.Dynamic(
                     () -> amountText(rowIndex, reserve),
@@ -368,9 +371,9 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         ItemStackWrapper wrapper = ItemStackWrapper.of(stack);
         if (wrapper == null) return;
         LogisticsResourceConfig existing = asset.logisticsConfig.get(wrapper);
-        LogisticsResourceConfig config = existing == LogisticsResourceConfig.DEFAULT ? defaultConfigForAccessMode()
+        LogisticsResourceConfig config = existing == LogisticsResourceConfig.DEFAULT
+            ? defaultConfigForAccessMode(asset, wrapper)
             : logisticsAccessMode().sanitize(existing);
-        asset.logisticsConfig.set(wrapper, config);
         CelestialClient.updateLogisticsConfig(asset.assetId, wrapper, config, logisticsAccessMode());
     }
 
@@ -399,7 +402,11 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         CelestialAsset asset = asset();
         if (row == null || asset == null) return;
         LogisticsResourceConfig cfg = row.getValue();
-        update(asset, row.getKey(), cfg.withImportEnabled(!cfg.isImportEnabled()));
+        boolean enabled = !cfg.isImportEnabled();
+        if (enabled && cfg.minReserve() == 0 && asset instanceof AutomatedFacility facility) {
+            cfg = cfg.withMinReserve((int) Math.min(Integer.MAX_VALUE, facility.upkeepReserve(row.getKey())));
+        }
+        update(asset, row.getKey(), cfg.withImportEnabled(enabled));
     }
 
     private void toggleExport(int rowIndex) {
@@ -415,7 +422,6 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         Map.Entry<ItemStackWrapper, LogisticsResourceConfig> row = rowEntry(rowIndex);
         CelestialAsset asset = asset();
         if (row == null || asset == null) return;
-        asset.logisticsConfig.reset(row.getKey());
         CelestialClient.removeLogisticsConfig(asset.assetId, row.getKey());
         rowSignature = "";
         refreshRows();
@@ -423,7 +429,6 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
 
     private void update(CelestialAsset asset, ItemStackWrapper wrapper, LogisticsResourceConfig config) {
         config = logisticsAccessMode().sanitize(config);
-        asset.logisticsConfig.set(wrapper, config);
         CelestialClient.updateLogisticsConfig(asset.assetId, wrapper, config, logisticsAccessMode());
     }
 
@@ -478,10 +483,9 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
     private void back() {
         ModuleInstance.ID modId = controller.moduleId();
         if (modId != null) {
-            int moduleIndex = controller.moduleIndex();
             ModuleInstance module = ModuleConfigModalSupport.module(assetId, modId);
             if (module != null && module.component() instanceof ModuleHammer) {
-                controller.openHammer(moduleIndex);
+                controller.openHammer(modId);
                 return;
             }
         }
@@ -503,16 +507,18 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         return controller.logisticsAccessMode();
     }
 
-    private LogisticsResourceConfig defaultConfigForAccessMode() {
+    private LogisticsResourceConfig defaultConfigForAccessMode(CelestialAsset asset, ItemStackWrapper item) {
+        int reserve = asset instanceof AutomatedFacility facility
+            ? (int) Math.min(Integer.MAX_VALUE, facility.upkeepReserve(item))
+            : 0;
         return logisticsAccessMode() == LogisticsConfigAccessMode.IMPORT_ONLY
-            ? new LogisticsResourceConfig(0, 64, true, false)
-            : new LogisticsResourceConfig(0, 64, false, false);
+            ? new LogisticsResourceConfig(reserve, 64, true, false)
+            : new LogisticsResourceConfig(reserve, 64, false, false);
     }
 
     private void addHeaderTooltip(int x, int width, String text) {
         child(
-            ModuleConfigModalSupport.drawable((ctx, drawX, drawY, drawW, drawH) -> {})
-                .asWidget()
+            ((IDrawable) (ctx, drawX, drawY, drawW, drawH, ignoredTheme) -> {}).asWidget()
                 .pos(SCROLL_X + x, HEADER_Y - 2)
                 .size(width, 13)
                 .tooltip(t -> t.addLine(text)));

@@ -51,14 +51,14 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
     private static final int ROW_CHECKBOX_Y_OFFSET = 2;
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
-    private final StationEditModeController editModeController;
+    private final StationTilePickerController tilePickerController;
     private final ModuleSettingsGroupSelectorWidget settingsGroupSelector;
 
     MinerBlacklistConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller,
-        StationEditModeController editModeController) {
+        StationTilePickerController tilePickerController) {
         this.assetId = assetId;
         this.controller = controller;
-        this.editModeController = editModeController;
+        this.tilePickerController = tilePickerController;
         this.settingsGroupSelector = new ModuleSettingsGroupSelectorWidget(
             assetId,
             controller,
@@ -198,9 +198,10 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
 
     private void setBlacklisted(String oreKey, boolean blacklisted) {
         ModuleInstance module = selectedModule();
-        if (module == null || !(module.component() instanceof ModuleMiner)) return;
+        AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
+        if (module == null || facility == null || !(module.component() instanceof ModuleMiner)) return;
         settingsGroupSelector.closeMenu();
-        CelestialClient.updateMinerOreBlacklisted(assetId, controller.moduleIndex(), oreKey, blacklisted);
+        CelestialClient.setMinerOreBlacklisted(assetId, controller.moduleId(), oreKey, blacklisted);
     }
 
     private void toggleFocusOre(int rowIndex) {
@@ -209,13 +210,13 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
         if (option == null || module == null || !(module.component() instanceof ModuleMiner)) return;
         settingsGroupSelector.closeMenu();
         String targetOreKey = MinerFocusUiModel.oreTargetForClick(module, option.key());
-        CelestialClient.setMinerFocusOre(assetId, controller.moduleIndex(), targetOreKey);
+        CelestialClient.setMinerFocusOre(assetId, controller.moduleId(), targetOreKey);
     }
 
     private boolean canCopySettings() {
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         ModuleInstance module = selectedModule();
-        return editModeController != null && controller.isMinerBlacklistOpen()
+        return tilePickerController != null && controller.isMinerBlacklistOpen()
             && !settingsGroupSelector.isBlockingModuleControls()
             && facility != null
             && facility.stationLayout() != null
@@ -226,16 +227,16 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
     private void startCopySettingsPicker() {
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         ModuleInstance source = selectedModule();
-        int sourceModuleIndex = controller.moduleIndex();
-        if (facility == null || source == null || editModeController == null || sourceModuleIndex < 0) return;
+        if (facility == null || source == null || tilePickerController == null) return;
         controller.close();
-        editModeController.startTileMode(
-            StationEditModeController.Mode.COPY_MODULE,
-            "Copy miner settings",
-            "Copy",
-            coord -> ModuleSettingsCopyPickerModel.isCompatibleTarget(facility, source, coord),
-            coord -> StationTargetPicker.normalizeTarget(facility, coord),
-            targets -> CelestialClient.copyModuleSettings(assetId, sourceModuleIndex, targets));
+        tilePickerController.start("Copy miner settings", "Copy", coord -> {
+            ModuleInstance target = facility.stationLayout()
+                .moduleAt(coord);
+            return target != null && facility.canCopyModuleRuntimeSettings(source, target);
+        },
+            coord -> StationTilePickerController.normalizeModuleTarget(facility, coord),
+            targets -> CelestialClient
+                .copyModuleSettings(assetId, source.id, StationTilePickerController.moduleIds(facility, targets)));
     }
 
     private boolean canUseRow(int rowIndex) {

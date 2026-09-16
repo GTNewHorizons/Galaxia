@@ -1,7 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.interfaces;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
 
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
@@ -79,5 +82,25 @@ final class ResourceFilterTest {
 
         assertTrue(restored.test(water));
         assertFalse(restored.test(FluidKey.of(new FluidStack(FluidRegistry.LAVA, 1))));
+    }
+
+    @Test
+    void loadingReplacesFilterWithoutChangingSavedConfiguration() {
+        ResourceFilter<FluidKey> filter = ResourceFilter.forFluids();
+        FluidKey water = FluidKey.of(new FluidStack(FluidRegistry.WATER, 1));
+        FluidKey lava = FluidKey.of(new FluidStack(FluidRegistry.LAVA, 1));
+        filter.add(water);
+        List<String> saved = filter.serialize();
+        filter.clear();
+        filter.add(lava);
+
+        filter.load(saved);
+
+        assertTrue(filter.test(water));
+        assertFalse(filter.test(lava));
+        assertEquals(saved, filter.serialize());
+        filter.remove(water);
+        filter.load(saved);
+        assertTrue(filter.test(water));
     }
 }

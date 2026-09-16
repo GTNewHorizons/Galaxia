@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -18,7 +17,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
@@ -237,7 +235,7 @@ final class SystemAssetPanelStressTest {
 
         private FakeAsset(Kind kind, CelestialObjectKey body, Buildable.Status status, WarningPriority warning,
             boolean mining, boolean production) {
-            super(ID.create(), body, kind, status, Collections.emptyMap());
+            super(ID.create(), body, kind, status);
             this.warning = warning;
             this.mining = mining;
             this.production = production;
@@ -260,11 +258,6 @@ final class SystemAssetPanelStressTest {
 
         @Override
         public void tick() {}
-
-        @Override
-        public long updateContents(InventoryKey item, long delta, boolean sync) {
-            return updateContents(item, delta);
-        }
 
         public String getInventoryName() {
             return "fake";

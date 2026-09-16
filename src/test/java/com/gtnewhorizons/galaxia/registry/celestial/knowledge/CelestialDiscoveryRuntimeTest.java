@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
@@ -152,6 +154,84 @@ final class CelestialDiscoveryRuntimeTest {
                 .snapshots(otherTeam)
                 .get(0)
                 .elapsedTicks());
+    }
+
+    // Integration contract: knowledge union precedes scan selection and never transfers unrelated progress.
+    @Test
+    void mergeSelectsNextUnknownTargetAfterCombiningKnowledge() {
+        UUID consumedTeam = new UUID(40L, 41L);
+        CelestialObjectKey nextTarget = CelestialObjectKey.registered(CelestialObjectId.OVERWORLD);
+        CelestialDiscoveryDomain domain = new CelestialDiscoveryDomain() {
+
+            @Override
+            public boolean ownsDiscoveryAnchor(CelestialObjectKey key) {
+                return key.equals(MARS);
+            }
+
+            @Override
+            public boolean ownsDiscoveryScope(CelestialDiscoveryScanScope scope) {
+                return scope.equals(SCOPE);
+            }
+
+            @Override
+            public OptionalLong discoveryScopeRevision(CelestialObjectKey key) {
+                return OptionalLong.of(SCOPE.revision());
+            }
+
+            @Override
+            public Optional<CelestialDiscoveryWork> nextDiscoveryWork(UUID team, CelestialDiscoveryScanScope scope) {
+                return List.of(MARS, nextTarget)
+                    .stream()
+                    .filter(key -> CelestialKnowledgeService.discoveryState(team, key) == DiscoveryState.HIDDEN)
+                    .findFirst()
+                    .map(key -> new CelestialDiscoveryWork(key, CelestialDiscoveryStep.DETECTION));
+            }
+
+            @Override
+            public void completeDiscoveryWork(UUID team, CelestialDiscoveryScanScope scope,
+                CelestialDiscoveryWork work) {
+                CelestialKnowledgeService.putFacts(team, work.targetKey(), CelestialKnowledgeFacts.discoveredUnknown());
+            }
+        };
+        CelestialDiscoveryScanService scans = new CelestialDiscoveryScanService(ignored -> domain);
+        CelestialServerRuntime mergingRuntime = new CelestialServerRuntime(scans, List::of);
+        CelestialKnowledgeService.putFacts(TEAM, MARS, CelestialKnowledgeFacts.hidden());
+        CelestialKnowledgeService.putFacts(TEAM, nextTarget, CelestialKnowledgeFacts.hidden());
+        CelestialKnowledgeService.putFacts(consumedTeam, nextTarget, CelestialKnowledgeFacts.hidden());
+        scans.restore(TEAM, List.of(activeSnapshot(TEAM, 900L)));
+        scans.restore(
+            consumedTeam,
+            List.of(
+                new CelestialDiscoveryScanSnapshot(
+                    consumedTeam,
+                    MARS,
+                    SCOPE.radius(),
+                    SCOPE.revision(),
+                    CelestialDiscoveryCapability.PROSPECTING,
+                    CelestialDiscoveryScanSnapshot.Status.ACTIVE,
+                    nextTarget,
+                    CelestialDiscoveryStep.DETECTION,
+                    200L)));
+
+        mergingRuntime.mergeTeams(consumedTeam, TEAM);
+
+        assertEquals(DiscoveryState.DISCOVERED, CelestialKnowledgeService.discoveryState(TEAM, MARS));
+        assertEquals(
+            nextTarget,
+            scans.snapshots(TEAM)
+                .get(0)
+                .targetKey());
+        assertEquals(
+            200L,
+            scans.snapshots(TEAM)
+                .get(0)
+                .elapsedTicks());
+        assertTrue(
+            scans.snapshots(consumedTeam)
+                .isEmpty());
+        assertTrue(
+            CelestialKnowledgeService.snapshot(consumedTeam)
+                .isEmpty());
     }
 
     private void addRuntimeProgress() {

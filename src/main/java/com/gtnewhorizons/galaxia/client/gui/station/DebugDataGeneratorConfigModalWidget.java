@@ -30,7 +30,7 @@ final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGe
     DebugDataGeneratorConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller) {
         this.assetId = assetId;
         this.controller = controller;
-        overlay(ModuleConfigModalSupport.drawable((ctx, x, y, w, h) -> draw()));
+        overlay((ctx, x, y, w, h, ignoredTheme) -> draw());
         addButtons();
     }
 
@@ -196,11 +196,7 @@ final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGe
     }
 
     private void apply(ModuleDebugDataGenerator.Config config) {
-        int moduleIndex = controller.moduleIndex();
-        if (moduleIndex < 0) return;
-        ModuleDebugDataGenerator generator = module();
-        if (generator != null) generator.configure(config);
-        CelestialClient.updateDebugDataGeneratorConfig(assetId, moduleIndex, config);
+        CelestialClient.updateDebugDataGeneratorConfig(assetId, controller.moduleId(), config);
     }
 
     private ModuleDebugDataGenerator.Config config() {

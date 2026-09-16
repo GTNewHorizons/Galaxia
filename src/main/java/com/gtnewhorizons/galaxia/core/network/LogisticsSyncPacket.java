@@ -5,9 +5,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import net.minecraft.client.Minecraft;
+import javax.annotation.Nullable;
 
-import org.jetbrains.annotations.UnknownNullability;
+import net.minecraft.client.Minecraft;
 
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -15,7 +15,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
-import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
@@ -28,56 +27,72 @@ import io.netty.buffer.ByteBuf;
 public final class LogisticsSyncPacket implements IMessage {
 
     private List<LogisticsDelivery> deliveries;
-    private Map<CelestialObjectKey, Map<String, Long>> bySystem;
-    private Map<CelestialObjectKey, Map<String, Long>> byPlanet;
+    private List<LogisticSignal> signals;
+    private boolean updateDeliveries = true;
+    private boolean updateSignals = true;
 
     public LogisticsSyncPacket() {}
 
-    public static LogisticsSyncPacket from(List<LogisticsDelivery> activeDeliveries) {
+    public static LogisticsSyncPacket from(List<LogisticsDelivery> activeDeliveries, List<LogisticSignal> signals) {
         LogisticsSyncPacket pkt = new LogisticsSyncPacket();
 
-        pkt.deliveries = new java.util.ArrayList<>(activeDeliveries.size());
+        pkt.deliveries = new ArrayList<>(activeDeliveries.size());
         for (LogisticsDelivery t : activeDeliveries) {
             if (t.data.resourceId() == null) continue;
-            pkt.deliveries.add(t);
+            pkt.deliveries.add(t.snapshot());
         }
 
-        pkt.bySystem = new LinkedHashMap<>();
-        pkt.byPlanet = new LinkedHashMap<>();
-
-        for (Map.Entry<CelestialObjectKey, List<LogisticSignal>> entry : LogisticStore
-            .allSignalsForScope(LogisticSignal.Scope.SYSTEM)
-            .entrySet()) {
-            CelestialObjectKey systemKey = entry.getKey();
-            Map<String, Long> systemAgg = new LinkedHashMap<>();
-            for (LogisticSignal sig : entry.getValue()) {
-                String key = sig.resourceId()
-                    .toKey();
-                systemAgg.merge(key, sig.amount(), Long::sum);
-                CelestialObjectKey anchorKey = sig.planetaryAnchorBodyKey();
-                if (anchorKey != null) {
-                    pkt.byPlanet.computeIfAbsent(anchorKey, k -> new LinkedHashMap<>())
-                        .merge(key, sig.amount(), Long::sum);
-                }
-            }
-            if (!systemAgg.isEmpty()) pkt.bySystem.put(systemKey, systemAgg);
-        }
-
+        pkt.signals = List.copyOf(signals);
         return pkt;
+    }
+
+    @Nullable
+    LogisticsSyncPacket changesSince(@Nullable LogisticsSyncPacket previous) {
+        if (previous == null) return this;
+        boolean deliveriesChanged = !sameDeliveries(previous);
+        boolean signalsChanged = !signals.equals(previous.signals);
+        if (!deliveriesChanged && !signalsChanged) return null;
+        if (deliveriesChanged && signalsChanged) return this;
+        LogisticsSyncPacket update = new LogisticsSyncPacket();
+        update.updateDeliveries = deliveriesChanged;
+        update.updateSignals = signalsChanged;
+        update.deliveries = deliveriesChanged ? deliveries : List.of();
+        update.signals = signalsChanged ? signals : List.of();
+        return update;
+    }
+
+    private boolean sameDeliveries(LogisticsSyncPacket other) {
+        if (deliveries.size() != other.deliveries.size()) return false;
+        for (int i = 0; i < deliveries.size(); i++) {
+            LogisticsDelivery left = deliveries.get(i);
+            LogisticsDelivery right = other.deliveries.get(i);
+            // Flight rendering uses orbital timestamps, not the server's ticking delivery countdown
+            if (!left.deliveryId.equals(right.deliveryId) || !left.data.equals(right.data)) return false;
+        }
+        return true;
     }
 
     @Override
     public void toBytes(ByteBuf buf) {
+        buf.writeBoolean(updateDeliveries);
+        buf.writeBoolean(updateSignals);
+        Map<ItemStackWrapper, Integer> resources = new LinkedHashMap<>();
+        for (LogisticsDelivery delivery : deliveries) {
+            resources.putIfAbsent(delivery.data.resourceId(), resources.size());
+        }
+        for (LogisticSignal signal : signals) {
+            resources.putIfAbsent(signal.resourceId(), resources.size());
+        }
+        buf.writeInt(resources.size());
+        for (ItemStackWrapper resource : resources.keySet()) PacketUtil.writeInventoryKey(buf, resource);
+
         buf.writeInt(deliveries.size());
         for (LogisticsDelivery t : deliveries) {
             LogisticsDelivery.Data d = t.data;
             PacketUtil.writeId(buf, t.deliveryId);
             PacketUtil.writeId(buf, d.fromAssetId());
             PacketUtil.writeId(buf, d.toAssetId());
-            PacketUtil.writeString(
-                buf,
-                d.resourceId()
-                    .toKey());
+            buf.writeInt(resources.get(d.resourceId()));
             buf.writeLong(d.amount());
             buf.writeInt(t.getRemainingTicks());
             PacketUtil.writeEnum(buf, d.scope());
@@ -88,19 +103,34 @@ public final class LogisticsSyncPacket implements IMessage {
             writeTransferRoute(buf, d.transferRoute());
         }
 
-        writeAggMap(buf, bySystem);
-        writeAggMap(buf, byPlanet);
+        buf.writeInt(signals.size());
+        for (LogisticSignal signal : signals) {
+            PacketUtil.writeId(buf, signal.outpostAssetId());
+            PacketUtil.writeCelestialObjectKey(buf, signal.systemKey());
+            buf.writeInt(resources.get(signal.resourceId()));
+            buf.writeLong(signal.amount());
+            PacketUtil.writeEnum(buf, signal.scope());
+            PacketUtil.writeCelestialObjectKey(buf, signal.bodyKey());
+            PacketUtil.writeCelestialObjectKey(buf, signal.planetaryAnchorBodyKey());
+        }
     }
 
     @Override
     public void fromBytes(ByteBuf buf) {
+        updateDeliveries = buf.readBoolean();
+        updateSignals = buf.readBoolean();
+        int resourceCount = PacketUtil.readBoundedCount(buf, "logistics resources", buf.readableBytes());
+        List<ItemStackWrapper> resources = new ArrayList<>(resourceCount);
+        for (int i = 0; i < resourceCount; i++) {
+            resources.add((ItemStackWrapper) PacketUtil.readInventoryKey(buf));
+        }
         int deliveryCount = buf.readInt();
         deliveries = new ArrayList<>(deliveryCount);
         for (int i = 0; i < deliveryCount; i++) {
             LogisticsDelivery.ID deliveryId = PacketUtil.readDeliveryId(buf);
             CelestialAsset.ID fromAssetId = PacketUtil.readAssetId(buf);
             CelestialAsset.ID toAssetId = PacketUtil.readAssetId(buf);
-            ItemStackWrapper resourceId = ItemStackWrapper.fromKey(PacketUtil.readString(buf));
+            ItemStackWrapper resourceId = resources.get(buf.readInt());
             long amount = buf.readLong();
             int remainingTicks = buf.readInt();
             LogisticSignal.Scope scope = PacketUtil.readEnum(buf, LogisticSignal.Scope.class);
@@ -125,8 +155,19 @@ public final class LogisticsSyncPacket implements IMessage {
                     transferRoute));
         }
 
-        bySystem = readAggMap(buf);
-        byPlanet = readAggMap(buf);
+        int signalCount = buf.readInt();
+        signals = new ArrayList<>(signalCount);
+        for (int i = 0; i < signalCount; i++) {
+            signals.add(
+                new LogisticSignal(
+                    PacketUtil.readAssetId(buf),
+                    PacketUtil.readCelestialObjectKey(buf),
+                    resources.get(buf.readInt()),
+                    buf.readLong(),
+                    PacketUtil.readEnum(buf, LogisticSignal.Scope.class),
+                    PacketUtil.readCelestialObjectKey(buf),
+                    PacketUtil.readCelestialObjectKey(buf)));
+        }
     }
 
     public static final class Handler implements IMessageHandler<LogisticsSyncPacket, IMessage> {
@@ -136,8 +177,8 @@ public final class LogisticsSyncPacket implements IMessage {
         public IMessage onMessage(LogisticsSyncPacket packet, MessageContext ctx) {
             Minecraft.getMinecraft()
                 .func_152344_a(() -> {
-                    CelestialClient.updateClientDeliveries(packet.deliveries);
-                    CelestialClient.updateClientSignals(packet.bySystem, packet.byPlanet);
+                    if (packet.updateDeliveries) CelestialClient.updateClientDeliveries(packet.deliveries);
+                    if (packet.updateSignals) CelestialClient.updateClientSignals(packet.signals);
                 });
             return null;
         }
@@ -192,33 +233,4 @@ public final class LogisticsSyncPacket implements IMessage {
             prograde);
     }
 
-    private static void writeAggMap(ByteBuf buf, @UnknownNullability Map<CelestialObjectKey, Map<String, Long>> map) {
-        buf.writeInt(map.size());
-        for (Map.Entry<CelestialObjectKey, Map<String, Long>> outer : map.entrySet()) {
-            PacketUtil.writeCelestialObjectKey(buf, outer.getKey());
-            Map<String, Long> inner = outer.getValue();
-            buf.writeInt(inner.size());
-            for (Map.Entry<String, Long> e : inner.entrySet()) {
-                PacketUtil.writeString(buf, e.getKey());
-                buf.writeLong(e.getValue());
-            }
-        }
-    }
-
-    private static Map<CelestialObjectKey, Map<String, Long>> readAggMap(ByteBuf buf) {
-        int outerCount = buf.readInt();
-        Map<CelestialObjectKey, Map<String, Long>> map = new LinkedHashMap<>(outerCount);
-        for (int i = 0; i < outerCount; i++) {
-            CelestialObjectKey outerKey = PacketUtil.readCelestialObjectKey(buf);
-            int innerCount = buf.readInt();
-            Map<String, Long> inner = new LinkedHashMap<>(innerCount);
-            for (int j = 0; j < innerCount; j++) {
-                String resourceKey = PacketUtil.readString(buf);
-                long net = buf.readLong();
-                inner.put(resourceKey, net);
-            }
-            map.put(outerKey, inner);
-        }
-        return map;
-    }
 }

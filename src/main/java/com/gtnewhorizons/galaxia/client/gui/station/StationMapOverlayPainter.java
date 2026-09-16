@@ -19,6 +19,7 @@ import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.PlanetaryFeatureOverlayRenderer;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureDefinition;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
@@ -33,35 +34,27 @@ final class StationMapOverlayPainter {
     private StationMapOverlayPainter() {}
 
     static void drawFeatureOverlay(AutomatedFacility facility, StationMapFrame frame,
-        List<StationMapViewport.TilePosition> visibleFeatureTiles) {
-        StationMapViewport.collectVisibleTilePositions(
-            frame.widgetWidth(),
-            frame.widgetHeight(),
-            frame.contentLeft(),
-            frame.contentRightPadding(),
-            frame.contentVerticalPadding(),
-            frame.panX(),
-            frame.panY(),
-            visibleFeatureTiles);
-        for (StationMapViewport.TilePosition coord : visibleFeatureTiles) {
-            PlanetaryFeatureOverlayRenderer.draw(
-                frame.tileLocalX(coord.dx()),
-                frame.tileLocalY(coord.dy()),
-                facility.planetaryFeaturesAt(coord.dx(), coord.dy()));
+        List<StationMapFrame.TilePosition> visibleFeatureTiles,
+        PlanetaryFeatureOverlayRenderer.VisibleFeatures featureProjection) {
+        frame.collectVisibleTilePositions(visibleFeatureTiles);
+        var features = featureProjection.project(facility, visibleFeatureTiles);
+        for (int i = 0; i < visibleFeatureTiles.size(); i++) {
+            StationMapFrame.TilePosition coord = visibleFeatureTiles.get(i);
+            PlanetaryFeatureOverlayRenderer
+                .draw(frame.tileLocalX(coord.dx()), frame.tileLocalY(coord.dy()), features.get(i));
         }
     }
 
     static void drawModuleAlerts(Map<StationTileCoord, PlacedTile> tiles,
-        Map<ModuleInstance.ID, List<StationModuleAlert>> moduleAlerts, StationMapFrame frame) {
+        Map<ModuleInstance.ID, StationModuleAlert> moduleAlerts, StationMapFrame frame) {
         if (moduleAlerts.isEmpty()) return;
         for (Map.Entry<StationTileCoord, PlacedTile> entry : tiles.entrySet()) {
             ModuleInstance module = moduleOf(entry.getValue());
-            if (module == null || !entry.getKey()
-                .equals(alertBadgeCoord(module, tiles))) {
-                continue;
-            }
-            StationModuleAlert alert = firstAlert(moduleAlerts, module);
+            if (module == null) continue;
+            StationModuleAlert alert = moduleAlerts.get(module.id);
             if (alert == null) continue;
+            if (!entry.getKey()
+                .equals(alertBadgeCoord(module))) continue;
             drawModuleAlertIcon(frame.tileLocalX(entry.getKey()), frame.tileLocalY(entry.getKey()), alert);
         }
     }
@@ -77,7 +70,7 @@ final class StationMapOverlayPainter {
         }
         int x = frame.tileLocalX(coord);
         int y = frame.tileLocalY(coord);
-        StationTileRenderer.drawHoverOverlay(x, y, StationMapViewport.TILE_SIZE);
+        StationTileRenderer.drawHoverOverlay(x, y, StationMapFrame.TILE_SIZE);
     }
 
     static void drawSelectionOverlay(StationTileCoord coord, Map<StationTileCoord, PlacedTile> tiles,
@@ -91,15 +84,25 @@ final class StationMapOverlayPainter {
         }
         int x = frame.tileLocalX(coord);
         int y = frame.tileLocalY(coord);
-        StationTileRenderer.drawSelectionOverlay(x, y, StationMapViewport.TILE_SIZE);
+        StationTileRenderer.drawSelectionOverlay(x, y, StationMapFrame.TILE_SIZE);
     }
 
     static void drawMaintenanceBayCoverage(@Nullable StationTileCoord selected, Map<StationTileCoord, PlacedTile> tiles,
         StationMapFrame frame) {
-        drawSegments(
-            maintenanceCoverageFillSegments(selected, tiles, frame),
-            EnumColors.MAP_COLOR_STATION_DEBUG_NEIGHBOR_FILL.getColor());
-        for (MaintenanceCoverageTarget target : maintenanceCoverageTargets(selected, tiles)) {
+        List<MaintenanceCoverageTarget> targets = maintenanceCoverageTargets(selected, tiles);
+        int fillColor = EnumColors.MAP_COLOR_STATION_DEBUG_NEIGHBOR_FILL.getColor();
+        for (MaintenanceCoverageTarget target : targets) {
+            ModuleInstance module = target.module();
+            if (module != null) {
+                ModuleFootprintProjection
+                    .drawFilled(module.shape(), module.anchor(), module.rotation(), frame, fillColor);
+            } else if (target.tile() != null) {
+                int x = frame.tileLocalX(target.tile());
+                int y = frame.tileLocalY(target.tile());
+                Gui.drawRect(x, y, x + StationMapFrame.TILE_SIZE, y + StationMapFrame.TILE_SIZE, fillColor);
+            }
+        }
+        for (MaintenanceCoverageTarget target : targets) {
             ModuleInstance module = target.module();
             if (module != null) {
                 drawModuleOverlay(module, EnumColors.MAP_COLOR_STATION_DEBUG_NEIGHBOR_BORDER.getColor(), frame);
@@ -110,36 +113,12 @@ final class StationMapOverlayPainter {
                 BorderedRect.draw(
                     frame.tileLocalX(coord),
                     frame.tileLocalY(coord),
-                    StationMapViewport.TILE_SIZE,
-                    StationMapViewport.TILE_SIZE,
+                    StationMapFrame.TILE_SIZE,
+                    StationMapFrame.TILE_SIZE,
                     EnumColors.MAP_COLOR_STATION_DEBUG_NEIGHBOR_FILL.getColor(),
                     EnumColors.MAP_COLOR_STATION_DEBUG_NEIGHBOR_BORDER.getColor());
             }
         }
-    }
-
-    static List<ModuleFootprintProjection.Segment> maintenanceCoverageFillSegments(@Nullable StationTileCoord selected,
-        Map<StationTileCoord, PlacedTile> tiles, StationMapFrame frame) {
-        List<ModuleFootprintProjection.Segment> segments = new ArrayList<>();
-        for (MaintenanceCoverageTarget target : maintenanceCoverageTargets(selected, tiles)) {
-            ModuleInstance module = target.module();
-            if (module != null) {
-                segments.addAll(
-                    ModuleFootprintProjection
-                        .filledSegments(module.shape(), module.anchor(), module.rotation(), frame));
-                continue;
-            }
-            StationTileCoord tile = target.tile();
-            if (tile != null) {
-                segments.add(
-                    new ModuleFootprintProjection.Segment(
-                        frame.tileLocalX(tile),
-                        frame.tileLocalY(tile),
-                        StationMapViewport.TILE_SIZE,
-                        StationMapViewport.TILE_SIZE));
-            }
-        }
-        return segments;
     }
 
     static List<MaintenanceCoverageTarget> maintenanceCoverageTargets(@Nullable StationTileCoord selected,
@@ -174,35 +153,16 @@ final class StationMapOverlayPainter {
 
     static void drawCoreDirectionIndicator(Set<StationTileCoord> occupiedTiles, StationMapFrame frame) {
         if (hasVisibleStationTile(occupiedTiles, frame)) return;
-        StationCoreDirectionIndicator.Arrow arrow = StationCoreDirectionIndicator.towardCore(
-            frame.widgetWidth(),
-            frame.widgetHeight(),
-            frame.contentLeft(),
-            frame.contentRightPadding(),
-            frame.contentVerticalPadding(),
-            frame.panX(),
-            frame.panY());
-        StationCoreDirectionIndicator.draw(
-            arrow,
-            EnumColors.MAP_COLOR_TEXT_TITLE.getColor(),
-            EnumColors.MAP_COLOR_STATION_TILE_BORDER_HOVERED.getColor());
+        StationCoreDirectionIndicator.Arrow arrow = StationCoreDirectionIndicator.towardCore(frame);
+        StationCoreDirectionIndicator.draw(arrow);
     }
 
-    static void drawFeatureTooltip(AutomatedFacility facility, StationFeatureSurface featureSurface, int localMouseX,
-        int localMouseY, StationMapFrame frame, List<PlanetaryFeatureDefinition> hoveredFeatureDefinitions) {
-        StationMapViewport.TilePosition coord = StationMapViewport.tilePositionAt(
-            localMouseX,
-            localMouseY,
-            frame.widgetWidth(),
-            frame.widgetHeight(),
-            frame.contentLeft(),
-            frame.contentRightPadding(),
-            frame.contentVerticalPadding(),
-            frame.panX(),
-            frame.panY());
+    static void drawFeatureTooltip(AutomatedFacility facility, int localMouseX, int localMouseY,
+        StationMapFrame frame) {
+        StationMapFrame.TilePosition coord = frame.tilePositionAt(localMouseX, localMouseY);
         if (coord == null) return;
-        List<PlanetaryFeatureDefinition> features = featureSurface
-            .hoverDefinitions(facility, coord, hoveredFeatureDefinitions);
+        List<PlanetaryFeatureDefinition> features = PlanetaryFeatureRegistry
+            .definitionsFor(facility.planetaryFeaturesAt(coord.dx(), coord.dy()));
         if (features.isEmpty()) return;
 
         FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
@@ -240,30 +200,26 @@ final class StationMapOverlayPainter {
     }
 
     static void drawModuleAlertTooltip(Map<StationTileCoord, PlacedTile> tiles,
-        Map<ModuleInstance.ID, List<StationModuleAlert>> moduleAlerts, @Nullable StationTileCoord hovered,
-        int localMouseX, int localMouseY, StationMapFrame frame) {
+        Map<ModuleInstance.ID, StationModuleAlert> moduleAlerts, @Nullable StationTileCoord hovered, int localMouseX,
+        int localMouseY, StationMapFrame frame) {
         if (moduleAlerts.isEmpty() || hovered == null) return;
         PlacedTile tile = tiles.get(hovered);
         ModuleInstance module = moduleOf(tile);
         if (module == null) return;
-        List<StationModuleAlert> alerts = moduleAlerts.get(module.id);
-        if (alerts == null || alerts.isEmpty()) return;
+        StationModuleAlert alert = moduleAlerts.get(module.id);
+        if (alert == null) return;
 
         FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
         int maxTextWidth = Math.max(40, Math.min(180, frame.widgetWidth() - 20));
-        int tooltipWidth = 40;
-        for (StationModuleAlert alert : alerts) {
-            tooltipWidth = Math.max(tooltipWidth, fr.getStringWidth(fr.trimStringToWidth(alert.title(), maxTextWidth)));
-            tooltipWidth = Math
-                .max(tooltipWidth, fr.getStringWidth(fr.trimStringToWidth(alert.message(), maxTextWidth)));
-        }
-        tooltipWidth += 12;
-        int tooltipHeight = 8 + alerts.size() * (fr.FONT_HEIGHT * 2 + 6);
+        String title = fr.trimStringToWidth(alert.title(), maxTextWidth);
+        String message = fr.trimStringToWidth(alert.message(), maxTextWidth);
+        int tooltipWidth = Math.max(40, Math.max(fr.getStringWidth(title), fr.getStringWidth(message))) + 12;
+        int tooltipHeight = 8 + fr.FONT_HEIGHT * 2 + 6;
         int tooltipX = Math.min(localMouseX + 10, frame.widgetWidth() - tooltipWidth - 2);
         int tooltipY = Math.min(localMouseY + 10, frame.widgetHeight() - tooltipHeight - 2);
         tooltipX = Math.max(2, tooltipX);
         tooltipY = Math.max(2, tooltipY);
-        boolean red = hasRedAlert(alerts);
+        boolean red = alert.severity() == StationModuleAlert.Severity.RED;
         BorderedRect.draw(
             tooltipX,
             tooltipY,
@@ -273,32 +229,13 @@ final class StationMapOverlayPainter {
             red ? EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_BLOCKING.getColor()
                 : EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_WARNING.getColor());
         int textY = tooltipY + 4;
-        for (StationModuleAlert alert : alerts) {
-            String title = fr.trimStringToWidth(alert.title(), maxTextWidth);
-            String message = fr.trimStringToWidth(alert.message(), maxTextWidth);
-            fr.drawStringWithShadow(title, tooltipX + 6, textY, alertTitleColor(alert));
-            textY += fr.FONT_HEIGHT + 2;
-            fr.drawStringWithShadow(message, tooltipX + 6, textY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-            textY += fr.FONT_HEIGHT + 4;
-        }
+        fr.drawStringWithShadow(title, tooltipX + 6, textY, alertTitleColor(alert));
+        textY += fr.FONT_HEIGHT + 2;
+        fr.drawStringWithShadow(message, tooltipX + 6, textY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
     }
 
-    static List<ModuleFootprintProjection.Segment> moduleOverlaySegments(ModuleInstance module, StationMapFrame frame) {
-        if (module == null) return List.of();
-        return ModuleFootprintProjection.outlineSegments(module.shape(), module.anchor(), module.rotation(), frame);
-    }
-
-    static StationTileCoord alertBadgeCoord(ModuleInstance module, Map<StationTileCoord, PlacedTile> tiles) {
-        StationTileCoord best = module.anchor();
-        for (Map.Entry<StationTileCoord, PlacedTile> entry : tiles.entrySet()) {
-            ModuleInstance tileModule = moduleOf(entry.getValue());
-            if (tileModule == null || !module.id.equals(tileModule.id)) continue;
-            StationTileCoord coord = entry.getKey();
-            if (coord.dy() < best.dy() || coord.dy() == best.dy() && coord.dx() < best.dx()) {
-                best = coord;
-            }
-        }
-        return best;
+    static StationTileCoord alertBadgeCoord(ModuleInstance module) {
+        return ModuleFootprintProjection.firstTile(module.shape(), module.anchor(), module.rotation());
     }
 
     static void drawDeconstructModuleOverlay(ModuleInstance module, boolean selected, StationMapFrame frame) {
@@ -308,27 +245,13 @@ final class StationMapOverlayPainter {
     }
 
     private static void drawModuleOverlay(ModuleInstance module, int color, StationMapFrame frame) {
-        drawSegments(moduleOverlaySegments(module, frame), color);
-    }
-
-    private static void drawSegments(List<ModuleFootprintProjection.Segment> segments, int color) {
-        for (ModuleFootprintProjection.Segment segment : segments) {
-            Gui.drawRect(
-                segment.x(),
-                segment.y(),
-                segment.x() + segment.width(),
-                segment.y() + segment.height(),
-                color);
-        }
+        if (module == null) return;
+        ModuleFootprintProjection.drawOutline(module.shape(), module.anchor(), module.rotation(), frame, color);
     }
 
     private static boolean hasVisibleStationTile(Set<StationTileCoord> occupiedTiles, StationMapFrame frame) {
         for (StationTileCoord coord : occupiedTiles) {
-            if (StationCoreDirectionIndicator.tileIntersectsScreen(
-                frame.tileLocalX(coord),
-                frame.tileLocalY(coord),
-                frame.widgetWidth(),
-                frame.widgetHeight())) {
+            if (frame.tileIntersectsScreen(frame.tileLocalX(coord), frame.tileLocalY(coord))) {
                 return true;
             }
         }
@@ -340,25 +263,12 @@ final class StationMapOverlayPainter {
         ModuleConfigModalSupport.renderTextureIcon(icon, tileX + 2, tileY + 2, ALERT_ICON_SIZE, ALERT_ICON_SIZE);
     }
 
-    private static @Nullable StationModuleAlert firstAlert(
-        Map<ModuleInstance.ID, List<StationModuleAlert>> moduleAlerts, ModuleInstance module) {
-        List<StationModuleAlert> alerts = moduleAlerts.get(module.id);
-        return alerts == null || alerts.isEmpty() ? null : alerts.get(0);
-    }
-
     private static @Nullable ModuleInstance moduleOf(@Nullable PlacedTile tile) {
         return tile == null ? null : tile.module();
     }
 
     private static ResourceLocation defaultAlertIcon(StationModuleAlert.Severity severity) {
         return severity == StationModuleAlert.Severity.RED ? DEFAULT_RED_ALERT_ICON : DEFAULT_ALERT_ICON;
-    }
-
-    private static boolean hasRedAlert(List<StationModuleAlert> alerts) {
-        for (StationModuleAlert alert : alerts) {
-            if (alert.severity() == StationModuleAlert.Severity.RED) return true;
-        }
-        return false;
     }
 
     private static int alertTitleColor(StationModuleAlert alert) {

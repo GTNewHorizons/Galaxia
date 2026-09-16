@@ -173,7 +173,7 @@ public final class GalaxiaCelestialAPI {
 
     public static CelestialObject findStar(CelestialObject root, CelestialObjectKey targetKey) {
         if (root == null || targetKey == null) return null;
-        CelestialObject target = get(targetKey).orElse(null);
+        CelestialObject target = ancestryTarget(targetKey);
         CelestialObject star = findStar(root, target);
         if (star != null || target == null || target.parentKey() == null) return star;
         return findStar(root, target.parentKey());
@@ -201,7 +201,7 @@ public final class GalaxiaCelestialAPI {
 
     public static CelestialObject findPlanetaryAnchor(CelestialObject root, CelestialObjectKey targetKey) {
         if (root == null || targetKey == null) return null;
-        CelestialObject target = get(targetKey).orElse(null);
+        CelestialObject target = ancestryTarget(targetKey);
         CelestialObject anchor = findPlanetaryAnchor(root, target);
         if (anchor != null || target == null || target.parentKey() == null) return anchor;
         return target;
@@ -225,6 +225,15 @@ public final class GalaxiaCelestialAPI {
             if (found != null) return found;
         }
         return null;
+    }
+
+    private static CelestialObject ancestryTarget(CelestialObjectKey targetKey) {
+        CelestialObject target = get(targetKey).orElse(null);
+        if (target != null || !targetKey.isMinorBody()) return target;
+        return get(
+            CelestialObjectKey.registered(
+                targetKey.minorBodyId()
+                    .parentBodyId())).orElse(null);
     }
 
     /**

@@ -6,6 +6,8 @@ import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.item.ItemStack;
 
+import org.lwjgl.input.Keyboard;
+
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.GuiData;
@@ -25,9 +27,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
  *
  * <p>
  * Opens via {@link #FACTORY} when the user wants to pick an item for outpost logistics routing.
- * Once the user places an item the stack is stored in {@link #pendingPick}. The caller polls
- * {@link #pollPendingPick()} on the next tick (in {@code StarmapAssetActionsWidget.onUpdate})
- * and adds it to the logistics configuration.
+ * Once the user places an item the stack is stored in {@link #pendingPick}. The caller that opened
+ * the picker polls the result on its next update and applies it.
  *
  * <p>
  * Because this screen is opened through {@link SimpleGuiFactory}, the full MUI lifecycle runs
@@ -38,18 +39,15 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
 
     public enum PickContext {
         OUTPOST_LOGISTICS,
-        MINER_BLACKLIST,
         SIDEBAR_DEBUG
     }
 
     public static final SimpleGuiFactory FACTORY = new SimpleGuiFactory("galaxia_item_picker", ItemPickerScreen::new);
 
-    /** Set on the client when the user places an item in the slot; consumed by the map widget. */
+    /** Set on the client when the user places an item in the slot; consumed by its opening UI. */
     private static volatile ItemStack pendingPick = null;
     /** Outpost assetId that this pick belongs to; set before opening the screen. */
     private static volatile CelestialAsset.ID pendingForOutpostId = null;
-    /** Module index for module-scoped picks such as miner blacklist configuration. */
-    private static volatile int pendingModuleIndex = -1;
     /** Routing context for the pending pick result. */
     private static volatile PickContext pendingContext = null;
     /** Screen to restore after the picker captured an item. */
@@ -60,17 +58,10 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
      * even if the starmap screen was closed and reopened in between.
      */
     public static void setPendingForOutpost(CelestialAsset.ID outpostId) {
+        clearPendingState();
         pendingReturnScreen = Minecraft.getMinecraft().currentScreen;
         pendingForOutpostId = outpostId;
-        pendingModuleIndex = -1;
         pendingContext = PickContext.OUTPOST_LOGISTICS;
-    }
-
-    public static void setPendingForMinerBlacklist(CelestialAsset.ID outpostId, int moduleIndex) {
-        pendingReturnScreen = Minecraft.getMinecraft().currentScreen;
-        pendingForOutpostId = outpostId;
-        pendingModuleIndex = moduleIndex;
-        pendingContext = PickContext.MINER_BLACKLIST;
     }
 
     public static void setPendingForSidebarDebug() {
@@ -82,26 +73,27 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
     }
 
     public static void setPendingForSidebarDebug(GuiScreen returnScreen) {
+        clearPendingState();
         pendingReturnScreen = returnScreen;
-        pendingForOutpostId = null;
-        pendingModuleIndex = -1;
         pendingContext = PickContext.SIDEBAR_DEBUG;
     }
 
     public static GuiScreen cancelPendingPick() {
         if (pendingPick == null && pendingForOutpostId == null
-            && pendingModuleIndex < 0
             && pendingContext == null
             && pendingReturnScreen == null) {
             return null;
         }
         GuiScreen returnScreen = pendingReturnScreen;
+        clearPendingState();
+        return returnScreen;
+    }
+
+    private static void clearPendingState() {
         pendingPick = null;
         pendingForOutpostId = null;
-        pendingModuleIndex = -1;
         pendingContext = null;
         pendingReturnScreen = null;
-        return returnScreen;
     }
 
     public static CelestialAsset.ID getPendingForOutpostId() {
@@ -109,45 +101,22 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
     }
 
     public static boolean hasPendingPickForOutpost() {
-        return pendingPick != null && pendingForOutpostId != null && pendingContext == PickContext.OUTPOST_LOGISTICS;
-    }
-
-    public static boolean hasPendingPickForMinerBlacklist() {
-        return pendingPick != null && pendingForOutpostId != null && pendingContext == PickContext.MINER_BLACKLIST;
+        return pendingPick != null && pendingForOutpostId != null && pendingContext == null;
     }
 
     public static boolean hasPendingPickForSidebarDebug() {
-        return pendingPick != null && pendingContext == PickContext.SIDEBAR_DEBUG;
+        return pendingPick != null && pendingForOutpostId == null && pendingContext == null;
     }
 
     public static boolean hasPendingPicker() {
         return pendingContext != null;
     }
 
-    public static int getPendingModuleIndex() {
-        return pendingModuleIndex;
-    }
-
     /** Returns and clears the pending outpost pick and context, or {@code null} if none. */
     public static ItemStack pollPendingPickForOutpost() {
         if (!hasPendingPickForOutpost()) return null;
         ItemStack pick = pendingPick;
-        pendingPick = null;
-        pendingForOutpostId = null;
-        pendingModuleIndex = -1;
-        pendingContext = null;
-        pendingReturnScreen = null;
-        return pick;
-    }
-
-    public static ItemStack pollPendingPickForMinerBlacklist() {
-        if (!hasPendingPickForMinerBlacklist()) return null;
-        ItemStack pick = pendingPick;
-        pendingPick = null;
-        pendingForOutpostId = null;
-        pendingModuleIndex = -1;
-        pendingContext = null;
-        pendingReturnScreen = null;
+        clearPendingState();
         return pick;
     }
 
@@ -155,11 +124,7 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
     public static ItemStack pollPendingPickForSidebarDebug() {
         if (!hasPendingPickForSidebarDebug()) return null;
         ItemStack pick = pendingPick;
-        pendingPick = null;
-        pendingForOutpostId = null;
-        pendingModuleIndex = -1;
-        pendingContext = null;
-        pendingReturnScreen = null;
+        clearPendingState();
         return pick;
     }
 
@@ -168,13 +133,34 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
         // Show NEI so the user can drag items from it
         settings.getRecipeViewerSettings()
             .enable();
-        ModularPanel panel = ModularPanel.defaultPanel("galaxia_item_picker", 176, 96);
+        ModularPanel panel = new ModularPanel("galaxia_item_picker") {
+
+            @Override
+            public boolean onKeyPressed(char typedChar, int keyCode) {
+                Minecraft minecraft = Minecraft.getMinecraft();
+                boolean closesPicker = keyCode == Keyboard.KEY_ESCAPE
+                    || keyCode == minecraft.gameSettings.keyBindInventory.getKeyCode();
+                if (!closesPicker || !hasPendingPicker()) {
+                    return super.onKeyPressed(typedChar, keyCode);
+                }
+                minecraft.displayGuiScreen(cancelPendingPick());
+                return true;
+            }
+
+            @Override
+            public void onClose() {
+                if (hasPendingPicker()) cancelPendingPick();
+                super.onClose();
+            }
+        }.size(176, 96);
 
         ItemStackHandler handler = new ItemStackHandler(1);
         ModularSlot slot = new ModularSlot(handler, 0).changeListener((stack, onlyAmountChanged, client, init) -> {
             if (client && !init && stack != null) {
                 pendingPick = stack.copy();
                 GuiScreen returnScreen = pendingReturnScreen;
+                pendingContext = null;
+                pendingReturnScreen = null;
                 Minecraft.getMinecraft()
                     .displayGuiScreen(returnScreen);
             }

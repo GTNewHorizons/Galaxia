@@ -30,25 +30,30 @@ final class ModuleOperationDefinitionTest {
     void tierDataValidatesBuildTicks() {
         assertThrows(
             IllegalArgumentException.class,
-            () -> new ModuleTierData(1000L, 0L, 10, null, null, Map.of(new ItemStack(TEST_ITEM), 1L), 0, 80));
+            () -> new ModuleTierData(0L, 10, null, null, Map.of(new ItemStack(TEST_ITEM), 1L), 0, 80));
     }
 
     @Test
     void tierDataValidatesRefundPercent() {
         assertThrows(
             IllegalArgumentException.class,
-            () -> new ModuleTierData(1000L, 0L, 10, null, null, Map.of(new ItemStack(TEST_ITEM), 1L), 200, -1));
+            () -> new ModuleTierData(0L, 10, null, null, Map.of(new ItemStack(TEST_ITEM), 1L), 200, -1));
     }
 
     @Test
-    void hammerSpecRejectsBlankVariant() {
-        assertThrows(IllegalArgumentException.class, () -> new HammerModuleOperation(ModuleTier.EV, " "));
+    void hammerSpecRejectsNullVariant() {
+        assertThrows(IllegalArgumentException.class, () -> new IModuleOperation.Hammer(ModuleTier.EV, null));
+    }
+
+    @Test
+    void minerFocusSpecRejectsNullTier() {
+        assertThrows(IllegalArgumentException.class, () -> new IModuleOperation.MinerFocus(ModuleTier.EV, null, null));
     }
 
     @Test
     void planHasCorrectTimingAndRefund() {
         ModuleOperationPlan plan = new ModuleOperationPlan(
-            new HammerModuleOperation(ModuleTier.IV, HammerVariant.BIG.name()),
+            new IModuleOperation.Hammer(ModuleTier.IV, HammerVariant.BIG),
             120,
             cost(4L),
             true);
@@ -64,7 +69,7 @@ final class ModuleOperationDefinitionTest {
         stack.stackSize = 32;
 
         Map<ItemStackWrapper, Long> planCost = new ModuleOperationPlan(
-            new HammerModuleOperation(ModuleTier.IV, HammerVariant.BIG.name()),
+            new IModuleOperation.Hammer(ModuleTier.IV, HammerVariant.BIG),
             120,
             cost,
             false).materialCost();

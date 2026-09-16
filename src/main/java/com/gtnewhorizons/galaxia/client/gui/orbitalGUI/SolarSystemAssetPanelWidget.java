@@ -15,7 +15,6 @@ import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
 
-import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.ScrollWidget;
@@ -52,8 +51,6 @@ import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
  */
 public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemAssetPanelWidget> {
 
-    private static final int PANEL_X = 10;
-    private static final int PANEL_Y = 30;
     private static final int PANEL_W = 348;
     private static final int HEADER_H = 24;
     private static final int CONTROLS_H = 22;
@@ -144,8 +141,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         String signature = buildStructureSignature();
         boolean structureChanged = !signature.equals(lastStructureSignature) || viewRoot != lastViewRoot
             || currentFilter != lastFilter
-            || currentSort != lastSort
-            || rowsContainer == null;
+            || currentSort != lastSort;
         if (structureChanged) {
             rebuildPanel(viewRoot);
             lastStructureSignature = signature;
@@ -287,17 +283,16 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         panelRoot.removeAll();
         scrollWidget = null;
         scrollData = null;
-        pos(PANEL_X, PANEL_Y);
         size(PANEL_W, panelH);
         panelRoot.size(PANEL_W, panelH);
         panelRoot.setEnabled(true);
 
         ParentWidget<?> backgroundLayer = new ParentWidget<>().pos(0, 0)
             .size(PANEL_W, panelH)
-            .background(drawable((ctx, x, y, w, h) -> {
+            .background((ctx, x, y, w, h, ignoredTheme) -> {
                 Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_MODAL_BG.getColor());
                 Gui.drawRect(x, y, x + w, y + HEADER_H, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
-            }));
+            });
         panelRoot.child(backgroundLayer);
         panelRoot.child(
             WidgetOutline.create(backgroundLayer, OUTLINE_THICKNESS, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
@@ -311,7 +306,9 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         panelRoot.child(
             cycleButton(
                 () -> "Filter: " + currentFilter.getDisplayName(),
-                () -> currentFilter = cycleEnum(currentFilter, SystemAssetFilter.values())).pos(PANEL_PAD_X, controlsY)
+                () -> currentFilter = cycleEnum(currentFilter, SystemAssetFilter.values()))
+                    .name("starmap.assets.filter")
+                    .pos(PANEL_PAD_X, controlsY)
                     .size(FILTER_BTN_W, CTRL_BTN_H));
         panelRoot.child(
             cycleButton(
@@ -369,12 +366,14 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         ButtonWidget<?> button = new ButtonWidget<>().widthRel(1f)
             .height(ROW_H)
             .background(
-                drawable((ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())))
+
+                (ctx, x, y, w, h, ignoredTheme) -> Gui
+                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor()))
             .hoverBackground(
-                drawable(
-                    (ctx, x, y, w, h) -> Gui
-                        .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor())))
-            .overlay(drawable((ctx, x, y, w, h) -> drawRowContent(row, displayName, bodyIcon, x, y, h)))
+
+                (ctx, x, y, w, h, ignoredTheme) -> Gui
+                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor()))
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> drawRowContent(row, displayName, bodyIcon, x, y, h))
             .onMousePressed(btn -> {
                 if (btn != 0 || onAssetSelect == null) return false;
                 onAssetSelect.accept(row.assetId);
@@ -432,8 +431,10 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         return new ParentWidget<>().widthRel(1f)
             .height(ROW_H)
             .background(
-                drawable((ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())))
-            .overlay(drawable((ctx, x, y, w, h) -> drawSatelliteRowContent(displayName, satelliteIcon, x, y, h)));
+
+                (ctx, x, y, w, h, ignoredTheme) -> Gui
+                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor()))
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> drawSatelliteRowContent(displayName, satelliteIcon, x, y, h));
     }
 
     /**
@@ -495,26 +496,25 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     }
 
     private ButtonWidget<?> cycleButton(Supplier<String> labelSupplier, Runnable onClick) {
-        return new ButtonWidget<>()
-            .background(
-                drawable(
-                    (ctx, x, y, w, h) -> BorderedRect.draw(
-                        x,
-                        y,
-                        w,
-                        h,
-                        EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                        EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
+        return new ButtonWidget<>().background(
+
+            (ctx, x, y, w, h, ignoredTheme) -> BorderedRect.draw(
+                x,
+                y,
+                w,
+                h,
+                EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+                EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()))
             .hoverBackground(
-                drawable(
-                    (ctx, x, y, w, h) -> BorderedRect.draw(
-                        x,
-                        y,
-                        w,
-                        h,
-                        EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor(),
-                        EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
-            .overlay(drawable((ctx, x, y, w, h) -> {
+
+                (ctx, x, y, w, h, ignoredTheme) -> BorderedRect.draw(
+                    x,
+                    y,
+                    w,
+                    h,
+                    EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor(),
+                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()))
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> {
                 String label = labelSupplier.get();
                 net.minecraft.client.gui.FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
                 String trimmed = fr.trimStringToWidth(label, w - 6);
@@ -524,7 +524,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
                     x + (w - textW) / 2,
                     y + (h - fr.FONT_HEIGHT) / 2 + 1,
                     EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
-            }))
+            })
             .onMousePressed(btn -> {
                 if (btn != 0) return false;
                 onClick.run();
@@ -540,10 +540,6 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         Minecraft mc = Minecraft.getMinecraft();
         if (mc == null || mc.fontRenderer == null || s == null) return s;
         return mc.fontRenderer.trimStringToWidth(s, maxPx);
-    }
-
-    private IDrawable drawable(DrawableCommand cmd) {
-        return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
     }
 
     record SatelliteRow(CelestialObjectKey bodyKey, SatelliteKind kind, int count) {}

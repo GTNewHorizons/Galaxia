@@ -1,10 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+
+import javax.annotation.Nullable;
 
 import net.minecraft.item.ItemStack;
 
@@ -13,17 +13,22 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
 
 public class ModuleInstance implements Buildable {
 
     public final ID id;
-    private final Map<ItemStack, Long> consumedResources = new HashMap<>();
     private final FacilityModuleRegistry.Definition definition;
     private IModuleComponent component;
+    private @Nullable AutomatedFacility facilityOwner;
+    private @Nullable RecipeBook.ScheduleState recipeScheduleState;
 
     private Buildable.Status status = Buildable.Status.IN_CONSTRUCTION;
     private int ticks = 0;
@@ -32,12 +37,13 @@ public class ModuleInstance implements Buildable {
     private final ModuleShape shape;
     private int rotation = 0;
     private ModuleTier tier;
+    private byte parallel = 1;
     private ModulePriority priorityOverride = ModulePriority.NORMAL;
     private boolean enabled = true;
-    private short groupId = 0;
     private ModuleState state = ModuleState.IDLE;
     private BlockingReason blocking = BlockingReason.NONE;
     private ModuleOperationState operation;
+    private @Nullable SettingsBinding settingsBinding;
 
     private ModuleTierData currentTierData() {
         return definition.getTierData(this.tier);
@@ -65,8 +71,9 @@ public class ModuleInstance implements Buildable {
 
         this.ticks += 1;
         if (this.ticks >= this.cooldownTicks()) {
-            this.definition.applyBehavior()
-                .accept(this, asset);
+            if (component != null) {
+                component.runCycle(this, asset);
+            }
             this.setTicks(this.ticks - this.cooldownTicks());
         }
     }
@@ -75,6 +82,7 @@ public class ModuleInstance implements Buildable {
         ModuleShape shape, ModuleTier tier) {
         this.id = id;
         this.definition = definition;
+        this.recipeScheduleState = definition.recipe() == null ? null : RecipeBook.ScheduleState.RESET;
         this.anchor = anchor;
         this.shape = shape;
         this.tier = tier;
@@ -84,12 +92,46 @@ public class ModuleInstance implements Buildable {
         return component;
     }
 
+    public RecipeBook.ScheduleState recipeScheduleState() {
+        if (recipeScheduleState == null) throw new IllegalStateException("Non-recipe module has no schedule " + id);
+        return recipeScheduleState;
+    }
+
+    public void restoreRecipeScheduleState(RecipeBook.ScheduleState state) {
+        if (recipeScheduleState == null || state == null)
+            throw new IllegalStateException("Invalid recipe schedule for " + id);
+        recipeScheduleState = state;
+    }
+
     public void setComponent(IModuleComponent component) {
+        if (this.component == component) return;
         this.component = component;
+        configurationChanged();
+    }
+
+    public void setFacilityOwner(@Nullable AutomatedFacility facilityOwner) {
+        this.facilityOwner = facilityOwner;
+    }
+
+    private void configurationChanged() {
+        if (facilityOwner != null) facilityOwner.moduleConfigurationChanged();
+    }
+
+    public @Nullable SettingsBinding settingsBinding() {
+        return settingsBinding;
+    }
+
+    public void setSettingsBinding(SettingsBinding settingsBinding) {
+        if (settingsBinding == null) throw new IllegalArgumentException("Module settings binding must not be null");
+        this.settingsBinding = settingsBinding;
     }
 
     public FacilityModuleKind kind() {
         return definition.kind();
+    }
+
+    public @Nullable FacilityModuleRegistry.Definition.Recipe recipe() {
+        return definition.recipe();
     }
 
     public Map<ModuleTier, ModuleTierData> allTierData() {
@@ -101,18 +143,8 @@ public class ModuleInstance implements Buildable {
     }
 
     @Override
-    public void clearConsumedResources() {
-        consumedResources.clear();
-    }
-
-    @Override
     public Map<ItemStack, Long> getRequiredResources() {
         return currentTierData().constructionCost();
-    }
-
-    @Override
-    public Map<ItemStack, Long> getConstructionInventory() {
-        return consumedResources;
     }
 
     public Buildable.Status status() {
@@ -121,7 +153,9 @@ public class ModuleInstance implements Buildable {
 
     @Override
     public void updateStatus(Status status) {
+        if (this.status == status) return;
         this.status = status;
+        configurationChanged();
     }
 
     public int ticks() {
@@ -149,6 +183,7 @@ public class ModuleInstance implements Buildable {
     public void initAnchor(StationTileCoord anchor) {
         if (this.anchor != null) return;
         this.anchor = anchor;
+        configurationChanged();
     }
 
     public ModuleShape shape() {
@@ -160,7 +195,10 @@ public class ModuleInstance implements Buildable {
     }
 
     public void setRotation(int rotation) {
-        this.rotation = ModuleShape.normalizeRotation(rotation);
+        int normalized = ModuleShape.normalizeRotation(rotation);
+        if (this.rotation == normalized) return;
+        this.rotation = normalized;
+        configurationChanged();
     }
 
     public StationTileCoord[] tiles() {
@@ -172,7 +210,9 @@ public class ModuleInstance implements Buildable {
     }
 
     public void setTier(ModuleTier tier) {
+        if (this.tier == tier) return;
         this.tier = tier;
+        configurationChanged();
     }
 
     public ModulePriority priorityOverride() {
@@ -180,7 +220,9 @@ public class ModuleInstance implements Buildable {
     }
 
     public void setPriorityOverride(ModulePriority priorityOverride) {
+        if (this.priorityOverride == priorityOverride) return;
         this.priorityOverride = priorityOverride;
+        configurationChanged();
     }
 
     public boolean enabled() {
@@ -188,15 +230,9 @@ public class ModuleInstance implements Buildable {
     }
 
     public void setEnabled(boolean enabled) {
+        if (this.enabled == enabled) return;
         this.enabled = enabled;
-    }
-
-    public short groupId() {
-        return groupId;
-    }
-
-    public void setGroupId(short groupId) {
-        this.groupId = groupId;
+        configurationChanged();
     }
 
     public ModuleState state() {
@@ -221,28 +257,29 @@ public class ModuleInstance implements Buildable {
 
     public void setOperation(ModuleOperationState operation) {
         this.operation = operation;
+        if (facilityOwner != null) facilityOwner.moduleOperationChanged();
     }
 
     public void clearOperation() {
-        this.operation = null;
+        setOperation(null);
+    }
+
+    public boolean canStartOperation() {
+        return operation == null || operation.phase()
+            .isTerminal()
+            && operation.depositedResources()
+                .isEmpty()
+            && operation.refundBuffer()
+                .isEmpty();
     }
 
     public boolean isOperational() {
         return status == Buildable.Status.OPERATIONAL;
     }
 
-    public void completeConstruction() {
-        this.status = Buildable.Status.OPERATIONAL;
-        consumedResources.clear();
-    }
-
     public long getDisplayedPowerEuPerTick() {
         if (!isOperational()) return 0L;
         return currentTierData().powerDrawEuPerTick();
-    }
-
-    public long baseEnergyCapacity() {
-        return currentTierData().baseEnergyCapacity();
     }
 
     public long baseCapacity() {
@@ -254,17 +291,18 @@ public class ModuleInstance implements Buildable {
         return currentTierData().powerDrawEuPerTick();
     }
 
-    public ModuleTier nextTier() {
-        ModuleTier[] available = definition.tierData()
-            .keySet()
-            .toArray(new ModuleTier[0]);
-        Arrays.sort(available);
-        for (int i = 0; i < available.length; i++) {
-            if (available[i] == this.tier) {
-                return available[Math.min(i + 1, available.length - 1)];
-            }
+    public byte parallel() {
+        return parallel;
+    }
+
+    public void setParallel(byte parallel) {
+        if (!kind().supportsParallel()) {
+            throw new IllegalStateException(kind() + " does not support parallel execution");
         }
-        return available[0];
+        if (parallel < 1) {
+            throw new IllegalArgumentException("parallel must be at least 1");
+        }
+        this.parallel = parallel;
     }
 
     public int cooldownTicks() {
@@ -278,6 +316,12 @@ public class ModuleInstance implements Buildable {
 
     public Map<ItemStack, Long> getConstructionCost() {
         return currentTierData().constructionCost();
+    }
+
+    public Map<ItemStackWrapper, Long> constructionMaterials(ModuleTier targetTier) {
+        return FacilityModuleRegistry.operationCost(
+            definition.getTierData(targetTier)
+                .constructionCost());
     }
 
     public UpkeepDemand currentTierUpkeepDemand() {
@@ -319,6 +363,23 @@ public class ModuleInstance implements Buildable {
         @Override
         public String toString() {
             return id.toString();
+        }
+    }
+
+    public sealed interface SettingsBinding {
+
+        record Private(ModuleSettings settings) implements SettingsBinding {
+
+            public Private {
+                if (settings == null) throw new IllegalArgumentException("Private module settings must not be null");
+            }
+        }
+
+        record Shared(SettingsGroup.ID groupId) implements SettingsBinding {
+
+            public Shared {
+                if (groupId == null) throw new IllegalArgumentException("Shared settings group ID must not be null");
+            }
         }
     }
 }

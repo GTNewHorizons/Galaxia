@@ -299,6 +299,6 @@ public final class GantryAPI {
     public static void requestProduction(RocketPartInstance part, TileEntityModuleAssembler assembler,
         TileEntitySilo targetSilo) {
         if (assembler == null || targetSilo == null) return;
-        assembler.enqueueProduction(part.copy(), targetSilo);
+        assembler.enqueueProduction(part, targetSilo);
     }
 }

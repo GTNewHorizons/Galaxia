@@ -30,7 +30,6 @@ public class RocketBuildOrder {
     public RocketBuildOrder(RocketBlueprint design) {
         this.parts = design.getParts()
             .stream()
-            .map(RocketPartInstance::copy)
             .sorted(
                 Comparator.comparingInt(RocketPartInstance::y)
                     .thenComparingInt(RocketPartInstance::x))
@@ -94,9 +93,7 @@ public class RocketBuildOrder {
         RocketBlueprint bp = new RocketBlueprint();
         for (int i = 0; i < parts.size(); i++) {
             if (delivered.get(i)) {
-                bp.addPart(
-                    parts.get(i)
-                        .copy());
+                bp.addPart(parts.get(i));
             }
         }
         return bp;

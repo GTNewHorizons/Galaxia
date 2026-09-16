@@ -117,12 +117,12 @@ public final class AssetCreateRequestPacket implements IMessage {
         }
     }
 
-    public AssetSyncPacket apply(UUID teamId) {
+    public CelestialAsset apply(UUID teamId) {
         return apply(teamId, false);
     }
 
     /** Only a creative operator may skip construction; everyone else starts the asset as a construction site. */
-    public AssetSyncPacket apply(UUID teamId, boolean creative) {
+    public CelestialAsset apply(UUID teamId, boolean creative) {
         validateTargetBody(teamId);
         CelestialAsset asset = CelestialAsset
             .create(celestialObjectKey, kind, operational && creative, requiredSatelliteKind());
@@ -136,7 +136,7 @@ public final class AssetCreateRequestPacket implements IMessage {
 
         Galaxia.LOG.info("[Outpost] Created asset {} ({}) at {}", asset.assetId, kind, celestialObjectKey);
 
-        return AssetSyncPacket.fullSync(asset);
+        return asset;
     }
 
     private void validateTargetBody(UUID teamId) {
@@ -175,18 +175,21 @@ public final class AssetCreateRequestPacket implements IMessage {
         public IMessage onMessage(AssetCreateRequestPacket packet, MessageContext ctx) {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
             if (player == null) return null;
-
-            if (!GTTeamsCompat.hasPermission(player, TeamAction.CREATE_ASSET)) return null;
-
-            UUID teamId = GTTeamsCompat.getTeam(player);
-            try {
-                return packet.apply(teamId, DebugActionAuthorization.isAuthorized(player));
-            } catch (IllegalArgumentException ex) {
-                Galaxia.LOG
-                    .warn("Rejected asset create request from {}: {}", player.getCommandSenderName(), ex.getMessage());
-                Galaxia.GALAXIA_NETWORK.sendTo(StarmapActionStatusPacket.rejected(ex.getMessage()), player);
-                return null;
-            }
+            ServerTickTaskQueue.schedule(() -> {
+                if (!GTTeamsCompat.hasPermission(player, TeamAction.CREATE_ASSET)) return;
+                UUID teamId = GTTeamsCompat.getTeam(player);
+                try {
+                    CelestialAsset created = packet.apply(teamId, DebugActionAuthorization.isAuthorized(player));
+                    if (created != null) AssetStateSync.SERVER.publishInteractive(created.assetId);
+                } catch (IllegalArgumentException ex) {
+                    Galaxia.LOG.warn(
+                        "Rejected asset create request from {}: {}",
+                        player.getCommandSenderName(),
+                        ex.getMessage());
+                    Galaxia.GALAXIA_NETWORK.sendTo(StarmapActionStatusPacket.rejected(ex.getMessage()), player);
+                }
+            });
+            return null;
         }
     }
 }

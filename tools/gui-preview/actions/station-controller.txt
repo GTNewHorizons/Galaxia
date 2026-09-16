@@ -1,0 +1,4 @@
+capture controller-default
+move-widget 0/3
+click left
+capture controller-role-changed

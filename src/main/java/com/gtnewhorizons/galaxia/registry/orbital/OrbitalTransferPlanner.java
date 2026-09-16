@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.orbital;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
@@ -105,76 +104,6 @@ public final class OrbitalTransferPlanner {
                 && Double.isFinite(tofOsu)
                 && tofOsu > 0.0;
         }
-    }
-
-    // -------------------------------------------------------------------------
-    // Celestial tree helpers
-    // -------------------------------------------------------------------------
-
-    /**
-     * Finds a body in the hierarchy by id, starting from {@code root}.
-     * Returns {@code null} if not found.
-     */
-    public static CelestialObject findBodyByKey(CelestialObject root, String id) {
-        if (root == null || id == null) return null;
-        return findBodyByIdRec(root, id);
-    }
-
-    private static CelestialObject findBodyByIdRec(CelestialObject current, String id) {
-        if (id.equals(current.key())) return current;
-        for (CelestialObject child : GalaxiaCelestialAPI.getChildren(current)) {
-            CelestialObject found = findBodyByIdRec(child, id);
-            if (found != null) return found;
-        }
-        return null;
-    }
-
-    /**
-     * Finds the nearest {@link CelestialObject.Class#STAR} ancestor of {@code target}.
-     * Returns {@code null} if no star is found above the target.
-     */
-    public static CelestialObject findHostStar(CelestialObject root, CelestialObject target) {
-        if (root == null || target == null) return null;
-        return findHostStarRec(root, target, null);
-    }
-
-    private static CelestialObject findHostStarRec(CelestialObject current, CelestialObject target,
-        CelestialObject currentStar) {
-        CelestialObject nextStar = current.objectClass() == CelestialObject.Class.STAR ? current : currentStar;
-        if (current == target) return nextStar;
-        for (CelestialObject child : GalaxiaCelestialAPI.getChildren(current)) {
-            CelestialObject found = findHostStarRec(child, target, nextStar);
-            if (found != null) return found;
-        }
-        return null;
-    }
-
-    /**
-     * Returns the "planetary anchor" for {@code target}:
-     * <ul>
-     * <li>If the target is a PLANET or GAS_GIANT → returns itself.</li>
-     * <li>If the target is a MOON (or ASTEROID, STATION, etc.) → returns the nearest
-     * PLANET/GAS_GIANT ancestor, or the target itself if none is found.</li>
-     * </ul>
-     */
-    public static CelestialObject findPlanetaryAnchor(CelestialObject root, CelestialObject target) {
-        if (root == null || target == null) return target;
-        CelestialObject anchor = findPlanetaryAnchorRec(root, target, null);
-        return anchor != null ? anchor : target;
-    }
-
-    private static CelestialObject findPlanetaryAnchorRec(CelestialObject current, CelestialObject target,
-        CelestialObject currentPlanet) {
-        CelestialObject.Class cls = current.objectClass();
-        CelestialObject nextPlanet = (cls == CelestialObject.Class.PLANET || cls == CelestialObject.Class.GAS_GIANT)
-            ? current
-            : currentPlanet;
-        if (current == target) return nextPlanet != null ? nextPlanet : current;
-        for (CelestialObject child : GalaxiaCelestialAPI.getChildren(current)) {
-            CelestialObject found = findPlanetaryAnchorRec(child, target, nextPlanet);
-            if (found != null) return found;
-        }
-        return null;
     }
 
     // -------------------------------------------------------------------------

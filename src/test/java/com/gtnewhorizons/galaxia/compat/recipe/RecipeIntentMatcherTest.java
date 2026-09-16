@@ -1,11 +1,13 @@
 package com.gtnewhorizons.galaxia.compat.recipe;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.oredict.OreDictionary;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -56,7 +58,71 @@ final class RecipeIntentMatcherTest {
         assertEquals(GTRecipeMapId.DISTILLERY.ordinal(), Byte.toUnsignedInt(snapshot.recipeMapOrdinal()));
         assertEquals(320, snapshot.duration());
         assertEquals(480, snapshot.eut());
-        assertEquals("galaxia.intent.water", fluidName(snapshot.fluidOutputs()[0]));
+        assertEquals(
+            "galaxia.intent.water",
+            fluidName(
+                snapshot.fluidOutputs()
+                    .get(0)
+                    .fluidStack()));
+    }
+
+    // Integration regression: GT's non-consumed item markers survive selection from a real recipe representation.
+    @Test
+    void matchingPreservesNonConsumedItemInput() {
+        Item item = new Item();
+        GTRecipe recipe = TestGTRecipes.recipe(
+            new ItemStack[] { new ItemStack(item, 0, 24) },
+            new ItemStack[] { new ItemStack(new Item()) },
+            null,
+            null,
+            null,
+            20,
+            30);
+        var result = RecipeIntentMatcher.match(
+            GTRecipeMapId.DISTILLERY,
+            new GTRecipe[] { recipe },
+            new ItemStack[] { new ItemStack(item, 1, 24) },
+            null,
+            null,
+            null);
+        assertEquals(RecipeIntentMatcher.Status.SINGLE_MATCH, result.status());
+        assertEquals(
+            0L,
+            result.snapshot()
+                .itemInputs()
+                .get(0)
+                .amount());
+        assertEquals(
+            24,
+            result.snapshot()
+                .itemInputs()
+                .get(0)
+                .itemStack()
+                .getItemDamage());
+    }
+
+    @Test
+    void matchingWildcardIngredientIsAlreadyProvidedForGhostHints() {
+        Item item = new Item();
+        ItemStack supplied = new ItemStack(item, 1, 4);
+        GTRecipe recipe = TestGTRecipes.recipe(
+            new ItemStack[] { new ItemStack(item, 1, OreDictionary.WILDCARD_VALUE) },
+            null,
+            null,
+            null,
+            null,
+            20,
+            30);
+        var result = RecipeIntentMatcher
+            .match(GTRecipeMapId.DISTILLERY, new GTRecipe[] { recipe }, new ItemStack[] { supplied }, null, null, null);
+
+        assertEquals(RecipeIntentMatcher.Status.SINGLE_MATCH, result.status());
+        assertArrayEquals(
+            new boolean[] { true },
+            RecipeIntentMatcher.providedItemSlots(
+                result.snapshot()
+                    .itemInputs(),
+                new ItemStack[] { supplied }));
     }
 
     @Test
@@ -131,7 +197,9 @@ final class RecipeIntentMatcherTest {
         assertEquals(
             5000,
             result.snapshot()
-                .outputChances()[0]);
+                .itemOutputs()
+                .get(0)
+                .effectiveChance());
     }
 
     @Test

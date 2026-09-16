@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module.types;
 
-import java.util.LinkedHashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -12,8 +12,10 @@ import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialBodyProperties;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureMiningContext;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.MiningFeatureEffects;
@@ -21,21 +23,18 @@ import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeature;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
 
-public final class ModuleMiner extends TieredModuleComponent implements IParallelModule {
+public final class ModuleMiner extends TieredModuleComponent {
 
     public final FacilityModuleKind kind;
 
     public static final FacilityModuleKind KIND = FacilityModuleKind.MINER;
-    private byte parallel = 1;
     private MinerFocusTier focusTier = MinerFocusTier.NONE;
     private String focusOreKey;
     private int focusAlignmentProgress;
@@ -46,34 +45,78 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
         this.kind = kind;
     }
 
-    public static void generateOre(ModuleInstance instance, CelestialAsset outpost) {
-        if (!(instance.component() instanceof ModuleMiner miner)) {
-            throw new IllegalStateException("miner tick sent to non-miner module " + instance.id);
+    @Override
+    public void applyBuildPhysicalSpec(ModuleInstance module, BuildPhysicalSpec spec) {
+        if (!(spec instanceof BuildPhysicalSpec.Miner minerSpec) || minerSpec.tier() == null
+            || minerSpec.focusTier() == null
+            || minerSpec.tier() != module.tier()) {
+            throw new IllegalArgumentException("Invalid miner build physical spec");
         }
+        setFocus(minerSpec.focusTier(), null, 0);
+    }
+
+    @Override
+    public BuildPhysicalSpec buildPhysicalSpec(ModuleInstance module) {
+        return new BuildPhysicalSpec.Miner(module.tier(), focusTier);
+    }
+
+    @Override
+    public boolean applyConfigurationTransition(ModuleInstance module,
+        FacilityCommand.ModuleConfiguration configuration) {
+        if (!(configuration instanceof FacilityCommand.SetMinerFocusOre setOre)) {
+            return super.applyConfigurationTransition(module, configuration);
+        }
+        if (setOre.oreKey() != null && setOre.oreKey()
+            .isBlank()) {
+            throw new IllegalArgumentException("Blank miner focus ore key");
+        }
+        if (Objects.equals(setOre.oreKey(), focusOreKey)) return false;
+        setFocusOre(setOre.oreKey());
+        return true;
+    }
+
+    @Override
+    public IModuleOperation prepareOperationTarget(ModuleInstance module, FacilityCommand.ModuleCommand request) {
+        if (!(request instanceof FacilityCommand.PlanMinerFocusUpgrade plan)) {
+            return super.prepareOperationTarget(module, request);
+        }
+        if (!canPlanFocusUpgrade(module, plan.targetModuleTier(), plan.targetFocusTier())) {
+            throw new IllegalArgumentException("Invalid miner focus operation target");
+        }
+        return new IModuleOperation.MinerFocus(plan.targetModuleTier(), plan.targetFocusTier(), focusOreKey);
+    }
+
+    public boolean canPlanFocusUpgrade(ModuleInstance module, ModuleTier targetModuleTier,
+        MinerFocusTier targetFocusTier) {
+        return targetModuleTier != null && targetFocusTier != null
+            && module.kind()
+                .allowedTiers()
+                .contains(targetModuleTier)
+            && (module.tier() != targetModuleTier || focusTier != targetFocusTier);
+    }
+
+    @Override
+    public void runCycle(ModuleInstance instance, CelestialAsset outpost) {
         if (!(outpost instanceof AutomatedFacility facility)) {
             throw new IllegalStateException("Miner should be only created in the AutomatedFacility");
         }
         GalaxiaCelestialAPI.get(outpost.celestialObjectKey)
             .ifPresent(registration -> {
                 MiningFeatureEffects featureEffects = featureMiningEffects(instance, facility);
-                List<ItemStack> candidates = miningCandidates(instance, facility, featureEffects);
+                List<ItemStack> candidates = miningCandidates(registration.properties(), featureEffects);
                 if (candidates.isEmpty() && featureEffects.replacementRolls()
                     .isEmpty()) return;
-                miner.advanceFocusAlignment();
+                advanceFocusAlignment();
                 int rolls = 1 + featureEffects.bonusRolls();
                 for (int i = 0; i < rolls; i++) {
                     ItemStack replacement = featureEffects.rollReplacement(RANDOM);
                     ItemStack chosen = replacement != null ? replacement
-                        : candidates.isEmpty() ? null : chooseFocusedOre(miner, candidates);
+                        : candidates.isEmpty() ? null : chooseFocusedOre(this, candidates);
                     if (chosen == null) continue;
-                    String oreKey = ItemStackWrapper.of(chosen)
-                        .toKey();
-                    if (shouldVoidOre(instance, facility, oreKey)) continue;
+                    ItemStackWrapper ore = ItemStackWrapper.of(chosen);
+                    if (shouldVoidOre(instance, facility, ore.toKey())) continue;
                     if (!featureEffects.shouldKeepOutput(RANDOM)) continue;
-                    ItemStack ore = chosen.copy();
-                    ore.stackSize = 1;
-                    ItemStackWrapper oreWrapper = ItemStackWrapper.of(ore);
-                    if (oreWrapper != null) facility.updateContents(oreWrapper, 1, true);
+                    facility.insert(ore, 1L);
                 }
             });
     }
@@ -81,7 +124,10 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
     public static List<ItemStack> possibleOutputs(@Nonnull ModuleInstance instance,
         @Nonnull AutomatedFacility facility) {
         MiningFeatureEffects featureEffects = featureMiningEffects(instance, facility);
-        List<ItemStack> outputs = new java.util.ArrayList<>(miningCandidates(instance, facility, featureEffects));
+        List<ItemStack> candidates = GalaxiaCelestialAPI.get(facility.celestialObjectKey)
+            .map(registration -> miningCandidates(registration.properties(), featureEffects))
+            .orElse(List.of());
+        List<ItemStack> outputs = new ArrayList<>(candidates);
         for (MiningFeatureEffects.ChanceStack roll : featureEffects.replacementRolls()) {
             ItemStack copy = roll.stack()
                 .copy();
@@ -91,30 +137,24 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
         return List.copyOf(outputs);
     }
 
-    private static List<ItemStack> miningCandidates(@Nonnull ModuleInstance instance,
-        @Nonnull AutomatedFacility facility, @Nonnull MiningFeatureEffects featureEffects) {
-        return GalaxiaCelestialAPI.get(facility.celestialObjectKey)
-            .map(registration -> {
-                var properties = registration.properties();
-                List<ItemStack> bodyOres = properties.getResolvedGtVeinOreStacks();
-                List<ItemStack> candidates = new java.util.ArrayList<>(
-                    bodyOres.size() + featureEffects.candidates()
-                        .size());
-                candidates.addAll(bodyOres);
-                candidates.addAll(featureEffects.candidates());
-                return List.copyOf(candidates);
-            })
-            .orElse(List.of());
+    private static List<ItemStack> miningCandidates(@Nonnull CelestialBodyProperties properties,
+        @Nonnull MiningFeatureEffects featureEffects) {
+        List<ItemStack> bodyOres = properties.getResolvedGtVeinOreStacks();
+        if (bodyOres.isEmpty()) return featureEffects.candidates();
+        if (featureEffects.candidates()
+            .isEmpty()) return bodyOres;
+        List<ItemStack> candidates = new ArrayList<>(
+            bodyOres.size() + featureEffects.candidates()
+                .size());
+        candidates.addAll(bodyOres);
+        candidates.addAll(featureEffects.candidates());
+        return candidates;
     }
 
     public static MiningFeatureEffects featureMiningEffects(@Nonnull ModuleInstance module,
         @Nonnull AutomatedFacility outpost) {
-        Map<PlanetaryFeatureKey, Integer> counts = new LinkedHashMap<>();
-        for (var tile : module.tiles()) {
-            for (PlanetaryFeatureKey feature : outpost.planetaryFeaturesAt(tile)) {
-                counts.merge(feature, 1, Integer::sum);
-            }
-        }
+        Map<PlanetaryFeatureKey, Integer> counts = outpost.featureModifiers(module)
+            .coveredTiles();
         MiningFeatureEffects.Builder builder = MiningFeatureEffects.builder();
         int totalTiles = module.shape()
             .tileCount();
@@ -129,6 +169,9 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
     }
 
     private static ItemStack chooseFocusedOre(ModuleMiner miner, List<ItemStack> candidates) {
+        if (miner.effectiveFocusBonusFor(miner.focusOreKey) == 0) {
+            return candidates.get(RANDOM.nextInt(candidates.size() * 100) / 100);
+        }
         int totalWeight = 0;
         int[] weights = new int[candidates.size()];
         for (int i = 0; i < candidates.size(); i++) {
@@ -153,41 +196,31 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
     }
 
     @Override
-    public ModuleSettings createPrivateSettings(ModuleInstance module) {
+    public ModuleSettings captureModuleSettings(ModuleInstance module) {
         return new MinerSettings();
     }
 
     @Override
-    public void applySettings(ModuleInstance module, ModuleSettings settings) {
+    public void validateModuleSettings(ModuleInstance module, ModuleSettings settings) {
         if (!(settings instanceof MinerSettings)) {
             throw new IllegalStateException("MINER received non-miner settings for module " + module.id);
         }
     }
 
     @Override
-    public void validateSettingsCopyTarget(ModuleInstance source, ModuleInstance target) {
+    public boolean settingsCopyWouldChange(ModuleInstance source, ModuleInstance target) {
         if (!(source.component() instanceof ModuleMiner sourceMiner)) {
             throw new IllegalStateException("Miner settings copy source is not a miner: " + source.id);
         }
         if (!(target.component() instanceof ModuleMiner targetMiner)) {
             throw new IllegalStateException("Miner settings copy target is not a miner: " + target.id);
         }
-        String sourceFocusOreKey = sourceMiner.focusOreKeyOrNull();
-        if (sourceFocusOreKey != null && targetMiner.focusTier() == MinerFocusTier.NONE) {
-            throw new IllegalStateException(
-                "Miner settings copy target " + target.id + " has no focus tier for ore " + sourceFocusOreKey);
-        }
+        return !Objects.equals(sourceMiner.focusOreKeyOrNull(), targetMiner.focusOreKeyOrNull());
     }
 
     @Override
-    public void afterSettingsCopied(ModuleInstance source, ModuleInstance target) {
-        if (!(source.component() instanceof ModuleMiner sourceMiner)) {
-            throw new IllegalStateException("Miner settings copy source is not a miner: " + source.id);
-        }
-        if (!(target.component() instanceof ModuleMiner targetMiner)) {
-            throw new IllegalStateException("Miner settings copy target is not a miner: " + target.id);
-        }
-        targetMiner.setFocusOre(sourceMiner.focusOreKeyOrNull());
+    public void applySettingsCopy(ModuleInstance source, ModuleInstance target) {
+        ((ModuleMiner) target.component()).setFocusOre(((ModuleMiner) source.component()).focusOreKeyOrNull());
     }
 
     public MinerFocusTier focusTier() {
@@ -204,18 +237,16 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
 
     @Override
     public void applyOperationTarget(IModuleOperation spec, ModuleInstance module) {
-        if (spec instanceof ModuleTierOperation) {
+        if (spec instanceof IModuleOperation.Tier) {
             super.applyOperationTarget(spec, module);
             return;
         }
-        if (!(spec instanceof MinerFocusOperation minerSpec)) {
+        if (!(spec instanceof IModuleOperation.MinerFocus minerSpec)) {
             throw new IllegalStateException(
                 "MINER cannot handle " + spec.getClass()
                     .getSimpleName());
         }
-        MinerFocusTier focusTier = MinerFocusTier.valueOf(minerSpec.targetFocusTierKey());
-        String focusOreKey = focusTier == MinerFocusTier.NONE ? null : minerSpec.targetFocusOreKey();
-        setFocus(focusTier, focusOreKey, 0);
+        setFocus(minerSpec.targetFocusTier(), minerSpec.targetFocusOreKey(), 0);
     }
 
     public void setFocus(MinerFocusTier focusTier, String focusOreKey, int focusAlignmentProgress) {
@@ -224,11 +255,8 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
         }
         String normalizedFocusOreKey = normalizeFocusOreKey(focusOreKey);
         if (focusTier == MinerFocusTier.NONE) {
-            if (normalizedFocusOreKey != null) {
-                throw new IllegalArgumentException("Miner focus ore must be null when focus tier is NONE");
-            }
             this.focusTier = focusTier;
-            this.focusOreKey = null;
+            this.focusOreKey = normalizedFocusOreKey;
             this.focusAlignmentProgress = 0;
             return;
         }
@@ -240,9 +268,6 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
 
     public void setFocusOre(String focusOreKey) {
         String normalized = normalizeFocusOreKey(focusOreKey);
-        if (focusTier == MinerFocusTier.NONE && normalized != null) {
-            throw new IllegalStateException("Miner focus ore cannot be set while focus tier is NONE");
-        }
         if (Objects.equals(this.focusOreKey, normalized)) return;
         this.focusOreKey = normalized;
         resetFocusAlignment();
@@ -266,13 +291,4 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
         return focusTier.bonusPercent() * focusAlignmentProgress / MinerFocusTier.ALIGNMENT_REQUIRED_TICKS;
     }
 
-    @Override
-    public byte getParallel() {
-        return parallel;
-    }
-
-    @Override
-    public void setParallel(byte parallel) {
-        this.parallel = parallel;
-    }
 }

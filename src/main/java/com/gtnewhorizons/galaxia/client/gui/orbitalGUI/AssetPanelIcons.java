@@ -1,11 +1,11 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.ResourceLocation;
 
 import org.lwjgl.opengl.GL11;
 
+import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -57,12 +57,6 @@ final class AssetPanelIcons {
         GlStateManager.enableBlend();
         GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GL11.glColor4f(1f, 1f, 1f, 1f);
-        Tessellator tess = Tessellator.instance;
-        tess.startDrawingQuads();
-        tess.addVertexWithUV(x, y + size, 0, 0, 1);
-        tess.addVertexWithUV(x + size, y + size, 0, 1, 1);
-        tess.addVertexWithUV(x + size, y, 0, 1, 0);
-        tess.addVertexWithUV(x, y, 0, 0, 0);
-        tess.draw();
+        GuiDraw.drawTexture(x, y, x + size, y + size, 0f, 0f, 1f, 1f);
     }
 }

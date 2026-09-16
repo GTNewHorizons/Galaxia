@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.core.persistence;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -7,11 +8,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.File;
 import java.util.UUID;
 
+import net.minecraft.nbt.NBTTagCompound;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.gtnewhorizons.galaxia.core.state.AssetState;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -61,9 +65,9 @@ final class DebugDataGeneratorPersistenceTest {
         generator.advanceJob();
         generator.consume(15L);
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
-        AutomatedFacility decoded = facility();
-        manager.decodeFacilityState(decoded, encoded);
+        NBTTagCompound encoded = AssetState.encode(new UUID(0L, 1L), station);
+        AutomatedFacility decoded = (AutomatedFacility) AssetState.decode(encoded)
+            .asset();
 
         ModuleDebugDataGenerator loaded = assertInstanceOf(
             ModuleDebugDataGenerator.class,
@@ -101,11 +105,14 @@ final class DebugDataGeneratorPersistenceTest {
         ModuleDebugDataGenerator generator = addGenerator(station);
         generator.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.RESEARCH, 25L, 40));
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
-        encoded.modules.get(0).data.getAsJsonObject()
-            .addProperty("enabled", false);
-        AutomatedFacility decoded = facility();
-        manager.decodeFacilityState(decoded, encoded);
+        NBTTagCompound encoded = AssetState.encode(new UUID(0L, 1L), station);
+        encoded.getCompoundTag("facility")
+            .getTagList("modules", 10)
+            .getCompoundTagAt(0)
+            .getCompoundTag("data")
+            .setBoolean("enabled", false);
+        AutomatedFacility decoded = (AutomatedFacility) AssetState.decode(encoded)
+            .asset();
 
         ModuleDebugDataGenerator loaded = assertInstanceOf(
             ModuleDebugDataGenerator.class,
@@ -180,7 +187,7 @@ final class DebugDataGeneratorPersistenceTest {
         module.updateStatus(Buildable.Status.OPERATIONAL);
         station.stationLayout()
             .place(module);
-        station.addModule(module);
+        addModule(station, module);
         return (ModuleDebugDataGenerator) module.component();
     }
 }

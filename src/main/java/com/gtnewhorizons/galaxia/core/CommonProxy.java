@@ -62,6 +62,7 @@ public class CommonProxy {
     // GameRegistry." (Remove if not needed)
     public void preInit(FMLPreInitializationEvent event) {
         CelestialServerRuntime celestialRuntime = CelestialServerRuntime.create();
+        TeamEventHandler teamEventHandler = new TeamEventHandler(celestialRuntime);
         GalaxiaAtmosphereFluids.init();
         CelestialDimensionMaterializer.registerPlayableDimensions();
 
@@ -70,10 +71,11 @@ public class CommonProxy {
         FMLBusRegister(new CelestialEventHandler(celestialRuntime));
         FMLBusRegister(new ServerTickTaskQueue());
         FMLBusRegister(new TetherEventHandler());
+        FMLBusRegister(teamEventHandler);
 
         // Forge bus registering
         ForgeBusRegister(new FacilityPersistenceManager(celestialRuntime));
-        ForgeBusRegister(new TeamEventHandler());
+        ForgeBusRegister(teamEventHandler);
         ForgeBusRegister(new GalaxiaPlayerProperties.PlayerEventHandler());
 
         // GTNH Teams custom data

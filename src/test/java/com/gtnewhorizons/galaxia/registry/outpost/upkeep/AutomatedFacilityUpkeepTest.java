@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.outpost.upkeep;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 import java.util.Map;
@@ -14,12 +16,14 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 import com.gtnewhorizons.galaxia.registry.outpost.module.BlockingReason;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -31,6 +35,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class AutomatedFacilityUpkeepTest {
 
@@ -40,7 +45,7 @@ final class AutomatedFacilityUpkeepTest {
 
     @BeforeAll
     static void initRegistries() {
-        CelestialRegistry.freezeAndBake();
+        GalaxiaTestBootstrap.ensureCelestialRegistry();
         FacilityModuleRegistry.init();
     }
 
@@ -52,22 +57,102 @@ final class AutomatedFacilityUpkeepTest {
     }
 
     @Test
+    void upkeepReserveTracksModuleAvailabilityAndReplacement() {
+        ModuleInstance module = moduleWithUpkeep(ModulePriority.NORMAL, "2");
+        AutomatedFacility facility = facilityWithModules(module);
+        assertEquals(20L, facility.upkeepReserve(UPKEEP_ITEM));
+
+        module.setEnabled(false);
+        assertEquals(0L, facility.upkeepReserve(UPKEEP_ITEM));
+        module.setEnabled(true);
+        assertEquals(20L, facility.upkeepReserve(UPKEEP_ITEM));
+        module.updateStatus(Buildable.Status.IN_CONSTRUCTION);
+        assertEquals(0L, facility.upkeepReserve(UPKEEP_ITEM));
+        module.completeConstruction();
+        assertEquals(20L, facility.upkeepReserve(UPKEEP_ITEM));
+        module.setComponent(null);
+        assertEquals(0L, facility.upkeepReserve(UPKEEP_ITEM));
+        module.setComponent(new TestTieredModule());
+        assertEquals(20L, facility.upkeepReserve(UPKEEP_ITEM));
+
+        facility.clearModules();
+        assertEquals(0L, facility.upkeepReserve(UPKEEP_ITEM));
+        facility.restoreModulesAndSettings(List.of(moduleWithUpkeep(ModulePriority.NORMAL, "3")), List.of());
+        assertEquals(30L, facility.upkeepReserve(UPKEEP_ITEM));
+    }
+
+    @Test
+    void priorityChangesApplyAfterDemandWasAlreadyRead() {
+        ModuleInstance first = moduleWithUpkeep(ModulePriority.NORMAL, "1");
+        ModuleInstance second = moduleWithUpkeep(ModulePriority.LOW, "1");
+        AutomatedFacility facility = facilityWithModules(first, second);
+        assertEquals(20L, facility.upkeepReserve(UPKEEP_ITEM));
+
+        second.setPriorityOverride(ModulePriority.HIGH);
+        facility.insert(UPKEEP_ITEM, 1L);
+        facility.settleUpkeep();
+
+        assertEquals(BlockingReason.UPKEEP_SHORTAGE, first.blocking());
+        assertEquals(BlockingReason.NONE, second.blocking());
+    }
+
+    @Test
+    void upkeepReserveTracksTierChanges() {
+        ModuleInstance module = moduleWithTierData(
+            ModulePriority.NORMAL,
+            Map.of(
+                ModuleTier.NONE,
+                tierDataBuilder().upkeepItem(UPKEEP_STACK, "1")
+                    .build(),
+                ModuleTier.HV,
+                tierDataBuilder().upkeepItem(UPKEEP_STACK, "3")
+                    .build()));
+        AutomatedFacility facility = facilityWithModules(module);
+        assertEquals(10L, facility.upkeepReserve(UPKEEP_ITEM));
+
+        module.setTier(ModuleTier.HV);
+
+        assertEquals(30L, facility.upkeepReserve(UPKEEP_ITEM));
+    }
+
+    @Test
     void manualUpkeepReserveOverridesDefaultDemandReserve() {
         AutomatedFacility facility = facilityWithModules(moduleWithUpkeep(ModulePriority.NORMAL, "2"));
 
-        facility.setUpkeepReserve(UPKEEP_ITEM, 7L);
+        facility.applyCommand(
+            new FacilityCommand.PutLogisticsConfig(
+                facility.assetId,
+                UPKEEP_ITEM,
+                new LogisticsResourceConfig(7, 1, false, false),
+                LogisticsConfigAccessMode.FULL),
+            FacilityCommand.Authority.NONE);
 
         assertEquals(7L, facility.upkeepReserve(UPKEEP_ITEM));
     }
 
     @Test
+    void zeroLogisticsReserveKeepsTheAutomaticUpkeepReserve() {
+        AutomatedFacility facility = facilityWithModules(moduleWithUpkeep(ModulePriority.NORMAL, "2"));
+
+        facility.applyCommand(
+            new FacilityCommand.PutLogisticsConfig(
+                facility.assetId,
+                UPKEEP_ITEM,
+                new LogisticsResourceConfig(0, 64, true, false),
+                LogisticsConfigAccessMode.FULL),
+            FacilityCommand.Authority.NONE);
+
+        assertEquals(20L, facility.upkeepReserve(UPKEEP_ITEM));
+    }
+
+    @Test
     void minuteTickConsumesWholeItemAndStoresFractionalCredit() {
         AutomatedFacility facility = facilityWithModules(moduleWithUpkeep(ModulePriority.NORMAL, "0.1"));
-        facility.updateItems(UPKEEP_ITEM, 1);
+        facility.insert(UPKEEP_ITEM, 1);
 
         tickUpkeepMinute(facility);
 
-        assertEquals(0L, facility.getItemAmount(UPKEEP_ITEM));
+        assertEquals(0L, facility.itemAmount(UPKEEP_ITEM));
         assertEquals(
             "0.9",
             facility.upkeepCredits()
@@ -83,11 +168,11 @@ final class AutomatedFacilityUpkeepTest {
     @Test
     void minuteTickConsumesWholeFluidAndStoresFractionalCredit() {
         AutomatedFacility facility = facilityWithModules(moduleWithFluidUpkeep(ModulePriority.NORMAL, "0.25"));
-        facility.updateFluids(UPKEEP_FLUID, 1);
+        facility.insert(UPKEEP_FLUID, 1);
 
         tickUpkeepMinute(facility);
 
-        assertEquals(0L, facility.getFluidAmount(UPKEEP_FLUID));
+        assertEquals(0L, facility.fluidAmount(UPKEEP_FLUID));
         assertEquals(
             "0.75",
             facility.upkeepCredits()
@@ -107,11 +192,11 @@ final class AutomatedFacilityUpkeepTest {
         ModuleInstance normal = moduleWithUpkeep(ModulePriority.NORMAL, "0.6");
         ModuleInstance low = moduleWithUpkeep(ModulePriority.LOW, "0.6");
         AutomatedFacility facility = facilityWithModules(low, normal, high);
-        facility.updateItems(UPKEEP_ITEM, 1);
+        facility.insert(UPKEEP_ITEM, 1);
 
         tickUpkeepMinute(facility);
 
-        assertEquals(0L, facility.getItemAmount(UPKEEP_ITEM));
+        assertEquals(0L, facility.itemAmount(UPKEEP_ITEM));
         assertEquals(BlockingReason.NONE, high.blocking());
         assertEquals(BlockingReason.UPKEEP_SHORTAGE, normal.blocking());
         assertEquals(BlockingReason.UPKEEP_SHORTAGE, low.blocking());
@@ -134,32 +219,93 @@ final class AutomatedFacilityUpkeepTest {
         assertEquals(BlockingReason.UPKEEP_SHORTAGE, module.blocking());
         assertEquals(ModuleState.BLOCKED, module.state());
 
-        facility.updateItems(UPKEEP_ITEM, 1);
+        facility.insert(UPKEEP_ITEM, 1);
         tickUpkeepMinute(facility);
 
         assertEquals(BlockingReason.NONE, module.blocking());
         assertEquals(ModuleState.IDLE, module.state());
-        assertEquals(0L, facility.getItemAmount(UPKEEP_ITEM));
+        assertEquals(0L, facility.itemAmount(UPKEEP_ITEM));
     }
 
     @Test
-    void upkeepBlockingAndRecoveryMarkModuleDirtyForSync() {
+    void oneSettlementPassBlocksAllModulesWithShortage() {
+        ModuleInstance high = moduleWithUpkeep(ModulePriority.HIGH, "1");
+        ModuleInstance normal = moduleWithUpkeep(ModulePriority.NORMAL, "1");
+        ModuleInstance low = moduleWithUpkeep(ModulePriority.LOW, "1");
+        AutomatedFacility facility = facilityWithModules(high, normal, low);
+
+        facility.settleUpkeep();
+
+        assertEquals(BlockingReason.UPKEEP_SHORTAGE, high.blocking());
+        assertEquals(BlockingReason.UPKEEP_SHORTAGE, normal.blocking());
+        assertEquals(BlockingReason.UPKEEP_SHORTAGE, low.blocking());
+    }
+
+    @Test
+    void repeatedUnchangedSettlementPreservesBlockingState() {
         ModuleInstance module = moduleWithUpkeep(ModulePriority.NORMAL, "1");
         AutomatedFacility facility = facilityWithModules(module);
-        facility.drainDirtyModules();
+        facility.settleUpkeep();
 
-        tickUpkeepMinute(facility);
+        facility.settleUpkeep();
 
-        List<ModuleInstance> blockedDirtyModules = facility.drainDirtyModules();
-        assertEquals(1, blockedDirtyModules.size());
-        assertEquals(module.id, blockedDirtyModules.get(0).id);
+        assertEquals(BlockingReason.UPKEEP_SHORTAGE, module.blocking());
+        assertEquals(ModuleState.BLOCKED, module.state());
+    }
 
-        facility.updateItems(UPKEEP_ITEM, 1);
-        tickUpkeepMinute(facility);
+    @Test
+    void consumptionAndCreditChangeApplyTogether() {
+        ModuleInstance module = moduleWithUpkeep(ModulePriority.NORMAL, "0.1");
+        AutomatedFacility facility = facilityWithModules(module);
+        facility.insert(UPKEEP_ITEM, 1L);
 
-        List<ModuleInstance> recoveredDirtyModules = facility.drainDirtyModules();
-        assertEquals(1, recoveredDirtyModules.size());
-        assertEquals(module.id, recoveredDirtyModules.get(0).id);
+        facility.settleUpkeep();
+
+        assertEquals(0L, facility.itemAmount(UPKEEP_ITEM));
+        assertEquals(
+            "0.9",
+            facility.upkeepCredits()
+                .itemCredit(UPKEEP_ITEM)
+                .toDisplayString());
+        assertEquals(BlockingReason.NONE, module.blocking());
+    }
+
+    @Test
+    void loadingNullCreditsNormalizesToEmptyCredits() {
+        AutomatedFacility facility = facilityWithModules();
+
+        facility.loadUpkeepCredits(null);
+
+        assertEquals(UpkeepSettlement.Credits.empty(), facility.upkeepCredits());
+    }
+
+    @Test
+    void wholeUnitConsumptionAppliesWhenCreditsAndBlockingStayUnchanged() {
+        ModuleInstance module = moduleWithUpkeep(ModulePriority.NORMAL, "1");
+        AutomatedFacility facility = facilityWithModules(module);
+        facility.insert(UPKEEP_ITEM, 1L);
+
+        facility.settleUpkeep();
+
+        assertEquals(0L, facility.itemAmount(UPKEEP_ITEM));
+        assertEquals(UpkeepSettlement.Credits.empty(), facility.upkeepCredits());
+        assertEquals(BlockingReason.NONE, module.blocking());
+    }
+
+    @Test
+    void exceptionalSettlementPreservesEarlierInventoryConsumption() {
+        ModuleInstance paidFirst = moduleWithUpkeep(ModulePriority.HIGH, "1");
+        ItemStack extremeStack = new ItemStack(new Item());
+        ModuleTierData extremeTier = tierDataBuilder()
+            .upkeepItem(extremeStack, UpkeepAmount.ofMicroUnits(Long.MAX_VALUE))
+            .build();
+        ModuleInstance throwsLater = moduleWithTierData(ModulePriority.NORMAL, extremeTier);
+        AutomatedFacility facility = facilityWithModules(paidFirst, throwsLater);
+        facility.insert(UPKEEP_ITEM, 2L);
+
+        assertThrows(RuntimeException.class, facility::settleUpkeep);
+
+        assertEquals(1L, facility.itemAmount(UPKEEP_ITEM));
     }
 
     private static void tickUpkeepMinute(AutomatedFacility facility) {
@@ -175,7 +321,7 @@ final class AutomatedFacilityUpkeepTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         for (ModuleInstance module : modules) {
-            facility.addModule(module);
+            addModule(facility, module);
         }
         return facility;
     }
@@ -194,21 +340,24 @@ final class AutomatedFacilityUpkeepTest {
 
     private static ModuleTierData.Builder tierDataBuilder() {
         return ModuleTierData.builder()
-            .addedEnergyCapacity(0L)
             .powerDraw(0L)
             .cooldown(20)
             .cost(Map.of(new ItemStack(new Item()), 1L));
     }
 
     private static ModuleInstance moduleWithTierData(ModulePriority priority, ModuleTierData tierData) {
+        return moduleWithTierData(priority, Map.of(ModuleTier.NONE, tierData));
+    }
+
+    private static ModuleInstance moduleWithTierData(ModulePriority priority, Map<ModuleTier, ModuleTierData> tiers) {
         FacilityModuleRegistry.Definition definition = new FacilityModuleRegistry.Definition(
             FacilityModuleKind.POWER,
-            Map.of(ModuleTier.NONE, tierData),
-            (module, facility) -> {},
+            tiers,
             TestTieredModule::new,
             List.<ModulePanelAction>of(),
             false,
-            List.of());
+            List.of(),
+            null);
         ModuleInstance module = new ModuleInstance(
             ModuleInstance.ID.create(),
             definition,

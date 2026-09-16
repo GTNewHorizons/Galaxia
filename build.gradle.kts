@@ -9,6 +9,16 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
+providers.gradleProperty("horizonQaJar").orNull?.let { horizonQaJar ->
+    sourceSets.main {
+        java.srcDir("src/gameTest/java")
+        resources.srcDir("src/gameTest/resources")
+    }
+    dependencies {
+        add("devOnlyNonPublishable", files(horizonQaJar))
+    }
+}
+
 tasks.test {
     useJUnitPlatform()
 

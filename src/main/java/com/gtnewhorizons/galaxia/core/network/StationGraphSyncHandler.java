@@ -27,13 +27,8 @@ public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncH
     private volatile EnergySnapshot snapshot = new EnergySnapshot(0, 0, 0, 0, 0, 0);
     private volatile RoomSnapshot[] roomSnapshots = new RoomSnapshot[0];
 
-    private int lastSentCount = -1;
-    private long lastSentStored = -1;
-    private long lastSentCapacity = -1;
-    private long lastSentFluidStored = -1;
-    private long lastSentFluidCapacity = -1;
-    private int lastSentFluidCount = -1;
     private RoomSnapshot[] lastSentRooms = new RoomSnapshot[0];
+    private EnergySnapshot lastSent;
     private int syncTicker;
 
     @Setter
@@ -75,13 +70,8 @@ public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncH
     }
 
     public void forceDirty() {
-        lastSentCount = -1;
-        lastSentStored = -1;
-        lastSentCapacity = -1;
-        lastSentFluidStored = -1;
-        lastSentFluidCapacity = -1;
-        lastSentFluidCount = -1;
         lastSentRooms = new RoomSnapshot[0];
+        lastSent = null;
     }
 
     public void triggerFullSync() {
@@ -109,34 +99,30 @@ public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncH
 
         RoomSnapshot[] rooms = airlock != null ? collectRooms() : new RoomSnapshot[0];
 
-        if (count == lastSentCount && stored == lastSentStored
-            && capacity == lastSentCapacity
-            && fluidStored == lastSentFluidStored
-            && fluidCapacity == lastSentFluidCapacity
-            && fluidCount == lastSentFluidCount
+        if (lastSent != null && count == lastSent.attachmentCount()
+            && stored == lastSent.totalStored()
+            && capacity == lastSent.totalCapacity()
+            && fluidStored == lastSent.fluidStored()
+            && fluidCapacity == lastSent.fluidCapacity()
+            && fluidCount == lastSent.fluidAttachmentCount()
             && roomsEqual(rooms, lastSentRooms)) return;
 
-        lastSentCount = count;
-        lastSentStored = stored;
-        lastSentCapacity = capacity;
-        lastSentFluidStored = fluidStored;
-        lastSentFluidCapacity = fluidCapacity;
-        lastSentFluidCount = fluidCount;
         lastSentRooms = rooms;
-
-        final int fCount = count;
-        final long fStored = stored;
-        final long fCapacity = capacity;
-        final long fFluidStored = fluidStored;
-        final long fFluidCapacity = fluidCapacity;
-        final int fFluidCount = fluidCount;
+        EnergySnapshot publication = new EnergySnapshot(
+            count,
+            stored,
+            capacity,
+            fluidStored,
+            fluidCapacity,
+            fluidCount);
+        lastSent = publication;
         syncToClient(OP_FULL_SYNC, buf -> {
-            buf.writeInt(fCount);
-            buf.writeLong(fStored);
-            buf.writeLong(fCapacity);
-            buf.writeLong(fFluidStored);
-            buf.writeLong(fFluidCapacity);
-            buf.writeInt(fFluidCount);
+            buf.writeInt(publication.attachmentCount());
+            buf.writeLong(publication.totalStored());
+            buf.writeLong(publication.totalCapacity());
+            buf.writeLong(publication.fluidStored());
+            buf.writeLong(publication.fluidCapacity());
+            buf.writeInt(publication.fluidAttachmentCount());
             buf.writeInt(rooms.length);
             for (RoomSnapshot room : rooms) {
                 buf.writeBoolean(room.sealed());

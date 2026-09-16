@@ -1,7 +1,8 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -16,12 +17,10 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
-import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePanelAction;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
@@ -42,8 +41,8 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     private static final int ACTION_BUTTON_HEIGHT = 20;
     private static final int ACTION_BUTTON_COLUMN_GAP = 8;
     private static final int ACTION_BUTTON_ROW_GAP = 6;
-    private static final int ACTION_GRID_WIDTH = ACTION_BUTTON_WIDTH * ModulePanelActionLayout.COLUMNS
-        + ACTION_BUTTON_COLUMN_GAP;
+    private static final int ACTION_COLUMNS = 2;
+    private static final int ACTION_GRID_WIDTH = ACTION_BUTTON_WIDTH * ACTION_COLUMNS + ACTION_BUTTON_COLUMN_GAP;
     private static final int DESTROY_MULTIPLE_TOGGLE_HEIGHT = 14;
     private static final int DESTROY_MULTIPLE_TOGGLE_Y = DESTROY_BUTTON_Y - DESTROY_MULTIPLE_TOGGLE_HEIGHT - 4;
     private static final int DESTROY_MULTIPLE_CHECKBOX_SIZE = 10;
@@ -57,16 +56,10 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     private final @Nullable CelestialAsset.ID assetId;
     private final StationMapWidget map;
     private final @Nullable StationTilePickerController tilePickerController;
-    private final @Nullable StationEditModeController editModeController;
     private final @Nullable ModuleConfigModalController configController;
     private @Nullable StationTileCoord armedDestroySelection;
+    private @Nullable HammerDispatchStatus.Status hammerDispatchStatus;
     private boolean destroyMultipleMode;
-    private @Nullable StationTileCoord cachedDestroySelection;
-    private @Nullable StationLayout cachedDestroyLayout;
-    private long cachedDestroyLayoutVersion = -1L;
-    private int cachedDestroyModuleCount = -1;
-    private @Nullable ModuleInstance.ID cachedDestroyModuleId;
-    private int cachedDestroyModuleIndex = -1;
 
     public StationSidePanelWidget(@Nullable CelestialAsset.ID assetId, StationMapWidget map) {
         this(assetId, map, null, null);
@@ -74,17 +67,15 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
 
     public StationSidePanelWidget(@Nullable CelestialAsset.ID assetId, StationMapWidget map,
         @Nullable StationTilePickerController tilePickerController) {
-        this(assetId, map, tilePickerController, null, null);
+        this(assetId, map, tilePickerController, null);
     }
 
     public StationSidePanelWidget(@Nullable CelestialAsset.ID assetId, StationMapWidget map,
         @Nullable StationTilePickerController tilePickerController,
-        @Nullable StationEditModeController editModeController,
         @Nullable ModuleConfigModalController configController) {
         this.assetId = assetId;
         this.map = map;
         this.tilePickerController = tilePickerController;
-        this.editModeController = editModeController;
         this.configController = configController;
         child(
             createDestroyMultipleToggle().pos(DESTROY_BUTTON_X, DESTROY_MULTIPLE_TOGGLE_Y)
@@ -93,20 +84,14 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
             createDestroyButton().pos(DESTROY_BUTTON_X, DESTROY_BUTTON_Y)
                 .size(DESTROY_BUTTON_WIDTH, DESTROY_BUTTON_HEIGHT));
         for (int slot = 0; slot < ModulePanelAction.values().length; slot++) {
-            ModulePanelActionLayout.Cell cell = ModulePanelActionLayout.cellForIndex(slot);
-            int actionX = DESTROY_BUTTON_X + cell.column() * (ACTION_BUTTON_WIDTH + ACTION_BUTTON_COLUMN_GAP);
-            int actionY = ACTION_BUTTON_START_Y + cell.row() * (ACTION_BUTTON_HEIGHT + ACTION_BUTTON_ROW_GAP);
+            int actionX = DESTROY_BUTTON_X + slot % ACTION_COLUMNS * (ACTION_BUTTON_WIDTH + ACTION_BUTTON_COLUMN_GAP);
+            int actionY = ACTION_BUTTON_START_Y
+                + slot / ACTION_COLUMNS * (ACTION_BUTTON_HEIGHT + ACTION_BUTTON_ROW_GAP);
             int actionSlot = slot;
             child(
                 createModuleActionButton(actionSlot).pos(actionX, actionY)
                     .size(ACTION_BUTTON_WIDTH, ACTION_BUTTON_HEIGHT));
         }
-    }
-
-    public StationSidePanelWidget(@Nullable CelestialAsset.ID assetId, StationMapWidget map,
-        @Nullable StationTilePickerController tilePickerController,
-        @Nullable ModuleConfigModalController configController) {
-        this(assetId, map, tilePickerController, null, configController);
     }
 
     @Override
@@ -118,6 +103,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
             armedDestroySelection = null;
             destroyMultipleMode = false;
         }
+        refreshHammerDispatchStatus();
     }
 
     @Override
@@ -178,7 +164,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         lineY = drawLine(
-            "Energy: " + facility.getEnergyStored() + "/" + AutomatedFacility.MAX_ENERGY,
+            "Energy: " + facility.getEnergyStored() + "/" + facility.energyCapacity(),
             x + CONTENT_PADDING,
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
@@ -192,7 +178,8 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
 
         PlacedTile tile = layout == null ? null : layout.get(selected);
         ModuleInstance module = tile == null ? null : tile.module();
-        lineY = ModuleStatusTextRegistry.collect(new ModuleStatusTextRegistry.Context(facility, selected, tile, module))
+        lineY = ModuleStatusTextRegistry
+            .collect(new ModuleStatusTextRegistry.Context(facility, selected, tile, module, hammerDispatchStatus))
             .draw(x + CONTENT_PADDING, lineY);
         if (module != null && module.component() instanceof ModuleHammer hammer) {
             drawHammerEnergyBar(
@@ -208,8 +195,15 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
         return CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility facility ? facility : null;
     }
 
+    private void refreshHammerDispatchStatus() {
+        ModuleInstance module = selectedModule();
+        hammerDispatchStatus = module != null && module.component() instanceof ModuleHammer
+            ? CelestialClient.hammerDispatchStatus(assetId, module.id)
+            : null;
+    }
+
     private ButtonWidget<?> createDestroyButton() {
-        return new ButtonWidget<>().background(drawable((ctx, x, y, w, h) -> {
+        return new ButtonWidget<>().background((ctx, x, y, w, h, ignoredTheme) -> {
             if (isPickerActive()) return;
             BorderedRect.draw(
                 x,
@@ -220,8 +214,8 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
                     : EnumColors.MAP_COLOR_BTN_DISABLED.getColor(),
                 canDestroySelected() ? EnumColors.MAP_COLOR_BTN_DESTROY_BORDER.getColor()
                     : EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor());
-        }))
-            .hoverBackground(drawable((ctx, x, y, w, h) -> {
+        })
+            .hoverBackground((ctx, x, y, w, h, ignoredTheme) -> {
                 if (isPickerActive()) return;
                 BorderedRect.draw(
                     x,
@@ -232,8 +226,8 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
                         : EnumColors.MAP_COLOR_BTN_DISABLED.getColor(),
                     canDestroySelected() ? EnumColors.MAP_COLOR_BTN_DESTROY_BORDER.getColor()
                         : EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor());
-            }))
-            .overlay(drawable((ctx, x, y, w, h) -> {
+            })
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> {
                 if (isPickerActive()) return;
                 FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
                 String label = armedDestroySelection != null && armedDestroySelection.equals(map.selection())
@@ -247,7 +241,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
                     x + (w - textWidth) / 2,
                     y + (h - fr.FONT_HEIGHT) / 2 + BUTTON_TEXT_BASELINE_OFFSET,
                     color);
-            }))
+            })
             .onMousePressed(mouseButton -> {
                 if (isPickerActive()) return false;
                 if (mouseButton != 0 || !canDestroySelected()) return true;
@@ -271,8 +265,8 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
 
     private ButtonWidget<?> createDestroyMultipleToggle() {
         return new ButtonWidget<>()
-            .background(drawable((ctx, x, y, w, h) -> drawDestroyMultipleToggle(x, y, w, h, false)))
-            .hoverBackground(drawable((ctx, x, y, w, h) -> drawDestroyMultipleToggle(x, y, w, h, true)))
+            .background((ctx, x, y, w, h, ignoredTheme) -> drawDestroyMultipleToggle(x, y, w, h, false))
+            .hoverBackground((ctx, x, y, w, h, ignoredTheme) -> drawDestroyMultipleToggle(x, y, w, h, true))
             .onMousePressed(mouseButton -> {
                 if (isPickerActive() || armedDestroySelection == null || mouseButton != 0) return false;
                 destroyMultipleMode = !destroyMultipleMode;
@@ -304,19 +298,32 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     }
 
     private ButtonWidget<?> createModuleActionButton(int slot) {
-        return new ButtonWidget<>().background(drawable((ctx, x, y, w, h) -> {
+        class ActionButton extends ButtonWidget<ActionButton> {
+
+            @Override
+            public @Nullable String getName() {
+                ModulePanelAction action = actionAtSlot(slot);
+                return action == null ? null : action.name();
+            }
+
+            @Override
+            public boolean isName(String name) {
+                return name != null && name.equals(getName());
+            }
+        }
+        return new ActionButton().background((ctx, x, y, w, h, ignoredTheme) -> {
             if (isPickerActive()) return;
             ModulePanelAction action = actionAtSlot(slot);
             if (action == null) return;
             drawActionButtonBackground(x, y, w, h, true, false);
-        }))
-            .hoverBackground(drawable((ctx, x, y, w, h) -> {
+        })
+            .hoverBackground((ctx, x, y, w, h, ignoredTheme) -> {
                 if (isPickerActive()) return;
                 ModulePanelAction action = actionAtSlot(slot);
                 if (action == null) return;
                 drawActionButtonBackground(x, y, w, h, true, true);
-            }))
-            .overlay(drawable((ctx, x, y, w, h) -> {
+            })
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> {
                 if (isPickerActive()) return;
                 ModulePanelAction action = actionAtSlot(slot);
                 if (action == null) return;
@@ -328,7 +335,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
                     x + (w - textWidth) / 2,
                     y + (h - fr.FONT_HEIGHT) / 2 + BUTTON_TEXT_BASELINE_OFFSET,
                     EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
-            }))
+            })
             .onMousePressed(mouseButton -> {
                 if (isPickerActive() || mouseButton != 0) return false;
                 ModulePanelAction action = actionAtSlot(slot);
@@ -371,44 +378,41 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
             return;
         }
         ModuleInstance module = selectedModule();
-        int moduleIndex = selectedModuleIndex();
-        if (module == null || moduleIndex < 0) return;
+        if (module == null) return;
         switch (action) {
-            case CONFIG -> openModuleConfig(module, moduleIndex);
-            case UPGRADE -> openModuleUpgrade(module, moduleIndex);
+            case CONFIG -> openModuleConfig(module);
+            case UPGRADE -> openModuleUpgrade(module);
         }
     }
 
-    private void openModuleConfig(ModuleInstance module, int moduleIndex) {
+    private void openModuleConfig(ModuleInstance module) {
         if (module.component() instanceof ModuleMiner) {
-            configController.openMinerBlacklist(moduleIndex);
+            configController.openMinerBlacklist(module.id);
         } else if (module.component() instanceof ModuleHammer) {
-            configController.openHammer(moduleIndex);
-        } else if (module.component() instanceof IRecipeModule) {
-            configController.openRecipeConfig(moduleIndex);
+            configController.openHammer(module.id);
+        } else if (module.recipe() != null) {
+            configController.openRecipeConfig(module.id);
         } else if (module.component() instanceof ModuleDebugDataGenerator) {
-            configController.openDebugDataGenerator(moduleIndex);
+            configController.openDebugDataGenerator(module.id);
         }
     }
 
-    private void openModuleUpgrade(ModuleInstance module, int moduleIndex) {
-        if (ModuleUpgradeUiModel.supports(module)) configController.openUpgrade(moduleIndex);
+    private void openModuleUpgrade(ModuleInstance module) {
+        if (ModuleUpgradeUiModel.supports(module)) configController.openUpgrade(module.id);
     }
 
     private boolean canDestroySelected() {
-        return !isPickerActive() && selectedModuleIndex() >= 0;
+        return !isPickerActive() && selectedModule() != null;
     }
 
     private @Nullable ModuleInstance selectedModule() {
         AutomatedFacility facility = resolveFacility(assetId);
-        int moduleIndex = selectedModuleIndex();
-        if (facility == null || moduleIndex < 0
-            || moduleIndex >= facility.modules()
-                .size()) {
-            return null;
-        }
-        return facility.modules()
-            .get(moduleIndex);
+        if (facility == null || map == null) return null;
+        StationLayout layout = facility.stationLayout();
+        StationTileCoord selected = map.selection();
+        if (layout == null || selected == null) return null;
+        ModuleInstance module = layout.moduleAt(selected);
+        return module == null ? null : facility.moduleById(module.id);
     }
 
     private boolean isCoreSelected() {
@@ -421,77 +425,23 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
         return tile != null && tile.isCore();
     }
 
-    private int selectedModuleIndex() {
-        AutomatedFacility facility = resolveFacility(assetId);
-        if (facility == null) {
-            clearDestroyIndexCache();
-            return -1;
-        }
-        StationLayout layout = facility.stationLayout();
-        StationTileCoord selected = map.selection();
-        if (layout == null || selected == null) {
-            clearDestroyIndexCache();
-            return -1;
-        }
-        PlacedTile tile = layout.get(selected);
-        if (tile == null || tile.isCore() || tile.module() == null) {
-            clearDestroyIndexCache();
-            return -1;
-        }
-        ModuleInstance module = tile.module();
-        int moduleCount = facility.modules()
-            .size();
-        long layoutVersion = layout.version();
-        if (selected.equals(cachedDestroySelection) && layout == cachedDestroyLayout
-            && layoutVersion == cachedDestroyLayoutVersion
-            && moduleCount == cachedDestroyModuleCount
-            && module.id.equals(cachedDestroyModuleId)) return cachedDestroyModuleIndex;
-
-        int moduleIndex = -1;
-        for (int i = 0; i < facility.modules()
-            .size(); i++) {
-            if (facility.modules()
-                .get(i).id.equals(module.id)) {
-                moduleIndex = i;
-                break;
-            }
-        }
-        cachedDestroySelection = selected;
-        cachedDestroyLayout = layout;
-        cachedDestroyLayoutVersion = layoutVersion;
-        cachedDestroyModuleCount = moduleCount;
-        cachedDestroyModuleId = module.id;
-        cachedDestroyModuleIndex = moduleIndex;
-        return moduleIndex;
-    }
-
-    private void clearDestroyIndexCache() {
-        cachedDestroySelection = null;
-        cachedDestroyLayout = null;
-        cachedDestroyLayoutVersion = -1L;
-        cachedDestroyModuleCount = -1;
-        cachedDestroyModuleId = null;
-        cachedDestroyModuleIndex = -1;
-    }
-
     private void destroySelected() {
-        int moduleIndex = selectedModuleIndex();
-        if (assetId == null || moduleIndex < 0) return;
-        CelestialClient.updateModuleAction(assetId, moduleIndex, AssetModuleUpdatePacket.Action.DESTROY);
+        ModuleInstance module = selectedModule();
+        if (assetId == null || module == null) return;
+        CelestialClient.requestModuleDeconstruction(assetId, module.id);
     }
 
     private boolean startDestroyPicker() {
-        if (assetId == null || editModeController == null) return false;
+        if (assetId == null || tilePickerController == null) return false;
         AutomatedFacility facility = resolveFacility(assetId);
         if (facility == null || facility.stationLayout() == null) return false;
-        editModeController.startTileMode(
-            StationEditModeController.Mode.MASS_DECONSTRUCT,
+        tilePickerController.start(
             "Destroy modules",
             "Destroy",
-            (coord, selected) -> canDestroyTarget(facility, coord),
+            coord -> canDestroyTarget(facility, coord),
             coord -> canonicalDestroyTarget(facility, coord),
             this::destroyTargets);
-        editModeController.setVisualStyle(StationTilePickerController.VisualStyle.DECONSTRUCT);
+        tilePickerController.setVisualStyle(StationTilePickerController.VisualStyle.DECONSTRUCT);
         return true;
     }
 
@@ -499,34 +449,29 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
         if (assetId == null || targets == null || targets.isEmpty()) return;
         AutomatedFacility facility = resolveFacility(assetId);
         if (facility == null) return;
-        List<Integer> moduleIndexes = new ArrayList<>();
+        Set<ModuleInstance.ID> moduleIds = new HashSet<>();
         for (StationTileCoord target : targets) {
-            int moduleIndex = moduleIndexAt(facility, target);
-            if (moduleIndex >= 0 && !moduleIndexes.contains(moduleIndex)) moduleIndexes.add(moduleIndex);
+            ModuleInstance module = moduleAt(facility, target);
+            if (module != null) moduleIds.add(module.id);
         }
-        moduleIndexes.sort((a, b) -> Integer.compare(b, a));
-        for (int moduleIndex : moduleIndexes) {
-            CelestialClient.updateModuleAction(assetId, moduleIndex, AssetModuleUpdatePacket.Action.DESTROY);
+        List<ModuleInstance> modules = facility.modules();
+        for (int i = modules.size() - 1; i >= 0; i--) {
+            ModuleInstance module = modules.get(i);
+            if (moduleIds.contains(module.id)) CelestialClient.requestModuleDeconstruction(assetId, module.id);
         }
     }
 
     private static boolean canDestroyTarget(AutomatedFacility facility, StationTileCoord coord) {
-        return moduleIndexAt(facility, coord) >= 0;
+        return moduleAt(facility, coord) != null;
     }
 
-    private static int moduleIndexAt(AutomatedFacility facility, StationTileCoord coord) {
-        if (facility == null || coord == null) return -1;
+    private static @Nullable ModuleInstance moduleAt(AutomatedFacility facility, StationTileCoord coord) {
+        if (facility == null || coord == null) return null;
         StationLayout layout = facility.stationLayout();
-        if (layout == null) return -1;
+        if (layout == null) return null;
         PlacedTile tile = layout.get(coord);
-        if (tile == null || tile.isCore() || tile.module() == null) return -1;
-        ModuleInstance module = tile.module();
-        for (int i = 0; i < facility.modules()
-            .size(); i++) {
-            if (facility.modules()
-                .get(i).id.equals(module.id)) return i;
-        }
-        return -1;
+        if (tile == null || tile.isCore() || tile.module() == null) return null;
+        return facility.moduleById(tile.module().id);
     }
 
     private static @Nullable StationTileCoord canonicalDestroyTarget(AutomatedFacility facility,
@@ -569,12 +514,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
             EnumColors.MAP_COLOR_SIDEBAR_CONFIRM_TEXT_ENABLED.getColor());
     }
 
-    private com.cleanroommc.modularui.api.drawable.IDrawable drawable(DrawableCommand cmd) {
-        return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
-    }
-
     private boolean isPickerActive() {
-        return editModeController != null ? editModeController.isTilePickerActive()
-            : tilePickerController != null && tilePickerController.isActive();
+        return tilePickerController != null && tilePickerController.isActive();
     }
 }

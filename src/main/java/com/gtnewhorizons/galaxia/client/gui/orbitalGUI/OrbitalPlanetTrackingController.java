@@ -10,7 +10,7 @@ final class OrbitalPlanetTrackingController {
         SELECT_ONLY
     }
 
-    private OrbitalMapClickMode clickMode = OrbitalMapClickMode.HIERARCHY;
+    private OrbitalMapClickMode clickMode = OrbitalMapClickMode.FOLLOW;
     private boolean following;
     private CelestialObject focusedBody;
 
@@ -19,7 +19,7 @@ final class OrbitalPlanetTrackingController {
     }
 
     void setClickMode(OrbitalMapClickMode clickMode) {
-        this.clickMode = clickMode == null ? OrbitalMapClickMode.HIERARCHY : clickMode;
+        this.clickMode = clickMode == null ? OrbitalMapClickMode.FOLLOW : clickMode;
     }
 
     boolean isFollowing() {

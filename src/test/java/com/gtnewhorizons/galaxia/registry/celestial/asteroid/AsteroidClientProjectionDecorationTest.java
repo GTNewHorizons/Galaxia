@@ -216,7 +216,6 @@ final class AsteroidClientProjectionDecorationTest {
         AsteroidNodeKind kind) {
         return new AsteroidStarmapProjection(
             source.body(),
-            source.id(),
             kind,
             source.sizeClass(),
             source.detectionState(),
@@ -231,7 +230,10 @@ final class AsteroidClientProjectionDecorationTest {
 
     private static List<MinorCelestialBodyId> projectionIds(List<AsteroidStarmapProjection> projections) {
         return projections.stream()
-            .map(AsteroidStarmapProjection::id)
+            .map(
+                projection -> projection.body()
+                    .key()
+                    .minorBodyId())
             .toList();
     }
 

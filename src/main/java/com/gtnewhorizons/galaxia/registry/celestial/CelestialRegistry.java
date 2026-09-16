@@ -214,6 +214,14 @@ public final class CelestialRegistry {
                 .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.2));
 
         register(
+            CelestialObjectId.TENEBRAE,
+            builder -> builder.parent(CelestialObjectId.VAEL)
+                .objectClass(CelestialObject.Class.PLANET)
+                .circularOrbit(1.20 * EARTH_RADIUS_TO_AU, 0.00016, seededPhase("tenebrae"))
+                .texture(EnumTextures.ICON_TENEBRAE.get())
+                .spriteSize(0.20));
+
+        register(
             DimensionEnum.MARS,
             builder -> builder.parent(CelestialObjectId.VAEL)
                 .objectClass(CelestialObject.Class.PLANET)

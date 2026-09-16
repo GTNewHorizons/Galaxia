@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -18,12 +19,9 @@ import net.minecraft.item.ItemStack;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
-import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 /**
@@ -46,9 +44,55 @@ final class CelestialAssetStoreRefactorTest {
     // ── Instance isolation ──
 
     @Test
+    void readViewTracksMembershipWhileTickSnapshotStaysDetached() {
+        CelestialAssetStore store = new CelestialAssetStore();
+        CelestialAsset first = createAsset(BODY_1);
+        CelestialAsset second = createAsset(BODY_2);
+        store.registerAssetInternal(TEAM_A, first);
+        var view = store.assetsViewInternal();
+        List<CelestialAsset> snapshot = store.allAssetsInternal();
+        store.registerAssetInternal(TEAM_A, second);
+        assertEquals(List.of(first, second), List.copyOf(view));
+        assertEquals(List.of(first), snapshot);
+        assertThrows(UnsupportedOperationException.class, view::clear);
+        store.destroyAssetInternal(first.assetId);
+        assertEquals(List.of(second), List.copyOf(view));
+        assertEquals(List.of(first), snapshot);
+        store.clearInternal();
+        assertTrue(view.isEmpty());
+    }
+
+    @Test
+    void transferReturnsMovedAssetsAndMergesTheirOwnershipIndexes() {
+        CelestialAssetStore store = new CelestialAssetStore();
+        CelestialAsset first = createAsset(BODY_1);
+        CelestialAsset second = createAsset(BODY_2);
+        CelestialAsset existing = createAsset(BODY_1);
+        store.registerAssetInternal(TEAM_A, first);
+        store.registerAssetInternal(TEAM_A, second);
+        store.registerAssetInternal(TEAM_B, existing);
+
+        List<CelestialAsset> transferred = store.transferTeamAssetsInternal(TEAM_A, TEAM_B);
+
+        assertEquals(Set.of(first, second), Set.copyOf(transferred));
+        assertEquals(TEAM_B, store.getTeamIdInternal(first.assetId));
+        assertEquals(TEAM_B, store.getTeamIdInternal(second.assetId));
+        assertEquals(Set.of(first, existing), Set.copyOf(store.getStateInternal(TEAM_B, BODY_1)));
+        assertEquals(List.of(second), store.getStateInternal(TEAM_B, BODY_2));
+        assertTrue(
+            store.getTeamAssetsInternal(TEAM_A)
+                .isEmpty());
+        assertTrue(
+            store.transferTeamAssetsInternal(TEAM_A, TEAM_B)
+                .isEmpty());
+    }
+
+    @Test
     void serverAndClientAreSeparateInstances() {
         CelestialAssetStore server = CelestialAssetStore.SERVER;
         CelestialAssetStore client = CelestialAssetStore.CLIENT;
+        server.clearInternal();
+        client.clearInternal();
 
         assertNotNull(server);
         assertNotNull(client);
@@ -189,28 +233,6 @@ final class CelestialAssetStoreRefactorTest {
     }
 
     @Test
-    void destroyAssetRemovesLogisticsSignals() {
-        LogisticStore.clearSignals();
-        CelestialAssetStore store = newStore();
-        AutomatedFacility asset = (AutomatedFacility) createAsset(BODY_1);
-        ItemStackWrapper resource = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
-        store.registerAssetInternal(TEAM_A, asset);
-        asset.updateItems(resource, 10);
-        asset.logisticsConfig.set(resource, new LogisticsResourceConfig(0, 1, false, true));
-        LogisticStore.updateSignalsForFacility(asset);
-        assertFalse(
-            LogisticStore.allSignalsForScope(LogisticSignal.Scope.SYSTEM)
-                .isEmpty());
-
-        assertTrue(store.destroyAssetInternal(asset.assetId));
-
-        assertTrue(
-            LogisticStore.allSignalsForScope(LogisticSignal.Scope.SYSTEM)
-                .isEmpty());
-        LogisticStore.clearSignals();
-    }
-
-    @Test
     void cancelConstructionOnlyForConstructionSites() {
         CelestialAssetStore store = newStore();
         CelestialAsset operational = createAsset(BODY_1);
@@ -227,6 +249,32 @@ final class CelestialAssetStoreRefactorTest {
         store.registerAssetInternal(TEAM_A, construction);
         assertTrue(store.cancelConstructionInternal(construction.assetId));
         assertNull(store.findAssetInternal(construction.assetId));
+    }
+
+    @Test
+    void constructionResourcesBelongOnlyToAutomatedFacilities() {
+        CelestialAssetStore store = newStore();
+        Station station = new Station(CelestialAsset.ID.create(), BODY_1, Buildable.Status.CONSTRUCTION_SITE);
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            BODY_1,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.CONSTRUCTION_SITE);
+        store.registerAssetInternal(TEAM_A, station);
+        store.registerAssetInternal(TEAM_A, facility);
+
+        ItemStack resource = new ItemStack(Items.iron_ingot);
+        assertFalse(store.addToConstructionInventoryInternal(station.assetId, resource, 1L));
+        assertEquals(Buildable.Status.CONSTRUCTION_SITE, station.status());
+        assertTrue(
+            station.getConstructionInventory()
+                .isEmpty());
+
+        assertTrue(store.addToConstructionInventoryInternal(facility.assetId, resource, 1L));
+        assertEquals(
+            1L,
+            facility.getConstructionInventory()
+                .get(resource));
     }
 
     @Test

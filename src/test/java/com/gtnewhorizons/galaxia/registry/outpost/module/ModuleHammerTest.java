@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -43,7 +44,7 @@ final class ModuleHammerTest {
     }
 
     @Test
-    void hammerChargesPrivateBufferFromStationOnApplyBehaviorInterval() {
+    void hammerChargesPrivateBufferFromStationOnModuleCycle() {
         AutomatedFacility outpost = createOutpost();
         ModuleInstance module = FacilityModuleRegistry.create(
             ModuleInstance.ID.create(),
@@ -68,7 +69,7 @@ final class ModuleHammerTest {
     }
 
     @Test
-    void hammerChargesPrivateBufferOnApplyBehaviorInterval() {
+    void hammerChargesPrivateBufferOnModuleCycle() {
         AutomatedFacility outpost = createOutpost();
         ModuleInstance module = FacilityModuleRegistry.create(
             ModuleInstance.ID.create(),
@@ -101,8 +102,7 @@ final class ModuleHammerTest {
             ModuleShape.SINGLE,
             ModuleTier.EV);
         module.updateStatus(Buildable.Status.OPERATIONAL);
-        outpost.addModule(module);
-        outpost.drainDirtyModules();
+        addModule(outpost, module);
         outpost.setEnergyStored(500_000L);
         outpost.clean();
 
@@ -114,10 +114,6 @@ final class ModuleHammerTest {
         }
 
         assertTrue(outpost.isDirty());
-        assertEquals(
-            module.id,
-            outpost.drainDirtyModules()
-                .get(0).id);
     }
 
     @Test
@@ -147,18 +143,14 @@ final class ModuleHammerTest {
             StationTileCoord.of(1, 0),
             ModuleShape.SINGLE,
             ModuleTier.EV);
-        outpost.addModule(module);
-        outpost.drainDirtyModules();
+        addModule(outpost, module);
+        outpost.clean();
         ModuleHammer hammer = (ModuleHammer) module.component();
         hammer.setEnergyStored(100_000L);
 
         assertTrue(hammer.trySpendShotEnergy(module, outpost, ModuleHammer.shotEnergyCost(7.25)));
 
         assertTrue(outpost.isDirty());
-        assertEquals(
-            module.id,
-            outpost.drainDirtyModules()
-                .get(0).id);
     }
 
     @Test

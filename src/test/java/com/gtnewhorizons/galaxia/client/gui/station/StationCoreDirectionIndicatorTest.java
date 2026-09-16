@@ -16,8 +16,7 @@ final class StationCoreDirectionIndicatorTest {
 
     @Test
     void arrowPointsTowardCoreWhenViewportIsPannedAway() {
-        StationCoreDirectionIndicator.Arrow arrow = StationCoreDirectionIndicator
-            .towardCore(WIDTH, HEIGHT, CONTENT_LEFT, CONTENT_RIGHT_PADDING, CONTENT_VERTICAL_PADDING, 0, -2000);
+        StationCoreDirectionIndicator.Arrow arrow = StationCoreDirectionIndicator.towardCore(frame(0, -2000));
 
         assertTrue(arrow.unitY() < -0.99);
         assertTrue(arrow.tipY() < HEIGHT / 4);
@@ -28,12 +27,10 @@ final class StationCoreDirectionIndicatorTest {
     void arrowDirectionIsRecomputedFromTipToCore() {
         int panX = -700;
         int panY = -500;
-        StationCoreDirectionIndicator.Arrow arrow = StationCoreDirectionIndicator
-            .towardCore(WIDTH, HEIGHT, CONTENT_LEFT, CONTENT_RIGHT_PADDING, CONTENT_VERTICAL_PADDING, panX, panY);
-        double coreX = StationMapViewport.tileLeftX(0, WIDTH, CONTENT_LEFT, CONTENT_RIGHT_PADDING, panX)
-            + StationMapViewport.TILE_SIZE * 0.5;
-        double coreY = StationMapViewport.tileTopY(0, HEIGHT, CONTENT_VERTICAL_PADDING, panY)
-            + StationMapViewport.TILE_SIZE * 0.5;
+        StationMapFrame frame = frame(panX, panY);
+        StationCoreDirectionIndicator.Arrow arrow = StationCoreDirectionIndicator.towardCore(frame);
+        double coreX = frame.tileLocalX(0) + StationMapFrame.TILE_SIZE * 0.5;
+        double coreY = frame.tileLocalY(0) + StationMapFrame.TILE_SIZE * 0.5;
         double dx = coreX - arrow.tipX();
         double dy = coreY - arrow.tipY();
         double length = Math.hypot(dx, dy);
@@ -44,19 +41,31 @@ final class StationCoreDirectionIndicatorTest {
 
     @Test
     void occupiedTilesIntersectScreenOnlyWhenTheirRectIsOnIt() {
-        int visibleX = StationMapViewport.tileLeftX(0, WIDTH, CONTENT_LEFT, CONTENT_RIGHT_PADDING, 0);
-        int visibleY = StationMapViewport.tileTopY(0, HEIGHT, CONTENT_VERTICAL_PADDING, 0);
+        StationMapFrame frame = frame(0, 0);
+        int visibleX = frame.tileLocalX(0);
+        int visibleY = frame.tileLocalY(0);
 
-        assertTrue(StationCoreDirectionIndicator.tileIntersectsScreen(visibleX, visibleY, WIDTH, HEIGHT));
-        assertFalse(
-            StationCoreDirectionIndicator.tileIntersectsScreen(visibleX, -StationMapViewport.TILE_SIZE, WIDTH, HEIGHT));
+        assertTrue(frame.tileIntersectsScreen(visibleX, visibleY));
+        assertFalse(frame.tileIntersectsScreen(visibleX, -StationMapFrame.TILE_SIZE));
     }
 
     @Test
     void occupiedTilesBehindTransparentPanelsStillCountAsVisibleOnScreen() {
-        int tileX = CONTENT_LEFT - StationMapViewport.TILE_SIZE - 1;
+        StationMapFrame frame = frame(0, 0);
+        int tileX = CONTENT_LEFT - StationMapFrame.TILE_SIZE - 1;
         int tileY = HEIGHT / 2;
 
-        assertTrue(StationCoreDirectionIndicator.tileIntersectsScreen(tileX, tileY, WIDTH, HEIGHT));
+        assertTrue(frame.tileIntersectsScreen(tileX, tileY));
+    }
+
+    private static StationMapFrame frame(int panX, int panY) {
+        return new StationMapFrame(
+            WIDTH,
+            HEIGHT,
+            CONTENT_LEFT,
+            CONTENT_RIGHT_PADDING,
+            CONTENT_VERTICAL_PADDING,
+            panX,
+            panY);
     }
 }

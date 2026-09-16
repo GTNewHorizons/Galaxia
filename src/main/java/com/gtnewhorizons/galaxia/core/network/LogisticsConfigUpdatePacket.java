@@ -11,9 +11,9 @@ import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
@@ -105,35 +105,38 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
         @Override
         public IMessage onMessage(LogisticsConfigUpdatePacket message, MessageContext ctx) {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
-            if (!GTTeamsCompat.hasPermission(player, TeamAction.CONFIGURE_LOGISTICS)) return null;
-            UUID teamId = GTTeamsCompat.getTeam(player);
-            return message.apply(teamId);
+            if (player == null) return null;
+            ServerTickTaskQueue.schedule(() -> {
+                if (!GTTeamsCompat.hasPermission(player, TeamAction.CONFIGURE_LOGISTICS)) return;
+                UUID teamId = GTTeamsCompat.getTeam(player);
+                if (message.apply(teamId)) AssetStateSync.SERVER.publishInteractive(message.assetId);
+            });
+            return null;
         }
     }
 
-    public AssetSyncPacket apply(UUID teamId) {
+    public boolean apply(UUID teamId) {
         CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
         if (asset == null || !CelestialAssetStore.isOwnedBy(teamId, assetId)) {
             LOG.warn("[Logistics] LogisticsConfigUpdate: unknown or unauthorized assetId {}", assetId);
-            return null;
+            return false;
         }
+        if (asset instanceof AutomatedFacility) return false;
 
         if (!removeEntry && orderSize <= 0) {
             LOG.warn("[Logistics] LogisticsConfigUpdate rejected: orderSize must be >0");
-            return null;
+            return false;
         }
         if (!removeEntry && minReserve < 0) {
             LOG.warn("[Logistics] LogisticsConfigUpdate rejected: minReserve must be >=0");
-            return null;
+            return false;
         }
 
-        if (resource == null) return null;
+        if (resource == null) return false;
         if (removeEntry) {
             asset.logisticsConfig.reset(resource);
-            LogisticStore.updateSignalsForFacility(asset);
-            asset.bumpSyncRevision();
-            return AssetSyncPacket.logisticsConfigRemoved(assetId, resource)
-                .withSyncRevision(asset.getSyncRevision());
+            asset.markDirty();
+            return true;
         } else {
             LogisticsResourceConfig config = new LogisticsResourceConfig(
                 minReserve,
@@ -142,18 +145,13 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
                 isSupplyEnabled);
             config = (accessMode == null ? LogisticsConfigAccessMode.FULL : accessMode).sanitize(config);
             asset.logisticsConfig.set(resource, config);
-            LogisticStore.updateSignalsForFacility(asset);
-            asset.bumpSyncRevision();
-            return AssetSyncPacket
-                .logisticsConfigUpdated(
-                    assetId,
-                    resource,
-                    config.minReserve(),
-                    config.orderSize(),
-                    config.isImportEnabled(),
-                    config.isSupplyEnabled())
-                .withSyncRevision(asset.getSyncRevision());
+            asset.markDirty();
+            return true;
         }
+    }
+
+    CelestialAsset.ID assetId() {
+        return assetId;
     }
 
 }

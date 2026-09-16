@@ -5,21 +5,14 @@ import java.util.Collections;
 import java.util.List;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Gui;
-import net.minecraft.client.renderer.OpenGlHelper;
-import net.minecraft.client.renderer.RenderHelper;
-import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
 
-import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL12;
-
-import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.drawable.ItemDrawable;
+import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
-import com.cleanroommc.modularui.utils.GlStateManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.TextWidget;
@@ -312,7 +305,6 @@ public final class OrbitalPinnedInfoContentBuilder {
             removeAll();
             Minecraft mc = Minecraft.getMinecraft();
             int viewportWidth = view.viewportWidth();
-            int viewportHeight = view.viewportHeight();
             int contentWidth = getContentWidth(mc, rows, viewportWidth);
             int boxWidth = contentWidth + PANEL_PADDING * 2;
             // Pre-compute row heights once to avoid double wrapValue calls
@@ -325,16 +317,13 @@ public final class OrbitalPinnedInfoContentBuilder {
             }
             if (n > 0) boxHeight -= ROW_GAP;
             boxHeight += 8;
-            int x = Math.max(8, viewportWidth - boxWidth - 18);
-            int y = Math.max(24, (viewportHeight - boxHeight) / 2);
-            pos(x, y);
             size(boxWidth, boxHeight);
             ParentWidget<?> root = new ParentWidget<>().pos(0, 0)
                 .size(boxWidth, boxHeight);
             PassiveLayer backgroundLayer = new PassiveLayer().pos(0, 0)
                 .widthRel(1f)
                 .heightRel(1f)
-                .background(createBackgroundDrawable());
+                .background(new Rectangle().color(EnumColors.MAP_COLOR_MODAL_BG.getColor()));
             root.child(backgroundLayer);
             root.child(WidgetOutline.create(backgroundLayer, 2, EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()));
             int currentY = 8;
@@ -383,7 +372,7 @@ public final class OrbitalPinnedInfoContentBuilder {
                 int itemX = x + col * (ICON_SIZE + ICON_GAP);
                 int itemY = y + rowIndex * (ICON_SIZE + ICON_GAP);
                 root.child(
-                    createItemWidget(stack, ICON_SIZE).pos(itemX, itemY)
+                    createItemWidget(stack).pos(itemX, itemY)
                         .size(ICON_SIZE, ICON_SIZE));
             }
         }
@@ -410,14 +399,14 @@ public final class OrbitalPinnedInfoContentBuilder {
                 if (stack == null) continue;
                 int itemX = iconsStartX + i * (INLINE_ICON_SIZE + INLINE_ICON_GAP);
                 root.child(
-                    createItemWidget(stack, INLINE_ICON_SIZE).pos(itemX, y)
+                    createItemWidget(stack).pos(itemX, y)
                         .size(INLINE_ICON_SIZE, INLINE_ICON_SIZE));
             }
         }
 
-        private Widget<?> createItemWidget(ItemStack stack, int size) {
+        private Widget<?> createItemWidget(ItemStack stack) {
             ItemStack displayStack = stack.copy();
-            return drawable((context, x, y, width, height) -> drawGuiItemStack(displayStack, x, y, size)).asWidget()
+            return new ItemDrawable(displayStack).asWidget()
                 .tooltip(t -> t.addLine(displayStack.getDisplayName()));
         }
 
@@ -474,40 +463,6 @@ public final class OrbitalPinnedInfoContentBuilder {
                 lines.addAll(mc.fontRenderer.listFormattedStringToWidth(paragraph, width));
             }
             return lines;
-        }
-
-        private void drawGuiItemStack(ItemStack stack, int x, int y, int size) {
-            Minecraft mc = Minecraft.getMinecraft();
-            float scale = size / 16.0f;
-            GlStateManager.pushMatrix();
-            GlStateManager.translate(x, y, 200f);
-            GlStateManager.scale(scale, scale, 1f);
-            GlStateManager.color(1f, 1f, 1f, 1f);
-            GL11.glEnable(GL12.GL_RESCALE_NORMAL);
-            GL11.glEnable(GL11.GL_ALPHA_TEST);
-            RenderHelper.enableGUIStandardItemLighting();
-            GL11.glEnable(GL11.GL_DEPTH_TEST);
-            final RenderItem GUI_ITEM_RENDERER = new RenderItem();
-            GUI_ITEM_RENDERER.zLevel = 200f;
-            OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240f, 240f);
-            GUI_ITEM_RENDERER.renderItemAndEffectIntoGUI(mc.fontRenderer, mc.getTextureManager(), stack, 0, 0);
-            RenderHelper.disableStandardItemLighting();
-            GL11.glDisable(GL11.GL_LIGHTING);
-            GL11.glDisable(GL11.GL_COLOR_MATERIAL);
-            GL11.glDisable(GL11.GL_DEPTH_TEST);
-            GL11.glDisable(GL12.GL_RESCALE_NORMAL);
-            GlStateManager.color(1f, 1f, 1f, 1f);
-            GlStateManager.popMatrix();
-        }
-
-        private IDrawable createBackgroundDrawable() {
-            return drawable(
-                (context, x, y, width, height) -> Gui
-                    .drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_MODAL_BG.getColor()));
-        }
-
-        private IDrawable drawable(DrawableCommand drawCommand) {
-            return (context, x, y, width, height, widgetTheme) -> drawCommand.draw(context, x, y, width, height);
         }
 
     }

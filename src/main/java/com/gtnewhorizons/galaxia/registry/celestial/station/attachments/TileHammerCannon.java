@@ -1,13 +1,16 @@
 package com.gtnewhorizons.galaxia.registry.celestial.station.attachments;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.Nullable;
 
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.inventory.IInventory;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.nbt.NBTTagString;
@@ -30,6 +33,7 @@ import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
+import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IAttachmentHandler;
@@ -51,7 +55,7 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
     private static final String NBT_HAMMER_VARIANT = "hammerVariant";
     private static final String NBT_HAMMER_ENERGY = "hammerEnergy";
     private static final String NBT_HAMMER_COOLDOWN_SHOT = "hammerCooldownShot";
-    private static final String NBT_HAMMER_COOLDOWN_ROUTE = "hammerCooldownShot";
+    private static final String NBT_HAMMER_COOLDOWN_ROUTE = "hammerCooldownRoute";
 
     private final static String STRUCTURE_PIECE_MAIN = "main";
     private static final IStructureDefinition<TileHammerCannon> STRUCTURE_DEFINITION = StructureDefinition
@@ -86,9 +90,9 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
         public void tick(TileHammerCannon attachment) {
             if (attachment.graph == null) return;
 
-            attachment.moduleInstance.tick(
-                attachment.graph.getController()
-                    .getBackingStation());
+            Station station = attachment.graph.getController()
+                .getBackingStation();
+            if (station != null) attachment.moduleInstance.tick(station);
         }
 
         @Override
@@ -130,6 +134,62 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
 
     public List<IInventory> getChestInventories() {
         return inventory;
+    }
+
+    public Map<ItemStackWrapper, Long> getPackageItems() {
+        Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
+        for (IInventory chest : inventory) {
+            if (chest == null) continue;
+            for (int slot = 0; slot < chest.getSizeInventory(); slot++) {
+                ItemStack stack = chest.getStackInSlot(slot);
+                if (stack == null || stack.stackSize <= 0) continue;
+                ItemStackWrapper key = ItemStackWrapper.of(stack);
+                if (key != null) result.merge(key, (long) stack.stackSize, Long::sum);
+            }
+        }
+        return Map.copyOf(result);
+    }
+
+    public long getPackageAmount(ItemStackWrapper resource) {
+        if (resource == null) return 0L;
+        return availablePackageAmount(resource, Long.MAX_VALUE);
+    }
+
+    public boolean tryExtractPackage(ItemStackWrapper resource, long amount) {
+        if (resource == null || amount <= 0L) return false;
+        if (availablePackageAmount(resource, amount) < amount) return false;
+        extractPackage(resource, amount);
+        markDirty();
+        return true;
+    }
+
+    private long availablePackageAmount(ItemStackWrapper resource, long target) {
+        long available = 0L;
+        for (IInventory chest : inventory) {
+            if (chest == null) continue;
+            for (int slot = 0; slot < chest.getSizeInventory(); slot++) {
+                ItemStack stack = chest.getStackInSlot(slot);
+                if (!resource.equals(ItemStackWrapper.of(stack))) continue;
+                available += stack.stackSize;
+                if (available >= target) return available;
+            }
+        }
+        return available;
+    }
+
+    private void extractPackage(ItemStackWrapper resource, long amount) {
+        long remaining = amount;
+        for (IInventory chest : inventory) {
+            if (chest == null) continue;
+            for (int slot = 0; slot < chest.getSizeInventory() && remaining > 0L; slot++) {
+                ItemStack stack = chest.getStackInSlot(slot);
+                if (!resource.equals(ItemStackWrapper.of(stack))) continue;
+                int extracted = (int) Math.min(remaining, stack.stackSize);
+                chest.decrStackSize(slot, extracted);
+                remaining -= extracted;
+            }
+            if (remaining <= 0L) break;
+        }
     }
 
     public TileHammerCannon() {

@@ -3,12 +3,10 @@ package com.gtnewhorizons.galaxia.registry.outpost.logistics;
 import java.util.Objects;
 import java.util.UUID;
 
-import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 public class LogisticsDelivery {
@@ -67,7 +65,7 @@ public class LogisticsDelivery {
             return amount;
         }
 
-        void setAmount(long amount) {
+        private void setAmount(long amount) {
             this.amount = amount;
         }
 
@@ -151,46 +149,6 @@ public class LogisticsDelivery {
         }
     }
 
-    public static LogisticsDelivery create(CelestialAsset.ID fromAssetId, CelestialAsset.ID toAssetId,
-        ItemStackWrapper resourceId, long amount, int deliveryTicks, LogisticSignal.Scope scope) {
-
-        AutomatedFacility from = CelestialClient.getByAssetId(fromAssetId) instanceof AutomatedFacility o ? o : null;
-        AutomatedFacility to = CelestialClient.getByAssetId(toAssetId) instanceof AutomatedFacility o ? o : null;
-        CelestialObjectKey fromBody = from != null ? from.celestialObjectKey : null;
-        CelestialObjectKey toBody = to != null ? to.celestialObjectKey : null;
-
-        return createWithTrajectory(
-            fromAssetId,
-            toAssetId,
-            resourceId,
-            amount,
-            deliveryTicks,
-            scope,
-            fromBody,
-            toBody,
-            0,
-            0,
-            null);
-    }
-
-    public static LogisticsDelivery createWithTrajectory(CelestialAsset.ID fromAssetId, CelestialAsset.ID toAssetId,
-        ItemStackWrapper resourceId, long amount, int deliveryTicks, LogisticSignal.Scope scope,
-        CelestialObjectKey fromBodyKey, CelestialObjectKey toBodyKey, double departureOrbitalTime,
-        double tofOrbitalOsu) {
-        return createWithTrajectory(
-            fromAssetId,
-            toAssetId,
-            resourceId,
-            amount,
-            deliveryTicks,
-            scope,
-            fromBodyKey,
-            toBodyKey,
-            departureOrbitalTime,
-            tofOrbitalOsu,
-            null);
-    }
-
     public static LogisticsDelivery createWithTrajectory(CelestialAsset.ID fromAssetId, CelestialAsset.ID toAssetId,
         ItemStackWrapper resourceId, long amount, int deliveryTicks, LogisticSignal.Scope scope,
         CelestialObjectKey fromBodyKey, CelestialObjectKey toBodyKey, double departureOrbitalTime, double tofOrbitalOsu,
@@ -249,18 +207,14 @@ public class LogisticsDelivery {
             deliveryTicks);
     }
 
-    public LogisticsDelivery tick() {
-        this.remainingTicks -= 1;
+    LogisticsDelivery tick() {
+        if (remainingTicks > 0) remainingTicks--;
         return this;
     }
 
-    public LogisticsDelivery setAmount(long amount) {
+    LogisticsDelivery setAmount(long amount) {
         this.data.setAmount(amount);
         return this;
-    }
-
-    public LogisticsDelivery withAmount(long amount) {
-        return setAmount(amount);
     }
 
     public boolean isArrived() {
@@ -269,6 +223,23 @@ public class LogisticsDelivery {
 
     public int getRemainingTicks() {
         return this.remainingTicks;
+    }
+
+    public LogisticsDelivery snapshot() {
+        return new LogisticsDelivery(
+            deliveryId,
+            new Data(
+                data.fromAssetId,
+                data.toAssetId,
+                data.resourceId,
+                data.amount,
+                data.scope,
+                data.fromBodyKey,
+                data.toBodyKey,
+                data.departureOrbitalTime,
+                data.tofOrbitalOsu,
+                data.transferRoute),
+            remainingTicks);
     }
 
     public record ID(UUID id) implements WithUUID {
@@ -280,15 +251,6 @@ public class LogisticsDelivery {
         public static ID from(String value) {
             if (value == null) return null;
             return new ID(UUID.fromString(value));
-        }
-
-        public static ID from(UUID value) {
-            return value == null ? null : new ID(value);
-        }
-
-        public static ID from(ID id) {
-            if (id == null) return null;
-            return new ID(id.id());
         }
 
         @Override

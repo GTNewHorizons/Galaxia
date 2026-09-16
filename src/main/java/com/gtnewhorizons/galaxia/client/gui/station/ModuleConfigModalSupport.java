@@ -9,7 +9,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
-import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
@@ -17,12 +16,11 @@ import net.minecraft.util.ResourceLocation;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 
-import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -64,12 +62,14 @@ final class ModuleConfigModalSupport {
     }
 
     static ButtonWidget<?> button(BooleanSupplier enabledSupplier, Supplier<String> labelSupplier, Runnable onClick) {
-        return new ButtonWidget<>()
-            .background(
-                drawable((ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false)))
+        return new ButtonWidget<>().background(
+
+            (ctx, x, y, w, h, ignoredTheme) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false))
             .hoverBackground(
-                drawable((ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true)))
-            .overlay(drawable((ctx, x, y, w, h) -> {
+
+                (ctx, x, y, w, h,
+                    ignoredTheme) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true))
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> {
                 if (!enabledSupplier.getAsBoolean()) return;
                 FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
                 String label = labelSupplier.get();
@@ -80,7 +80,7 @@ final class ModuleConfigModalSupport {
                     x + (w - textW) / 2,
                     y + (h - fr.FONT_HEIGHT) / 2 + 1,
                     EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
-            }))
+            })
             .onMousePressed(mouseButton -> {
                 if (mouseButton != 0 || !enabledSupplier.getAsBoolean()) return false;
                 onClick.run();
@@ -91,12 +91,14 @@ final class ModuleConfigModalSupport {
 
     static ButtonWidget<?> checkbox(BooleanSupplier enabledSupplier, BooleanSupplier checkedSupplier, String tooltip,
         Runnable onClick) {
-        return new ButtonWidget<>()
-            .background(
-                drawable((ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false)))
+        return new ButtonWidget<>().background(
+
+            (ctx, x, y, w, h, ignoredTheme) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false))
             .hoverBackground(
-                drawable((ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true)))
-            .overlay(drawable((ctx, x, y, w, h) -> {
+
+                (ctx, x, y, w, h,
+                    ignoredTheme) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true))
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> {
                 if (!enabledSupplier.getAsBoolean() || !checkedSupplier.getAsBoolean()) return;
                 FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
                 int textW = fr.getStringWidth("X");
@@ -105,7 +107,7 @@ final class ModuleConfigModalSupport {
                     x + (w - textW) / 2,
                     y + (h - fr.FONT_HEIGHT) / 2 + 1,
                     EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
-            }))
+            })
             .onMousePressed(mouseButton -> {
                 if (mouseButton != 0 || !enabledSupplier.getAsBoolean()) return false;
                 onClick.run();
@@ -131,15 +133,17 @@ final class ModuleConfigModalSupport {
 
     static ButtonWidget<?> iconButton(BooleanSupplier enabledSupplier, ItemStack icon, String tooltip,
         Runnable onClick) {
-        return new ButtonWidget<>()
-            .background(
-                drawable((ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false)))
+        return new ButtonWidget<>().background(
+
+            (ctx, x, y, w, h, ignoredTheme) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false))
             .hoverBackground(
-                drawable((ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true)))
-            .overlay(drawable((ctx, x, y, w, h) -> {
+
+                (ctx, x, y, w, h,
+                    ignoredTheme) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true))
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> {
                 if (!enabledSupplier.getAsBoolean() || icon == null) return;
                 renderItemIcon(icon, x + (w - 16) / 2, y + (h - 16) / 2);
-            }))
+            })
             .onMousePressed(mouseButton -> {
                 if (mouseButton != 0 || !enabledSupplier.getAsBoolean()) return false;
                 onClick.run();
@@ -152,15 +156,17 @@ final class ModuleConfigModalSupport {
 
     static ButtonWidget<?> textureIconButton(BooleanSupplier enabledSupplier, ResourceLocation icon, String tooltip,
         Runnable onClick) {
-        return new ButtonWidget<>()
-            .background(
-                drawable((ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false)))
+        return new ButtonWidget<>().background(
+
+            (ctx, x, y, w, h, ignoredTheme) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false))
             .hoverBackground(
-                drawable((ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true)))
-            .overlay(drawable((ctx, x, y, w, h) -> {
+
+                (ctx, x, y, w, h,
+                    ignoredTheme) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true))
+            .overlay((ctx, x, y, w, h, ignoredTheme) -> {
                 if (!enabledSupplier.getAsBoolean() || icon == null) return;
                 renderTextureIcon(icon, x + (w - 12) / 2, y + (h - 12) / 2, 12, 12);
-            }))
+            })
             .onMousePressed(mouseButton -> {
                 if (mouseButton != 0 || !enabledSupplier.getAsBoolean()) return false;
                 onClick.run();
@@ -199,34 +205,9 @@ final class ModuleConfigModalSupport {
         return assetId != null ? CelestialClient.getByAssetId(assetId) : null;
     }
 
-    static @Nullable ModuleInstance module(CelestialAsset.ID assetId, int moduleIndex) {
-        AutomatedFacility facility = facility(assetId);
-        if (facility == null || moduleIndex < 0
-            || moduleIndex >= facility.modules()
-                .size()) {
-            return null;
-        }
-        return facility.modules()
-            .get(moduleIndex);
-    }
-
-    static int moduleIndex(CelestialAsset.ID assetId, ModuleInstance.ID moduleId) {
-        AutomatedFacility facility = facility(assetId);
-        if (facility == null || moduleId == null) return -1;
-        for (int i = 0; i < facility.modules()
-            .size(); i++) {
-            if (moduleId.equals(
-                facility.modules()
-                    .get(i).id)) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
     static @Nullable ModuleInstance module(CelestialAsset.ID assetId, ModuleInstance.ID moduleId) {
-        int moduleIndex = moduleIndex(assetId, moduleId);
-        return moduleIndex >= 0 ? module(assetId, moduleIndex) : null;
+        AutomatedFacility facility = facility(assetId);
+        return facility == null ? null : facility.moduleById(moduleId);
     }
 
     static boolean refundBlockedByFullInventory(CelestialAsset.ID assetId, ModuleInstance module) {
@@ -247,10 +228,6 @@ final class ModuleConfigModalSupport {
     static String moduleTitle(ModuleInstance module, String suffix) {
         StationTileCoord anchor = module.anchor();
         return moduleDisplayName(module) + " (" + (int) anchor.dx() + "," + (int) anchor.dy() + ") " + suffix;
-    }
-
-    static IDrawable drawable(DrawableCommand cmd) {
-        return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
     }
 
     static void renderItemIcon(ItemStack stack, int x, int y) {
@@ -282,13 +259,7 @@ final class ModuleConfigModalSupport {
         com.cleanroommc.modularui.utils.GlStateManager.enableBlend();
         com.cleanroommc.modularui.utils.GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GL11.glColor4f(1f, 1f, 1f, 1f);
-        Tessellator tessellator = Tessellator.instance;
-        tessellator.startDrawingQuads();
-        tessellator.addVertexWithUV(x, y + height, 0.0, 0.0, 1.0);
-        tessellator.addVertexWithUV(x + width, y + height, 0.0, 1.0, 1.0);
-        tessellator.addVertexWithUV(x + width, y, 0.0, 1.0, 0.0);
-        tessellator.addVertexWithUV(x, y, 0.0, 0.0, 0.0);
-        tessellator.draw();
+        GuiDraw.drawTexture(x, y, x + width, y + height, 0f, 0f, 1f, 1f);
     }
 
     private static String moduleDisplayName(ModuleInstance module) {

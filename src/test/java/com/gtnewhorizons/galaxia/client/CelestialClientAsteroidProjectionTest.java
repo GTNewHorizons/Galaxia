@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.AbstractList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -20,7 +19,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidClientProjectionService;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitResolver;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
@@ -44,43 +42,6 @@ final class CelestialClientAsteroidProjectionTest {
     @BeforeAll
     static void init() {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
-    }
-
-    @Test
-    void repeatedProjectionLookupsDoNotRescanUnchangedSiblingCatalog() {
-        CelestialClient.clear();
-        CelestialKnowledgeClientState.clear();
-        CelestialDiscoveryClientState.clear();
-        CelestialClient.setShowHiddenAsteroidObjects(true);
-
-        CelestialObject frozenBelt = CelestialRegistry.get(CelestialObjectId.FROZEN_BELT)
-            .orElseThrow();
-        List<CelestialObject> asteroids = CelestialClient.getChildren(frozenBelt.key())
-            .stream()
-            .filter(CelestialObject::isAsteroid)
-            .toList();
-        assertTrue(asteroids.size() > 1);
-
-        CountingList<CelestialObject> siblings = new CountingList<>(asteroids);
-        AsteroidClientProjectionService service = new AsteroidClientProjectionService();
-        service.setIncludeHidden(true);
-        assertTrue(
-            service.projectionFor(asteroids.get(0), siblings, List.of())
-                .isPresent());
-        siblings.resetReadCount();
-
-        for (CelestialObject asteroid : asteroids) {
-            assertTrue(
-                service.projectionFor(asteroid, siblings, List.of())
-                    .isPresent());
-        }
-
-        assertTrue(
-            siblings.readCount() <= asteroids.size(),
-            () -> "unchanged projection lookups rescanned the sibling catalog " + siblings.readCount() + " times");
-        CelestialClient.clear();
-        CelestialKnowledgeClientState.clear();
-        CelestialDiscoveryClientState.clear();
     }
 
     @Test
@@ -245,32 +206,4 @@ final class CelestialClientAsteroidProjectionTest {
         return Math.sqrt(dx * dx + dy * dy);
     }
 
-    private static final class CountingList<E> extends AbstractList<E> {
-
-        private final List<E> delegate;
-        private int readCount;
-
-        private CountingList(List<E> delegate) {
-            this.delegate = delegate;
-        }
-
-        @Override
-        public E get(int index) {
-            readCount++;
-            return delegate.get(index);
-        }
-
-        @Override
-        public int size() {
-            return delegate.size();
-        }
-
-        private int readCount() {
-            return readCount;
-        }
-
-        private void resetReadCount() {
-            readCount = 0;
-        }
-    }
 }

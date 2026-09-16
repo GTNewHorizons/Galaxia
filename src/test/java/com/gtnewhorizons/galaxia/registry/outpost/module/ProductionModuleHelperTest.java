@@ -1,16 +1,15 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
-import java.util.HashMap;
-import java.util.Random;
+import java.util.List;
+import java.util.UUID;
 
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidRegistry;
-import net.minecraftforge.fluids.FluidStack;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -19,472 +18,245 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
-import com.gtnewhorizons.galaxia.testing.TestFluidStacks;
 
 final class ProductionModuleHelperTest {
 
-    private static Fluid TEST_FLUID_1;
-    private static Fluid TEST_FLUID_2;
-
     @BeforeAll
     static void initRegistries() {
-        GalaxiaTestBootstrap.ensureCelestialRegistry();
-
-        TEST_FLUID_1 = FluidRegistry.WATER;
-        TEST_FLUID_2 = FluidRegistry.LAVA;
+        GalaxiaTestBootstrap.ensureFacilityModules();
     }
 
     @Test
-    void executeKeepsPerItemInputLowerBoundAfterCombinedRecipeCost() {
-        AutomatedFacility station = station();
-        Item inputItem = Items.diamond;
-        Item outputItem = Items.iron_ingot;
-        ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
-        ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.updateItems(inputResource, 105);
+    void successfulExchangeAdvancesThePerModuleOrderSchedule() {
+        AutomatedFacility facility = facility();
+        RecipeBook book = orderBook(
+            recipe(Items.diamond, Items.iron_ingot, 1),
+            recipe(Items.gold_ingot, Items.coal, 1));
+        ModuleInstance module = installBook(facility, book);
+        ItemStackWrapper input = ItemStackWrapper.of(new ItemStack(Items.diamond));
+        ItemStackWrapper output = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
+        facility.insert(input, 1L);
+        RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
+        module.restoreRecipeScheduleState(before);
 
-        ItemStack[] inputs = { new ItemStack(inputItem, 2, 0), new ItemStack(inputItem, 4, 0) };
-        ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
-        station.setBound(inputResource, 100, true);
-        SavedRecipeList slots = new SavedRecipeList();
-        slots.add(
-            new SavedRecipe(
-                RecipeSnapshot.resolved((byte) 1, 0, inputs, outputs, null, null, 20, 30),
-                true,
-                0L,
-                (byte) 1,
-                (byte) 1));
-        StubRecipeModule module = new StubRecipeModule(
-            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
+        execute(facility, module);
 
-        ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
-
-        assertEquals(105, station.getItemAmount(inputResource));
-        assertEquals(0, station.getItemAmount(outputResource));
+        assertEquals(0L, facility.itemAmount(input));
+        assertEquals(1L, facility.itemAmount(output));
+        assertEquals(new RecipeBook.ScheduleState((byte) 1, (byte) 1), module.recipeScheduleState());
     }
 
     @Test
-    void executeAllowsOutputUpperBoundOvershootWhenCurrentInventoryIsBelowTarget() {
-        AutomatedFacility station = station();
-        Item inputItem = Items.diamond;
-        Item outputItem = Items.iron_ingot;
-        ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
-        ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.updateItems(inputResource, 1);
-        station.updateItems(outputResource, 95);
+    void failedExchangeDoesNotAdvanceTheSchedule() {
+        AutomatedFacility facility = facility();
+        ModuleInstance module = installBook(facility, orderBook(recipe(Items.diamond, Items.iron_ingot, 1)));
+        RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
+        module.restoreRecipeScheduleState(before);
 
-        ItemStack[] inputs = { new ItemStack(inputItem, 1, 0) };
-        ItemStack[] outputs = { new ItemStack(outputItem, 4, 0), new ItemStack(outputItem, 5, 0) };
-        station.setBound(outputResource, 100, false);
-        SavedRecipeList slots = new SavedRecipeList();
-        slots.add(
-            new SavedRecipe(
-                RecipeSnapshot.resolved((byte) 1, 0, inputs, outputs, null, null, 20, 30),
-                true,
-                0L,
-                (byte) 1,
-                (byte) 1));
-        StubRecipeModule module = new StubRecipeModule(
-            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
+        execute(facility, module);
 
-        ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
-
-        assertEquals(0, station.getItemAmount(inputResource));
-        assertEquals(104, station.getItemAmount(outputResource));
+        assertEquals(before, module.recipeScheduleState());
     }
 
     @Test
-    void executeUsesCanonicalOutputBoundWhenDuplicateSecondSlotProduces() {
-        AutomatedFacility station = station();
-        Item inputItem = Items.diamond;
-        Item outputItem = Items.iron_ingot;
-        ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
-        ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.updateItems(inputResource, 1);
-        station.updateItems(outputResource, 99);
+    void combinedInputCostMustRemainAboveTheConfiguredLowerBound() {
+        AutomatedFacility facility = facility();
+        SavedRecipe recipe = savedRecipe(
+            new ItemStack[] { new ItemStack(Items.diamond, 2), new ItemStack(Items.diamond, 4) },
+            new ItemStack[] { new ItemStack(Items.iron_ingot) },
+            0L);
+        ModuleInstance module = installBook(facility, orderBook(recipe));
+        ItemStackWrapper input = ItemStackWrapper.of(new ItemStack(Items.diamond));
+        facility.insert(input, 105L);
+        facility.applyCommand(
+            new FacilityCommand.SetInventoryBound(facility.assetId, BoundKind.ITEM_LOWER, input, 100L),
+            FacilityCommand.Authority.NONE);
+        RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
+        module.restoreRecipeScheduleState(before);
 
-        ItemStack[] inputs = { new ItemStack(inputItem, 1, 0) };
-        ItemStack[] outputs = { new ItemStack(outputItem, 1, 0), new ItemStack(outputItem, 2, 0) };
-        station.setBound(outputResource, 100, false);
-        SavedRecipeList slots = new SavedRecipeList();
-        slots.add(
-            new SavedRecipe(
-                RecipeSnapshot.resolved((byte) 1, 0, inputs, outputs, null, null, new int[] { 0, 10_000 }, 20, 30),
-                true,
-                0L,
-                (byte) 1,
-                (byte) 1));
-        StubRecipeModule module = new StubRecipeModule(
-            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
+        execute(facility, module);
 
-        ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
-
-        assertEquals(0, station.getItemAmount(inputResource));
-        assertEquals(101, station.getItemAmount(outputResource));
+        assertEquals(105L, facility.itemAmount(input));
+        assertEquals(before, module.recipeScheduleState());
     }
 
     @Test
-    void executeConsumesAndProducesFluidSnapshotAmounts() throws Exception {
-        AutomatedFacility station = new AutomatedFacility(
-            CelestialAsset.ID.create(),
-            CelestialObjectId.OVERWORLD,
-            CelestialAsset.Kind.AUTOMATED_STATION,
-            Buildable.Status.OPERATIONAL);
-        FluidKey inputKey = new FluidKey(TEST_FLUID_1, null);
-        station.updateFluids(inputKey, 1000);
+    void inputCostMustRemainAboveTheEffectiveLowerBoundWithoutAManualBound() {
+        AutomatedFacility facility = facility();
+        ModuleInstance module = installBook(facility, orderBook(recipe(Items.diamond, Items.iron_ingot, 1)));
+        ItemStackWrapper input = ItemStackWrapper.of(new ItemStack(Items.diamond));
+        facility.insert(input, 5L);
+        facility.applyCommand(
+            new FacilityCommand.PutLogisticsConfig(
+                facility.assetId,
+                input,
+                new LogisticsResourceConfig(5, 1, false, false),
+                LogisticsConfigAccessMode.FULL),
+            FacilityCommand.Authority.NONE);
+        RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
+        module.restoreRecipeScheduleState(before);
 
-        FluidStack[] fluidInputs = { new FluidStack(TEST_FLUID_1, 144) };
-        FluidStack[] fluidOutputs = { new FluidStack(TEST_FLUID_2, 72) };
-        RecipeSnapshot snapshot = new RecipeSnapshot(
+        execute(facility, module);
+
+        assertEquals(5L, facility.itemAmount(input));
+        assertEquals(before, module.recipeScheduleState());
+    }
+
+    @Test
+    void requestAmountStopsProductionAtTheRequestedInventoryLevel() {
+        AutomatedFacility facility = facility();
+        ModuleInstance module = installBook(
+            facility,
+            orderBook(
+                savedRecipe(
+                    new ItemStack[] { new ItemStack(Items.diamond) },
+                    new ItemStack[] { new ItemStack(Items.iron_ingot) },
+                    5L)));
+        ItemStackWrapper input = ItemStackWrapper.of(new ItemStack(Items.diamond));
+        ItemStackWrapper output = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
+        facility.insert(input, 1L);
+        facility.insert(output, 5L);
+        RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
+        module.restoreRecipeScheduleState(before);
+
+        execute(facility, module);
+
+        assertEquals(1L, facility.itemAmount(input));
+        assertEquals(5L, facility.itemAmount(output));
+        assertEquals(before, module.recipeScheduleState());
+    }
+
+    @Test
+    void rejectedOutputDoesNotConsumeInputOrAdvanceSchedule() {
+        AutomatedFacility facility = facility();
+        ModuleInstance module = installBook(facility, orderBook(recipe(Items.diamond, Items.iron_ingot, 1)));
+        ItemStackWrapper input = ItemStackWrapper.of(new ItemStack(Items.diamond));
+        facility.insert(input, 1L);
+        facility.addFilter(new ItemStack(Items.gold_ingot).getUnlocalizedName(), true);
+        RecipeBook.ScheduleState before = new RecipeBook.ScheduleState((byte) 0, (byte) 1);
+        module.restoreRecipeScheduleState(before);
+
+        execute(facility, module);
+
+        assertEquals(1L, facility.itemAmount(input));
+        assertEquals(before, module.recipeScheduleState());
+    }
+
+    private static void execute(AutomatedFacility facility, ModuleInstance module) {
+        module.component()
+            .runCycle(module, facility);
+    }
+
+    // Product contract: blocked production changes the ORDER cursor according to the chosen policy, not inventory.
+    @Test
+    void blockedOrderFollowsTheConfiguredPolicyWithoutConsumingMaterials() {
+        for (NotDoablePolicy policy : NotDoablePolicy.values()) {
+            AutomatedFacility facility = facility();
+            RecipeBook book = new RecipeBook(
+                List.of(
+                    recipe(Items.gold_ingot, Items.coal, 1),
+                    recipe(Items.diamond, Items.iron_ingot, 1),
+                    recipe(Items.stick, Items.feather, 1)),
+                RecipeSchedulerMode.ORDER,
+                policy);
+            ModuleInstance module = installBook(facility, book);
+            facility.insert(ItemStackWrapper.of(new ItemStack(Items.gold_ingot)), 1L);
+            facility.insert(ItemStackWrapper.of(new ItemStack(Items.stick)), 1L);
+            var inventoryBefore = facility.inventorySnapshot();
+            module.restoreRecipeScheduleState(new RecipeBook.ScheduleState((byte) 1, (byte) 3));
+
+            execute(facility, module);
+
+            int expected = policy == NotDoablePolicy.SKIP ? 2 : 0;
+            assertEquals(inventoryBefore, facility.inventorySnapshot());
+            assertEquals(
+                expected,
+                module.recipeScheduleState()
+                    .orderCursor());
+            execute(facility, module);
+            Item output = policy == NotDoablePolicy.SKIP ? Items.feather : Items.coal;
+            assertEquals(1L, facility.itemAmount(ItemStackWrapper.of(new ItemStack(output))));
+        }
+    }
+
+    // Product regression: a GT zero-sized item input is required, survives save/load, and is not consumed.
+    @Test
+    void nonConsumedInputMustBePresentButSurvivesRepeatedProduction() {
+        AutomatedFacility facility = facility();
+        RecipeBook book = orderBook(
+            savedRecipe(
+                new ItemStack[] { new ItemStack(Items.stick, 0) },
+                new ItemStack[] { new ItemStack(Items.iron_ingot) },
+                0L));
+        book = com.gtnewhorizons.galaxia.core.state.RecipeBookState
+            .decode(com.gtnewhorizons.galaxia.core.state.RecipeBookState.encode(book));
+        ModuleInstance module = installBook(facility, book);
+        ItemStackWrapper catalyst = ItemStackWrapper.of(new ItemStack(Items.stick));
+        ItemStackWrapper output = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
+
+        execute(facility, module);
+        assertEquals(0L, facility.itemAmount(output));
+        facility.insert(catalyst, 1L);
+        execute(facility, module);
+        execute(facility, module);
+
+        assertEquals(2L, facility.itemAmount(output));
+        assertEquals(1L, facility.itemAmount(catalyst));
+    }
+
+    private static ModuleInstance installBook(AutomatedFacility facility, RecipeBook book) {
+        FacilityModuleKind kind = FacilityModuleKind.MACERATOR;
+        ModuleInstance module = FacilityModuleRegistry.create(
+            new ModuleInstance.ID(new UUID(0L, 1L)),
+            kind,
+            StationTileCoord.of(0, 0),
+            kind.defaultShape(),
+            kind.defaultTier());
+        addModule(facility, module);
+        FacilityCommand.Result result = facility.applyCommand(
+            new FacilityCommand.ReplaceRecipeBook(facility.assetId, module.id, book),
+            FacilityCommand.Authority.NONE);
+        assertSame(FacilityCommand.Result.CHANGED, result);
+        return module;
+    }
+
+    private static RecipeBook orderBook(SavedRecipe... recipes) {
+        return new RecipeBook(List.of(recipes), RecipeSchedulerMode.ORDER, NotDoablePolicy.SKIP);
+    }
+
+    private static SavedRecipe recipe(Item input, Item output, int outputSize) {
+        return savedRecipe(
+            new ItemStack[] { new ItemStack(input) },
+            new ItemStack[] { new ItemStack(output, outputSize) },
+            0L);
+    }
+
+    private static SavedRecipe savedRecipe(ItemStack[] inputs, ItemStack[] outputs, long requestAmount) {
+        return new SavedRecipe(
+            RecipeSnapshot.resolved((byte) 1, 0, inputs, outputs, null, null, 20, 30),
+            true,
+            requestAmount,
             (byte) 1,
-            0,
-            RecipeSnapshot.computeContentHash(null, null, fluidInputs, fluidOutputs, 20, 30),
-            null,
-            null,
-            fluidInputs,
-            fluidOutputs,
-            20,
-            30);
-        SavedRecipeList slots = new SavedRecipeList();
-        slots.add(new SavedRecipe(snapshot, true, 0L, (byte) 1, (byte) 1));
-        StubRecipeModule module = new StubRecipeModule(
-            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
-
-        ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
-
-        assertEquals(856, station.getFluidAmount(new FluidKey(TEST_FLUID_1, null)));
-        assertEquals(72, station.getFluidAmount(new FluidKey(TEST_FLUID_2, null)));
+            (byte) 1);
     }
 
-    @Test
-    void executeDoesNotProduceWhenDuplicateItemInputsWouldOverdrawStock() {
-        AutomatedFacility station = new AutomatedFacility(
-            CelestialAsset.ID.create(),
-            CelestialObjectId.OVERWORLD,
-            CelestialAsset.Kind.AUTOMATED_STATION,
-            Buildable.Status.OPERATIONAL);
-        Item inputItem = Items.diamond;
-        Item outputItem = Items.iron_ingot;
-        ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
-        ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.updateItems(inputResource, 1);
-
-        ItemStack[] inputs = { new ItemStack(inputItem, 1, 0), new ItemStack(inputItem, 1, 0) };
-        ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
-        RecipeSnapshot snapshot = RecipeSnapshot.resolved((byte) 1, 0, inputs, outputs, null, null, 20, 30);
-        SavedRecipeList slots = new SavedRecipeList();
-        slots.add(new SavedRecipe(snapshot, true, 0L, (byte) 1, (byte) 1));
-        StubRecipeModule module = new StubRecipeModule(
-            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
-
-        ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
-
-        assertEquals(1, station.getItemAmount(inputResource));
-        assertEquals(0, station.getItemAmount(outputResource));
-    }
-
-    @Test
-    void executeKeepsInputLowerBoundAfterConsumingRecipeCost() {
-        AutomatedFacility station = new AutomatedFacility(
-            CelestialAsset.ID.create(),
-            CelestialObjectId.OVERWORLD,
-            CelestialAsset.Kind.AUTOMATED_STATION,
-            Buildable.Status.OPERATIONAL);
-        Item inputItem = Items.diamond;
-        Item outputItem = Items.iron_ingot;
-        ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
-        ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.updateItems(inputResource, 64);
-
-        ItemStack[] inputs = { new ItemStack(inputItem, 1, 0) };
-        ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
-        RecipeSnapshot snapshot = RecipeSnapshot.resolved((byte) 1, 0, inputs, outputs, null, null, 20, 30);
-        station.setBound(inputResource, 64, true);
-        SavedRecipeList slots = new SavedRecipeList();
-        slots.add(new SavedRecipe(snapshot, true, 0L, (byte) 1, (byte) 1));
-        StubRecipeModule module = new StubRecipeModule(
-            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
-
-        ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
-
-        assertEquals(64, station.getItemAmount(inputResource));
-        assertEquals(0, station.getItemAmount(outputResource));
-    }
-
-    @Test
-    void executeKeepsInputAboveManualLowerBoundPlusUpkeepReserve() {
-        AutomatedFacility station = new AutomatedFacility(
-            CelestialAsset.ID.create(),
-            CelestialObjectId.OVERWORLD,
-            CelestialAsset.Kind.AUTOMATED_STATION,
-            Buildable.Status.OPERATIONAL);
-        Item inputItem = Items.diamond;
-        Item outputItem = Items.iron_ingot;
-        ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
-        ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.updateItems(inputResource, 11);
-        station.setBound(inputResource, 1, true);
-        station.setUpkeepReserve(inputResource, 10L);
-
-        ItemStack[] inputs = { new ItemStack(inputItem, 1, 0) };
-        ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
-        RecipeSnapshot snapshot = RecipeSnapshot.resolved((byte) 1, 0, inputs, outputs, null, null, 20, 30);
-        SavedRecipeList slots = new SavedRecipeList();
-        slots.add(new SavedRecipe(snapshot, true, 0L, (byte) 1, (byte) 1));
-        StubRecipeModule module = new StubRecipeModule(
-            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
-
-        ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
-
-        assertEquals(11, station.getItemAmount(inputResource));
-        assertEquals(0, station.getItemAmount(outputResource));
-    }
-
-    @Test
-    void executeConsumesInputWhenChancedItemOutputMisses() {
-        AutomatedFacility station = station();
-        Item inputItem = Items.diamond;
-        Item outputItem = Items.iron_ingot;
-        ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
-        ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.updateItems(inputResource, 1);
-
-        StubRecipeModule module = itemOutputModule(inputItem, outputItem, 1);
-
-        ProductionModuleHelper.execute(null, station, module, new FixedRandom(5000), new HashMap<>(), new HashMap<>());
-
-        assertEquals(0, station.getItemAmount(inputResource));
-        assertEquals(0, station.getItemAmount(outputResource));
-    }
-
-    @Test
-    void executeUsesOutputUpperBoundAsCurrentInventoryTargetForItems() {
-        Item inputItem = Items.diamond;
-        Item outputItem = Items.iron_ingot;
-        ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
-        ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-
-        AutomatedFacility atGuard = station();
-        atGuard.updateItems(inputResource, 1);
-        atGuard.updateItems(outputResource, 1);
-        atGuard.setBound(outputResource, 1, false);
-        ProductionModuleHelper.execute(
-            null,
-            atGuard,
-            itemOutputModule(inputItem, outputItem, 1),
-            new FixedRandom(4999),
-            new HashMap<>(),
-            new HashMap<>());
-
-        assertEquals(1, atGuard.getItemAmount(inputResource));
-        assertEquals(1, atGuard.getItemAmount(outputResource));
-
-        AutomatedFacility belowGuard = station();
-        belowGuard.updateItems(inputResource, 1);
-        belowGuard.setBound(outputResource, 1, false);
-        ProductionModuleHelper.execute(
-            null,
-            belowGuard,
-            itemOutputModule(inputItem, outputItem, 1),
-            new FixedRandom(4999),
-            new HashMap<>(),
-            new HashMap<>());
-
-        assertEquals(0, belowGuard.getItemAmount(inputResource));
-        assertEquals(1, belowGuard.getItemAmount(outputResource));
-    }
-
-    @Test
-    void executeUsesOutputUpperBoundAsCurrentInventoryTargetForFluids() throws Exception {
-        Item inputItem = Items.diamond;
-        ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
-
-        AutomatedFacility atGuard = station();
-        atGuard.updateItems(inputResource, 1);
-        FluidKey outputKey = new FluidKey(TEST_FLUID_1, null);
-        atGuard.updateFluids(outputKey, 72);
-        atGuard.setBound(outputKey, 72, false);
-        ProductionModuleHelper.execute(
-            null,
-            atGuard,
-            fluidOutputModule(inputItem, new FluidStack(TEST_FLUID_1, 72)),
-            new FixedRandom(4999),
-            new HashMap<>(),
-            new HashMap<>());
-
-        assertEquals(1, atGuard.getItemAmount(inputResource));
-        assertEquals(72, atGuard.getFluidAmount(new FluidKey(TEST_FLUID_1, null)));
-
-        AutomatedFacility belowGuard = station();
-        belowGuard.updateItems(inputResource, 1);
-        belowGuard.setBound(new FluidKey(TEST_FLUID_1, null), 72, false);
-        ProductionModuleHelper.execute(
-            null,
-            belowGuard,
-            fluidOutputModule(inputItem, new FluidStack(TEST_FLUID_1, 72)),
-            new FixedRandom(4999),
-            new HashMap<>(),
-            new HashMap<>());
-
-        assertEquals(0, belowGuard.getItemAmount(inputResource));
-        assertEquals(72, belowGuard.getFluidAmount(new FluidKey(TEST_FLUID_1, null)));
-    }
-
-    @Test
-    void executeDoesNotConsumeInputsWhenSelectedItemOutputsWouldOverflowInventory() {
-        AutomatedFacility station = station();
-        Item fillerItem = Items.diamond;
-        Item inputItem = Items.iron_ingot;
-        Item outputItem = Items.gold_ingot;
-        ItemStackWrapper fillerResource = new ItemStackWrapper(fillerItem, 0, null);
-        ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
-        ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.updateItems(fillerResource, 999);
-        station.updateItems(inputResource, 1);
-
-        ProductionModuleHelper.execute(
-            null,
-            station,
-            itemOutputModule(inputItem, outputItem, 2),
-            new FixedRandom(4999),
-            new HashMap<>(),
-            new HashMap<>());
-
-        assertEquals(999, station.getItemAmount(fillerResource));
-        assertEquals(1, station.getItemAmount(inputResource));
-        assertEquals(0, station.getItemAmount(outputResource));
-    }
-
-    @Test
-    void executeCanUseFreedInputCapacityForSelectedItemOutputs() {
-        AutomatedFacility station = station();
-        Item fillerItem = Items.diamond;
-        Item inputItem = Items.iron_ingot;
-        Item outputItem = Items.gold_ingot;
-        ItemStackWrapper fillerResource = new ItemStackWrapper(fillerItem, 0, null);
-        ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
-        ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.updateItems(fillerResource, 999);
-        station.updateItems(inputResource, 1);
-
-        ProductionModuleHelper.execute(
-            null,
-            station,
-            itemOutputModule(inputItem, outputItem, 1),
-            new FixedRandom(4999),
-            new HashMap<>(),
-            new HashMap<>());
-
-        assertEquals(999, station.getItemAmount(fillerResource));
-        assertEquals(0, station.getItemAmount(inputResource));
-        assertEquals(1, station.getItemAmount(outputResource));
-    }
-
-    private static AutomatedFacility station() {
+    private static AutomatedFacility facility() {
         return new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.OVERWORLD,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-    }
-
-    private static StubRecipeModule itemOutputModule(Item inputItem, Item outputItem, int outputSize) {
-        SavedRecipeList slots = new SavedRecipeList();
-        slots.add(
-            new SavedRecipe(
-                RecipeSnapshot.resolved(
-                    (byte) 1,
-                    0,
-                    new ItemStack[] { new ItemStack(inputItem, 1, 0) },
-                    new ItemStack[] { new ItemStack(outputItem, outputSize, 0) },
-                    null,
-                    null,
-                    new int[] { 5000 },
-                    20,
-                    30),
-                true,
-                0L,
-                (byte) 1,
-                (byte) 1));
-        return new StubRecipeModule(
-            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
-    }
-
-    private static StubRecipeModule fluidOutputModule(Item inputItem, FluidStack output) {
-        SavedRecipeList slots = new SavedRecipeList();
-        slots.add(
-            new SavedRecipe(
-                RecipeSnapshot.resolved(
-                    (byte) 1,
-                    0,
-                    new ItemStack[] { new ItemStack(inputItem, 1, 0) },
-                    null,
-                    null,
-                    new FluidStack[] { output },
-                    null,
-                    new int[] { 5000 },
-                    20,
-                    30),
-                true,
-                0L,
-                (byte) 1,
-                (byte) 1));
-        return new StubRecipeModule(
-            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
-    }
-
-    private static final class StubRecipeModule implements IRecipeModule {
-
-        private RecipeConfig config;
-
-        private StubRecipeModule(RecipeConfig config) {
-            this.config = config;
-        }
-
-        @Override
-        public String getRecipeMapName() {
-            return "gt.recipe.invalid";
-        }
-
-        @Override
-        public RecipeConfig getRecipeConfig() {
-            return config;
-        }
-
-        @Override
-        public void setRecipeConfig(RecipeConfig config) {
-            this.config = config;
-        }
-    }
-
-    private static final class FixedRandom extends Random {
-
-        private final int value;
-
-        private FixedRandom(int value) {
-            this.value = value;
-        }
-
-        @Override
-        public int nextInt(int bound) {
-            return value;
-        }
-    }
-
-    private static FluidStack fluidStack(String fluidName, int amount) throws Exception {
-        return TestFluidStacks.stack(fluidName, amount);
-    }
-
-    private static String fluidName(FluidStack stack) {
-        return TestFluidStacks.name(stack);
     }
 }

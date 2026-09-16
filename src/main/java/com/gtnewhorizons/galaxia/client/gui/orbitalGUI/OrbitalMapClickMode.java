@@ -8,11 +8,11 @@ enum OrbitalMapClickMode {
     FOLLOW;
 
     static OrbitalMapClickMode fromJson(JsonElement element) {
-        if (element == null || !element.isJsonPrimitive()) return HIERARCHY;
+        if (element == null || !element.isJsonPrimitive()) return FOLLOW;
         try {
             return valueOf(element.getAsString());
         } catch (IllegalArgumentException e) {
-            return HIERARCHY;
+            return FOLLOW;
         }
     }
 }

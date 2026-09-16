@@ -5,14 +5,26 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Collections;
 import java.util.Map;
 
+import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
+
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class ModuleOperationStateTest {
+
+    @BeforeAll
+    static void init() {
+        GalaxiaTestBootstrap.ensureFacilityModules();
+    }
 
     @Test
     void rejectsMalformedState() {
@@ -29,13 +41,21 @@ final class ModuleOperationStateTest {
 
         assertThrows(
             IllegalStateException.class,
-            () -> ModuleOperationState
-                .restore(plan, ModuleOperationPhase.COMPLETE, plan.buildTicks(), Map.of(), Map.of("ore:iron", 2L)));
+            () -> ModuleOperationState.restore(
+                plan,
+                ModuleOperationPhase.COMPLETE,
+                plan.buildTicks(),
+                Map.of(),
+                Map.of(ItemStackWrapper.of(new ItemStack(Items.iron_ingot)), 2L)));
 
         assertThrows(
             IllegalArgumentException.class,
-            () -> ModuleOperationState
-                .restore(plan, ModuleOperationPhase.WAITING_FOR_MATERIALS, 0, Map.of("", 1L), Map.of()));
+            () -> ModuleOperationState.restore(
+                plan,
+                ModuleOperationPhase.WAITING_FOR_MATERIALS,
+                0,
+                Collections.singletonMap(null, 1L),
+                Map.of()));
     }
 
     @Test
@@ -92,7 +112,11 @@ final class ModuleOperationStateTest {
             cancelledWithoutDeposit.refundBuffer()
                 .isEmpty());
 
-        Map<String, Long> deposits = Map.of("plate.titanium", 3L, "circuit.advanced", 7L);
+        Map<ItemStackWrapper, Long> deposits = Map.of(
+            ItemStackWrapper.of(new ItemStack(Items.iron_ingot)),
+            3L,
+            ItemStackWrapper.of(new ItemStack(Items.gold_ingot)),
+            7L);
 
         ModuleOperationState waitingWithDeposit = ModuleOperationState.waiting(rebuildPlan(true, 5))
             .withDepositedResources(deposits);
@@ -116,7 +140,7 @@ final class ModuleOperationStateTest {
     @Test
     void finishRefundingClearsRefundAndDepositState() {
         ModuleOperationState refunding = ModuleOperationState.waiting(rebuildPlan(true, 5))
-            .withDepositedResources(Map.of("plate.titanium", 3L))
+            .withDepositedResources(Map.of(ItemStackWrapper.of(new ItemStack(Items.iron_ingot)), 3L))
             .cancel();
 
         ModuleOperationState cancelled = refunding.finishRefunding();
@@ -132,7 +156,7 @@ final class ModuleOperationStateTest {
 
     private static ModuleOperationPlan rebuildPlan(boolean reserveItems, int buildTicks) {
         return new ModuleOperationPlan(
-            new HammerModuleOperation(ModuleTier.IV, HammerVariant.BIG.name()),
+            new IModuleOperation.Hammer(ModuleTier.IV, HammerVariant.BIG),
             buildTicks,
             Map.of(),
             reserveItems);

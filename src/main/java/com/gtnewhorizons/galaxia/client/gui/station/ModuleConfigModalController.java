@@ -4,10 +4,12 @@ import java.util.Objects;
 
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.widget.ParentWidget;
+import com.cleanroommc.modularui.widget.sizer.Unit;
+import com.gtnewhorizons.galaxia.client.gui.station.ModuleUpgradeUiModel.Selection;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
@@ -30,98 +32,60 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
     private final CelestialAsset.ID assetId;
     private final int x;
     private final int y;
-    private final StationEditModeController editModeController;
+    private final StationTilePickerController tilePickerController;
     private final StationOverlayCoordinator overlayCoordinator;
 
     private ParentWidget<?> modal;
     private Kind kind = Kind.NONE;
     private ModuleInstance.ID moduleId;
     private int minerBlacklistPage;
-    private boolean settingsGroupMenuOpen;
     private boolean moduleOperationCancelArmed;
     private boolean hammerUpgradeReserveItems;
     private boolean hammerUpgradeVoidRefund;
     private boolean retargetQueued;
     private ModuleInstance.ID queuedRetargetModuleId;
     private LogisticsConfigAccessMode logisticsAccessMode = LogisticsConfigAccessMode.FULL;
-    private ModuleUpgradeSelection moduleUpgradeSelection = ModuleUpgradeSelection
-        .hammer(HammerVariant.BASE, ModuleTier.EV);
+    private Selection moduleUpgradeSelection = Selection.hammer(HammerVariant.BASE, ModuleTier.EV);
 
     ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y) {
         this(host, assetId, x, y, null, new StationOverlayCoordinator());
     }
 
     ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y,
-        StationEditModeController editModeController, StationOverlayCoordinator overlayCoordinator) {
+        StationTilePickerController tilePickerController, StationOverlayCoordinator overlayCoordinator) {
         this.host = host;
         this.assetId = assetId;
         this.x = x;
         this.y = y;
-        this.editModeController = editModeController;
+        this.tilePickerController = tilePickerController;
         this.overlayCoordinator = overlayCoordinator;
         overlayCoordinator.register(this);
     }
 
-    void openHammer(int moduleIndex) {
-        ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
-        if (targetModuleId == null) return;
-        if (closeIfSame(Kind.HAMMER, targetModuleId)) return;
-        overlayCoordinator.closeOthers(this);
-        close();
-        this.kind = Kind.HAMMER;
-        this.moduleId = targetModuleId;
-        this.minerBlacklistPage = 0;
-        this.settingsGroupMenuOpen = false;
-        this.moduleOperationCancelArmed = false;
+    void openHammer(ModuleInstance.ID moduleId) {
+        if (ModuleConfigModalSupport.module(assetId, moduleId) == null) return;
+        if (!prepareOpen(Kind.HAMMER, moduleId)) return;
 
         HammerConfigModalWidget widget = new HammerConfigModalWidget(assetId, this);
-        widget.left(x)
-            .top(y)
-            .width(HammerConfigModalWidget.WIDTH)
-            .height(HammerConfigModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
+        mount(widget, HammerConfigModalWidget.WIDTH, HammerConfigModalWidget.HEIGHT);
     }
 
-    void openUpgrade(int moduleIndex) {
-        ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
+    void openUpgrade(ModuleInstance.ID moduleId) {
+        ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleId);
         if (module == null || !ModuleUpgradeUiModel.supports(module)) return;
-        if (closeIfSame(Kind.MODULE_UPGRADE, module.id)) return;
-        overlayCoordinator.closeOthers(this);
-        close();
-        this.kind = Kind.MODULE_UPGRADE;
-        this.moduleId = module.id;
+        if (!prepareOpen(Kind.MODULE_UPGRADE, module.id)) return;
         this.moduleUpgradeSelection = ModuleUpgradeUiModel.defaultSelection(module);
-        this.hammerUpgradeReserveItems = false;
-        this.hammerUpgradeVoidRefund = false;
-        this.moduleOperationCancelArmed = false;
 
-        ModuleUpgradeModalWidget widget = new ModuleUpgradeModalWidget(assetId, this, editModeController);
-        widget.left(x)
-            .top(y)
-            .width(ModuleUpgradeModalWidget.WIDTH)
-            .height(ModuleUpgradeModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
+        ModuleUpgradeModalWidget widget = new ModuleUpgradeModalWidget(assetId, this, tilePickerController);
+        mount(widget, ModuleUpgradeModalWidget.WIDTH, ModuleUpgradeModalWidget.HEIGHT);
     }
 
-    void openLogistics(int moduleIndex) {
-        ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
-        if (targetModuleId == null) return;
-        if (closeIfSame(Kind.LOGISTICS, targetModuleId)) return;
-        overlayCoordinator.closeOthers(this);
-        close();
-        this.kind = Kind.LOGISTICS;
-        this.moduleId = targetModuleId;
-        this.logisticsAccessMode = LogisticsConfigAccessMode.FULL;
+    void openLogistics(ModuleInstance.ID moduleId) {
+        if (ModuleConfigModalSupport.module(assetId, moduleId) == null) return;
+        if (!prepareOpen(Kind.LOGISTICS, moduleId)) return;
 
         LogisticsConfigModalWidget widget = new LogisticsConfigModalWidget(assetId, this);
-        widget.left(x)
-            .top(y)
-            .width(LogisticsConfigModalWidget.WIDTH)
-            .height(LogisticsConfigModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
+        mount(widget, LogisticsConfigModalWidget.WIDTH, LogisticsConfigModalWidget.HEIGHT);
     }
 
     void openStationLogistics() {
@@ -133,85 +97,63 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
     }
 
     private void openStationLogistics(LogisticsConfigAccessMode accessMode) {
-        if (closeIfSame(Kind.LOGISTICS, null)) return;
-        overlayCoordinator.closeOthers(this);
-        close();
-        this.kind = Kind.LOGISTICS;
-        this.moduleId = null;
+        if (!prepareOpen(Kind.LOGISTICS, null)) return;
         this.logisticsAccessMode = accessMode == null ? LogisticsConfigAccessMode.FULL : accessMode;
 
         LogisticsConfigModalWidget widget = new LogisticsConfigModalWidget(assetId, this);
-        widget.left(x)
-            .top(y)
-            .width(LogisticsConfigModalWidget.WIDTH)
-            .height(LogisticsConfigModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
+        mount(widget, LogisticsConfigModalWidget.WIDTH, LogisticsConfigModalWidget.HEIGHT);
     }
 
-    void openMinerBlacklist(int moduleIndex) {
-        ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
-        if (targetModuleId == null) return;
-        if (closeIfSame(Kind.MINER_BLACKLIST, targetModuleId)) return;
-        overlayCoordinator.closeOthers(this);
-        close();
-        this.kind = Kind.MINER_BLACKLIST;
-        this.moduleId = targetModuleId;
-        this.minerBlacklistPage = 0;
-        this.settingsGroupMenuOpen = false;
-        this.moduleOperationCancelArmed = false;
+    void openMinerBlacklist(ModuleInstance.ID moduleId) {
+        if (ModuleConfigModalSupport.module(assetId, moduleId) == null) return;
+        if (!prepareOpen(Kind.MINER_BLACKLIST, moduleId)) return;
 
-        MinerBlacklistConfigModalWidget widget = new MinerBlacklistConfigModalWidget(assetId, this, editModeController);
-        widget.left(x)
-            .top(y)
-            .width(MinerBlacklistConfigModalWidget.WIDTH)
-            .height(MinerBlacklistConfigModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
+        MinerBlacklistConfigModalWidget widget = new MinerBlacklistConfigModalWidget(
+            assetId,
+            this,
+            tilePickerController);
+        mount(widget, MinerBlacklistConfigModalWidget.WIDTH, MinerBlacklistConfigModalWidget.HEIGHT);
     }
 
-    void openRecipeConfig(int moduleIndex) {
-        ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
-        if (module == null || !(module.component() instanceof IRecipeModule)) return;
-        if (closeIfSame(Kind.RECIPE_CONFIG, module.id)) return;
-        overlayCoordinator.closeOthers(this);
-        close();
-        this.kind = Kind.RECIPE_CONFIG;
-        this.moduleId = module.id;
+    void openRecipeConfig(ModuleInstance.ID moduleId) {
+        ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleId);
+        AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
+        if (facility == null || module == null || module.recipe() == null) return;
+        if (!prepareOpen(Kind.RECIPE_CONFIG, module.id)) return;
 
-        RecipeConfigModalWidget widget = new RecipeConfigModalWidget(assetId, this, editModeController);
-        widget.left(x)
-            .top(y)
-            .width(RecipeConfigModalWidget.WIDTH)
-            .height(RecipeConfigModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
+        RecipeBookEditorModel editor = RecipeBookEditorModel.edit(module.id, facility.recipeBook(module));
+        RecipeConfigModalWidget widget = new RecipeConfigModalWidget(assetId, this, tilePickerController, editor);
+        mount(widget, RecipeConfigModalWidget.WIDTH, RecipeConfigModalWidget.HEIGHT);
     }
 
-    void openDebugDataGenerator(int moduleIndex) {
-        ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
+    void openDebugDataGenerator(ModuleInstance.ID moduleId) {
+        ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleId);
         if (module == null || !(module.component() instanceof ModuleDebugDataGenerator)) return;
-        if (closeIfSame(Kind.DEBUG_DATA_GENERATOR, module.id)) return;
-        overlayCoordinator.closeOthers(this);
-        close();
-        this.kind = Kind.DEBUG_DATA_GENERATOR;
-        this.moduleId = module.id;
+        if (!prepareOpen(Kind.DEBUG_DATA_GENERATOR, module.id)) return;
 
         DebugDataGeneratorConfigModalWidget widget = new DebugDataGeneratorConfigModalWidget(assetId, this);
-        widget.left(x)
-            .top(y)
-            .width(DebugDataGeneratorConfigModalWidget.WIDTH)
-            .height(DebugDataGeneratorConfigModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
+        mount(widget, DebugDataGeneratorConfigModalWidget.WIDTH, DebugDataGeneratorConfigModalWidget.HEIGHT);
     }
 
-    private boolean closeIfSame(Kind targetKind, ModuleInstance.ID targetModuleId) {
+    private boolean prepareOpen(Kind targetKind, ModuleInstance.ID targetModuleId) {
         if (kind == targetKind && Objects.equals(moduleId, targetModuleId)) {
             close();
-            return true;
+            return false;
         }
-        return false;
+        overlayCoordinator.closeOthers(this);
+        close();
+        kind = targetKind;
+        moduleId = targetModuleId;
+        return true;
+    }
+
+    private void mount(ParentWidget<?> widget, int width, int height) {
+        widget.left(() -> Math.max(0, Math.min(x, host.getArea().width - width)), Unit.Measure.PIXEL)
+            .top(() -> Math.max(0, Math.min(y, host.getArea().height - height)), Unit.Measure.PIXEL)
+            .width(width)
+            .height(height);
+        modal = widget;
+        host.child(widget);
     }
 
     @Override
@@ -223,10 +165,9 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         this.kind = Kind.NONE;
         this.moduleId = null;
         this.minerBlacklistPage = 0;
-        this.settingsGroupMenuOpen = false;
         this.hammerUpgradeReserveItems = false;
         this.hammerUpgradeVoidRefund = false;
-        this.moduleUpgradeSelection = ModuleUpgradeSelection.hammer(HammerVariant.BASE, ModuleTier.EV);
+        this.moduleUpgradeSelection = Selection.hammer(HammerVariant.BASE, ModuleTier.EV);
         this.moduleOperationCancelArmed = false;
         this.logisticsAccessMode = LogisticsConfigAccessMode.FULL;
     }
@@ -245,7 +186,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
     }
 
     void closeIfTargetMissing() {
-        if (kind != Kind.NONE && moduleId != null && moduleIndex() < 0) {
+        if (kind != Kind.NONE && moduleId != null && ModuleConfigModalSupport.module(assetId, moduleId) == null) {
             close();
         }
     }
@@ -308,11 +249,6 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         return kind == Kind.DEBUG_DATA_GENERATOR;
     }
 
-    int moduleIndex() {
-        if (moduleId == null) return -1;
-        return ModuleConfigModalSupport.moduleIndex(assetId, moduleId);
-    }
-
     ModuleInstance.ID moduleId() {
         return moduleId;
     }
@@ -327,18 +263,6 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
 
     void setMinerBlacklistPage(int minerBlacklistPage) {
         this.minerBlacklistPage = Math.max(0, minerBlacklistPage);
-    }
-
-    boolean isSettingsGroupMenuOpen() {
-        return settingsGroupMenuOpen;
-    }
-
-    void toggleSettingsGroupMenu() {
-        settingsGroupMenuOpen = !settingsGroupMenuOpen;
-    }
-
-    void closeSettingsGroupMenu() {
-        settingsGroupMenuOpen = false;
     }
 
     boolean isModuleOperationCancelArmed() {
@@ -369,7 +293,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         hammerUpgradeVoidRefund = !hammerUpgradeVoidRefund;
     }
 
-    ModuleUpgradeSelection moduleUpgradeSelection() {
+    Selection moduleUpgradeSelection() {
         return moduleUpgradeSelection;
     }
 
@@ -377,11 +301,6 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleId);
         if (module == null) return;
         moduleUpgradeSelection = ModuleUpgradeUiModel.selectOption(module, moduleUpgradeSelection, groupId, optionId);
-    }
-
-    private ModuleInstance.ID resolveModuleId(int moduleIndex) {
-        ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
-        return module == null ? null : module.id;
     }
 
     private void retargetHammer(ModuleInstance module) {
@@ -426,16 +345,17 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         }
         moduleId = module.id;
         minerBlacklistPage = 0;
-        settingsGroupMenuOpen = false;
         moduleOperationCancelArmed = false;
     }
 
     private void retargetRecipeConfig(ModuleInstance module) {
-        if (!(module.component() instanceof IRecipeModule)) {
+        if (module.recipe() == null) {
             close();
             return;
         }
-        moduleId = module.id;
+        AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
+        close();
+        if (facility != null && facility.moduleById(module.id) != null) openRecipeConfig(module.id);
     }
 
     private void retargetDebugDataGenerator(ModuleInstance module) {

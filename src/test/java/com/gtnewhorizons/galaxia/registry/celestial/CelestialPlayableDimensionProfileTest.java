@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.celestial;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -16,6 +17,18 @@ import com.gtnewhorizons.galaxia.registry.dimension.PlayableDimensionProfile;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class CelestialPlayableDimensionProfileTest {
+
+    @Test
+    void everyGalaxiaDimensionResolvesThroughCelestialRegistry() {
+        GalaxiaTestBootstrap.ensureCelestialRegistry();
+
+        for (DimensionEnum dimension : DimensionEnum.values()) {
+            assertTrue(
+                CelestialRegistry.findByDimension(dimension)
+                    .isPresent(),
+                () -> "Dimension has no celestial object: " + dimension);
+        }
+    }
 
     @Test
     void registryExposesOnlyPlayableBodiesWithDimensionProfiles() {

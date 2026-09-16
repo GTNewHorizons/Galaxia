@@ -89,7 +89,6 @@ public final class GTCompat {
                 stack = null;
             }
             if (stack == null) continue;
-            stack = stack.copy();
             stack.stackSize = 1;
             pool.add(stack);
         }

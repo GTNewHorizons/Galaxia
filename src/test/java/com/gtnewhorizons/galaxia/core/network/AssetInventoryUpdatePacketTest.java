@@ -1,8 +1,12 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import net.minecraft.init.Items;
@@ -15,11 +19,10 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 import io.netty.buffer.ByteBuf;
@@ -35,114 +38,82 @@ final class AssetInventoryUpdatePacketTest {
     }
 
     @BeforeEach
+    @AfterEach
     void cleanStores() {
         CelestialAssetStore.SERVER.clearInternal();
         CelestialAssetStore.CLIENT.clearInternal();
-        LogisticStore.clearSignals();
-    }
-
-    @AfterEach
-    void cleanStoresAfter() {
-        CelestialAssetStore.SERVER.clearInternal();
-        CelestialAssetStore.CLIENT.clearInternal();
-        LogisticStore.clearSignals();
     }
 
     @Test
-    void applyRejectsPositiveDeltaFromNonCreativeEvenWhenPacketClearsCreativeOnly() throws Exception {
-        AutomatedFacility facility = addFacilityToServer();
+    void applyMutatesPhysicalStationInventory() {
+        MutableInventory inventory = new MutableInventory();
+        Station station = addStation(inventory);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
+
+        assertTrue(
+            AssetInventoryUpdatePacket.add(station.assetId, resource, 64)
+                .apply(TEAM, true));
+        assertEquals(64L, inventory.getItemAmount(resource));
+
+        assertTrue(
+            AssetInventoryUpdatePacket.removeAmount(station.assetId, resource, 16)
+                .apply(TEAM, false));
+        assertEquals(48L, inventory.getItemAmount(resource));
+
+        assertTrue(
+            AssetInventoryUpdatePacket.remove(station.assetId, resource)
+                .apply(TEAM, false));
+        assertEquals(0L, inventory.getItemAmount(resource));
+    }
+
+    @Test
+    void applyRejectsPositiveDeltaFromNonCreativeEvenWhenWireFlagIsCleared() {
+        MutableInventory inventory = new MutableInventory();
+        Station station = addStation(inventory);
         ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);
         AssetInventoryUpdatePacket packet = roundTripWithCreativeOnlyCleared(
-            AssetInventoryUpdatePacket.add(facility.assetId, resource, 64));
+            AssetInventoryUpdatePacket.add(station.assetId, resource, 64));
 
-        AssetSyncPacket sync = packet.apply(TEAM, false);
-
-        assertNull(sync);
-        assertEquals(0L, facility.getItemAmount(resource));
+        assertFalse(packet.apply(TEAM, false));
+        assertEquals(0L, inventory.getItemAmount(resource));
     }
 
-    @Test
-    void applyBumpsSyncRevisionForInventoryDelta() {
-        AutomatedFacility facility = addFacilityToServer();
-        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
-        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.add(facility.assetId, resource, 64);
-
-        AssetSyncPacket sync = packet.apply(TEAM, true);
-
-        assertEquals(1, facility.getSyncRevision());
-        assertEquals(1, sync.syncRevision());
-    }
-
-    @Test
-    void removePacketRemovesAllMatchingInventory() {
-        AutomatedFacility facility = addFacilityToServer();
-        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
-        facility.updateItems(resource, 32);
-        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.remove(facility.assetId, resource);
-
-        AssetSyncPacket sync = packet.apply(TEAM, false);
-
-        assertEquals(0L, facility.getItemAmount(resource));
-        assertEquals(1, facility.getSyncRevision());
-        assertEquals(1, sync.syncRevision());
-    }
-
-    @Test
-    void boundPacketSetsInventoryBoundForNonCreativePlayer() {
-        AutomatedFacility facility = addFacilityToServer();
-        ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);
-        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket
-            .setBound(facility.assetId, BoundKind.ITEM_LOWER, resource, 48);
-
-        AssetSyncPacket sync = packet.apply(TEAM, false);
-
-        assertEquals(
-            48,
-            facility.getBound(resource)
-                .lowOrDefault());
-        assertEquals(1, facility.getSyncRevision());
-        assertEquals(1, sync.syncRevision());
-    }
-
-    @Test
-    void invalidBoundPacketIsRejectedWithoutChangingExistingBounds() {
-        AutomatedFacility facility = addFacilityToServer();
-        ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);
-        facility.setBound(resource, 320, false);
-        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket
-            .setBound(facility.assetId, BoundKind.ITEM_LOWER, resource, 442);
-
-        AssetSyncPacket sync = packet.apply(TEAM, false);
-
-        assertNull(sync);
-        assertEquals(
-            0L,
-            facility.getBound(resource)
-                .lowOrDefault());
-        assertEquals(
-            320L,
-            facility.getBound(resource)
-                .upperOrDefault());
-        assertEquals(0, facility.getSyncRevision());
-    }
-
-    private static AutomatedFacility addFacilityToServer() {
-        AutomatedFacility facility = new AutomatedFacility(
+    private static Station addStation(MutableInventory inventory) {
+        Station station = new Station(
             CelestialAsset.ID.create(),
             CelestialObjectId.MARS,
-            CelestialAsset.Kind.AUTOMATED_STATION,
-            Buildable.Status.OPERATIONAL);
-        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
-        return facility;
+            Buildable.Status.OPERATIONAL) {
+
+            @Override
+            public List<IDistributedInventory> getChildren() {
+                return List.of(inventory);
+            }
+        };
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, station);
+        return station;
     }
 
     private static AssetInventoryUpdatePacket roundTripWithCreativeOnlyCleared(AssetInventoryUpdatePacket packet) {
-        ByteBuf buf = Unpooled.buffer();
-        packet.toBytes(buf);
-        buf.setBoolean(buf.writerIndex() - 1, false);
+        ByteBuf buffer = Unpooled.buffer();
+        packet.toBytes(buffer);
+        buffer.setBoolean(buffer.writerIndex() - 1, false);
         AssetInventoryUpdatePacket decoded = new AssetInventoryUpdatePacket();
-        decoded.fromBytes(buf);
+        decoded.fromBytes(buffer);
         return decoded;
     }
 
+    private static final class MutableInventory implements IDistributedInventory {
+
+        private final Map<ItemStackWrapper, Long> items = new LinkedHashMap<>();
+
+        @Override
+        public Map<ItemStackWrapper, Long> getItemAmounts() {
+            return items;
+        }
+
+        @Override
+        public long totalItemCapacity() {
+            return 1_000L;
+        }
+    }
 }

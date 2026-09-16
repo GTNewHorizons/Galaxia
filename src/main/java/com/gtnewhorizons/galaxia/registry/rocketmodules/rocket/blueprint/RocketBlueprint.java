@@ -24,9 +24,7 @@ public class RocketBlueprint {
     public RocketBlueprint copy() {
         RocketBlueprint copy = new RocketBlueprint();
         copy.name = this.name;
-        for (RocketPartInstance part : parts) {
-            copy.parts.add(part.copy());
-        }
+        copy.parts.addAll(parts);
         return copy;
     }
 
@@ -46,23 +44,10 @@ public class RocketBlueprint {
     }
 
     public boolean canPlacePart(RocketPartInstance candidate) {
-        for (RocketPartInstance existing : parts) {
-            if (existing.overlaps(candidate)) {
-                return false;
-            }
-        }
-
-        if (parts.isEmpty()) {
-            return true;
-        }
-
-        for (RocketPartInstance existing : parts) {
-            if (candidate.isAdjacentTo(existing)) {
-                return true;
-            }
-        }
-
-        return false;
+        return parts.stream()
+            .noneMatch(existing -> existing.overlaps(candidate))
+            && (parts.isEmpty() || parts.stream()
+                .anyMatch(candidate::isAdjacentTo));
     }
 
     public NBTTagCompound serializeNBT() {

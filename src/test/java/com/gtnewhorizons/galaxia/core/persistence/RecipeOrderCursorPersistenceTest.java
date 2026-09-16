@@ -1,22 +1,31 @@
 package com.gtnewhorizons.galaxia.core.persistence;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.List;
+import java.util.UUID;
+
+import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.core.state.AssetState;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FacilityCommand;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
@@ -25,8 +34,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 /**
- * Tests that ORDER mode cursor state (orderCursor, orderRemaining) persists
- * through save/load round-trip.
+ * Tests that a recipe book and its independent ORDER schedule persist through a save/load round trip.
  */
 final class RecipeOrderCursorPersistenceTest {
 
@@ -49,15 +57,11 @@ final class RecipeOrderCursorPersistenceTest {
         ModuleInstance macerator = createMaceratorWithOrderConfig(station);
 
         // Save
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        NBTTagCompound encoded = AssetState.encode(new UUID(0L, 1L), station);
 
         // Load
-        AutomatedFacility decoded = new AutomatedFacility(
-            ASSET_ID,
-            CelestialObjectId.MARS,
-            CelestialAsset.Kind.AUTOMATED_STATION,
-            Buildable.Status.OPERATIONAL);
-        manager.decodeFacilityState(decoded, encoded);
+        AutomatedFacility decoded = (AutomatedFacility) AssetState.decode(encoded)
+            .asset();
 
         // Verify
         assertEquals(
@@ -66,35 +70,23 @@ final class RecipeOrderCursorPersistenceTest {
                 .size());
         ModuleInstance loaded = decoded.modules()
             .get(0);
-        assertTrue(loaded.component() instanceof IRecipeModule);
+        assertNotNull(loaded.recipe());
 
-        IRecipeModule recipeModule = (IRecipeModule) loaded.component();
-        assertNotNull(recipeModule.getRecipeConfig(), "RecipeConfig must survive round-trip");
+        RecipeBook loadedBook = decoded.recipeBook(loaded);
+        assertEquals(RecipeSchedulerMode.ORDER, loadedBook.mode(), "ORDER mode must survive");
         assertEquals(
-            RecipeSchedulerMode.ORDER,
-            recipeModule.getRecipeConfig()
-                .mode(),
-            "ORDER mode must survive");
-        assertEquals(
-            (byte) 1,
-            recipeModule.getRecipeConfig()
-                .orderCursor(),
-            "orderCursor must survive");
-        assertEquals(
-            (byte) 3,
-            recipeModule.getRecipeConfig()
-                .orderRemaining(),
-            "orderRemaining must survive");
+            new RecipeBook.ScheduleState((byte) 1, (byte) 3),
+            loaded.recipeScheduleState(),
+            "schedule state must survive independently of the recipe book");
 
         // Verify recipe slot content survived
-        RecipeConfig loadedConfig = recipeModule.getRecipeConfig();
         assertEquals(
             3,
-            loadedConfig.savedRecipes()
+            loadedBook.recipes()
                 .size(),
             "3 slots must survive");
         // Spot-check first slot's fields
-        SavedRecipe firstSlot = loadedConfig.savedRecipes()
+        SavedRecipe firstSlot = loadedBook.recipes()
             .get(0);
         assertTrue(firstSlot.enabled(), "slot 0 enabled must survive");
         assertEquals(0L, firstSlot.requestAmount(), "slot 0 requestAmount must survive empty");
@@ -118,32 +110,32 @@ final class RecipeOrderCursorPersistenceTest {
         macerator.updateStatus(Buildable.Status.OPERATIONAL);
         station.stationLayout()
             .place(macerator);
-        station.addModule(macerator);
+        addModule(station, macerator);
 
-        // Create RecipeConfig with ORDER mode, 3 slots, cursor=1, remaining=3
-        RecipeConfig config = RecipeConfig.empty();
-        // Config is in PRIORITY mode by default — change to ORDER
-        config = new RecipeConfig(
-            config.savedRecipes(),
+        RecipeBook book = new RecipeBook(
+            List.of(recipe(0, true, 5, 2), recipe(1, true, 3, 4), recipe(2, false, 1, 1)),
             RecipeSchedulerMode.ORDER,
-            NotDoablePolicy.SKIP,
-            (byte) 1,
-            (byte) 3);
-
-        // Add 3 recipe slots
-        SavedRecipe slot1 = new SavedRecipe(RecipeSnapshot.unresolved((byte) 1, 0, 42L), true, 0L, (byte) 5, (byte) 2);
-        SavedRecipe slot2 = new SavedRecipe(RecipeSnapshot.unresolved((byte) 1, 1, 43L), true, 0L, (byte) 3, (byte) 4);
-        SavedRecipe slot3 = new SavedRecipe(RecipeSnapshot.unresolved((byte) 1, 2, 44L), false, 0L, (byte) 1, (byte) 1);
-        config.savedRecipes()
-            .add(slot1);
-        config.savedRecipes()
-            .add(slot2);
-        config.savedRecipes()
-            .add(slot3);
-
-        // Set config via IRecipeModule
-        ((IRecipeModule) macerator.component()).setRecipeConfig(config);
+            NotDoablePolicy.SKIP);
+        assertSame(
+            FacilityCommand.Result.CHANGED,
+            station.applyCommand(
+                new FacilityCommand.ReplaceRecipeBook(station.assetId, macerator.id, book),
+                FacilityCommand.Authority.NONE));
+        macerator.restoreRecipeScheduleState(new RecipeBook.ScheduleState((byte) 1, (byte) 3));
 
         return macerator;
+    }
+
+    private static SavedRecipe recipe(int index, boolean enabled, int priority, int orderSize) {
+        RecipeSnapshot snapshot = RecipeSnapshot.resolved(
+            (byte) 1,
+            index,
+            new ItemStack[] { new ItemStack(Items.iron_ingot, 1, 0) },
+            new ItemStack[] { new ItemStack(Items.diamond, index + 1, 0) },
+            null,
+            null,
+            20 + index,
+            30 + index);
+        return new SavedRecipe(snapshot, enabled, 0L, (byte) priority, (byte) orderSize);
     }
 }

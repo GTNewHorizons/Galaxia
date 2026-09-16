@@ -1,69 +1,47 @@
 package com.gtnewhorizons.galaxia.core.network;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import net.minecraft.init.Items;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidRegistry;
-import net.minecraftforge.fluids.FluidStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.core.state.AssetState;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
-import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
-import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
-import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
-import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
-import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
-import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
-import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
-import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
+import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
-import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
-import io.netty.buffer.Unpooled;
-
-/**
- * Tests packet serialization round-trips and delta sync correctness.
- */
 final class StationPacketRoundTripTest {
 
     private static final UUID TEAM = UUID.randomUUID();
@@ -74,640 +52,218 @@ final class StationPacketRoundTripTest {
     }
 
     @BeforeEach
-    void cleanStores() {
-        CelestialAssetStore.SERVER.clearInternal();
-        CelestialAssetStore.CLIENT.clearInternal();
-    }
-
-    @AfterEach
-    void cleanStoresAfter() {
-        CelestialAssetStore.SERVER.clearInternal();
+    void clearClientStore() {
         CelestialAssetStore.CLIENT.clearInternal();
     }
 
     @Test
-    void fullSyncRoundTripPreservesLayoutTilesAndModules() {
-        AutomatedFacility server = buildFacilityWithModules(2);
+    void canonicalNetworkStateRegistersEveryAssetKindWithAuthoritativeStateAndTeam() {
+        Station station = new Station(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MOON,
+            Buildable.Status.IN_CONSTRUCTION);
+        station.setController(new BlockPos(3, 5, 7));
+        Satellite satellite = new Satellite(
+            CelestialAsset.ID.create(),
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            Buildable.Status.OPERATIONAL,
+            SatelliteKind.PROSPECTING);
+        AutomatedFacility facility = facility();
+        ItemStackWrapper item = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        facility.restoreInventory(Map.of(item, 9L));
+        facility.restoreFilters(List.of("ore:iron"), true);
+        facility.logisticsConfig.set(item, new LogisticsResourceConfig(4, 8, true, false));
 
-        AssetSyncPacket full = AssetSyncPacket.fullSync(server);
-        var buf = Unpooled.buffer();
-        full.toBytes(buf);
-        AssetSyncPacket decoded = new AssetSyncPacket();
-        decoded.fromBytes(buf);
+        AssetStateSync.Client client = new AssetStateSync.Client(assetId -> {});
+        receive(
+            client,
+            AssetSyncPacket.state(TEAM, station, Map.of())
+                .withPublishedRevision(1L));
+        receive(
+            client,
+            AssetSyncPacket.state(TEAM, satellite, Map.of())
+                .withPublishedRevision(1L));
+        receive(
+            client,
+            AssetSyncPacket.state(TEAM, facility, Map.of())
+                .withPublishedRevision(1L));
 
-        // Apply decoded full sync to a fresh client
-        AutomatedFacility client = createFacility();
-        applyFullSyncFromPacket(client, decoded);
-
+        Station decodedStation = (Station) CelestialAssetStore.CLIENT.findAssetInternal(station.assetId);
+        Satellite decodedSatellite = (Satellite) CelestialAssetStore.CLIENT.findAssetInternal(satellite.assetId);
+        AutomatedFacility decodedFacility = (AutomatedFacility) CelestialAssetStore.CLIENT
+            .findAssetInternal(facility.assetId);
+        assertEquals(station.getController(), decodedStation.getController());
+        assertEquals(Buildable.Status.IN_CONSTRUCTION, decodedStation.status());
+        assertEquals(SatelliteKind.PROSPECTING, decodedSatellite.satelliteKind());
+        assertEquals(700L, decodedFacility.getEnergyStored());
         assertEquals(
-            server.modules()
-                .size(),
-            client.modules()
-                .size(),
-            "client must have same module count");
+            1,
+            decodedFacility.modules()
+                .size());
         assertEquals(
-            server.stationLayout()
-                .size(),
-            client.stationLayout()
-                .size(),
-            "client layout must have same tile count");
+            9L,
+            decodedFacility.itemSnapshot()
+                .get(item));
         assertTrue(
-            client.stationLayout()
-                .isOccupied(StationTileCoord.CORE),
-            "CORE on client");
-        assertTrue(
-            client.stationLayout()
-                .isOccupied(StationTileCoord.of(1, 0)),
-            "[1,0] on client");
+            decodedFacility.filtersSnapshot(true)
+                .contains("ore:iron"));
+        assertEquals(facility.logisticsConfig.snapshot(), decodedFacility.logisticsConfig.snapshot());
+        assertEquals(TEAM, CelestialAssetStore.CLIENT.getTeamIdInternal(station.assetId));
+        assertEquals(TEAM, CelestialAssetStore.CLIENT.getTeamIdInternal(satellite.assetId));
+        assertEquals(TEAM, CelestialAssetStore.CLIENT.getTeamIdInternal(facility.assetId));
     }
 
-    // ── Delta sync ──
+    @Test
+    void canonicalStateStoresPlannedConstructionOnlyForAutomatedFacilities() {
+        Station station = new Station(CelestialAsset.ID.create(), CelestialObjectId.MOON, Buildable.Status.OPERATIONAL);
+        AutomatedFacility facility = facility();
+        facility.setConstructionInventory(Map.of(new ItemStack(Items.iron_ingot), 7L));
+
+        NBTTagCompound stationState = AssetState.encode(TEAM, station);
+        NBTTagCompound facilityState = AssetState.encode(TEAM, facility);
+
+        assertFalse(stationState.hasKey("construction"));
+        assertFalse(facilityState.hasKey("construction"));
+        assertTrue(
+            facilityState.getCompoundTag("facility")
+                .hasKey("construction"));
+        AutomatedFacility decoded = (AutomatedFacility) AssetState.decode(facilityState)
+            .asset();
+        assertEquals(
+            1,
+            decoded.getConstructionInventory()
+                .size());
+        Map.Entry<ItemStack, Long> restored = decoded.getConstructionInventory()
+            .entrySet()
+            .iterator()
+            .next();
+        assertEquals(ItemStackWrapper.of(new ItemStack(Items.iron_ingot)), ItemStackWrapper.of(restored.getKey()));
+        assertEquals(7L, restored.getValue());
+
+        stationState.setTag("construction", new NBTTagList());
+        assertThrows(IllegalStateException.class, () -> AssetState.decode(stationState));
+    }
 
     @Test
-    void dirtyInventoryDeltaSyncsAfterInitialFullSync() {
-        AutomatedFacility server = createFacility();
-        UUID playerId = UUID.randomUUID();
-        AssetSyncPacket.figureOutWhatToSend(server, playerId);
-        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
+    void canonicalNetworkReplacementPreservesAssetIdentityAndClearsAbsentState() {
+        AutomatedFacility current = facility();
+        current.restoreFilters(List.of("ore:old"), true);
+        CelestialAssetStore.CLIENT.registerAssetInternal(TEAM, current);
+        AutomatedFacility authoritative = new AutomatedFacility(
+            current.assetId,
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.DISABLED);
+        authoritative.setEnergyStored(250L);
 
-        server.updateContents(resource, 42, true);
+        AssetStateSync.Client client = new AssetStateSync.Client(assetId -> {});
+        receive(
+            client,
+            AssetSyncPacket.state(TEAM, authoritative, Map.of())
+                .withPublishedRevision(2L));
 
-        List<AssetSyncPacket> deltas = AssetSyncPacket.figureOutWhatToSend(server, playerId);
-        assertEquals(1, deltas.size());
+        assertSame(current, CelestialAssetStore.CLIENT.findAssetInternal(current.assetId));
+        assertEquals(250L, current.getEnergyStored());
+        assertEquals(Buildable.Status.DISABLED, current.status());
         assertTrue(
-            AssetSyncPacket.figureOutWhatToSend(server, playerId)
+            current.modules()
+                .isEmpty());
+        assertTrue(
+            current.filtersSnapshot(true)
                 .isEmpty());
     }
 
     @Test
-    void fullSyncRoundTripPreservesHammerVariant() {
-        AutomatedFacility server = createFacility();
-        ModuleInstance hammerModule = buildModule(server, FacilityModuleKind.HAMMER, StationTileCoord.of(1, 0));
-        hammerModule.setTier(ModuleTier.LuV);
-        ModuleHammer serverHammer = (ModuleHammer) hammerModule.component();
-        serverHammer.setVariant(HammerVariant.BIG);
-        serverHammer.setEnergyStored(123_456L);
+    void immutableIdentityMismatchesRequestOneRecoveryWithoutPartialMutation() {
+        AutomatedFacility current = facility();
+        current.setEnergyStored(100L);
+        CelestialAssetStore.CLIENT.registerAssetInternal(TEAM, current);
+        RecordingTransport transport = new RecordingTransport();
+        AssetStateSync.Client client = new AssetStateSync.Client(transport);
 
-        AutomatedFacility client = createFacility();
-        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
+        AutomatedFacility wrongBody = new AutomatedFacility(
+            current.assetId,
+            CelestialObjectId.MOON,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.DISABLED);
+        wrongBody.setEnergyStored(200L);
+        receive(
+            client,
+            AssetSyncPacket.state(TEAM, wrongBody, Map.of())
+                .withPublishedRevision(2L));
 
-        ModuleHammer clientHammer = (ModuleHammer) client.modules()
-            .get(0)
-            .component();
-        assertEquals(HammerVariant.BIG, clientHammer.variant());
-        assertEquals(123_456L, clientHammer.energyStored());
+        AutomatedFacility wrongTeam = new AutomatedFacility(
+            current.assetId,
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.DISABLED);
+        wrongTeam.setEnergyStored(300L);
+        receive(
+            client,
+            AssetSyncPacket.state(UUID.randomUUID(), wrongTeam, Map.of())
+                .withPublishedRevision(3L));
+
+        assertSame(current, CelestialAssetStore.CLIENT.findAssetInternal(current.assetId));
+        assertEquals(100L, current.getEnergyStored());
+        assertEquals(Buildable.Status.OPERATIONAL, current.status());
+        assertEquals(List.of(current.assetId), transport.recoveryRequests);
     }
 
     @Test
-    void fullSyncRoundTripPreservesUpkeepCredits() {
-        AutomatedFacility server = createFacility();
-        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
-        server.loadUpkeepCredits(new UpkeepSettlement.Credits(Map.of(resource, UpkeepAmount.parse("0.5")), Map.of()));
-
-        AssetSyncPacket.Handler.handleFull(roundTrip(AssetSyncPacket.fullSync(server)));
-
-        AutomatedFacility client = (AutomatedFacility) CelestialAssetStore.CLIENT.findAssetInternal(server.assetId);
-        assertNotNull(client);
-        assertEquals(
-            "0.5",
-            client.upkeepCredits()
-                .itemCredit(resource)
-                .toDisplayString());
-    }
-
-    @Test
-    void fullSyncRoundTripPreservesModuleOperation() {
-        AutomatedFacility server = createFacility();
-        ModuleInstance hammerModule = buildModule(server, FacilityModuleKind.HAMMER, StationTileCoord.of(1, 0));
-        hammerModule.setOperation(
-            ModuleOperationState.waiting(
-                new ModuleOperationPlan(new HammerModuleOperation(ModuleTier.LuV, "BIG"), 200, Map.of(), true)));
-
-        AutomatedFacility client = createFacility();
-        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
-
-        ModuleInstance clientModule = client.modules()
-            .get(0);
-        assertNotNull(clientModule.operationOrNull());
-        assertEquals(
-            ModuleTier.LuV,
-            clientModule.operationOrNull()
-                .plan()
-                .spec()
-                .targetTier());
-    }
-
-    @Test
-    void fullSyncRoundTripPreservesModuleRotation() {
-        AutomatedFacility server = createFacility();
-        ModuleInstance module = FacilityModuleRegistry.create(
-            ModuleInstance.ID.create(),
-            FacilityModuleKind.HAMMER,
-            StationTileCoord.of(5, 5),
-            ModuleShape.QUAD_2x2,
-            ModuleTier.IV);
-        module.setRotation(1);
-        server.addModule(module);
-        server.stationLayout()
-            .place(module);
-
-        AutomatedFacility client = createFacility();
-        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
-
-        ModuleInstance clientModule = client.modules()
-            .get(0);
-        assertEquals(1, clientModule.rotation());
-        assertTrue(
-            client.stationLayout()
-                .isOccupied(StationTileCoord.of(4, 5)));
-    }
-
-    @Test
-    void fullSyncRoundTripPreservesMinerBlacklist() {
-        AutomatedFacility server = createFacility();
-        ModuleInstance miner = buildModule(server, FacilityModuleKind.MINER, StationTileCoord.of(1, 0));
-        server.setMinerOreBlacklisted(miner, "ore:iron", true);
-
-        AutomatedFacility client = createFacility();
-        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
-
-        assertTrue(
-            client.isMinerOreBlacklisted(
-                client.modules()
-                    .get(0),
-                "ore:iron"));
-        assertFalse(
-            client.settingsGroups()
-                .require(
-                    client.modules()
-                        .get(0)
-                        .groupId())
-                .isJoinable());
-    }
-
-    @Test
-    void fullSyncRoundTripPreservesMinerSettingsGroup() {
-        AutomatedFacility server = createFacility();
-        ModuleInstance miner = buildModule(server, FacilityModuleKind.MINER, StationTileCoord.of(1, 0));
-        server.setMinerOreBlacklisted(miner, "ore:iron", true);
-        short groupId = server.createSettingsGroupForModule(miner, "Shared miners")
-            .id();
-
-        AutomatedFacility client = createFacility();
-        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
-
-        ModuleInstance clientMiner = client.modules()
-            .get(0);
-        assertEquals(groupId, clientMiner.groupId());
-        assertEquals(
-            "Shared miners",
-            client.settingsGroups()
-                .require(groupId)
-                .displayName());
-        assertTrue(
-            client.settingsGroups()
-                .require(groupId)
-                .isJoinable());
-        assertTrue(client.isMinerOreBlacklisted(clientMiner, "ore:iron"));
-    }
-
-    @Test
-    void fullSyncOrdersSettingsGroupsBeforeGroupedModules() {
-        AutomatedFacility server = createFacility();
-        ModuleInstance miner = buildModule(server, FacilityModuleKind.MINER, StationTileCoord.of(1, 0));
-        server.setMinerOreBlacklisted(miner, "ore:iron", true);
-        short groupId = server.createSettingsGroupForModule(miner, "Shared miners")
-            .id();
-
-        AssetSyncPacket full = AssetSyncPacket.fullSync(server);
-
-        int firstGroup = firstFullSyncDeltaIndex(full, AssetSyncPacket.SETTINGS_GROUP_UPDATED);
-        int firstModule = firstFullSyncDeltaIndex(full, AssetSyncPacket.MODULE_ADDED);
-        assertTrue(firstGroup >= 0, "full sync must include settings groups for grouped modules");
-        assertTrue(firstModule >= 0, "full sync must include grouped modules");
-        assertTrue(firstGroup < firstModule, "settings groups must replay before modules that reference them");
-
-        AutomatedFacility client = createFacility();
-        applyFullSyncFromPacket(client, roundTrip(full));
-        assertEquals(
-            groupId,
-            client.modules()
-                .get(0)
-                .groupId());
-        assertTrue(
-            client.isMinerOreBlacklisted(
-                client.modules()
-                    .get(0),
-                "ore:iron"));
-    }
-
-    @Test
-    void fullSyncRoundTripPreservesRecipeSnapshotPayload() {
-        AutomatedFacility server = createFacility();
-        ModuleInstance centrifuge = buildModule(server, FacilityModuleKind.CENTRIFUGE, StationTileCoord.of(1, 0));
-        Item inputItem = Items.diamond;
-        Item outputItem = Items.diamond;
-        RecipeSnapshot snapshot = RecipeSnapshot.resolved(
-            (byte) 1,
-            832,
-            new ItemStack[] { new ItemStack(inputItem, 2, 0) },
-            new ItemStack[] { new ItemStack(outputItem, 3, 0) },
-            null,
-            null,
-            200,
-            480);
-        SavedRecipeList slots = new SavedRecipeList();
-        slots.add(new SavedRecipe(snapshot, true, 0L, (byte) 1, (byte) 1));
-        ((IRecipeModule) centrifuge.component()).setRecipeConfig(
-            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
-
-        AutomatedFacility client = createFacility();
-        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
-
-        RecipeSnapshot clientSnapshot = ((IRecipeModule) client.modules()
-            .get(0)
-            .component()).getRecipeConfig()
-                .savedRecipes()
-                .get(0)
-                .recipe();
-        assertEquals(200, clientSnapshot.duration());
-        assertEquals(480, clientSnapshot.eut());
-        assertEquals(1, clientSnapshot.inputs().length);
-        assertEquals(1, clientSnapshot.outputs().length);
-    }
-
-    @Test
-    void fullSyncInternsRepeatedRecipeSnapshotsWithinRecipeConfigPayload() {
-        RecipeSnapshot snapshot = recipeSnapshot(832);
-        AutomatedFacility repeated = facilityWithRecipeConfig(snapshot, snapshot);
-        AutomatedFacility distinct = facilityWithRecipeConfig(snapshot, recipeSnapshot(833));
-
-        int repeatedBytes = encodedSize(AssetSyncPacket.fullSync(repeated));
-        int distinctBytes = encodedSize(AssetSyncPacket.fullSync(distinct));
-
-        assertTrue(
-            repeatedBytes < distinctBytes,
-            "repeated RecipeSnapshot payloads should be interned inside one RecipeConfig payload");
-
-        AutomatedFacility client = createFacility();
-        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(repeated)));
-
-        SavedRecipeList clientRecipes = ((IRecipeModule) client.modules()
-            .get(0)
-            .component()).getRecipeConfig()
-                .savedRecipes();
-        assertEquals(2, clientRecipes.size());
-        assertEquals(
-            snapshot.contentHash(),
-            clientRecipes.get(0)
-                .recipe()
-                .contentHash());
-        assertEquals(
-            snapshot.contentHash(),
-            clientRecipes.get(1)
-                .recipe()
-                .contentHash());
-    }
-
-    @Test
-    void fullSyncCompactsInventoryBoundsIntoBulkSnapshot() {
-        AutomatedFacility server = createFacility();
-        ItemStackWrapper iron = ItemStackWrapper.of(new ItemStack(Items.iron_ingot, 1, 0));
-        ItemStackWrapper gold = ItemStackWrapper.of(new ItemStack(Items.gold_ingot, 1, 0));
-        FluidKey water = FluidKey.of(new FluidStack(FluidRegistry.WATER, 1));
-        FluidKey lava = FluidKey.of(new FluidStack(FluidRegistry.LAVA, 1));
-        server.setBound(iron, 12L, true);
-        server.setBound(iron, 64L, false);
-        server.setBound(gold, 8L, true);
-        server.setBound(gold, 40L, false);
-        server.setBound(water, 1_000L, true);
-        server.setBound(water, 16_000L, false);
-        server.setBound(lava, 500L, true);
-        server.setBound(lava, 4_000L, false);
-
-        AssetSyncPacket full = AssetSyncPacket.fullSync(server);
-
-        long perBoundDeltas = full.fullSyncDeltas()
-            .stream()
-            .filter(delta -> delta.syncType() == AssetSyncPacket.INVENTORY_BOUND_UPDATE)
-            .count();
-        assertEquals(0, perBoundDeltas, "full sync should carry inventory bounds as one compact snapshot");
-
-        AutomatedFacility client = createFacility();
-        applyFullSyncFromPacket(client, roundTrip(full));
-
-        assertEquals(
-            new InventoryBounds(12L, 64L),
-            client.getBounds(true)
-                .get(iron));
-        assertEquals(
-            new InventoryBounds(8L, 40L),
-            client.getBounds(true)
-                .get(gold));
-        assertEquals(
-            new InventoryBounds(1_000L, 16_000L),
-            client.getBounds(false)
-                .get(water));
-        assertEquals(
-            new InventoryBounds(500L, 4_000L),
-            client.getBounds(false)
-                .get(lava));
-    }
-
-    @Test
-    void moduleAddedDeltaPlacesLayoutTileOnClient() {
-        // Server: facility with 1 module, create FULL_SYNC for client baseline
-        AutomatedFacility server = buildFacilityWithModules(1);
-
-        // Client: receive FULL_SYNC
-        AutomatedFacility client = createFacility();
-        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
-        assertTrue(
-            client.stationLayout()
-                .isOccupied(StationTileCoord.of(1, 0)),
-            "after FULL_SYNC, client must have [1,0] tile");
-
-        // Server builds SECOND module
-        StationTileCoord anchor2 = StationTileCoord.of(2, 0);
-        ModuleInstance m2 = buildModule(server, FacilityModuleKind.TANK, anchor2);
-        int idx = server.modules()
-            .size() - 1;
-
-        // Generate MODULE_ADDED delta and apply to client via the production code path
-        AssetSyncPacket delta = AssetSyncPacket.moduleAdded(server.assetId, idx, m2);
-        AssetSyncPacket.Handler.handleDelta(client, roundTrip(delta));
-
-        // CRITICAL: client must now have the layout tile for the new module
-        assertTrue(
-            client.stationLayout()
-                .isOccupied(anchor2),
-            "BUG: MODULE_ADDED delta must place layout tile on client — [2,0] should be occupied");
-    }
-
-    @Test
-    void moduleRemovedDeltaClearsLayoutTileOnClient() {
-        AutomatedFacility server = buildFacilityWithModules(1);
-        AutomatedFacility client = createFacility();
-        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
-
-        StationTileCoord anchor = StationTileCoord.of(1, 0);
-        assertTrue(
-            client.stationLayout()
-                .isOccupied(anchor),
-            "precondition: client has [1,0] tile");
-
-        // Server removes the module
-        ModuleInstance module = server.modules()
-            .get(0);
-        server.removeModule(module.id);
-        server.stationLayout()
-            .removeTileForModule(module.id);
-
-        // Send MODULE_REMOVED delta to client
-        AssetSyncPacket delta = AssetSyncPacket.moduleRemoved(server.assetId, 0, module.id);
-        AssetSyncPacket.Handler.handleDelta(client, roundTrip(delta));
-
-        assertEquals(
-            0,
-            client.modules()
-                .size(),
-            "client should have no modules after remove");
-        assertFalse(
-            client.stationLayout()
-                .isOccupied(anchor),
-            "client layout must free the removed module anchor");
-        assertEquals(
-            1,
-            client.stationLayout()
-                .size(),
-            "client layout should keep only CORE after MODULE_REMOVED");
-    }
-
-    // ── Helpers ──
-
-    @Test
-    void moduleUpdatedDeltaRefreshesLayoutTileOnClient() {
-        AutomatedFacility server = buildFacilityWithModules(1);
-        AutomatedFacility client = createFacility();
-        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
-
-        StationTileCoord anchor = StationTileCoord.of(1, 0);
-        ModuleInstance module = server.modules()
-            .get(0);
-        module.updateStatus(Buildable.Status.DISABLED);
-
-        AssetSyncPacket delta = AssetSyncPacket.moduleUpdated(server.assetId, 0, module);
-        AssetSyncPacket.Handler.handleDelta(client, roundTrip(delta));
-
-        ModuleInstance updatedModule = client.modules()
-            .get(0);
-        PlacedTile tile = client.stationLayout()
-            .snapshot()
-            .get(anchor);
-        assertSame(updatedModule, tile.module(), "layout tile must point at the updated module instance");
-        assertEquals(
-            StationTileState.OCCUPIED_DISABLED,
-            tile.state(),
-            "layout tile state must match updated module status");
-    }
-
-    @Test
-    void dirtyExistingModuleSyncsAsModuleUpdatedDelta() {
-        UUID playerId = UUID.randomUUID();
-        AutomatedFacility server = buildFacilityWithModules(1);
-        AssetSyncPacket.figureOutWhatToSend(server, playerId);
-
-        ModuleInstance module = server.modules()
-            .get(0);
-        module.updateStatus(Buildable.Status.DISABLED);
-        server.markModuleDirty(module.id);
-
-        List<AssetSyncPacket> deltas = AssetSyncPacket.figureOutWhatToSend(server, playerId);
-
-        assertEquals(1, deltas.size());
-        assertEquals(
-            AssetSyncPacket.MODULE_UPDATED,
-            deltas.get(0)
-                .syncType());
-    }
-
-    @Test
-    void debugDataGeneratorStateDeltaUpdatesClientModule() {
-        UUID playerId = UUID.randomUUID();
-        AutomatedFacility source = createFacility(CelestialObjectId.MARS);
-        AutomatedFacility destination = createFacility(CelestialObjectId.EGORA);
-        ModuleDebugDataGenerator producer = debugDataGenerator(source, StationTileCoord.of(1, 0));
-        ModuleDebugDataGenerator consumer = debugDataGenerator(destination, StationTileCoord.of(1, 0));
-        producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.COMMUNICATION, 10L, 1));
-        consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.COMMUNICATION, 10L, 1, null));
-        SatelliteNetworkService.refreshFacilityEndpoints(source);
-        SatelliteNetworkService.refreshFacilityEndpoints(destination);
-        CelestialAssetStore.SERVER.setSatelliteCount(
-            TEAM,
+    void satelliteKindMismatchDoesNotReplaceExistingClientObject() {
+        CelestialAsset.ID assetId = CelestialAsset.ID.create();
+        Satellite current = new Satellite(
+            assetId,
             CelestialObjectKey.registered(CelestialObjectId.MARS),
-            SatelliteKind.COMMUNICATION,
-            1);
-        CelestialAssetStore.SERVER.setSatelliteCount(
-            TEAM,
-            CelestialObjectKey.registered(CelestialObjectId.EGORA),
-            SatelliteKind.COMMUNICATION,
-            1);
-        SatelliteNetworkService.rebuild(TEAM, 0.0D);
+            Buildable.Status.OPERATIONAL,
+            SatelliteKind.COMMUNICATION);
+        CelestialAssetStore.CLIENT.registerAssetInternal(TEAM, current);
+        Satellite incompatible = new Satellite(
+            assetId,
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            Buildable.Status.OPERATIONAL,
+            SatelliteKind.PROSPECTING);
+        RecordingTransport transport = new RecordingTransport();
+        AssetStateSync.Client client = new AssetStateSync.Client(transport);
 
-        List<AssetSyncPacket> initialPackets = AssetSyncPacket.figureOutWhatToSend(source, playerId);
-        AutomatedFacility clientSource = createUnregisteredFacility(CelestialObjectId.MARS);
-        applyFullSyncFromPacket(clientSource, roundTrip(initialPackets.get(0)));
-        List<AssetSyncPacket> initialDestinationPackets = AssetSyncPacket.figureOutWhatToSend(destination, playerId);
-        AutomatedFacility clientDestination = createUnregisteredFacility(CelestialObjectId.EGORA);
-        applyFullSyncFromPacket(clientDestination, roundTrip(initialDestinationPackets.get(0)));
+        receive(
+            client,
+            AssetSyncPacket.state(TEAM, incompatible, Map.of())
+                .withPublishedRevision(2L));
 
-        SatelliteNetworkService.tickDataJobs();
-        List<AssetSyncPacket> deltas = AssetSyncPacket.figureOutWhatToSend(source, playerId);
-        for (AssetSyncPacket delta : deltas) {
-            AssetSyncPacket.Handler.handleDelta(clientSource, roundTrip(delta));
-        }
-        List<AssetSyncPacket> destinationDeltas = AssetSyncPacket.figureOutWhatToSend(destination, playerId);
-        for (AssetSyncPacket delta : destinationDeltas) {
-            AssetSyncPacket.Handler.handleDelta(clientDestination, roundTrip(delta));
-        }
-
-        ModuleDebugDataGenerator clientProducer = (ModuleDebugDataGenerator) clientSource.modules()
-            .get(0)
-            .component();
-        ModuleDebugDataGenerator clientConsumer = (ModuleDebugDataGenerator) clientDestination.modules()
-            .get(0)
-            .component();
-        assertEquals(
-            CelestialObjectKey.registered(CelestialObjectId.EGORA),
-            clientProducer.detectedCounterpartBodyKey());
-        assertEquals(
-            SatelliteDataType.COMMUNICATION,
-            clientConsumer.config()
-                .dataType());
-        assertEquals(5L, clientConsumer.consumedDeciKb());
-
-        SatelliteNetworkService.tickDataJobs();
-        destinationDeltas = AssetSyncPacket.figureOutWhatToSend(destination, playerId);
-        for (AssetSyncPacket delta : destinationDeltas) {
-            AssetSyncPacket.Handler.handleDelta(clientDestination, roundTrip(delta));
-        }
-
-        clientConsumer = (ModuleDebugDataGenerator) clientDestination.modules()
-            .get(0)
-            .component();
-        assertEquals(10L, clientConsumer.consumedDeciKb());
+        assertSame(current, CelestialAssetStore.CLIENT.findAssetInternal(assetId));
+        assertEquals(SatelliteKind.COMMUNICATION, current.satelliteKind());
+        assertEquals(List.of(assetId), transport.recoveryRequests);
     }
 
-    private static AssetSyncPacket roundTrip(AssetSyncPacket pkt) {
-        var buf = Unpooled.buffer();
-        pkt.toBytes(buf);
-        AssetSyncPacket decoded = new AssetSyncPacket();
-        decoded.fromBytes(buf);
-        return decoded;
-    }
-
-    private static int encodedSize(AssetSyncPacket pkt) {
-        var buf = Unpooled.buffer();
-        pkt.toBytes(buf);
-        return buf.writerIndex();
-    }
-
-    private static int firstFullSyncDeltaIndex(AssetSyncPacket pkt, byte syncType) {
-        List<AssetSyncPacket> deltas = pkt.fullSyncDeltas();
-        for (int i = 0; i < deltas.size(); i++) {
-            if (deltas.get(i)
-                .syncType() == syncType) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    private static AutomatedFacility createFacility() {
-        return createFacility(CelestialObjectId.MARS);
-    }
-
-    private static AutomatedFacility createFacility(CelestialObjectId bodyId) {
+    private static AutomatedFacility facility() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            bodyId,
+            CelestialObjectId.MARS,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
-        return facility;
-    }
-
-    private static AutomatedFacility createUnregisteredFacility(CelestialObjectId bodyId) {
-        return new AutomatedFacility(
-            CelestialAsset.ID.create(),
-            bodyId,
-            CelestialAsset.Kind.AUTOMATED_STATION,
-            Buildable.Status.OPERATIONAL);
-    }
-
-    private static AutomatedFacility facilityWithRecipeConfig(RecipeSnapshot... snapshots) {
-        AutomatedFacility facility = createFacility();
-        ModuleInstance module = buildModule(facility, FacilityModuleKind.CENTRIFUGE, StationTileCoord.of(1, 0));
-        SavedRecipeList slots = new SavedRecipeList();
-        for (RecipeSnapshot snapshot : snapshots) {
-            slots.add(new SavedRecipe(snapshot, true, 0L, (byte) 1, (byte) 1));
-        }
-        ((IRecipeModule) module.component()).setRecipeConfig(
-            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
-        return facility;
-    }
-
-    private static RecipeSnapshot recipeSnapshot(int recipeIndex) {
-        Item item = Items.diamond;
-        return RecipeSnapshot.resolved(
-            (byte) 1,
-            recipeIndex,
-            new ItemStack[] { new ItemStack(item, 2, 0) },
-            new ItemStack[] { new ItemStack(item, 3, 0) },
-            null,
-            null,
-            200,
-            480);
-    }
-
-    private static AutomatedFacility buildFacilityWithModules(int count) {
-        AutomatedFacility facility = createFacility();
-        for (int i = 0; i < count; i++) {
-            buildModule(facility, FacilityModuleKind.STORAGE, StationTileCoord.of(1 + i, 0));
-        }
-        return facility;
-    }
-
-    private static ModuleInstance buildModule(AutomatedFacility facility, FacilityModuleKind kind,
-        StationTileCoord anchor) {
+        facility.setEnergyStored(700L);
         ModuleInstance module = FacilityModuleRegistry
-            .create(ModuleInstance.ID.create(), kind, anchor, ModuleShape.SINGLE, kind.defaultTier());
-        facility.addModule(module);
-        StationLayout layout = facility.stationLayout();
-        StationTileState state = StationTileState.fromModuleStatus(module.status());
-        for (StationTileCoord coord : module.tiles()) {
-            layout.place(coord, new PlacedTile(module, state));
-        }
-        return module;
+            .create(ModuleInstance.ID.create(), FacilityModuleKind.HAMMER, null, ModuleShape.SINGLE, ModuleTier.IV);
+        module.updateStatus(Buildable.Status.OPERATIONAL);
+        module.initAnchor(StationTileCoord.of(2, 3));
+        addModule(facility, module);
+        facility.stationLayout()
+            .place(module);
+        return facility;
     }
 
-    private static ModuleDebugDataGenerator debugDataGenerator(AutomatedFacility facility, StationTileCoord anchor) {
-        return (ModuleDebugDataGenerator) buildModule(facility, FacilityModuleKind.DEBUG_DATA_GENERATOR, anchor)
-            .component();
+    private static void receive(AssetStateSync.Client client, AssetSyncPacket packet) {
+        for (AssetStateFramePacket frame : AssetStateSync.Server.frame(packet)) client.receive(frame);
     }
 
-    private static void applyFullSyncFromPacket(AutomatedFacility client, AssetSyncPacket packet) {
-        client.clearModules();
-        client.settingsGroups()
-            .clear();
-        client.clear();
-        client.logisticsConfig.clear();
-        StationLayout layout = client.stationLayout();
-        if (layout != null) layout.loadFromSnapshot(java.util.Collections.emptyMap());
+    private static final class RecordingTransport implements AssetStateSync.ClientTransport {
 
-        for (AssetSyncPacket d : packet.fullSyncDeltas()) {
-            AssetSyncPacket.Handler.handleDelta(client, d);
+        private final List<CelestialAsset.ID> recoveryRequests = new ArrayList<>();
+
+        @Override
+        public void requestFull(CelestialAsset.ID assetId) {
+            recoveryRequests.add(assetId);
         }
-        client.setSyncRevision(packet.syncRevision());
     }
 }
