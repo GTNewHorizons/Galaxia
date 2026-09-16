@@ -209,6 +209,9 @@ public class OrbitalView {
         private boolean centeringOnFollowedBody;
         private long followStartedNanos;
         private double followOffsetX, followOffsetY;
+        private double animationElapsedSeconds, animationDurationSeconds = -1;
+        private double animationStartX, animationStartY, animationStartZoom, animationStartIsometric;
+        private double animationTargetX, animationTargetY, animationTargetZoom, animationTargetIsometric;
 
         double cameraX, cameraY, zoomLevel, targetCameraX, targetCameraY, targetZoomLevel, isometricProgress,
             targetIsometricProgress;
@@ -218,22 +221,34 @@ public class OrbitalView {
             this.targetZoomLevel = initialZoom;
         }
 
-        void step(double lerpSpeed, double elapsedSeconds) {
-            double blend = 1.0 - Math.pow(1.0 - lerpSpeed, Math.max(0.0, elapsedSeconds) * 60.0);
-            if (!centeringOnFollowedBody) {
-                cameraX = lerp(cameraX, targetCameraX, blend);
-                cameraY = lerp(cameraY, targetCameraY, blend);
+        void step(double durationSeconds, double elapsedSeconds) {
+            boolean cameraMoving = !centeringOnFollowedBody && (cameraX != targetCameraX || cameraY != targetCameraY);
+            // A followed body's changing position must not keep restarting the zoom animation.
+            if (animationDurationSeconds != durationSeconds || animationTargetZoom != targetZoomLevel
+                || animationTargetIsometric != targetIsometricProgress
+                || cameraMoving && (animationTargetX != targetCameraX || animationTargetY != targetCameraY)) {
+                animationElapsedSeconds = 0;
+                animationDurationSeconds = durationSeconds;
+                animationStartX = cameraX;
+                animationStartY = cameraY;
+                animationStartZoom = zoomLevel;
+                animationStartIsometric = isometricProgress;
+                animationTargetX = targetCameraX;
+                animationTargetY = targetCameraY;
+                animationTargetZoom = targetZoomLevel;
+                animationTargetIsometric = targetIsometricProgress;
             }
-            zoomLevel = lerp(zoomLevel, targetZoomLevel, blend);
-            isometricProgress = lerp(isometricProgress, targetIsometricProgress, blend);
-        }
-
-        void snap(double threshold) {
-            if (Math.abs(cameraX - targetCameraX) < threshold) cameraX = targetCameraX;
-            if (Math.abs(cameraY - targetCameraY) < threshold) cameraY = targetCameraY;
-            if (Math.abs(zoomLevel - targetZoomLevel) < threshold) zoomLevel = targetZoomLevel;
-            if (Math.abs(isometricProgress - targetIsometricProgress) < threshold)
-                isometricProgress = targetIsometricProgress;
+            animationElapsedSeconds = Math.min(durationSeconds, animationElapsedSeconds + Math.max(0, elapsedSeconds));
+            boolean finished = animationElapsedSeconds >= durationSeconds;
+            double blend = Interpolation.QUINT_INOUT
+                .interpolate(0f, 1f, (float) (animationElapsedSeconds / durationSeconds));
+            if (cameraMoving) {
+                cameraX = finished ? targetCameraX : lerp(animationStartX, targetCameraX, blend);
+                cameraY = finished ? targetCameraY : lerp(animationStartY, targetCameraY, blend);
+            }
+            zoomLevel = finished ? targetZoomLevel : lerp(animationStartZoom, targetZoomLevel, blend);
+            isometricProgress = finished ? targetIsometricProgress
+                : lerp(animationStartIsometric, targetIsometricProgress, blend);
         }
 
         void reset(boolean resetCameraToOrigin) {
@@ -268,6 +283,7 @@ public class OrbitalView {
 
         void beginLayerTransition(double x, double y) {
             centeringOnFollowedBody = false;
+            animationDurationSeconds = -1;
             targetCameraX = x;
             targetCameraY = y;
             targetZoomLevel = zoomLevel;
@@ -297,6 +313,7 @@ public class OrbitalView {
             syncCameraToTarget();
             zoomLevel = targetZoomLevel;
             isometricProgress = targetIsometricProgress;
+            animationDurationSeconds = -1;
         }
 
         private static double lerp(double a, double b, double t) {
@@ -520,15 +537,12 @@ public class OrbitalView {
         private long lastAnimationFrameNanos;
         private OrbitalLayerTransitionState transitionState = new OrbitalLayerTransitionState();
         private static final double SERVER_OSU_PER_SECOND = OrbitalTransferPlanner.OSU_PER_SECOND;
-        private static final double LERP_SPEED = 0.045;
-        private static final double PENDING_LAYER_CENTER_LERP_SPEED = 0.08;
-        private static final double LAYER_SWITCH_LERP_SPEED = 0.036;
+        private static final double VIEW_ANIMATION_SECONDS = 0.3;
+        private static final double LAYER_CENTER_SECONDS = 0.15;
+        private static final double LAYER_ZOOM_PHASE_SECONDS = 0.225;
         private static final float ISO_SPACING = 90f;
         private static final float ISO_OFFSET = 110f;
         private static final float ISO_Y_OFFSET = 20f;
-        private static final double CONVERGE_THRESHOLD = 0.001;
-        private static final double PENDING_LAYER_SWITCH_CAMERA_THRESHOLD = 1.5;
-        private static final double LAYER_SWITCH_CONVERGE_THRESHOLD = 0.03;
         private static final int CLICK_DRAG_THRESHOLD = 6;
         private static final float MAP_ICON_BASE_SCALE = 18f;
         private static final float MAP_ICON_ZOOM_SCALE = 0.8f;
@@ -1663,13 +1677,11 @@ public class OrbitalView {
         }
 
         private boolean isReadyForPendingLayerSwitch() {
-            return Math.abs(viewState.cameraX - viewState.targetCameraX) < PENDING_LAYER_SWITCH_CAMERA_THRESHOLD
-                && Math.abs(viewState.cameraY - viewState.targetCameraY) < PENDING_LAYER_SWITCH_CAMERA_THRESHOLD;
+            return viewState.cameraX == viewState.targetCameraX && viewState.cameraY == viewState.targetCameraY;
         }
 
         private boolean isReadyForLayerSwitchPhase() {
-            return isReadyForPendingLayerSwitch()
-                && Math.abs(viewState.zoomLevel - viewState.targetZoomLevel) < LAYER_SWITCH_CONVERGE_THRESHOLD;
+            return isReadyForPendingLayerSwitch() && viewState.zoomLevel == viewState.targetZoomLevel;
         }
 
         private boolean isLayerSwitchActive() {
@@ -1864,12 +1876,11 @@ public class OrbitalView {
             clock.advance(isInWorld(), getServerOrbitalTime());
             updateManualDragging();
             updateRenameFieldLayout();
-            double activeLerpSpeed = transitionState.hasPending() ? PENDING_LAYER_CENTER_LERP_SPEED
-                : isLayerSwitchActive() ? LAYER_SWITCH_LERP_SPEED : LERP_SPEED;
+            double animationSeconds = transitionState.hasPending() ? LAYER_CENTER_SECONDS
+                : isLayerSwitchActive() ? LAYER_ZOOM_PHASE_SECONDS : VIEW_ANIMATION_SECONDS;
             long nowNanos = System.nanoTime();
-            viewState.step(activeLerpSpeed, (nowNanos - lastAnimationFrameNanos) / 1_000_000_000.0);
+            viewState.step(animationSeconds, (nowNanos - lastAnimationFrameNanos) / 1_000_000_000.0);
             lastAnimationFrameNanos = nowNanos;
-            viewState.snap(CONVERGE_THRESHOLD);
             if (pendingFocusBody != null && viewState.isometricProgress < 0.01) {
                 setFocusImmediately(pendingFocusBody);
                 pendingFocusBody = null;
