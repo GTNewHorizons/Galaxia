@@ -428,6 +428,7 @@ public class OrbitalView {
         private InterplanetaryTransferJob focusedTransfer = null;
         private boolean isFollowing = false;
         private CelestialObject pendingFocusBody = null;
+        private boolean pressedNavigationMarker;
         private boolean dragEnabledForCurrentPress = false;
         private int pressedMapButton = -1;
         private CelestialObject pressedBodyCandidate = null;
@@ -950,7 +951,8 @@ public class OrbitalView {
                     public boolean isOnScreen(float sx, float sy, float radius) {
                         return OrbitalMapWidget.this.isOnScreen(sx, sy, radius);
                     }
-                });
+                },
+                viewContext);
             this.signalsWidget = new LogisticsSignalsWidget(root, () -> this.viewRoot, () -> this.signalsOpen);
             this.assetsPanelWidget = new SolarSystemAssetPanelWidget(
                 root,
@@ -969,8 +971,16 @@ public class OrbitalView {
             return this;
         }
 
-        /** Returns the body's visible interaction bounds in widget-local coordinates from the last rendered frame. */
+        /** Returns interaction bounds for a visible body or its navigation marker in widget-local coordinates. */
         public @Nullable Rectangle visibleBodyBounds(CelestialObjectKey key) {
+            for (OrbitalScene.MarkerDrawCall marker : sceneFrame.markerDrawCalls) {
+                if (marker.navigationBody() != null && key.equals(
+                    marker.navigationBody()
+                        .key())) {
+                    if (transitionState.hasPending() || isLayerSwitchActive()) return null;
+                    return new Rectangle(marker.x(), marker.y(), marker.size(), marker.size());
+                }
+            }
             for (OrbitalScene.ScreenBodyBounds bounds : sceneFrame.screenBodies) {
                 if (!key.equals(
                     bounds.body()
@@ -993,8 +1003,12 @@ public class OrbitalView {
                 || (contextMenuState.isOpen() && (mouseButton != 1 || isPointInContextMenu((int) localX, (int) localY)))
                 || transferSimulatorState.isWaitingForPick()
                 || (transferSimulatorState.isOpen()
-                    && transferSimulatorWidget.isPointInPanel((int) localX, (int) localY))
-                || (mouseButton == 0 && findTransferAtLocal((int) localX, (int) localY) != null)) return null;
+                    && transferSimulatorWidget.isPointInPanel((int) localX, (int) localY)))
+                return null;
+            OrbitalScene.MarkerDrawCall marker = findNavigationMarkerAt(localX, localY);
+            if (marker != null && mouseButton == 0) return marker.navigationBody()
+                .key();
+            if (mouseButton == 0 && findTransferAtLocal((int) localX, (int) localY) != null) return null;
             CelestialObject body = findBodyAtLocal(localX, localY);
             return body == null || !isVisibleInCurrentLayer(body) ? null : body.key();
         }
@@ -1186,6 +1200,7 @@ public class OrbitalView {
             if (guiActionsRegistered) return;
             guiActionsRegistered = true;
             listenGuiAction((IGuiAction.MousePressed) button -> {
+                pressedNavigationMarker = false;
                 pressedMapButton = getPanel().getTopHovering() == this ? button : -1;
                 if (pressedMapButton < 0) {
                     dragging = false;
@@ -1220,6 +1235,14 @@ public class OrbitalView {
                 pressMouseY = localMouseY;
                 lastMouseX = pressMouseX;
                 lastMouseY = pressMouseY;
+                OrbitalScene.MarkerDrawCall marker = findNavigationMarkerAt(pressMouseX, pressMouseY);
+                if (marker != null) {
+                    pressedBodyCandidate = marker.navigationBody();
+                    pressedNavigationMarker = true;
+                    dragEnabledForCurrentPress = false;
+                    dragging = false;
+                    return true;
+                }
                 InterplanetaryTransferJob clickedTransfer = findTransferAtLocal(pressMouseX, pressMouseY);
                 if (clickedTransfer != null) {
                     viewState.centeringOnFollowedBody = false;
@@ -1298,7 +1321,10 @@ public class OrbitalView {
                         pressedBodyCandidate = null;
                         return true;
                     }
-                    if (clickedBody != null) handleBodyClick(clickedBody);
+                    if (clickedBody != null) {
+                        if (pressedNavigationMarker) navigateToHiddenBody(clickedBody);
+                        else handleBodyClick(clickedBody);
+                    }
                 }
                 dragging = false;
                 dragEnabledForCurrentPress = false;
@@ -1570,6 +1596,24 @@ public class OrbitalView {
                 }
             }
             return true;
+        }
+
+        private void navigateToHiddenBody(CelestialObject body) {
+            centerOnBody(body);
+            double extent = body.orbitalParams()
+                .perigee();
+            double screenRadius = Math.min(getArea().width, getArea().height) * 0.25;
+            viewState.targetZoomLevel = OrbitalZoom.zoomForWorldDistance(extent, screenRadius);
+            if (bodySelectionListener != null) bodySelectionListener.onBodySelected(body, false);
+        }
+
+        private OrbitalScene.MarkerDrawCall findNavigationMarkerAt(float x, float y) {
+            if (transitionState.hasPending() || isLayerSwitchActive()) return null;
+            for (int i = sceneFrame.markerDrawCalls.size() - 1; i >= 0; i--) {
+                OrbitalScene.MarkerDrawCall marker = sceneFrame.markerDrawCalls.get(i);
+                if (marker.navigationBody() != null && marker.contains(x, y)) return marker;
+            }
+            return null;
         }
 
         public OrbitalMapClickMode getClickMode() {
@@ -1967,7 +2011,14 @@ public class OrbitalView {
             if (debugOverlayEnabled) sceneRenderer.drawDebugOverlay(sceneFrame, getArea().height);
             super.drawBackground(context, widgetTheme);
             if (!dragging && !contextMenuState.isOpen() && !assetUiState.isAssetActionsOpen()) {
-                drawSatelliteMarkerTooltip(sceneFrame, localMouseX, localMouseY);
+                OrbitalScene.MarkerDrawCall marker = findNavigationMarkerAt(localMouseX, localMouseY);
+                if (marker != null) drawTooltip(
+                    List.of(
+                        marker.navigationBody()
+                            .displayName()),
+                    localMouseX + 10,
+                    localMouseY + 10);
+                else drawSatelliteMarkerTooltip(sceneFrame, localMouseX, localMouseY);
             }
         }
 

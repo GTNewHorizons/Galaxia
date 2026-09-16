@@ -208,6 +208,7 @@ public class OrbitalScene {
     static final class MarkerDrawCall {
 
         private ResourceLocation texture;
+        private CelestialObject navigationBody;
         private int x;
         private int y;
         private int size;
@@ -215,6 +216,7 @@ public class OrbitalScene {
 
         void set(ResourceLocation texture, int x, int y, int size, float alpha) {
             this.texture = texture;
+            this.navigationBody = null;
             this.x = x;
             this.y = y;
             this.size = size;
@@ -239,6 +241,14 @@ public class OrbitalScene {
 
         float alpha() {
             return alpha;
+        }
+
+        CelestialObject navigationBody() {
+            return navigationBody;
+        }
+
+        boolean contains(float mouseX, float mouseY) {
+            return mouseX >= x && mouseY >= y && mouseX < x + size && mouseY < y + size;
         }
     }
 
@@ -394,6 +404,10 @@ public class OrbitalScene {
 
     public static final class OrbitalSceneFrameBuilder {
 
+        private static final int CHILD_MARKER_SIZE = 12;
+        private static final int CHILD_MARKER_GAP = 3;
+        private static final int CHILD_MARKER_COLUMNS = 6;
+
         interface Callbacks {
 
             double[] getViewOrigin(CelestialObject viewRoot);
@@ -409,9 +423,12 @@ public class OrbitalScene {
         }
 
         private final Callbacks callbacks;
+        private final StarmapViewContext view;
+        private final List<CelestialObject> hiddenChildren = new ArrayList<>();
 
-        OrbitalSceneFrameBuilder(Callbacks callbacks) {
+        OrbitalSceneFrameBuilder(Callbacks callbacks, StarmapViewContext view) {
             this.callbacks = callbacks;
+            this.view = view;
         }
 
         OrbitalSceneFrame buildInto(OrbitalSceneFrame frame, CelestialObject viewRoot, double globalTime,
@@ -420,7 +437,45 @@ public class OrbitalScene {
             double[] viewOrigin = callbacks.getViewOrigin(viewRoot);
             if (viewOrigin == null) viewOrigin = ZERO_VIEW_ORIGIN;
             collectRecursive(frame, viewRoot, null, viewOrigin[0], viewOrigin[1], globalTime, labelAlpha);
+            if (viewRoot.objectClass() != CelestialObject.Class.GALAXY && labelAlpha > 0.02f)
+                registerHiddenChildren(frame);
             return frame;
+        }
+
+        private void registerHiddenChildren(OrbitalSceneFrame frame) {
+            for (ScreenBodyBounds parent : frame.screenBodies) {
+                if (parent.body()
+                    .isAsteroid()
+                    || parent.body()
+                        .isAsteroidBelt())
+                    continue;
+                hiddenChildren.clear();
+                for (CelestialObject child : CelestialClient.getChildren(parent.body())) {
+                    if (child.isAsteroid()) continue;
+                    ResolvedBodyDrawState state = frame.resolvedBodiesByBody.get(child);
+                    if (state == null || !state.renderBody() && state.bodyAlpha() > 0.01f) hiddenChildren.add(child);
+                }
+                int count = hiddenChildren.size();
+                if (count == 0) continue;
+                int stride = CHILD_MARKER_SIZE + CHILD_MARKER_GAP;
+                int columns = Math.min(CHILD_MARKER_COLUMNS, count);
+                int width = columns * stride - CHILD_MARKER_GAP;
+                int height = ((count + columns - 1) / columns) * stride - CHILD_MARKER_GAP;
+                int left = Math
+                    .max(0, Math.min(view.viewportWidth() - width, Math.round(parent.centerX() - width / 2f)));
+                int top = Math.round(parent.centerY() - parent.renderedRadius() - CHILD_MARKER_GAP - height);
+                if (top < 0) top = Math.round(parent.centerY() + parent.renderedRadius() + 20);
+                for (int i = 0; i < count; i++) {
+                    CelestialObject child = hiddenChildren.get(i);
+                    MarkerDrawCall marker = frame.addMarker(
+                        child.texture(),
+                        left + i % columns * stride,
+                        top + i / columns * stride,
+                        CHILD_MARKER_SIZE,
+                        1f);
+                    marker.navigationBody = child;
+                }
+            }
         }
 
         private void collectRecursive(OrbitalSceneFrame frame, CelestialObject body, CelestialObject parent,
@@ -679,8 +734,28 @@ public class OrbitalScene {
         }
 
         void drawCollectedMarkers(OrbitalSceneFrame frame) {
-            for (MarkerDrawCall marker : frame.markerDrawCalls)
-                drawUiSprite(marker.texture(), marker.x(), marker.y(), marker.size(), marker.alpha());
+            for (MarkerDrawCall marker : frame.markerDrawCalls) {
+                if (marker.navigationBody() != null) {
+                    Gui.drawRect(
+                        marker.x() - 1,
+                        marker.y() - 1,
+                        marker.x() + marker.size() + 1,
+                        marker.y() + marker.size() + 1,
+                        EnumColors.MapBackground.getColor());
+                }
+                if (marker.texture() != null) {
+                    drawUiSprite(marker.texture(), marker.x(), marker.y(), marker.size(), marker.alpha());
+                } else if (marker.navigationBody() != null) {
+                    drawFilledCircle(
+                        marker.x() + marker.size() / 2f,
+                        marker.y() + marker.size() / 2f,
+                        marker.size() / 2f,
+                        getFallbackBodyColor(
+                            marker.navigationBody()
+                                .objectClass()),
+                        marker.alpha());
+                }
+            }
         }
 
         void drawSelectionHighlight(CelestialObject body, OrbitalSceneFrame frame) {

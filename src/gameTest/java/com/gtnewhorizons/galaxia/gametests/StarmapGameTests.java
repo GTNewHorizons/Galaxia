@@ -55,6 +55,61 @@ public final class StarmapGameTests {
 
     private StarmapGameTests() {}
 
+    /** Product contract: hidden planets and moons remain reachable through their parent's map markers. */
+    @GameTest(timeoutTicks = 1200)
+    public static void hiddenChildrenCanBeReachedThroughParentMarkers(GameTestHelper helper) {
+        var moon = CelestialObjectKey.registered(CelestialObjectId.MOON);
+        double[] earthZoom = new double[1];
+        GuiTestSupport.openMap(helper)
+            .click(ClientTarget.of("galaxy", c -> sidebarLayerTarget(false)))
+            .withinTicks(300)
+            .awaitClient("galaxy contains no planetary markers", c -> {
+                var map = GuiTestSupport.map();
+                if (map.getViewRoot()
+                    .objectClass() != CelestialObject.Class.GALAXY)
+                    throw new AssertionError("Galaxy transition has not completed");
+                if (map.visibleBodyBounds(BODY) != null)
+                    throw new AssertionError("Planet marker leaked into galaxy view");
+            })
+            .click(ClientTarget.of("Sol system", c -> sidebarLayerTarget(true)))
+            .withinTicks(300)
+            .awaitClient("planet marker visible beside Sol without exposing grandchildren", c -> {
+                var map = GuiTestSupport.map();
+                if (map.getViewRoot()
+                    .objectClass() != CelestialObject.Class.STAR || map.visibleBodyBounds(BODY) == null)
+                    throw new AssertionError("Hidden Earth is not reachable");
+                if (map.visibleBodyBounds(moon) != null) throw new AssertionError("Moon was promoted past its parent");
+            })
+            .click(ClientTarget.of("Earth marker", c -> GuiTestSupport.bodyTarget(BODY)))
+            .awaitClient("Earth selected in Sol and Moon reachable", c -> {
+                var map = GuiTestSupport.map();
+                Rectangle bounds = map.visibleBodyBounds(BODY);
+                if (map.getViewRoot()
+                    .objectClass() != CelestialObject.Class.STAR
+                    || !BODY.equals(
+                        map.getFocusedBody()
+                            .key())
+                    || map.visibleBodyBounds(moon) == null
+                    || bounds == null
+                    || !bounds.contains(map.getArea().width / 2, map.getArea().height / 2))
+                    throw new AssertionError("Earth navigation did not expose Moon");
+                earthZoom[0] = map.getDisplayZoomMultiplier();
+            })
+            .click(ClientTarget.of("Moon marker", c -> GuiTestSupport.bodyTarget(moon)))
+            .awaitClient("Moon selected through its marker", c -> {
+                var map = GuiTestSupport.map();
+                Rectangle bounds = map.visibleBodyBounds(moon);
+                if (!moon.equals(
+                    map.getFocusedBody()
+                        .key())
+                    || bounds == null
+                    || !bounds.contains(map.getArea().width / 2, map.getArea().height / 2)
+                    || map.getDisplayZoomMultiplier() <= earthZoom[0])
+                    throw new AssertionError("Moon navigation did not complete");
+            })
+            .succeed();
+    }
+
     /** Bug regression: Ross and Ra ore pools resolve to real items, including BartWorks ores. */
     @GameTest(timeoutTicks = 300)
     public static void rossAndRaOrePoolsResolveRegisteredItems(GameTestHelper helper) {
