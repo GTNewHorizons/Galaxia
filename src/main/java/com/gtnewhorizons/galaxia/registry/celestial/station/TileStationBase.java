@@ -77,18 +77,25 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
         super.onStructureFormed();
         this.here = new BlockPos(xCoord, yCoord, zCoord);
 
-        for (BlockPos airlock : airlocks) {
-            if (!(airlock.getTE(worldObj) instanceof TileEntityAirlock teLock)) continue;
+        markSealedDirty();
+    }
 
-            if (!teLock.trackStationController(this.here)) {
-                Galaxia.LOG.warn(
-                    "Airlock at {} cannot track more than {} controllers",
-                    airlock,
-                    TileEntityAirlock.MAX_CONNECTIONS);
+    @Override
+    protected void onStructureChecked() {
+        if (structureValid) {
+            for (BlockPos airlock : airlocks) {
+                if (!(airlock.getTE(worldObj) instanceof TileEntityAirlock teLock)) continue;
+
+                if (!teLock.trackStationController(this.here)) {
+                    Galaxia.LOG.warn(
+                        "Airlock at {} cannot track more than {} controllers",
+                        airlock,
+                        TileEntityAirlock.MAX_CONNECTIONS);
+                }
             }
         }
 
-        markSealedDirty();
+        super.onStructureChecked();
     }
 
     @Override

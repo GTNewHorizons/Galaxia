@@ -1,17 +1,16 @@
 package com.gtnewhorizons.galaxia.registry.celestial.station.gui;
 
-import net.minecraft.tileentity.TileEntity;
-
 import com.cleanroommc.modularui.api.IPanelHandler;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.drawable.UITexture;
-import com.cleanroommc.modularui.factory.GuiFactories;
 import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
+import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
 
 public class StationButtonWidget extends ButtonWidget<StationButtonWidget> {
 
@@ -55,15 +54,13 @@ public class StationButtonWidget extends ButtonWidget<StationButtonWidget> {
             });
     }
 
-    public static ButtonWidget<?> refreshButton(TileEntity tile) {
+    public static ButtonWidget<?> refreshButton(TileEntityAirlock tile) {
         return new StationButtonWidget(IKey.lang("galaxia.gui.airlock_controller.refresh_button.tooltip"))
+            .name("airlock.refresh")
             .overlay(GuiTextures.REFRESH)
-            .onMousePressed(mouseButton -> {
-                if (mouseButton != 0) return false;
-                GuiFactories.tileEntity()
-                    .openClient(tile.xCoord, tile.yCoord, tile.zCoord);
-                return true;
-            });
+            .syncHandler(
+                new InteractionSyncHandler()
+                    .setOnMousePressed(mouseData -> { if (mouseData.mouseButton == 0) tile.refreshStructure(); }));
     }
 
     public static ButtonWidget<?> toggleButton(BooleanSyncValue sync, String tooltipKey, UITexture icon) {

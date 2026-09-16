@@ -100,11 +100,11 @@ public class BlockAirlockDoor extends BlockOpenable {
     public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer player, int side, float hitX,
         float hitY, float hitZ) {
         if (world.isRemote) return true;
-        searchAndOpenDoor(world, x, y, z);
+        searchAndOpenDoor(world, x, y, z, player);
         return false;
     }
 
-    public static void searchAndOpenDoor(World world, int x, int y, int z) {
+    public static void searchAndOpenDoor(World world, int x, int y, int z, EntityPlayer player) {
         final int searchRadius = TileEntityAirlock.MAXIMUM_RADIUS + 1;
 
         IntQueue floodBFS = new IntQueue();
@@ -140,7 +140,7 @@ public class BlockAirlockDoor extends BlockOpenable {
                     floodBFS.enqueue(np);
                 } else if (b == GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get()) {
                     BlockAirlockController controller = (BlockAirlockController) b;
-                    controller.toggleDoor(world, wx, wy, wz);
+                    controller.toggleDoor(world, wx, wy, wz, player);
                     return;
                 }
             }

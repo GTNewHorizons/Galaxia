@@ -7,6 +7,7 @@ import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.AxisAlignedBB;
+import net.minecraft.util.ChatComponentTranslation;
 import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.common.util.ForgeDirection;
 
@@ -89,6 +90,7 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
     private int proximityCheckTimer = 0;
 
     private boolean redstonePowered = false;
+    private boolean manualSealOverride;
 
     private int xMin = INVALID;
     private int xMax = INVALID;
@@ -164,6 +166,15 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
         return new ArrayList<>(stationControllers);
     }
 
+    public void refreshStructure() {
+        if (worldObj == null || worldObj.isRemote) return;
+        markStructureDirty();
+        for (BlockPos pos : stationControllers) {
+            if (pos.getTE(worldObj) instanceof TileStationBase<?>room) room.markStructureDirty();
+        }
+        GalaxiaAPI.causeMachineUpdate(worldObj, xCoord, yCoord, zCoord);
+    }
+
     public void setProximityOpening(boolean proximityOpening) {
         this.proximityOpening = proximityOpening;
         markDirty();
@@ -205,27 +216,42 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
         markDirty();
     }
 
-    public void toggleState() {
+    public void toggleState(EntityPlayer player) {
+        if (worldObj == null || worldObj.isRemote) return;
         if (!structureValid) return;
-        if (redstonePowered) return;
+        if (redstonePowered && !manualSealOverride) return;
         if (!manualClick) return;
 
-        switch (state) {
-            case CLOSED -> {
-                state = AirlockState.OPEN;
-                setDoorState(true);
-            }
-            case OPEN -> {
-                state = AirlockState.CLOSED;
-                setDoorState(false);
-            }
+        boolean open = !isOpen();
+        if (open && hasVacuumConnection()) {
+            player.addChatMessage(new ChatComponentTranslation("galaxia.airlock.warning.depressurization"));
+            manualSealOverride = true;
         }
+        setDoorState(open);
+    }
+
+    private boolean hasVacuumConnection() {
+        if (stationControllers.isEmpty()) return false;
+        if (isExternalConnection()) return true;
+        for (BlockPos pos : stationControllers) {
+            if (!(pos.getTE(worldObj) instanceof TileStationBase<?>room) || !room.isStructureValid()
+                || !room.isSealed()) return true;
+        }
+        return false;
     }
 
     @Override
     public void updateEntity() {
         super.updateEntity();
         if (worldObj == null || worldObj.isRemote || !structureValid) return;
+
+        if (autoSealOnLeak && !manualSealOverride && hasVacuumConnection()) {
+            if (isOpen()) setDoorState(false);
+            // Reapply a sustained signal once the rooms become safe again.
+            redstonePowered = false;
+            proximityCheckTimer = 0;
+            return;
+        }
 
         boolean powered = worldObj.isBlockIndirectlyGettingPowered(xCoord, yCoord, zCoord);
         if (redstoneControl && powered != redstonePowered) {
@@ -309,11 +335,11 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
     }
 
     public boolean trackStationController(BlockPos pos) {
+        if (stationControllers.contains(pos)) return true;
         if (stationControllers.size() >= MAX_CONNECTIONS) {
             return false;
         }
 
-        if (stationControllers.contains(pos)) return true;
         stationControllers.add(pos);
         markDirty();
         if (worldObj != null && !worldObj.isRemote) {
@@ -331,6 +357,7 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
         if (worldObj != null && !worldObj.isRemote) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
         }
+        notifyDirtySeal();
     }
 
     @Override
@@ -475,6 +502,7 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
 
     private void setDoorState(boolean open) {
         state = open ? AirlockState.OPEN : AirlockState.CLOSED;
+        if (!open) manualSealOverride = false;
 
         for (int x = xMin + 1; x <= xMax - 1; x++) {
             for (int y = yMin + 1; y <= yMax - 1; y++) {

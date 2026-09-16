@@ -8,7 +8,6 @@ import net.minecraft.network.PacketBuffer;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.value.sync.SyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
-import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.IEnergyHandler;
@@ -25,23 +24,14 @@ public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncH
     private static final int OP_FULL_SYNC = 1;
 
     private volatile EnergySnapshot snapshot = new EnergySnapshot(0, 0, 0, 0, 0, 0);
-    private volatile RoomSnapshot[] roomSnapshots = new RoomSnapshot[0];
-
-    private RoomSnapshot[] lastSentRooms = new RoomSnapshot[0];
     private EnergySnapshot lastSent;
     private int syncTicker;
 
     @Setter
     private TileStation station;
 
-    @Setter
-    private TileEntityAirlock airlock;
-
     public record EnergySnapshot(int attachmentCount, long totalStored, long totalCapacity, long fluidStored,
         long fluidCapacity, int fluidAttachmentCount) {}
-
-    public record RoomSnapshot(boolean sealed, boolean oxygenated, int oxygenLevel, int volume, long powerStored,
-        long powerCapacity) {}
 
     @Override
     public void init(String key, PanelSyncManager syncManager) {
@@ -50,7 +40,7 @@ public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncH
 
     @Override
     public void detectAndSendChanges(boolean init) {
-        if (getSyncManager() == null || getSyncManager().isClient() || (station == null && airlock == null)) return;
+        if (getSyncManager() == null || getSyncManager().isClient() || station == null) return;
         if (init) {
             forceDirty();
             triggerFullSync();
@@ -65,12 +55,10 @@ public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncH
             station.clearActiveGraphSyncHandler(this);
             station = null;
         }
-        airlock = null;
         super.dispose();
     }
 
     public void forceDirty() {
-        lastSentRooms = new RoomSnapshot[0];
         lastSent = null;
     }
 
@@ -97,17 +85,13 @@ public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncH
             }
         }
 
-        RoomSnapshot[] rooms = airlock != null ? collectRooms() : new RoomSnapshot[0];
-
         if (lastSent != null && count == lastSent.attachmentCount()
             && stored == lastSent.totalStored()
             && capacity == lastSent.totalCapacity()
             && fluidStored == lastSent.fluidStored()
             && fluidCapacity == lastSent.fluidCapacity()
-            && fluidCount == lastSent.fluidAttachmentCount()
-            && roomsEqual(rooms, lastSentRooms)) return;
+            && fluidCount == lastSent.fluidAttachmentCount()) return;
 
-        lastSentRooms = rooms;
         EnergySnapshot publication = new EnergySnapshot(
             count,
             stored,
@@ -123,45 +107,7 @@ public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncH
             buf.writeLong(publication.fluidStored());
             buf.writeLong(publication.fluidCapacity());
             buf.writeInt(publication.fluidAttachmentCount());
-            buf.writeInt(rooms.length);
-            for (RoomSnapshot room : rooms) {
-                buf.writeBoolean(room.sealed());
-                buf.writeBoolean(room.oxygenated());
-                buf.writeInt(room.oxygenLevel());
-                buf.writeInt(room.volume());
-                buf.writeLong(room.powerStored());
-                buf.writeLong(room.powerCapacity());
-            }
         });
-    }
-
-    private RoomSnapshot[] collectRooms() {
-        TileEntityAirlock lock = airlock;
-        if (lock == null || lock.getWorldObj() == null) return new RoomSnapshot[0];
-        return lock.getStationControllers()
-            .stream()
-            .map(pos -> pos.getTE(lock.getWorldObj()))
-            .filter(te -> te instanceof TileStation)
-            .map(te -> {
-                TileStation room = (TileStation) te;
-                long powerStored = 0, powerCapacity = 0;
-                StationGraph roomGraph = room.getGraph();
-                if (roomGraph != null) {
-                    for (StationAttachmentRegistry.ResolvedAttachment<?> ra : (Iterable<StationAttachmentRegistry.ResolvedAttachment<?>>) roomGraph
-                        .getEnergyAttachments()::iterator) {
-                        powerStored = saturatedAdd(powerStored, energyStored(ra));
-                        powerCapacity = saturatedAdd(powerCapacity, energyCapacity(ra));
-                    }
-                }
-                return new RoomSnapshot(
-                    room.isSealed(),
-                    room.isOxygenated(),
-                    (int) Math.round(room.getOxygenLevel()),
-                    room.getVolume(),
-                    powerStored,
-                    powerCapacity);
-            })
-            .toArray(RoomSnapshot[]::new);
     }
 
     @Override
@@ -179,36 +125,11 @@ public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncH
         int fluidCount = buf.readInt();
         snapshot = new EnergySnapshot(count, stored, capacity, fluidStored, fluidCapacity, fluidCount);
 
-        int roomCount = buf.readInt();
-        RoomSnapshot[] rooms = new RoomSnapshot[roomCount];
-        for (int i = 0; i < roomCount; i++) {
-            rooms[i] = new RoomSnapshot(
-                buf.readBoolean(),
-                buf.readBoolean(),
-                buf.readInt(),
-                buf.readInt(),
-                buf.readLong(),
-                buf.readLong());
-        }
-        roomSnapshots = rooms;
     }
 
     @SideOnly(Side.CLIENT)
     public EnergySnapshot getSnapshot() {
         return snapshot;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public RoomSnapshot[] getRoomSnapshots() {
-        return roomSnapshots;
-    }
-
-    private static boolean roomsEqual(RoomSnapshot[] a, RoomSnapshot[] b) {
-        if (a.length != b.length) return false;
-        for (int i = 0; i < a.length; i++) {
-            if (!a[i].equals(b[i])) return false;
-        }
-        return true;
     }
 
     private static long saturatedAdd(long accumulator, BigInteger value) {

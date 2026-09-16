@@ -101,7 +101,7 @@ public class BlockAirlockController extends BlockUpdatable implements ITileEntit
         if (!(te instanceof TileEntityAirlock)) return false;
 
         if (ConfigStructures.airlock.openOnNormalClick && !player.isSneaking()) {
-            toggleDoor(world, x, y, z);
+            toggleDoor(world, x, y, z, player);
         } else {
             GuiFactories.tileEntity()
                 .open(player, x, y, z);
@@ -113,10 +113,10 @@ public class BlockAirlockController extends BlockUpdatable implements ITileEntit
     /**
      * Manual toggle entry point used by {@link BlockAirlockDoor#searchAndOpenDoor}.
      */
-    public boolean toggleDoor(World world, int x, int y, int z) {
+    public boolean toggleDoor(World world, int x, int y, int z, EntityPlayer player) {
         TileEntity te = world.getTileEntity(x, y, z);
         if (te instanceof TileEntityAirlock) {
-            ((TileEntityAirlock) te).toggleState();
+            ((TileEntityAirlock) te).toggleState(player);
             return true;
         }
 
