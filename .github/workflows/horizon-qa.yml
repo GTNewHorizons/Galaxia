@@ -37,7 +37,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: GTNewHorizons/Horizon-QA
-          ref: 6209ae74fc4f66d78310bd6d59e5ef6cdedeb56c
+          ref: 6cff237c3b829edce087d771bd1b04b38c3df4e3
           path: horizonqa
           fetch-depth: 0
           persist-credentials: false
@@ -80,21 +80,13 @@ jobs:
       - name: Run all Galaxia client scenarios
         run: |
           report_dir="$PWD/build/horizonqa/ci"
-          mkdir -p "$report_dir"
-          set -o pipefail
-          timeout --signal=TERM --kill-after=30s 15m \
-            xvfb-run -a --server-args='-screen 0 2560x1440x24' \
-            ./gradlew runClient --no-daemon --max-workers=2 --console=plain \
-              -PusesMixinDebug=false "-PhorizonQaJar=$HORIZON_QA_JAR" \
-              --init-script ../horizonqa/scripts/client-test-isolation.init.gradle \
-              -PhorizonQaClientTask=runClient "-PhorizonQaClientReportDir=$report_dir" \
-              --mcJvmArgs=-Dhorizonqa.mode=ci \
-              --mcJvmArgs=-Dhorizonqa.client=true \
-              --mcJvmArgs=-Dhorizonqa.world=normal \
-              --mcJvmArgs=-Dhorizonqa.tests=galaxia \
-              "--mcJvmArgs=-Dhorizonqa.reportDir=$report_dir" \
-              --mcArgs=--width --mcArgs=1280 --mcArgs=--height --mcArgs=720 \
-              2>&1 | tee "$report_dir/launch.log"
+          xvfb-run -a --server-args='-screen 0 2560x1440x24' \
+            ../horizonqa/gradlew -p ../horizonqa/scripts/client-tests runClientTests \
+              --no-daemon --max-workers=2 --console=plain \
+              --project-root "$PWD" --client-task :runClient --tests galaxia \
+              --horizon-qa-jar "$HORIZON_QA_JAR" --report-dir "$report_dir" \
+              --timeout-seconds 900 --gradle-argument=-PusesMixinDebug=false \
+              --gradle-argument=--max-workers=2
 
       - name: Validate completed suite
         if: ${{ !cancelled() }}
@@ -110,7 +102,6 @@ jobs:
           path: |
             galaxia/build/horizonqa/ci/*.json
             galaxia/build/horizonqa/ci/*.xml
-            galaxia/build/horizonqa/ci/*.html
             galaxia/build/horizonqa/ci/*.log
             galaxia/build/horizonqa/ci/**/*.png
             galaxia/build/horizonqa/ci/game/logs/

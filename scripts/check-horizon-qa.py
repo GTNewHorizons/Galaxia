@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 def check_result(result):
-    if result["schemaVersion"] != 4:
+    if result["schemaVersion"] != 5:
         raise ValueError("Unsupported Horizon QA report schema")
     if result["exitCode"] != 0 or result["status"] != "passed":
         raise ValueError("Horizon QA did not finish successfully")
