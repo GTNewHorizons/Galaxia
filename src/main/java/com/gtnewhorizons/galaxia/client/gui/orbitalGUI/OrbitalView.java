@@ -218,13 +218,14 @@ public class OrbitalView {
             this.targetZoomLevel = initialZoom;
         }
 
-        void step(double lerpSpeed) {
+        void step(double lerpSpeed, double elapsedSeconds) {
+            double blend = 1.0 - Math.pow(1.0 - lerpSpeed, Math.max(0.0, elapsedSeconds) * 60.0);
             if (!centeringOnFollowedBody) {
-                cameraX = lerp(cameraX, targetCameraX, lerpSpeed);
-                cameraY = lerp(cameraY, targetCameraY, lerpSpeed);
+                cameraX = lerp(cameraX, targetCameraX, blend);
+                cameraY = lerp(cameraY, targetCameraY, blend);
             }
-            zoomLevel = lerp(zoomLevel, targetZoomLevel, lerpSpeed);
-            isometricProgress = lerp(isometricProgress, targetIsometricProgress, lerpSpeed);
+            zoomLevel = lerp(zoomLevel, targetZoomLevel, blend);
+            isometricProgress = lerp(isometricProgress, targetIsometricProgress, blend);
         }
 
         void snap(double threshold) {
@@ -515,6 +516,7 @@ public class OrbitalView {
         private boolean creativeBuildMode = creativeBuildModePersisted;
         private final OrbitalPlanetTrackingController planetTrackingController = new OrbitalPlanetTrackingController();
         private boolean guiActionsRegistered = false;
+        private long lastAnimationFrameNanos;
         private OrbitalLayerTransitionState transitionState = new OrbitalLayerTransitionState();
         private static final double SERVER_OSU_PER_SECOND = OrbitalTransferPlanner.OSU_PER_SECOND;
         private static final double LERP_SPEED = 0.045;
@@ -1175,6 +1177,7 @@ public class OrbitalView {
         @Override
         public void onInit() {
             super.onInit();
+            lastAnimationFrameNanos = System.nanoTime();
             CelestialObject startingLayer = initialLayer == null ? root : initialLayer;
             resetForLayer(startingLayer);
             this.viewRoot = startingLayer;
@@ -1819,7 +1822,9 @@ public class OrbitalView {
             updateRenameFieldLayout();
             double activeLerpSpeed = transitionState.hasPending() ? PENDING_LAYER_CENTER_LERP_SPEED
                 : isLayerSwitchActive() ? LAYER_SWITCH_LERP_SPEED : LERP_SPEED;
-            viewState.step(activeLerpSpeed);
+            long nowNanos = System.nanoTime();
+            viewState.step(activeLerpSpeed, (nowNanos - lastAnimationFrameNanos) / 1_000_000_000.0);
+            lastAnimationFrameNanos = nowNanos;
             viewState.snap(CONVERGE_THRESHOLD);
             if (pendingFocusBody != null && viewState.isometricProgress < 0.01) {
                 setFocusImmediately(pendingFocusBody);

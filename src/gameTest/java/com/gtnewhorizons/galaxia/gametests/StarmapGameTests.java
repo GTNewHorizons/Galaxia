@@ -169,6 +169,7 @@ public final class StarmapGameTests {
             Rectangle[] previousBounds = new Rectangle[1];
             var motion = new SystemEntryMotion(key);
             sequence.click(ClientTarget.of("galaxy layer", c -> sidebarLayerTarget(false)))
+                .withinTicks(300)
                 .awaitClient("galaxy layer visible", c -> {
                     if (GuiTestSupport.map()
                         .getViewRoot()
@@ -435,17 +436,20 @@ public final class StarmapGameTests {
             .step("drag empty orbital space")
             .drag(ClientTarget.of("empty orbital space", c -> {
                 var map = GuiTestSupport.map();
-                int x = map.getArea().width / 2;
-                int y = map.getArea().height * 3 / 4;
-                if (map.interactableBodyAt(x, y, 0) != null) return null;
                 var matrix = LocatedWidget.of(map)
                     .getTransformationMatrix();
-                dragStart[0] = new Point(matrix.transformX(x, y), matrix.transformY(x, y));
-                return new ClickTarget(
-                    map,
-                    new Rectangle(dragStart[0].x, dragStart[0].y, 1, 1),
-                    () -> map.isValid() && map.getPanel()
-                        .getTopHovering() == map);
+                for (int y = map.getArea().height / 2; y < map.getArea().height - 80; y += 30) {
+                    for (int x = map.getArea().width / 3; x < map.getArea().width * 2 / 3; x += 30) {
+                        if (map.interactableBodyAt(x, y, 0) != null) continue;
+                        dragStart[0] = new Point(matrix.transformX(x, y), matrix.transformY(x, y));
+                        return new ClickTarget(
+                            map,
+                            new Rectangle(dragStart[0].x, dragStart[0].y, 1, 1),
+                            () -> map.isValid() && map.getPanel()
+                                .getTopHovering() == map);
+                    }
+                }
+                return null;
             }))
             .to(c -> new Point(dragStart[0].x + 80, dragStart[0].y + 45))
             .overFrames(8)

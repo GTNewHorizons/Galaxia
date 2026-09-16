@@ -18,7 +18,7 @@ final class OrbitalPlanetTrackingControllerTest {
         var view = new OrbitalView.OrbitalViewState(0);
         view.setCamera(10, 20);
         view.beginFollowing(110, 220, 0);
-        view.step(0.045);
+        view.step(0.045, 1.0 / 60);
         view.follow(115, 230, 50_000_000L);
         assertEquals(100, 115 - view.cameraX, 1e-9);
         assertEquals(200, 230 - view.cameraY, 1e-9);
