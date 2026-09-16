@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.block.special;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
+import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
@@ -30,6 +31,12 @@ public class BlockAirlockDoor extends BlockOpenable {
 
     private static final int ORIENTATION_SHIFT = 1;
     private static final int ORIENTATION_MASK = 0b110;
+
+    @SideOnly(Side.CLIENT)
+    private IIcon edgeU;
+
+    @SideOnly(Side.CLIENT)
+    private IIcon edgeV;
 
     public BlockAirlockDoor() {
         super(Material.iron);
@@ -60,10 +67,20 @@ public class BlockAirlockDoor extends BlockOpenable {
 
     @Override
     @SideOnly(Side.CLIENT)
+    public void registerBlockIcons(IIconRegister register) {
+        super.registerBlockIcons(register);
+        edgeU = register.registerIcon(getTextureName() + "_edge_u");
+        edgeV = register.registerIcon(getTextureName() + "_edge_v");
+    }
+
+    @Override
+    @SideOnly(Side.CLIENT)
     public IIcon getIcon(int side, int meta) {
-        return orientationForAxis(ForgeDirection.getOrientation(side)) == getOrientation(meta) ? blockIcon
-            : GalaxiaBlocksEnum.AIRLOCK_CASING.get()
-                .getIcon(side, 0);
+        int faceAxis = orientationForAxis(ForgeDirection.getOrientation(side));
+        int orientation = getOrientation(meta);
+        if (faceAxis == orientation) return blockIcon;
+        // Vanilla maps X to U on Y/Z faces, Z to U on X faces, and Y to V on vertical faces.
+        return orientation == ORIENT_X || (orientation == ORIENT_Z && faceAxis == ORIENT_X) ? edgeU : edgeV;
     }
 
     @Override

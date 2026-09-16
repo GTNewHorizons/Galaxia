@@ -63,8 +63,13 @@ public final class AirlockGuiGameTests {
                         GalaxiaBlocksEnum.AIRLOCK_DOOR.get(),
                         BlockAirlockDoor.encodeMeta(false, BlockAirlockDoor.ORIENT_Y));
                 }
-                fixture.place(16, 10, 0, GalaxiaBlocksEnum.AIRLOCK_CASING.get(), 0);
-                fixture.player.playerNetServerHandler.setPlayerLocation(fixture.x + 16.5, 139, fixture.z + 0.5, 50, 30);
+                fixture.place(
+                    0,
+                    3,
+                    2,
+                    GalaxiaBlocksEnum.AIRLOCK_DOOR.get(),
+                    BlockAirlockDoor.encodeMeta(false, BlockAirlockDoor.ORIENT_Z));
+                fixture.viewPanels(5, 133, 4, 45, 21);
             })
             .awaitClient("door display reaches the client", c -> {
                 if (Minecraft.getMinecraft().theWorld.getBlock(fixture.x + 6, 132, fixture.z + 8)
@@ -76,14 +81,30 @@ public final class AirlockGuiGameTests {
                 var settings = Minecraft.getMinecraft().gameSettings;
                 boolean oldHud = settings.hideGUI;
                 boolean oldClouds = settings.clouds;
+                float oldFov = settings.fovSetting;
+                float oldGamma = settings.gammaSetting;
                 c.afterTest(() -> {
                     settings.hideGUI = oldHud;
                     settings.clouds = oldClouds;
+                    settings.fovSetting = oldFov;
+                    settings.gammaSetting = oldGamma;
                 });
                 settings.hideGUI = true;
                 settings.clouds = false;
+                settings.fovSetting = 45;
+                settings.gammaSetting = 1;
             })
-            .capture("airlock-axis-textures")
+            .awaitClient("camera is close to the Z-axis panels", c -> fixture.assertCameraAt(5, 133, 4))
+            .capture("airlock-edge-z-close")
+            .server("look closely at the X-axis panels", () -> fixture.viewPanels(10, 133, 4, 45, 21))
+            .awaitClient("camera is close to the X-axis panels", c -> fixture.assertCameraAt(10, 133, 4))
+            .capture("airlock-edge-x-close")
+            .server("look down at the Y-axis panels", () -> fixture.viewPanels(15, 135, 4, 45, 40))
+            .awaitClient("camera is close to the Y-axis panels", c -> fixture.assertCameraAt(15, 135, 4))
+            .capture("airlock-edge-y-close")
+            .server("look closely at a single panel", () -> fixture.viewPanels(3, 132, -1, 45, 25))
+            .awaitClient("camera is close to the single panel", c -> fixture.assertCameraAt(3, 132, -1))
+            .capture("airlock-edge-single-close")
             .client("only the broad faces use the connected door texture", c -> {
                 Block door = GalaxiaBlocksEnum.AIRLOCK_DOOR.get();
                 for (ForgeDirection axis : new ForgeDirection[] { ForgeDirection.UP, ForgeDirection.NORTH,
@@ -424,6 +445,19 @@ public final class AirlockGuiGameTests {
         void clearBlocks() {
             for (BlockPos pos : placed) world.setBlockToAir(pos.x(), pos.y(), pos.z());
             placed.clear();
+        }
+
+        void viewPanels(int dx, int y, int dz, float yaw, float pitch) {
+            place(dx, y - 129, dz, GalaxiaBlocksEnum.AIRLOCK_CASING.get(), 0);
+            player.playerNetServerHandler.setPlayerLocation(x + dx + 0.5, y, z + dz + 0.5, yaw, pitch);
+        }
+
+        void assertCameraAt(int dx, int y, int dz) {
+            var camera = Minecraft.getMinecraft().thePlayer;
+            if (Math.abs(camera.posX - (x + dx + 0.5)) > 0.1 || Math.abs(camera.boundingBox.minY - y) > 0.1
+                || Math.abs(camera.posZ - (z + dz + 0.5)) > 0.1) {
+                throw new AssertionError("Camera has not reached the close-up position");
+            }
         }
 
         void prepareConstruction(ForgeDirection facing) {
