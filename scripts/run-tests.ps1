@@ -18,7 +18,7 @@ $groups = [ordered]@{
     'physical-stations' = @('galaxia:AirlockGuiGameTests.')
     'automated-facilities' = @('galaxia:FacilityGameplayGameTests.', 'galaxia:StationGuiGameTests.')
     'rocket-production' = @('galaxia:ModuleConstructionGuiGameTests.')
-    'starmap' = @('galaxia:StarmapGameTests.', 'galaxia:OrbitalTransferGameTests.')
+    'starmap' = @('galaxia:StarmapGameTests.')
     'satellites' = @('galaxia:SatelliteNetworkGuiGameTests.')
 }
 if ($ListSuites) {

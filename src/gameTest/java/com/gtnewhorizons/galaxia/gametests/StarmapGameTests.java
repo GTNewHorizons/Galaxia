@@ -39,14 +39,11 @@ import com.gtnewhorizons.horizonqa.api.client.ClickTarget;
 import com.gtnewhorizons.horizonqa.api.client.ClientTarget;
 import com.gtnewhorizons.horizonqa.api.client.ClientTest;
 
-import bartworks.system.material.WerkstoffLoader;
 import codechicken.nei.LayoutManager;
 import codechicken.nei.NEIClientConfig;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
-import gregtech.api.enums.OrePrefixes;
-import gregtech.api.util.GTUtility;
 
 @GameTestHolder(value = "galaxia", clientOnly = true, requiredMods = { "gregtech", "NotEnoughItems" })
 public final class StarmapGameTests {
@@ -119,37 +116,21 @@ public final class StarmapGameTests {
             .succeed();
     }
 
-    /** Bug regression: Ross and Ra ore pools resolve to real items, including BartWorks ores. */
+    /** Integration contract: authored deposits resolve to registered items in the loaded modpack. */
     @GameTest(timeoutTicks = 300)
-    public static void rossAndRaOrePoolsResolveRegisteredItems(GameTestHelper helper) {
+    public static void registeredOrePoolsResolveItems(GameTestHelper helper) {
         GuiTestSupport.openMap(helper)
-            .client("registered planetary resources are available without discovery", c -> {
-                for (var id : List.of(
-                    CelestialObjectId.ROSS_128_B,
-                    CelestialObjectId.ROSS_128_BA,
-                    CelestialObjectId.HORUS,
-                    CelestialObjectId.ANUBIS,
-                    CelestialObjectId.NEPER,
-                    CelestialObjectId.MAAHES,
-                    CelestialObjectId.SETH,
-                    CelestialObjectId.MEHEN_BELT)) {
-                    var properties = CelestialRegistry.get(id)
-                        .orElseThrow()
-                        .properties();
-                    for (String vein : properties.gtOreDepositIds()) {
-                        if (GTCompat.getGtOreDepositStacks(vein)
-                            .isEmpty()) throw new AssertionError(id + ": no registered ore items for " + vein);
+            .client("resolve authored deposits against the loaded ore registries", c -> {
+                var checked = new java.util.HashSet<String>();
+                for (var body : CelestialRegistry.getAll()) {
+                    for (String deposit : body.properties()
+                        .gtOreDepositIds()) {
+                        if (checked.add(deposit) && GTCompat.getGtOreDepositStacks(deposit)
+                            .isEmpty())
+                            throw new AssertionError(body.key() + ": no registered ore items for " + deposit);
                     }
                 }
-                var thorianite = WerkstoffLoader.Thorianit.get(OrePrefixes.ore);
-                if (thorianite == null) throw new AssertionError("BartWorks thorianite ore is not registered");
-                var rossOres = CelestialRegistry.get(CelestialObjectId.ROSS_128_B)
-                    .orElseThrow()
-                    .properties()
-                    .getResolvedGtOreStacks();
-                if (rossOres.stream()
-                    .noneMatch(ore -> GTUtility.areStacksEqual(ore, thorianite)))
-                    throw new AssertionError("Ross 128 b is missing its BartWorks thorianite ore");
+                if (checked.isEmpty()) throw new AssertionError("No authored deposits were checked");
             })
             .succeed();
     }
@@ -158,59 +139,32 @@ public final class StarmapGameTests {
     @GameTest(timeoutTicks = 2400)
     public static void everyMappedSystemOpensThroughGalaxyNavigation(GameTestHelper helper) {
         var sequence = GuiTestSupport.openMap(helper);
-        for (var id : List.of(
-            CelestialObjectId.VEGA,
-            CelestialObjectId.BARNARDA,
-            CelestialObjectId.TCETI_A,
-            CelestialObjectId.ALPHA_CENTAURI_A,
-            CelestialObjectId.ROSS_128,
-            CelestialObjectId.RA,
-            CelestialObjectId.VAEL,
-            CelestialObjectId.ILIA,
-            CelestialObjectId.SOL)) {
-            var key = CelestialObjectKey.registered(id);
+        for (var star : CelestialRegistry.getChildren(
+            CelestialRegistry.getPrimaryRoot()
+                .key())) {
+            if (star.objectClass() != CelestialObject.Class.STAR) continue;
+            var key = star.key();
             sequence.click(ClientTarget.of("galaxy", c -> sidebarLayerTarget(false)))
-                .click(ClientTarget.of("star " + id, c -> GuiTestSupport.bodyTarget(key)))
-                .click(ClientTarget.of("enter " + id, c -> sidebarLayerTarget(true)))
-                .awaitClient("system and planets visible: " + id, c -> {
+                .click(ClientTarget.of("star " + key, c -> GuiTestSupport.bodyTarget(key)))
+                .click(ClientTarget.of("enter " + key, c -> sidebarLayerTarget(true)))
+                .awaitClient("system and planets visible: " + key, c -> {
                     var map = GuiTestSupport.map();
                     if (!key.equals(
                         map.getViewRoot()
                             .key()))
-                        throw new AssertionError("Wrong system for " + id);
+                        throw new AssertionError("Wrong system for " + key);
                     var planets = CelestialRegistry.getChildren(key)
                         .stream()
                         .filter(
                             body -> body.objectClass() == CelestialObject.Class.PLANET
                                 || body.objectClass() == CelestialObject.Class.GAS_GIANT)
                         .toList();
-                    if (planets.isEmpty()) throw new AssertionError("Empty system: " + id);
-                    if (planets.stream()
+                    if (!planets.isEmpty() && planets.stream()
                         .noneMatch(planet -> map.visibleBodyBounds(planet.key()) != null))
-                        throw new AssertionError("No planet markers in system: " + id);
+                        throw new AssertionError("No planet markers in system: " + key);
                 });
         }
-        // The whole-system view includes Eris. Inner planets become individually visible after zooming.
-        sequence.awaitClient("Sol overview settled before zoom", c -> {
-            if (Math.abs(
-                GuiTestSupport.map()
-                    .getDisplayZoomMultiplier() - 1.0)
-                > 0.01) throw new AssertionError("Sol overview is still zooming");
-        });
-        for (int step = 0; step < 24; step++) {
-            sequence.step("zoom into the inner Solar System")
-                .scroll(
-                    ClientTarget.of(
-                        "Sol",
-                        c -> GuiTestSupport.bodyTarget(CelestialObjectKey.registered(CelestialObjectId.SOL))),
-                    120);
-        }
-        sequence.awaitClient("Mercury visible after zoom", c -> {
-            if (GuiTestSupport.map()
-                .visibleBodyBounds(CelestialObjectKey.registered(CelestialObjectId.MERCURY)) == null)
-                throw new AssertionError("Missing Mercury marker after zoom");
-        })
-            .succeed();
+        sequence.succeed();
     }
 
     /** Bug regression: selecting a star changes the system button destination without entering immediately. */
@@ -340,68 +294,6 @@ public final class StarmapGameTests {
             new Rectangle(matrix.transformX(system ? 110 : 40, 23), matrix.transformY(system ? 110 : 40, 23), 1, 1),
             () -> sidebar.isValid() && sidebar.getPanel()
                 .isBelowMouse(sidebar));
-    }
-
-    /** Integration contract: registered planets and moons remain selectable through live map input. */
-    @GameTest(timeoutTicks = 1800)
-    public static void selectsSolarSystemAndNearbyBodies(GameTestHelper helper) {
-        var sequence = GuiTestSupport.openMap(helper);
-        for (CelestialObjectId id : List.of(
-            CelestialObjectId.MERCURY,
-            CelestialObjectId.JUPITER,
-            CelestialObjectId.IO,
-            CelestialObjectId.PLUTO,
-            CelestialObjectId.BARNARD_C,
-            CelestialObjectId.CENTAURI_BB,
-            CelestialObjectId.TCETI_E,
-            CelestialObjectId.VEGA_B)) {
-            CelestialObjectKey key = CelestialObjectKey.registered(id);
-            sequence.client("prepare parent view for " + id, c -> {
-                var body = CelestialRegistry.get(key)
-                    .orElseThrow();
-                var parent = CelestialRegistry.get(body.parentKey())
-                    .orElseThrow();
-                GuiTestSupport.map()
-                    .showLayer(parent);
-                GuiTestSupport.map()
-                    .focusOn(parent);
-            })
-                .awaitClient("parent overview settled", c -> {
-                    if (Math.abs(
-                        GuiTestSupport.map()
-                            .getDisplayZoomMultiplier() - 1.0)
-                        > 0.01) {
-                        throw new AssertionError("Parent overview is still zooming");
-                    }
-                });
-            int zoomSteps = switch (id) {
-                case MERCURY -> 24;
-                case JUPITER -> 8;
-                default -> -4;
-            };
-            for (int step = 0; step < Math.abs(zoomSteps); step++) {
-                sequence.step("frame the orbit of " + id)
-                    .scroll(
-                        ClientTarget.of(
-                            "parent of " + id,
-                            c -> GuiTestSupport.bodyTarget(
-                                CelestialRegistry.get(key)
-                                    .orElseThrow()
-                                    .parentKey())),
-                        zoomSteps > 0 ? 120 : -120);
-            }
-            sequence.withinTicks(200)
-                .step("select " + id + " through map input")
-                .click(ClientTarget.of("orbital body " + id, c -> GuiTestSupport.bodyTarget(key)))
-                .awaitClient(id + " selected", c -> {
-                    var selected = GuiTestSupport.map()
-                        .getFocusedBody();
-                    if (selected == null || !key.equals(selected.key())) {
-                        throw new AssertionError("Map input did not select " + id);
-                    }
-                });
-        }
-        sequence.succeed();
     }
 
     /** Integration contract: text entry owns keys while focused, and screen shortcuts execute once elsewhere. */

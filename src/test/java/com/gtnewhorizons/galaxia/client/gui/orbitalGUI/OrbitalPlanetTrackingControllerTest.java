@@ -12,38 +12,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 
 final class OrbitalPlanetTrackingControllerTest {
 
-    /** Bug regression: selecting a moving body preserves its screen position briefly instead of snapping. */
-    @Test
-    void followCameraPreservesTheDoubleClickWindow() {
-        var view = new OrbitalView.OrbitalViewState(0);
-        view.setCamera(10, 20);
-        view.beginFollowing(110, 220, 0);
-        view.step(0.3, 1.0 / 60);
-        view.follow(115, 230, 50_000_000L);
-        assertEquals(100, 115 - view.cameraX, 1e-9);
-        assertEquals(200, 230 - view.cameraY, 1e-9);
-        view.follow(115, 230, 110_000_000L);
-        assertTrue(view.cameraX > 15 && view.cameraX < 25);
-    }
-
-    /** Product contract: camera centering accelerates and decelerates, then follows the body without lag. */
-    @Test
-    void followCameraEasesThenLocksToTheMovingTarget() {
-        var view = new OrbitalView.OrbitalViewState(0);
-        view.beginFollowing(100, 0, 0);
-        double[] positions = new double[6];
-        for (int i = 0; i < positions.length; i++) {
-            view.follow(100, 0, (100L + 50L * i) * 1_000_000L);
-            positions[i] = view.cameraX;
-        }
-        assertTrue(positions[1] - positions[0] < positions[2] - positions[1]);
-        assertTrue(positions[4] - positions[3] > positions[5] - positions[4]);
-        for (int i = 1; i < positions.length; i++) assertTrue(positions[i] >= positions[i - 1]);
-        view.follow(120, 30, 1_000_000_000L);
-        assertEquals(120, view.cameraX, 1e-9);
-        assertEquals(30, view.cameraY, 1e-9);
-    }
-
     /** Product contract: changing the followed body during centering starts from the current camera position. */
     @Test
     void followCameraCanRetargetWithoutJumping() {

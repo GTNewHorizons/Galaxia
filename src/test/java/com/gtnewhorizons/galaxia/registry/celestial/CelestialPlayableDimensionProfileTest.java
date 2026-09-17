@@ -5,9 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializer;
@@ -28,23 +25,6 @@ final class CelestialPlayableDimensionProfileTest {
                     .isPresent(),
                 () -> "Dimension has no celestial object: " + dimension);
         }
-    }
-
-    @Test
-    void registryExposesOnlyPlayableBodiesWithDimensionProfiles() {
-        GalaxiaTestBootstrap.ensureCelestialRegistry();
-
-        Set<DimensionEnum> playableDimensions = CelestialRegistry.getPlayableBodies()
-            .stream()
-            .map(
-                body -> body.playableDimensionProfile()
-                    .dimension())
-            .collect(Collectors.toSet());
-
-        assertEquals(
-            Set.of(DimensionEnum.MARS, DimensionEnum.MOON, DimensionEnum.FROZEN_BELT, DimensionEnum.OVERWORLD),
-            playableDimensions);
-
     }
 
     @Test

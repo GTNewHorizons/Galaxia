@@ -27,13 +27,18 @@ final class OrbitalTransferPlannerTest {
             { CelestialObjectId.OVERWORLD, CelestialObjectId.PLUTO },
             { CelestialObjectId.NEPTUNE, CelestialObjectId.MERCURY },
             { CelestialObjectId.PLUTO, CelestialObjectId.OVERWORLD } };
-        double[] flightTimes = { 197803.89039, 218748.07331, 197803.89039, 218748.07331 };
         for (int i = 0; i < pairs.length; i++) {
             var source = CelestialRegistry.get(pairs[i][0])
                 .orElseThrow();
             var destination = CelestialRegistry.get(pairs[i][1])
                 .orElseThrow();
-            var route = OrbitalTransferPlanner.computeFixedRoute(root, star, source, destination, 100, flightTimes[i]);
+            var route = OrbitalTransferPlanner.computeFixedRoute(
+                root,
+                star,
+                source,
+                destination,
+                100,
+                star.getHohmannTof(source, destination, root, 100));
             assertNotNull(route);
             double[] xs = new double[96];
             double[] ys = new double[96];
