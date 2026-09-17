@@ -174,14 +174,14 @@ public final class GalaxiaCelestialAPI {
     public static CelestialObject findStar(CelestialObject root, CelestialObjectKey targetKey) {
         if (root == null || targetKey == null) return null;
         CelestialObject target = ancestryTarget(targetKey);
-        CelestialObject star = findStar(root, target);
-        if (star != null || target == null || target.parentKey() == null) return star;
-        return findStar(root, target.parentKey());
+        return findStar(root, target);
     }
 
     public static CelestialObject findStar(CelestialObject root, CelestialObject target) {
         if (root == null || target == null) return null;
-        return findStarRec(root, target, null);
+        CelestialObject star = findStarRec(root, target, null);
+        if (star != null || target.parentKey() == null) return star;
+        return findStar(root, target.parentKey());
     }
 
     private static CelestialObject findStarRec(CelestialObject current, CelestialObject target,

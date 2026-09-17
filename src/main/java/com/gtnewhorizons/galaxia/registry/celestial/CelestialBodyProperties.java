@@ -20,7 +20,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
 public record CelestialBodyProperties(boolean visitable, boolean canCreateStation, boolean canCreateOutpost,
     double localGravityG, double massEarthRelative, double orbitalRadiusEarthRelative, double radiusEarthRelative,
     double standardGravitationalParameter, double sphereOfInfluenceRadius, double parkingOrbitRadius, String oreProfile,
-    List<String> gtOreVeinIds, double radiation, double temperature, double surfacePressurePa,
+    List<String> gtOreDepositIds, double radiation, double temperature, double surfacePressurePa,
     double starmapAtmosphericDrag, List<AtmosphereIngredient> atmosphereIngredients,
     CelestialBodyProperties atmosphereCompositionSource, AsteroidFieldProfile asteroidFieldProfile,
     AsteroidNodeKind asteroidNodeKind, AsteroidSizeClass asteroidSizeClass, Map<String, String> metadata) {
@@ -42,8 +42,8 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
         if (oreProfile == null) oreProfile = "";
         if (metadata == null) metadata = Collections.emptyMap();
         else metadata = Collections.unmodifiableMap(new LinkedHashMap<>(metadata));
-        if (gtOreVeinIds == null) gtOreVeinIds = List.of();
-        else gtOreVeinIds = Collections.unmodifiableList(new ArrayList<>(gtOreVeinIds));
+        if (gtOreDepositIds == null) gtOreDepositIds = List.of();
+        else gtOreDepositIds = Collections.unmodifiableList(new ArrayList<>(gtOreDepositIds));
         if (atmosphereIngredients == null) atmosphereIngredients = List.of();
         else {
             List<AtmosphereIngredient> ingredients = new ArrayList<>(atmosphereIngredients.size());
@@ -90,13 +90,13 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
         }
     }
 
-    public boolean hasGtOreVeinIds() {
-        return !gtOreVeinIds.isEmpty();
+    public boolean hasGtOreDepositIds() {
+        return !gtOreDepositIds.isEmpty();
     }
 
-    public List<ItemStack> getResolvedGtVeinOreStacks() {
-        if (gtOreVeinIds.isEmpty()) return List.of();
-        return GTCompat.getGtVeinOreStacks(gtOreVeinIds.toArray(new String[0]));
+    public List<ItemStack> getResolvedGtOreStacks() {
+        if (gtOreDepositIds.isEmpty()) return List.of();
+        return GTCompat.getGtOreDepositStacks(gtOreDepositIds.toArray(new String[0]));
     }
 
     // TODO: come up with some kind of atmosphere recipe autogen that accounts for weights and atmosphere density (low
@@ -149,7 +149,7 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
         private double sphereOfInfluenceRadius;
         private double parkingOrbitRadius;
         private String oreProfile = "";
-        private final List<String> resolvedGtOreVeinIds = new ArrayList<>();
+        private final List<String> resolvedGtOreDepositIds = new ArrayList<>();
         private double radiation;
         private double temperature;
         private double surfacePressurePa;
@@ -176,7 +176,7 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
             this.sphereOfInfluenceRadius = source.sphereOfInfluenceRadius;
             this.parkingOrbitRadius = source.parkingOrbitRadius;
             this.oreProfile = source.oreProfile;
-            this.resolvedGtOreVeinIds.addAll(source.gtOreVeinIds);
+            this.resolvedGtOreDepositIds.addAll(source.gtOreDepositIds);
             this.radiation = source.radiation;
             this.temperature = source.temperature;
             this.surfacePressurePa = source.surfacePressurePa;
@@ -246,9 +246,9 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
             return this;
         }
 
-        public Builder gtOreVeinIds(@Nonnull String... veinIds) {
+        public Builder gtOreDepositIds(@Nonnull String... veinIds) {
             for (String veinId : veinIds) {
-                if (veinId != null) resolvedGtOreVeinIds.add(veinId);
+                if (veinId != null) resolvedGtOreDepositIds.add(veinId);
             }
             return this;
         }
@@ -351,7 +351,7 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
                 sphereOfInfluenceRadius,
                 parkingOrbitRadius,
                 oreProfile,
-                resolvedGtOreVeinIds,
+                resolvedGtOreDepositIds,
                 radiation,
                 temperature,
                 surfacePressurePa,

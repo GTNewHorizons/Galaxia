@@ -19,6 +19,7 @@ public record AsteroidStarmapProjection(@Nonnull CelestialObject body, @Nonnull 
     boolean debugHidden, boolean scanInProgress, boolean sensorRevealed) {
 
     private static final float MAP_ICON_BASE_SCALE = 60f;
+    private static final float MAX_MAP_RADIUS = 4f;
     private static final float MIN_RENDERED_DIAMETER = 2f;
     private static final float NO_SPRITE_RADIUS = 0.0f;
     private static final float MINIMUM_SPRITE_SIZE = 0.0001f;
@@ -53,7 +54,8 @@ public record AsteroidStarmapProjection(@Nonnull CelestialObject body, @Nonnull 
 
     public static float spriteRadius(@Nullable CelestialObject body, float spriteSize, double relativeZoom) {
         if (body == null || !body.isAsteroid() || spriteSize <= MINIMUM_SPRITE_SIZE) return NO_SPRITE_RADIUS;
-        return Math.max(NO_SPRITE_RADIUS, spriteSize * MAP_ICON_BASE_SCALE * (float) relativeZoom);
+        return Math
+            .min(MAX_MAP_RADIUS, Math.max(NO_SPRITE_RADIUS, spriteSize * MAP_ICON_BASE_SCALE * (float) relativeZoom));
     }
 
     public static boolean shouldCull(@Nullable CelestialObject body, @Nullable AsteroidStarmapProjection projection,

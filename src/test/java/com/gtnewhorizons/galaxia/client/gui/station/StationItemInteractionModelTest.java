@@ -147,7 +147,7 @@ final class StationItemInteractionModelTest {
     private static AutomatedFacility createFacility() {
         return new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PROXIMA_CENTAURI,
+            CelestialObjectId.ROSS_128_B,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
     }

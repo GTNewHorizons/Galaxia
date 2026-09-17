@@ -340,6 +340,53 @@ public final class FacilityGameplayGameTests {
     }
 
     /** Bug regression: generated asteroid ancestry must resolve for a real BIG HAMMER launch. */
+    @GameTest(timeoutTicks = 800)
+    public static void hammerLaunchesCargoFromAsteroidToPlanet(GameTestHelper helper) {
+        hammerLaunchesBetweenAsteroidAndPlanet(helper, true);
+    }
+
+    /** Bug regression: planetary suppliers must be able to launch toward generated asteroids. */
+    @GameTest(timeoutTicks = 800)
+    public static void hammerLaunchesCargoFromPlanetToAsteroid(GameTestHelper helper) {
+        hammerLaunchesBetweenAsteroidAndPlanet(helper, false);
+    }
+
+    private static void hammerLaunchesBetweenAsteroidAndPlanet(GameTestHelper helper, boolean fromAsteroid) {
+        Fixture fixture = new Fixture();
+        GuiTestSupport.openMap(helper, 2)
+            .server("prepare asteroid and planet facilities with charged BIG HAMMER", () -> {
+                fixture.prepare(helper);
+                var asteroid = fixture.generatedAsteroid(9);
+                var planet = CelestialObjectKey.registered(CelestialObjectId.OVERWORLD);
+                fixture
+                    .prepareHammer(
+                        fixture.addFacility(
+                            fromAsteroid ? asteroid : planet,
+                            fromAsteroid ? CelestialAsset.Kind.AUTOMATED_OUTPOST
+                                : CelestialAsset.Kind.AUTOMATED_STATION),
+                        fixture.addFacility(
+                            fromAsteroid ? planet : asteroid,
+                            fromAsteroid ? CelestialAsset.Kind.AUTOMATED_STATION
+                                : CelestialAsset.Kind.AUTOMATED_OUTPOST),
+                        HammerVariant.BIG);
+            })
+            .client("register client cleanup", c -> c.afterTest(fixture::cleanupClient))
+            .awaitClient("both endpoints synchronized", c -> {
+                fixture.facility(true, 0);
+                fixture.facility(true, 1);
+            })
+            .client("show transfer paths", c -> fixture.showMap())
+            .client("request cross-body shipment", c -> fixture.configureShipment(true))
+            .withinTicks(300)
+            .awaitServer("real cargo launched between asteroid and planet", () -> fixture.assertInFlight(false))
+            .server("record actual flight duration", fixture::recordFlight)
+            .awaitClient("same shipment and conserved cargo synchronized", c -> fixture.assertInFlight(true))
+            .withinTicks(30)
+            .awaitServer("normal ticks advance shipment", fixture::assertFlightAdvanced)
+            .succeed();
+    }
+
+    /** Bug regression: generated asteroid ancestry must resolve for a real BIG HAMMER launch. */
     @GameTest(timeoutTicks = 600)
     public static void hammerLaunchesCargoBetweenAsteroidOutposts(GameTestHelper helper) {
         Fixture fixture = new Fixture();
@@ -742,6 +789,10 @@ public final class FacilityGameplayGameTests {
             AutomatedFacility requester = crossAsteroid
                 ? addFacility(generatedAsteroid(10), CelestialAsset.Kind.AUTOMATED_OUTPOST)
                 : addFacility();
+            prepareHammer(supplier, requester, crossAsteroid ? HammerVariant.BIG : HammerVariant.BASE);
+        }
+
+        void prepareHammer(AutomatedFacility supplier, AutomatedFacility requester, HammerVariant variant) {
             NBTTagCompound tag = new NBTTagCompound();
             tag.setString("horizonFixture", name);
             cargo = new ItemStackWrapper(Items.iron_ingot, 0, tag);
@@ -751,9 +802,7 @@ public final class FacilityGameplayGameTests {
                     supplier.assetId,
                     FacilityModuleKind.HAMMER,
                     FacilityModuleKind.HAMMER.defaultShape(),
-                    new IModuleComponent.BuildPhysicalSpec.Hammer(
-                        ModuleTier.LuV,
-                        crossAsteroid ? HammerVariant.BIG : HammerVariant.BASE),
+                    new IModuleComponent.BuildPhysicalSpec.Hammer(ModuleTier.LuV, variant),
                     null,
                     true,
                     List.of(ModulePlacement.at(StationTileCoord.of(1, 0)))),
