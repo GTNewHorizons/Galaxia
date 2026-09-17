@@ -1,13 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_ANDESITE;
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_ANORTHOSITE;
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_BASALT;
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_GABBRO;
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_MAGMA;
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_OBSIDIAN;
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_REGOLITH;
-import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.MOON_TEKTITE;
+import static com.gtnewhorizons.galaxia.registry.block.PlanetBlocks.*;
 
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -23,13 +16,17 @@ import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeCracks;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeTubes;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.BiomeMatrixGenerator;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.details.ErodedHills;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CraterFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CrystalClusterFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.FluidSpringFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.GeodeFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.StalactiteFeature;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.TerrainModifier;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.TerrainModifierEntry;
 
 /**
  * The class holding all data related to the dimension Moon
@@ -48,107 +45,79 @@ public final class Moon {
             "Moon Ocean Edge",
             TerrainConfiguration.builder()
                 .feature(TerrainPreset.BASE_HEIGHT)
-                .height(50)
+                .height(16)
                 .endFeature()
                 .feature(TerrainPreset.MOUNTAIN_RANGES)
                 .width(4)
                 .height(32)
                 .endFeature()
                 .build());
-        BiomeGenBase smallVolcanoes = createOceanBiome(
-            "Moon Small Volcanoes",
+        BiomeGenBase volcanoes = createOceanBiome(
+            "Moon Volcanoes",
             TerrainConfiguration.builder()
                 .feature(TerrainPreset.BASE_HEIGHT)
-                .height(32)
+                .height(8)
                 .endFeature()
                 .feature(TerrainPreset.SHIELD_VOLCANOES)
                 .replacementBlock(MOON_MAGMA)
                 .width(2)
                 .height(32)
-                .endFeature()
-                .build());
-        BiomeGenBase bigVolcanoes = createOceanBiome(
-            "Moon Big Volcanoes",
-            TerrainConfiguration.builder()
-                .feature(TerrainPreset.BASE_HEIGHT)
-                .height(32)
+                .modifier(
+                    TerrainModifier.WEIRDNESS,
+                    TerrainModifier.WEIRDNESS.minimum,
+                    TerrainModifier.WEIRDNESS.middle)
                 .endFeature()
                 .feature(TerrainPreset.SHIELD_VOLCANOES)
                 .replacementBlock(MOON_MAGMA)
                 .width(4)
                 .height(64)
+                .modifier(
+                    TerrainModifier.WEIRDNESS,
+                    TerrainModifier.WEIRDNESS.middle,
+                    TerrainModifier.WEIRDNESS.maximum)
                 .endFeature()
                 .build());
-        BiomeGenBase hills = createLandBiome(
-            "Moon Hills",
+        BiomeGenBase highlands = createLandBiome(
+            "Moon Highlands",
             TerrainConfiguration.builder()
                 .feature(TerrainPreset.BASE_HEIGHT)
-                .height(64)
+                .height(32)
+                .endFeature()
+                .feature(TerrainPreset.MOUNTAIN_RANGES)
+                .width(3)
+                .height(24)
+                .modifier(
+                    TerrainModifier.WEIRDNESS,
+                    TerrainModifier.WEIRDNESS.lowerExtreme,
+                    TerrainModifier.WEIRDNESS.upperExtreme)
                 .endFeature()
                 .feature(TerrainPreset.MOUNTAIN_RANGES)
                 .width(32)
-                .height(32)
+                .height(192)
+                .modifier(
+                    TerrainModifier.WEIRDNESS,
+                    TerrainModifier.WEIRDNESS.minimum,
+                    TerrainModifier.WEIRDNESS.middle)
                 .endFeature()
                 .feature(TerrainPreset.CANYONS)
                 .width(4)
                 .height(32)
-                .endFeature()
-                .build());
-        BiomeGenBase mountains = createLandBiome(
-            "Moon Mountains",
-            TerrainConfiguration.builder()
-                .feature(TerrainPreset.BASE_HEIGHT)
-                .height(64)
-                .endFeature()
-                .feature(TerrainPreset.MOUNTAIN_RANGES)
-                .width(3)
-                .height(16)
-                .endFeature()
-                .feature(TerrainPreset.MOUNTAIN_RANGES)
-                .width(8)
-                .height(128)
+                .modifier(
+                    TerrainModifier.WEIRDNESS,
+                    TerrainModifier.WEIRDNESS.middle,
+                    TerrainModifier.WEIRDNESS.maximum)
                 .endFeature()
                 .build());
         builder.sky(true)
             .fog(0, 0, 0)
             .skyColor(0, 0, 0.001f)
             .avgGround(80)
-            // Inner volcanic biomes
-            .biome(smallVolcanoes, 1, 1)
-            .biome(bigVolcanoes, 1, 2)
-            .biome(bigVolcanoes, 2, 1)
-            .biome(smallVolcanoes, 2, 2)
-            // Border
-            .biome(border, 0, 0)
-            .biome(border, 1, 0)
-            .biome(border, 2, 0)
-            .biome(border, 3, 0)
-            .biome(border, 0, 1)
-            .biome(border, 3, 1)
-            .biome(border, 0, 2)
-            .biome(border, 3, 2)
-            .biome(border, 0, 3)
-            .biome(border, 1, 3)
-            .biome(border, 2, 3)
-            .biome(border, 3, 3)
-            // Hills
-            .biome(hills, 4, 0)
-            .biome(hills, 5, 0)
-            .biome(hills, 6, 0)
-            .biome(hills, 7, 0)
-            .biome(hills, 4, 1)
-            .biome(hills, 7, 1)
-            .biome(hills, 4, 2)
-            .biome(hills, 7, 2)
-            .biome(hills, 4, 3)
-            .biome(hills, 5, 3)
-            .biome(hills, 6, 3)
-            .biome(hills, 7, 3)
-            // Mountains
-            .biome(mountains, 5, 1)
-            .biome(mountains, 5, 2)
-            .biome(mountains, 6, 1)
-            .biome(mountains, 6, 2)
+            // Biome matrix
+            .biomeMatrix(
+                new BiomeMatrixGenerator(new String[] { "HHHHHH", "HHHHHH", "HHHbHH", "HHbVbH", "HHHbHH", "HHHHHH" })
+                    .addBiomeEntry('H', highlands)
+                    .addBiomeEntry('b', border)
+                    .addBiomeEntry('V', volcanoes))
             // Finish
             .name(DimensionEnum.MOON)
             .build();
@@ -207,8 +176,7 @@ public final class Moon {
      */
     protected static BiomeGenBase createLandBiome(String name, TerrainConfiguration terrainConfiguration) {
         BlockMeta andesite = new BlockMeta(MOON_ANDESITE);
-        BlockMeta anorthosite = new BlockMeta(MOON_ANORTHOSITE);
-        BlockMeta bedrock = new BlockMeta(Blocks.bedrock);
+        BlockMeta anorthosite = new BlockMeta(MOON_DIORITE);
 
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .height(0.1F, 0.11F)
@@ -216,7 +184,6 @@ public final class Moon {
             .rainfall(0.99F)
             .topBlock(MOON_REGOLITH)
             .fillerBlocks(height -> {
-                if (height == 0) return bedrock;
                 if (height <= 32) return anorthosite;
                 return andesite;
             })
@@ -229,8 +196,8 @@ public final class Moon {
             .undergroundFeature(
                 StalactiteFeature.builder()
                     .maxHeight(64)
-                    .stalactiteBlock(MOON_ANORTHOSITE)
-                    .condition((block, meta) -> block == MOON_ANORTHOSITE)
+                    .stalactiteBlock(MOON_DIORITE)
+                    .condition((block, meta) -> block == MOON_DIORITE)
                     .build())
             .undergroundFeature(
                 StalactiteFeature.builder()
@@ -241,25 +208,32 @@ public final class Moon {
             .undergroundFeature(
                 CrystalClusterFeature.builder()
                     .maxHeight(24)
-                    .condition((block, meta) -> block == MOON_ANORTHOSITE)
+                    .condition((block, meta) -> block == MOON_DIORITE)
                     .crystalBlock(GalaxiaBlocksEnum.BLOCK_OF_CINNABAR.get())
                     .build())
             .undergroundFeature(
                 FluidSpringFeature.builder()
                     .maxHeight(64)
                     .fluid(PlanetBlocks.LIQUID_MERCURY.getBlock())
-                    .condition((block, meta) -> block == MOON_ANDESITE || block == MOON_ANORTHOSITE)
+                    .condition((block, meta) -> block == MOON_ANDESITE || block == MOON_DIORITE)
                     .build())
             .undergroundFeature(
                 GeodeFeature.builder()
                     .rarity(32)
                     .minHeight(16)
                     .maxHeight(96)
-                    .condition((block, meta) -> block == MOON_ANORTHOSITE || block == MOON_ANDESITE)
+                    .condition((block, meta) -> block == MOON_DIORITE || block == MOON_ANDESITE)
                     .shell(Blocks.glass)
                     .crystal(Blocks.stained_glass)
                     .build())
             .terrain(terrainConfiguration)
+            .terrain3d(
+                new ErodedHills(
+                    new TerrainModifierEntry(
+                        TerrainModifier.WEIRDNESS,
+                        TerrainModifier.WEIRDNESS.upperExtreme,
+                        TerrainModifier.WEIRDNESS.maximum),
+                    16))
             .ocean(MOON_OBSIDIAN, MOON_BASALT, 1, MOON_OBSIDIAN, 1)
             .surfaceThickness(4)
             .build();
@@ -268,7 +242,6 @@ public final class Moon {
     protected static BiomeGenBase createOceanBiome(String name, TerrainConfiguration terrainConfiguration) {
         BlockMeta basalt = new BlockMeta(MOON_BASALT);
         BlockMeta gabbro = new BlockMeta(MOON_GABBRO);
-        BlockMeta bedrock = new BlockMeta(Blocks.bedrock);
 
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .height(0.1F, 0.11F)
@@ -276,7 +249,6 @@ public final class Moon {
             .rainfall(0.99F)
             .topBlock(MOON_BASALT)
             .fillerBlocks(height -> {
-                if (height == 0) return bedrock;
                 if (height <= 32) return gabbro;
                 return basalt;
             })
@@ -288,7 +260,7 @@ public final class Moon {
                     .condition((block, meta) -> block == MOON_REGOLITH || block == MOON_BASALT)
                     .build())
             .terrain(terrainConfiguration)
-            .ocean(MOON_OBSIDIAN, MOON_BASALT, 56, MOON_OBSIDIAN, 1)
+            .ocean(MOON_OBSIDIAN, MOON_BASALT, 80, MOON_OBSIDIAN, 1)
             .oceanCracks(0.3F, MOON_MAGMA, 4)
             .surfaceThickness(4)
             .build();

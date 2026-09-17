@@ -6,13 +6,17 @@ import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.TubeNoise;
 
+/**
+ * Cave generator for long tubes
+ */
 public class CaveShapeTubes implements CaveShape {
 
     private static final int CHUNK_AREA = 256;
     private static final int CHUNK_WIDTH = 16;
     private static final double HORIZONTAL_CAVE_STRETCH = 0.1;
+    private static final float DEFAULT_VERTICAL_INCLINATION_MULTIPLIER = 0.5F;
 
-    private static TubeNoise caveNoise;
+    private static TubeNoise tubeNoise;
     private static NoiseGeneratorOctaves sizeNoise;
     private static NoiseGeneratorOctaves horizontalDistortion;
     private static NoiseGeneratorOctaves verticalDistortion;
@@ -23,11 +27,25 @@ public class CaveShapeTubes implements CaveShape {
     private final byte baseTubeDiameter;
     private final byte varyingTubeDiameter;
     private final short tubeLength;
+    private final float verticalInclinationMultiplier;
 
+    /**
+     * Simple constructor with a default vertical inclination of 0.5
+     *
+     * @param baseTubeDiameter    Minimum diameter for all tubes
+     * @param varyingTubeDiameter Varying additional size for each tube
+     * @param tubeLength          Maximum tube length
+     */
     public CaveShapeTubes(byte baseTubeDiameter, byte varyingTubeDiameter, short tubeLength) {
+        this(baseTubeDiameter, varyingTubeDiameter, tubeLength, DEFAULT_VERTICAL_INCLINATION_MULTIPLIER);
+    }
+
+    public CaveShapeTubes(byte baseTubeDiameter, byte varyingTubeDiameter, short tubeLength,
+        float verticalInclinationMultiplier) {
         this.baseTubeDiameter = baseTubeDiameter;
         this.varyingTubeDiameter = varyingTubeDiameter;
         this.tubeLength = tubeLength;
+        this.verticalInclinationMultiplier = verticalInclinationMultiplier;
     }
 
     @Override
@@ -35,18 +53,18 @@ public class CaveShapeTubes implements CaveShape {
         sizeNoise = new NoiseGeneratorOctaves(random, 4);
         horizontalDistortion = new NoiseGeneratorOctaves(random, 4);
         verticalDistortion = new NoiseGeneratorOctaves(random, 4);
-        caveNoise = new TubeNoise();
-        caveNoise.setSeed(random);
+        tubeNoise = new TubeNoise(verticalInclinationMultiplier);
+        tubeNoise.setSeed(random);
     }
 
     @Override
     public boolean preparedCaveShape() {
-        return caveNoise != null && sizeNoise != null;
+        return tubeNoise != null && sizeNoise != null;
     }
 
     @Override
     public void prepareCaveCache(int chunkX, int chunkZ) {
-        caveNoise.updateCache(chunkX, chunkZ, baseTubeDiameter, varyingTubeDiameter, tubeLength);
+        tubeNoise.updateCache(chunkX, chunkZ, baseTubeDiameter, varyingTubeDiameter, tubeLength);
         double[] rawModifiers = sizeNoise.generateNoiseOctaves(
             new double[CHUNK_AREA],
             chunkZ * CHUNK_WIDTH,
@@ -91,12 +109,12 @@ public class CaveShapeTubes implements CaveShape {
 
     @Override
     public boolean preparedCaveCache(int chunkX, int chunkZ) {
-        return caveNoise.isCached() && !caveNoise.isInDifferentChunk(chunkX, chunkZ);
+        return tubeNoise.isCached() && !tubeNoise.isInDifferentChunk(chunkX, chunkZ);
     }
 
     @Override
-    public boolean generateCave(int localX, int localY, int localZ, int height) {
-        return caveNoise.isIntersectingTube(
+    public boolean isInCave(int localX, int localY, int localZ, int height) {
+        return tubeNoise.isIntersectingTube(
             localX + horizontalModifiers[localX],
             localY + verticalModifiers[localX + (localZ << 4)],
             localZ + horizontalModifiers[localZ << 4],

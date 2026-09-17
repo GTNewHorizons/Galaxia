@@ -4,12 +4,13 @@ import java.util.Collections;
 import java.util.Map;
 
 import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.TerrainModifierEntry;
 
 /**
  * Data record holding terrain features
  */
 public record TerrainFeature(TerrainPreset preset, double height, double width, Map<String, Object> customParams,
-    ImmutableBlockMeta replacementBlock) {
+    ImmutableBlockMeta replacementBlock, TerrainModifierEntry modifierEntry) {
 
     public TerrainFeature {
         customParams = Collections.unmodifiableMap(customParams);

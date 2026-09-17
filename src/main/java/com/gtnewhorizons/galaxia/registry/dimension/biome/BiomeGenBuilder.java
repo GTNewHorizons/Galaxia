@@ -14,6 +14,7 @@ import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationFunction;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.details.Terrain3D;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.SurfaceFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.UndergroundFeature;
 
@@ -48,6 +49,7 @@ public class BiomeGenBuilder {
     int oceanCrackComplexity;
     StratificationFunction fillerBlocks;
     CaveShape caveShape;
+    Terrain3D terrain3d;
 
     List<FlowerEntry> flowers = List.of();
     List<SpawnListEntry> mobsWater = List.of();
@@ -193,6 +195,11 @@ public class BiomeGenBuilder {
 
     public BiomeGenBuilder surfaceThickness(int surfaceThickness) {
         this.surfaceThickness = surfaceThickness;
+        return this;
+    }
+
+    public BiomeGenBuilder terrain3d(Terrain3D terrain3d) {
+        this.terrain3d = terrain3d;
         return this;
     }
 

@@ -17,6 +17,7 @@ import com.gtnewhorizon.gtnhlib.util.data.ImmutableBlockMeta;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenSpace;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldChunkManagerSpace;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.modifier.ModifierHandler;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
@@ -36,6 +37,7 @@ public final class HeightOracle {
     private final World world;
     private final WorldChunkManagerSpace wcm;
     private final DimensionEnum dimension;
+    private final ModifierHandler modifierHandler;
 
     private final boolean clampHeight;
 
@@ -51,7 +53,7 @@ public final class HeightOracle {
     private final StdLCG rand = new StdLCG();
     private final NoiseGeneratorOctaves terrainNoise;
 
-    public HeightOracle(World world, DimensionEnum dimension, boolean clampHeight) {
+    public HeightOracle(World world, DimensionEnum dimension, boolean clampHeight, ModifierHandler modifierHandler) {
         this.world = world;
         this.wcm = (WorldChunkManagerSpace) world.getWorldChunkManager();
         this.dimension = dimension;
@@ -59,6 +61,7 @@ public final class HeightOracle {
 
         this.pooledBiomeContrib = new double[wcm.getBiomeCount()][CHUNK_AREA];
         this.terrainNoise = new NoiseGeneratorOctaves(new StdLCG(world.getSeed()), 4);
+        this.modifierHandler = modifierHandler;
     }
 
     public static final class ChunkData {
@@ -240,7 +243,8 @@ public final class HeightOracle {
                     withSeed(cx, cz, i++, 5),
                     terrainRelevance,
                     dimension,
-                    terrainNoise);
+                    terrainNoise,
+                    modifierHandler);
             }
 
             i = 0;
@@ -255,7 +259,8 @@ public final class HeightOracle {
                     withSeed(cx, cz, i++, 10),
                     terrainRelevance,
                     dimension,
-                    terrainNoise);
+                    terrainNoise,
+                    modifierHandler);
             }
         }
 

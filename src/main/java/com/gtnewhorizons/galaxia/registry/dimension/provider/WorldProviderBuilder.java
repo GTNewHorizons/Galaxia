@@ -8,6 +8,7 @@ import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraftforge.client.IRenderHandler;
 
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.BiomeMatrixGenerator;
 
 /**
  * A builder class to generate a world provider with configuration
@@ -101,6 +102,11 @@ public class WorldProviderBuilder {
      */
     public WorldProviderBuilder biome(BiomeGenBase biome, int x, int z) {
         provider.addBiome(biome, x, z);
+        return this;
+    }
+
+    public WorldProviderBuilder biomeMatrix(BiomeMatrixGenerator biomeMatrixGenerator) {
+        provider.addBiomeMatrix(biomeMatrixGenerator);
         return this;
     }
 
