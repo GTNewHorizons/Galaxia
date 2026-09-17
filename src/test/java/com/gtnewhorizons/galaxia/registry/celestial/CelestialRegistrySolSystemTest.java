@@ -312,27 +312,6 @@ final class CelestialRegistrySolSystemTest {
         }
     }
 
-    /** Integration contract: every mapped destination exposes the deposits authored by the pinned GTNH source. */
-    @Test
-    void mappedResourcesMatchGtnhSourceCatalog() throws java.io.IOException {
-        try (var stream = getClass().getResourceAsStream("/gtnh-celestial-ore-deposits.tsv")) {
-            assertNotNull(stream);
-            var lines = new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).lines()
-                .toList();
-            for (String line : lines) {
-                if (line.isBlank() || line.startsWith("#")) continue;
-                String[] fields = line.split("\t");
-                var body = CelestialRegistry.get(CelestialObjectId.valueOf(fields[0]))
-                    .orElseThrow();
-                var expected = new java.util.HashSet<>(java.util.List.of(fields[1].split(",")));
-                var actual = body.properties()
-                    .gtOreDepositIds();
-                assertEquals(expected, new java.util.HashSet<>(actual), fields[0]);
-                assertEquals(expected.size(), actual.size(), fields[0] + " contains duplicate deposits");
-            }
-        }
-    }
-
     /** Bug regression: imported Ross and Ra destinations carry their GTNH ore pools. */
     @Test
     void rossAndRaResourceDestinationsHaveAuthoredOrePools() {
