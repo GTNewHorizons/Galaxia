@@ -221,7 +221,7 @@ final class StationInventoryPanelModelTest {
     private static AutomatedFacility facility() {
         return new AutomatedFacility(
             CelestialAsset.ID.create(),
-            com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId.PROXIMA_CENTAURI,
+            com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId.ROSS_128_B,
             CelestialAsset.Kind.AUTOMATED_OUTPOST,
             com.gtnewhorizons.galaxia.registry.interfaces.Buildable.Status.OPERATIONAL);
     }

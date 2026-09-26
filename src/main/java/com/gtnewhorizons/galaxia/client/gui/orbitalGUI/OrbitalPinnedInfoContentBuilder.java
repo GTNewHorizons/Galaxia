@@ -86,11 +86,11 @@ public final class OrbitalPinnedInfoContentBuilder {
             signature.append("|asteroidOre:")
                 .append(asteroidOreKnowledge(body));
         } else {
-            List<String> gtOreVeinIds = body.properties()
-                .gtOreVeinIds();
+            List<String> gtOreDepositIds = body.properties()
+                .gtOreDepositIds();
             signature.append('|')
-                .append(gtOreVeinIds.size());
-            for (String veinId : gtOreVeinIds) {
+                .append(gtOreDepositIds.size());
+            for (String veinId : gtOreDepositIds) {
                 signature.append('|')
                     .append(veinId)
                     .append(',');
@@ -129,7 +129,7 @@ public final class OrbitalPinnedInfoContentBuilder {
         if (!canShowOreDetails(body)) return row("ores", tr("ore.unknown"));
 
         List<ItemStack> gtOres = body.properties()
-            .getResolvedGtVeinOreStacks();
+            .getResolvedGtOreStacks();
         if (gtOres.isEmpty()) return row("ores", tr("ore.undefined"));
         return new PinnedInfoRow(label("ores"), "", gtOres);
     }

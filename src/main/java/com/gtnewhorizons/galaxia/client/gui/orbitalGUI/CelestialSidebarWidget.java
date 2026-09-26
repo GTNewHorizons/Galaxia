@@ -188,7 +188,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             return true;
         }
         map.focusOn(entry.body());
-        handleMapSelection(entry.body());
+        handleMapSelection(entry.body(), map.getClickMode() == OrbitalMapClickMode.HIERARCHY);
         return true;
     }
 
@@ -405,10 +405,11 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         map.showLayer(activeLayer);
     }
 
-    private void handleMapSelection(CelestialObject body) {
-        if (body.objectClass() == CelestialObject.Class.STAR) {
+    private void handleMapSelection(CelestialObject body, boolean enterSystem) {
+        if (body.objectClass() == CelestialObject.Class.STAR && root.key()
+            .equals(body.parentKey())) {
             currentSystem = body;
-            if (activeLayer == root) {
+            if (activeLayer == root && enterSystem) {
                 activeLayer = body;
                 scrollOffset = 0;
                 expanded.add(body);

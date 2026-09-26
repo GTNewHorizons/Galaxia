@@ -110,7 +110,7 @@ public final class AsteroidCelestialMaterializer {
                     .oreProfile(
                         node.oreProfile()
                             .id())
-                    .gtOreVeinIds(
+                    .gtOreDepositIds(
                         node.oreProfile()
                             .gtOreVeinIds()
                             .toArray(new String[0]))

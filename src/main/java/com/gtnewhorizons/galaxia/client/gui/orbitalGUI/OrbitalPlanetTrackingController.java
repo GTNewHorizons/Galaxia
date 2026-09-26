@@ -33,6 +33,10 @@ final class OrbitalPlanetTrackingController {
     ClickAction clickBody(CelestialObject body, boolean canOpenHierarchy) {
         if (body == null) return ClickAction.SELECT_ONLY;
         if (clickMode == OrbitalMapClickMode.FOLLOW) {
+            if (canOpenHierarchy && focusedBody != null
+                && focusedBody.key()
+                    .equals(body.key()))
+                return ClickAction.SELECT_ONLY;
             track(body);
             return ClickAction.TRACK_ONLY;
         }

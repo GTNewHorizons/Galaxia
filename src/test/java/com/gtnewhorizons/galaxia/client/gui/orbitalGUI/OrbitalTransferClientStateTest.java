@@ -136,7 +136,7 @@ final class OrbitalTransferClientStateTest {
     void lambertStressReportAcceptsFirstValidTransferCandidate() {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
         CelestialObject root = GalaxiaCelestialAPI.getPrimaryRoot();
-        CelestialObject star = GalaxiaCelestialAPI.get(CelestialObjectId.VAEL)
+        CelestialObject star = GalaxiaCelestialAPI.get(CelestialObjectId.SOL)
             .orElseThrow();
 
         InterplanetaryTransferSystem.LambertStressReport report = InterplanetaryTransferSystem

@@ -22,7 +22,7 @@ final class MinerBlacklistOptions {
                 addOptions(
                     options,
                     body.properties()
-                        .getResolvedGtVeinOreStacks());
+                        .getResolvedGtOreStacks());
                 return new ArrayList<>(options.values());
             })
             .orElse(List.of());

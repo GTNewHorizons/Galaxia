@@ -156,6 +156,34 @@ final class OrbitalSceneBodyPresentationTest {
         assertEquals(overviewRadius * 2.0f, closerZoomRadius, 0.001f);
     }
 
+    /** Bug regression: dense belts must stay smaller than readable planet markers even at close zoom. */
+    @Test
+    void zoomedAsteroidsDoNotDwarfPlanetMarkers() {
+        CelestialObject asteroid = asteroid(AsteroidNodeKind.GENERATED, AsteroidSizeClass.LARGE, 0.12);
+        CelestialObject mercury = CelestialRegistry.get(CelestialObjectId.MERCURY)
+            .orElseThrow();
+        float asteroidRadius = OrbitalView.OrbitalMapWidget.mapAsteroidSpriteRadiusForRelativeZoom(asteroid, 1000.0);
+        float planetRadius = OrbitalView.OrbitalMapWidget.mapSpriteRadiusForScale(mercury, 0.001);
+        assertTrue(asteroidRadius < planetRadius);
+    }
+
+    /** Product contract: zoom preserves the relative sizes for major celestial markers. */
+    @Test
+    void majorBodyMarkersKeepTheirSizeOrderAcrossZoom() {
+        for (double scale : List.of(0.000001, 1.0, 1000000.0)) {
+            float planet = OrbitalView.OrbitalMapWidget.mapSpriteRadiusForScale(
+                CelestialRegistry.get(CelestialObjectId.MERCURY)
+                    .orElseThrow(),
+                scale);
+            float star = OrbitalView.OrbitalMapWidget.mapSpriteRadiusForScale(
+                CelestialRegistry.get(CelestialObjectId.SOL)
+                    .orElseThrow(),
+                scale);
+            assertTrue(planet > 0f);
+            assertTrue(star >= planet);
+        }
+    }
+
     @Test
     void lowerPriorityAsteroidsAreDeclutteredNearAcceptedScreenBodies() {
         CelestialObject accepted = asteroid(AsteroidSizeClass.LARGE);

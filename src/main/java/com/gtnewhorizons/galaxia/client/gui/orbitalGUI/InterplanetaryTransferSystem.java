@@ -442,6 +442,16 @@ public final class InterplanetaryTransferSystem {
             return;
         }
 
+        if (state.automaticBudgetPending) {
+            var route = OrbitalTransferPlanner
+                .computeRoute(root, star, origin, dest, globalTime, OrbitalTransferPlanner.RoutePriority.PRIORITIZE_DV);
+            if (route == null) {
+                state.clearPreview();
+                return;
+            }
+            state.setMaxDv(Math.ceil(route.totalDv()));
+            state.setSliderDv(state.maxDv());
+        }
         double sliderDv = state.sliderDv();
         if (sliderDv <= 0.0) {
             state.clearPreview();
@@ -886,6 +896,7 @@ public final class InterplanetaryTransferSystem {
         // New dV fields
         private double maxDv = 5.0;
         private double sliderDv = 0.0;
+        private boolean automaticBudgetPending = false;
 
         // Preview data
         private double[] previewXs = new double[0];
@@ -970,6 +981,7 @@ public final class InterplanetaryTransferSystem {
             if (!open || pickMode == TransferPickMode.NONE || body == null) return;
             if (pickMode == TransferPickMode.ORIGIN) originBody = body;
             else if (pickMode == TransferPickMode.DESTINATION) destinationBody = body;
+            automaticBudgetPending = true;
             pickMode = TransferPickMode.NONE;
             clearPreview();
             version++;
@@ -980,6 +992,7 @@ public final class InterplanetaryTransferSystem {
         }
 
         void setMaxDv(double value) {
+            automaticBudgetPending = false;
             this.maxDv = Math.max(0.001, value);
             if (sliderDv > this.maxDv) sliderDv = this.maxDv;
             version++;
@@ -1112,6 +1125,7 @@ public final class InterplanetaryTransferSystem {
         private double lastPreviewDvCap = -1;
         private double lastPreviewTotalDv = -1;
         private boolean lastHasPreview = false;
+        private double shownMaxDv = Double.NaN;
         private double lastTimeScale = -1;
 
         OrbitalTransferSimulatorWidget(OrbitalTransferSimulatorState state, Callbacks callbacks,
@@ -1222,6 +1236,13 @@ public final class InterplanetaryTransferSystem {
         }
 
         private void rebuildChildren() {
+            if (state.originBody() != null && state.destinationBody() != null) {
+                callbacks.onPreviewNeeded();
+            }
+            if (shownMaxDv != state.maxDv()) {
+                maxDvField.setText(String.valueOf(state.maxDv()));
+                shownMaxDv = state.maxDv();
+            }
             String dvText = maxDvField.getText();
             removeAll();
 
@@ -1388,10 +1409,6 @@ public final class InterplanetaryTransferSystem {
             child(maxDvField);
             scheduleResize();
 
-            // Trigger preview if both bodies are selected and dV is set
-            if (state.originBody() != null && state.destinationBody() != null && state.sliderDv() > 0.0) {
-                callbacks.onPreviewNeeded();
-            }
         }
 
         private void applyMaxDv() {

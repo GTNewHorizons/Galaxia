@@ -15,7 +15,7 @@ import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
 
 final class OrbitalBodyZoomTest {
 
-    private static final CelestialObject GALAXY = body(CelestialObjectId.NOVA_CAELUM, CelestialObject.Class.GALAXY, 0);
+    private static final CelestialObject GALAXY = body(CelestialObjectId.NOVUM_CAELUM, CelestialObject.Class.GALAXY, 0);
     private static final CelestialObject ANCHOR_STAR = body(CelestialObjectId.ILIA, CelestialObject.Class.STAR, 0);
     private static final CelestialObject OTHER_STAR = body(CelestialObjectId.VAEL, CelestialObject.Class.STAR, 0);
     private static final CelestialObject INNER_PLANET = body(

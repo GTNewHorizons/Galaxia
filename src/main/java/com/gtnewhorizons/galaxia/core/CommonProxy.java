@@ -21,6 +21,7 @@ import com.gtnewhorizons.galaxia.client.gui.TeamPermissionScreen;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.ModulePickerScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
+import com.gtnewhorizons.galaxia.compat.GTCompat;
 import com.gtnewhorizons.galaxia.compat.gt.GalaxiaGTAttachmentRegistration;
 import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData;
 import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
@@ -144,17 +145,32 @@ public class CommonProxy {
 
         int bodyCount = 0;
         int stackCount = 0;
+        int incompleteDeposits = 0;
         for (CelestialObject body : GalaxiaCelestialAPI.getAll()) {
             var properties = body.properties();
-            if (!properties.hasGtOreVeinIds()) continue;
+            if (!properties.hasGtOreDepositIds()) continue;
 
             bodyCount++;
-            List<ItemStack> gtOres = properties.getResolvedGtVeinOreStacks();
+            for (String depositId : properties.gtOreDepositIds()) {
+                int expected = depositId.startsWith("ore.small.") ? 1 : 4;
+                int resolved = GTCompat.getGtOreDepositStacks(depositId)
+                    .size();
+                if (resolved != expected) {
+                    incompleteDeposits++;
+                    Galaxia.LOG.error(
+                        "[GT_ORE_AUDIT] {} deposit {} resolved {} of {} ore stacks",
+                        body.key(),
+                        depositId,
+                        resolved,
+                        expected);
+                }
+            }
+            List<ItemStack> gtOres = properties.getResolvedGtOreStacks();
             if (gtOres.isEmpty()) {
                 Galaxia.LOG.error(
-                    "[GT_ORE_AUDIT] {} declares GT ore veins {} but resolved no GT ore stacks",
+                    "[GT_ORE_AUDIT] {} declares GT ore deposits {} but resolved no GT ore stacks",
                     body.key(),
-                    properties.gtOreVeinIds());
+                    properties.gtOreDepositIds());
                 continue;
             }
 
@@ -163,12 +179,13 @@ public class CommonProxy {
                 "[GT_ORE_AUDIT] {} resolved {} GT ore stacks from {}",
                 body.key(),
                 gtOres.size(),
-                properties.gtOreVeinIds());
+                properties.gtOreDepositIds());
         }
         Galaxia.LOG.info(
-            "[GT_ORE_AUDIT] verified {} celestial bodies with GT ore vein IDs, {} resolved stacks",
+            "[GT_ORE_AUDIT] checked {} celestial bodies, {} resolved stacks, {} incomplete deposits",
             bodyCount,
-            stackCount);
+            stackCount,
+            incompleteDeposits);
     }
 
     private void registerBaublesSlots() {

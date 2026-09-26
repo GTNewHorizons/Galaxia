@@ -22,6 +22,7 @@ import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.OrbitalView.OrbitalMapWid
 import com.gtnewhorizons.galaxia.client.gui.station.StationMapWidget;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -51,7 +52,7 @@ final class GuiTestSupport {
     }
 
     static ClientScenario openMap(ClientScenario scenario, GameTestHelper helper, int guiScale) {
-        return scenario.server("equip the galactic map", () -> {
+        scenario = scenario.server("equip the galactic map", () -> {
             EntityPlayerMP owner = null;
             for (Object candidate : helper.getWorld().playerEntities) {
                 if (candidate instanceof EntityPlayerMP player) {
@@ -93,6 +94,13 @@ final class GuiTestSupport {
             })
             .useHeldItem()
             .awaitClient("galactic map opened after item use", c -> requireScreen("galactic_orbital_map"));
+        for (int step = 0; step < 20; step++) {
+            scenario.step("frame the inner Solar System")
+                .scroll(
+                    ClientTarget.of("Sol", c -> bodyTarget(CelestialObjectKey.registered(CelestialObjectId.SOL))),
+                    120);
+        }
+        return scenario;
     }
 
     public static final class PauseTrace {

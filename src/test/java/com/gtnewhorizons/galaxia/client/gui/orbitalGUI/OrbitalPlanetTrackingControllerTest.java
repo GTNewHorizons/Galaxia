@@ -12,6 +12,29 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 
 final class OrbitalPlanetTrackingControllerTest {
 
+    /** Product contract: changing the followed body during centering starts from the current camera position. */
+    @Test
+    void followCameraCanRetargetWithoutJumping() {
+        var view = new OrbitalView.OrbitalViewState(0);
+        view.beginFollowing(100, 0, 0);
+        view.follow(100, 0, 250_000_000L);
+        double before = view.cameraX;
+        view.beginFollowing(-100, 0, 250_000_000L);
+        view.follow(-100, 0, 250_000_000L);
+        assertEquals(before, view.cameraX, 1e-9);
+    }
+
+    @Test
+    void clickingSelectedStarEntersItsSystem() {
+        var star = body(CelestialObjectId.VEGA, "Vega", CelestialObject.Class.STAR);
+        var other = body(CelestialObjectId.SOL, "Sol", CelestialObject.Class.STAR);
+        var controller = new OrbitalPlanetTrackingController();
+        assertEquals(OrbitalPlanetTrackingController.ClickAction.TRACK_ONLY, controller.clickBody(star, true));
+        assertEquals(OrbitalPlanetTrackingController.ClickAction.SELECT_ONLY, controller.clickBody(star, true));
+        assertEquals(OrbitalPlanetTrackingController.ClickAction.TRACK_ONLY, controller.clickBody(other, true));
+        assertEquals(OrbitalPlanetTrackingController.ClickAction.TRACK_ONLY, controller.clickBody(other, false));
+    }
+
     @Test
     void defaultClickTracksPlanetWithoutOpeningHierarchy() {
         CelestialObject planet = body(CelestialObjectId.OVERWORLD, "Overworld", CelestialObject.Class.PLANET);

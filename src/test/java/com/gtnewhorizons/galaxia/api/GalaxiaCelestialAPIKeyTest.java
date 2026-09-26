@@ -32,7 +32,7 @@ final class GalaxiaCelestialAPIKeyTest {
 
         assertEquals(asteroid, GalaxiaCelestialAPI.findBodyByKey(root, key));
         assertEquals(
-            CelestialObjectId.VAEL,
+            CelestialObjectId.SOL,
             GalaxiaCelestialAPI.findStar(key)
                 .requireRegisteredId());
         assertEquals(asteroid, GalaxiaCelestialAPI.findPlanetaryAnchor(key));
@@ -44,7 +44,7 @@ final class GalaxiaCelestialAPIKeyTest {
             .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 0));
 
         assertEquals(
-            CelestialObjectId.VAEL,
+            CelestialObjectId.SOL,
             GalaxiaCelestialAPI.findStar(key)
                 .requireRegisteredId());
         assertEquals(

@@ -40,7 +40,7 @@ import com.gtnewhorizons.horizonqa.api.client.ClientTest;
 public final class SatelliteNetworkGuiGameTests {
 
     private static final List<CelestialObjectId> PLANETS = List
-        .of(CelestialObjectId.OVERWORLD, CelestialObjectId.MARS, CelestialObjectId.EGORA);
+        .of(CelestialObjectId.OVERWORLD, CelestialObjectId.MARS, CelestialObjectId.VENUS);
     private static final int ASTEROID_COUNT = 30;
     private static final int ASTEROID_CANDIDATES = 200;
 
