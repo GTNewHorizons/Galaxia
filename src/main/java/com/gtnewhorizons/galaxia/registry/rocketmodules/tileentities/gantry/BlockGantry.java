@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.block.Block;
@@ -76,8 +77,15 @@ public class BlockGantry extends BlockUpdatable implements ITileEntityProvider {
     /**
      * Sides the drawn rail reaches. A rail with a single connection is drawn as a full beam through the block, a rail
      * without any as a beam along X
+     *
+     * @param world The world to look in
+     * @param x     X position of the block
+     * @param y     Y position of the block
+     * @param z     Z position of the block
+     *
+     * @return Reached sides, bit per {@link ForgeDirection} ordinal
      */
-    private static int shapeMask(IBlockAccess world, int x, int y, int z) {
+    public static int shapeMask(IBlockAccess world, int x, int y, int z) {
         int mask = TileEntityGantry.connectionMask(world, x, y, z);
         if (mask == 0) return (1 << ForgeDirection.EAST.ordinal()) | (1 << ForgeDirection.WEST.ordinal());
         if (Integer.bitCount(mask) == 1) {
@@ -86,6 +94,31 @@ public class BlockGantry extends BlockUpdatable implements ITileEntityProvider {
                 .ordinal();
         }
         return mask;
+    }
+
+    /**
+     * Boxes making up a rail inside its block: the beam in the centre and one arm towards every reached side
+     *
+     * @param shape Reached sides, see {@link #shapeMask}
+     *
+     * @return Boxes relative to the block corner
+     */
+    public static List<AxisAlignedBB> partBoxes(int shape) {
+        double min = 0.5 - BEAM, max = 0.5 + BEAM;
+        List<AxisAlignedBB> boxes = new ArrayList<>(7);
+        boxes.add(AxisAlignedBB.getBoundingBox(min, min, min, max, max, max));
+        for (ForgeDirection side : ForgeDirection.VALID_DIRECTIONS) {
+            if (!has(shape, side)) continue;
+            boxes.add(
+                AxisAlignedBB.getBoundingBox(
+                    side.offsetX < 0 ? 0 : side.offsetX > 0 ? max : min,
+                    side.offsetY < 0 ? 0 : side.offsetY > 0 ? max : min,
+                    side.offsetZ < 0 ? 0 : side.offsetZ > 0 ? max : min,
+                    side.offsetX < 0 ? min : side.offsetX > 0 ? 1 : max,
+                    side.offsetY < 0 ? min : side.offsetY > 0 ? 1 : max,
+                    side.offsetZ < 0 ? min : side.offsetZ > 0 ? 1 : max));
+        }
+        return boxes;
     }
 
     @Override
@@ -107,22 +140,10 @@ public class BlockGantry extends BlockUpdatable implements ITileEntityProvider {
     @Override
     public void addCollisionBoxesToList(World world, int x, int y, int z, AxisAlignedBB mask, List<AxisAlignedBB> list,
         Entity entity) {
-        int connections = shapeMask(world, x, y, z);
-        float min = 0.5f - BEAM, max = 0.5f + BEAM;
-        setBlockBounds(min, min, min, max, max, max);
-        super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
-        for (ForgeDirection side : ForgeDirection.VALID_DIRECTIONS) {
-            if (!has(connections, side)) continue;
-            setBlockBounds(
-                side.offsetX < 0 ? 0 : side.offsetX > 0 ? max : min,
-                side.offsetY < 0 ? 0 : side.offsetY > 0 ? max : min,
-                side.offsetZ < 0 ? 0 : side.offsetZ > 0 ? max : min,
-                side.offsetX < 0 ? min : side.offsetX > 0 ? 1 : max,
-                side.offsetY < 0 ? min : side.offsetY > 0 ? 1 : max,
-                side.offsetZ < 0 ? min : side.offsetZ > 0 ? 1 : max);
-            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
+        for (AxisAlignedBB box : partBoxes(shapeMask(world, x, y, z))) {
+            AxisAlignedBB placed = box.getOffsetBoundingBox(x, y, z);
+            if (mask.intersectsWith(placed)) list.add(placed);
         }
-        setBlockBoundsBasedOnState(world, x, y, z);
     }
 
     private static boolean has(int mask, ForgeDirection side) {

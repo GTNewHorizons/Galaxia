@@ -27,8 +27,8 @@ import cpw.mods.fml.relauncher.SideOnly;
  * <li>one or two opposite connections: a straight beam</li>
  * <li>two flat connections at a right angle: a rounded corner</li>
  * <li>a flat and a vertical connection: a rounded bend</li>
- * <li>three or more: a straight beam through the block with arms welded on, or a hub when no two connections line
- * up</li>
+ * <li>three or more: a straight beam through the block with branches welded on, their webs reaching into it, or a
+ * hub with arms when no two connections line up</li>
  * </ul>
  * A vertical shaft faces the bend at its bottom. When the bend at its top turns the other way, that bend twists the
  * beam a quarter round while it bends, so the flanges never jump between two blocks
@@ -39,6 +39,7 @@ public final class GantryRailModels {
     public static final ResourceLocation TEXTURE = LocationGalaxia("textures/model/gantry/rail.png");
     public static final ResourceLocation STRAIGHT = LocationGalaxia("textures/model/gantry/rail_straight.obj");
     private static final ResourceLocation ARM = LocationGalaxia("textures/model/gantry/rail_arm.obj");
+    private static final ResourceLocation BRANCH = LocationGalaxia("textures/model/gantry/rail_branch.obj");
     private static final ResourceLocation CORNER = LocationGalaxia("textures/model/gantry/rail_corner.obj");
     private static final ResourceLocation BEND = LocationGalaxia("textures/model/gantry/rail_bend.obj");
     private static final ResourceLocation BEND_TWIST = LocationGalaxia("textures/model/gantry/rail_bend_twist.obj");
@@ -110,7 +111,7 @@ public final class GantryRailModels {
         }
         for (ForgeDirection arm : arms) {
             if (through != null && (arm == through || arm == through.getOpposite())) continue;
-            draw(ARM, arm, up(world, x, y, z, arm));
+            draw(through != null ? BRANCH : ARM, arm, up(world, x, y, z, arm));
         }
     }
 

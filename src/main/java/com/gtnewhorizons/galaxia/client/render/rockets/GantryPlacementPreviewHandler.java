@@ -1,8 +1,10 @@
 package com.gtnewhorizons.galaxia.client.render.rockets;
 
 import net.minecraft.block.Block;
+import net.minecraft.client.renderer.RenderGlobal;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.Facing;
 import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.world.World;
@@ -11,19 +13,21 @@ import net.minecraftforge.client.event.DrawBlockHighlightEvent;
 import org.lwjgl.opengl.GL11;
 
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantry;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.BlockGantry;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
 /**
- * Shows a wireframe of the rail piece a held Gantry Shaft would become, connections included
+ * Outlines the rail a held Gantry Shaft would become, connections included
  */
 @SideOnly(Side.CLIENT)
 public class GantryPlacementPreviewHandler {
 
     private static final float GHOST_ALPHA = 0.65f;
+    /** Keeps the outline off the faces of blocks the rail touches */
+    private static final double OUTLINE_GROW = 0.002;
 
     @SubscribeEvent
     public void onDrawBlockHighlight(DrawBlockHighlightEvent event) {
@@ -52,10 +56,12 @@ public class GantryPlacementPreviewHandler {
         double pz = player.lastTickPosZ + (player.posZ - player.lastTickPosZ) * event.partialTicks;
 
         setGhostGLState();
-        GL11.glPushMatrix();
-        GL11.glTranslated(x - px + 0.5, y - py + 0.5, z - pz + 0.5);
-        GantryRailModels.render(world, x, y, z, TileEntityGantry.connectionMask(world, x, y, z));
-        GL11.glPopMatrix();
+        for (AxisAlignedBB box : BlockGantry.partBoxes(BlockGantry.shapeMask(world, x, y, z))) {
+            RenderGlobal.drawOutlinedBoundingBox(
+                box.getOffsetBoundingBox(x - px, y - py, z - pz)
+                    .expand(OUTLINE_GROW, OUTLINE_GROW, OUTLINE_GROW),
+                -1);
+        }
         restoreGLState();
     }
 
@@ -67,13 +73,11 @@ public class GantryPlacementPreviewHandler {
 
         GL11.glDisable(GL11.GL_TEXTURE_2D);
         GL11.glLineWidth(2.0F);
-        GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_LINE);
 
         GL11.glColor4f(1.0f, 1.0f, 1.0f, GHOST_ALPHA);
     }
 
     private static void restoreGLState() {
-        GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_FILL);
         GL11.glEnable(GL11.GL_TEXTURE_2D);
         GL11.glLineWidth(1.0F);
 
