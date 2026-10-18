@@ -53,7 +53,9 @@ import com.gtnewhorizons.horizonqa.api.annotation.GameTestHolder;
 import com.gtnewhorizons.horizonqa.api.client.ClientTarget;
 import com.gtnewhorizons.horizonqa.api.client.ClientTest;
 
+import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
+import cpw.mods.fml.common.gameevent.TickEvent;
 
 @GameTestHolder(value = "galaxia", clientOnly = true, requiredMods = { "gregtech", "NotEnoughItems" })
 public final class RocketMissionGameTests {
@@ -218,7 +220,7 @@ public final class RocketMissionGameTests {
         EntityPlayerMP[] crew = new EntityPlayerMP[1];
         var reservedFuel = new AtomicReference<Map<FluidKey, Long>>();
         var acceptedSite = new AtomicReference<VehicleSchedule.Place>();
-        var descent = new LandingProjectionTrace();
+        var descent = new FlightProjectionTrace();
         var scenario = ClientTest.scenario(helper)
             .server("prepare a boarded basic lunar vehicle", () -> {
                 for (Object candidate : helper.getWorld().playerEntities)
@@ -284,10 +286,17 @@ public final class RocketMissionGameTests {
                 registry.register(rocket);
                 descent.vehicleId = rocket.id();
                 MinecraftForge.EVENT_BUS.register(descent);
-                helper.afterTest(() -> MinecraftForge.EVENT_BUS.unregister(descent));
+                FMLCommonHandler.instance()
+                    .bus()
+                    .register(descent);
+                helper.afterTest(() -> {
+                    MinecraftForge.EVENT_BUS.unregister(descent);
+                    FMLCommonHandler.instance()
+                        .bus()
+                        .unregister(descent);
+                });
                 var entity = new EntityRocket(helper.getWorld());
                 entity.setPositionAndRotation(source.x(), source.y(), source.z(), source.yaw(), 0);
-                entity.setProjectionVisible(true);
                 if (!entity.bind(rocket) || !helper.getWorld()
                     .spawnEntityInWorld(entity) || !entity.interactFirst(player))
                     throw new AssertionError("Native capsule could not board its crew");
@@ -483,10 +492,17 @@ public final class RocketMissionGameTests {
             .succeed();
     }
 
-    /** Integration contract: observe the native projection before spawn and during the real accepted landing. */
-    public static final class LandingProjectionTrace {
+    /** Integration contract: native ascent and landing remain visible while the owner advances their positions. */
+    public static final class FlightProjectionTrace {
 
         private UUID vehicleId;
+        private int ascentSamples;
+        private int risingSamples;
+        private double firstAscentHeight = Double.NaN;
+        private double lastAscentHeight = Double.NaN;
+        private volatile int clientVisibleAscentSamples;
+        private volatile int clientRisingSamples;
+        private double lastClientAscentHeight = Double.NaN;
         private boolean airborneSpawn;
         private int matchingJoins;
         private int landingJoins;
@@ -522,6 +538,12 @@ public final class RocketMissionGameTests {
 
         private void observe(Rocket rocket) {
             if (failure != null) throw new AssertionError(failure);
+            if (rocket != null && rocket.physicalManeuver() != null
+                && rocket.physicalManeuver()
+                    .kind() == OrbitalMechanics.ManeuverKind.ASCENT) {
+                observeAscent(rocket);
+                return;
+            }
             if (!landing(rocket)) return;
             landingTicks++;
             if (!Double.isFinite(firstProgress)) firstProgress = rocket.physicalManeuverProgress();
@@ -531,6 +553,8 @@ public final class RocketMissionGameTests {
             if (world == null) return;
             for (Object candidate : world.loadedEntityList) {
                 if (!(candidate instanceof EntityRocket entity) || !entity.isCurrentProjection(rocket)) continue;
+                if (!entity.shouldRender() || entity.getBlueprint()
+                    .isEmpty()) throw new AssertionError("LANDING projection has no visible model");
                 projectionSamples++;
                 if (firstEntityTick < 0) firstEntityTick = entity.ticksExisted;
                 lastEntityTick = entity.ticksExisted;
@@ -545,6 +569,55 @@ public final class RocketMissionGameTests {
             }
         }
 
+        private void observeAscent(Rocket rocket) {
+            var world = DimensionManager.getWorld(
+                rocket.physicalPosition()
+                    .dimension());
+            if (world == null) return;
+            for (Object candidate : world.loadedEntityList) {
+                if (!(candidate instanceof EntityRocket entity) || !entity.isCurrentProjection(rocket)) continue;
+                ascentSamples++;
+                if (!entity.shouldRender() || entity.getBlueprint()
+                    .isEmpty()) {
+                    failure = "ASCENT projection has no visible model at progress " + rocket.physicalManeuverProgress();
+                    throw new AssertionError(failure);
+                }
+                if (!Double.isFinite(firstAscentHeight)) firstAscentHeight = entity.posY;
+                if (Double.isFinite(lastAscentHeight)) {
+                    if (entity.posY < lastAscentHeight - 1e-6)
+                        throw new AssertionError("The ascending projection moved down");
+                    if (entity.posY > lastAscentHeight + 1e-6) risingSamples++;
+                }
+                lastAscentHeight = entity.posY;
+            }
+        }
+
+        @SubscribeEvent
+        public void clientTick(TickEvent.ClientTickEvent event) {
+            if (event.phase != TickEvent.Phase.END) return;
+            var view = RocketTransitPacket.Handler.current();
+            var world = Minecraft.getMinecraft().theWorld;
+            if (world == null || view == null
+                || !view.vehicleId()
+                    .equals(vehicleId)
+                || view.currentPhase() == null
+                || view.currentPhase()
+                    .kind() != OrbitalMechanics.ManeuverKind.ASCENT)
+                return;
+            for (Object candidate : world.loadedEntityList) {
+                if (!(candidate instanceof EntityRocket entity)
+                    || !java.util.Objects.equals(vehicleId, entity.vehicleId())
+                    || !entity.shouldRender()
+                    || entity.getBlueprint()
+                        .isEmpty())
+                    continue;
+                clientVisibleAscentSamples++;
+                if (Double.isFinite(lastClientAscentHeight) && entity.posY > lastClientAscentHeight + 1e-6)
+                    clientRisingSamples++;
+                lastClientAscentHeight = entity.posY;
+            }
+        }
+
         private static boolean landing(Rocket rocket) {
             return rocket != null && rocket.physicalManeuver() != null
                 && rocket.physicalManeuver()
@@ -553,13 +626,27 @@ public final class RocketMissionGameTests {
 
         private void assertCompleted() {
             if (failure != null) throw new AssertionError(failure);
+            if (risingSamples < 2 || clientVisibleAscentSamples < 2 || clientRisingSamples < 2)
+                throw new AssertionError("The real ascent did not retain its visible rising model. " + diagnostic());
             if (!airborneSpawn || descendingSamples < 2) throw new AssertionError(
                 "The real landing did not expose an airborne spawn and gradual descent. " + diagnostic());
-            Galaxia.LOG.info("[Horizon QA] Landing: {}", diagnostic());
+            Galaxia.LOG.info("[Horizon QA] Flight projection: {}", diagnostic());
         }
 
         private String diagnostic() {
-            return "joins=" + matchingJoins
+            return "ascentSamples=" + ascentSamples
+                + ", risingSamples="
+                + risingSamples
+                + ", ascentHeight="
+                + firstAscentHeight
+                + "->"
+                + lastAscentHeight
+                + ", clientVisibleAscentSamples="
+                + clientVisibleAscentSamples
+                + ", clientRisingSamples="
+                + clientRisingSamples
+                + ", joins="
+                + matchingJoins
                 + ", landingJoins="
                 + landingJoins
                 + ", landingTicks="

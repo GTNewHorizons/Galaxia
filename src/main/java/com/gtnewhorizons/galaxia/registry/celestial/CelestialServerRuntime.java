@@ -111,6 +111,7 @@ public record CelestialServerRuntime(CelestialDiscoveryScanService scans,
             var position = rocket.projectionPosition();
             if (position != null && position.dimension() == current.worldObj.provider.dimensionId)
                 current.setPosition(position.x(), position.y(), position.z());
+            if (rocket.physicalManeuver() != null) current.setProjectionVisible(true);
             return;
         }
         var place = rocket.projectionPlace();
