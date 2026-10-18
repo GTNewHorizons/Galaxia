@@ -21,14 +21,21 @@ public class CommitBlueprintAndOrderPacket implements IMessage {
     private int z;
 
     private NBTTagCompound blueprint;
+    /** False only saves the design, true also orders the modules */
+    private boolean order;
 
     public CommitBlueprintAndOrderPacket() {}
 
     public CommitBlueprintAndOrderPacket(int x, int y, int z, NBTTagCompound blueprint) {
+        this(x, y, z, blueprint, true);
+    }
+
+    public CommitBlueprintAndOrderPacket(int x, int y, int z, NBTTagCompound blueprint, boolean order) {
         this.x = x;
         this.y = y;
         this.z = z;
         this.blueprint = blueprint;
+        this.order = order;
     }
 
     @Override
@@ -38,6 +45,7 @@ public class CommitBlueprintAndOrderPacket implements IMessage {
         buf.writeInt(z);
 
         ByteBufUtils.writeTag(buf, blueprint);
+        buf.writeBoolean(order);
     }
 
     @Override
@@ -47,6 +55,7 @@ public class CommitBlueprintAndOrderPacket implements IMessage {
         z = buf.readInt();
 
         blueprint = ByteBufUtils.readTag(buf);
+        order = buf.readBoolean();
     }
 
     public static class Handler implements IMessageHandler<CommitBlueprintAndOrderPacket, IMessage> {
@@ -65,13 +74,9 @@ public class CommitBlueprintAndOrderPacket implements IMessage {
             RocketBlueprint blueprint = RocketBlueprint
                 .deserializeNBT(message.blueprint, RocketPartRegistry.instance());
 
-            System.out.println(
-                "[PACKET] Received blueprint parts: " + blueprint.getParts()
-                    .size());
-
             silo.setDesignBlueprint(blueprint);
 
-            silo.orderModules();
+            if (message.order) silo.orderModules();
 
             silo.sync();
 

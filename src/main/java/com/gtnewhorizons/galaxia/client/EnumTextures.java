@@ -148,6 +148,21 @@ public enum EnumTextures {
     SILO_STAGE_PARACHUTE("textures/gui/silo/stages/stage_parachute.png"),
     SILO_STAGE_SINGLE("textures/gui/silo/stages/stage_single.png"),
     SILO_STAGE_SINGLE_HOVERED("textures/gui/silo/stages/stage_single_hovered.png"),
+    SILO_RETURN_ICON("textures/gui/silo/fields/return_icon.png"),
+    SILO_AUTOMATION_ICON("textures/gui/silo/fields/automation_icon.png"),
+    SILO_CARGO_ICON("textures/gui/silo/fields/cargo_icon.png"),
+    SILO_LAUNCH_ICON("textures/gui/silo/fields/launch_icon.png"),
+
+    // Rocket panels, stretchable so every popup shares the silo frame
+    ROCKET_PANEL("textures/gui/silo/panels/panel.png", 16, 2),
+    ROCKET_WELL("textures/gui/silo/panels/well.png", 16, 2),
+    ROCKET_BUTTON("textures/gui/silo/panels/button.png", 16, 2),
+    ROCKET_BUTTON_HOVERED("textures/gui/silo/panels/button_hovered.png", 16, 2),
+    ROCKET_BUTTON_SELECTED("textures/gui/silo/panels/button_selected.png", 16, 2),
+    ROCKET_SLOT("textures/gui/silo/panels/slot.png"),
+    ROCKET_LED_ON("textures/gui/silo/panels/led_on.png"),
+    ROCKET_LED_OFF("textures/gui/silo/panels/led_off.png"),
+    ROCKET_LED_WAIT("textures/gui/silo/panels/led_wait.png"),
 
     // Add more textures here
     ; // leave trailing semicolon
@@ -158,6 +173,22 @@ public enum EnumTextures {
     EnumTextures(String location) {
         this.texture = LocationGalaxia(location);
         this.uiTexture = UITexture.fullImage(Galaxia.MODID, location);
+    }
+
+    /**
+     * A square texture whose border stays fixed while the centre stretches
+     *
+     * @param location Path inside the mod's assets
+     * @param size     Width and height of the image in pixels
+     * @param border   Width of the fixed border in pixels
+     */
+    EnumTextures(String location, int size, int border) {
+        this.texture = LocationGalaxia(location);
+        this.uiTexture = UITexture.builder()
+            .location(Galaxia.MODID, location)
+            .imageSize(size, size)
+            .adaptable(border)
+            .build();
     }
 
     public ResourceLocation get() {

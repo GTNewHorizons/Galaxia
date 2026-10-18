@@ -9,6 +9,7 @@ import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.factory.GuiFactories;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
 
 /**
@@ -53,6 +54,7 @@ public class BlockModuleAssembler extends BlockRocketController implements ITile
     @Override
     public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer player, int side, float hitX,
         float hitY, float hitZ) {
+        if (GalaxiaMultiblockBase.handleWrench(world, x, y, z, player, side, hitX, hitY, hitZ)) return true;
         if (world.isRemote) return true;
 
         TileEntity te = world.getTileEntity(x, y, z);
@@ -65,8 +67,8 @@ public class BlockModuleAssembler extends BlockRocketController implements ITile
     public ForgeDirection getFacing(IBlockAccess world, int x, int y, int z) {
         TileEntity te = world.getTileEntity(x, y, z);
         if (te instanceof TileEntityModuleAssembler assembler) {
-            return assembler.isStructureValid() ? assembler.getCurrentFacing()
-                .getDirection() : assembler.getPlacedFacing();
+            return assembler.getCurrentFacing()
+                .getDirection();
         }
         return ForgeDirection.NORTH;
     }

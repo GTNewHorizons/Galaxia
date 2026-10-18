@@ -15,6 +15,7 @@ import net.minecraftforge.common.util.Constants;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.factory.PosGuiData;
+import com.gtnewhorizon.structurelib.alignment.IAlignmentLimits;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
@@ -31,6 +32,12 @@ import lombok.Getter;
 
 public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> extends GalaxiaBootableMultiblock<T>
     implements IGuiHolder<PosGuiData>, IGraphListener {
+
+    // The front only seeds the shell search, so rotating it changes nothing
+    @Override
+    public IAlignmentLimits getAlignmentLimits() {
+        return ANY_DIRECTION;
+    }
 
     protected @Nullable StationGraph graph;
     protected List<BlockPos> airlocks = new ArrayList<>();

@@ -2,15 +2,13 @@ package com.gtnewhorizons.galaxia.client.render.rockets;
 
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
 
-import java.util.List;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Vec3;
-import net.minecraftforge.client.model.AdvancedModelLoader;
-import net.minecraftforge.client.model.IModelCustom;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.World;
+import net.minecraftforge.common.util.ForgeDirection;
 
 import org.lwjgl.opengl.GL11;
 
@@ -19,290 +17,134 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPa
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-
 /**
- * Renderer to handle gantry blocks, modules, and carriage rendering
+ * Renderer to handle gantry rails and the modules travelling along them.
+ * <p>
+ * A module hangs from two hooks that run along the rail ahead of and behind its middle. The module simply spans the
+ * two hooks, so it tilts and turns through corners and shafts by itself instead of following a set angle
  */
-@SideOnly(Side.CLIENT)
 public class GantryRenderer extends TileEntitySpecialRenderer {
 
-    private static final float MODULE_SCALE = 1f;
-    private static final float GANTRY_SCALE = 1f;
-    private static final float CARRIAGE_SCALE = 1f;
-
-    private static final IModelCustom carriageModel = AdvancedModelLoader
-        .loadModel(LocationGalaxia("textures/model/gantry/carriage.obj"));
-
-    // spotless:off
-    private static final Vec3[] CARDINAL_DIRECTIONS = {
-            Vec3.createVectorHelper(1, 0, 0),
-            Vec3.createVectorHelper(-1, 0, 0),
-            Vec3.createVectorHelper(0, 0, 1),
-            Vec3.createVectorHelper(0, 0, -1)
-    };
-    // spotless:on
+    private static final ResourceLocation HOOK_MODEL = LocationGalaxia("textures/model/gantry/hook.obj");
+    private static final ResourceLocation HOOK_TEXTURE = LocationGalaxia("textures/model/gantry/hook.png");
 
     @Override
     public void renderTileEntityAt(TileEntity tileEntity, double x, double y, double z, float partialTicks) {
         if (!(tileEntity instanceof TileEntityGantry gantry)) return;
 
-        // Invalid gantry (stacked directly on another) renders error and doesnt affect
-        // anything else
-        if (gantry.isInvalid()) {
-            renderErrorBeam(gantry, x, y, z);
-            return;
+        // Terminals are full blocks with a recess for the rail, the block renderer draws them
+        if (!(gantry instanceof TileEntityGantryTerminal)) {
+            applyWorldLighting(gantry.getWorldObj(), gantry.xCoord, gantry.yCoord, gantry.zCoord);
+            GL11.glPushMatrix();
+            GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
+            GantryRailModels.render(
+                gantry.getWorldObj(),
+                gantry.xCoord,
+                gantry.yCoord,
+                gantry.zCoord,
+                TileEntityGantry.connectionMask(gantry.getWorldObj(), gantry.xCoord, gantry.yCoord, gantry.zCoord));
+            GL11.glPopMatrix();
         }
 
-        List<Vec3> dirs = gantry.neighbourDirs;
+        if (gantry.clientModuleId != -1) renderModule(gantry, x, y, z, partialTicks);
+    }
 
-        renderGantryPath(gantry, x, y, z, dirs);
-
-        Vec3 outDir = gantry.getDirection();
-        Vec3 inDir = gantry.clientIncomingDirection;
-        float progress = gantry.getInterpolatedProgress(partialTicks);
-
-        boolean isCorner = inDir != null && outDir != null
-            && (Math.abs(inDir.xCoord - outDir.xCoord) > 0.01 || Math.abs(inDir.yCoord - outDir.yCoord) > 0.01
-                || Math.abs(inDir.zCoord - outDir.zCoord) > 0.01);
-
-        float dx, dy, dz, yaw, pitch;
-
-        if (isCorner) {
-            float blend = smoothStep(progress);
-            dx = (float) (inDir.xCoord * progress * (1f - blend) + outDir.xCoord * progress * blend);
-            dy = (float) (inDir.yCoord * progress * (1f - blend) + outDir.yCoord * progress * blend);
-            dz = (float) (inDir.zCoord * progress * (1f - blend) + outDir.zCoord * progress * blend);
-
-            Vec3 inNorm = inDir.normalize();
-            Vec3 outNorm = outDir.normalize();
-
-            float inYaw = (float) Math.toDegrees(Math.atan2(inNorm.xCoord, inNorm.zCoord));
-            float outYaw = (float) Math.toDegrees(Math.atan2(outNorm.xCoord, outNorm.zCoord));
-            yaw = lerpAngle(inYaw, outYaw, blend);
-            float inPitch = (float) Math.toDegrees(Math.asin(-inNorm.yCoord));
-            float outPitch = (float) Math.toDegrees(Math.asin(-outNorm.yCoord));
-            pitch = lerpAngle(inPitch, outPitch, blend);
-
-        } else {
-            dx = outDir != null ? (float) outDir.xCoord * progress : 0f;
-            dy = outDir != null ? (float) outDir.yCoord * progress : 0f;
-            dz = outDir != null ? (float) outDir.zCoord * progress : 0f;
-            Vec3 norm = outDir != null ? outDir.normalize() : Vec3.createVectorHelper(0, 0, 1);
-
-            yaw = (float) Math.toDegrees(Math.atan2(norm.xCoord, norm.zCoord));
-            pitch = (float) Math.toDegrees(Math.asin(-norm.yCoord));
-        }
-
-        int moduleId = gantry.clientModuleId;
-        if (moduleId == -1) return;
-
+    private static void renderModule(TileEntityGantry gantry, double x, double y, double z, float partialTicks) {
         // TODO: clientModuleId -> clientPartInstance
         IRocketPartDef def = RocketPartRegistry.instance()
-            .get(moduleId);
-        if (def == null) return;
+            .get(gantry.clientModuleId);
+        GantryPath path = GantryPath.of(gantry.clientPath);
+        if (def == null || path == null) return;
 
-        applyWorldLighting(gantry);
+        // Hooks sit a block in from the ends of the module, closer together on short ones
+        double progress = gantry.getInterpolatedProgress(partialTicks);
+        double half = Math.min(path.reach(), Math.max(1, def.height() - 1) / 2.0);
+        GantryPath.Pose front = path.pose(progress + half);
+        GantryPath.Pose back = path.pose(progress - half);
+
+        GantryPath.Vec forward = front.position()
+            .sub(back.position());
+        if (forward.length() < 1e-3) forward = path.pose(progress)
+            .tangent();
+        forward = forward.normalize();
+        GantryPath.Vec hang = front.normal()
+            .add(back.normal());
+        hang = hang.sub(forward.scale(hang.dot(forward)));
+        if (hang.length() < 1e-3) hang = front.normal();
+        hang = hang.normalize();
+
         GL11.glPushMatrix();
+        GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
 
-        applyGantryOrientation(x, y, z, dx, dy, dz, yaw, pitch);
+        Minecraft.getMinecraft()
+            .getTextureManager()
+            .bindTexture(HOOK_TEXTURE);
+        renderHook(gantry, front);
+        renderHook(gantry, back);
 
-        GL11.glTranslatef(0f, -0.5f, 0f);
-        GL11.glRotatef(90f, 1, 0, 0);
-        GL11.glScalef(MODULE_SCALE, MODULE_SCALE, MODULE_SCALE);
-
-        if (def.modelLocation() != null) {
-            IModelCustom model = ModelCache.get(def.modelLocation());
-            if (model != null) {
-                if (def.textureLocation() != null) {
-                    Minecraft.getMinecraft()
-                        .getTextureManager()
-                        .bindTexture(def.textureLocation());
-                }
-                model.renderAll();
-            }
-        }
+        // Module between the hooks, its top towards the front hook and its side towards the rail
+        GantryPath.Vec centre = front.position()
+            .add(back.position())
+            .scale(0.5)
+            .add(hang.scale(GantryPath.HOOK_DROP + def.width() / 2.0));
+        GantryPath.Vec side = forward.cross(hang);
+        // Lit where the module is, the gantry holding it can be a solid terminal with no light inside
+        applyWorldLighting(
+            gantry.getWorldObj(),
+            gantry.xCoord + (int) Math.floor(centre.x() + 0.5),
+            gantry.yCoord + (int) Math.floor(centre.y() + 0.5),
+            gantry.zCoord + (int) Math.floor(centre.z() + 0.5));
+        GL11.glPushMatrix();
+        GL11.glTranslated(centre.x(), centre.y(), centre.z());
+        GantryRailModels.multiply(side.x(), side.y(), side.z(), forward.x(), forward.y(), forward.z());
+        ModuleModelRenderer.renderModel(def, 1f);
+        GL11.glPopMatrix();
 
         GL11.glPopMatrix();
     }
 
     /**
-     * Renders the gantry path using dedicated models for straights, corners,
-     * T-junctions, crosses, diagonals, and mixed ramp transitions.
+     * Draws a hook at a point of the path, running along the rail with its hanger pointing to the module
      */
-    private void renderGantryPath(TileEntityGantry gantry, double x, double y, double z, List<Vec3> dirs) {
-        if (dirs.isEmpty()) {
-            renderFullBeam(gantry, x, y, z, Vec3.createVectorHelper(1, 0, 0));
-            return;
-        }
-
-        if (dirs.size() == 1) {
-            Vec3 dir = dirs.get(0);
-            if (gantry instanceof TileEntityGantryTerminal) {
-                renderFullBeam(gantry, x, y, z, dir);
-                return;
-            }
-            if (dir.yCoord != 0) {
-                renderDiagonalBeam(gantry, x, y, z, dir);
-            } else {
-                renderFullBeam(gantry, x, y, z, dir);
-            }
-            return;
-        }
-
-        int cardinalCount = 0;
-        Vec3 firstCard = null;
-        Vec3 secondCard = null;
-        for (Vec3 d : dirs) {
-            if (isCardinal(d)) {
-                cardinalCount++;
-                if (firstCard == null) firstCard = d;
-                else if (secondCard == null) secondCard = d;
-            }
-        }
-
-        if (cardinalCount == 0) {
-            renderDiagonalBeam(gantry, x, y, z, dirs.get(0));
-            return;
-        }
-
-        int uncovered = getUncoveredCount(dirs);
-        if (uncovered == 0) {
-            renderPlusBeam(gantry, x, y, z);
-            return;
-        } else if (uncovered == 1) {
-            Vec3 missing = getUncoveredMissingDirection(dirs);
-            renderTBeam(gantry, x, y, z, missing);
-            return;
-        }
-
-        if (cardinalCount == 4) {
-            renderPlusBeam(gantry, x, y, z);
-            return;
-        }
-
-        if (cardinalCount == 3) {
-            Vec3 missing = findMissingCardinalDirection(dirs);
-            if (missing != null) {
-                if (hasDiagonalCoveringDirection(dirs, missing)) {
-                    renderPlusBeam(gantry, x, y, z);
-                } else {
-                    renderTBeam(gantry, x, y, z, missing);
-                }
-            }
-            return;
-        }
-
-        if (cardinalCount == 2) {
-            if (isOpposite(firstCard, secondCard)) {
-                renderFullBeam(gantry, x, y, z, firstCard);
-            } else {
-                renderCornerBeam(gantry, x, y, z, firstCard, secondCard);
-            }
-            return;
-        }
-
-        Vec3 cardDir = null;
-        for (Vec3 d : dirs) {
-            if (isCardinal(d)) {
-                cardDir = d;
-                break;
-            }
-        }
-
-        for (Vec3 d : dirs) {
-            if (!isCardinal(d)) {
-                Vec3 horiz = Vec3.createVectorHelper(d.xCoord, 0, d.zCoord);
-                if (isOpposite(cardDir, horiz)) {
-                    if (d.yCoord > 0) {
-                        renderDiagonalBeam(gantry, x, y, z, d);
-                    } else {
-                        renderFullBeam(gantry, x, y, z, cardDir);
-                    }
-                } else {
-                    renderCornerBeam(gantry, x, y, z, cardDir, horiz);
-                }
-                return;
-            }
-        }
-
-        renderErrorBeam(gantry, x, y, z);
+    private static void renderHook(TileEntityGantry gantry, GantryPath.Pose pose) {
+        GantryPath.Vec position = pose.position();
+        applyWorldLighting(
+            gantry.getWorldObj(),
+            gantry.xCoord + (int) Math.floor(position.x() + 0.5),
+            gantry.yCoord + (int) Math.floor(position.y() + 0.5),
+            gantry.zCoord + (int) Math.floor(position.z() + 0.5));
+        GantryPath.Vec up = pose.normal()
+            .scale(-1);
+        GantryPath.Vec side = up.cross(pose.tangent());
+        GL11.glPushMatrix();
+        GL11.glTranslated(
+            pose.position()
+                .x(),
+            pose.position()
+                .y(),
+            pose.position()
+                .z());
+        GantryRailModels.multiply(side.x(), side.y(), side.z(), up.x(), up.y(), up.z());
+        ModelCache.get(HOOK_MODEL)
+            .renderAll();
+        GL11.glPopMatrix();
     }
 
     /**
-     * Checks if a diagonal ramp neighbour covers the missing cardinal direction
-     * for a cross instead of a T-shape. When the ramp is below us (y < 0),
-     * we are at its upper exit, so we use the raw horizontal component of d.
+     * Applies the world lightmap at a block so the model receives ambient light and shadow from its surroundings.
+     * Inside solid blocks, where the light is zero, the brightest neighbour is used
      */
-    private boolean hasDiagonalCoveringDirection(List<Vec3> dirs, Vec3 horizDir) {
-        for (Vec3 d : dirs) {
-            if (d.yCoord != 0) {
-                Vec3 diagHoriz = Vec3.createVectorHelper(d.xCoord, 0, d.zCoord);
-                if (d.yCoord > 0) {
-                    diagHoriz = Vec3.createVectorHelper(-d.xCoord, 0, -d.zCoord);
-                }
-                if (approxEqualHorizontal(diagHoriz, horizDir)) {
-                    return true;
-                }
+    private static void applyWorldLighting(World world, int x, int y, int z) {
+        int brightness = world.getLightBrightnessForSkyBlocks(x, y, z, 0);
+        if (world.getBlock(x, y, z)
+            .isOpaqueCube()) {
+            for (ForgeDirection side : ForgeDirection.VALID_DIRECTIONS) {
+                int around = world
+                    .getLightBrightnessForSkyBlocks(x + side.offsetX, y + side.offsetY, z + side.offsetZ, 0);
+                if ((around >> 16) + (around & 0xFFFF) > (brightness >> 16) + (brightness & 0xFFFF))
+                    brightness = around;
             }
         }
-        return false;
-    }
-
-    /**
-     * Counts how many of the 4 cardinal directions are neither a direct
-     * cardinal neighbour nor covered by any diagonal ramp.
-     */
-    private int getUncoveredCount(List<Vec3> dirs) {
-        int count = 0;
-        for (Vec3 cand : CARDINAL_DIRECTIONS) {
-            if (!isCovered(cand, dirs)) count++;
-        }
-        return count;
-    }
-
-    /**
-     * Returns the single uncovered cardinal direction when exactly one remains.
-     * Returns null otherwise.
-     */
-    private Vec3 getUncoveredMissingDirection(List<Vec3> dirs) {
-        for (Vec3 cand : CARDINAL_DIRECTIONS) {
-            if (!isCovered(cand, dirs)) return cand;
-        }
-        return null;
-    }
-
-    private static float lerpAngle(float a, float b, float t) {
-        float diff = b - a;
-        while (diff > 180f) diff -= 360f;
-        while (diff < -180f) diff += 360f;
-        return a + diff * t;
-    }
-
-    /**
-     * Basic smoothstep function
-     *
-     * @see <a href="https://en.wikipedia.org/wiki/Smoothstep">Smoothstep
-     *      Wikipedia</a>
-     *
-     * @param t Progress through block
-     *
-     * @return Smoothstepped progress
-     */
-    private static float smoothStep(float t) {
-        return t * t * (3f - 2f * t);
-    }
-
-    /**
-     * Applies the world lightmap at the gantry's block position so the model
-     * receives ambient light and shadow from its surroundings.
-     *
-     * @param gantry The gantry whose world position is sampled
-     */
-    private static void applyWorldLighting(TileEntityGantry gantry) {
-        int brightness = gantry.getWorldObj()
-            .getLightBrightnessForSkyBlocks(gantry.xCoord, gantry.yCoord, gantry.zCoord, 0);
 
         int skyLight = (brightness >> 16) & 0xFFFF;
         int blockLight = brightness & 0xFFFF;
@@ -311,190 +153,5 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         GL11.glEnable(GL11.GL_TEXTURE_2D);
         OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, blockLight, skyLight);
         OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit);
-    }
-
-    /**
-     * Applies the base position and yaw/pitch rotation used by both the module
-     * and the carriage.
-     */
-    private void applyGantryOrientation(double x, double y, double z, float dx, float dy, float dz, float yaw,
-        float pitch) {
-        GL11.glTranslated(x + 0.5 + dx, y + 0.5 + dy, z + 0.5 + dz);
-        GL11.glRotatef(yaw, 0f, 1f, 0f);
-        GL11.glRotatef(pitch, 1f, 0f, 0f);
-    }
-
-    private boolean isCardinal(Vec3 dir) {
-        return dir.yCoord == 0
-            && ((Math.abs(dir.xCoord) == 1 && dir.zCoord == 0) || (dir.xCoord == 0 && Math.abs(dir.zCoord) == 1));
-    }
-
-    private boolean isOpposite(Vec3 a, Vec3 b) {
-        return Math.abs(a.xCoord + b.xCoord) < 0.01 && Math.abs(a.yCoord + b.yCoord) < 0.01
-            && Math.abs(a.zCoord + b.zCoord) < 0.01;
-    }
-
-    /**
-     * Compares the horizontal x and z components of two vectors.
-     */
-    private boolean approxEqualHorizontal(Vec3 a, Vec3 b) {
-        return Math.abs(a.xCoord - b.xCoord) < 0.01 && Math.abs(a.zCoord - b.zCoord) < 0.01;
-    }
-
-    /**
-     * Returns true if the given cardinal direction has a direct cardinal neighbour
-     * in the list.
-     */
-    private boolean hasDirectCardinal(Vec3 candidate, List<Vec3> dirs) {
-        for (Vec3 d : dirs) {
-            if (isCardinal(d) && approxEqualHorizontal(d, candidate)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Returns true if the cardinal direction is covered by either a direct cardinal
-     * or a diagonal ramp.
-     */
-    private boolean isCovered(Vec3 candidate, List<Vec3> dirs) {
-        return hasDirectCardinal(candidate, dirs) || hasDiagonalCoveringDirection(dirs, candidate);
-    }
-
-    /**
-     * Finds the single missing cardinal direction (for T-shape).
-     */
-    private Vec3 findMissingCardinalDirection(List<Vec3> dirs) {
-        for (Vec3 cand : CARDINAL_DIRECTIONS) {
-            if (!hasDirectCardinal(cand, dirs)) return cand;
-        }
-        return null;
-    }
-
-    private static void renderFullBeam(TileEntityGantry g, double x, double y, double z, Vec3 dir) {
-        Vec3 f = dir.normalize();
-        float facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
-
-        applyWorldLighting(g);
-        GL11.glPushMatrix();
-        GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
-        GL11.glRotatef(90, 0, 1, 0);
-        GL11.glRotatef(facingYaw, 0, 1, 0);
-        GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
-        Minecraft.getMinecraft()
-            .getTextureManager()
-            .bindTexture(g.getStraightTexture());
-        g.getStraightModel()
-            .renderAll();
-        GL11.glPopMatrix();
-    }
-
-    private static void renderErrorBeam(TileEntityGantry g, double x, double y, double z) {
-        Vec3 f = Vec3.createVectorHelper(1, 0, 0);
-        float facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
-
-        applyWorldLighting(g);
-        GL11.glPushMatrix();
-        GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
-        GL11.glRotatef(90, 0, 1, 0);
-        GL11.glRotatef(facingYaw, 0, 1, 0);
-        GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
-        Minecraft.getMinecraft()
-            .getTextureManager()
-            .bindTexture(g.getErrorTexture());
-        g.getStraightModel()
-            .renderAll();
-        GL11.glPopMatrix();
-
-        f = Vec3.createVectorHelper(0, 0, 1);
-        facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
-
-        GL11.glPushMatrix();
-        GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
-        GL11.glRotatef(90, 0, 1, 0);
-        GL11.glRotatef(facingYaw, 0, 1, 0);
-        GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
-        Minecraft.getMinecraft()
-            .getTextureManager()
-            .bindTexture(g.getErrorTexture());
-        g.getStraightModel()
-            .renderAll();
-        GL11.glPopMatrix();
-    }
-
-    private static void renderDiagonalBeam(TileEntityGantry g, double x, double y, double z, Vec3 dir) {
-        Vec3 ascDir = (dir.yCoord >= 0) ? dir : Vec3.createVectorHelper(-dir.xCoord, -dir.yCoord, -dir.zCoord);
-        Vec3 f = ascDir.normalize();
-        float facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
-
-        applyWorldLighting(g);
-        GL11.glPushMatrix();
-        GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
-        GL11.glRotatef(90, 0, 1, 0);
-        GL11.glRotatef(facingYaw, 0, 1, 0);
-        GL11.glRotatef(180, 0, 1, 0);
-        GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
-        Minecraft.getMinecraft()
-            .getTextureManager()
-            .bindTexture(g.getDiagonalTexture());
-        g.getDiagonalModel()
-            .renderAll();
-        GL11.glPopMatrix();
-    }
-
-    private static void renderCornerBeam(TileEntityGantry g, double x, double y, double z, Vec3 in, Vec3 out) {
-        double cx = in.xCoord + out.xCoord;
-        double cz = in.zCoord + out.zCoord;
-        float facingYaw = (float) Math.toDegrees(Math.atan2(cx, cz));
-
-        applyWorldLighting(g);
-        GL11.glPushMatrix();
-        GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
-        GL11.glRotatef(225, 0, 1, 0);
-        GL11.glRotatef(facingYaw, 0, 1, 0);
-        GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
-        Minecraft.getMinecraft()
-            .getTextureManager()
-            .bindTexture(g.getCornerTexture());
-        g.getCornerModel()
-            .renderAll();
-        GL11.glPopMatrix();
-    }
-
-    /**
-     * Renders a T-shape using a dedicated model.
-     * missingDir is the open side of the T.
-     */
-    private static void renderTBeam(TileEntityGantry g, double x, double y, double z, Vec3 missingDir) {
-        Vec3 f = missingDir.normalize();
-        float missingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
-
-        applyWorldLighting(g);
-        GL11.glPushMatrix();
-        GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
-        GL11.glRotatef(90, 0, 1, 0);
-        GL11.glRotatef(missingYaw + 180f, 0, 1, 0);
-        GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
-        Minecraft.getMinecraft()
-            .getTextureManager()
-            .bindTexture(g.getSemiCrossTexture());
-        g.getSemiCrossModel()
-            .renderAll();
-        GL11.glPopMatrix();
-    }
-
-    private static void renderPlusBeam(TileEntityGantry g, double x, double y, double z) {
-        applyWorldLighting(g);
-        GL11.glPushMatrix();
-        GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
-        GL11.glRotatef(90, 0, 1, 0);
-        GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
-        Minecraft.getMinecraft()
-            .getTextureManager()
-            .bindTexture(g.getCrossTexture());
-        g.getCrossModel()
-            .renderAll();
-        GL11.glPopMatrix();
     }
 }

@@ -16,6 +16,7 @@ slot.wither_protection=Wither Protection
 slot.reaction_control_system=Reaction Control System
 
 #### Dimensions
+galaxia.dimension.overworld=Overworld
 galaxia.dimension.frozen_belt=Frozen Belt
 galaxia.dimension.mars=Mars
 galaxia.dimension.tenebrae=Tenebrae
@@ -740,7 +741,7 @@ galaxia.rocket_editor.order_modules=Order Modules
 galaxia.rocket_editor.order_modules_empty=Order Modules (empty)
 galaxia.rocket_editor.assembling=Assembling...
 galaxia.rocket_editor.ready_launch=Ready to Launch
-galaxia.rocket_editor.destination=Destination: %s
+galaxia.rocket_editor.destination=Destination
 galaxia.rocket_editor.click_cycle=Click to cycle
 galaxia.rocket_editor.enter_rocket=Enter Rocket
 galaxia.rocket_editor.enter_rocket_not_ready=Enter Rocket (not ready)
@@ -810,3 +811,150 @@ galaxia.gui.station.recipe.details.unavailable=The original recipe is unavailabl
 galaxia.gui.station.recipe.details.select_resource=Select an input or output slot to configure its inventory bound
 galaxia.gui.station.settings_group.rename=Rename
 galaxia.gui.station.settings_group.members=Members
+
+# Rocket modules
+galaxia.rocket_part.capsule=Basic Capsule
+galaxia.rocket_part.decoupler=Basic Decoupler
+galaxia.rocket_part.lander=Basic Lander
+galaxia.rocket_part.rider=Passenger Cabin
+galaxia.rocket_part.storage=Cargo Hold
+galaxia.rocket_part.engine=%s Engine
+galaxia.rocket_part.fuel_tank=Fuel Tank %s (%s)
+galaxia.rocket_part.stat.size=Size
+galaxia.rocket_part.stat.mass=Dry mass
+galaxia.rocket_part.stat.thrust=Thrust
+galaxia.rocket_part.stat.isp=Specific impulse
+galaxia.rocket_part.stat.burns=Burns
+galaxia.rocket_part.stat.capacity=Capacity
+galaxia.rocket_part.stat.full_mass=Fuelled mass
+galaxia.rocket_part.stat.slots=Cargo slots
+galaxia.rocket_part.stat.seats=Seats
+
+# Rocket fuels
+galaxia.rocket_fuel.nitrofuel=Cetane-Boosted Diesel
+galaxia.rocket_fuel.rp1=RP-1
+galaxia.rocket_fuel.liquid_hydrogen=Liquid Hydrogen
+galaxia.rocket_fuel.antimatter=Antimatter
+galaxia.rocket_fuel.containment.basic=Standard core
+galaxia.rocket_fuel.containment.cryogenic=Cryogenic core
+galaxia.rocket_fuel.containment.exotic=Containment field core
+
+# Elements - GUI - "Rocket Editor"
+galaxia.rocket_editor.pick_core=Core for the %s frame
+galaxia.rocket_editor.pick_core_hint=§8Right click to change the core
+galaxia.rocket_editor.status.idle=No design
+galaxia.rocket_editor.status.designed=Designed
+galaxia.rocket_editor.status.assembling=Assembling...
+galaxia.rocket_editor.status.ready=Ready
+galaxia.rocket_editor.delta_v=Δv %s
+galaxia.rocket_editor.delta_v_needed=Needs %s
+galaxia.rocket_editor.no_destination=No destination set
+galaxia.rocket_editor.mass=Dry mass %s kg
+galaxia.rocket_editor.stage=Stage %d
+galaxia.rocket_editor.stage_payload=Payload, no engines
+galaxia.rocket_editor.automation=Automation
+galaxia.rocket_editor.cargo=Cargo and fuel
+galaxia.rocket_editor.problem.empty=The design is empty
+galaxia.rocket_editor.problem.no_payload=Needs a capsule, lander or cargo hold
+galaxia.rocket_editor.problem.no_engine=The bottom stage has no engine
+galaxia.rocket_editor.problem.unburnable_fuel=A stage carries fuel its engines can't burn
+galaxia.rocket_editor.problem.too_heavy=Too heavy to lift off
+
+# Silo problems
+galaxia.silo.problem.empty_blueprint=Nothing to build
+galaxia.silo.problem.busy=A rocket is already being built
+galaxia.silo.problem.no_terminal=No gantry terminal in the silo
+galaxia.silo.problem.terminal_input_only=The silo's gantry terminal is set to input only
+galaxia.silo.problem.not_viable=The design can't fly
+galaxia.silo.problem.no_assembler=No Module Assembler on the gantry network
+galaxia.silo.problem.no_rocket=No rocket on the pad
+galaxia.silo.problem.unloading=Cargo is still being unloaded
+galaxia.silo.problem.no_destination=No destination set
+galaxia.silo.problem.too_heavy=Too heavy to lift off here
+galaxia.silo.problem.not_enough_delta_v=Not enough fuel to reach the destination
+galaxia.silo.problem.destination_self=Can't fly to its own silo
+galaxia.silo.problem.destination_busy=The destination pad is busy
+galaxia.silo.problem.destination_missing=The destination silo no longer exists
+galaxia.silo.problem.crew_aboard=Crew aboard, launch from the capsule instead
+galaxia.silo.problem.uncrewed_needs_silo=Uncrewed rockets can only fly to a silo
+galaxia.silo.problem.cargo_aboard=Take the cargo out first
+
+# Silo automation
+galaxia.silo.automation.title=Automation
+galaxia.silo.automation.enabled=Automated launches
+galaxia.silo.automation.return_arrivals=Disassemble arriving rockets
+galaxia.silo.automation.schematic=Rocket schematic to build
+galaxia.silo.automation.view_schematic=Show in editor
+galaxia.silo.automation.view_schematic.tooltip=Loads the schematic into the editor canvas
+galaxia.silo.automation.requests=Deliver to the destination
+galaxia.silo.automation.progress=%d / %d delivered, %d in flight
+galaxia.silo.automation.reset=Reset progress
+galaxia.silo.automation.status.disabled=Automation is off
+galaxia.silo.automation.status.no_schematic=Insert a rocket schematic
+galaxia.silo.automation.status.no_destination=Pick a destination silo
+galaxia.silo.automation.status.no_requests=Add items to deliver
+galaxia.silo.automation.status.invalid_schematic=The schematic can't fly
+galaxia.silo.automation.status.no_assembler=Waiting for a Module Assembler
+galaxia.silo.automation.status.building=Building the rocket
+galaxia.silo.automation.status.fueling=Fuelling
+galaxia.silo.automation.status.loading=Loading cargo
+galaxia.silo.automation.status.not_enough_delta_v=Can't reach the destination
+galaxia.silo.automation.status.destination_busy=Waiting for the destination pad
+galaxia.silo.automation.status.in_flight=Cargo in flight
+galaxia.silo.automation.status.complete=All requests delivered
+
+# Silo destination
+galaxia.silo.destination.title=Destination
+galaxia.silo.destination.current=Current: %s
+galaxia.silo.destination.silos=Silos
+galaxia.silo.destination.no_silos=No other silos built yet
+galaxia.silo.destination.surfaces=Land anywhere (crewed only)
+galaxia.silo.destination.crewed_only=Lands the capsule, no silo
+galaxia.silo.destination.none=none
+galaxia.silo.destination.unknown_body=Unknown body
+
+# Silo cargo
+galaxia.silo.cargo.title=Cargo and fuel
+galaxia.silo.cargo.no_holds=This rocket has no cargo hold
+galaxia.silo.cargo.fuel=Tanks
+galaxia.silo.cargo.no_tanks=No tanks
+galaxia.silo.cargo.delta_v=Δv %s, needs %s
+galaxia.silo.cargo.hatches=Buses %d in, %d out, hatches %d
+galaxia.silo.cargo.launch=Launch uncrewed
+galaxia.silo.cargo.launch.tooltip=Sends the rocket to the destination silo without a crew
+
+# Module Assembler
+galaxia.gui.module_assembler.title=Module Assembler
+galaxia.gui.module_assembler.status.idle=Idle
+galaxia.gui.module_assembler.status.crafting=Assembling
+galaxia.gui.module_assembler.status.missing_inputs=Missing inputs
+galaxia.gui.module_assembler.stock=In stock %s, queued %d
+galaxia.gui.module_assembler.recipe=Recipe
+galaxia.gui.module_assembler.craft_one=Build 1
+galaxia.gui.module_assembler.craft_five=Build 5
+galaxia.gui.module_assembler.cancel=Cancel
+galaxia.gui.module_assembler.debug_add=Debug: add one to the stock for free (creative)
+galaxia.gui.module_assembler.debug_remove=Debug: remove one from the stock (creative)
+galaxia.gui.module_assembler.infinite_stock=Debug: infinite stock (creative)
+galaxia.gui.module_assembler.infinite_stock.on=§aOn§7, every module is always in stock
+galaxia.gui.module_assembler.infinite_stock.off=§7Off
+galaxia.gui.module_assembler.no_craft=Nothing being assembled
+galaxia.gui.module_assembler.crafting=Assembling %s
+galaxia.gui.module_assembler.queue=Queue %d, orders %d, input buses %d
+galaxia.gui.module_assembler.group=Fuel tanks %s
+galaxia.gui.module_assembler.group_hint=§8Click to show every core
+galaxia.gui.module_assembler.group_fold=Fold the group
+
+# Gantry
+galaxia.gantry.mode.input=Input
+galaxia.gantry.mode.output=Output
+galaxia.gantry.mode.both=Input and output
+galaxia.gantry.machine.silo=Rocket Silo
+galaxia.gantry.machine.assembler=Module Assembler
+galaxia.gantry.machine.none=nothing
+galaxia.gantry.terminal.status=Terminal: %s, linked to %s
+galaxia.gantry.network.status=Network: %d gantries, %d assemblers, %d silos
+galaxia.gantry.terminal.hint=§8Sneak + right click with an empty hand to change the mode
+
+# Multiblocks
+galaxia.chat.multiblock.facing=Facing: %s
