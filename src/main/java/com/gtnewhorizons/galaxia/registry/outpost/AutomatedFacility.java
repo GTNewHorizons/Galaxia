@@ -22,6 +22,7 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureModuleContext;
@@ -59,7 +60,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepLedger;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
 
-public final class AutomatedFacility extends CelestialAsset {
+public final class AutomatedFacility extends CelestialAsset implements IDistributedInventory {
 
     private static final Logger LOG = LogManager.getLogger(AutomatedFacility.class);
 
@@ -85,6 +86,7 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private long energyStored;
     private long ticks;
+    private int poweredLandingSlots;
 
     public static final long BASE_ENERGY_CAPACITY = 8_000_000L;
     public static final long BASE_ITEM_CAPACITY = 1000L;
@@ -228,8 +230,10 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void moduleConfigurationChanged() {
+        poweredLandingSlots = 0;
         layoutCache.invalidate();
         moduleOperationChanged();
+        refreshLandingEndpoint();
     }
 
     public void moduleOperationChanged() {
@@ -670,8 +674,9 @@ public final class AutomatedFacility extends CelestialAsset {
                     aggregateCost.merge(material.getKey(), material.getValue(), Math::addExact);
                 }
             }
-            if (!aggregateCost.isEmpty() && inventory.tryExchange(aggregateCost, Map.of(), itemCapacity())
-                == FacilityInventory.ExchangeResult.REJECTED) {
+            if (!aggregateCost.isEmpty()
+                && inventory.tryExchange(aggregateCost, Map.of(), itemCapacity(), fluidCapacity())
+                    == FacilityInventory.ExchangeResult.REJECTED) {
                 return FacilityCommand.Result.rejected(FacilityCommand.Rejection.INSUFFICIENT_MODULE_MATERIALS);
             }
         }
@@ -1249,7 +1254,8 @@ public final class AutomatedFacility extends CelestialAsset {
         ModuleOperationState operation = requireWaitingOperation(module);
         Map<ItemStackWrapper, Long> requested = requireMaterialCost(materialCost);
         if (requested.isEmpty()) return true;
-        if (inventory.tryExchange(requested, Map.of(), itemCapacity()) == FacilityInventory.ExchangeResult.REJECTED) {
+        if (inventory.tryExchange(requested, Map.of(), itemCapacity(), fluidCapacity())
+            == FacilityInventory.ExchangeResult.REJECTED) {
             return false;
         }
         module.setOperation(operation.withDepositedResources(mergeAmounts(operation.depositedResources(), requested)));
@@ -1287,7 +1293,7 @@ public final class AutomatedFacility extends CelestialAsset {
             reservedItems.put(material.getKey(), reserved);
         }
         if (!reservedItems.isEmpty()) {
-            if (inventory.tryExchange(reservedItems, Map.of(), itemCapacity())
+            if (inventory.tryExchange(reservedItems, Map.of(), itemCapacity(), fluidCapacity())
                 == FacilityInventory.ExchangeResult.REJECTED) {
                 throw new IllegalStateException(
                     "Operation partial reservation became inconsistent for module " + module.id);
@@ -1443,6 +1449,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void tick() {
+        poweredLandingSlots = 0;
         ticks++;
         if (ticks % UPKEEP_INTERVAL_TICKS == 0L) {
             settleUpkeep();
@@ -1453,7 +1460,12 @@ public final class AutomatedFacility extends CelestialAsset {
             if (i < modules.size() && modules.get(i) == module
                 && !moduleTickBlocked
                 && module.blocking() != BlockingReason.UPKEEP_SHORTAGE) {
-                module.tick(this);
+                boolean landing = module.kind() == FacilityModuleKind.LANDING_BAY;
+                if (!landing || module.enabled()) {
+                    boolean powered = module.tick(this);
+                    if (landing && powered) poweredLandingSlots = Math
+                        .addExact(poweredLandingSlots, Math.toIntExact(module.baseCapacity()));
+                }
             }
             if (i < modules.size() && modules.get(i) == module) i++;
         }
@@ -1651,6 +1663,96 @@ public final class AutomatedFacility extends CelestialAsset {
             .buildTicks();
     }
 
+    @Override
+    public Map<ItemStackWrapper, Long> getItemAmounts() {
+        return itemSnapshot();
+    }
+
+    @Override
+    public Map<FluidKey, Long> getFluidAmounts() {
+        return fluidAmounts();
+    }
+
+    @Override
+    public long totalItemCapacity() {
+        return itemCapacity();
+    }
+
+    @Override
+    public long totalItemsStored() {
+        return storedItemAmount();
+    }
+
+    @Override
+    public long totalFluidCapacity() {
+        return fluidCapacity();
+    }
+
+    @Override
+    public long getFreeItemSpace(ItemStackWrapper item) {
+        return allowsInsertion(item) ? inventory.availableCapacity(itemCapacity(), true) : 0;
+    }
+
+    @Override
+    public long getFreeFluidSpace(FluidKey fluid) {
+        return allowsInsertion(fluid) ? inventory.availableCapacity(fluidCapacity(), false) : 0;
+    }
+
+    @Override
+    public long insertIntoOwnStorage(ItemStackWrapper item, long amount) {
+        return insert(item, amount);
+    }
+
+    @Override
+    public long insertIntoOwnStorage(ItemStackWrapper item, long amount, boolean simulate) {
+        return insert(item, amount, simulate);
+    }
+
+    @Override
+    public long extractFromOwnStorage(ItemStackWrapper item, long amount) {
+        return extract(item, amount);
+    }
+
+    @Override
+    public long extractFromOwnStorage(ItemStackWrapper item, long amount, boolean simulate) {
+        return extract(item, amount, simulate);
+    }
+
+    @Override
+    public long insertIntoOwnFluidStorage(FluidKey fluid, long amount) {
+        return insert(fluid, amount);
+    }
+
+    @Override
+    public long insertIntoOwnFluidStorage(FluidKey fluid, long amount, boolean simulate) {
+        return insert(fluid, amount, simulate);
+    }
+
+    @Override
+    public long extractFromOwnFluidStorage(FluidKey fluid, long amount) {
+        return extract(fluid, amount);
+    }
+
+    @Override
+    public long extractFromOwnFluidStorage(FluidKey fluid, long amount, boolean simulate) {
+        return extract(fluid, amount, simulate);
+    }
+
+    public long insert(InventoryKey resource, long requested, boolean simulate) {
+        if (!simulate) return insert(resource, requested);
+        if (requested < 0) throw new IllegalArgumentException("Resource transfer amount must be nonnegative");
+        if (resource == null || !allowsInsertion(resource)) return 0;
+        return Math.min(
+            requested,
+            resource.isItem() ? getFreeItemSpace((ItemStackWrapper) resource) : getFreeFluidSpace((FluidKey) resource));
+    }
+
+    public long extract(InventoryKey resource, long requested, boolean simulate) {
+        if (!simulate) return extract(resource, requested);
+        if (requested < 0) throw new IllegalArgumentException("Resource transfer amount must be nonnegative");
+        return Math.min(requested, amount(resource));
+    }
+
     public long itemAmount(ItemStackWrapper item) {
         return inventory.amount(item);
     }
@@ -1676,7 +1778,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public long insert(InventoryKey resource, long requested) {
-        long applied = inventory.insert(resource, requested, itemCapacity());
+        long applied = inventory.insert(resource, requested, itemCapacity(), fluidCapacity());
         if (applied != 0L) markInventoryDelta(resource, applied);
         return applied;
     }
@@ -1688,7 +1790,8 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public boolean tryExchange(Map<? extends InventoryKey, Long> inputs, Map<? extends InventoryKey, Long> outputs) {
-        FacilityInventory.ExchangeResult result = inventory.tryExchange(inputs, outputs, itemCapacity());
+        FacilityInventory.ExchangeResult result = inventory
+            .tryExchange(inputs, outputs, itemCapacity(), fluidCapacity());
         if (result == FacilityInventory.ExchangeResult.REJECTED) return false;
         if (result == FacilityInventory.ExchangeResult.CHANGED) markDirty();
         return true;
@@ -1700,6 +1803,40 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public boolean isItemInventoryFull() {
         return remainingItemCapacity() <= 0L;
+    }
+
+    public long fluidCapacity() {
+        return layoutCache.totalCapacity(FacilityModuleKind.TANK);
+    }
+
+    public int availableLandingSlots() {
+        return isOperational() ? poweredLandingSlots : 0;
+    }
+
+    private void refreshLandingEndpoint() {
+        int slots = Math.toIntExact(
+            modules.stream()
+                .filter(
+                    module -> module.kind() == FacilityModuleKind.LANDING_BAY && module.isOperational()
+                        && module.enabled())
+                .mapToLong(ModuleInstance::baseCapacity)
+                .sum());
+        var current = endpoint(assetId.id());
+        if (current == null) {
+            if (slots == 0) return;
+            var endpointKind = location == Location.ORBIT ? Endpoint.Kind.DOCK : Endpoint.Kind.LANDING_PAD;
+            registerEndpoint(
+                new Endpoint(
+                    assetId.id(),
+                    endpointKind,
+                    assetId.id()
+                        .toString(),
+                    null,
+                    null,
+                    slots));
+        } else {
+            setEndpointServiceSlots(current.id(), slots);
+        }
     }
 
     public long itemCapacity() {

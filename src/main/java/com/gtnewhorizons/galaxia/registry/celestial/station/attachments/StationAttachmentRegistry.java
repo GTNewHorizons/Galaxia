@@ -9,6 +9,7 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.interfaces.IAttachmentHandler;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IEnergyHandler;
 import com.gtnewhorizons.galaxia.registry.interfaces.IFluidStorageHandler;
 import com.gtnewhorizons.galaxia.registry.interfaces.IItemStorageHandler;
@@ -18,7 +19,18 @@ import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
 
 public final class StationAttachmentRegistry {
 
-    public record ResolvedAttachment<T> (T attachment, IAttachmentHandler<T> handler) {}
+    public record ResolvedAttachment<T> (T attachment, IAttachmentHandler<T> handler) {
+
+        public IDistributedInventory distributedInventory() {
+            if (!handler.hasDistributedInventory()) return null;
+            if (attachment instanceof IDistributedInventory owner) return owner;
+            if (isFluidStorageHandler(handler))
+                return new FluidAttachmentInventory<>(asFluidStorageHandler(handler), attachment);
+            if (isItemStorageHandler(handler))
+                return new ItemAttachmentInventory<>(asItemStorageHandler(handler), attachment);
+            throw new IllegalStateException("Registered attachment has no distributed inventory capability");
+        }
+    }
 
     private static final Map<Class<?>, IAttachmentHandler<?>> handlers = new HashMap<>();
 

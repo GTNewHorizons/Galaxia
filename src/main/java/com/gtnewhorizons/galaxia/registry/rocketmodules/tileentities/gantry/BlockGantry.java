@@ -14,7 +14,9 @@ import net.minecraft.util.Vec3;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.Rocket;
 
 public class BlockGantry extends BlockUpdatable implements ITileEntityProvider {
 
@@ -96,24 +98,15 @@ public class BlockGantry extends BlockUpdatable implements ITileEntityProvider {
      */
     @Override
     public void breakBlock(World world, int x, int y, int z, Block block, int meta) {
+        if (!world.isRemote && world.getTileEntity(x, y, z) instanceof TileEntityGantry node) {
+            GantryAPI.dropModules(
+                Galaxia.proxy.serverRuntime()
+                    .rockets(),
+                new Rocket.Holder(Rocket.HolderKind.GANTRY, node.nodeId()),
+                node);
+            for (TileEntityGantry neighbour : new ArrayList<>(node.getNeighbours())) node.disconnect(neighbour);
+        }
         super.breakBlock(world, x, y, z, block, meta);
-        TileEntity gantry = world.getTileEntity(x, y, z);
-        if (!(gantry instanceof TileEntityGantry terminal)) {
-            return;
-        }
-
-        // Iterate through neighbours and disconnect them
-        for (Vec3 check_offset : new ArrayList<>(terminal.neighbourDirs)) {
-            int cx = x + (int) check_offset.xCoord;
-            int cy = y + (int) check_offset.yCoord;
-            int cz = z + (int) check_offset.zCoord;
-
-            TileEntity checkTileEntity = world.getTileEntity(cx, cy, cz);
-            if (checkTileEntity instanceof TileEntityGantry checkGantry) {
-                terminal.disconnect(checkGantry);
-            }
-        }
-
     }
 
     @Override

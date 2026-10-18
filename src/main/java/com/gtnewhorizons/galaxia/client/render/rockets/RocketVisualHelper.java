@@ -8,7 +8,7 @@ import org.lwjgl.opengl.GL11;
 
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RocketPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityRocketTrophy;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 
@@ -54,7 +54,7 @@ public final class RocketVisualHelper {
             TileEntitySilo.SILO_DEFAULT_X_OFFSET,
             TileEntitySilo.SILO_DEFAULT_Y_OFFSET,
             TileEntitySilo.SILO_DEFAULT_Z_OFFSET,
-            silo.currentFacing);
+            silo.getCurrentFacing());
 
         int px = silo.xCoord + offset[0];
         int py = silo.yCoord + offset[1];
@@ -74,29 +74,10 @@ public final class RocketVisualHelper {
 
         if (blueprint == null || blueprint.isEmpty()) return;
 
-        double minX = Double.POSITIVE_INFINITY;
-        double minY = Double.POSITIVE_INFINITY;
-        double minZ = Double.POSITIVE_INFINITY;
-
-        double maxX = Double.NEGATIVE_INFINITY;
-        double maxY = Double.NEGATIVE_INFINITY;
-        double maxZ = Double.NEGATIVE_INFINITY;
-
-        for (RocketPartInstance part : blueprint.getParts()) {
-            IRocketPartDef def = part.def();
-
-            minX = Math.min(minX, part.x());
-            minY = Math.min(minY, part.y());
-            minZ = Math.min(minZ, part.z());
-
-            maxX = Math.max(maxX, part.x() + def.width());
-            maxY = Math.max(maxY, part.y() + def.height());
-            maxZ = Math.max(maxZ, part.z() + 1);
-        }
-
-        double centerX = (minX + maxX) * 0.5D;
-        double totalHeight = maxY;
-        double centerZ = (minZ + maxZ) * 0.5D;
+        var bounds = blueprint.bounds();
+        double centerX = bounds.centerX();
+        double totalHeight = bounds.maxY();
+        double centerZ = bounds.centerZ();
 
         GL11.glPushMatrix();
         GL11.glTranslated(x, y, z);
@@ -124,7 +105,7 @@ public final class RocketVisualHelper {
                     .height() / 2),
             part.z() - centerZ + 0.5);
 
-        IRocketPartDef def = part.def();
+        RocketPartDef def = part.def();
 
         if (def.modelLocation() != null) {
             IModelCustom model = ModelCache.get(def.modelLocation());

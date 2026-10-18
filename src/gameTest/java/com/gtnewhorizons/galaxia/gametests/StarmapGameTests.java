@@ -145,6 +145,16 @@ public final class StarmapGameTests {
             if (star.objectClass() != CelestialObject.Class.STAR) continue;
             var key = star.key();
             sequence.click(ClientTarget.of("galaxy", c -> sidebarLayerTarget(false)))
+                .awaitClient("galaxy view ready for star selection: " + key, c -> {
+                    var map = GuiTestSupport.map();
+                    if (!CelestialRegistry.getPrimaryRoot()
+                        .key()
+                        .equals(
+                            map.getViewRoot()
+                                .key())
+                        || map.visibleBodyBounds(key) == null)
+                        throw new AssertionError("Galaxy transition has not exposed the requested star");
+                })
                 .click(ClientTarget.of("star " + key, c -> GuiTestSupport.bodyTarget(key)))
                 .click(ClientTarget.of("enter " + key, c -> sidebarLayerTarget(true)))
                 .awaitClient("system and planets visible: " + key, c -> {

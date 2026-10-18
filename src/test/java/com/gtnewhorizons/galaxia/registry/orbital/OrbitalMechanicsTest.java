@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldNode;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldOrbitResolver;
@@ -25,6 +26,46 @@ import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyI
 final class OrbitalMechanicsTest {
 
     private static final double EPSILON = 1.0e-9;
+
+    /** Integration contract: SI physics preserves the existing orbital length and Sun gravity scales. */
+    @Test
+    void physicalConversionsPreserveOrbitalDynamicsWithoutUsingTheGameTimer() {
+        assertEquals(6_371_000, OrbitalMechanics.distanceToMetres(1), 1e-9);
+        assertEquals(11_844.639269880003, OrbitalMechanics.osuToPhysicalSeconds(1), 1e-8);
+        assertEquals(537.8804583944534, OrbitalMechanics.velocityToMetresPerSecond(1), 1e-9);
+        assertEquals(132_712_440_041.279419e9, OrbitalMechanics.muToSI(7.2e7), 1e6);
+        assertEquals(1, OrbitalMechanics.metresToDistance(6_371_000), 1e-12);
+        assertEquals(1, OrbitalMechanics.physicalSecondsToOsu(11_844.639269880003), 1e-12);
+        assertEquals(1, OrbitalMechanics.metresPerSecondToVelocity(537.8804583944534), 1e-12);
+        assertEquals(7.2e7, OrbitalMechanics.siToMu(132_712_440_041.279419e9), 1e-7);
+    }
+
+    /** Product contract: visible surface maneuvers have a minimum game time without inventing extra fuel burns. */
+    @Test
+    void surfaceManeuversKeepBurnPhysicsButReserveVisibleGameTime() {
+        var body = CelestialRegistry.numericalDefinitions(200000)
+            .get(CelestialObjectKey.registered(CelestialObjectId.OVERWORLD));
+        var vehicle = new OrbitalMechanics.LocalVehicle(100, 3000, 3000, 1000000);
+        var numerical = new OrbitalMechanics.CostModel(1000, 100, .35, .05, 20, 20, 0);
+        var visible = new OrbitalMechanics.CostModel(1000, 100, .35, .05, 20, 20, 4);
+        for (var kind : List.of(
+            OrbitalMechanics.ManeuverKind.ASCENT,
+            OrbitalMechanics.ManeuverKind.LANDING,
+            OrbitalMechanics.ManeuverKind.DOCKING)) {
+            var raw = OrbitalMechanics.approximateBurn(kind, body, vehicle, vehicle.wetMassKg(), 100, 0, numerical);
+            var shown = OrbitalMechanics.approximateBurn(kind, body, vehicle, vehicle.wetMassKg(), 100, 0, visible);
+            double gameSeconds = (shown.endEpochOsu() - shown.startEpochOsu()) / OrbitalTransferPlanner.OSU_PER_SECOND;
+            assertEquals(raw.deltaVMps(), shown.deltaVMps());
+            assertEquals(raw.propellantKg(), shown.propellantKg());
+            assertEquals(raw.physicalSeconds(), shown.physicalSeconds());
+            assertEquals(raw.burnPhysicalSeconds(), shown.burnPhysicalSeconds());
+            assertEquals(shown, OrbitalMechanics.ManeuverObligation.deserializeNBT(shown.serializeNBT()));
+            if (kind == OrbitalMechanics.ManeuverKind.DOCKING) assertEquals(raw, shown);
+            else assertTrue(
+                gameSeconds >= visible.minimumSurfaceGameSeconds() - EPSILON,
+                kind + " game duration " + gameSeconds + " is shorter than its configured visible minimum");
+        }
+    }
 
     @BeforeEach
     void registerOrbitalAdapters() {

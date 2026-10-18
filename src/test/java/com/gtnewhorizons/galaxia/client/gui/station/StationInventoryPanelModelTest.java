@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addFluidTank;
 import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -255,8 +256,9 @@ final class StationInventoryPanelModelTest {
     @Test
     void fluidRowsShowStoredFluids() {
         AutomatedFacility distributed = facility();
+        addFluidTank(distributed);
         FluidKey water = new FluidKey(new Fluid("water"), null);
-        addFluid(distributed, water, 1000);
+        assertEquals(1000, distributed.insert(water, 1000));
 
         List<StationInventoryPanelModel.FluidRow> rows = StationInventoryPanelModel
             .fluidRows(distributed.fluidAmounts());

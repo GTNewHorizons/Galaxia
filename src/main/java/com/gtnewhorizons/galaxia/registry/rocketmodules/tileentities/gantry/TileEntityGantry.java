@@ -2,10 +2,13 @@ package com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry;
 
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import javax.annotation.Nullable;
 
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
@@ -20,33 +23,280 @@ import net.minecraftforge.client.model.AdvancedModelLoader;
 import net.minecraftforge.client.model.IModelCustom;
 import net.minecraftforge.common.util.Constants.NBT;
 
+import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.state.NbtReader;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.TransitModule;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
+/** A physical node. The world Rocket manifest owns module custody, movement and route claims. */
 public class TileEntityGantry extends TileEntity {
 
-    private final float SPEED = 0.1f;
-    private final Deque<TransitModule> queue = new ArrayDeque<>();
-    private final static int DISPATCH_INTERVAL = 40;
-    private int dispatchCooldown = 0;
-    private List<int[]> pendingNeighbourCoords = new ArrayList<>();
-
-    List<TileEntityGantry> neighbours = new ArrayList<>();
+    public static final double MOVEMENT_PER_TICK = 0.2;
+    private UUID nodeId = UUID.randomUUID();
+    final List<TileEntityGantry> neighbours = new ArrayList<>();
+    private final Map<UUID, Neighbour> savedNeighbours = new LinkedHashMap<>();
+    public final List<Vec3> neighbourDirs = new ArrayList<>();
     private Vec3 currentDirection;
-    private float progress = 0f;
-    private TransitModule containedTransitModule;
-    public int clientModuleId = -1;
-    public float clientPrevProgress = 0f;
-    public float clientProgress = 0f;
-    public List<Vec3> neighbourDirs = new ArrayList<>();
-    public boolean isJunction = false;
-    public Vec3 facing = null;
-
-    private Vec3 incomingDirection;
     public Vec3 clientIncomingDirection;
+    public int clientModuleId = -1;
+    public float clientPrevProgress;
+    public float clientProgress;
+
+    private record Neighbour(UUID id, int x, int y, int z) {}
+
+    public UUID nodeId() {
+        return nodeId;
+    }
+
+    public int dimension() {
+        return worldObj.provider.dimensionId;
+    }
+
+    @Override
+    public void updateEntity() {
+        if (worldObj == null) return;
+        if (worldObj.isRemote) {
+            clientPrevProgress = clientProgress;
+            return;
+        }
+        GantryAPI.tickNode(
+            Galaxia.proxy.serverRuntime()
+                .rockets(),
+            this);
+    }
+
+    /** Resolves only loaded, exact neighbor identities and retains unresolved links for later ticks. */
+    public List<TileEntityGantry> getNeighbours() {
+        if (worldObj == null) return List.copyOf(neighbours);
+        for (Neighbour link : savedNeighbours.values()) {
+            if (!worldObj.blockExists(link.x(), link.y(), link.z())) continue;
+            TileEntity tile = worldObj.getTileEntity(link.x(), link.y(), link.z());
+            if (tile instanceof TileEntityGantry gantry && gantry.nodeId()
+                .equals(link.id()) && !neighbours.contains(gantry)) {
+                neighbours.add(gantry);
+            }
+        }
+        return neighbours.stream()
+            .filter(
+                next -> !next.isInvalid() && next.getWorldObj() == worldObj
+                    && worldObj.blockExists(next.xCoord, next.yCoord, next.zCoord)
+                    && worldObj.getTileEntity(next.xCoord, next.yCoord, next.zCoord) == next)
+            .toList();
+    }
+
+    public void connect(TileEntityGantry other) {
+        if (other == this) return;
+        neighbours.removeIf(
+            previous -> previous != other && previous.xCoord == other.xCoord
+                && previous.yCoord == other.yCoord
+                && previous.zCoord == other.zCoord);
+        savedNeighbours.values()
+            .removeIf(
+                previous -> !previous.id()
+                    .equals(other.nodeId()) && previous.x() == other.xCoord
+                    && previous.y() == other.yCoord
+                    && previous.z() == other.zCoord);
+        if (!neighbours.contains(other)) neighbours.add(other);
+        if (!other.neighbours.contains(this)) other.neighbours.add(this);
+        savedNeighbours.put(other.nodeId(), new Neighbour(other.nodeId(), other.xCoord, other.yCoord, other.zCoord));
+        other.savedNeighbours.put(nodeId, new Neighbour(nodeId, xCoord, yCoord, zCoord));
+        updateNeighbourDirs();
+        other.updateNeighbourDirs();
+    }
+
+    public void disconnect(TileEntityGantry other) {
+        neighbours.remove(other);
+        other.neighbours.remove(this);
+        savedNeighbours.remove(other.nodeId());
+        other.savedNeighbours.remove(nodeId);
+        updateNeighbourDirs();
+        other.updateNeighbourDirs();
+    }
+
+    public void updateNeighbourDirs() {
+        if (worldObj != null && worldObj.isRemote) return;
+        neighbourDirs.clear();
+        for (TileEntityGantry next : getNeighbours()) {
+            neighbourDirs
+                .add(Vec3.createVectorHelper(next.xCoord - xCoord, next.yCoord - yCoord, next.zCoord - zCoord));
+        }
+        syncProjection();
+    }
+
+    public boolean checkValidGraph() {
+        return worldObj != null && GantryAPI.terminatesWithTerminals(worldObj, xCoord, yCoord, zCoord);
+    }
+
+    @Nullable
+    public RocketPartInstance getModule() {
+        if (worldObj == null || worldObj.isRemote) return null;
+        var module = GantryAPI.heldModule(
+            Galaxia.proxy.serverRuntime()
+                .rockets(),
+            nodeId);
+        return module == null ? null : module.part();
+    }
+
+    public Vec3 getDirection() {
+        return currentDirection;
+    }
+
+    public float getProgress() {
+        return clientProgress;
+    }
+
+    public float getInterpolatedProgress(float partialTicks) {
+        return clientPrevProgress + (clientProgress - clientPrevProgress) * partialTicks;
+    }
+
+    void projectDirection(TileEntityGantry next) {
+        currentDirection = Vec3.createVectorHelper(next.xCoord - xCoord, next.yCoord - yCoord, next.zCoord - zCoord);
+    }
+
+    void projectDirectionToController() {
+        if (this instanceof TileEntityGantryTerminal terminal) {
+            TileEntity controller = terminal.controller();
+            currentDirection = controller == null ? null
+                : Vec3.createVectorHelper(
+                    controller.xCoord - xCoord,
+                    controller.yCoord - yCoord,
+                    controller.zCoord - zCoord);
+        }
+    }
+
+    public void syncProjection() {
+        markDirty();
+        if (worldObj != null && !worldObj.isRemote) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+    }
+
+    @Override
+    public void writeToNBT(NBTTagCompound tag) {
+        super.writeToNBT(tag);
+        tag.setString("nodeId", nodeId.toString());
+        var links = new LinkedHashMap<>(savedNeighbours);
+        for (TileEntityGantry next : neighbours) {
+            links.put(next.nodeId(), new Neighbour(next.nodeId(), next.xCoord, next.yCoord, next.zCoord));
+        }
+        var encoded = new NBTTagList();
+        for (Neighbour next : links.values()) {
+            var link = new NBTTagCompound();
+            link.setString(
+                "id",
+                next.id()
+                    .toString());
+            link.setInteger("x", next.x());
+            link.setInteger("y", next.y());
+            link.setInteger("z", next.z());
+            encoded.appendTag(link);
+        }
+        tag.setTag("neighbours", encoded);
+    }
+
+    @Override
+    public void readFromNBT(NBTTagCompound tag) {
+        super.readFromNBT(tag);
+        var in = new NbtReader(tag, "gantry");
+        nodeId = UUID.fromString(in.string("nodeId"));
+        neighbours.clear();
+        savedNeighbours.clear();
+        var links = in.compounds("neighbours");
+        neighbourDirs.clear();
+        for (int i = 0; i < links.tagCount(); i++) {
+            var link = in.element("neighbours", i, links.getCompoundTagAt(i));
+            var next = new Neighbour(
+                UUID.fromString(link.string("id")),
+                link.integer("x"),
+                link.integer("y"),
+                link.integer("z"));
+            if (savedNeighbours.put(next.id(), next) != null)
+                throw new IllegalStateException("Duplicate Gantry neighbor");
+            neighbourDirs.add(Vec3.createVectorHelper(next.x() - xCoord, next.y() - yCoord, next.z() - zCoord));
+        }
+    }
+
+    @Override
+    public Packet getDescriptionPacket() {
+        var tag = new NBTTagCompound();
+        tag.setString("nodeId", nodeId.toString());
+        var directions = new NBTTagList();
+        for (Vec3 direction : neighbourDirs) {
+            var entry = new NBTTagCompound();
+            entry.setDouble("x", direction.xCoord);
+            entry.setDouble("y", direction.yCoord);
+            entry.setDouble("z", direction.zCoord);
+            directions.appendTag(entry);
+        }
+        tag.setTag("directions", directions);
+        var module = GantryAPI.heldModule(
+            Galaxia.proxy.serverRuntime()
+                .rockets(),
+            nodeId);
+        tag.setInteger(
+            "moduleId",
+            module == null ? -1
+                : module.part()
+                    .def()
+                    .id());
+        tag.setFloat(
+            "progress",
+            module == null || module.gantryTransport() == null ? 0
+                : (float) module.gantryTransport()
+                    .progress());
+        // A handoff can reach this node after its tick. Project the new trip, never the previous module's heading.
+        currentDirection = null;
+        if (module != null && module.gantryTransport() != null) {
+            var trip = module.gantryTransport();
+            int nextIndex = trip.routeIndex() + 1;
+            if (nextIndex < trip.reservedRoute()
+                .size()) {
+                var next = savedNeighbours.get(
+                    trip.reservedRoute()
+                        .get(nextIndex));
+                if (next != null) {
+                    currentDirection = Vec3.createVectorHelper(next.x() - xCoord, next.y() - yCoord, next.z() - zCoord);
+                }
+            } else {
+                projectDirectionToController();
+            }
+        }
+        if (currentDirection != null) {
+            tag.setDouble("dirX", currentDirection.xCoord);
+            tag.setDouble("dirY", currentDirection.yCoord);
+            tag.setDouble("dirZ", currentDirection.zCoord);
+        }
+        return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 1, tag);
+    }
+
+    @Override
+    public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity packet) {
+        var tag = packet.func_148857_g();
+        nodeId = UUID.fromString(tag.getString("nodeId"));
+        clientModuleId = tag.getInteger("moduleId");
+        clientPrevProgress = clientProgress;
+        clientProgress = tag.getFloat("progress");
+        currentDirection = tag.hasKey("dirX")
+            ? Vec3.createVectorHelper(tag.getDouble("dirX"), tag.getDouble("dirY"), tag.getDouble("dirZ"))
+            : null;
+        var directions = tag.getTagList("directions", NBT.TAG_COMPOUND);
+        neighbourDirs.clear();
+        for (int i = 0; i < directions.tagCount(); i++) {
+            var direction = directions.getCompoundTagAt(i);
+            neighbourDirs.add(
+                Vec3.createVectorHelper(direction.getDouble("x"), direction.getDouble("y"), direction.getDouble("z")));
+        }
+    }
+
+    @Override
+    public AxisAlignedBB getRenderBoundingBox() {
+        return TileEntity.INFINITE_EXTENT_AABB;
+    }
+
+    @Override
+    public double getMaxRenderDistanceSquared() {
+        return 512 * 512;
+    }
 
     // I beam
     @SideOnly(Side.CLIENT)
@@ -80,86 +330,6 @@ public class TileEntityGantry extends TileEntity {
 
     @SideOnly(Side.CLIENT)
     private ResourceLocation errorTexture;
-
-    /**
-     * Updates the tile entity. In this case, handling current module progression
-     * and queue management
-     */
-    @Override
-    public void updateEntity() {
-        // Lazy loading for neighbours
-        if (!pendingNeighbourCoords.isEmpty()) {
-            for (int[] coords : pendingNeighbourCoords) {
-                TileEntity te = worldObj.getTileEntity(coords[0], coords[1], coords[2]);
-                if (te instanceof TileEntityGantry teg) {
-                    neighbours.add(teg);
-                }
-            }
-            pendingNeighbourCoords.clear();
-        }
-        if (worldObj.isRemote) {
-            // -1 used as "null" as 0 is a valid ID
-            if (clientModuleId != -1) {
-                // If module, increase progress
-                clientPrevProgress = clientProgress;
-                clientProgress += SPEED;
-                if (clientProgress > 1.0f) {
-                    // If above 1, reset
-                    clientProgress = 0f;
-                    clientPrevProgress = 0f;
-                    clientModuleId = -1;
-                    currentDirection = null;
-                }
-            }
-            return;
-        }
-
-        if (dispatchCooldown > 0) dispatchCooldown--;
-
-        // Handle dispatch queue
-        if (!queue.isEmpty()) {
-            // If cooling down, lower cooldown counter
-            if (dispatchCooldown == 0 && containedTransitModule == null) {
-                // If no contained module, take the next and process
-                TransitModule entry = queue.poll();
-                containedTransitModule = entry;
-                currentDirection = GantryAPI.getDirectionTo(this, entry.destination());
-                progress = 0f;
-
-                if (this instanceof TileEntityGantryTerminal) {
-                    dispatchCooldown = DISPATCH_INTERVAL;
-                }
-
-                markDirty();
-                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-            }
-        }
-
-        if (containedTransitModule == null) {
-            return;
-        }
-
-        // Progress module
-        progress += SPEED;
-
-        // If progress finished, hand off to next gantry
-        if (progress >= 1.0f) {
-            progress = 1.0f;
-            handOff();
-        }
-        markDirty();
-    }
-
-    /**
-     * Gets the current direction of the gantry
-     *
-     * @return The current direction
-     */
-    public Vec3 getDirection() {
-        return currentDirection;
-    }
-
-    // TODO: ADD MODEL AND TEXTURE FOR GANTRY
 
     // MODEL AND TEXTURE GETTERS
     @SideOnly(Side.CLIENT)
@@ -255,331 +425,4 @@ public class TileEntityGantry extends TileEntity {
         return errorTexture;
     }
 
-    /**
-     * Gets an interpolated progress based on the partial tick
-     *
-     * @param partialTicks The amount through the current tick the world is
-     * @return The interpolated progress
-     */
-    public float getInterpolatedProgress(float partialTicks) {
-        return clientPrevProgress + (clientProgress - clientPrevProgress) * partialTicks;
-    }
-
-    /**
-     * Gets the current progress of the module stored (0 if no module)
-     *
-     * @return Current progress / 0 if no module
-     */
-    public float getProgress() {
-        return progress;
-    }
-
-    /**
-     * Gets the list of gantries that count as valid neighbours to this one
-     *
-     * @return The list of valid gantry neighbours
-     */
-    public List<TileEntityGantry> getNeighbours() {
-        return neighbours;
-    }
-
-    /**
-     * Sets the current direction of the gantry
-     *
-     * @param dir The target direction
-     */
-    public void setDirection(Vec3 dir) {
-        currentDirection = dir;
-    }
-
-    /**
-     * Clears the module from gantry and resets progress
-     */
-    public void clearModule() {
-        progress = 0f;
-        clientProgress = 0f;
-        clientPrevProgress = 0f;
-        clientModuleId = -1;
-        containedTransitModule = null;
-        currentDirection = null;
-        incomingDirection = null;
-        clientIncomingDirection = null;
-        markDirty();
-        if (worldObj != null) {
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-        }
-    }
-
-    /**
-     * Ensures the graph is valid by all endpoints being terminals
-     *
-     * @return Boolean : True => is valid graph
-     */
-    public boolean checkValidGraph() {
-        return GantryAPI.terminatesWithTerminals(worldObj, xCoord, yCoord, zCoord);
-    }
-
-    /**
-     * Connects another gantry to this one and updates both
-     *
-     * @param other The other gantry to connect to
-     */
-    public void connect(TileEntityGantry other) {
-        this.neighbours.add(other);
-        other.neighbours.add(this);
-        this.updateNeighbourDirs();
-        other.updateNeighbourDirs();
-        this.markDirty();
-        other.markDirty();
-        if (worldObj != null) {
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-            worldObj.markBlockForUpdate(other.xCoord, other.yCoord, other.zCoord);
-        }
-    }
-
-    /**
-     * Update neighbour direction list
-     */
-    public void updateNeighbourDirs() {
-        if (worldObj.isRemote) return;
-
-        // Clear list and go through neighbours getting vectors
-        neighbourDirs.clear();
-        for (TileEntityGantry neighbour : neighbours) {
-            neighbourDirs.add(
-                Vec3.createVectorHelper(
-                    neighbour.xCoord - xCoord,
-                    neighbour.yCoord - yCoord,
-                    neighbour.zCoord - zCoord));
-        }
-        markDirty();
-        if (worldObj != null) {
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-        }
-        return;
-    }
-
-    /**
-     * Disconnects the gantry from another one and updates both
-     *
-     * @param other The other gantry to disconnect from
-     */
-    public void disconnect(TileEntityGantry other) {
-        this.neighbours.remove(other);
-        other.neighbours.remove(this);
-        this.updateNeighbourDirs();
-        other.updateNeighbourDirs();
-        if (worldObj != null) {
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-            worldObj.markBlockForUpdate(other.xCoord, other.yCoord, other.zCoord);
-        }
-
-    }
-
-    public RocketPartInstance getModule() {
-        if (containedTransitModule == null) return null;
-        return containedTransitModule.module();
-    }
-
-    /**
-     * Hands off a module to the next gantry in the path of the module
-     */
-    public void handOff() {
-
-        // Get next gantry to hand to
-        TileEntityGantry next = getNeighbourGantry(currentDirection);
-        if (next == null || next == this) {
-            // If terminal endpoint, pass to consumer (assembler / silo etc.)
-            if (this instanceof TileEntityGantryTerminal teg) {
-                teg.passModuleToConsumer();
-            }
-            clearModule();
-            return;
-        }
-
-        // If next gantry can take it, pass it on
-        if (next.acceptModule(containedTransitModule, currentDirection)) {
-            clearModule();
-            if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-        }
-    }
-
-    /**
-     * Gets the neighbouring gantry based on a given direction
-     *
-     * @param dir The vector direction to check
-     *
-     * @return The gantry found or null
-     */
-    public TileEntityGantry getNeighbourGantry(Vec3 dir) {
-        if (dir == null) return null;
-        int nx = xCoord + (int) dir.xCoord;
-        int ny = yCoord + (int) dir.yCoord;
-        int nz = zCoord + (int) dir.zCoord;
-        TileEntity te = worldObj.getTileEntity(nx, ny, nz);
-        return (te instanceof TileEntityGantry ? (TileEntityGantry) te : null);
-    }
-
-    /**
-     * Adds a new transit module to the dispatch queue
-     *
-     * @param transit The transit module to add
-     */
-    public void enqueueModule(TransitModule transit) {
-        queue.addLast(transit);
-        markDirty();
-    }
-
-    /**
-     * Takes an incoming transit module and direction and adds it to the dispatch
-     * queue
-     *
-     * @param transit       The transit module
-     * @param fromDirection The direction it came from
-     *
-     * @return Boolean : True => accepted module
-     */
-    public boolean acceptModule(TransitModule transit, Vec3 fromDirection) {
-        if (worldObj.isRemote) return false;
-        if (transit == null) {
-            return false;
-        }
-        this.incomingDirection = fromDirection;
-
-        enqueueModule(transit);
-        markDirty();
-        if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-        return true;
-
-    }
-
-    // Overloaded method for initial injection with no previous direction
-    public boolean acceptModule(TransitModule transit) {
-        return acceptModule(transit, null);
-    }
-
-    @Override
-    public void writeToNBT(NBTTagCompound tag) {
-        super.writeToNBT(tag);
-        NBTTagList neighbourList = new NBTTagList();
-        for (TileEntityGantry neighbour : neighbours) {
-            NBTTagCompound neighbourTag = new NBTTagCompound();
-            neighbourTag.setInteger("x", neighbour.xCoord);
-            neighbourTag.setInteger("y", neighbour.yCoord);
-            neighbourTag.setInteger("z", neighbour.zCoord);
-            neighbourList.appendTag(neighbourTag);
-        }
-        tag.setTag("neighbours", neighbourList);
-
-        NBTTagList dirList = new NBTTagList();
-        for (Vec3 dir : neighbourDirs) {
-            NBTTagCompound entry = new NBTTagCompound();
-            entry.setDouble("x", dir.xCoord);
-            entry.setDouble("y", dir.yCoord);
-            entry.setDouble("z", dir.zCoord);
-            dirList.appendTag(entry);
-        }
-        tag.setTag("neighbourDirs", dirList);
-
-    }
-
-    @Override
-    public void readFromNBT(NBTTagCompound tag) {
-        super.readFromNBT(tag);
-
-        NBTTagList neighbourList = tag.getTagList("neighbours", NBT.TAG_COMPOUND);
-        pendingNeighbourCoords = new ArrayList<>();
-
-        for (int i = 0; i < neighbourList.tagCount(); i++) {
-            NBTTagCompound entry = neighbourList.getCompoundTagAt(i);
-            pendingNeighbourCoords
-                .add(new int[] { entry.getInteger("x"), entry.getInteger("y"), entry.getInteger("z"), });
-        }
-
-        neighbourDirs.clear();
-        NBTTagList list = tag.getTagList("neighbourDirs", NBT.TAG_COMPOUND);
-        for (int i = 0; i < list.tagCount(); i++) {
-            NBTTagCompound entry = list.getCompoundTagAt(i);
-            neighbourDirs
-                .add(Vec3.createVectorHelper(entry.getDouble("x"), entry.getDouble("y"), entry.getDouble("z")));
-        }
-    }
-
-    @Override
-    public Packet getDescriptionPacket() {
-        NBTTagCompound tag = new NBTTagCompound();
-        writeToNBT(tag);
-
-        tag.setBoolean("hasModule", containedTransitModule != null);
-        tag.setFloat("progress", progress);
-
-        if (currentDirection != null) {
-            tag.setFloat("dirX", (float) currentDirection.xCoord);
-            tag.setFloat("dirY", (float) currentDirection.yCoord);
-            tag.setFloat("dirZ", (float) currentDirection.zCoord);
-        }
-
-        if (incomingDirection != null) {
-            tag.setFloat("inDirX", (float) incomingDirection.xCoord);
-            tag.setFloat("inDirY", (float) incomingDirection.yCoord);
-            tag.setFloat("inDirZ", (float) incomingDirection.zCoord);
-        }
-        if (containedTransitModule != null) {
-            tag.setInteger(
-                "moduleId",
-                containedTransitModule.module()
-                    .def()
-                    .id());
-        }
-
-        return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 1, tag);
-    }
-
-    @Override
-    public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity packet) {
-        NBTTagCompound tag = packet.func_148857_g();
-
-        // DO NOT call readFromNBT(tag) here — it will clobber xCoord/yCoord/zCoord
-
-        // Re-read neighbourDirs manually
-        neighbourDirs.clear();
-        NBTTagList list = tag.getTagList("neighbourDirs", NBT.TAG_COMPOUND);
-        for (int i = 0; i < list.tagCount(); i++) {
-            NBTTagCompound entry = list.getCompoundTagAt(i);
-            neighbourDirs
-                .add(Vec3.createVectorHelper(entry.getDouble("x"), entry.getDouble("y"), entry.getDouble("z")));
-        }
-
-        // Module/direction sync
-        int incomingId = tag.hasKey("moduleId") ? tag.getInteger("moduleId") : -1;
-        if (incomingId != -1 && clientModuleId == -1) {
-            clientProgress = 0f;
-            clientPrevProgress = 0f;
-        }
-        clientModuleId = incomingId;
-
-        if (tag.hasKey("dirX")) {
-            currentDirection = Vec3
-                .createVectorHelper(tag.getFloat("dirX"), tag.getFloat("dirY"), tag.getFloat("dirZ"));
-        } else {
-            currentDirection = null;
-        }
-
-        if (tag.hasKey("inDirX")) {
-            clientIncomingDirection = Vec3
-                .createVectorHelper(tag.getFloat("inDirX"), tag.getFloat("inDirY"), tag.getFloat("inDirZ"));
-        } else {
-            clientIncomingDirection = null;
-        }
-    }
-
-    @Override
-    public AxisAlignedBB getRenderBoundingBox() {
-        return TileEntity.INFINITE_EXTENT_AABB;
-    }
-
-    @Override
-    public double getMaxRenderDistanceSquared() {
-        return 512 * 512;
-    }
 }

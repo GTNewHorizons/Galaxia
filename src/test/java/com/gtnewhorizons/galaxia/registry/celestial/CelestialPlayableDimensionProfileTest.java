@@ -62,8 +62,9 @@ final class CelestialPlayableDimensionProfileTest {
             def.radius());
     }
 
+    /** Integration contract: physical pressure is in pascals while existing dimension hazards use atmospheres. */
     @Test
-    void playableDimensionPressureIsAuthoredOnCelestialProperties() {
+    void playableDimensionPressureUsesExplicitPhysicalAndHazardUnits() {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
 
         for (CelestialObject body : CelestialRegistry.getPlayableBodies()) {
@@ -71,9 +72,10 @@ final class CelestialPlayableDimensionProfileTest {
 
             assertEquals(
                 def.effects()
-                    .getPressure(null),
+                    .getPressure(null) * 101325.0,
                 body.properties()
-                    .surfacePressurePa());
+                    .surfacePressurePa(),
+                1e-9);
         }
     }
 

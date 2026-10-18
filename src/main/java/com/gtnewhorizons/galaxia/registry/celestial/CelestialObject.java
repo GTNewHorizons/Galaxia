@@ -153,7 +153,8 @@ public record CelestialObject(CelestialObjectKey key, String name, String nameKe
             this.key = value;
             if (value != null && value.isRegistered()) {
                 CelestialObjectId registeredId = value.registeredBodyId();
-                this.name = registeredId.displayName();
+                this.name = registeredId.name();
+                this.nameKey = registeredId.getId();
                 if (registeredId.dimension() != null) {
                     this.dimensionEnum = registeredId.dimension();
                 }

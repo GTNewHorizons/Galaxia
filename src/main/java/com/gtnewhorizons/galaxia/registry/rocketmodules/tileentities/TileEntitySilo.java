@@ -1,11 +1,16 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities;
 
+import java.util.UUID;
+
+import javax.annotation.Nullable;
+
 import net.minecraft.block.Block;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraftforge.common.util.ForgeDirection;
+import net.minecraft.network.Packet;
+import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.factory.PosGuiData;
@@ -16,190 +21,334 @@ import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
+import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemRocketSchematic;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAssembly;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.assembly.RocketBuildOrder;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.Rocket;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.VehicleSchedule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.assembly.RocketBuildStatus;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor.RocketEditorUI;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler.Operation;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler.WorkRequest;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.GantryAPI;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
-import lombok.Getter;
-import lombok.Setter;
-
+/** Physical assembly coordinator. The world Rocket owns every produced module and paid work claim. */
 public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
-    implements IGuiHolder<PosGuiData>, IRocketControllerTE {
+    implements IGuiHolder<PosGuiData>, IRocketControllerTE.TransportEndpoint {
 
+    private final MachineIdentity identity = new MachineIdentity();
+    private final EndpointBinding endpointBinding = new EndpointBinding();
+    @Nullable
+    private TileEntityRocketLoadingPort loadingPort;
+    @Nullable
+    private UUID vehicleId;
+    private RocketBlueprint designBlueprint = new RocketBlueprint();
+    private RocketBlueprint clientBuiltView = new RocketBlueprint();
+    private RocketBuildStatus clientBuildStatus = RocketBuildStatus.IDLE;
     private EntityRocket entityRocket;
-    public boolean shouldRender = true;
-
-    @Getter
-    private int destination = -1;
-
-    @Getter
-    @Setter
-    private String pendingSchematicName = "";
-
-    @Getter
-    @Setter
     private TileEntityGantryTerminal gantryTerminal;
-    public TileEntityModuleAssembler moduleAssembler;
-    private int[] pendingAssemblerCoords;
-    public boolean hasAssembler = false;
-
-    public ExtendedFacing currentFacing = ExtendedFacing.DEFAULT;
-    private ForgeDirection placedFacing = ForgeDirection.NORTH;
+    private String pendingSchematicName = "";
+    public boolean shouldRender = true;
 
     public static final int SILO_DEFAULT_X_OFFSET = 0;
     public static final int SILO_DEFAULT_Y_OFFSET = 1;
     public static final int SILO_DEFAULT_Z_OFFSET = 3;
-
     private static final String STRUCTURE_PIECE_MAIN = "main";
 
-    /** What the player has drawn in the editor. Mutable only while canEdit(). */
-    @Getter
-    private RocketBlueprint designBlueprint = new RocketBlueprint();
+    @Override
+    public MachineIdentity machineIdentity() {
+        return identity;
+    }
 
-    /**
-     * Immutable snapshot created at order time. Drives the assembler's work list.
-     * Null when not in ASSEMBLING state.
-     */
-    @Getter
-    private RocketBuildOrder currentBuildOrder = null;
+    @Override
+    public EndpointBinding endpointBinding() {
+        return endpointBinding;
+    }
 
-    /**
-     * Accumulated result of confirmed deliveries. Only updated in receiveModulePart.
-     * Becomes authoritative source for the EntityRocket once READY.
-     */
-    private RocketBlueprint assembledBlueprint = new RocketBlueprint();
+    @Override
+    @Nullable
+    public IDistributedInventory loadingInventory() {
+        return structureValid && loadingPort != null && loadingPort.isAvailable() ? loadingPort : null;
+    }
 
-    @Getter
-    private RocketBuildStatus buildStatus = RocketBuildStatus.IDLE;
+    @Override
+    public CelestialAsset.Endpoint.Kind endpointKind() {
+        return CelestialAsset.Endpoint.Kind.SILO;
+    }
 
-    /**
-     * Returns the assembled blueprint only when the rocket is actually built or
-     * launched. Returns an empty blueprint otherwise so callers can't render a
-     * half-built rocket.
-     */
+    @Nullable
+    public UUID vehicleId() {
+        return vehicleId;
+    }
+
+    @Nullable
+    public Rocket rocket() {
+        if (vehicleId == null || worldObj == null || worldObj.isRemote) return null;
+        return Galaxia.proxy.serverRuntime()
+            .rockets()
+            .find(vehicleId);
+    }
+
+    public RocketBlueprint getDesignBlueprint() {
+        return designBlueprint;
+    }
+
+    public RocketBuildStatus getBuildStatus() {
+        if (worldObj != null && worldObj.isRemote) return clientBuildStatus;
+        Rocket rocket = rocket();
+        if (vehicleId != null)
+            return rocket != null && rocket.status() == Rocket.Status.PHYSICAL ? RocketBuildStatus.READY
+                : RocketBuildStatus.ASSEMBLING;
+        return designBlueprint.isEmpty() ? RocketBuildStatus.IDLE : RocketBuildStatus.DESIGNED;
+    }
+
     public RocketBlueprint getBuiltBlueprint() {
-        return buildStatus == RocketBuildStatus.READY ? assembledBlueprint : new RocketBlueprint();
+        if (worldObj != null && worldObj.isRemote) return clientBuiltView;
+        Rocket rocket = rocket();
+        return rocket == null ? new RocketBlueprint() : rocket.builtBlueprint();
     }
 
-    /**
-     * Called by the editor UI on close. Only applies the new design when editing
-     * is allowed — prevents the open editor from overwriting a live build order.
-     */
-    public void setDesignBlueprint(RocketBlueprint bp) {
-        if (!buildStatus.canEdit()) return;
-        this.designBlueprint = bp != null ? bp.copy() : new RocketBlueprint();
-        updateBuildStatusAfterEdit();
+    public void setDesignBlueprint(RocketBlueprint blueprint) {
+        if (!getBuildStatus().canEdit()) return;
+        designBlueprint = blueprint.copy();
         sync();
-    }
-
-    /**
-     * Creates an immutable build order from the current design and enqueues all parts
-     * to the assembler at once. The assembler immediately begins work on any part it
-     * has in stock and holds the rest until stock is replenished — no serial
-     * request-per-delivery loop.
-     */
-    public void orderModules() {
-        if (worldObj.isRemote) return;
-
-        System.out.println("[SILO] orderModules() called - Status: " + buildStatus);
-
-        if (designBlueprint.isEmpty()) {
-            System.out.println("[SILO] cannot order - empty blueprint");
-            return;
-        }
-
-        if (buildStatus == RocketBuildStatus.IDLE) {
-            buildStatus = RocketBuildStatus.DESIGNED;
-        }
-
-        if (!buildStatus.canOrder()) {
-            System.out.println("[SILO] cannot order - wrong status");
-            return;
-        }
-
-        updateLinkedAssembler();
-        System.out.println(
-            "[SILO] hasAssembler=" + hasAssembler
-                + ", moduleAssembler="
-                + (moduleAssembler != null)
-                + ", gantryTerminal="
-                + (gantryTerminal != null));
-
-        if (!hasAssembler || moduleAssembler == null || gantryTerminal == null) {
-            System.out.println("[SILO] No assembler or gantry terminal connected");
-            return;
-        }
-
-        boolean graphValid = gantryTerminal.checkValidGraph() && moduleAssembler.checkValidGraph();
-        System.out.println("[SILO] Gantry graph valid: " + graphValid);
-
-        if (!graphValid) {
-            System.out.println("[SILO] Gantry graph is invalid");
-            return;
-        }
-
-        RocketAssembly analysis = designBlueprint.analyze();
-        System.out.println("[SILO] Blueprint viable: " + analysis.viable());
-
-        if (!analysis.viable()) {
-            System.out.println("[SILO] Blueprint not viable");
-            return;
-        }
-
-        this.currentBuildOrder = new RocketBuildOrder(designBlueprint);
-        this.buildStatus = RocketBuildStatus.ASSEMBLING;
-        this.assembledBlueprint.clear();
-
-        System.out.println("[SILO] Ordering " + currentBuildOrder.totalCount() + " parts...");
-
-        for (RocketPartInstance part : currentBuildOrder.getParts()) {
-            System.out.println(
-                "[SILO] Requesting production: " + part.def()
-                    .name());
-            GantryAPI.requestProduction(part, moduleAssembler, this);
-        }
-
-        sync();
-        System.out.println("[SILO] Order completed successfully!");
     }
 
     public void updateBuildStatusAfterEdit() {
-        if (designBlueprint.isEmpty()) {
-            buildStatus = RocketBuildStatus.IDLE;
-        } else {
-            buildStatus = RocketBuildStatus.DESIGNED;
-        }
         sync();
     }
 
-    /**
-     * Called by TileEntityGantryTerminal when a part physically arrives at the silo.
-     * This is the only place that writes to assembledBlueprint.
-     */
-    public boolean receiveModulePart(RocketPartInstance part) {
-        if (currentBuildOrder == null) return false;
+    public String getPendingSchematicName() {
+        return pendingSchematicName;
+    }
 
-        boolean accepted = currentBuildOrder.markDelivered(part);
-        if (accepted) {
-            assembledBlueprint.addPart(part);
+    public void setPendingSchematicName(String name) {
+        pendingSchematicName = name;
+    }
 
-            if (currentBuildOrder.isComplete()) {
-                buildStatus = RocketBuildStatus.READY;
-                currentBuildOrder = null;
+    public TileEntityGantryTerminal getGantryTerminal() {
+        return gantryTerminal;
+    }
+
+    public void setGantryTerminal(TileEntityGantryTerminal terminal) {
+        gantryTerminal = terminal;
+    }
+
+    public void orderModules() {
+        if (worldObj == null || worldObj.isRemote
+            || !structureValid
+            || !getBuildStatus().canOrder()
+            || identity.teamId() == null
+            || !designBlueprint.analyze()
+                .viable())
+            return;
+        if (designBlueprint.getParts()
+            .stream()
+            .anyMatch(
+                part -> part.def()
+                    .manufactureBill() == null))
+            return;
+        var endpoint = CelestialAssetStore.findEndpoint(identity.id());
+        if (endpoint == null) return;
+        UUID team = CelestialAssetStore.getTeamId(endpoint.asset().assetId);
+        if (team == null || !identity.belongsTo(team)) return;
+        var rocket = Rocket.construct(team, endpoint, designBlueprint);
+        Galaxia.proxy.serverRuntime()
+            .rockets()
+            .register(rocket);
+        vehicleId = rocket.id();
+        tickConstruction(rocket);
+        sync();
+    }
+
+    private void tickConstruction(Rocket rocket) {
+        if (gantryTerminal == null || !structureValid) return;
+        for (var slot : rocket.buildSlots()) {
+            Rocket.Module module = rocket.modules()
+                .stream()
+                .filter(
+                    candidate -> candidate.id()
+                        .equals(slot.moduleId()))
+                .findFirst()
+                .orElse(null);
+            Rocket.ModuleWork claim = rocket.workFor(slot.moduleId());
+            if (module == null && claim == null) {
+                var bill = slot.part()
+                    .def()
+                    .manufactureBill();
+                if (bill == null) continue;
+                var request = WorkRequest.fromBill(
+                    slot.requestId(),
+                    rocket.id(),
+                    slot.moduleId(),
+                    slot.part()
+                        .def()
+                        .id(),
+                    Operation.MANUFACTURE,
+                    bill);
+                var accepted = GantryAPI.requestWork(gantryTerminal, rocket.teamId(), request);
+                if (accepted == null) continue;
+                var terminal = GantryAPI.findEndpointTerminals(gantryTerminal)
+                    .stream()
+                    .filter(
+                        candidate -> candidate.terminalId()
+                            .equals(accepted.terminalId()))
+                    .findFirst()
+                    .orElse(null);
+                if (terminal == null)
+                    throw new IllegalStateException("Accepted Assembler left its connected component during admission");
+                var target = new Rocket.TerminalTarget(
+                    terminal.terminalId(),
+                    accepted.controllerId(),
+                    worldObj.provider.dimensionId,
+                    terminal.xCoord,
+                    terminal.yCoord,
+                    terminal.zCoord,
+                    new Rocket.Holder(Rocket.HolderKind.ASSEMBLER, accepted.controllerId()));
+                claim = new Rocket.ModuleWork(slot.requestId(), slot.moduleId(), target, bill);
+                if (!rocket.reserveWork(claim)) throw new IllegalStateException("Conflicting vehicle work claim");
             }
+            if (claim == null) continue;
+            var target = claim.machine();
+            if (target.dimension() != worldObj.provider.dimensionId
+                || !worldObj.blockExists(target.x(), target.y(), target.z())) continue;
+            var tile = worldObj.getTileEntity(target.x(), target.y(), target.z());
+            if (!(tile instanceof TileEntityGantryTerminal terminal) || !terminal.terminalId()
+                .equals(target.terminalId())) continue;
+            var assembler = terminal.getAssembler();
+            if (assembler == null || !assembler.controllerId()
+                .equals(target.controllerId())) continue;
+            if (module == null) {
+                var request = WorkRequest.fromBill(
+                    claim.workId(),
+                    rocket.id(),
+                    slot.moduleId(),
+                    slot.part()
+                        .def()
+                        .id(),
+                    Operation.MANUFACTURE,
+                    claim.bill());
+                if (!assembler.tryAccept(rocket.teamId(), request)
+                    .accepted()) continue;
+                var output = assembler.completedOutput();
+                if (output == null || !output.equals(request)) continue;
+                module = Rocket.Module.produced(
+                    rocket.id(),
+                    slot,
+                    100,
+                    new Rocket.Holder(Rocket.HolderKind.ASSEMBLER, assembler.controllerId()));
+                if (!rocket.acceptProduced(module))
+                    throw new IllegalStateException("Assembler produced an unreserved module");
+            }
+            if (module.holder()
+                .equals(new Rocket.Holder(Rocket.HolderKind.ASSEMBLER, assembler.controllerId()))) {
+                GantryAPI.dispatch(
+                    Galaxia.proxy.serverRuntime()
+                        .rockets(),
+                    rocket,
+                    module.id(),
+                    claim.workId(),
+                    terminal,
+                    gantryTerminal,
+                    new Rocket.Holder(Rocket.HolderKind.SILO_BUFFER, identity.id()));
+            }
+        }
+        var place = assemblyPlace();
+        if (place != null && rocket.assemble(identity.id(), place)) sync();
+    }
+
+    /** Checks the existing vehicle's reserved receiving position without advancing its lifecycle. */
+    public boolean acceptGantryDelivery(Rocket rocket, Rocket.Module module, UUID workId) {
+        if (rocket.status() == Rocket.Status.INCOMPLETE) return false;
+        var service = rocket.service();
+        if (service != null && !service.reassembled()) {
+            return rocket.id()
+                .equals(vehicleId)
+                && service.returnSiloId()
+                    .equals(identity.id())
+                && isAvailableTo(rocket.teamId(), rocket.bodyKey())
+                && workId.equals(
+                    service.returns()
+                        .get(module.id()));
+        }
+        var claim = rocket.workFor(module.id());
+        return rocket.id()
+            .equals(vehicleId)
+            && rocket.assemblySiloId()
+                .equals(identity.id())
+            && identity.belongsTo(rocket.teamId())
+            && claim != null
+            && claim.workId()
+                .equals(workId);
+    }
+
+    @Override
+    public boolean reserveArrival(Rocket.Registry registry, Rocket rocket) {
+        return (vehicleId == null || vehicleId.equals(rocket.id()))
+            && TransportEndpoint.super.reserveArrival(registry, rocket);
+    }
+
+    @Override
+    public boolean acceptArrival(Rocket.Registry registry, Rocket rocket) {
+        if (!TransportEndpoint.super.acceptArrival(registry, rocket)) return false;
+        if (vehicleId == null) {
+            vehicleId = rocket.id();
             sync();
         }
-        return accepted;
+        return true;
+    }
+
+    /** One physical Silo reserves its receiving slot for the exact accepted service order. */
+    public boolean adoptServiceReturn(Rocket rocket) {
+        var service = rocket.service();
+        if (rocket.status() == Rocket.Status.INCOMPLETE || service == null
+            || service.reassembled()
+            || !service.returnSiloId()
+                .equals(identity.id())
+            || !isAvailableTo(rocket.teamId(), rocket.bodyKey())
+            || (vehicleId != null && !vehicleId.equals(rocket.id()))) return false;
+        if (vehicleId == null) {
+            vehicleId = rocket.id();
+            sync();
+        }
+        return true;
+    }
+
+    public void tickServiceReturn(Rocket rocket) {
+        var place = assemblyPlace();
+        if (place != null && adoptServiceReturn(rocket)
+            && (rocket.resumeConstruction(identity.id(), place) || rocket.assemble(identity.id(), place))) sync();
+    }
+
+    @Nullable
+    private VehicleSchedule.Place assemblyPlace() {
+        var endpoint = CelestialAssetStore.findEndpoint(identity.id());
+        if (endpoint == null) return null;
+        return VehicleSchedule.Place.at(endpoint);
+    }
+
+    /** Frees only this coordinator's vehicle slot after its owner has committed departure. */
+    public boolean releaseOccupancy(Rocket rocket) {
+        if ((worldObj != null && worldObj.isRemote) || !identity.belongsTo(rocket.teamId())
+            || identity.id()
+                .equals(rocket.currentEndpointId())
+            || (rocket.service() != null && !rocket.service()
+                .reassembled()))
+            return false;
+        if (vehicleId == null) return true;
+        if (!vehicleId.equals(rocket.id())) return false;
+        vehicleId = null;
+        sync();
+        return true;
     }
 
     private static final IStructureDefinition<TileEntitySilo> STRUCTURE_DEFINITION = StructureDefinition
@@ -208,7 +357,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
             STRUCTURE_PIECE_MAIN,
             // spotless:off
                 new String[][]{
-                    {"         ","         ","         ","         ","         ","         ","         ","         ","  DDDDD  ","   C C   ","  EE~EE  ","  EEEEE  "},
+                    {"         ","         ","         ","         ","         ","         ","         ","         ","  DDDDD  ","   C C   ","  PE~EE  ","  EEEEE  "},
                     {"         ","         ","         ","         ","         ","         ","         ","         "," D     D ","         "," EAAAAAE "," EAAAAAE "},
                     {" C     C "," C     C "," C     C "," C     C "," C     C "," C     C "," C     C "," C     C "," D     D "," C     C ","EEAAAAAEE","EEAAAAAEE"},
                     {"CB     BC","CB     BC","CB     BC","CB     BC","CB     BC","CB     BC","CB     BC","CB     BC","CB     BC","TB     BT","EEAAAAAEE","EEAAAAAEE"},
@@ -223,6 +372,12 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         .addElement('C', StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_FRAMEBOX.get(), 0))
         .addElement('D', StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_REINFORCEMENT.get(), 0))
         .addElement('E', StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_SHEETING.get(), 0))
+        .addElement('P', StructureUtility.ofChain(StructureUtility.ofTileAdder((silo, tile) -> {
+            if (!(tile instanceof TileEntityRocketLoadingPort port)) return false;
+            silo.loadingPort = port;
+            return true;
+        }, GalaxiaBlocksEnum.ROCKET_LOADING_PORT.get(), 0),
+            StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_SHEETING.get(), 0)))
         .addElement('T', StructureUtility.ofChain(StructureUtility.ofTileAdder((silo, te) -> {
             if (te instanceof TileEntityGantryTerminal terminal) {
                 silo.setGantryTerminal(terminal);
@@ -234,13 +389,16 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
             StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_SHEETING.get(), 0)))
         .build();
 
-    public TileEntitySilo() {
-        super();
-    }
-
     @Override
     public IStructureDefinition<TileEntitySilo> getStructureDefinition() {
         return STRUCTURE_DEFINITION;
+    }
+
+    @Override
+    protected boolean checkStructure() {
+        gantryTerminal = null;
+        loadingPort = null;
+        return super.checkStructure();
     }
 
     @Override
@@ -259,128 +417,110 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     }
 
     @Override
-    protected void onStructureFormed() {
-        super.onStructureFormed();
-        updateLinkedAssembler();
-        shouldRender = true;
-    }
-
-    @Override
-    protected void onStructureDisformed() {
-        super.onStructureDisformed();
-        updateLinkedAssembler();
-        shouldRender = false;
-    }
-
-    public static int[] getRotatedOffset(int localX, int localY, int localZ, ExtendedFacing currentFacing) {
-        return switch (currentFacing.getDirection()) {
-            case SOUTH -> new int[] { localX, localY, -localZ };
-            case NORTH -> new int[] { -localX, localY, localZ };
-            case EAST -> new int[] { -localZ, localY, -localX };
-            case WEST -> new int[] { localZ, localY, localX };
-            default -> new int[] { localX, localY, -localZ };
-        };
-    }
-
-    @Override
     public Block getControllerBlock() {
         return GalaxiaBlocksEnum.SILO_CONTROLLER.get();
     }
 
-    public void updateLinkedAssembler() {
-        if (worldObj.isRemote || gantryTerminal == null) {
-            moduleAssembler = null;
-            hasAssembler = false;
-            return;
-        }
+    @Override
+    protected void onStructureFormed() {
+        shouldRender = true;
+        refreshEndpoint();
+    }
 
-        if (!gantryTerminal.checkValidGraph()) {
-            moduleAssembler = null;
-            hasAssembler = false;
-            return;
-        }
+    @Override
+    protected void onStructureChecked() {
+        refreshEndpoint();
+    }
 
-        for (TileEntityGantryTerminal terminal : GantryAPI.findEndpointTerminals(gantryTerminal)) {
-            if (terminal.getAssembler() != null) {
-                moduleAssembler = terminal.getAssembler();
-                hasAssembler = true;
-                markDirty();
-                return;
-            }
-        }
+    @Override
+    protected void onStructureDisformed() {
+        shouldRender = false;
+        endpointUnavailable();
+    }
 
-        moduleAssembler = null;
-        hasAssembler = false;
+    public static int[] getRotatedOffset(int x, int y, int z, ExtendedFacing facing) {
+        return switch (facing.getDirection()) {
+            case SOUTH -> new int[] { x, y, -z };
+            case NORTH -> new int[] { -x, y, z };
+            case EAST -> new int[] { -z, y, -x };
+            case WEST -> new int[] { z, y, x };
+            default -> new int[] { x, y, -z };
+        };
     }
 
     @Override
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
+        if (endpointBinding.assetId() == null) return endpointAssociationUI(data);
         return RocketEditorUI.build(data, syncManager, settings);
     }
 
     public void enterRocket(PosGuiData data) {
-        if (!buildStatus.canLaunch() || assembledBlueprint.isEmpty()) return;
-
-        boolean isNew = (entityRocket == null || entityRocket.isDead);
-        EntityRocket rocket = getOrCreateEntityRocket();
-        if (rocket == null) return;
-
-        rocket.setBlueprint(assembledBlueprint);
-        rocket.setDestination(destination);
-        rocket.setTargetSilo(this);
-        rocket.initializeSeats();
-
-        if (isNew) {
-            worldObj.spawnEntityInWorld(rocket);
-        }
-
-        sync();
-        rocket.interactFirst(data.getPlayer());
+        if (worldObj.isRemote || getBuildStatus() != RocketBuildStatus.READY) return;
+        Rocket vehicle = rocket();
+        if (vehicle == null || vehicle.isRunning()) return;
+        EntityRocket entity = getOrCreateEntityRocket();
+        if (entity == null) return;
+        entity.initializeSeats();
+        entity.interactFirst(data.getPlayer());
     }
 
-    public void returnModules() {
-        if (moduleAssembler == null || worldObj.isRemote) return;
-        for (RocketPartInstance part : assembledBlueprint.getParts()) {
-            GantryAPI.injectModule(part, moduleAssembler, this, true);
-        }
-
-        this.designBlueprint.clear();
-        this.assembledBlueprint.clear();
-        this.currentBuildOrder = null;
-        this.buildStatus = RocketBuildStatus.IDLE;
-        this.shouldRender = true;
-        sync();
-    }
-
-    public void captureSchematic(EntityPlayer player) {
-        if (worldObj.isRemote || designBlueprint.isEmpty()) return;
-        ItemStack schematic = ItemRocketSchematic.captureFromSilo(this, pendingSchematicName);
-        if (schematic != null) {
-            player.inventory.addItemStackToInventory(schematic);
-        }
-    }
-
+    @Nullable
     private EntityRocket getOrCreateEntityRocket() {
-        if (entityRocket != null && !entityRocket.isDead) return entityRocket;
-
+        Rocket vehicle = rocket();
+        if (vehicle == null || vehicle.status() != Rocket.Status.PHYSICAL) return null;
+        if (entityRocket != null && !entityRocket.isDead && entityRocket.isCurrentProjection(vehicle))
+            return entityRocket;
+        for (Entity candidate : worldObj.loadedEntityList) {
+            if (candidate instanceof EntityRocket existing && !existing.isDead
+                && existing.isCurrentProjection(vehicle)) {
+                entityRocket = existing;
+                return existing;
+            }
+        }
         entityRocket = new EntityRocket(worldObj);
+        var position = vehiclePosition();
+        entityRocket.setPosition(position.x() + 0.5, position.y(), position.z() + 0.5);
+        if (!entityRocket.bind(vehicle)) {
+            entityRocket = null;
+            return null;
+        }
+        if (!worldObj.spawnEntityInWorld(entityRocket)) {
+            vehicle.retireProjection(entityRocket.getUniqueID(), entityRocket.projectionGeneration());
+            entityRocket.setDead();
+            entityRocket = null;
+        }
+        return entityRocket;
+    }
+
+    @Override
+    public BlockPos vehiclePosition() {
         int[] offset = getRotatedOffset(
             SILO_DEFAULT_X_OFFSET,
             SILO_DEFAULT_Y_OFFSET,
             SILO_DEFAULT_Z_OFFSET,
             currentFacing);
-        entityRocket.setPosition(xCoord + offset[0] + 0.5, yCoord + offset[1], zCoord + offset[2] + 0.5);
-        return entityRocket;
+        return new BlockPos(xCoord + offset[0], yCoord + offset[1], zCoord + offset[2]);
     }
 
-    public void onRocketLaunched() {
+    public void captureSchematic(EntityPlayer player) {
         if (worldObj.isRemote) return;
+        ItemStack schematic = ItemRocketSchematic.captureFromSilo(this, pendingSchematicName);
+        if (schematic != null) player.inventory.addItemStackToInventory(schematic);
+    }
 
-        this.assembledBlueprint.clear();
-        this.currentBuildOrder = null;
-        this.buildStatus = RocketBuildStatus.DESIGNED;
-        this.shouldRender = true;
-        sync();
+    @Override
+    public void updateEntity() {
+        super.updateEntity();
+        if (worldObj == null || worldObj.isRemote) return;
+        Rocket rocket = rocket();
+        if (rocket == null) return;
+        tickServiceReturn(rocket);
+        if (rocket.status() == Rocket.Status.CONSTRUCTING) tickConstruction(rocket);
+        if (shouldRender && structureValid
+            && rocket.status() == Rocket.Status.PHYSICAL
+            && (entityRocket == null || entityRocket.isDead)) {
+            getOrCreateEntityRocket();
+        }
     }
 
     public void sync() {
@@ -389,112 +529,53 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     }
 
     @Override
-    public void updateEntity() {
-        super.updateEntity();
-        if (worldObj.isRemote) return;
-
-        if (shouldRender && (entityRocket == null || entityRocket.isDead)
-            && structureValid
-            && buildStatus == RocketBuildStatus.READY) {
-            EntityRocket rocket = getOrCreateEntityRocket();
-            rocket.setBlueprint(assembledBlueprint);
-            rocket.setDestination(destination);
-            rocket.setTargetSilo(this);
-            worldObj.spawnEntityInWorld(rocket);
-        }
-
-        if (pendingAssemblerCoords != null) {
-            TileEntity te = worldObj
-                .getTileEntity(pendingAssemblerCoords[0], pendingAssemblerCoords[1], pendingAssemblerCoords[2]);
-            if (te instanceof TileEntityModuleAssembler assembler) {
-                moduleAssembler = assembler;
-            }
-            pendingAssemblerCoords = null;
-        }
-    }
-
-    @Override
     public void invalidate() {
+        endpointUnavailable();
         super.invalidate();
         if (entityRocket != null && !entityRocket.isDead) entityRocket.setDead();
     }
 
     @Override
-    public void writeToNBT(NBTTagCompound nbt) {
-        super.writeToNBT(nbt);
-
-        nbt.setBoolean("shouldRender", shouldRender);
-
-        nbt.setInteger("buildStatus", buildStatus.ordinal());
-        nbt.setTag("designBlueprint", designBlueprint.serializeNBT());
-        nbt.setTag("assembledBlueprint", assembledBlueprint.serializeNBT());
-
-        if (currentBuildOrder != null) {
-            nbt.setTag("buildOrder", currentBuildOrder.serializeNBT());
-        }
-
-        if (moduleAssembler != null) {
-            nbt.setInteger("assemblerX", moduleAssembler.xCoord);
-            nbt.setInteger("assemblerY", moduleAssembler.yCoord);
-            nbt.setInteger("assemblerZ", moduleAssembler.zCoord);
-        }
-        nbt.setBoolean("hasAssembler", hasAssembler);
-
-        nbt.setInteger("facing", currentFacing.getIndex());
-        nbt.setInteger("placedFacing", placedFacing.ordinal());
-        nbt.setInteger("destination", destination);
-        nbt.setString("pendingSchematicName", pendingSchematicName);
+    public void onChunkUnload() {
+        endpointUnavailable();
+        super.onChunkUnload();
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
-        super.readFromNBT(nbt);
+    public void writeToNBT(NBTTagCompound tag) {
+        super.writeToNBT(tag);
+        identity.writeToNBT(tag);
+        endpointBinding.writeToNBT(tag);
+        if (vehicleId != null) tag.setString("vehicle", vehicleId.toString());
+        tag.setTag("designBlueprint", designBlueprint.serializeNBT());
+        tag.setBoolean("shouldRender", shouldRender);
+        tag.setString("pendingSchematicName", pendingSchematicName);
+        tag.setString("buildStatus", getBuildStatus().name());
+    }
 
-        shouldRender = nbt.getBoolean("shouldRender");
+    @Override
+    public Packet getDescriptionPacket() {
+        var tag = new NBTTagCompound();
+        writeToNBT(tag);
+        tag.setTag("builtView", getBuiltBlueprint().serializeNBT());
+        return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 0, tag);
+    }
 
-        if (nbt.hasKey("buildStatus")) {
-            int ordinal = nbt.getInteger("buildStatus");
-            RocketBuildStatus[] values = RocketBuildStatus.values();
-            buildStatus = ordinal >= 0 && ordinal < values.length ? values[ordinal] : RocketBuildStatus.IDLE;
-        }
-
+    @Override
+    public void readFromNBT(NBTTagCompound tag) {
+        super.readFromNBT(tag);
+        identity.readFromNBT(tag);
+        endpointBinding.readFromNBT(tag);
+        vehicleId = tag.hasKey("vehicle") ? UUID.fromString(tag.getString("vehicle")) : null;
         designBlueprint = RocketBlueprint
-            .deserializeNBT(nbt.getCompoundTag("designBlueprint"), RocketPartRegistry.instance());
-        assembledBlueprint = RocketBlueprint
-            .deserializeNBT(nbt.getCompoundTag("assembledBlueprint"), RocketPartRegistry.instance());
-
-        if (nbt.hasKey("buildOrder")) {
-            currentBuildOrder = RocketBuildOrder
-                .deserializeNBT(nbt.getCompoundTag("buildOrder"), RocketPartRegistry.instance());
+            .deserializeNBT(tag.getCompoundTag("designBlueprint"), RocketPartRegistry.instance());
+        shouldRender = tag.getBoolean("shouldRender");
+        pendingSchematicName = tag.getString("pendingSchematicName");
+        clientBuildStatus = RocketBuildStatus.valueOf(tag.getString("buildStatus"));
+        if (worldObj != null && worldObj.isRemote) {
+            clientBuiltView = RocketBlueprint
+                .deserializeNBT(tag.getCompoundTag("builtView"), RocketPartRegistry.instance());
         }
-
-        hasAssembler = nbt.getBoolean("hasAssembler");
-        destination = nbt.getInteger("destination");
-        pendingSchematicName = nbt.getString("pendingSchematicName");
-
-        if (nbt.hasKey("assemblerX")) {
-            pendingAssemblerCoords = new int[] { nbt.getInteger("assemblerX"), nbt.getInteger("assemblerY"),
-                nbt.getInteger("assemblerZ") };
-        }
-        if (nbt.hasKey("facing")) currentFacing = ExtendedFacing.byIndex(nbt.getInteger("facing"));
-        if (nbt.hasKey("placedFacing")) placedFacing = ForgeDirection.getOrientation(nbt.getInteger("placedFacing"));
-    }
-
-    public void setDestination(int dim) {
-        this.destination = dim;
-        markDirty();
-    }
-
-    // IRocketControllerTE
-
-    @Override
-    public ForgeDirection getPlacedFacing() {
-        return placedFacing;
-    }
-
-    @Override
-    public void setPlacedFacing(ForgeDirection dir) {
-        this.placedFacing = dir;
     }
 
     @Override

@@ -17,7 +17,7 @@ $projectRoot = Split-Path $PSScriptRoot -Parent
 $groups = [ordered]@{
     'physical-stations' = @('galaxia:AirlockGuiGameTests.')
     'automated-facilities' = @('galaxia:FacilityGameplayGameTests.', 'galaxia:StationGuiGameTests.')
-    'rocket-production' = @('galaxia:ModuleConstructionGuiGameTests.')
+    'rocket-production' = @('galaxia:ModuleConstructionGuiGameTests.', 'galaxia:RocketScheduleGuiGameTests.', 'galaxia:RocketMissionGameTests.', 'galaxia:TransportPlatformGuiGameTests.')
     'starmap' = @('galaxia:StarmapGameTests.')
     'satellites' = @('galaxia:SatelliteNetworkGuiGameTests.')
 }

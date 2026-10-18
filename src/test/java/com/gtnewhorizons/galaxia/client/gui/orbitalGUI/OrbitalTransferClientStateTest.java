@@ -77,6 +77,7 @@ final class OrbitalTransferClientStateTest {
                 .shouldRenderTransferForEndpointVisibility(transfer, endpointVisibility(destination)));
     }
 
+    /** Integration contract: rendering selects the cheapest physically valid Lambert branch at the requested time. */
     @Test
     void renderedLogisticsTransferUsesCheapestLambertBranchForFixedRouteTime() {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
@@ -87,7 +88,10 @@ final class OrbitalTransferClientStateTest {
         for (CelestialObject source : GalaxiaCelestialAPI.getAllBodies()
             .values()) {
             CelestialObject star = GalaxiaCelestialAPI.findStar(root, source);
-            if (star == null) continue;
+            if (star == null || star.mu() <= 0.0
+                || star.properties()
+                    .radiusEarthRelative() <= 0.0)
+                continue;
             for (CelestialObject destination : GalaxiaCelestialAPI.getAllBodies()
                 .values()) {
                 if (source.key() == destination.key()) continue;
@@ -198,8 +202,9 @@ final class OrbitalTransferClientStateTest {
         double vsrcY = srcState.vy() - starAtDep.vy();
         double vdstX = dstState.vx() - starAtArr.vx();
         double vdstY = dstState.vy() - starAtArr.vy();
-        double mu = Math.max(1e-6, star.mu());
-        double minPeriapsis = Math.max(0.05, star.spriteSize() * 0.5);
+        double mu = star.mu();
+        double minPeriapsis = star.properties()
+            .radiusEarthRelative();
 
         LambertTransfer.Solution prograde = LambertTransfer.between(r1x, r1y, r2x, r2y)
             .mu(mu)

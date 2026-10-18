@@ -22,7 +22,7 @@ final class CelestialAssetInventoryCapabilityTest {
     }
 
     @Test
-    void onlyPhysicalStationExposesDistributedInventory() {
+    void physicalAndLogicalStorageOwnersExposeTheirResourceCapability() {
         CelestialAsset station = new Station(
             CelestialAsset.ID.create(),
             CelestialObjectId.MOON,
@@ -39,7 +39,7 @@ final class CelestialAssetInventoryCapabilityTest {
             SatelliteKind.COMMUNICATION);
 
         assertTrue(IDistributedInventory.class.isInstance(station));
-        assertFalse(IDistributedInventory.class.isInstance(facility));
+        assertTrue(IDistributedInventory.class.isInstance(facility));
         assertFalse(IDistributedInventory.class.isInstance(satellite));
     }
 }

@@ -63,6 +63,7 @@ final class AutomatedFacilityInventoryTest {
             CelestialObjectId.ROSS_128_B,
             CelestialAsset.Kind.AUTOMATED_OUTPOST,
             Buildable.Status.OPERATIONAL);
+        FacilityTestFixtures.addFluidTank(outpost);
         outpost.insert(INPUT_KEY, 1000);
         outpost.insert(OUTPUT_KEY, 900);
         outpost.applyCommand(

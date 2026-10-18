@@ -17,6 +17,7 @@ import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemGalacticMap;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemKineticTether;
+import com.gtnewhorizons.galaxia.registry.items.special.ItemRocketModule;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemRocketSchematic;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemTeleporter;
 
@@ -61,6 +62,7 @@ public enum GalaxiaItemList {
     // PARTS
     HEAVY_DUTY_PLATE_BASE("parts/heavy_duty_plate_base"),
     SATELLITE_DISH("parts/satellite_dish"),
+    RECOVERED_ROCKET_MODULE("parts/recovered_rocket_module", ItemRocketModule::new, 1),
     BOROSILICATE_GLASS_BAR("parts/borosilicate_glass_bar"),
 
     // GEAR

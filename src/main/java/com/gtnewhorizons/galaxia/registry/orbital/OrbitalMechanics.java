@@ -2,11 +2,27 @@ package com.gtnewhorizons.galaxia.registry.orbital;
 
 import java.util.ArrayList;
 
+import javax.annotation.Nullable;
+
+import net.minecraft.nbt.NBTTagCompound;
+
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
+import com.gtnewhorizons.galaxia.core.state.CelestialObjectKeyState;
+import com.gtnewhorizons.galaxia.core.state.NbtReader;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialBodyProperties;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 public final class OrbitalMechanics {
+
+    /** Existing orbital catalogue length scale, independent of Minecraft block coordinates. */
+    public static final double METRES_PER_DISTANCE_UNIT = 6_371_000.0;
+    private static final double SOLAR_MU_SI = 132_712_440_041.279419e9;
+    private static final double SOLAR_MU_ORBITAL = 7.2e7;
+    /** Physical seconds per OSU. Game-clock seconds are a separate compressed duration. */
+    public static final double PHYSICAL_SECONDS_PER_OSU = Math
+        .sqrt(SOLAR_MU_ORBITAL * Math.pow(METRES_PER_DISTANCE_UNIT, 3) / SOLAR_MU_SI);
 
     private static final double DEFAULT_STANDARD_GRAVITATIONAL_PARAMETER = 0.1764;
     private static final double MINIMUM_AXIS = 1e-8;
@@ -16,6 +32,273 @@ public final class OrbitalMechanics {
     private static final ArrayList<MinorBodyOrbitResolver> MINOR_BODY_ORBIT_RESOLVERS = new ArrayList<>();
 
     private OrbitalMechanics() {}
+
+    public static double distanceToMetres(double distance) {
+        return distance * METRES_PER_DISTANCE_UNIT;
+    }
+
+    public static double metresToDistance(double metres) {
+        return metres / METRES_PER_DISTANCE_UNIT;
+    }
+
+    public static double osuToPhysicalSeconds(double osu) {
+        return osu * PHYSICAL_SECONDS_PER_OSU;
+    }
+
+    public static double physicalSecondsToOsu(double seconds) {
+        return seconds / PHYSICAL_SECONDS_PER_OSU;
+    }
+
+    public static double velocityToMetresPerSecond(double velocity) {
+        return velocity * METRES_PER_DISTANCE_UNIT / PHYSICAL_SECONDS_PER_OSU;
+    }
+
+    public static double metresPerSecondToVelocity(double velocity) {
+        return velocity * PHYSICAL_SECONDS_PER_OSU / METRES_PER_DISTANCE_UNIT;
+    }
+
+    public static double muToSI(double mu) {
+        return mu * SOLAR_MU_SI / SOLAR_MU_ORBITAL;
+    }
+
+    public static double siToMu(double mu) {
+        return mu * SOLAR_MU_ORBITAL / SOLAR_MU_SI;
+    }
+
+    /** Actual burnable mixture only. Inert mass includes cargo and any unusable mixture remainder. */
+    public record LocalVehicle(double inertMassKg, double usablePropellantKg, double exhaustVelocityMps,
+        double thrustNewtons) {
+
+        public LocalVehicle {
+            if (!positive(inertMassKg) || !nonNegative(usablePropellantKg)
+                || !positive(exhaustVelocityMps)
+                || !positive(thrustNewtons)) throw new IllegalArgumentException("Invalid propulsion inputs");
+        }
+
+        public double wetMassKg() {
+            return inertMassKg + usablePropellantKg;
+        }
+
+        public double usableDeltaVMps() {
+            return exhaustVelocityMps * Math.log1p(usablePropellantKg / inertMassKg);
+        }
+    }
+
+    /** Explicit provisional cost settings, not an additional celestial or vehicle catalogue. */
+    public record CostModel(double gravityLossAtOneGMps, double atmosphereLossAtOneAtmMps,
+        double atmosphericLandingCostFraction, double maxOrbitalBurnTimeScaleFraction, double localTimeScale,
+        double dockingDeltaVMps, double minimumSurfaceGameSeconds) {
+
+        public CostModel {
+            if (!nonNegative(gravityLossAtOneGMps) || !nonNegative(atmosphereLossAtOneAtmMps)
+                || !nonNegative(atmosphericLandingCostFraction)
+                || atmosphericLandingCostFraction > 1
+                || !positive(maxOrbitalBurnTimeScaleFraction)
+                || !positive(localTimeScale)
+                || !nonNegative(dockingDeltaVMps)
+                || !nonNegative(minimumSurfaceGameSeconds))
+                throw new IllegalArgumentException("Invalid maneuver cost settings");
+        }
+    }
+
+    public enum LocalStatus {
+        FEASIBLE,
+        UNAVAILABLE_DATA,
+        INSUFFICIENT_THRUST,
+        INSUFFICIENT_PROPELLANT,
+        APPROXIMATION_LIMIT,
+        NOT_FOUND
+    }
+
+    public enum ManeuverKind {
+        ASCENT,
+        UNDOCKING,
+        PARKING_COAST,
+        DEPARTURE,
+        WELL_PASSAGE,
+        COAST,
+        CAPTURE,
+        LANDING,
+        DOCKING
+    }
+
+    /** Approximate cost obligation. It is not a numerically integrated trajectory or an exact steering program. */
+    public record ManeuverObligation(ManeuverKind kind, CelestialObjectKey bodyKey, double deltaVMps,
+        double propellantKg, double physicalSeconds, double burnPhysicalSeconds, double startEpochOsu,
+        double endEpochOsu, double thrustToWeight, LocalStatus status) {
+
+        public ManeuverObligation {
+            if (kind == null || bodyKey == null
+                || status == null
+                || !nonNegative(deltaVMps)
+                || !nonNegative(propellantKg)
+                || !nonNegative(physicalSeconds)
+                || !nonNegative(burnPhysicalSeconds)
+                || burnPhysicalSeconds > physicalSeconds + 1e-6
+                || !Double.isFinite(startEpochOsu)
+                || !Double.isFinite(endEpochOsu)
+                || endEpochOsu < startEpochOsu
+                || !nonNegative(thrustToWeight)) throw new IllegalArgumentException("Invalid maneuver obligation");
+            boolean coast = kind == ManeuverKind.COAST || kind == ManeuverKind.PARKING_COAST
+                || kind == ManeuverKind.WELL_PASSAGE;
+            if (coast && (deltaVMps != 0 || propellantKg != 0
+                || burnPhysicalSeconds != 0
+                || thrustToWeight != 0
+                || Math.abs(endEpochOsu - startEpochOsu - physicalSecondsToOsu(physicalSeconds)) > 1e-7))
+                throw new IllegalArgumentException("Invalid ballistic coast obligation");
+            if (!coast && (Math.abs(physicalSeconds - burnPhysicalSeconds) > 1e-7
+                || (deltaVMps > 0 && (propellantKg <= 0 || burnPhysicalSeconds <= 0
+                    || (status == LocalStatus.FEASIBLE && endEpochOsu <= startEpochOsu)))))
+                throw new IllegalArgumentException("Invalid powered maneuver obligation");
+            if (status == LocalStatus.FEASIBLE && (kind == ManeuverKind.ASCENT || kind == ManeuverKind.LANDING)
+                && thrustToWeight <= 1) throw new IllegalArgumentException("Insufficient surface maneuver thrust");
+        }
+
+        public NBTTagCompound serializeNBT() {
+            NBTTagCompound out = new NBTTagCompound();
+            out.setString("kind", kind.name());
+            out.setTag("body", CelestialObjectKeyState.encode(bodyKey));
+            out.setDouble("dv", deltaVMps);
+            out.setDouble("propellant", propellantKg);
+            out.setDouble("seconds", physicalSeconds);
+            out.setDouble("burnSeconds", burnPhysicalSeconds);
+            out.setDouble("start", startEpochOsu);
+            out.setDouble("end", endEpochOsu);
+            out.setDouble("twr", thrustToWeight);
+            out.setString("status", status.name());
+            return out;
+        }
+
+        public static ManeuverObligation deserializeNBT(NBTTagCompound encoded) {
+            var in = new NbtReader(encoded, "maneuverObligation");
+            return new ManeuverObligation(
+                in.enumValue(ManeuverKind.class, "kind"),
+                CelestialObjectKeyState.decode(in.compound("body")),
+                in.doubleValue("dv"),
+                in.doubleValue("propellant"),
+                in.doubleValue("seconds"),
+                in.doubleValue("burnSeconds"),
+                in.doubleValue("start"),
+                in.doubleValue("end"),
+                in.doubleValue("twr"),
+                in.enumValue(LocalStatus.class, "status"));
+        }
+    }
+
+    public static boolean hasManeuverData(CelestialBodyProperties body) {
+        return body.radiusEarthRelative() > 0 && body.standardGravitationalParameter() > 0
+            && body.parkingOrbitRadius() > body.radiusEarthRelative();
+    }
+
+    /** Two-impulse energy cost from a stationary surface to parking, plus explicit provisional losses. */
+    public static double surfaceManeuverDeltaV(CelestialBodyProperties body, CostModel model, boolean landing) {
+        if (!hasManeuverData(body)) return Double.NaN;
+        double radius = body.radiusMetres(), parking = distanceToMetres(body.parkingOrbitRadius());
+        double mu = muToSI(body.standardGravitationalParameter()), axis = (radius + parking) / 2;
+        double ideal = Math.sqrt(mu * (2 / radius - 1 / axis)) + Math.sqrt(mu / parking)
+            - Math.sqrt(mu * (2 / parking - 1 / axis));
+        double gravity = mu / (radius * radius) / 9.80665;
+        double pressure = body.surfacePressurePa() / 101325;
+        double cost = ideal + model.gravityLossAtOneGMps() * gravity;
+        if (landing) return cost * (1 - (1 - model.atmosphericLandingCostFraction()) * Math.min(1, pressure));
+        return cost + model.atmosphereLossAtOneAtmMps() * pressure;
+    }
+
+    /** Tangential hyperbolic periapsis injection/capture cost. Geometry supplies the actual asymptotic speed. */
+    public static double parkingWellDeltaV(CelestialBodyProperties body, double infinitySpeedMps) {
+        if (!hasManeuverData(body) || !nonNegative(infinitySpeedMps)) return Double.NaN;
+        double r = distanceToMetres(body.parkingOrbitRadius()), mu = muToSI(body.standardGravitationalParameter());
+        return Math.sqrt(infinitySpeedMps * infinitySpeedMps + 2 * mu / r) - Math.sqrt(mu / r);
+    }
+
+    public static ManeuverObligation approximateBurn(ManeuverKind kind, CelestialObject body, LocalVehicle vehicle,
+        double currentMassKg, double deltaV, double epoch, CostModel model) {
+        double propellant = -currentMassKg * Math.expm1(-deltaV / vehicle.exhaustVelocityMps());
+        double seconds = propellant * vehicle.exhaustVelocityMps() / vehicle.thrustNewtons();
+        double radius = body.properties()
+            .radiusMetres();
+        double mu = muToSI(body.mu());
+        double twr = vehicle.thrustNewtons() / (currentMassKg * mu / (radius * radius));
+        LocalStatus status = LocalStatus.FEASIBLE;
+        if (propellant > currentMassKg - vehicle.inertMassKg() + 1e-7) status = LocalStatus.INSUFFICIENT_PROPELLANT;
+        else if ((kind == ManeuverKind.ASCENT || kind == ManeuverKind.LANDING) && twr <= 1)
+            status = LocalStatus.INSUFFICIENT_THRUST;
+        else if (kind == ManeuverKind.DEPARTURE || kind == ManeuverKind.CAPTURE
+            || kind == ManeuverKind.UNDOCKING
+            || kind == ManeuverKind.DOCKING) {
+                double parking = distanceToMetres(
+                    body.properties()
+                        .parkingOrbitRadius());
+                double tau = Math.sqrt(parking * parking * parking / mu);
+                if (seconds / tau > model.maxOrbitalBurnTimeScaleFraction()) status = LocalStatus.APPROXIMATION_LIMIT;
+            }
+        double gameSeconds = seconds / model.localTimeScale();
+        if (kind == ManeuverKind.ASCENT || kind == ManeuverKind.LANDING)
+            gameSeconds = Math.max(gameSeconds, model.minimumSurfaceGameSeconds());
+        return new ManeuverObligation(
+            kind,
+            body.key(),
+            deltaV,
+            propellant,
+            seconds,
+            seconds,
+            epoch,
+            epoch + gameSeconds * OrbitalTransferPlanner.OSU_PER_SECOND,
+            twr,
+            status);
+    }
+
+    public static ManeuverObligation approximateCoast(ManeuverKind kind, CelestialObject body, double seconds,
+        double epoch) {
+        return new ManeuverObligation(
+            kind,
+            body.key(),
+            0,
+            0,
+            seconds,
+            0,
+            epoch,
+            epoch + physicalSecondsToOsu(seconds),
+            0,
+            LocalStatus.FEASIBLE);
+    }
+
+    /** Analytic hyperbolic branch at a physical child encounter point, with velocities in SI. */
+    public record HyperbolicPassage(double vxMps, double vyMps, double radialMps, double periapsisRadiusM) {}
+
+    public static HyperbolicPassage hyperbolicVelocityAtPosition(double mu, double xM, double yM, double infinityVxMps,
+        double infinityVyMps, boolean outgoing, int angularMomentumSign) {
+        double r = Math.hypot(xM, yM), u = Math.hypot(infinityVxMps, infinityVyMps);
+        if (!positive(mu) || !positive(r) || !nonNegative(u) || (angularMomentumSign != 1 && angularMomentumSign != -1))
+            throw new IllegalArgumentException("Invalid hyperbolic passage");
+        double nx = xM / r, ny = yM / r;
+        if (u < 1e-9) {
+            double vt = angularMomentumSign * Math.sqrt(2 * mu / r);
+            return new HyperbolicPassage(-ny * vt, nx * vt, 0, r);
+        }
+        double qx = infinityVxMps / u, qy = infinityVyMps / u;
+        double c = Math.max(-1, Math.min(1, nx * qx + ny * qy)), s = -ny * qx + nx * qy;
+        double b = r * u * s, product = mu * r * (outgoing ? 1 - c : 1 + c);
+        double discriminant = Math.sqrt(b * b + 4 * product);
+        double h = angularMomentumSign > 0 ? (b >= 0 ? (b + discriminant) / 2 : 2 * product / (discriminant - b))
+            : b <= 0 ? (b - discriminant) / 2 : -2 * product / (discriminant + b);
+        if (Math.abs(h) < 1e-9) {
+            double vr = (outgoing ? 1 : -1) * Math.sqrt(u * u + 2 * mu / r);
+            return new HyperbolicPassage(nx * vr, ny * vr, vr, 0);
+        }
+        double vr = u * c + (outgoing ? 1 : -1) * mu * s / h, vt = h / r;
+        double eccentricity = Math.sqrt(1 + u * u * h * h / (mu * mu));
+        double periapsis = h * h / (mu * (1 + eccentricity));
+        return new HyperbolicPassage(nx * vr - ny * vt, ny * vr + nx * vt, vr, periapsis);
+    }
+
+    private static boolean positive(double value) {
+        return Double.isFinite(value) && value > 0;
+    }
+
+    private static boolean nonNegative(double value) {
+        return Double.isFinite(value) && value >= 0;
+    }
 
     public static void registerMinorBodyResolver(MinorBodyOrbitResolver resolver) {
         if (resolver == null) throw new IllegalArgumentException("minor body orbit resolver is required");
@@ -41,6 +324,25 @@ public final class OrbitalMechanics {
     }
 
     public record AbsolutePosition(double x, double y) {}
+
+    /** Resolves the same authored parent frames from a supplied headless numerical definition set. */
+    @Nullable
+    public static OrbitalState resolveWorldState(
+        java.util.Map<com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey, CelestialObject> bodies,
+        com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey key, double epoch) {
+        java.util.List<CelestialObject> path = new java.util.ArrayList<>();
+        CelestialObject body = bodies.get(key);
+        while (body != null) {
+            if (path.size() >= bodies.size()) throw new IllegalArgumentException("Cyclic numerical hierarchy");
+            path.add(body);
+            body = bodies.get(body.parentKey());
+        }
+        if (path.isEmpty()) return null;
+        OrbitalState state = new OrbitalState(0, 0, 0, 0);
+        for (int i = path.size() - 2; i >= 0; i--)
+            state = resolveChildWorldState(path.get(i + 1), path.get(i), state, epoch);
+        return state;
+    }
 
     public static OrbitalState resolveWorldState(CelestialObject root, CelestialObject target, double globalTime) {
         if (root == null || target == null) return null;
@@ -232,6 +534,7 @@ public final class OrbitalMechanics {
     }
 
     private static double solveEccentricAnomaly(double meanAnomaly, double eccentricity) {
+        if (eccentricity == 0) return meanAnomaly;
         double eccentricAnomaly = meanAnomaly;
         for (int i = 0; i < KEPLER_ITERATIONS; i++) {
             double value = eccentricAnomaly - eccentricity * Math.sin(eccentricAnomaly) - meanAnomaly;

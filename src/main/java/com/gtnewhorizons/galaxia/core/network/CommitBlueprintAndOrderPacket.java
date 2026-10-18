@@ -4,6 +4,8 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 
+import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
@@ -54,27 +56,24 @@ public class CommitBlueprintAndOrderPacket implements IMessage {
         @Override
         public IMessage onMessage(CommitBlueprintAndOrderPacket message, MessageContext ctx) {
 
-            World world = ctx.getServerHandler().playerEntity.worldObj;
-
-            TileEntity te = world.getTileEntity(message.x, message.y, message.z);
-
-            if (!(te instanceof TileEntitySilo silo)) {
-                return null;
-            }
-
-            RocketBlueprint blueprint = RocketBlueprint
-                .deserializeNBT(message.blueprint, RocketPartRegistry.instance());
-
-            System.out.println(
-                "[PACKET] Received blueprint parts: " + blueprint.getParts()
-                    .size());
-
-            silo.setDesignBlueprint(blueprint);
-
-            silo.orderModules();
-
-            silo.sync();
-
+            var player = ctx.getServerHandler().playerEntity;
+            World world = player.worldObj;
+            ServerTickTaskQueue.schedule(() -> {
+                if (player.isDead || player.worldObj != world
+                    || message.blueprint == null
+                    || !world.blockExists(message.x, message.y, message.z)
+                    || player.getDistanceSq(message.x + 0.5, message.y + 0.5, message.z + 0.5) > 64) return;
+                TileEntity tile = world.getTileEntity(message.x, message.y, message.z);
+                if (!(tile instanceof TileEntitySilo silo) || !silo.machineIdentity()
+                    .canUse(player, TeamAction.BUILD_MODULE)) return;
+                try {
+                    var blueprint = RocketBlueprint.deserializeNBT(message.blueprint, RocketPartRegistry.instance());
+                    silo.setDesignBlueprint(blueprint);
+                    silo.orderModules();
+                } catch (IllegalArgumentException | IllegalStateException ex) {
+                    Galaxia.LOG.warn("Rejected invalid Rocket construction request from {}", player.getUniqueID(), ex);
+                }
+            });
             return null;
         }
     }

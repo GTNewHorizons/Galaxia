@@ -427,7 +427,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
                 + " x"
                 + row.count(),
             NAME_W + BODY_ICON_SIZE + CAP_ICON_SIZE);
-        ResourceLocation satelliteIcon = CelestialMarkerBase.CelestialAssetIcons.get(CelestialAsset.Kind.SATELLITE);
+        ResourceLocation satelliteIcon = AssetPanelIcons.kindIcon(CelestialAsset.Kind.SATELLITE);
         return new ParentWidget<>().widthRel(1f)
             .height(ROW_H)
             .background(

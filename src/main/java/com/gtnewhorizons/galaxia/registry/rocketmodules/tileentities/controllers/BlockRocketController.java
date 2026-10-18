@@ -6,6 +6,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.IIcon;
@@ -14,6 +15,7 @@ import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
+import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.IRocketControllerTE;
 
@@ -60,12 +62,21 @@ public abstract class BlockRocketController extends BlockUpdatable {
      */
     @Override
     public void onBlockPlacedBy(World world, int x, int y, int z, EntityLivingBase placer, ItemStack stack) {
+        initializeController(world, x, y, z, placer);
+    }
+
+    public static void initializeController(World world, int x, int y, int z, EntityLivingBase placer) {
         int f = MathHelper.floor_double((placer.rotationYaw * 4.0F / 360.0F) + 0.5D) & 3;
         ForgeDirection[] dirs = { ForgeDirection.NORTH, ForgeDirection.EAST, ForgeDirection.SOUTH,
             ForgeDirection.WEST };
         ForgeDirection dir = dirs[f];
         TileEntity te = world.getTileEntity(x, y, z);
         if (te instanceof IRocketControllerTE rte) rte.setPlacedFacing(dir);
+        if (!world.isRemote && placer instanceof EntityPlayer player && te instanceof IRocketControllerTE rte) {
+            rte.machineIdentity()
+                .claim(GTTeamsCompat.getTeam(player));
+            te.markDirty();
+        }
     }
 
     @Override

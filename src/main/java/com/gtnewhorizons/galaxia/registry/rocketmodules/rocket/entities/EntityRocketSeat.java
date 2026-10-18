@@ -1,9 +1,14 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities;
 
+import java.util.UUID;
+
 import net.minecraft.entity.Entity;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.DamageSource;
 import net.minecraft.world.World;
+
+import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.state.NbtReader;
 
 import cpw.mods.fml.common.registry.IEntityAdditionalSpawnData;
 import io.netty.buffer.ByteBuf;
@@ -16,6 +21,9 @@ public class EntityRocketSeat extends Entity implements IEntityAdditionalSpawnDa
     private double offsetX, offsetY, offsetZ;
 
     private int clientParentId = -1;
+    private UUID parentId;
+    private UUID vehicleId;
+    private long projectionGeneration;
 
     public EntityRocketSeat(World world) {
         super(world);
@@ -24,9 +32,13 @@ public class EntityRocketSeat extends Entity implements IEntityAdditionalSpawnDa
         this.noClip = true;
     }
 
-    public EntityRocketSeat(World world, Entity rocket, int seatIndex, double offsetX, double offsetY, double offsetZ) {
+    public EntityRocketSeat(World world, EntityRocket rocket, int seatIndex, double offsetX, double offsetY,
+        double offsetZ) {
         this(world);
         this.rocket = rocket;
+        this.parentId = rocket.getUniqueID();
+        this.vehicleId = rocket.vehicleId();
+        this.projectionGeneration = rocket.projectionGeneration();
         this.seatIndex = seatIndex;
         this.offsetX = offsetX;
         this.offsetY = offsetY;
@@ -39,31 +51,43 @@ public class EntityRocketSeat extends Entity implements IEntityAdditionalSpawnDa
     }
 
     public EntityRocket getRocket() {
-        if (rocket instanceof EntityRocket castRocket) {
+        if (rocket instanceof EntityRocket castRocket && !rocket.isDead) {
             return castRocket;
         }
+        if (worldObj.isRemote && clientParentId >= 0) {
+            rocket = worldObj.getEntityByID(clientParentId);
+            return rocket instanceof EntityRocket found && !found.isDead ? found : null;
+        }
+        if (!worldObj.isRemote && parentId != null) {
+            for (Entity candidate : worldObj.loadedEntityList) {
+                if (candidate instanceof EntityRocket found && !found.isDead && parentId.equals(found.getUniqueID())) {
+                    rocket = found;
+                    return found;
+                }
+            }
+        }
         return null;
+    }
+
+    public int seatIndex() {
+        return seatIndex;
     }
 
     @Override
     public void onUpdate() {
         super.onUpdate();
-
-        if (worldObj.isRemote && rocket == null && clientParentId != -1) {
-            Entity parent = worldObj.getEntityByID(clientParentId);
-            if (parent != null) {
-                this.rocket = parent;
-            }
-        }
-
         if (!worldObj.isRemote) {
-            if (rocket == null || rocket.isDead) {
+            var vehicle = vehicleId == null ? null
+                : Galaxia.proxy.serverRuntime()
+                    .rockets()
+                    .find(vehicleId);
+            if (vehicle == null || parentId == null || !vehicle.ownsProjection(parentId, projectionGeneration)) {
                 this.setDead();
                 return;
             }
         }
-
-        if (rocket != null) {
+        EntityRocket parent = getRocket();
+        if (parent != null) {
 
             this.motionX = rocket.motionX;
             this.motionY = rocket.motionY;
@@ -100,6 +124,11 @@ public class EntityRocketSeat extends Entity implements IEntityAdditionalSpawnDa
 
     @Override
     protected void readEntityFromNBT(NBTTagCompound tag) {
+        var in = new NbtReader(tag, "rocketSeat");
+        parentId = UUID.fromString(in.string("parent"));
+        vehicleId = UUID.fromString(in.string("vehicle"));
+        projectionGeneration = in.longValue("generation");
+        if (projectionGeneration <= 0) throw new IllegalStateException("Invalid Rocket seat generation");
         this.seatIndex = tag.getInteger("SeatIndex");
         this.offsetX = tag.getDouble("OffsetX");
         this.offsetY = tag.getDouble("OffsetY");
@@ -108,6 +137,11 @@ public class EntityRocketSeat extends Entity implements IEntityAdditionalSpawnDa
 
     @Override
     protected void writeEntityToNBT(NBTTagCompound tag) {
+        if (parentId == null || vehicleId == null)
+            throw new IllegalStateException("Unbound Rocket seat cannot be saved");
+        tag.setString("parent", parentId.toString());
+        tag.setString("vehicle", vehicleId.toString());
+        tag.setLong("generation", projectionGeneration);
         tag.setInteger("SeatIndex", this.seatIndex);
         tag.setDouble("OffsetX", this.offsetX);
         tag.setDouble("OffsetY", this.offsetY);

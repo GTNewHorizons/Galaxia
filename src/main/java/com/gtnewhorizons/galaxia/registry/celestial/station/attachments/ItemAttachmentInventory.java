@@ -49,21 +49,32 @@ public class ItemAttachmentInventory<T> implements IDistributedInventory {
     @Override
     public long getFreeItemSpace(ItemStackWrapper item) {
         if (!getItemFilter().test(item)) return 0L;
-        long capacity = handler.getItemCapacity(attachment);
-        long stored = handler.getItemStored(attachment);
-        return Math.max(0, capacity - stored);
+        return insertIntoOwnStorage(item, Integer.MAX_VALUE, true);
     }
 
     @Override
     public long insertIntoOwnStorage(ItemStackWrapper item, long target) {
+        return insertIntoOwnStorage(item, target, false);
+    }
+
+    @Override
+    public long insertIntoOwnStorage(ItemStackWrapper item, long target, boolean simulate) {
         int toFill = (int) Math.min(target, Integer.MAX_VALUE);
-        return Math.max(0, handler.insertItem(attachment, item.toStack(toFill), true));
+        long moved = Math.max(0, handler.insertItem(attachment, item.toStack(toFill), !simulate));
+        if (!simulate && moved > 0) handler.markDirty(attachment);
+        return moved;
     }
 
     @Override
     public long extractFromOwnStorage(ItemStackWrapper item, long target) {
+        return extractFromOwnStorage(item, target, false);
+    }
+
+    @Override
+    public long extractFromOwnStorage(ItemStackWrapper item, long target, boolean simulate) {
         ItemStack drained = handler
-            .extractItem(attachment, item.toStack((int) Math.min(target, Integer.MAX_VALUE)), true);
+            .extractItem(attachment, item.toStack((int) Math.min(target, Integer.MAX_VALUE)), !simulate);
+        if (!simulate && drained != null && drained.stackSize > 0) handler.markDirty(attachment);
         return drained != null ? drained.stackSize : 0;
     }
 

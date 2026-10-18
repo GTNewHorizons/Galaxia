@@ -5,6 +5,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.util.ResourceLocation;
@@ -28,7 +30,10 @@ import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics.ManeuverKind;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner.PoweredCandidate;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.Rocket.TransitView;
 
 // ---------------------------------------------------------------------------
 // Package-level records
@@ -730,14 +735,100 @@ public final class InterplanetaryTransferSystem {
         private static final int PREVIEW_PATH_COLOR = EnumColors.MAP_COLOR_TRANSFER_PREVIEW_PATH.getColor();
         private static final float DOT_HIT_RADIUS = 7.0f;
         private static final float PACKAGE_SPRITE_SIZE = 12.0f;
+        private static final int VEHICLE_TRAJECTORY_SAMPLES = 96;
+        private static final float VEHICLE_PATH_WIDTH = 2.0f;
+        private static final float VEHICLE_SPRITE_SIZE = 14.0f;
 
         private final Callbacks callbacks;
         private final StarmapViewContext view;
         private final MutableTransferPoint transferPoint = new MutableTransferPoint();
+        private final double[] vehicleXs = new double[VEHICLE_TRAJECTORY_SAMPLES];
+        private final double[] vehicleYs = new double[VEHICLE_TRAJECTORY_SAMPLES];
+        @Nullable
+        private PoweredCandidate vehicleGeometry;
+        private int vehiclePointCount;
 
         public OrbitalTransferRenderer(Callbacks callbacks, StarmapViewContext view) {
             this.callbacks = callbacks;
             this.view = view;
+        }
+
+        void drawVehicleTransit(@Nullable TransitView transit) {
+            if (transit == null) return;
+            var source = GalaxiaCelestialAPI.get(
+                transit.source()
+                    .body())
+                .orElseThrow();
+            var destination = GalaxiaCelestialAPI.get(
+                transit.destination()
+                    .body())
+                .orElseThrow();
+            if (!callbacks.isBodyRendered(source) && !callbacks.isBodyRendered(destination)) return;
+            updateVehicleGeometry(transit.journey());
+            GlStateManager.disableTexture2D();
+            GlStateManager.enableBlend();
+            GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+            StarmapColor.apply(EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
+            if (vehiclePointCount > 1) {
+                GL11.glLineWidth(VEHICLE_PATH_WIDTH);
+                GL11.glBegin(GL11.GL_LINE_STRIP);
+                for (int i = 0; i < vehiclePointCount; i++) {
+                    GL11.glVertex2f(view.worldToScreenX(vehicleXs[i]), view.worldToScreenY(vehicleYs[i]));
+                }
+                GL11.glEnd();
+                GL11.glLineWidth(1f);
+            }
+            GlStateManager.enableTexture2D();
+            var phase = transit.currentPhase();
+            double worldX;
+            double worldY;
+            if (phase != null && phase.kind() == ManeuverKind.COAST) {
+                if (vehiclePointCount < 2) return;
+                double point = transit.phaseProgress() * (vehiclePointCount - 1);
+                int before = Math.min(vehiclePointCount - 2, (int) point);
+                double fraction = point - before;
+                worldX = vehicleXs[before] + fraction * (vehicleXs[before + 1] - vehicleXs[before]);
+                worldY = vehicleYs[before] + fraction * (vehicleYs[before + 1] - vehicleYs[before]);
+            } else {
+                var body = phase == null ? source
+                    : GalaxiaCelestialAPI.get(phase.bodyKey())
+                        .orElseThrow();
+                var position = callbacks.getWorldPosition(body);
+                if (position == null) return;
+                worldX = position[0];
+                worldY = position[1];
+            }
+            Minecraft.getMinecraft()
+                .getTextureManager()
+                .bindTexture(EnumTextures.SILO_ENTER_ROCKET_ICON.get());
+            GlStateManager.color(1f, 1f, 1f, 1f);
+            float x = view.worldToScreenX(worldX);
+            float y = view.worldToScreenY(worldY);
+            float half = VEHICLE_SPRITE_SIZE * 0.5f;
+            GuiDraw.drawTexture(x - half, y - half, x + half, y + half, 0f, 0f, 1f, 1f);
+        }
+
+        private void updateVehicleGeometry(@Nullable PoweredCandidate journey) {
+            if (java.util.Objects.equals(vehicleGeometry, journey)) return;
+            vehicleGeometry = journey;
+            vehiclePointCount = 0;
+            if (journey == null || journey.geometrySeed() == null) return;
+            var route = journey.geometrySeed()
+                .route();
+            var attractor = GalaxiaCelestialAPI.get(route.attractorBodyKey())
+                .orElseThrow();
+            vehiclePointCount = sampleTransferArcInto(
+                route.anchorX(),
+                route.anchorY(),
+                route.r1x(),
+                route.r1y(),
+                route.departureVelocityX(),
+                route.departureVelocityY(),
+                route.tofOsu(),
+                attractor.mu(),
+                vehicleXs,
+                vehicleYs,
+                VEHICLE_TRAJECTORY_SAMPLES);
         }
 
         void drawTransferPaths(OrbitalTransferState state, CelestialObject visibleSystem, double currentTime,

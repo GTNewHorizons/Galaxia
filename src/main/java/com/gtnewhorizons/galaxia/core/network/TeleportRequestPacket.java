@@ -69,14 +69,21 @@ public class TeleportRequestPacket implements IMessage {
         @Override
         public IMessage onMessage(TeleportRequestPacket message, MessageContext ctx) {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
+            ServerTickTaskQueue.schedule(() -> teleport(message, player));
+            return null;
+        }
+
+        private void teleport(TeleportRequestPacket message, EntityPlayerMP player) {
+            if (com.gtnewhorizons.galaxia.core.Galaxia.proxy.serverRuntime()
+                .restrictedPassenger(player.getUniqueID()) != null) return;
             MinecraftServer server = player.mcServer;
             WorldServer targetWorld = server.worldServerForDimension(message.dim);
 
-            if (targetWorld == null) return null;
+            if (targetWorld == null) return;
 
             if (player.dimension == message.dim) {
                 placePlayer(message, player);
-                return null;
+                return;
             }
 
             player.mountEntity(null);
@@ -114,7 +121,6 @@ public class TeleportRequestPacket implements IMessage {
                     }
                 });
 
-            return null;
         }
 
         private void placePlayer(TeleportRequestPacket message, EntityPlayerMP player) {

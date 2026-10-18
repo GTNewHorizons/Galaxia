@@ -121,10 +121,12 @@ final class FacilityInventoryCommandTest {
     }
 
     private static AutomatedFacility facility() {
-        return new AutomatedFacility(
+        var facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.MARS,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
+        FacilityTestFixtures.addFluidTank(facility);
+        return facility;
     }
 }

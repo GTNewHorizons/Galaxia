@@ -158,6 +158,43 @@ public interface IDistributedInventory {
     // Mutations
     // =========================================================================
 
+    /** Simulates exact owner admission without changing resources. Positive return values are moved amounts. */
+    default <T extends InventoryKey> long updateContents(T key, long delta, boolean simulate) {
+        return key.isItem() ? updateItems((ItemStackWrapper) key, delta, simulate)
+            : updateFluids((FluidKey) key, delta, simulate);
+    }
+
+    default long updateItems(ItemStackWrapper item, long delta, boolean simulate) {
+        if (!simulate) return updateItems(item, delta);
+        if (item == null || delta == 0L || !getItemFilter().test(item)) return 0L;
+        return delta > 0 ? insertItems(item, delta, true) : extractItems(item, extractionTarget(delta), true);
+    }
+
+    default long updateFluids(FluidKey fluid, long delta, boolean simulate) {
+        if (!simulate) return updateFluids(fluid, delta);
+        if (fluid == null || delta == 0L || !getFluidFilter().test(fluid)) return 0L;
+        return delta > 0 ? insertFluids(fluid, delta, true) : extractFluids(fluid, extractionTarget(delta), true);
+    }
+
+    /** Owners must provide exact simulated insertion. Unsupported insertion cannot promise capacity. */
+    default long insertIntoOwnStorage(ItemStackWrapper item, long target, boolean simulate) {
+        return simulate ? 0 : insertIntoOwnStorage(item, target);
+    }
+
+    default long extractFromOwnStorage(ItemStackWrapper item, long target, boolean simulate) {
+        return simulate ? Math.min(target, getItemAmounts().getOrDefault(item, 0L))
+            : extractFromOwnStorage(item, target);
+    }
+
+    default long insertIntoOwnFluidStorage(FluidKey fluid, long target, boolean simulate) {
+        return simulate ? 0 : insertIntoOwnFluidStorage(fluid, target);
+    }
+
+    default long extractFromOwnFluidStorage(FluidKey fluid, long target, boolean simulate) {
+        return simulate ? Math.min(target, getFluidAmounts().getOrDefault(fluid, 0L))
+            : extractFromOwnFluidStorage(fluid, target);
+    }
+
     default <T extends InventoryKey> long updateContents(T key, long delta) {
         return key.isItem() ? updateItems((ItemStackWrapper) key, delta) : updateFluids((FluidKey) key, delta);
     }
@@ -165,33 +202,33 @@ public interface IDistributedInventory {
     default long updateItems(ItemStackWrapper item, long delta) {
         if (item == null || delta == 0L) return 0L;
         if (!getItemFilter().test(item)) return 0L;
-        return delta > 0 ? insertItems(item, delta) : extractItems(item, extractionTarget(delta));
+        return delta > 0 ? insertItems(item, delta, false) : extractItems(item, extractionTarget(delta), false);
     }
 
-    private long insertItems(ItemStackWrapper item, long target) {
+    private long insertItems(ItemStackWrapper item, long target, boolean simulate) {
         long transferred = 0;
         for (IDistributedInventory child : getChildrenSortedByPriority()) {
             if (transferred >= target) break;
             if (child == null || !child.getItemFilter()
                 .test(item)) continue;
-            transferred += child.updateItems(item, target - transferred);
+            transferred += child.updateItems(item, target - transferred, simulate);
         }
         if (transferred < target) {
-            transferred += insertIntoOwnStorage(item, target - transferred);
+            transferred += insertIntoOwnStorage(item, target - transferred, simulate);
         }
         return transferred;
     }
 
-    private long extractItems(ItemStackWrapper item, long target) {
+    private long extractItems(ItemStackWrapper item, long target, boolean simulate) {
         long transferred = 0;
         List<IDistributedInventory> sorted = getChildrenSortedByPriority();
         for (int i = sorted.size() - 1; i >= 0 && transferred < target; i--) {
             IDistributedInventory child = sorted.get(i);
             if (child == null) continue;
-            transferred += child.updateItems(item, -(target - transferred));
+            transferred += child.updateItems(item, -(target - transferred), simulate);
         }
         if (transferred < target) {
-            transferred += extractFromOwnStorage(item, target - transferred);
+            transferred += extractFromOwnStorage(item, target - transferred, simulate);
         }
         return transferred;
     }
@@ -223,37 +260,37 @@ public interface IDistributedInventory {
     default long updateFluids(FluidKey fluid, long delta) {
         if (fluid == null || delta == 0) return 0L;
         if (!getFluidFilter().test(fluid)) return 0L;
-        return delta > 0 ? insertFluids(fluid, delta) : extractFluids(fluid, extractionTarget(delta));
+        return delta > 0 ? insertFluids(fluid, delta, false) : extractFluids(fluid, extractionTarget(delta), false);
     }
 
     private static long extractionTarget(long delta) {
         return delta == Long.MIN_VALUE ? Long.MAX_VALUE : -delta;
     }
 
-    private long insertFluids(FluidKey fluid, long target) {
+    private long insertFluids(FluidKey fluid, long target, boolean simulate) {
         long transferred = 0;
         for (IDistributedInventory child : getChildrenSortedByPriority()) {
             if (transferred >= target) break;
             if (child == null || !child.getFluidFilter()
                 .test(fluid)) continue;
-            transferred += child.updateFluids(fluid, target - transferred);
+            transferred += child.updateFluids(fluid, target - transferred, simulate);
         }
         if (transferred < target) {
-            transferred += insertIntoOwnFluidStorage(fluid, target - transferred);
+            transferred += insertIntoOwnFluidStorage(fluid, target - transferred, simulate);
         }
         return transferred;
     }
 
-    private long extractFluids(FluidKey fluid, long target) {
+    private long extractFluids(FluidKey fluid, long target, boolean simulate) {
         long transferred = 0;
         List<IDistributedInventory> sorted = getChildrenSortedByPriority();
         for (int i = sorted.size() - 1; i >= 0 && transferred < target; i--) {
             IDistributedInventory child = sorted.get(i);
             if (child == null) continue;
-            transferred += child.updateFluids(fluid, -(target - transferred));
+            transferred += child.updateFluids(fluid, -(target - transferred), simulate);
         }
         if (transferred < target) {
-            transferred += extractFromOwnFluidStorage(fluid, target - transferred);
+            transferred += extractFromOwnFluidStorage(fluid, target - transferred, simulate);
         }
         return transferred;
     }

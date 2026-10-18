@@ -1,130 +1,211 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry;
 
+import java.util.UUID;
+
+import javax.annotation.Nullable;
+
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.network.NetworkManager;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
-import net.minecraft.util.Vec3;
+import net.minecraft.tileentity.TileEntity;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
+import com.gtnewhorizons.galaxia.core.state.NbtReader;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.Rocket;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.IRocketControllerTE;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityTransportPlatform;
 
+/** A Gantry node bound to one exact physical controller, resolved again after unload. */
 public class TileEntityGantryTerminal extends TileEntityGantry {
 
-    private TileEntitySilo connectedSilo;
-    public Vec3 siloDir = null;
-    private TileEntityModuleAssembler connectedAssembler;
-    public Vec3 assemblerDir = null;
+    private TileEntity connectedController;
+    private Binding binding;
 
-    /**
-     * Connects a silo provided to this terminal
-     *
-     * @param silo The silo to connect
-     */
+    private enum ControllerKind {
+        SILO,
+        ASSEMBLER,
+        PLATFORM
+    }
+
+    private record Binding(UUID id, ControllerKind kind, int x, int y, int z) {}
+
+    public UUID terminalId() {
+        return nodeId();
+    }
+
     public void connectSilo(TileEntitySilo silo) {
-        connectedSilo = silo;
+        bind(silo, ControllerKind.SILO);
     }
 
-    /**
-     * Connects a module assembler to this terminal
-     *
-     * @param assembler The assembler to connect
-     */
     public void connectAssembler(TileEntityModuleAssembler assembler) {
-        connectedAssembler = assembler;
+        bind(assembler, ControllerKind.ASSEMBLER);
     }
 
+    public void connectPlatform(TileEntityTransportPlatform pad) {
+        bind(pad, ControllerKind.PLATFORM);
+    }
+
+    private void bind(TileEntity controller, ControllerKind kind) {
+        var identity = ((IRocketControllerTE) controller).machineIdentity();
+        connectedController = controller;
+        binding = new Binding(identity.id(), kind, controller.xCoord, controller.yCoord, controller.zCoord);
+        syncProjection();
+    }
+
+    @Nullable
+    public TileEntity controller() {
+        if (binding == null) return null;
+        if (worldObj == null) return connectedController;
+        if (!worldObj.blockExists(binding.x(), binding.y(), binding.z())) return null;
+        TileEntity tile = worldObj.getTileEntity(binding.x(), binding.y(), binding.z());
+        if (!(tile instanceof IRocketControllerTE controller) || tile.isInvalid()
+            || !controller.machineIdentity()
+                .id()
+                .equals(binding.id())
+            || !matchesKind(tile)) {
+            return null;
+        }
+        connectedController = tile;
+        return tile;
+    }
+
+    private boolean matchesKind(TileEntity tile) {
+        return switch (binding.kind()) {
+            case SILO -> tile instanceof TileEntitySilo;
+            case ASSEMBLER -> tile instanceof TileEntityModuleAssembler;
+            case PLATFORM -> tile instanceof TileEntityTransportPlatform;
+        };
+    }
+
+    @Nullable
+    public TileEntityTransportPlatform getPlatform() {
+        TileEntity tile = controller();
+        return tile instanceof TileEntityTransportPlatform pad ? pad : null;
+    }
+
+    @Nullable
+    public IRocketControllerTE.MachineIdentity controllerIdentity() {
+        TileEntity tile = controller();
+        return tile instanceof IRocketControllerTE controller ? controller.machineIdentity() : null;
+    }
+
+    @Nullable
     public TileEntitySilo getSilo() {
-        return connectedSilo;
+        TileEntity tile = controller();
+        return tile instanceof TileEntitySilo silo ? silo : null;
     }
 
+    @Nullable
     public TileEntityModuleAssembler getAssembler() {
-        return connectedAssembler;
+        TileEntity tile = controller();
+        return tile instanceof TileEntityModuleAssembler assembler ? assembler : null;
+    }
+
+    public boolean matchesTarget(Rocket.TerminalTarget target) {
+        var identity = controllerIdentity();
+        return identity != null && nodeId().equals(target.terminalId())
+            && identity.id()
+                .equals(target.controllerId())
+            && dimension() == target.dimension()
+            && xCoord == target.x()
+            && yCoord == target.y()
+            && zCoord == target.z();
+    }
+
+    /** Pure admission checks do not move a module or consume resources. */
+    public boolean canReceive(Rocket rocket, Rocket.Module module, UUID workId, Rocket.Holder receiver) {
+        TileEntity tile = controller();
+        if (!(tile instanceof IRocketControllerTE controller) || !controller.isStructureValid()
+            || !controller.machineIdentity()
+                .belongsTo(rocket.teamId())
+            || !controller.machineIdentity()
+                .id()
+                .equals(receiver.id()))
+            return false;
+        if (tile instanceof TileEntityModuleAssembler assembler) {
+            var request = assembler.acceptedWork();
+            return receiver.kind() == Rocket.HolderKind.ASSEMBLER && request != null
+                && request.workId()
+                    .equals(workId)
+                && request.vehicleId()
+                    .equals(rocket.id())
+                && request.moduleId()
+                    .equals(module.id())
+                && request.definitionId() == module.part()
+                    .def()
+                    .id()
+                && request.operation() == TileEntityModuleAssembler.Operation.REPAIR;
+        }
+        return tile instanceof TileEntitySilo silo && receiver.kind() == Rocket.HolderKind.SILO_BUFFER
+            && silo.acceptGantryDelivery(rocket, module, workId);
+    }
+
+    /** The receiver acknowledges the exact claim before the manifest changes custody. */
+    public boolean acceptDelivery(Rocket rocket, Rocket.Module module, UUID workId, Rocket.Holder receiver) {
+        if (!canReceive(rocket, module, workId, receiver)) return false;
+        TileEntityModuleAssembler assembler = getAssembler();
+        return assembler == null || assembler.receiveAssignedModule(workId, rocket.id(), module.id());
     }
 
     public void sync() {
-        markDirty();
-        if (!worldObj.isRemote) {
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-        }
-    }
-
-    /**
-     * Passes a module to a linked consumer if it exists
-     */
-    public void passModuleToConsumer() {
-        if (worldObj.isRemote) return;
-
-        RocketPartInstance part = getModule();
-
-        if (part == null) {
-            clearModule();
-            return;
-        }
-
-        if (connectedSilo != null) {
-            connectedSilo.receiveModulePart(part);
-            clearModule();
-        } else if (connectedAssembler != null) {
-            connectedAssembler.addPart(part.def(), part.x(), part.y(), part.z());
-            clearModule();
-        }
+        syncProjection();
     }
 
     @Override
     public void writeToNBT(NBTTagCompound tag) {
         super.writeToNBT(tag);
-        if (connectedAssembler != null) {
-            NBTTagCompound assemblerTag = new NBTTagCompound();
-            assemblerTag.setInteger("x", connectedAssembler.xCoord);
-            assemblerTag.setInteger("y", connectedAssembler.yCoord);
-            assemblerTag.setInteger("z", connectedAssembler.zCoord);
-            tag.setTag("assembler", assemblerTag);
-        }
-        if (connectedSilo != null) {
-            NBTTagCompound siloTag = new NBTTagCompound();
-            siloTag.setInteger("x", connectedSilo.xCoord);
-            siloTag.setInteger("y", connectedSilo.yCoord);
-            siloTag.setInteger("z", connectedSilo.zCoord);
-            tag.setTag("silo", siloTag);
+        if (binding != null) tag.setTag("controller", encodeBinding());
+    }
+
+    private NBTTagCompound encodeBinding() {
+        var tag = new NBTTagCompound();
+        tag.setString(
+            "id",
+            binding.id()
+                .toString());
+        tag.setString(
+            "kind",
+            binding.kind()
+                .name());
+        tag.setInteger("x", binding.x());
+        tag.setInteger("y", binding.y());
+        tag.setInteger("z", binding.z());
+        return tag;
+    }
+
+    private void readBinding(NBTTagCompound tag) {
+        binding = null;
+        connectedController = null;
+        if (tag.hasKey("controller")) {
+            var in = new NbtReader(tag, "gantryTerminal").compound("controller");
+            binding = new Binding(
+                UUID.fromString(in.string("id")),
+                in.enumValue(ControllerKind.class, "kind"),
+                in.integer("x"),
+                in.integer("y"),
+                in.integer("z"));
         }
     }
 
     @Override
     public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
-        if (tag.hasKey("assembler")) {
-            NBTTagCompound assemblerTag = tag.getCompoundTag("assembler");
-            assemblerDir = Vec3.createVectorHelper(
-                assemblerTag.getDouble("x"),
-                assemblerTag.getDouble("y"),
-                assemblerTag.getDouble("z"));
-        }
-        if (tag.hasKey("silo")) {
-            NBTTagCompound siloTag = tag.getCompoundTag("silo");
-            siloDir = Vec3.createVectorHelper(siloTag.getDouble("x"), siloTag.getDouble("y"), siloTag.getDouble("z"));
-        }
+        readBinding(tag);
     }
 
     @Override
     public Packet getDescriptionPacket() {
-        super.getDescriptionPacket();
-        NBTTagCompound tag = new NBTTagCompound();
-        writeToNBT(tag);
-
-        if (siloDir != null) {
-            tag.setFloat("siloX", (float) siloDir.xCoord);
-            tag.setFloat("siloY", (float) siloDir.yCoord);
-            tag.setFloat("siloZ", (float) siloDir.zCoord);
-        }
-
-        if (assemblerDir != null) {
-            tag.setFloat("assemblerX", (float) assemblerDir.xCoord);
-            tag.setFloat("assemblerY", (float) assemblerDir.yCoord);
-            tag.setFloat("assemblerZ", (float) assemblerDir.zCoord);
-        }
-
-        return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 1, tag);
+        var packet = (S35PacketUpdateTileEntity) super.getDescriptionPacket();
+        if (binding != null) packet.func_148857_g()
+            .setTag("controller", encodeBinding());
+        return packet;
     }
 
+    @Override
+    public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity packet) {
+        super.onDataPacket(net, packet);
+        readBinding(packet.func_148857_g());
+    }
 }

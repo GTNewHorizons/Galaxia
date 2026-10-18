@@ -72,6 +72,7 @@ final class FacilityInventoryContractTest {
     @Test
     void fluidTransfersReportExactlyTheAppliedStateChange() {
         AutomatedFacility facility = facility();
+        FacilityTestFixtures.addFluidTank(facility);
         FluidKey fluid = new FluidKey(FluidRegistry.WATER, null);
 
         assertEquals(4_096L, facility.insert(fluid, 4_096L));
@@ -371,6 +372,7 @@ final class FacilityInventoryContractTest {
     @Test
     void fluidInsertionIsNotLimitedByFiniteItemCapacity() {
         AutomatedFacility facility = facility();
+        FacilityTestFixtures.addFluidTank(facility);
         FluidKey fluid = new FluidKey(FluidRegistry.LAVA, null);
         long requested = facility.itemCapacity() * 4L;
 
@@ -379,13 +381,16 @@ final class FacilityInventoryContractTest {
     }
 
     @Test
-    void fluidInsertionAppliesOnlyTheRepresentableRemainder() {
+    void overCapacityFluidsRejectInsertionButRemainExtractable() {
         AutomatedFacility facility = facility();
+        FacilityTestFixtures.addFluidTank(facility);
         FluidKey fluid = new FluidKey(FluidRegistry.WATER, null);
         facility.restoreInventory(Map.of(fluid, Long.MAX_VALUE - 5L));
 
-        assertEquals(5L, facility.insert(fluid, 10L));
-        assertEquals(Long.MAX_VALUE, facility.fluidAmount(fluid));
+        assertEquals(0L, facility.insert(fluid, 10L));
+        assertEquals(Long.MAX_VALUE - 5L, facility.fluidAmount(fluid));
+        assertEquals(1L, facility.extract(fluid, 1L));
+        assertEquals(Long.MAX_VALUE - 6L, facility.fluidAmount(fluid));
         assertEquals(0L, facility.insert(fluid, 1L));
     }
 

@@ -19,6 +19,74 @@ public class ConfigMachines {
     @Config.LangKey("galaxia.config.category.machines.filler")
     public static final OxygenFiller filler = new OxygenFiller();
 
+    @Config.LangKey("galaxia.config.category.machines.module_assembler")
+    public static final ModuleAssembler moduleAssembler = new ModuleAssembler();
+
+    @Config.LangKey("galaxia.config.category.machines.loading_port")
+    public static final LoadingPort loadingPort = new LoadingPort();
+
+    @Config.LangKey("galaxia.config.category.machines.landing_bay")
+    public static final LandingBay landingBay = new LandingBay();
+
+    public static class LoadingPort {
+
+        @Config.LangKey("galaxia.config.machines.loading_port.item_slots")
+        @Config.DefaultInt(9)
+        @Config.RangeInt(min = 1, max = 81)
+        public int itemSlots = 9;
+
+        @Config.LangKey("galaxia.config.machines.loading_port.tank_capacity")
+        @Config.DefaultInt(32000)
+        @Config.RangeInt(min = 1, max = Integer.MAX_VALUE)
+        public int tankCapacity = 32000;
+    }
+
+    public static class LandingBay {
+
+        @Config.LangKey("galaxia.config.machines.landing_bay.power_draw")
+        @Config.DefaultInt(32)
+        @Config.RangeInt(min = 1)
+        public int powerDraw = 32;
+
+        @Config.LangKey("galaxia.config.machines.landing_bay.build_ticks")
+        @Config.DefaultInt(1200)
+        @Config.RangeInt(min = 1)
+        public int buildTicks = 1200;
+
+        @Config.LangKey("galaxia.config.machines.landing_bay.service_slots")
+        @Config.DefaultInt(1)
+        @Config.RangeInt(min = 1, max = 16)
+        public int serviceSlots = 1;
+    }
+
+    public static class ModuleAssembler {
+
+        @Config.LangKey("galaxia.config.machines.module_assembler.item_slots")
+        @Config.DefaultInt(9)
+        @Config.RangeInt(min = 1, max = 81)
+        public int itemSlots = 9;
+
+        @Config.LangKey("galaxia.config.machines.module_assembler.fluid_tanks")
+        @Config.DefaultInt(1)
+        @Config.RangeInt(min = 1, max = 16)
+        public int fluidTanks = 1;
+
+        @Config.LangKey("galaxia.config.machines.module_assembler.fluid_capacity")
+        @Config.DefaultInt(16000)
+        @Config.RangeInt(min = 1, max = Integer.MAX_VALUE)
+        public int fluidCapacity = 16000;
+
+        @Config.LangKey("galaxia.config.machines.module_assembler.energy_capacity")
+        @Config.DefaultInt(32768)
+        @Config.RangeInt(min = 1, max = Integer.MAX_VALUE)
+        public int energyCapacity = 32768;
+
+        @Config.LangKey("galaxia.config.machines.module_assembler.max_voltage")
+        @Config.DefaultInt(512)
+        @Config.RangeInt(min = 1, max = Integer.MAX_VALUE)
+        public int maxVoltage = 512;
+    }
+
     public static class Energy {
 
         /**

@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.upkeep;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addFluidTank;
 import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -168,7 +169,8 @@ final class AutomatedFacilityUpkeepTest {
     @Test
     void minuteTickConsumesWholeFluidAndStoresFractionalCredit() {
         AutomatedFacility facility = facilityWithModules(moduleWithFluidUpkeep(ModulePriority.NORMAL, "0.25"));
-        facility.insert(UPKEEP_FLUID, 1);
+        addFluidTank(facility);
+        assertEquals(1, facility.insert(UPKEEP_FLUID, 1));
 
         tickUpkeepMinute(facility);
 

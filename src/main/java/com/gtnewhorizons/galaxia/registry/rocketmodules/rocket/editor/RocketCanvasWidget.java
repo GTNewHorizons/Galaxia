@@ -24,7 +24,7 @@ import com.cleanroommc.modularui.widget.Widget;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RocketPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 
 public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
@@ -43,7 +43,7 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
     private final TileEntitySilo silo;
     private final Minecraft mc = Minecraft.getMinecraft();
 
-    private Supplier<IRocketPartDef> selectedPartSupplier = () -> null;
+    private Supplier<RocketPartDef> selectedPartSupplier = () -> null;
 
     private double panX = 40;
     private double panY = 40;
@@ -126,7 +126,7 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
             .canEdit();
     }
 
-    public void setSelectedPartSupplier(Supplier<IRocketPartDef> supplier) {
+    public void setSelectedPartSupplier(Supplier<RocketPartDef> supplier) {
         this.selectedPartSupplier = supplier != null ? supplier : () -> null;
     }
 
@@ -222,7 +222,7 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
         List<RocketPartInstance> untextured = new ArrayList<>();
 
         for (RocketPartInstance part : parts) {
-            IRocketPartDef def = part.def();
+            RocketPartDef def = part.def();
             if (def.assetFolder() != null) {
                 byTexture.computeIfAbsent(def.spriteLocation(), k -> new ArrayList<>())
                     .add(part);
@@ -264,7 +264,7 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
     private void drawHoverPreview() {
         if (isDragging) return;
 
-        IRocketPartDef sel = selectedPartSupplier.get();
+        RocketPartDef sel = selectedPartSupplier.get();
         double localX = getContext().getMouseX();
         double localY = getContext().getMouseY();
 
@@ -307,7 +307,7 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
         drawPreviewPart(sel, originX, originY, canPlace);
     }
 
-    private void drawPreviewPart(IRocketPartDef def, int partX, int partY, boolean valid) {
+    private void drawPreviewPart(RocketPartDef def, int partX, int partY, boolean valid) {
         int px = partX * CELL;
         int py = partY * CELL;
         int pw = def.width() * CELL;
@@ -348,7 +348,7 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
         GL11.glColor4f(1f, 1f, 1f, 1f);
     }
 
-    private void addPlainQuad(Tessellator tes, IRocketPartDef def, int partX, int partY) {
+    private void addPlainQuad(Tessellator tes, RocketPartDef def, int partX, int partY) {
         int px = partX * CELL;
         int py = partY * CELL;
         int pw = def.width() * CELL;
@@ -360,7 +360,7 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
         tes.addVertex(px, py, 0);
     }
 
-    private void addTexturedQuad(Tessellator tes, IRocketPartDef def, int partX, int partY) {
+    private void addTexturedQuad(Tessellator tes, RocketPartDef def, int partX, int partY) {
         int px = partX * CELL;
         int py = partY * CELL;
         int pw = def.width() * CELL;
@@ -398,7 +398,7 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
     }
 
     private void placePart() {
-        IRocketPartDef def = selectedPartSupplier.get();
+        RocketPartDef def = selectedPartSupplier.get();
         if (def == null) return;
 
         int originX = centeredOrigin(mouseToCellX(), def.width());
@@ -423,7 +423,7 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
             .size() - 1; i >= 0; i--) {
             RocketPartInstance part = blueprint.getParts()
                 .get(i);
-            IRocketPartDef def = part.def();
+            RocketPartDef def = part.def();
 
             int x1 = part.x(), y1 = part.y();
             int x2 = x1 + def.width(), y2 = y1 + def.height();

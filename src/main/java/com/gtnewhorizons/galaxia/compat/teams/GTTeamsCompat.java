@@ -4,13 +4,17 @@ import java.util.Optional;
 import java.util.UUID;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import net.minecraft.entity.player.EntityPlayer;
 
 import com.gtnewhorizon.gtnhlib.teams.Team;
 import com.gtnewhorizon.gtnhlib.teams.TeamManager;
 import com.gtnewhorizon.gtnhlib.teams.TeamManagerClient;
+import com.gtnewhorizon.gtnhlib.teams.TeamNetwork;
+import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData.Achievement;
 
+import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
@@ -54,6 +58,37 @@ public final class GTTeamsCompat {
     @SideOnly(Side.CLIENT)
     public static Optional<GalaxiaTeamData> getGalaxiaTeamData() {
         return getTeamData().map(t -> (GalaxiaTeamData) t.getData(GalaxiaTeamData.ID));
+    }
+
+    public static boolean hasAchievement(@Nullable EntityPlayer player, @Nonnull Achievement achievement) {
+        if (player == null) return false;
+        Team team = player.worldObj.isRemote ? TeamManagerClient.GetTeam()
+            : TeamManager.getTeamByPlayer(player.getUniqueID());
+        return team != null && team.getData(GalaxiaTeamData.ID) instanceof GalaxiaTeamData data
+            && data.hasAchievement(achievement);
+    }
+
+    /** Awards authoritative server team data and immediately sends the changed ledger to its members. */
+    public static boolean awardAchievement(@Nonnull UUID teamId, @Nonnull Achievement achievement) {
+        if (FMLCommonHandler.instance()
+            .getEffectiveSide()
+            .isClient()) return false;
+        Team team = TeamManager.getTeamById(teamId);
+        if (team == null || team.isClientSide()
+            || !(team.getData(GalaxiaTeamData.ID) instanceof GalaxiaTeamData data)
+            || !data.award(achievement)) return false;
+        team.markDirty();
+        TeamNetwork.syncTeamData(team, GalaxiaTeamData.ID);
+        return true;
+    }
+
+    public static boolean teamOwns(@Nullable UUID currentTeam, @Nullable UUID originalOwner) {
+        if (currentTeam == null || originalOwner == null) return false;
+        if (currentTeam.equals(originalOwner)) return true;
+        Team team = TeamManager.getTeamById(currentTeam);
+        return team != null && team.getData(GalaxiaTeamData.ID) instanceof GalaxiaTeamData data
+            && data.inheritedTeamIds()
+                .contains(originalOwner);
     }
 
     public static boolean hasPermission(EntityPlayer player, TeamAction action) {

@@ -16,6 +16,7 @@ import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.core.config.ConfigRocket;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidCelestialMaterializer;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
@@ -31,6 +32,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.planets.Mars;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.Moon;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
 
@@ -97,125 +99,159 @@ public final class CelestialRegistry {
         if (bootstrapped) return;
         bootstrapped = true;
         PlanetaryFeatureRegistry.registerDefaults();
+        declareDefaults(new DefinitionPass(true, ConfigRocket.flight.localParkingAltitudeM));
+    }
 
-        register(
+    /** The same authored numerical declarations without game content or registry mutation. */
+    public static Map<CelestialObjectKey, CelestialObject> numericalDefinitions(double parkingAltitudeM) {
+        if (!Double.isFinite(parkingAltitudeM) || parkingAltitudeM <= 0)
+            throw new IllegalArgumentException("Positive parking altitude required");
+        DefinitionPass definitions = new DefinitionPass(false, parkingAltitudeM);
+        declareDefaults(definitions);
+        return Collections.unmodifiableMap(definitions.bodies);
+    }
+
+    private static void declareDefaults(DefinitionPass definitions) {
+
+        definitions.register(
             CelestialObjectId.NOVUM_CAELUM,
             builder -> builder.objectClass(CelestialObject.Class.GALAXY)
-                .properties(
-                    b -> b.orbitalGravity(5.4e8, 0.0)
-                        .visitable(false)
-                        .canCreateStation(false)
-                        .canCreateOutpost(false)
-                        .metadata("mapLayer", "stars")));
+                .properties(b -> b.orbitalGravity(5.4e8, 0.0)),
+            builder -> builder.properties(
+                b -> b.visitable(false)
+                    .canCreateStation(false)
+                    .canCreateOutpost(false)
+                    .metadata("mapLayer", "stars")));
 
-        register(
+        definitions.register(
             CelestialObjectId.SOL,
             builder -> builder.parent(CelestialObjectId.NOVUM_CAELUM)
                 .objectClass(CelestialObject.Class.STAR)
                 .absolutePosition(0.0, 0.0)
+                .properties(
+                    b -> b.orbitalGravity(7.2e7, 0.0)
+                        .radiusEarthRelative(695700.0 / EARTH_RADIUS_KM)),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(1.0)
                 .properties(
-                    b -> b.orbitalGravity(7.2e7, 0.0)
+                    b -> b
+                        // NASA Sun Fact Sheet, volumetric mean radius:
+                        // https://nssdc.gsfc.nasa.gov/planetary/factsheet/sunfact.html
                         .visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
                         .metadata("system", "sol")));
 
-        register(
+        definitions.register(
             CelestialObjectId.BARNARDA,
             builder -> builder.parent(CelestialObjectId.NOVUM_CAELUM)
                 .objectClass(CelestialObject.Class.STAR)
                 .absolutePosition(5800.0, -2600.0)
+                .properties(b -> b.orbitalGravity(4.2e7, 0.0)),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.92)
                 .properties(
-                    b -> b.orbitalGravity(4.2e7, 0.0)
-                        .visitable(false)
+                    b -> b.visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
                         .metadata("system", "barnarda")));
 
-        register(
+        definitions.register(
             CelestialObjectId.TCETI_A,
             builder -> builder.parent(CelestialObjectId.NOVUM_CAELUM)
                 .objectClass(CelestialObject.Class.STAR)
                 .absolutePosition(-4900.0, 3400.0)
+                .properties(b -> b.orbitalGravity(7.2e7, 0.0)),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.88)
                 .properties(
-                    b -> b.orbitalGravity(7.2e7, 0.0)
-                        .visitable(false)
+                    b -> b.visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
                         .metadata("system", "tceti")));
 
-        register(
+        definitions.register(
             CelestialObjectId.VEGA,
             builder -> builder.parent(CelestialObjectId.NOVUM_CAELUM)
                 .objectClass(CelestialObject.Class.STAR)
                 .absolutePosition(7600.0, 3300.0)
+                .properties(b -> b.orbitalGravity(7.2e7, 0.0)),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(1.08)
                 .properties(
-                    b -> b.orbitalGravity(7.2e7, 0.0)
-                        .visitable(false)
+                    b -> b.visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
                         .metadata("system", "vega")));
 
-        register(
+        definitions.register(
             CelestialObjectId.ALPHA_CENTAURI_A,
             builder -> builder.parent(CelestialObjectId.NOVUM_CAELUM)
                 .objectClass(CelestialObject.Class.STAR)
                 .absolutePosition(-7200.0, -3100.0)
+                .properties(b -> b.orbitalGravity(7.2e7, 0.0)),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.96)
                 .properties(
-                    b -> b.orbitalGravity(7.2e7, 0.0)
-                        .visitable(false)
+                    b -> b.visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
                         .metadata("system", "alpha_centauri")));
 
-        register(
+        definitions.register(
             CelestialObjectId.VAEL,
             builder -> builder.parent(CelestialObjectId.NOVUM_CAELUM)
                 .objectClass(CelestialObject.Class.STAR)
                 .absolutePosition(15000.0, -5000.0)
+                .properties(b -> b.orbitalGravity(7.2e7, 0.0)),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(1.0)
                 .properties(
-                    b -> b.orbitalGravity(7.2e7, 0.0)
-                        .visitable(false)
+                    b -> b.visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
                         .metadata("system", "vael")));
 
-        register(
+        definitions.register(
             CelestialObjectId.ILIA,
             builder -> builder.parent(CelestialObjectId.NOVUM_CAELUM)
                 .objectClass(CelestialObject.Class.STAR)
                 .absolutePosition(15000.0, 5000.0)
+                .properties(b -> b.orbitalGravity(4.2e7, 0.0)),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.92)
                 .properties(
-                    b -> b.orbitalGravity(4.2e7, 0.0)
-                        .visitable(false)
+                    b -> b.visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
                         .metadata("system", "ilia")));
 
-        register(
+        definitions.register(
             CelestialObjectId.ROMULUS,
             builder -> builder.parent(CelestialObjectId.ILIA)
                 .objectClass(CelestialObject.Class.PLANET)
                 .circularOrbit(0.296 * EARTH_RADIUS_TO_AU, 0.00031, seededPhase("ilia_romulus"))
+                .properties(b -> b.orbitalGravity(5.2e6, 1200.0)),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.24)
                 .properties(
-                    b -> b.orbitalGravity(5.2e6, 1200.0)
-                        .visitable(false)
+                    b -> b.visitable(false)
                         .canCreateStation(true)
                         .canCreateOutpost(true)
                         .temperature(301)
@@ -229,16 +265,18 @@ public final class CelestialRegistry {
                 .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.5)
                 .feature(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET, 0.6));
 
-        register(
+        definitions.register(
             CelestialObjectId.REMUS,
             builder -> builder.parent(CelestialObjectId.ILIA)
                 .objectClass(CelestialObject.Class.PLANET)
                 .circularOrbit(0.726 * EARTH_RADIUS_TO_AU, 0.00018, seededPhase("ilia_remus"))
+                .properties(b -> b.orbitalGravity(4.6e6, 1500.0)),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.19)
                 .properties(
-                    b -> b.orbitalGravity(4.6e6, 1500.0)
-                        .visitable(false)
+                    b -> b.visitable(false)
                         .canCreateStation(true)
                         .canCreateOutpost(true)
                         .temperature(182)
@@ -250,16 +288,18 @@ public final class CelestialRegistry {
                 .feature(PlanetaryFeatureRegistry.THERMAL_SINK_ZONE, 2.0)
                 .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0));
 
-        register(
+        definitions.register(
             CelestialObjectId.EGORA,
             builder -> builder.parent(CelestialObjectId.VAEL)
                 .objectClass(CelestialObject.Class.PLANET)
                 .circularOrbit(0.92 * EARTH_RADIUS_TO_AU, 0.00022, seededPhase("egora"))
+                .properties(b -> b.orbitalGravity(9.8e6, 2400.0)),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.18)
                 .properties(
-                    b -> b.orbitalGravity(9.8e6, 2400.0)
-                        .visitable(false)
+                    b -> b.visitable(false)
                         .canCreateStation(true)
                         .canCreateOutpost(true)
                         .temperature(288)
@@ -274,19 +314,23 @@ public final class CelestialRegistry {
                 .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 2.0)
                 .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.2));
 
-        register(
+        definitions.register(
             CelestialObjectId.TENEBRAE,
             builder -> builder.parent(CelestialObjectId.VAEL)
                 .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(1.20 * EARTH_RADIUS_TO_AU, 0.00016, seededPhase("tenebrae"))
+                .circularOrbit(1.20 * EARTH_RADIUS_TO_AU, 0.00016, seededPhase("tenebrae")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_TENEBRAE.get())
                 .spriteSize(0.20));
 
-        register(
+        definitions.register(
             CelestialObjectId.MERCURY,
             builder -> builder.parent(CelestialObjectId.SOL)
                 .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(0.387 * EARTH_RADIUS_TO_AU, 0.00028, seededPhase("mercury"))
+                .circularOrbit(0.387 * EARTH_RADIUS_TO_AU, 0.00028, seededPhase("mercury")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.12)
                 .properties(
@@ -323,11 +367,13 @@ public final class CelestialRegistry {
                             "ore.small.zinc")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.VENUS,
             builder -> builder.parent(CelestialObjectId.SOL)
                 .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(0.723 * EARTH_RADIUS_TO_AU, 0.00022, seededPhase("venus"))
+                .circularOrbit(0.723 * EARTH_RADIUS_TO_AU, 0.00022, seededPhase("venus")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.18)
                 .properties(
@@ -368,22 +414,25 @@ public final class CelestialRegistry {
                             "ore.small.tungsten")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             DimensionEnum.MARS,
             builder -> builder.parent(CelestialObjectId.SOL)
                 .objectClass(CelestialObject.Class.PLANET)
                 .circularOrbit(1.524 * EARTH_RADIUS_TO_AU, 0.00011, seededPhase("mars"))
+                .properties(
+                    b -> b.surfaceGravityAndRadius(.25, .53)
+                        .parkingOrbitRadius(.53 + OrbitalMechanics.metresToDistance(definitions.parkingAltitudeM))
+                        .massEarthRelative(0.25)
+                        .orbitalRadiusEarthRelative(1.52 * EARTH_RADIUS_TO_AU)),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_MARS.get())
                 .spriteSize(0.825)
                 .properties(
-                    b -> b.orbitalGravity(42828.375816 * GRAVITY_SCALE, 0.0)
-                        .visitable(true)
+                    b -> b.visitable(true)
                         .canCreateStation(true)
                         .canCreateOutpost(true)
-                        .localGravityG(0.25)
-                        .massEarthRelative(0.25)
-                        .orbitalRadiusEarthRelative(1.52 * EARTH_RADIUS_TO_AU)
-                        .radiusEarthRelative(0.53)
+
                         .temperature(67)
                         .radiation(0.10)
                         .oreProfile("gtnh_t2")
@@ -430,11 +479,13 @@ public final class CelestialRegistry {
                 .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 2.0)
                 .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0));
 
-        register(
+        definitions.register(
             CelestialObjectId.PHOBOS,
             builder -> builder.parent(CelestialObjectId.MARS)
                 .objectClass(CelestialObject.Class.MOON)
-                .circularOrbit(9375.0 / EARTH_RADIUS_KM, 0.00110, seededPhase("phobos"))
+                .circularOrbit(9375.0 / EARTH_RADIUS_KM, 0.00110, seededPhase("phobos")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_MOON.get())
                 .spriteSize(0.035)
                 .properties(
@@ -469,11 +520,13 @@ public final class CelestialRegistry {
                             "ore.small.tungstate")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.DEIMOS,
             builder -> builder.parent(CelestialObjectId.MARS)
                 .objectClass(CelestialObject.Class.MOON)
-                .circularOrbit(23457.0 / EARTH_RADIUS_KM, 0.00080, seededPhase("deimos"))
+                .circularOrbit(23457.0 / EARTH_RADIUS_KM, 0.00080, seededPhase("deimos")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_MOON.get())
                 .spriteSize(0.035)
                 .properties(
@@ -507,21 +560,24 @@ public final class CelestialRegistry {
                             "ore.small.tungstate")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.OVERWORLD,
             builder -> builder.parent(CelestialObjectId.SOL)
                 .objectClass(CelestialObject.Class.PLANET)
                 .circularOrbit(EARTH_RADIUS_TO_AU, 0.00022, seededPhase("overworld"))
+                .properties(
+                    b -> b.surfaceGravityAndRadius(1.0, 1.0)
+                        .parkingOrbitRadius(1 + OrbitalMechanics.metresToDistance(definitions.parkingAltitudeM))
+                        .orbitalRadiusEarthRelative(EARTH_RADIUS_TO_AU)),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.18)
                 .properties(
-                    b -> b.orbitalGravity(398600.435507 * GRAVITY_SCALE, 0.0)
-                        .visitable(false)
+                    b -> b.visitable(false)
                         .canCreateStation(true)
                         .canCreateOutpost(true)
-                        .localGravityG(1.0)
-                        .orbitalRadiusEarthRelative(EARTH_RADIUS_TO_AU)
-                        .surfacePressurePa(1.0)
+                        .surfacePressurePa(101325)
                         .addAtmosphereIngredient(requiredGas(Materials.Air), 1.0)
                         .temperature(288)
                         .radiation(0.00)
@@ -576,22 +632,28 @@ public final class CelestialRegistry {
                 .feature(PlanetaryFeatureRegistry.MAGMA_POOL, 0.4)
                 .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.2));
 
-        register(
+        definitions.register(
             DimensionEnum.MOON,
             builder -> builder.parent(CelestialObjectId.OVERWORLD)
                 .objectClass(CelestialObject.Class.MOON)
                 .circularOrbit(384400.0 / EARTH_RADIUS_KM, 0.00145, seededPhase("moon"))
+                .properties(
+                    b -> b.surfaceGravityAndRadius(.25, .27)
+                        .sphereOfInfluenceRadius(480.0)
+                        .parkingOrbitRadius(.27 + OrbitalMechanics.metresToDistance(definitions.parkingAltitudeM))
+                        .massEarthRelative(0.012)
+                        .orbitalRadiusEarthRelative(EARTH_RADIUS_TO_AU)),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_MOON.get())
                 .spriteSize(0.06)
                 .properties(
-                    b -> b.orbitalGravity(1.8e6, 480.0)
+                    b -> b
+
                         .visitable(true)
                         .canCreateStation(true)
                         .canCreateOutpost(true)
-                        .localGravityG(0.25)
-                        .massEarthRelative(0.012)
-                        .orbitalRadiusEarthRelative(EARTH_RADIUS_TO_AU)
-                        .radiusEarthRelative(0.27)
+
                         .temperature(225)
                         .radiation(0.18)
                         .oreProfile("gtnh_t1")
@@ -621,11 +683,13 @@ public final class CelestialRegistry {
                 .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 2.0)
                 .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 0.8));
 
-        register(
+        definitions.register(
             CelestialObjectId.CERES,
             builder -> builder.parent(CelestialObjectId.SOL)
                 .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(2.767 * EARTH_RADIUS_TO_AU, 0.00008, seededPhase("ceres"))
+                .circularOrbit(2.767 * EARTH_RADIUS_TO_AU, 0.00008, seededPhase("ceres")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.10)
                 .properties(
@@ -662,27 +726,33 @@ public final class CelestialRegistry {
                             "ore.small.tungstate")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.JUPITER,
             builder -> builder.parent(CelestialObjectId.SOL)
                 .objectClass(CelestialObject.Class.GAS_GIANT)
                 .circularOrbit(5.204 * EARTH_RADIUS_TO_AU, 0.00005, seededPhase("jupiter"))
+                .properties(b -> b.physicalGravityAndRadius(126712764.1e9, 69911000)),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.54)
                 .properties(
-                    b -> b.orbitalGravity(126712764.1 * GRAVITY_SCALE, 0.0)
-                        .visitable(false)
+                    // NASA Jupiter Fact Sheet, volumetric mean radius:
+                    // https://nssdc.gsfc.nasa.gov/planetary/factsheet/jupiterfact.html
+                    b -> b.visitable(false)
                         .canCreateStation(true)
                         .canCreateOutpost(false)
                         .temperature(165)
                         .radiation(0.45)
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.IO,
             builder -> builder.parent(CelestialObjectId.JUPITER)
                 .objectClass(CelestialObject.Class.MOON)
-                .circularOrbit(421800.0 / EARTH_RADIUS_KM, 0.00100, seededPhase("io"))
+                .circularOrbit(421800.0 / EARTH_RADIUS_KM, 0.00100, seededPhase("io")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_MOON.get())
                 .spriteSize(0.08)
                 .properties(
@@ -723,11 +793,13 @@ public final class CelestialRegistry {
                             "ore.small.zinc")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.EUROPA,
             builder -> builder.parent(CelestialObjectId.JUPITER)
                 .objectClass(CelestialObject.Class.MOON)
-                .circularOrbit(671100.0 / EARTH_RADIUS_KM, 0.00080, seededPhase("europa"))
+                .circularOrbit(671100.0 / EARTH_RADIUS_KM, 0.00080, seededPhase("europa")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_MOON.get())
                 .spriteSize(0.07)
                 .properties(
@@ -745,11 +817,13 @@ public final class CelestialRegistry {
                             "ore.mix.europacore")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.GANYMEDE,
             builder -> builder.parent(CelestialObjectId.JUPITER)
                 .objectClass(CelestialObject.Class.MOON)
-                .circularOrbit(1070400.0 / EARTH_RADIUS_KM, 0.00070, seededPhase("ganymede"))
+                .circularOrbit(1070400.0 / EARTH_RADIUS_KM, 0.00070, seededPhase("ganymede")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_MOON.get())
                 .spriteSize(0.09)
                 .properties(
@@ -784,14 +858,22 @@ public final class CelestialRegistry {
                             "ore.small.zinc")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.CALLISTO,
             builder -> builder.parent(CelestialObjectId.JUPITER)
                 .objectClass(CelestialObject.Class.MOON)
                 .circularOrbit(1882700.0 / EARTH_RADIUS_KM, 0.00055, seededPhase("callisto"))
+                .properties(
+                    b -> b.physicalGravityAndRadius(7179.28340e9, 2410300)
+                        .parkingOrbitRadius(
+                            2410.3 / EARTH_RADIUS_KM
+                                + OrbitalMechanics.metresToDistance(definitions.parkingAltitudeM))),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_MOON.get())
                 .spriteSize(0.09)
                 .properties(
+                    // JPL satellite physical parameters, JUP365: https://ssd.jpl.nasa.gov/sats/phys_par/
                     b -> b.visitable(false)
                         .canCreateStation(true)
                         .canCreateOutpost(true)
@@ -820,27 +902,31 @@ public final class CelestialRegistry {
                             "ore.small.tungstate")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.SATURN,
             builder -> builder.parent(CelestialObjectId.SOL)
                 .objectClass(CelestialObject.Class.GAS_GIANT)
                 .circularOrbit(9.583 * EARTH_RADIUS_TO_AU, 0.00004, seededPhase("saturn"))
+                .properties(b -> b.orbitalGravity(37940584.8418 * GRAVITY_SCALE, 0.0)),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.48)
                 .properties(
-                    b -> b.orbitalGravity(37940584.8418 * GRAVITY_SCALE, 0.0)
-                        .visitable(false)
+                    b -> b.visitable(false)
                         .canCreateStation(true)
                         .canCreateOutpost(false)
                         .temperature(134)
                         .radiation(0.24)
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.ENCELADUS,
             builder -> builder.parent(CelestialObjectId.SATURN)
                 .objectClass(CelestialObject.Class.MOON)
-                .circularOrbit(238400.0 / EARTH_RADIUS_KM, 0.00090, seededPhase("enceladus"))
+                .circularOrbit(238400.0 / EARTH_RADIUS_KM, 0.00090, seededPhase("enceladus")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_MOON.get())
                 .spriteSize(0.06)
                 .properties(
@@ -873,11 +959,13 @@ public final class CelestialRegistry {
                             "ore.small.zinc")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.TITAN,
             builder -> builder.parent(CelestialObjectId.SATURN)
                 .objectClass(CelestialObject.Class.MOON)
-                .circularOrbit(1221900.0 / EARTH_RADIUS_KM, 0.00060, seededPhase("titan"))
+                .circularOrbit(1221900.0 / EARTH_RADIUS_KM, 0.00060, seededPhase("titan")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_MOON.get())
                 .spriteSize(0.10)
                 .properties(
@@ -916,27 +1004,31 @@ public final class CelestialRegistry {
                             "ore.small.zinc")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.URANUS,
             builder -> builder.parent(CelestialObjectId.SOL)
                 .objectClass(CelestialObject.Class.GAS_GIANT)
                 .circularOrbit(19.218 * EARTH_RADIUS_TO_AU, 0.000035, seededPhase("uranus"))
+                .properties(b -> b.orbitalGravity(5794556.4 * GRAVITY_SCALE, 0.0)),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.38)
                 .properties(
-                    b -> b.orbitalGravity(5794556.4 * GRAVITY_SCALE, 0.0)
-                        .visitable(false)
+                    b -> b.visitable(false)
                         .canCreateStation(true)
                         .canCreateOutpost(false)
                         .temperature(76)
                         .radiation(0.18)
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.MIRANDA,
             builder -> builder.parent(CelestialObjectId.URANUS)
                 .objectClass(CelestialObject.Class.MOON)
-                .circularOrbit(129846.0 / EARTH_RADIUS_KM, 0.00090, seededPhase("miranda"))
+                .circularOrbit(129846.0 / EARTH_RADIUS_KM, 0.00090, seededPhase("miranda")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_MOON.get())
                 .spriteSize(0.06)
                 .properties(
@@ -965,11 +1057,13 @@ public final class CelestialRegistry {
                             "ore.small.tungstate")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.OBERON,
             builder -> builder.parent(CelestialObjectId.URANUS)
                 .objectClass(CelestialObject.Class.MOON)
-                .circularOrbit(583511.0 / EARTH_RADIUS_KM, 0.00065, seededPhase("oberon"))
+                .circularOrbit(583511.0 / EARTH_RADIUS_KM, 0.00065, seededPhase("oberon")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_MOON.get())
                 .spriteSize(0.07)
                 .properties(
@@ -1001,27 +1095,31 @@ public final class CelestialRegistry {
                             "ore.small.tungstate")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.NEPTUNE,
             builder -> builder.parent(CelestialObjectId.SOL)
                 .objectClass(CelestialObject.Class.GAS_GIANT)
                 .circularOrbit(30.11 * EARTH_RADIUS_TO_AU, 0.00003, seededPhase("neptune"))
+                .properties(b -> b.orbitalGravity(6836527.10058 * GRAVITY_SCALE, 0.0)),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.38)
                 .properties(
-                    b -> b.orbitalGravity(6836527.10058 * GRAVITY_SCALE, 0.0)
-                        .visitable(false)
+                    b -> b.visitable(false)
                         .canCreateStation(true)
                         .canCreateOutpost(false)
                         .temperature(72)
                         .radiation(0.18)
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.PROTEUS,
             builder -> builder.parent(CelestialObjectId.NEPTUNE)
                 .objectClass(CelestialObject.Class.MOON)
-                .circularOrbit(117600.0 / EARTH_RADIUS_KM, 0.00080, seededPhase("proteus"))
+                .circularOrbit(117600.0 / EARTH_RADIUS_KM, 0.00080, seededPhase("proteus")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_MOON.get())
                 .spriteSize(0.06)
                 .properties(
@@ -1060,11 +1158,13 @@ public final class CelestialRegistry {
                             "ore.small.zinc")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.TRITON,
             builder -> builder.parent(CelestialObjectId.NEPTUNE)
                 .objectClass(CelestialObject.Class.MOON)
-                .circularOrbit(354800.0 / EARTH_RADIUS_KM, 0.00055, seededPhase("triton"))
+                .circularOrbit(354800.0 / EARTH_RADIUS_KM, 0.00055, seededPhase("triton")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_MOON.get())
                 .spriteSize(0.08)
                 .properties(
@@ -1100,16 +1200,18 @@ public final class CelestialRegistry {
                             "ore.small.tungstate")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.PLUTO,
             builder -> builder.parent(CelestialObjectId.SOL)
                 .objectClass(CelestialObject.Class.PLANET)
                 .circularOrbit(39.482 * EARTH_RADIUS_TO_AU, 0.000025, seededPhase("pluto"))
+                .properties(b -> b.orbitalGravity(975.5 * GRAVITY_SCALE, 0.0)),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.12)
                 .properties(
-                    b -> b.orbitalGravity(975.5 * GRAVITY_SCALE, 0.0)
-                        .visitable(false)
+                    b -> b.visitable(false)
                         .canCreateStation(true)
                         .canCreateOutpost(true)
                         .temperature(44)
@@ -1147,11 +1249,13 @@ public final class CelestialRegistry {
                             "ore.small.tungstate")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.KUIPER_BELT,
             builder -> builder.parent(CelestialObjectId.SOL)
                 .objectClass(CelestialObject.Class.ASTEROID_BELT)
-                .circularOrbit(43.0 * EARTH_RADIUS_TO_AU, 0.00002, seededPhase("kuiper_belt"))
+                .circularOrbit(43.0 * EARTH_RADIUS_TO_AU, 0.00002, seededPhase("kuiper_belt")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.60)
                 .properties(
@@ -1191,11 +1295,13 @@ public final class CelestialRegistry {
                             "ore.small.tungstate")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.HAUMEA,
             builder -> builder.parent(CelestialObjectId.SOL)
                 .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(43.218 * EARTH_RADIUS_TO_AU, 0.00002, seededPhase("haumea"))
+                .circularOrbit(43.218 * EARTH_RADIUS_TO_AU, 0.00002, seededPhase("haumea")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.11)
                 .properties(
@@ -1231,11 +1337,13 @@ public final class CelestialRegistry {
                             "ore.small.zinc")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.MAKEMAKE,
             builder -> builder.parent(CelestialObjectId.SOL)
                 .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(45.715 * EARTH_RADIUS_TO_AU, 0.00002, seededPhase("makemake"))
+                .circularOrbit(45.715 * EARTH_RADIUS_TO_AU, 0.00002, seededPhase("makemake")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.11)
                 .properties(
@@ -1273,11 +1381,13 @@ public final class CelestialRegistry {
                             "ore.small.titanium")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.BARNARD_C,
             builder -> builder.parent(CelestialObjectId.BARNARDA)
                 .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(0.75 * EARTH_RADIUS_TO_AU, 0.00019, seededPhase("barnard_c"))
+                .circularOrbit(0.75 * EARTH_RADIUS_TO_AU, 0.00019, seededPhase("barnard_c")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.16)
                 .properties(
@@ -1300,11 +1410,13 @@ public final class CelestialRegistry {
                             "ore.mix.secondlanthanid")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.BARNARD_E,
             builder -> builder.parent(CelestialObjectId.BARNARDA)
                 .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(2.0 * EARTH_RADIUS_TO_AU, 0.00008, seededPhase("barnard_e"))
+                .circularOrbit(2.0 * EARTH_RADIUS_TO_AU, 0.00008, seededPhase("barnard_e")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.18)
                 .properties(
@@ -1338,11 +1450,13 @@ public final class CelestialRegistry {
                             "ore.small.zinc")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.BARNARD_F,
             builder -> builder.parent(CelestialObjectId.BARNARDA)
                 .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(2.5 * EARTH_RADIUS_TO_AU, 0.00006, seededPhase("barnard_f"))
+                .circularOrbit(2.5 * EARTH_RADIUS_TO_AU, 0.00006, seededPhase("barnard_f")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.18)
                 .properties(
@@ -1381,11 +1495,13 @@ public final class CelestialRegistry {
                             "ore.small.titanium")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.CENTAURI_BB,
             builder -> builder.parent(CelestialObjectId.ALPHA_CENTAURI_A)
                 .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(0.9 * EARTH_RADIUS_TO_AU, 0.00018, seededPhase("centauri_bb"))
+                .circularOrbit(0.9 * EARTH_RADIUS_TO_AU, 0.00018, seededPhase("centauri_bb")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.17)
                 .properties(
@@ -1411,11 +1527,13 @@ public final class CelestialRegistry {
                             "ore.mix.quartzspace")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.TCETI_E,
             builder -> builder.parent(CelestialObjectId.TCETI_A)
                 .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(1.25 * EARTH_RADIUS_TO_AU, 0.00014, seededPhase("tceti_e"))
+                .circularOrbit(1.25 * EARTH_RADIUS_TO_AU, 0.00014, seededPhase("tceti_e")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.17)
                 .properties(
@@ -1445,11 +1563,13 @@ public final class CelestialRegistry {
                             "ore.small.neutronium")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.VEGA_B,
             builder -> builder.parent(CelestialObjectId.VEGA)
                 .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(0.5 * EARTH_RADIUS_TO_AU, 0.00020, seededPhase("vega_b"))
+                .circularOrbit(0.5 * EARTH_RADIUS_TO_AU, 0.00020, seededPhase("vega_b")),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.17)
                 .properties(
@@ -1488,19 +1608,23 @@ public final class CelestialRegistry {
                             "ore.small.silver")
                         .metadata("source", "gtnh_galaxyspace")));
 
-        register(
+        definitions.register(
             CelestialObjectId.FROZEN_BELT,
             builder -> builder.parent(CelestialObjectId.SOL)
                 .objectClass(CelestialObject.Class.ASTEROID_BELT)
                 .circularOrbit(2.8 * EARTH_RADIUS_TO_AU, 0.00005, seededPhase("frozen_belt"))
+                .properties(
+                    b -> b.orbitalGravity(3.5e5, 3000.0)
+                        .localGravityG(0.0)
+                        .asteroidFieldProfile(frozenBeltAsteroidFieldProfile())),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.60)
                 .properties(
-                    b -> b.orbitalGravity(3.5e5, 3000.0)
-                        .visitable(true)
+                    b -> b.visitable(true)
                         .canCreateStation(true)
                         .canCreateOutpost(false)
-                        .localGravityG(0.0)
                         .temperature(67)
                         .radiation(0.28)
                         .oreProfile("gtnh_t3")
@@ -1526,7 +1650,6 @@ public final class CelestialRegistry {
                             "ore.small.nickel",
                             "ore.small.titanium",
                             "ore.small.tungstate")
-                        .asteroidFieldProfile(frozenBeltAsteroidFieldProfile())
                         .metadata("surface", "undefined")
                         .metadata("minorBodies", "enabled"))
                 .playableDimensionProfile(
@@ -1542,137 +1665,162 @@ public final class CelestialRegistry {
                 .feature(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET, 1.0)
                 .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.3));
 
-        registerRemainingGtnhBodies();
+        registerRemainingGtnhBodies(definitions);
     }
 
     // Catalog sources: GalaxySpace's SolarSystem/ACentauri/Barnards/TCeti/Vega registrations,
     // BartWorks Ross128SolarSystem and AmunRa's celestial registrations.
     // Fictional/extrasolar distances retain the source map spacing, not measured astronomical distances.
     // Amun-Ra fictional moon distances retain their relative ordering in map units.
-    private static void registerRemainingGtnhBodies() {
-        registerMapStar(CelestialObjectId.ROSS_128, -1500.0, -6500.0);
-        registerMapStar(CelestialObjectId.RA, 0.0, 8000.0);
+    private static void registerRemainingGtnhBodies(DefinitionPass definitions) {
+        registerMapStar(definitions, CelestialObjectId.ROSS_128, -1500.0, -6500.0);
+        registerMapStar(definitions, CelestialObjectId.RA, 0.0, 8000.0);
         registerMapBody(
+            definitions,
             CelestialObjectId.MIMAS,
             CelestialObjectId.SATURN,
             CelestialObject.Class.MOON,
             186000.0 / EARTH_RADIUS_KM);
         registerMapBody(
+            definitions,
             CelestialObjectId.TETHYS,
             CelestialObjectId.SATURN,
             CelestialObject.Class.MOON,
             295000.0 / EARTH_RADIUS_KM);
         registerMapBody(
+            definitions,
             CelestialObjectId.DIONE,
             CelestialObjectId.SATURN,
             CelestialObject.Class.MOON,
             377700.0 / EARTH_RADIUS_KM);
         registerMapBody(
+            definitions,
             CelestialObjectId.RHEA,
             CelestialObjectId.SATURN,
             CelestialObject.Class.MOON,
             527200.0 / EARTH_RADIUS_KM);
         registerMapBody(
+            definitions,
             CelestialObjectId.IAPETUS,
             CelestialObjectId.SATURN,
             CelestialObject.Class.MOON,
             3561700.0 / EARTH_RADIUS_KM);
         registerMapBody(
+            definitions,
             CelestialObjectId.ARIEL,
             CelestialObjectId.URANUS,
             CelestialObject.Class.MOON,
             190929.0 / EARTH_RADIUS_KM);
         registerMapBody(
+            definitions,
             CelestialObjectId.UMBRIEL,
             CelestialObjectId.URANUS,
             CelestialObject.Class.MOON,
             265986.0 / EARTH_RADIUS_KM);
         registerMapBody(
+            definitions,
             CelestialObjectId.TITANIA,
             CelestialObjectId.URANUS,
             CelestialObject.Class.MOON,
             436298.0 / EARTH_RADIUS_KM);
         registerMapBody(
+            definitions,
             CelestialObjectId.CHARON,
             CelestialObjectId.PLUTO,
             CelestialObject.Class.MOON,
             19600.0 / EARTH_RADIUS_KM);
         registerMapBody(
+            definitions,
             CelestialObjectId.ERIS,
             CelestialObjectId.SOL,
             CelestialObject.Class.PLANET,
             67.781 * EARTH_RADIUS_TO_AU);
         registerMapBody(
+            definitions,
             CelestialObjectId.ALPHA_CENTAURI_B,
             CelestialObjectId.ALPHA_CENTAURI_A,
             CelestialObject.Class.STAR,
             0.3 * EARTH_RADIUS_TO_AU);
         registerMapBody(
+            definitions,
             CelestialObjectId.BARNARD_B,
             CelestialObjectId.BARNARDA,
             CelestialObject.Class.PLANET,
             0.5 * EARTH_RADIUS_TO_AU);
         registerMapBody(
+            definitions,
             CelestialObjectId.BARNARD_D,
             CelestialObjectId.BARNARDA,
             CelestialObject.Class.PLANET,
             1.5 * EARTH_RADIUS_TO_AU);
         registerMapBody(
+            definitions,
             CelestialObjectId.BARNARD_G,
             CelestialObjectId.BARNARDA,
             CelestialObject.Class.PLANET,
             2.75 * EARTH_RADIUS_TO_AU);
         registerMapBody(
+            definitions,
             CelestialObjectId.BARNARD_BELT,
             CelestialObjectId.BARNARDA,
             CelestialObject.Class.ASTEROID_BELT,
             3.25 * EARTH_RADIUS_TO_AU);
         registerMapBody(
+            definitions,
             CelestialObjectId.TCETI_B,
             CelestialObjectId.TCETI_A,
             CelestialObject.Class.PLANET,
             0.5 * EARTH_RADIUS_TO_AU);
         registerMapBody(
+            definitions,
             CelestialObjectId.TCETI_C,
             CelestialObjectId.TCETI_A,
             CelestialObject.Class.PLANET,
             0.75 * EARTH_RADIUS_TO_AU);
         registerMapBody(
+            definitions,
             CelestialObjectId.TCETI_D,
             CelestialObjectId.TCETI_A,
             CelestialObject.Class.PLANET,
             1 * EARTH_RADIUS_TO_AU);
         registerMapBody(
+            definitions,
             CelestialObjectId.TCETI_F,
             CelestialObjectId.TCETI_A,
             CelestialObject.Class.PLANET,
             1.5 * EARTH_RADIUS_TO_AU);
         registerMapBody(
+            definitions,
             CelestialObjectId.TCETI_G,
             CelestialObjectId.TCETI_A,
             CelestialObject.Class.PLANET,
             1.75 * EARTH_RADIUS_TO_AU);
         registerMapBody(
+            definitions,
             CelestialObjectId.TCETI_BELT,
             CelestialObjectId.TCETI_A,
             CelestialObject.Class.ASTEROID_BELT,
             2 * EARTH_RADIUS_TO_AU);
         registerMapBody(
+            definitions,
             CelestialObjectId.VEGA_C,
             CelestialObjectId.VEGA,
             CelestialObject.Class.PLANET,
             1.75 * EARTH_RADIUS_TO_AU);
         registerMapBody(
+            definitions,
             CelestialObjectId.VEGA_INNER_BELT,
             CelestialObjectId.VEGA,
             CelestialObject.Class.ASTEROID_BELT,
             1.6 * EARTH_RADIUS_TO_AU);
         registerMapBody(
+            definitions,
             CelestialObjectId.VEGA_OUTER_BELT,
             CelestialObjectId.VEGA,
             CelestialObject.Class.ASTEROID_BELT,
             2.5 * EARTH_RADIUS_TO_AU);
         registerMapBody(
+            definitions,
             CelestialObjectId.ROSS_128_B,
             CelestialObjectId.ROSS_128,
             CelestialObject.Class.PLANET,
@@ -1688,6 +1836,7 @@ public final class CelestialRegistry {
             "ore.mix.ross128.Hedenbergit",
             "ore.mix.ross128.RedZircon");
         registerMapBody(
+            definitions,
             CelestialObjectId.ROSS_128_BA,
             CelestialObjectId.ROSS_128_B,
             CelestialObject.Class.MOON,
@@ -1701,16 +1850,19 @@ public final class CelestialRegistry {
             "ore.mix.ross128ba.RedZircon",
             "ore.mix.ross128ba.Fluorspar");
         registerMapBody(
+            definitions,
             CelestialObjectId.AMUN,
             CelestialObjectId.RA,
             CelestialObject.Class.STAR,
             0.7 * EARTH_RADIUS_TO_AU);
         registerMapBody(
+            definitions,
             CelestialObjectId.OSIRIS,
             CelestialObjectId.RA,
             CelestialObject.Class.PLANET,
             0.34 * EARTH_RADIUS_TO_AU);
         registerMapBody(
+            definitions,
             CelestialObjectId.HORUS,
             CelestialObjectId.RA,
             CelestialObject.Class.PLANET,
@@ -1747,13 +1899,25 @@ public final class CelestialRegistry {
             "ore.small.tanzanite",
             "ore.small.topaz");
         registerMapBody(
+            definitions,
             CelestialObjectId.BAAL,
             CelestialObjectId.RA,
             CelestialObject.Class.GAS_GIANT,
             1.2 * EARTH_RADIUS_TO_AU);
-        registerMapBody(CelestialObjectId.BAAL_RINGS, CelestialObjectId.BAAL, CelestialObject.Class.ASTEROID_BELT, 9);
-        registerMapBody(CelestialObjectId.KHONSU, CelestialObjectId.BAAL, CelestialObject.Class.MOON, 12.45);
         registerMapBody(
+            definitions,
+            CelestialObjectId.BAAL_RINGS,
+            CelestialObjectId.BAAL,
+            CelestialObject.Class.ASTEROID_BELT,
+            9);
+        registerMapBody(
+            definitions,
+            CelestialObjectId.KHONSU,
+            CelestialObjectId.BAAL,
+            CelestialObject.Class.MOON,
+            12.45);
+        registerMapBody(
+            definitions,
             CelestialObjectId.NEPER,
             CelestialObjectId.BAAL,
             CelestialObject.Class.MOON,
@@ -1770,8 +1934,9 @@ public final class CelestialRegistry {
             "ore.mix.heavypentele",
             "ore.mix.certusquartz",
             "ore.mix.dilithium");
-        registerMapBody(CelestialObjectId.IAH, CelestialObjectId.BAAL, CelestialObject.Class.MOON, 18.5);
+        registerMapBody(definitions, CelestialObjectId.IAH, CelestialObjectId.BAAL, CelestialObject.Class.MOON, 18.5);
         registerMapBody(
+            definitions,
             CelestialObjectId.MEHEN_BELT,
             CelestialObjectId.RA,
             CelestialObject.Class.ASTEROID_BELT,
@@ -1796,12 +1961,19 @@ public final class CelestialRegistry {
             "ore.small.tin",
             "ore.small.titanium");
         registerMapBody(
+            definitions,
             CelestialObjectId.SEKHMET,
             CelestialObjectId.RA,
             CelestialObject.Class.GAS_GIANT,
             1.6 * EARTH_RADIUS_TO_AU);
-        registerMapBody(CelestialObjectId.BAST, CelestialObjectId.SEKHMET, CelestialObject.Class.MOON, 9.8);
         registerMapBody(
+            definitions,
+            CelestialObjectId.BAST,
+            CelestialObjectId.SEKHMET,
+            CelestialObject.Class.MOON,
+            9.8);
+        registerMapBody(
+            definitions,
             CelestialObjectId.MAAHES,
             CelestialObjectId.SEKHMET,
             CelestialObject.Class.MOON,
@@ -1817,8 +1989,14 @@ public final class CelestialRegistry {
             "ore.mix.europacore",
             "ore.mix.tfgalena",
             "ore.mix.naquadria");
-        registerMapBody(CelestialObjectId.THOTH, CelestialObjectId.SEKHMET, CelestialObject.Class.MOON, 15.5);
         registerMapBody(
+            definitions,
+            CelestialObjectId.THOTH,
+            CelestialObjectId.SEKHMET,
+            CelestialObject.Class.MOON,
+            15.5);
+        registerMapBody(
+            definitions,
             CelestialObjectId.SETH,
             CelestialObjectId.SEKHMET,
             CelestialObject.Class.MOON,
@@ -1837,6 +2015,7 @@ public final class CelestialRegistry {
             "ore.small.awdraconium",
             "ore.small.draconium");
         registerMapBody(
+            definitions,
             CelestialObjectId.ANUBIS,
             CelestialObjectId.RA,
             CelestialObject.Class.PLANET,
@@ -1854,32 +2033,36 @@ public final class CelestialRegistry {
             "ore.mix.tfgalena",
             "ore.mix.infinitycatalyst",
             "ore.small.infinitycatalyst");
-        registerMapBody(CelestialObjectId.KEBE, CelestialObjectId.ANUBIS, CelestialObject.Class.MOON, 19);
+        registerMapBody(definitions, CelestialObjectId.KEBE, CelestialObjectId.ANUBIS, CelestialObject.Class.MOON, 19);
     }
 
-    private static void registerMapStar(CelestialObjectId id, double x, double y) {
-        register(
+    private static void registerMapStar(DefinitionPass definitions, CelestialObjectId id, double x, double y) {
+        definitions.register(
             id,
             builder -> builder.parent(CelestialObjectId.NOVUM_CAELUM)
                 .objectClass(CelestialObject.Class.STAR)
                 .absolutePosition(x, y)
+                .properties(b -> b.orbitalGravity(7.2e7, 0.0)),
+            builder -> builder
+
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(1.0)
                 .properties(
-                    b -> b.orbitalGravity(7.2e7, 0.0)
-                        .visitable(false)
+                    b -> b.visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
                         .metadata("source", "gtnh_map_scaffold")));
     }
 
-    private static void registerMapBody(CelestialObjectId id, CelestialObjectId parent,
+    private static void registerMapBody(DefinitionPass definitions, CelestialObjectId id, CelestialObjectId parent,
         CelestialObject.Class objectClass, double orbitalRadius, String... oreVeinIds) {
-        register(
+        definitions.register(
             id,
             builder -> builder.parent(parent)
                 .objectClass(objectClass)
-                .circularOrbit(orbitalRadius, 0.0001, seededPhase(id.name()))
+                .circularOrbit(orbitalRadius, 0.0001, seededPhase(id.name())),
+            builder -> builder
+
                 .texture(
                     objectClass == CelestialObject.Class.MOON ? EnumTextures.ICON_MOON.get()
                         : EnumTextures.ICON_EGORA.get())
@@ -1895,6 +2078,38 @@ public final class CelestialRegistry {
                         .canCreateOutpost(
                             objectClass == CelestialObject.Class.PLANET || objectClass == CelestialObject.Class.MOON)
                         .metadata("source", "gtnh_map_scaffold")));
+    }
+
+    /** Registration context keeps one numerical declaration shared by the game and offline planner. */
+    private static final class DefinitionPass {
+
+        private final boolean gameplay;
+        private final double parkingAltitudeM;
+        private final Map<CelestialObjectKey, CelestialObject> bodies = new LinkedHashMap<>();
+
+        private DefinitionPass(boolean gameplay, double parkingAltitudeM) {
+            this.gameplay = gameplay;
+            this.parkingAltitudeM = parkingAltitudeM;
+        }
+
+        private void register(DimensionEnum dimension, Consumer<CelestialObject.Builder> numerical,
+            Consumer<CelestialObject.Builder> content) {
+            register(CelestialObjectId.fromDimension(dimension), numerical, content);
+        }
+
+        private void register(CelestialObjectId id, Consumer<CelestialObject.Builder> numerical,
+            Consumer<CelestialObject.Builder> content) {
+            CelestialObject.Builder builder = CelestialObject.builder()
+                .key(id);
+            numerical.accept(builder);
+            CelestialObject body = builder.build();
+            if (bodies.put(body.key(), body) != null)
+                throw new IllegalStateException("Duplicate numerical definition: " + id);
+            if (gameplay) {
+                content.accept(builder);
+                CelestialRegistry.register(builder.build());
+            }
+        }
     }
 
     private static void configureOverworldProvider(WorldProviderBuilder builder) {

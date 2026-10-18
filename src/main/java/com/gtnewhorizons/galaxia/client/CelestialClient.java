@@ -114,15 +114,18 @@ public final class CelestialClient {
     }
 
     public static boolean registerAsset(CelestialObjectKey celestialObjectKey, CelestialAsset asset) {
-        AssetCreateRequestPacket packet = switch (asset.kind) {
-            case STATION -> AssetCreateRequestPacket
-                .createStation(celestialObjectKey, asset.displayName(), ((Station) asset).getController());
-            case AUTOMATED_OUTPOST, AUTOMATED_STATION -> AssetCreateRequestPacket
-                .createFacility(celestialObjectKey, asset.displayName(), asset.kind, asset.isOperational());
-            case SATELLITE -> AssetCreateRequestPacket
-                .createSatellite(celestialObjectKey, ((Satellite) asset).satelliteKind(), asset.isOperational());
+        return switch (asset.kind) {
+            case STATION -> sendToServer(
+                AssetCreateRequestPacket
+                    .createStation(celestialObjectKey, asset.displayName(), ((Station) asset).getController()));
+            case AUTOMATED_OUTPOST, AUTOMATED_STATION -> sendToServer(
+                AssetCreateRequestPacket
+                    .createFacility(celestialObjectKey, asset.displayName(), asset.kind, asset.isOperational()));
+            case SATELLITE -> sendToServer(
+                AssetCreateRequestPacket
+                    .createSatellite(celestialObjectKey, ((Satellite) asset).satelliteKind(), asset.isOperational()));
+            case TRANSPORT_SITE -> false;
         };
-        return sendToServer(packet);
     }
 
     public static void add(CelestialAsset state) {

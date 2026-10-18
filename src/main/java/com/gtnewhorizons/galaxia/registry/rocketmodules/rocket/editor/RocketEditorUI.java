@@ -9,6 +9,7 @@ import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
 
+import com.cleanroommc.modularui.api.IPanelHandler;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.drawable.UITexture;
@@ -25,23 +26,29 @@ import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.core.network.CommitBlueprintAndOrderPacket;
-import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
-import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.core.network.RocketScheduleSyncHandler;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.assembly.RocketBuildStatus;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartCategory;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RocketPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 
 public class RocketEditorUI {
 
     public static ModularPanel build(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
         TileEntitySilo silo = getSilo(data);
-        if (silo == null) {
+        if (silo == null || (!data.getWorld().isRemote && !silo.machineIdentity()
+            .canUse(data.getPlayer(), TeamAction.BUILD_MODULE))) {
             return buildErrorPanel();
         }
+
+        var schedulePanel = syncManager.syncedPanel(
+            "vehicle_schedule",
+            true,
+            (subSync, handler) -> RocketScheduleSyncHandler.build(subSync, silo::vehicleId));
 
         RocketBlueprint workingBlueprint = silo.getDesignBlueprint()
             .copy();
@@ -77,12 +84,15 @@ public class RocketEditorUI {
         panel.child(createCanvasContainer(canvas).margin(153, 6));
         panel.child(createNameFieldLayer().margin(156, 9));
         panel.child(createStagesPanel().margin(403, 2));
-        panel
-            .child(createBottomToolbar(silo, workingBlueprint, selectedPartId, buildStatusSync, data).margin(258, 219));
+        panel.child(
+            createBottomToolbar(silo, workingBlueprint, selectedPartId, buildStatusSync, data, schedulePanel)
+                .margin(258, 219));
 
         panel.onCloseAction(() -> {
-            if (silo.getBuildStatus()
-                .canEdit()) {
+            if (!data.getWorld().isRemote && silo.machineIdentity()
+                .canUse(data.getPlayer(), TeamAction.BUILD_MODULE)
+                && silo.getBuildStatus()
+                    .canEdit()) {
                 silo.setDesignBlueprint(workingBlueprint);
             }
         });
@@ -131,7 +141,7 @@ public class RocketEditorUI {
                     .onMousePressed(btn -> {
                         if (btn == 0) {
                             selectedCategory.setValue(idx);
-                            List<IRocketPartDef> filtered = RocketPartRegistry.instance()
+                            List<RocketPartDef> filtered = RocketPartRegistry.instance()
                                 .getByCategory(cat);
                             if (!filtered.isEmpty()) {
                                 selectedPartId.setValue(
@@ -162,7 +172,7 @@ public class RocketEditorUI {
                 .coverChildren()
                 .childPadding(2);
 
-            for (IRocketPartDef part : RocketPartRegistry.instance()
+            for (RocketPartDef part : RocketPartRegistry.instance()
                 .getByCategory(cat)) {
                 final int partId = part.id();
                 col.child(
@@ -174,7 +184,7 @@ public class RocketEditorUI {
                         }))
                         .overlay(UITexture.fullImage(part.siloIconLocation()))
                         .tooltip(t -> {
-                            t.addLine(IKey.str(part.name()));
+                            t.addLine(IKey.lang(part.nameKey()));
                             t.add(
                                 UITexture.fullImage(part.spriteLocation())
                                     .asIcon()
@@ -326,7 +336,7 @@ public class RocketEditorUI {
     }
 
     private static ParentWidget<?> createBottomToolbar(TileEntitySilo silo, RocketBlueprint blueprint,
-        IntSyncValue selectedPartId, IntSyncValue buildStatusSync, PosGuiData data) {
+        IntSyncValue selectedPartId, IntSyncValue buildStatusSync, PosGuiData data, IPanelHandler schedulePanel) {
 
         Flow row = Flow.row()
             .coverChildren()
@@ -371,20 +381,6 @@ public class RocketEditorUI {
                 .child(
                     new ButtonWidget<>().size(16, 16)
                         .margin(0, 2)
-                        .background(EnumTextures.SILO_SAVE_BLUEPRINT_ICON.getImage())
-                        .tooltip(t -> t.addLine(IKey.lang("galaxia.rocket_editor.return_modules")))
-                        .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
-                            if (md.mouseButton == 0 && !silo.getWorldObj().isRemote) {
-                                silo.returnModules();
-                            }
-                        }))));
-
-        row.child(
-            new SingleChildWidget<>().size(16, 20)
-                .background(EnumTextures.SILO_FIELD_ICON_MIDDLE.getImage())
-                .child(
-                    new ButtonWidget<>().size(16, 16)
-                        .margin(0, 2)
                         .background(EnumTextures.SILO_ORDER_MODULES_ICON.getImage())
                         .tooltip(t -> {
                             RocketBuildStatus status = RocketBuildStatus.values()[buildStatusSync.getValue()];
@@ -415,34 +411,14 @@ public class RocketEditorUI {
                     new ButtonWidget<>().size(16, 16)
                         .margin(0, 2)
                         .background(EnumTextures.SILO_DESTINATION_ICON.getImage())
-                        .tooltip(t -> {
-                            DimensionEnum current = null;
-                            for (DimensionEnum d : DimensionEnum.values()) {
-                                if (d.getId() == silo.getDestination()) {
-                                    current = d;
-                                    break;
-                                }
-                            }
-                            t.addLine(
-                                IKey.str(
-                                    StatCollector.translateToLocalFormatted(
-                                        "galaxia.rocket_editor.destination",
-                                        current != null ? current.getName() : "?")));
-                            t.addLine(IKey.lang("galaxia.rocket_editor.click_cycle"));
-                        })
+                        .tooltip(
+                            t -> t.addLine(
+                                IKey.lang(
+                                    silo.vehicleId() != null ? "galaxia.rocket.schedule.open"
+                                        : "galaxia.rocket.schedule.open_unavailable")))
                         .onMousePressed(btn -> {
-                            if (btn != 0) return false;
-                            DimensionEnum[] dims = DimensionEnum.values();
-                            int cur = 0;
-                            for (int i = 0; i < dims.length; i++) {
-                                if (dims[i].getId() == silo.getDestination()) {
-                                    cur = i;
-                                    break;
-                                }
-                            }
-                            int next = (cur + 1) % dims.length;
-                            GALAXIA_NETWORK.sendToServer(
-                                new DestinationSetPacket(silo.xCoord, silo.yCoord, silo.zCoord, dims[next].getId()));
+                            if (btn != 0 || silo.vehicleId() == null) return false;
+                            schedulePanel.openPanel();
                             return true;
                         })));
 

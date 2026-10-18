@@ -49,19 +49,20 @@ public class ModuleInstance implements Buildable {
         return definition.getTierData(this.tier);
     }
 
-    public void tick(CelestialAsset outpost) {
+    public boolean tick(CelestialAsset outpost) {
         if (this.status() == Buildable.Status.OPERATIONAL) {
-            tickOperational(outpost);
+            return tickOperational(outpost);
         }
+        return false;
     }
 
-    private void tickOperational(CelestialAsset asset) {
+    private boolean tickOperational(CelestialAsset asset) {
         long powerDraw = asset instanceof AutomatedFacility facility ? facility.effectivePowerDrawEuPerTick(this)
             : this.powerDrawEuPerTick();
 
         if (!asset.tryConsumeEnergy(powerDraw)) {
             ticks = 0;
-            return;
+            return false;
         }
 
         IModuleComponent component = this.component;
@@ -76,6 +77,7 @@ public class ModuleInstance implements Buildable {
             }
             this.setTicks(this.ticks - this.cooldownTicks());
         }
+        return true;
     }
 
     public ModuleInstance(ID id, FacilityModuleRegistry.Definition definition, StationTileCoord anchor,

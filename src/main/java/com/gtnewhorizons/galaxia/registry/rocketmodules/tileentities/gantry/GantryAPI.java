@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -8,297 +9,421 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.UUID;
+
+import javax.annotation.Nullable;
 
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
+import com.gtnewhorizons.galaxia.registry.items.special.ItemRocketModule;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.Rocket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.TransitModule;
 
-/**
- * API helper class for graph pathing and injection of modules
- */
+import gregtech.api.util.GTUtility;
+
+/** Connected machine admission and physical trips whose authoritative state belongs to the Rocket. */
 public final class GantryAPI {
 
-    // Costs and limit for dfs/dijkstra
-    private static final float HORIZONTAL_COST = 1f;
-    private static final float DIAGONAL_COST = 1.5f;
-    private static int MAX_CHAIN_SIZE = 256;
+    private static final int MAX_CHAIN_SIZE = 256;
 
-    // Valid connection vectors
     public static final Vec3[] CHECK_OFFSETS = { Vec3.createVectorHelper(1, 0, 0), Vec3.createVectorHelper(-1, 0, 0),
         Vec3.createVectorHelper(0, 0, 1), Vec3.createVectorHelper(0, 0, -1), Vec3.createVectorHelper(1, 1, 0),
         Vec3.createVectorHelper(1, -1, 0), Vec3.createVectorHelper(-1, 1, 0), Vec3.createVectorHelper(-1, -1, 0),
-
         Vec3.createVectorHelper(0, 1, 1), Vec3.createVectorHelper(0, -1, 1), Vec3.createVectorHelper(0, 1, -1),
         Vec3.createVectorHelper(0, -1, -1) };
 
-    /**
-     * Checks that a graph of gantries always terminates with actual gantry
-     * terminals
-     *
-     * @param world The world the TileEntity is in
-     * @param x     X coordinate of TileEntity
-     * @param y     Y coordinate of TileEntity
-     * @param z     Z coordinate of TileEntity
-     */
-    public static boolean terminatesWithTerminals(World world, int x, int y, int z) {
-        TileEntity tegantry = world.getTileEntity(x, y, z);
-        if (tegantry == null || !(tegantry instanceof TileEntityGantry)) {
-            return false;
-        }
+    private GantryAPI() {}
 
-        List<TileEntityGantry> endpoints = new ArrayList<>();
-        TileEntityGantry start = (TileEntityGantry) tegantry;
-        // Get all endpoints with DFS
-        dfsEndpoints(start, start, new HashSet<>(), endpoints, 0);
-        if (endpoints.size() == 1) {
+    /** Explicit native destruction, never chunk unload or structure disformation. */
+    public static void dropModules(Rocket.Registry registry, Rocket.Holder holder, TileEntity tile) {
+        if (tile.getWorldObj().isRemote) return;
+        for (Rocket rocket : registry.all()) {
+            for (var drop : rocket.dropModules(holder)) {
+                GTUtility.dropItemToBlockPos(
+                    tile.getWorldObj(),
+                    tile.xCoord,
+                    tile.yCoord,
+                    tile.zCoord,
+                    ItemRocketModule.dropped(drop));
+            }
+        }
+    }
+
+    public record AcceptedWork(UUID workId, UUID controllerId, UUID terminalId) {}
+
+    public enum DispatchResult {
+
+        ACCEPTED,
+        ALREADY_ACTIVE,
+        BLOCKED_ROUTE,
+        BUSY_ROUTE,
+        RECEIVER_UNAVAILABLE,
+        WRONG_SOURCE;
+
+        public boolean accepted() {
+            return this == ACCEPTED || this == ALREADY_ACTIVE;
+        }
+    }
+
+    /** Selects a connected machine only after it reserves this exact work's supplied bill. */
+    @Nullable
+    public static AcceptedWork requestWork(TileEntityGantryTerminal origin, UUID teamId,
+        TileEntityModuleAssembler.WorkRequest request) {
+        List<TileEntityGantryTerminal> candidates = findEndpointTerminals(origin).stream()
+            .filter(terminal -> terminal.getAssembler() != null)
+            .sorted(
+                Comparator.comparingInt((TileEntityGantryTerminal terminal) -> terminal.getAssembler().xCoord)
+                    .thenComparingInt(terminal -> terminal.getAssembler().yCoord)
+                    .thenComparingInt(terminal -> terminal.getAssembler().zCoord))
+            .toList();
+        for (TileEntityGantryTerminal terminal : candidates) {
+            TileEntityModuleAssembler assembler = terminal.getAssembler();
+            var previous = assembler.acceptedWork();
+            if (previous != null && previous.workId()
+                .equals(request.workId())) {
+                return assembler.tryAccept(teamId, request)
+                    .accepted() ? new AcceptedWork(request.workId(), assembler.controllerId(), terminal.terminalId())
+                        : null;
+            }
+        }
+        for (TileEntityGantryTerminal terminal : candidates) {
+            TileEntityModuleAssembler assembler = terminal.getAssembler();
+            if (assembler.tryAccept(teamId, request)
+                .accepted()) {
+                return new AcceptedWork(request.workId(), assembler.controllerId(), terminal.terminalId());
+            }
+        }
+        return null;
+    }
+
+    /** Reserves one physical trip, then confirms custody at its first Gantry node. */
+    public static DispatchResult dispatch(Rocket.Registry registry, Rocket rocket, UUID moduleId, UUID workId,
+        TileEntityGantry source, TileEntityGantryTerminal destination, Rocket.Holder receiver) {
+        if (rocket.status() == Rocket.Status.INCOMPLETE) return DispatchResult.WRONG_SOURCE;
+        Rocket.Module module = rocket.module(moduleId);
+        var sourceTerminal = source instanceof TileEntityGantryTerminal terminal ? terminal : null;
+        var controller = sourceTerminal == null ? null : sourceTerminal.controllerIdentity();
+        boolean heldHere = module.holder()
+            .equals(new Rocket.Holder(Rocket.HolderKind.GANTRY, source.nodeId()));
+        var targetController = destination.controllerIdentity();
+        if ((!heldHere && (controller == null || !controller.belongsTo(rocket.teamId()))) || targetController == null
+            || !targetController.belongsTo(rocket.teamId())
+            || source.dimension() != destination.dimension()) {
+            return DispatchResult.WRONG_SOURCE;
+        }
+        var target = new Rocket.TerminalTarget(
+            destination.nodeId(),
+            targetController.id(),
+            destination.dimension(),
+            destination.xCoord,
+            destination.yCoord,
+            destination.zCoord,
+            receiver);
+        if (module.gantryTransport() != null) {
+            var trip = module.gantryTransport();
+            if (!trip.workId()
+                .equals(workId)
+                || !trip.target()
+                    .equals(target))
+                return DispatchResult.WRONG_SOURCE;
+            if (trip.routeIndex() >= 0) return DispatchResult.ALREADY_ACTIVE;
+            return sourceTerminal != null && enterRoute(registry, rocket, module, sourceTerminal)
+                ? DispatchResult.ACCEPTED
+                : DispatchResult.BUSY_ROUTE;
+        }
+        if (!heldHere && (controller == null || !module.holder()
+            .id()
+            .equals(controller.id()))) {
+            return DispatchResult.WRONG_SOURCE;
+        }
+        if (!destination.canReceive(rocket, module, workId, receiver)) return DispatchResult.RECEIVER_UNAVAILABLE;
+        List<TileEntityGantry> route = path(source, destination);
+        if (route == null) return DispatchResult.BLOCKED_ROUTE;
+        List<UUID> reserved = route.stream()
+            .map(TileEntityGantry::nodeId)
+            .toList();
+        if (occupied(registry, source.nodeId(), module) || !routeAvailable(registry, reserved, module))
+            return DispatchResult.BUSY_ROUTE;
+        if (!rocket.beginGantryTransport(moduleId, workId, module.holder(), target, reserved))
+            return DispatchResult.WRONG_SOURCE;
+        if (heldHere) {
+            source.syncProjection();
+            return DispatchResult.ACCEPTED;
+        }
+        return enterRoute(registry, rocket, module, sourceTerminal) ? DispatchResult.ACCEPTED
+            : DispatchResult.BUSY_ROUTE;
+    }
+
+    private static boolean enterRoute(Rocket.Registry registry, Rocket rocket, Rocket.Module module,
+        TileEntityGantryTerminal source) {
+        var trip = module.gantryTransport();
+        if (!trip.reservedRoute()
+            .getFirst()
+            .equals(source.nodeId()) || occupied(registry, source.nodeId(), module)) {
             return false;
         }
-        // Ensure all are terminal instances
-        for (TileEntityGantry instance : endpoints) {
-            if (!isTerminal(instance)) {
-                return false;
+        var receiver = new Rocket.Holder(Rocket.HolderKind.GANTRY, source.nodeId());
+        var transfer = rocket.beginTransfer(module.id(), trip.workId(), module.holder(), receiver);
+        if (rocket.confirmTransfer(transfer, receiver) == Rocket.TransferResult.REJECTED) return false;
+        TileEntityModuleAssembler assembler = source.getAssembler();
+        if (assembler != null) {
+            var output = assembler.completedOutput();
+            if (output != null && output.vehicleId()
+                .equals(rocket.id())
+                && output.moduleId()
+                    .equals(module.id())) {
+                assembler.acknowledgeOutput(output.workId());
+            }
+        }
+        source.syncProjection();
+        return true;
+    }
+
+    /** Same server step used by native Gantry ticks and deterministic transport integration tests. */
+    public static void tickNode(Rocket.Registry registry, TileEntityGantry node) {
+        Rocket.Module module = heldModule(registry, node.nodeId());
+        if (module == null || module.gantryTransport() == null) return;
+        Rocket rocket = registry.find(module.vehicleId());
+        if (rocket.status() == Rocket.Status.INCOMPLETE) return;
+        var trip = module.gantryTransport();
+        int index = trip.routeIndex();
+        if (index < 0 || index >= trip.reservedRoute()
+            .size()
+            || !trip.reservedRoute()
+                .get(index)
+                .equals(node.nodeId()))
+            return;
+        if (index + 1 < trip.reservedRoute()
+            .size()) {
+            UUID nextId = trip.reservedRoute()
+                .get(index + 1);
+            TileEntityGantry next = node.getNeighbours()
+                .stream()
+                .filter(
+                    candidate -> candidate.nodeId()
+                        .equals(nextId) && adjacent(node, candidate))
+                .findFirst()
+                .orElse(null);
+            if (next == null || occupied(registry, nextId, module)) return;
+            node.projectDirection(next);
+            var receiver = new Rocket.Holder(Rocket.HolderKind.GANTRY, nextId);
+            var transfer = rocket.beginTransfer(module.id(), trip.workId(), module.holder(), receiver);
+            if (!rocket.advanceGantryProgress(module.id(), TileEntityGantry.MOVEMENT_PER_TICK)) {
+                node.syncProjection();
+                return;
+            }
+            if (rocket.confirmTransfer(transfer, receiver) != Rocket.TransferResult.REJECTED) {
+                node.syncProjection();
+                next.syncProjection();
+            }
+            return;
+        }
+        if (!(node instanceof TileEntityGantryTerminal terminal) || !terminal.matchesTarget(trip.target())) return;
+        node.projectDirectionToController();
+        var transfer = rocket.beginTransfer(
+            module.id(),
+            trip.workId(),
+            module.holder(),
+            trip.target()
+                .receiver());
+        if (!rocket.advanceGantryProgress(module.id(), TileEntityGantry.MOVEMENT_PER_TICK)) {
+            node.syncProjection();
+            return;
+        }
+        if (!terminal.acceptDelivery(
+            rocket,
+            module,
+            trip.workId(),
+            trip.target()
+                .receiver()))
+            return;
+        if (rocket.confirmTransfer(
+            transfer,
+            trip.target()
+                .receiver())
+            != Rocket.TransferResult.REJECTED) {
+            rocket.finishGantryTransport(module.id(), trip.workId());
+            node.syncProjection();
+        }
+    }
+
+    @Nullable
+    public static Rocket.Module heldModule(Rocket.Registry registry, UUID nodeId) {
+        Rocket.Module held = null;
+        var holder = new Rocket.Holder(Rocket.HolderKind.GANTRY, nodeId);
+        for (Rocket rocket : registry.all()) {
+            for (Rocket.Module module : rocket.modules()) {
+                if (!module.holder()
+                    .equals(holder)) continue;
+                if (held != null) throw new IllegalStateException("Multiple modules occupy one Gantry node");
+                held = module;
+            }
+        }
+        return held;
+    }
+
+    private static boolean occupied(Rocket.Registry registry, UUID nodeId, Rocket.Module own) {
+        for (Rocket rocket : registry.all()) {
+            for (Rocket.Module module : rocket.modules()) {
+                if (module == own) continue;
+                if (module.holder()
+                    .kind() == Rocket.HolderKind.GANTRY && module.holder()
+                        .id()
+                        .equals(nodeId))
+                    return true;
+                var pending = module.pendingTransfer();
+                if (pending != null && pending.destination()
+                    .kind() == Rocket.HolderKind.GANTRY
+                    && pending.destination()
+                        .id()
+                        .equals(nodeId))
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    /** Admit following traffic, but keep incompatible directions outside their shared corridor. */
+    private static boolean routeAvailable(Rocket.Registry registry, List<UUID> route, Rocket.Module own) {
+        for (Rocket rocket : registry.all()) {
+            for (Rocket.Module module : rocket.modules()) {
+                if (module == own || module.gantryTransport() == null) continue;
+                var trip = module.gantryTransport();
+                var remaining = trip.reservedRoute()
+                    .subList(
+                        Math.max(0, trip.routeIndex()),
+                        trip.reservedRoute()
+                            .size());
+                if (!compatibleRoutes(route, remaining)) return false;
             }
         }
         return true;
     }
 
-    /**
-     * Injects a module into a gantry
-     *
-     * @param module          The rocket module to inject
-     * @param moduleAssembler The assembler for this journey
-     * @param silo            The silo for this journey
-     * @param returning       Determines which consumer is the start point (True =>
-     *                        Silo start)
-     */
-    public static void injectModule(RocketPartInstance module, TileEntityModuleAssembler moduleAssembler,
-        TileEntitySilo silo, boolean returning) {
-        TileEntityGantryTerminal start, dest;
-        // Determine start point and accept
-        if (returning) {
-            start = silo.getGantryTerminal();
-            dest = moduleAssembler.getGantryTerminal();
-        } else {
-            start = moduleAssembler.getGantryTerminal();
-            dest = silo.getGantryTerminal();
+    private static boolean compatibleRoutes(List<UUID> route, List<UUID> remaining) {
+        int shared = 0;
+        int previousRouteIndex = -1;
+        int previousRemainingIndex = -1;
+        for (int i = 0; i < route.size(); i++) {
+            int other = remaining.indexOf(route.get(i));
+            if (other < 0) continue;
+            if (shared > 0 && (i != previousRouteIndex + 1 || other != previousRemainingIndex + 1)) return false;
+            previousRouteIndex = i;
+            previousRemainingIndex = other;
+            shared++;
         }
-
-        start.acceptModule(new TransitModule(module, dest));
-        start.sync();
+        // A common receiver can queue arrivals even when the incoming branches share no track.
+        return shared != 1 || route.getLast()
+            .equals(remaining.getLast());
     }
 
-    /**
-     * Finds endpoint terminals of the gantry graph
-     *
-     * @param start The start terminal of the graph
-     *
-     * @return The list of terminals at endpoints
-     */
-    public static List<TileEntityGantryTerminal> findEndpointTerminals(TileEntityGantryTerminal start) {
-        List<TileEntityGantry> ends = new ArrayList<>();
-        dfsEndpoints(start, start, new HashSet<>(), ends, 0);
-        return ends.stream()
+    public static boolean terminatesWithTerminals(World world, int x, int y, int z) {
+        TileEntity tile = world.getTileEntity(x, y, z);
+        if (!(tile instanceof TileEntityGantry start)) return false;
+        List<TileEntityGantry> graph = connectedNodes(start);
+        return graph != null && graph.stream()
             .filter(TileEntityGantryTerminal.class::isInstance)
-            .map(TileEntityGantryTerminal.class::cast)
-            .collect(Collectors.toList());
+            .count() >= 2
+            && graph.stream()
+                .noneMatch(
+                    node -> node.getNeighbours()
+                        .size() <= 1 && !(node instanceof TileEntityGantryTerminal));
     }
 
-    /**
-     * Depth-First Search (DFS) to find all endpoints of a gantry graph
-     *
-     * @param current   The current gantry being checked
-     * @param start     The original start gantry
-     * @param visited   The set of all visited nodes on the graph
-     * @param endpoints The list of endpoints found so far
-     * @param depth     The current depth of this search relative to original search
-     *                  being 0
-     */
-    private static void dfsEndpoints(TileEntityGantry current, TileEntityGantry start, Set<TileEntityGantry> visited,
-        List<TileEntityGantry> endpoints, int depth) {
-        visited.add(current);
+    public static List<TileEntityGantryTerminal> findEndpointTerminals(TileEntityGantryTerminal start) {
+        List<TileEntityGantry> nodes = connectedNodes(start);
+        return nodes == null ? List.of()
+            : nodes.stream()
+                .filter(TileEntityGantryTerminal.class::isInstance)
+                .map(TileEntityGantryTerminal.class::cast)
+                .toList();
+    }
 
-        if (depth >= MAX_CHAIN_SIZE) {
-            endpoints.add(current);
-            return;
-        }
+    @Nullable
+    public static TileEntityGantry findNode(TileEntityGantry start, UUID nodeId) {
+        var nodes = connectedNodes(start);
+        return nodes == null ? null
+            : nodes.stream()
+                .filter(
+                    node -> node.nodeId()
+                        .equals(nodeId))
+                .findFirst()
+                .orElse(null);
+    }
 
-        if (current.neighbours.isEmpty() || isEndpoint(current)) {
-            endpoints.add(current);
-            if (current != start) return;
-        }
+    @Nullable
+    public static TileEntityGantryTerminal findControllerTerminal(TileEntityGantryTerminal start, UUID controllerId) {
+        return findEndpointTerminals(start).stream()
+            .filter(terminal -> {
+                var identity = terminal.controllerIdentity();
+                return identity != null && identity.id()
+                    .equals(controllerId);
+            })
+            .findFirst()
+            .orElse(null);
+    }
 
-        for (TileEntityGantry neighbour : current.neighbours) {
-            if (!visited.contains(neighbour)) {
-                dfsEndpoints(neighbour, start, visited, endpoints, depth + 1);
+    @Nullable
+    private static List<TileEntityGantry> connectedNodes(TileEntityGantry start) {
+        var queue = new ArrayDeque<TileEntityGantry>();
+        var visited = new HashSet<UUID>();
+        var nodes = new ArrayList<TileEntityGantry>();
+        queue.add(start);
+        visited.add(start.nodeId());
+        while (!queue.isEmpty()) {
+            TileEntityGantry current = queue.removeFirst();
+            nodes.add(current);
+            if (nodes.size() > MAX_CHAIN_SIZE) return null;
+            for (TileEntityGantry next : current.getNeighbours()) {
+                if (visited.add(next.nodeId())) queue.addLast(next);
             }
         }
+        return nodes;
     }
 
-    /**
-     * Performs an A* Search algorithm to find the shortest path from a gantry
-     * to a terminal along a graph, prioritising horizontal paths first.
-     *
-     * @see <a href="https://en.wikipedia.org/wiki/A*_search_algorithm">A* Search
-     *      Algorithm</a>
-     *
-     * @param start The start point to search from
-     * @param end   The ending terminal to search for
-     *
-     * @return The list of gantries in the shortest path, null if end not found
-     */
-    private static List<TileEntityGantry> aStarPath(TileEntityGantry start, TileEntityGantryTerminal end) {
-        // g(n): actual cost from start to node n
-        Map<TileEntityGantry, Float> gScore = new HashMap<>();
-        // f(n): g(n) + h(n), used for priority ordering
-        Map<TileEntityGantry, Float> fScore = new HashMap<>();
-        Map<TileEntityGantry, TileEntityGantry> prev = new HashMap<>();
-        Set<TileEntityGantry> closedSet = new HashSet<>();
-
-        PriorityQueue<TileEntityGantry> openSet = new PriorityQueue<>(
-            Comparator.comparingDouble(n -> fScore.getOrDefault(n, Float.MAX_VALUE)));
-
-        gScore.put(start, 0f);
-        fScore.put(start, heuristic(start, end));
-        openSet.add(start);
-
-        int visited = 0;
-
-        while (!openSet.isEmpty()) {
-            TileEntityGantry current = openSet.poll();
-
-            if (++visited > MAX_CHAIN_SIZE) break;
+    @Nullable
+    private static List<TileEntityGantry> path(TileEntityGantry start, TileEntityGantry end) {
+        List<TileEntityGantry> graph = connectedNodes(start);
+        if (graph == null || !graph.contains(end)) return null;
+        Map<TileEntityGantry, Double> costs = new HashMap<>();
+        Map<TileEntityGantry, TileEntityGantry> previous = new HashMap<>();
+        Set<TileEntityGantry> settled = new HashSet<>();
+        var queue = new PriorityQueue<TileEntityGantry>(Comparator.comparingDouble(costs::get));
+        costs.put(start, 0.0);
+        queue.add(start);
+        while (!queue.isEmpty()) {
+            TileEntityGantry current = queue.remove();
             if (current == end) break;
-
-            // Node is settled — skip if revisited via a worse path
-            closedSet.add(current);
-
-            for (TileEntityGantry neighbour : current.getNeighbours()) {
-                if (closedSet.contains(neighbour)) continue;
-
-                float stepCost = isHorizontalStep(current, neighbour) ? HORIZONTAL_COST : DIAGONAL_COST;
-                float tentativeG = gScore.getOrDefault(current, Float.MAX_VALUE) + stepCost;
-
-                if (tentativeG < gScore.getOrDefault(neighbour, Float.MAX_VALUE)) {
-                    prev.put(neighbour, current);
-                    gScore.put(neighbour, tentativeG);
-                    fScore.put(neighbour, tentativeG + heuristic(neighbour, end));
-
-                    // Re-insert to update priority (remove is O(n) but acceptable at
-                    // MAX_CHAIN_SIZE=256)
-                    openSet.remove(neighbour);
-                    openSet.add(neighbour);
-                }
+            settled.add(current);
+            for (TileEntityGantry next : current.getNeighbours()) {
+                if (settled.contains(next) || !adjacent(current, next)) continue;
+                double candidate = costs.get(current) + (current.yCoord == next.yCoord ? 1.0 : 1.5);
+                if (candidate >= costs.getOrDefault(next, Double.POSITIVE_INFINITY)) continue;
+                costs.put(next, candidate);
+                previous.put(next, current);
+                queue.remove(next);
+                queue.add(next);
             }
         }
+        if (start != end && !previous.containsKey(end)) return null;
+        List<TileEntityGantry> route = new ArrayList<>();
+        for (TileEntityGantry current = end; current != null; current = previous.get(current)) route.addFirst(current);
+        return route;
+    }
 
-        if (!prev.containsKey(end) && start != end) return null;
-
-        List<TileEntityGantry> path = new ArrayList<>();
-        for (TileEntityGantry step = end; step != null; step = prev.get(step)) {
-            path.add(0, step);
+    private static boolean adjacent(TileEntityGantry first, TileEntityGantry second) {
+        int x = second.xCoord - first.xCoord;
+        int y = second.yCoord - first.yCoord;
+        int z = second.zCoord - first.zCoord;
+        for (Vec3 offset : CHECK_OFFSETS) {
+            if (x == offset.xCoord && y == offset.yCoord && z == offset.zCoord) return true;
         }
-        return path.isEmpty() ? null : path;
+        return false;
     }
 
-    /**
-     * Euclidean distance squared heuristic for A* — estimates the remaining cost
-     * from a node to the goal. Admissible because straight-line distance
-     * is always ≤ actual traversal cost given the step costs used.
-     *
-     * @param node The current node
-     * @param goal The target terminal
-     *
-     * @return The estimated cost from node to goal
-     */
-    private static float heuristic(TileEntityGantry node, TileEntityGantry goal) {
-        float dx = goal.xCoord - node.xCoord;
-        float dy = goal.yCoord - node.yCoord;
-        float dz = goal.zCoord - node.zCoord;
-        return (float) dx * dx + dy * dy + dz * dz;
-    }
-
-    /**
-     * Helper method to determine if a step is horizontal
-     *
-     * @param from The gantry at start of step
-     * @param to   The gantry stepping to
-     *
-     * @return Boolean : True => is horizontal step
-     */
-    private static boolean isHorizontalStep(TileEntityGantry from, TileEntityGantry to) {
-        return (to.yCoord - from.yCoord) == 0 ? true : false;
-
-    }
-
-    /**
-     * Gets the direction vector from one gantry to another
-     *
-     * @param start The starting gantry
-     * @param end   The ending gantry
-     *
-     * @return The vector from start to end
-     */
-    public static Vec3 getDirectionTo(TileEntityGantry start, TileEntityGantryTerminal end) {
-
-        List<TileEntityGantry> nodes = aStarPath(start, end);
-        if (nodes == null || nodes.size() == 0) return Vec3.createVectorHelper(0, 0, 0);
-        if (nodes.size() == 1) {
-            if (nodes.get(0) instanceof TileEntityGantryTerminal terminal) {
-                if (terminal.getSilo() != null) {
-                    TileEntitySilo silo = terminal.getSilo();
-                    return Vec3.createVectorHelper(
-                        silo.xCoord - start.xCoord,
-                        silo.yCoord - start.yCoord,
-                        silo.zCoord - start.zCoord);
-                }
-
-                if (terminal.getAssembler() != null) {
-                    TileEntityModuleAssembler assembler = terminal.getAssembler();
-                    return Vec3.createVectorHelper(
-                        assembler.xCoord - start.xCoord,
-                        assembler.yCoord - start.yCoord,
-                        assembler.zCoord - start.zCoord);
-
-                }
-            }
-            return Vec3.createVectorHelper(0, 0, 0);
-        }
-        TileEntityGantry next = nodes.get(1);
-        return Vec3
-            .createVectorHelper(next.xCoord - start.xCoord, next.yCoord - start.yCoord, next.zCoord - start.zCoord);
-    }
-
-    /**
-     * Determines if a gantry is an endpoint in its graph
-     *
-     * @param gantry The gantry to check
-     *
-     * @return Boolean : True => is an endpoint
-     */
-    private static boolean isEndpoint(TileEntityGantry gantry) {
-        return gantry.neighbours.size() == 1;
-    }
-
-    /**
-     * Determines if a gantry is a terminal
-     *
-     * @param gantry The gantry to check
-     *
-     * @return Boolean : True => is a terminal
-     */
     public static boolean isTerminal(TileEntityGantry gantry) {
         return gantry instanceof TileEntityGantryTerminal;
-    }
-
-    public static void requestProduction(RocketPartInstance part, TileEntityModuleAssembler assembler,
-        TileEntitySilo targetSilo) {
-        if (assembler == null || targetSilo == null) return;
-        assembler.enqueueProduction(part, targetSilo);
     }
 }

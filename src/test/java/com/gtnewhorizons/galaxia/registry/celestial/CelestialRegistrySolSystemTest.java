@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -8,6 +9,7 @@ import java.util.HashSet;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class CelestialRegistrySolSystemTest {
@@ -49,6 +51,23 @@ final class CelestialRegistrySolSystemTest {
                     .apogee();
                 assertTrue(farthest < nearestGap, () -> "Moon reaches another planet's orbit: " + moon.key());
             }
+        }
+    }
+
+    /** Product contract: authored surface acceleration and orbital motion share one gravity authority. */
+    @Test
+    void localFlightBodiesUseCoherentAuthoredSurfaceGravityAndPhysicalParking() {
+        for (var id : new CelestialObjectId[] { CelestialObjectId.OVERWORLD, CelestialObjectId.MOON,
+            CelestialObjectId.MARS }) {
+            var body = CelestialRegistry.get(CelestialObjectKey.registered(id))
+                .orElseThrow();
+            var properties = body.properties();
+            double radius = properties.radiusMetres();
+            assertTrue(radius > 0);
+            assertTrue(properties.parkingOrbitRadius() > properties.radiusEarthRelative());
+            double acceleration = OrbitalMechanics.muToSI(properties.standardGravitationalParameter())
+                / (radius * radius);
+            assertEquals(properties.localGravityG() * 9.80665, acceleration, 1e-9);
         }
     }
 }

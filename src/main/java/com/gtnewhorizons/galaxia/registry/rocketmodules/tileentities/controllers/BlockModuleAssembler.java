@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.controllers;
 
+import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.tileentity.TileEntity;
@@ -8,6 +9,8 @@ import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.factory.GuiFactories;
+import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
 
@@ -56,9 +59,21 @@ public class BlockModuleAssembler extends BlockRocketController implements ITile
         if (world.isRemote) return true;
 
         TileEntity te = world.getTileEntity(x, y, z);
-        if (te instanceof TileEntityModuleAssembler) GuiFactories.tileEntity()
-            .open(player, x, y, z);
+        if (te instanceof TileEntityModuleAssembler assembler && assembler.machineIdentity()
+            .canUse(player, TeamAction.MANAGE_INVENTORY))
+            GuiFactories.tileEntity()
+                .open(player, x, y, z);
         return true;
+    }
+
+    @Override
+    public void breakBlock(World world, int x, int y, int z, Block block, int metadata) {
+        if (!world.isRemote && world.getTileEntity(x, y, z) instanceof TileEntityModuleAssembler assembler) {
+            assembler.destroyController(
+                Galaxia.proxy.serverRuntime()
+                    .rockets());
+        }
+        super.breakBlock(world, x, y, z, block, metadata);
     }
 
     @Override

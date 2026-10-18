@@ -179,6 +179,7 @@ final class StationItemInteractionModalWidget extends ParentWidget<StationItemIn
             case STORAGE -> new ItemStack(Blocks.chest);
             case TANK -> new ItemStack(Items.bucket);
             case MAINTENANCE_BAY -> new ItemStack(Blocks.anvil);
+            case LANDING_BAY -> new ItemStack(Blocks.iron_block);
             case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> new ItemStack(
                 Blocks.furnace);
         };

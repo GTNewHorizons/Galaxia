@@ -140,6 +140,10 @@ public final class AssetCreateRequestPacket implements IMessage {
     }
 
     private void validateTargetBody(UUID teamId) {
+        if (kind == CelestialAsset.Kind.TRANSPORT_SITE) {
+            throw new IllegalArgumentException(
+                net.minecraft.util.StatCollector.translateToLocal("galaxia.transport.site.native_only"));
+        }
         CelestialObject body = CelestialRegistry.get(celestialObjectKey)
             .orElseThrow(
                 () -> new IllegalArgumentException(

@@ -2,9 +2,9 @@ package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint;
 
 import net.minecraft.nbt.NBTTagCompound;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RocketPartDef;
 
-public record RocketPartInstance(IRocketPartDef def, int x, int y, int z, boolean isRadial) {
+public record RocketPartInstance(RocketPartDef def, int x, int y, int z, boolean isRadial) {
 
     public NBTTagCompound serialize() {
         NBTTagCompound tag = new NBTTagCompound();
@@ -18,7 +18,7 @@ public record RocketPartInstance(IRocketPartDef def, int x, int y, int z, boolea
 
     public static RocketPartInstance deserialize(NBTTagCompound tag, RocketPartRegistry registry) {
         int id = tag.getInteger("id");
-        IRocketPartDef def = registry.get(id);
+        RocketPartDef def = registry.get(id);
         if (def == null) return null;
         return new RocketPartInstance(
             def,

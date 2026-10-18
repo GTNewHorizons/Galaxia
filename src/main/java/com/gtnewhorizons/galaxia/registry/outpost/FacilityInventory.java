@@ -27,13 +27,13 @@ final class FacilityInventory {
     private final ResourceFilter<ItemStackWrapper> itemFilter = ResourceFilter.forItems();
     private final ResourceFilter<FluidKey> fluidFilter = ResourceFilter.forFluids();
 
-    long insert(InventoryKey resource, long requested, long itemCapacity) {
+    long insert(InventoryKey resource, long requested, long itemCapacity, long fluidCapacity) {
         requireNonNegative(requested, "insertion");
         if (resource == null || requested == 0L || !allowsInsertion(resource)) return 0L;
         if (resource instanceof ItemStackWrapper item) {
             return insertItem(item, requested, itemCapacity);
         }
-        return insertFluid((FluidKey) resource, requested);
+        return insertFluid((FluidKey) resource, requested, fluidCapacity);
     }
 
     long extract(InventoryKey resource, long requested) {
@@ -43,7 +43,7 @@ final class FacilityInventory {
     }
 
     ExchangeResult tryExchange(Map<? extends InventoryKey, Long> inputs, Map<? extends InventoryKey, Long> outputs,
-        long itemCapacity) {
+        long itemCapacity, long fluidCapacity) {
         validateExchangeAmounts(inputs, "inputs");
         validateExchangeAmounts(outputs, "outputs");
         Map<InventoryKey, Long> finalAmounts = new LinkedHashMap<>();
@@ -54,11 +54,13 @@ final class FacilityInventory {
             finalAmounts.put(entry.getKey(), stored - entry.getValue());
         }
         boolean hasItemOutput = false;
+        boolean hasFluidOutput = false;
         for (var entry : outputs.entrySet()) {
             if (entry.getValue() == 0L) continue;
             InventoryKey resource = entry.getKey();
             if (!allowsInsertion(resource)) return ExchangeResult.REJECTED;
             hasItemOutput |= resource.isItem();
+            hasFluidOutput |= !resource.isItem();
             try {
                 finalAmounts.put(
                     resource,
@@ -68,7 +70,8 @@ final class FacilityInventory {
             }
         }
         if (finalAmounts.isEmpty()) return ExchangeResult.REJECTED;
-        if (hasItemOutput && !fitsItemCapacity(finalAmounts, itemCapacity)) return ExchangeResult.REJECTED;
+        if (hasItemOutput && !fitsCapacity(finalAmounts, itemCapacity, true)) return ExchangeResult.REJECTED;
+        if (hasFluidOutput && !fitsCapacity(finalAmounts, fluidCapacity, false)) return ExchangeResult.REJECTED;
         if (finalAmounts.entrySet()
             .stream()
             .allMatch(entry -> entry.getValue() == amount(entry.getKey()))) {
@@ -266,20 +269,23 @@ final class FacilityInventory {
         return applied;
     }
 
-    private long insertFluid(FluidKey fluid, long requested) {
+    private long insertFluid(FluidKey fluid, long requested, long capacity) {
         long stored = amounts.getOrDefault(fluid, 0L);
-        if (stored >= Long.MAX_VALUE) return 0L;
-        long applied = Math.min(requested, Long.MAX_VALUE - stored);
+        long applied = Math.min(requested, availableCapacity(capacity, false));
         if (applied == 0L) return 0L;
         amounts.put(fluid, stored + applied);
         return applied;
     }
 
     private long availableItemCapacity(long capacity) {
+        return availableCapacity(capacity, true);
+    }
+
+    long availableCapacity(long capacity, boolean item) {
         long available = Math.max(0L, capacity);
         for (Map.Entry<InventoryKey, Long> entry : amounts.entrySet()) {
-            if (!entry.getKey()
-                .isItem()) continue;
+            if (entry.getKey()
+                .isItem() != item) continue;
             long stored = entry.getValue();
             if (stored >= available) return 0L;
             available -= stored;
@@ -306,17 +312,17 @@ final class FacilityInventory {
         }
     }
 
-    private boolean fitsItemCapacity(Map<InventoryKey, Long> finalAmounts, long capacity) {
+    private boolean fitsCapacity(Map<InventoryKey, Long> finalAmounts, long capacity, boolean item) {
         long remaining = Math.max(0L, capacity);
         for (var entry : amounts.entrySet()) {
-            if (!entry.getKey()
-                .isItem() || finalAmounts.containsKey(entry.getKey())) continue;
+            if (entry.getKey()
+                .isItem() != item || finalAmounts.containsKey(entry.getKey())) continue;
             if (entry.getValue() > remaining) return false;
             remaining -= entry.getValue();
         }
         for (var entry : finalAmounts.entrySet()) {
-            if (!entry.getKey()
-                .isItem()) continue;
+            if (entry.getKey()
+                .isItem() != item) continue;
             if (entry.getValue() > remaining) return false;
             remaining -= entry.getValue();
         }

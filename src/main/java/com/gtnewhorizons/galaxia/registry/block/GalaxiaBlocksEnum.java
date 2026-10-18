@@ -19,16 +19,20 @@ import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityFumarole;
 import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenCollector;
 import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenFiller;
 import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenPylon;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerTarget;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.BlockRocketTrophy;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityRocketLoadingPort;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityRocketTrophy;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.controllers.BlockModuleAssembler;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.controllers.BlockRocketLoadingPort;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.controllers.BlockSilo;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.controllers.BlockTransportPlatform;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.BlockGantry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.BlockGantryTerminal;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantry;
@@ -47,6 +51,9 @@ public enum GalaxiaBlocksEnum {
 
     // TE
     SILO_CONTROLLER(new BlockSilo(), TileEntitySilo.class, "silo_controller"),
+    LANDING_PAD_CONTROLLER(new BlockTransportPlatform(CelestialAsset.Endpoint.Kind.LANDING_PAD), "landing_pad_controller"),
+    DOCK_CONTROLLER(new BlockTransportPlatform(CelestialAsset.Endpoint.Kind.DOCK), "dock_controller"),
+    ROCKET_LOADING_PORT(new BlockRocketLoadingPort(), TileEntityRocketLoadingPort.class, "rocket_loading_port"),
     AIRLOCK_CONTROLLER(new BlockAirlockController(), TileEntityAirlock.class, "airlock_controller"),
     STATION_CONTROLLER(new BlockStationController(), TileStation.class, "station_controller"),
     ASSEMBLER_CONTROLLER(new BlockModuleAssembler(), TileEntityModuleAssembler.class, "module_assembler_controller"),

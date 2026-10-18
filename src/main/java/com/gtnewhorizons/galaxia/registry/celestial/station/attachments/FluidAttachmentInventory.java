@@ -43,21 +43,32 @@ public class FluidAttachmentInventory<T> implements IDistributedInventory {
     @Override
     public long getFreeFluidSpace(FluidKey fluid) {
         if (!getFluidFilter().test(fluid)) return 0L;
-        long capacity = handler.getFluidCapacity(attachment);
-        long stored = handler.getFluidStored(attachment);
-        return Math.max(0, capacity - stored);
+        return insertIntoOwnFluidStorage(fluid, Integer.MAX_VALUE, true);
     }
 
     @Override
     public long insertIntoOwnFluidStorage(FluidKey fluid, long target) {
+        return insertIntoOwnFluidStorage(fluid, target, false);
+    }
+
+    @Override
+    public long insertIntoOwnFluidStorage(FluidKey fluid, long target, boolean simulate) {
         int toFill = (int) Math.min(target, Integer.MAX_VALUE);
-        return Math.max(0, handler.fillFluid(attachment, fluid.toStack(toFill), true));
+        long moved = Math.max(0, handler.fillFluid(attachment, fluid.toStack(toFill), !simulate));
+        if (!simulate && moved > 0) handler.markDirty(attachment);
+        return moved;
     }
 
     @Override
     public long extractFromOwnFluidStorage(FluidKey fluid, long target) {
+        return extractFromOwnFluidStorage(fluid, target, false);
+    }
+
+    @Override
+    public long extractFromOwnFluidStorage(FluidKey fluid, long target, boolean simulate) {
         FluidStack drained = handler
-            .drainFluid(attachment, fluid.toStack((int) Math.min(target, Integer.MAX_VALUE)), true);
+            .drainFluid(attachment, fluid.toStack((int) Math.min(target, Integer.MAX_VALUE)), !simulate);
+        if (!simulate && drained != null && drained.amount > 0) handler.markDirty(attachment);
         return drained != null ? drained.amount : 0;
     }
 

@@ -85,6 +85,12 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.Rocket;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartCategory;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RocketPartDef;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
@@ -102,8 +108,80 @@ final class FacilityPersistenceManagerTest {
     @BeforeAll
     static void initRegistries() {
         GalaxiaTestBootstrap.ensureFacilityModules();
+        FacilityModuleRegistry.registerLandingBay(Map.of(new ItemStack(Items.iron_ingot), 1L));
         TEST_FLUID_1 = FluidRegistry.WATER;
         TEST_FLUID_2 = FluidRegistry.LAVA;
+    }
+
+    @Test
+    void worldSaveRestoresVehiclesAndTeamMergeWithoutRecreatingModules(@TempDir Path save) {
+        var runtime = CelestialServerRuntime.create();
+        var manager = new FacilityPersistenceManager(runtime);
+        manager.loadFromSaveDirectory(save.toFile());
+        var part = RocketPartDef.structural(105432, "persistence_frame", 1, 1, 1, null);
+        RocketPartRegistry.instance()
+            .register(part, RocketPartCategory.STRUCTURAL);
+        var design = new RocketBlueprint();
+        assertTrue(design.addPart(new RocketPartInstance(part, 0, 0, 0, false)));
+        UUID oldTeam = UUID.randomUUID();
+        UUID newTeam = UUID.randomUUID();
+        var first = Rocket
+            .construct(oldTeam, CelestialObjectKey.registered(CelestialObjectId.OVERWORLD), UUID.randomUUID(), design);
+        var second = Rocket
+            .construct(newTeam, CelestialObjectKey.registered(CelestialObjectId.MARS), UUID.randomUUID(), design);
+        runtime.rockets()
+            .register(first);
+        runtime.rockets()
+            .register(second);
+        var slot = first.buildSlots()
+            .getFirst();
+        var holder = new Rocket.Holder(Rocket.HolderKind.ASSEMBLER, UUID.randomUUID());
+        assertTrue(first.acceptProduced(Rocket.Module.produced(first.id(), slot, 75, holder)));
+        var transfer = first.beginTransfer(
+            slot.moduleId(),
+            UUID.randomUUID(),
+            holder,
+            new Rocket.Holder(Rocket.HolderKind.SILO_BUFFER, first.assemblySiloId()));
+
+        runtime.mergeTeams(oldTeam, newTeam);
+        manager.saveToSaveDirectory(save.toFile());
+        runtime.reset();
+        assertTrue(
+            runtime.rockets()
+                .all()
+                .isEmpty());
+        manager.loadFromSaveDirectory(save.toFile());
+
+        assertTrue(
+            runtime.rockets()
+                .forTeam(oldTeam)
+                .isEmpty());
+        assertEquals(
+            2,
+            runtime.rockets()
+                .forTeam(newTeam)
+                .size());
+        var restored = runtime.rockets()
+            .find(first.id());
+        assertNotNull(restored);
+        assertEquals(newTeam, restored.teamId());
+        assertEquals(
+            holder,
+            restored.module(slot.moduleId())
+                .holder());
+        assertEquals(
+            transfer,
+            restored.module(slot.moduleId())
+                .pendingTransfer());
+        assertEquals(
+            1,
+            restored.modules()
+                .size());
+        assertEquals(
+            CelestialObjectKey.registered(CelestialObjectId.MARS),
+            runtime.rockets()
+                .find(second.id())
+                .bodyKey());
     }
 
     @Test
@@ -1092,7 +1170,7 @@ final class FacilityPersistenceManagerTest {
         Path dataDir = tempDir.resolve("galaxiadata");
         Files.createDirectories(dataDir);
         NBTTagCompound root = new NBTTagCompound();
-        root.setInteger("version", 2);
+        root.setInteger("version", 3);
         NBTTagList list = new NBTTagList();
         assets.forEach(list::appendTag);
         root.setTag("assets", list);
@@ -1437,7 +1515,8 @@ final class FacilityPersistenceManagerTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         FluidKey bufferKey = new FluidKey(TEST_FLUID_1, null);
-        station.insert(bufferKey, 4096);
+        FacilityTestFixtures.addFluidTank(station);
+        assertEquals(4096, station.insert(bufferKey, 4096));
 
         NBTTagCompound encoded = facilityTag(station);
         AutomatedFacility decoded = decodeFacility(emptyReplacement(station), encoded);
@@ -1561,6 +1640,13 @@ final class FacilityPersistenceManagerTest {
             ModuleShape.SINGLE,
             ModuleTier.HV,
             StationTileCoord.of(2, 4));
+        createAndPlaceModule(
+            station,
+            FacilityModuleKind.LANDING_BAY,
+            Buildable.Status.OPERATIONAL,
+            ModuleShape.QUAD_2x2,
+            ModuleTier.NONE,
+            StationTileCoord.of(5, 4));
 
         StationLayout layout = station.stationLayout();
         assertNotNull(layout);
@@ -1574,10 +1660,10 @@ final class FacilityPersistenceManagerTest {
         org.junit.jupiter.api.Assertions.assertAll(
             "fullRoundTripAllKinds",
             () -> assertEquals(
-                15,
+                FacilityModuleKind.values().length,
                 decoded.modules()
                     .size(),
-                "Expected 15 modules, got " + decoded.modules()
+                "Expected every module kind, got " + decoded.modules()
                     .size() + dumpKinds(decoded)),
             () -> {
                 // Verify each kind is present
@@ -1608,6 +1694,8 @@ final class FacilityPersistenceManagerTest {
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(3, 3), "ASSEMBLER anchor"),
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(1, 4), "DISTILLERY anchor"),
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(2, 4), "DEBUG_DATA_GENERATOR anchor"),
+            () -> assertLayoutTilesExist(decoded, StationTileCoord.of(5, 4), "LANDING_BAY anchor"),
+            () -> assertLayoutTilesExist(decoded, StationTileCoord.of(6, 5), "LANDING_BAY child"),
             () -> assertLayoutEquals(layout, decoded.stationLayout()));
     }
 

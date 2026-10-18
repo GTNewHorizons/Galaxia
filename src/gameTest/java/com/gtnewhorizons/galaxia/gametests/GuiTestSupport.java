@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiIngameMenu;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.client.event.GuiOpenEvent;
 import net.minecraftforge.common.MinecraftForge;
 
@@ -17,13 +18,20 @@ import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.viewport.LocatedWidget;
 import com.cleanroommc.modularui.utils.TreeUtil;
 import com.cleanroommc.modularui.widget.AbstractScrollWidget;
+import com.gtnewhorizon.gtnhlib.teams.TeamManager;
+import com.gtnewhorizon.gtnhlib.teams.TeamNetwork;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.CelestialSidebarWidget;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.OrbitalView.OrbitalMapWidget;
 import com.gtnewhorizons.galaxia.client.gui.station.StationMapWidget;
+import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
+import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData;
+import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData.Achievement;
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.network.CelestialKnowledgeSyncPacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeService;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.horizonqa.api.GameTestHelper;
@@ -62,6 +70,27 @@ final class GuiTestSupport {
             }
             if (owner == null) throw new AssertionError("Integrated client player has not joined");
             EntityPlayerMP player = owner;
+            if (!GTTeamsCompat.hasAchievement(player, Achievement.STAR_MAP_ACTIVATION)) {
+                var team = TeamManager.getTeamByPlayer(player.getUniqueID());
+                if (!(team.getData(GalaxiaTeamData.ID) instanceof GalaxiaTeamData data))
+                    throw new AssertionError("Galaxia team data is not initialized");
+                var originalData = new NBTTagCompound();
+                data.writeToNBT(originalData);
+                var originalKnowledge = CelestialKnowledgeService.snapshot(team.getTeamId());
+                helper.afterTest(() -> {
+                    data.readFromNBT(originalData);
+                    CelestialKnowledgeService.restore(team.getTeamId(), originalKnowledge);
+                    team.markDirty();
+                    TeamNetwork.syncTeamData(team, GalaxiaTeamData.ID);
+                    Galaxia.GALAXIA_NETWORK.sendTo(
+                        CelestialKnowledgeSyncPacket.forTeam(
+                            team.getTeamId(),
+                            Galaxia.proxy.serverRuntime()
+                                .scans()),
+                        player);
+                });
+                GTTeamsCompat.awardAchievement(team.getTeamId(), Achievement.STAR_MAP_ACTIVATION);
+            }
             int slot = player.inventory.currentItem;
             ItemStack original = player.inventory.getStackInSlot(slot);
             helper.afterTest(() -> {
@@ -77,6 +106,8 @@ final class GuiTestSupport {
                 if (held == null || held.getItem() != GalaxiaItemList.ITEM_GALACTIC_MAP.getItem()) {
                     throw new AssertionError("Galactic map has not reached the client");
                 }
+                if (!GTTeamsCompat.hasAchievement(Minecraft.getMinecraft().thePlayer, Achievement.STAR_MAP_ACTIVATION))
+                    throw new AssertionError("Star Map access has not synchronized");
             })
             .client("prepare GUI settings and diagnostics", c -> {
                 Minecraft mc = Minecraft.getMinecraft();
@@ -94,6 +125,10 @@ final class GuiTestSupport {
             })
             .useHeldItem()
             .awaitClient("galactic map opened after item use", c -> requireScreen("galactic_orbital_map"));
+        return frameInnerSolarSystem(scenario);
+    }
+
+    static ClientScenario frameInnerSolarSystem(ClientScenario scenario) {
         for (int step = 0; step < 20; step++) {
             scenario.step("frame the inner Solar System")
                 .scroll(

@@ -9,6 +9,7 @@ import java.util.function.Supplier;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
+import com.gtnewhorizons.galaxia.core.config.ConfigMachines;
 import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
@@ -61,6 +62,25 @@ public class FacilityModuleRegistry {
     }
 
     private static final Map<FacilityModuleKind, Definition> DEFINITIONS = new EnumMap<>(FacilityModuleKind.class);
+
+    public static void registerLandingBay(Map<ItemStack, Long> constructionCost) {
+        if (constructionCost.isEmpty() || constructionCost.entrySet()
+            .stream()
+            .anyMatch(
+                entry -> entry.getKey() == null || entry.getKey()
+                    .getItem() == null || entry.getValue() == null || entry.getValue() <= 0)) {
+            throw new IllegalArgumentException("Landing Bay construction needs actual positive materials");
+        }
+        register(
+            FacilityModuleKind.LANDING_BAY,
+            tierDataBuilder().powerDraw(ConfigMachines.landingBay.powerDraw)
+                .cooldown(1)
+                .capacity((long) ConfigMachines.landingBay.serviceSlots)
+                .cost(constructionCost)
+                .buildTicks(ConfigMachines.landingBay.buildTicks)
+                .build(),
+            TieredModuleComponent::new);
+    }
 
     public static void init() {
         register(

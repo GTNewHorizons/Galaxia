@@ -16,6 +16,7 @@ import com.gtnewhorizons.galaxia.compat.GTCompat;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidNodeKind;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidSizeClass;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 
 public record CelestialBodyProperties(boolean visitable, boolean canCreateStation, boolean canCreateOutpost,
     double localGravityG, double massEarthRelative, double orbitalRadiusEarthRelative, double radiusEarthRelative,
@@ -74,6 +75,10 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
         if ((asteroidNodeKind == null) != (asteroidSizeClass == null)) {
             throw new IllegalStateException("Asteroid node kind and size class must be set together");
         }
+    }
+
+    public double radiusMetres() {
+        return OrbitalMechanics.distanceToMetres(radiusEarthRelative);
     }
 
     /**
@@ -226,6 +231,23 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
             return this;
         }
 
+        /** Defines one gravity authority for surface acceleration and orbital dynamics. */
+        public Builder surfaceGravityAndRadius(double gravityG, double earthRadii) {
+            localGravityG(gravityG);
+            radiusEarthRelative(earthRadii);
+            double radiusM = OrbitalMechanics.distanceToMetres(earthRadii);
+            return standardGravitationalParameter(OrbitalMechanics.siToMu(gravityG * 9.80665 * radiusM * radiusM));
+        }
+
+        /** Authors measured SI mu and radius while deriving the same surface gravity used by local costs. */
+        public Builder physicalGravityAndRadius(double muM3PerS2, double radiusM) {
+            requirePositiveFinite("muM3PerS2", muM3PerS2);
+            requirePositiveFinite("radiusM", radiusM);
+            radiusEarthRelative(OrbitalMechanics.metresToDistance(radiusM));
+            localGravityG(muM3PerS2 / (radiusM * radiusM * 9.80665));
+            return standardGravitationalParameter(OrbitalMechanics.siToMu(muM3PerS2));
+        }
+
         public Builder standardGravitationalParameter(double value) {
             this.standardGravitationalParameter = requireNonNegativeFinite("standardGravitationalParameter", value);
             return this;
@@ -277,10 +299,10 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
         }
 
         /**
-         * Defines a positive multiplier for future starmap flight planning through atmosphere.
+         * Defines a positive multiplier for starmap atmospheric costs.
          *
          * <p>
-         * TODO: Wire this into starmap launch/landing/trajectory calculations. Keep it separate from dimension movement
+         * Keep it separate from dimension movement
          * air resistance, which controls in-world player/entity speed behavior.
          */
         public Builder starmapAtmosphericDrag(double value) {

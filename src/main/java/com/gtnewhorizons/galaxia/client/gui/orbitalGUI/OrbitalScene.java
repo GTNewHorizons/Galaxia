@@ -35,7 +35,7 @@ public class OrbitalScene {
         if (assetState == null) return alphas;
         for (CelestialAsset asset : assetState) {
             if (!(asset instanceof Satellite satellite)) continue;
-            float alpha = CelestialMarkerBase.assetMarkerAlpha(asset);
+            float alpha = AssetPanelIcons.assetMarkerAlpha(asset);
             if (alpha <= 0.0f) continue;
             alphas.merge(satellite.satelliteKind(), alpha, (left, right) -> Math.max(left, right));
         }
@@ -570,7 +570,7 @@ public class OrbitalScene {
             List<CelestialAsset> assetState, int iconSize, int gap) {
             EnumMap<SatelliteKind, Float> markerAlphas = visibleSatelliteMarkerAlphas(assetState);
             if (markerAlphas.isEmpty()) return;
-            ResourceLocation texture = CelestialMarkerBase.CelestialAssetIcons.get(CelestialAsset.Kind.SATELLITE);
+            ResourceLocation texture = AssetPanelIcons.kindIcon(CelestialAsset.Kind.SATELLITE);
             int leftX = Math.round(state.screenX() - state.renderedRadius() - 6f - iconSize);
             int topY = Math.round(state.screenY() - state.renderedRadius());
             int index = 0;
@@ -589,9 +589,9 @@ public class OrbitalScene {
         List<AssetMarker> markers = new ArrayList<>();
         for (CelestialAsset asset : assetState) {
             if (asset.kind == CelestialAsset.Kind.SATELLITE) continue;
-            ResourceLocation texture = CelestialMarkerBase.CelestialAssetIcons.get(asset.kind);
+            ResourceLocation texture = AssetPanelIcons.kindIcon(asset.kind);
             if (texture == null) continue;
-            float alpha = CelestialMarkerBase.assetMarkerAlpha(asset);
+            float alpha = AssetPanelIcons.assetMarkerAlpha(asset);
             if (alpha <= 0.0f) continue;
             markers.add(new AssetMarker(texture, alpha));
         }

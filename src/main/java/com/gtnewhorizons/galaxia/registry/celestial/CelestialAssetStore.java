@@ -10,10 +10,17 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import net.minecraft.item.ItemStack;
+import javax.annotation.Nullable;
 
+import net.minecraft.item.ItemStack;
+import net.minecraftforge.common.DimensionManager;
+
+import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.IRocketControllerTE.TransportEndpoint;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
@@ -74,6 +81,53 @@ public final class CelestialAssetStore {
 
     public static CelestialAsset findAsset(CelestialAsset.ID assetId) {
         return SERVER.findAssetInternal(assetId);
+    }
+
+    public record EndpointRef(CelestialAsset asset, CelestialAsset.Endpoint endpoint) {
+
+        public int availableServiceSlots() {
+            var current = asset.endpoint(endpoint.id());
+            if (current == null || asset.status() != CelestialAsset.Status.OPERATIONAL) return 0;
+            if (asset instanceof AutomatedFacility facility)
+                return Math.min(current.serviceSlots(), facility.availableLandingSlots());
+            return TransportEndpoint.loaded(new EndpointRef(asset, current)) == null ? 0 : current.serviceSlots();
+        }
+
+        @Nullable
+        public IDistributedInventory resources() {
+            if (availableServiceSlots() == 0) return null;
+            if (asset instanceof AutomatedFacility facility) return facility;
+            if (asset instanceof Station station) {
+                var physical = endpoint.physical();
+                var world = DimensionManager.getWorld(physical.dimension());
+                var position = station.getController();
+                if (world == null || position == null || !world.blockExists(position.x(), position.y(), position.z()))
+                    return null;
+                var tile = world.getTileEntity(position.x(), position.y(), position.z());
+                if (!(tile instanceof TileStation controller) || !controller.isStructureValid()
+                    || controller.getBackingStation() != station
+                    || controller.getGraph() == null) return null;
+                return station;
+            }
+            var controller = TransportEndpoint.loaded(this);
+            return controller == null ? null : controller.loadingInventory();
+        }
+
+    }
+
+    public static EndpointRef findEndpoint(UUID endpointId) {
+        return SERVER.findEndpointInternal(endpointId);
+    }
+
+    public EndpointRef findEndpointInternal(UUID endpointId) {
+        EndpointRef found = null;
+        for (CelestialAsset asset : assetView) {
+            var endpoint = asset.endpoint(endpointId);
+            if (endpoint == null) continue;
+            if (found != null) throw new IllegalStateException("Endpoint identity belongs to more than one asset");
+            found = new EndpointRef(asset, endpoint);
+        }
+        return found;
     }
 
     public static List<CelestialAsset> allAssets() {

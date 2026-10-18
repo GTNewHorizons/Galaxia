@@ -8,6 +8,11 @@ import java.util.stream.Collectors;
 
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
+import net.minecraftforge.event.entity.living.LivingAttackEvent;
+import net.minecraftforge.event.entity.player.AttackEntityEvent;
+import net.minecraftforge.event.entity.player.EntityItemPickupEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.world.BlockEvent;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
@@ -16,6 +21,7 @@ import com.gtnewhorizons.galaxia.core.network.AssetStateSync;
 import com.gtnewhorizons.galaxia.core.network.CelestialKnowledgeSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.RocketTransitPacket;
 import com.gtnewhorizons.galaxia.core.network.SatelliteNetworkSyncPacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
@@ -97,6 +103,10 @@ public class CelestialEventHandler {
 
             UUID playerTeam = GTTeamsCompat.getTeam(player);
             UUID playerId = player.getUniqueID();
+            var aboard = celestialRuntime.rockets()
+                .passengerVehicle(playerId);
+            Galaxia.GALAXIA_NETWORK
+                .sendTo(new RocketTransitPacket(aboard == null ? null : aboard.transitView()), player);
             final boolean toClear = TeamEventHandler.playersToClear.remove(playerId);
             if (toClear) {
                 AssetStateSync.SERVER.resetRecipient(playerId);
@@ -120,6 +130,38 @@ public class CelestialEventHandler {
             AssetStateSync.SERVER.publishLogistics(playerId, playerTeam, logisticsPacket);
         }
         AssetStateSync.SERVER.publishPeriodic();
+    }
+
+    @SubscribeEvent
+    public void onTransitInteraction(PlayerInteractEvent event) {
+        if (!event.world.isRemote && celestialRuntime.restrictedPassenger(event.entityPlayer.getUniqueID()) != null)
+            event.setCanceled(true);
+    }
+
+    @SubscribeEvent
+    public void onTransitAttack(AttackEntityEvent event) {
+        if (!event.entityPlayer.worldObj.isRemote
+            && celestialRuntime.restrictedPassenger(event.entityPlayer.getUniqueID()) != null) event.setCanceled(true);
+    }
+
+    @SubscribeEvent
+    public void onTransitPickup(EntityItemPickupEvent event) {
+        if (!event.entityPlayer.worldObj.isRemote
+            && celestialRuntime.restrictedPassenger(event.entityPlayer.getUniqueID()) != null) event.setCanceled(true);
+    }
+
+    @SubscribeEvent
+    public void onTransitBreak(BlockEvent.BreakEvent event) {
+        if (!event.world.isRemote && celestialRuntime.restrictedPassenger(
+            event.getPlayer()
+                .getUniqueID())
+            != null) event.setCanceled(true);
+    }
+
+    @SubscribeEvent
+    public void onTransitDamage(LivingAttackEvent event) {
+        if (event.entityLiving instanceof EntityPlayerMP player
+            && celestialRuntime.restrictedPassenger(player.getUniqueID()) != null) event.setCanceled(true);
     }
 
     private boolean hasCreativeProfilerViewer() {

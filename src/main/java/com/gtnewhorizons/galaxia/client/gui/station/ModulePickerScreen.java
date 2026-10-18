@@ -562,6 +562,8 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
             case TANK -> "Adds fluid inventory capacity";
             case BATTERY -> "Adds energy buffer capacity";
             case MAINTENANCE_BAY -> "Reduces station upkeep";
+            case LANDING_BAY -> IKey.lang("galaxia.outpost.module.landing_bay.description")
+                .get();
             case MACERATOR -> "Runs macerator recipes";
             case CENTRIFUGE -> "Runs centrifuge recipes";
             case ELECTROLYZER -> "Runs electrolyzer recipes";

@@ -19,7 +19,7 @@ import org.lwjgl.opengl.GL11;
 import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemRocketSchematic;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAnalyzer;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAssembly;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAnalyzer.Analysis;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 
@@ -84,7 +84,7 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
             return;
         }
 
-        RocketAssembly assembly = RocketAnalyzer.analyze(blueprint);
+        Analysis assembly = RocketAnalyzer.analyze(blueprint);
         List<RocketPartInstance> parts = blueprint.getParts();
 
         GL11.glPushMatrix();
@@ -168,7 +168,7 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
         GuiDraw.drawTexture(x, y, x + w, y + h, 0f, 0f, 1f, 1f, z);
     }
 
-    private static void drawTexts(RocketAssembly assembly, RocketBlueprint blueprint) {
+    private static void drawTexts(Analysis assembly, RocketBlueprint blueprint) {
         FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
         GL11.glPushMatrix();
         GL11.glScalef(0.5f, 0.5f, 0.5f);
@@ -184,10 +184,9 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
             StatCollector.translateToLocalFormatted("galaxia.item.schematic.label.width", blueprint.getWidth()),
 
             StatCollector
-                .translateToLocalFormatted("galaxia.item.schematic.label.weight", (int) assembly.getTotalMass()),
+                .translateToLocalFormatted("galaxia.item.schematic.label.dry_mass", assembly.getTotalDryMassKg()),
 
-            StatCollector
-                .translateToLocalFormatted("galaxia.item.schematic.label.thrust", (int) assembly.getTotalThrust()) };
+            StatCollector.translateToLocal("galaxia.item.schematic.label.flight_unavailable") };
 
         float offsetY = 16f;
         for (String line : lines) {

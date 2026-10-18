@@ -8,8 +8,6 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
-import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.FluidAttachmentInventory;
-import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.ItemAttachmentInventory;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IEnergyHandler;
@@ -113,8 +111,10 @@ public final class StationGraph {
     }
 
     public @Nonnull Stream<IDistributedInventory> connectedInventories() {
-        return resolvedInventories.values()
-            .stream();
+        return resolvedInventories.entrySet()
+            .stream()
+            .filter(entry -> isReady(entry.getKey()))
+            .map(java.util.Map.Entry::getValue);
     }
 
     public void registerAttachment(BlockPos parent, BlockPos pos,
@@ -126,23 +126,10 @@ public final class StationGraph {
         attachments.put(pos, ra);
         if (ra.handler()
             .hasDistributedInventory()) {
-            resolvedInventories.put(ra, resolveDistributedInventory(ra));
+            resolvedInventories.put(ra, ra.distributedInventory());
         }
         onAttached(ra, this);
         fireListeners(l -> l.onAttachmentConnected(pos, ra.attachment()));
-    }
-
-    private <T> IDistributedInventory resolveDistributedInventory(StationAttachmentRegistry.ResolvedAttachment<T> ra) {
-        if (StationAttachmentRegistry.isFluidStorageHandler(ra.handler())) {
-            return new FluidAttachmentInventory<>(
-                StationAttachmentRegistry.asFluidStorageHandler(ra.handler()),
-                ra.attachment());
-        } else if (StationAttachmentRegistry.isItemStorageHandler(ra.handler())) {
-            return new ItemAttachmentInventory<>(
-                StationAttachmentRegistry.asItemStorageHandler(ra.handler()),
-                ra.attachment());
-        }
-        throw new IllegalStateException("[StationGraph] Trying to register unknown inventory handler");
     }
 
     public boolean hasAttachment(BlockPos pos) {

@@ -235,6 +235,7 @@ public final class StarmapAssetActions {
                 && CelestialKnowledgeClientState.effectiveDiscoveryState(body.key()) != DiscoveryState.DISCOVERED)
                 return false;
             return switch (kind) {
+                case TRANSPORT_SITE -> false;
                 case AUTOMATED_STATION -> body.properties()
                     .canCreateStation();
                 case AUTOMATED_OUTPOST -> body.properties()

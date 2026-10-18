@@ -15,6 +15,7 @@ import java.util.List;
 
 import net.minecraft.item.ItemStack;
 
+import com.gtnewhorizon.gtnhlib.config.ConfigurationManager;
 import com.gtnewhorizon.gtnhlib.teams.TeamDataRegistry;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.gui.TeamPermissionScreen;
@@ -24,8 +25,14 @@ import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
 import com.gtnewhorizons.galaxia.compat.GTCompat;
 import com.gtnewhorizons.galaxia.compat.gt.GalaxiaGTAttachmentRegistration;
 import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData;
+import com.gtnewhorizons.galaxia.core.config.ConfigMachines;
+import com.gtnewhorizons.galaxia.core.config.ConfigOverlay;
+import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
+import com.gtnewhorizons.galaxia.core.config.ConfigRocket;
+import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
 import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
+import com.gtnewhorizons.galaxia.gt5.RocketContent;
 import com.gtnewhorizons.galaxia.handlers.CelestialEventHandler;
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
 import com.gtnewhorizons.galaxia.handlers.TeamEventHandler;
@@ -47,6 +54,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocketSeat;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityRocketLoadingPort;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityTransportPlatform;
 
 import baubles.api.expanded.BaubleExpandedSlots;
 import cpw.mods.fml.common.Loader;
@@ -55,21 +64,30 @@ import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
 import cpw.mods.fml.common.registry.EntityRegistry;
+import cpw.mods.fml.common.registry.GameRegistry;
 
 public class CommonProxy {
+
+    private CelestialServerRuntime celestialRuntime;
+
+    public CelestialServerRuntime serverRuntime() {
+        return celestialRuntime;
+    }
 
     // preInit "Run before anything else. Read your config, create blocks, items,
     // etc, and register them with the
     // GameRegistry." (Remove if not needed)
     public void preInit(FMLPreInitializationEvent event) {
-        CelestialServerRuntime celestialRuntime = CelestialServerRuntime.create();
+        registerConfiguration();
+        celestialRuntime = CelestialServerRuntime.create();
         TeamEventHandler teamEventHandler = new TeamEventHandler(celestialRuntime);
         GalaxiaAtmosphereFluids.init();
         CelestialDimensionMaterializer.registerPlayableDimensions();
 
         // FML bus registering
         FMLBusRegister(new DimensionEventHandler());
-        FMLBusRegister(new CelestialEventHandler(celestialRuntime));
+        var celestialEvents = new CelestialEventHandler(celestialRuntime);
+        FMLBusRegister(celestialEvents);
         FMLBusRegister(new ServerTickTaskQueue());
         FMLBusRegister(new TetherEventHandler());
         FMLBusRegister(teamEventHandler);
@@ -77,6 +95,7 @@ public class CommonProxy {
         // Forge bus registering
         ForgeBusRegister(new FacilityPersistenceManager(celestialRuntime));
         ForgeBusRegister(teamEventHandler);
+        ForgeBusRegister(celestialEvents);
         ForgeBusRegister(new GalaxiaPlayerProperties.PlayerEventHandler());
 
         // GTNH Teams custom data
@@ -84,7 +103,10 @@ public class CommonProxy {
 
         // Registration
         GalaxiaItemList.registerAll();
+        RocketContent.registerItems();
         GalaxiaBlocksEnum.registerBlocks();
+        GameRegistry
+            .registerTileEntity(TileEntityTransportPlatform.class, Galaxia.REGISTRY_PREFIX + "transport_platform");
         PlanetBlocks.init();
         GalaxiaEffects.init();
 
@@ -98,8 +120,18 @@ public class CommonProxy {
             .registerAll();
     }
 
-    // load "Do your mod setup. Build whatever data structures you care about.
-    // Register recipes." (Remove if not needed)
+    private static void registerConfiguration() {
+        try {
+            ConfigurationManager.registerConfig(ConfigOverlay.class);
+            ConfigurationManager.registerConfig(ConfigRocket.class);
+            ConfigurationManager.registerConfig(ConfigPlayer.class);
+            ConfigurationManager.registerConfig(ConfigMachines.class);
+            ConfigurationManager.registerConfig(ConfigStructures.class);
+        } catch (Exception ex) {
+            throw new IllegalStateException("Galaxia configuration could not be loaded", ex);
+        }
+    }
+
     public void init(FMLInitializationEvent event) {
         NetworkManager.registerPackets();
         EntityRegistry.registerModEntity(EntityRocket.class, "RocketEntity", 0, Galaxia.instance, 64, 1, false);
@@ -117,6 +149,7 @@ public class CommonProxy {
     // postInit "Handle interaction with other mods, complete your setup based on
     // this." (Remove if not needed)
     public void postInit(FMLPostInitializationEvent event) {
+        RocketContent.registerRecipesAndDefinitions();
         Galaxia.oxygenSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_OXYGEN_TANK);
         Galaxia.shieldSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_PROTECTION_SHIELD);
         Galaxia.oxygenMaskSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_OXYGEN_MASK);
@@ -138,6 +171,7 @@ public class CommonProxy {
 
         StationAttachmentRegistry.register(TileHammerTarget.class, TileHammerTarget.HANDLER);
         StationAttachmentRegistry.register(TileHammerCannon.class, TileHammerCannon.HANDLER);
+        StationAttachmentRegistry.register(TileEntityRocketLoadingPort.class, TileEntityRocketLoadingPort.HANDLER);
     }
 
     private void validateGtCelestialOrePools() {

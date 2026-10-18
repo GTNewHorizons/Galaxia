@@ -9,7 +9,7 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraftforge.common.util.Constants;
 
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAnalyzer;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAssembly;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAnalyzer.Analysis;
 
 import lombok.Getter;
 
@@ -85,40 +85,59 @@ public class RocketBlueprint {
     }
 
     public int getWidth() {
-        if (parts.isEmpty()) return 0;
-
-        int min = Integer.MAX_VALUE;
-        int max = Integer.MIN_VALUE;
-
-        for (RocketPartInstance part : parts) {
-            min = Math.min(min, part.x());
-            max = Math.max(
-                max,
-                part.x() + part.def()
-                    .width());
-        }
-
-        return max - min;
+        return bounds().width();
     }
 
     public int getHeight() {
-        if (parts.isEmpty()) return 0;
-
-        int min = Integer.MAX_VALUE;
-        int max = Integer.MIN_VALUE;
-
-        for (RocketPartInstance part : parts) {
-            min = Math.min(min, part.y());
-            max = Math.max(
-                max,
-                part.y() + part.def()
-                    .height());
-        }
-
-        return max - min;
+        return bounds().height();
     }
 
-    public RocketAssembly analyze() {
+    /** Authored module extents shared by rendering and physical landing clearance. */
+    public Bounds bounds() {
+        if (parts.isEmpty()) return new Bounds(0, 0, 0, 0, 0, 0);
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+        for (var part : parts) {
+            minX = Math.min(minX, part.x());
+            minY = Math.min(minY, part.y());
+            minZ = Math.min(minZ, part.z());
+            maxX = Math.max(
+                maxX,
+                part.x() + part.def()
+                    .width());
+            maxY = Math.max(
+                maxY,
+                part.y() + part.def()
+                    .height());
+            maxZ = Math.max(maxZ, part.z() + 1);
+        }
+        return new Bounds(minX, minY, minZ, maxX, maxY, maxZ);
+    }
+
+    public record Bounds(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+
+        public int width() {
+            return maxX - minX;
+        }
+
+        public int height() {
+            return maxY - minY;
+        }
+
+        public int depth() {
+            return maxZ - minZ;
+        }
+
+        public double centerX() {
+            return (minX + maxX) * .5;
+        }
+
+        public double centerZ() {
+            return (minZ + maxZ) * .5;
+        }
+    }
+
+    public Analysis analyze() {
         return RocketAnalyzer.analyze(this);
     }
 

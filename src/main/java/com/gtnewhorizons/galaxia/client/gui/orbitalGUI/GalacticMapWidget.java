@@ -1,17 +1,32 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
+import java.util.Locale;
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.StatCollector;
 
+import org.lwjgl.input.Keyboard;
+
+import com.cleanroommc.modularui.api.IGuiHolder;
+import com.cleanroommc.modularui.api.IPanelHandler;
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.layout.IViewportStack;
 import com.cleanroommc.modularui.drawable.Rectangle;
+import com.cleanroommc.modularui.factory.GuiData;
+import com.cleanroommc.modularui.factory.GuiFactories;
+import com.cleanroommc.modularui.factory.SimpleGuiFactory;
+import com.cleanroommc.modularui.network.ModularNetwork;
 import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.screen.ModularScreen;
+import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Unit;
@@ -20,8 +35,19 @@ import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
+import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData.Achievement;
+import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.network.RocketScheduleSyncHandler;
+import com.gtnewhorizons.galaxia.core.network.RocketTransitPacket;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.Rocket.TransitView;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.VehicleSchedule;
+
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 
 public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
 
@@ -46,28 +72,112 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
     private static final int SATELLITE_LINKS_W = 98;
     private static final int ASSETS_W = 66;
     private static final int HIERARCHY_TOGGLE_W = 74;
+    private static final int TRANSIT_WIDTH = 360;
+    private static final int TRANSIT_HEIGHT = 76;
+    private static final String TRANSIT_TEXT = "galaxia.rocket.transit.";
 
     private final OrbitalView.OrbitalMapWidget mapWidget;
+    private boolean selectingBody;
+
+    private static final SimpleGuiFactory TRANSIT_FACTORY = GuiFactories
+        .createSimple("galaxia:rocket_transit", new IGuiHolder<GuiData>() {
+
+            @Override
+            public ModularPanel buildUI(GuiData data, PanelSyncManager syncManager, UISettings settings) {
+                settings.canInteractWith(GalacticMapWidget::canUseTransitMap);
+                if (!canUseTransitMap(data.getPlayer())) return ModularPanel.defaultPanel("galaxia:transit_unavailable")
+                    .child(
+                        IKey.lang("galaxia.rocket.schedule.no_vehicle")
+                            .asWidget());
+                return build(syncManager, data.getPlayer());
+            }
+
+            @Override
+            @SideOnly(Side.CLIENT)
+            public ModularScreen createScreen(GuiData data, ModularPanel panel) {
+                return new ModularScreen(Galaxia.MODID, panel);
+            }
+        });
+
+    public static void initTransitFactory() {
+        TRANSIT_FACTORY.init();
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static void openTransitMap() {
+        TRANSIT_FACTORY.openClient();
+    }
+
+    private static boolean canUseTransitMap(EntityPlayer player) {
+        if (GTTeamsCompat.hasAchievement(player, Achievement.STAR_MAP_ACTIVATION)) return true;
+        return player.worldObj.isRemote ? RocketTransitPacket.Handler.current() != null
+            : Galaxia.proxy.serverRuntime()
+                .rockets()
+                .passengerVehicle(player.getUniqueID()) != null;
+    }
+
+    public static void prepareOpen(EntityPlayerMP player) {
+        ModularNetwork.SERVER.closeAll(player);
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static ModularScreen createScreen(ModularPanel mainPanel) {
+        prepareClientOpen();
+        return new ModularScreen(Galaxia.MODID, mainPanel);
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static void prepareClientOpen() {
+        Minecraft mc = Minecraft.getMinecraft();
+        ModularNetwork.CLIENT.closeAll(mc.thePlayer, false);
+        mc.displayGuiScreen(null);
+    }
 
     public static ModularPanel build(PanelSyncManager syncManager, EntityPlayer player) {
-        syncManager.syncValue(StarmapActionSyncHandler.KEY, new StarmapActionSyncHandler());
+        return buildPanel(syncManager, contentFor(syncManager, player));
+    }
+
+    public static ModularPanel buildBodyPicker(PanelSyncManager syncManager, EntityPlayer player,
+        Consumer<CelestialObjectKey> onSelected, ParentWidget<?> choices) {
+        GalacticMapWidget content = contentFor(syncManager, player);
+        content.selectingBody = true;
+        content.mapWidget()
+            .selectBodies(onSelected, choices);
+        return buildPanel(syncManager, content);
+    }
+
+    private static GalacticMapWidget contentFor(PanelSyncManager syncManager, EntityPlayer player) {
+        var vehiclesPanel = syncManager.syncedPanel(
+            "vehicle_schedule",
+            true,
+            (subSync, handler) -> RocketScheduleSyncHandler.build(subSync, null));
         CelestialObject galaxyRoot = GalaxiaCelestialAPI.root();
         CelestialObject currentStar = GalaxiaCelestialAPI.findCurrentStar(player.dimension)
             .orElseGet(
                 () -> GalaxiaCelestialAPI.getPrimaryStar()
                     .orElse(galaxyRoot));
-        GalacticMapWidget content = new GalacticMapWidget(galaxyRoot, currentStar);
+        return new GalacticMapWidget(galaxyRoot, currentStar, vehiclesPanel);
+    }
+
+    private static ModularPanel buildPanel(PanelSyncManager syncManager, GalacticMapWidget content) {
+        syncManager.syncValue(StarmapActionSyncHandler.KEY, new StarmapActionSyncHandler());
         return new ModularPanel(SCREEN_NAME) {
 
             @Override
             public boolean onKeyPressed(char character, int keyCode) {
+                var transit = RocketTransitPacket.Handler.current();
+                if (!content.selectingBody && transit != null
+                    && transit.restricted()
+                    && (keyCode == Keyboard.KEY_ESCAPE
+                        || keyCode == Minecraft.getMinecraft().gameSettings.keyBindInventory.getKeyCode()))
+                    return true;
                 return content.mapWidget.handleKeyPressed(keyCode) || super.onKeyPressed(character, keyCode);
             }
         }.fullScreenInvisible()
             .child(content);
     }
 
-    public GalacticMapWidget(CelestialObject galaxyRoot, CelestialObject initialLayer) {
+    public GalacticMapWidget(CelestialObject galaxyRoot, CelestialObject initialLayer, IPanelHandler vehiclesPanel) {
         name("starmap.screen");
         TextFieldWidget renameField = new TextFieldWidget().left(SIDEBAR_WIDTH)
             .top(-1000)
@@ -119,6 +229,12 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
                     ASSETS_W,
                     () -> toolbarText(mapWidget.isAssetsPanelOpen() ? "assets.open" : "assets.closed"),
                     mapWidget::toggleAssetsPanel))
+            .child(
+                createTopBarButton(
+                    "vehicles",
+                    80,
+                    () -> StatCollector.translateToLocal("galaxia.rocket.schedule.fleet"),
+                    vehiclesPanel::openPanel).setEnabledIf(widget -> !selectingBody))
             .child(createTopBarButton("clickMode", HIERARCHY_TOGGLE_W, this::clickModeLabel, () -> {
                 mapWidget.toggleClickMode();
                 preferences.setClickMode(worldPreferenceKey, playerPreferenceKey, mapWidget.getClickMode());
@@ -138,6 +254,10 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
         mapArea.child(mapWidget.createTransferTooltipWidget());
         mapArea.child(mapWidget.createTransferSimulatorWidget());
         mapArea.child(mapWidget.createAssetActionsWidget());
+        mapArea.child(
+            createTransitStatusWidget(RocketTransitPacket.Handler::current, GalaxiaCelestialAPI::get)
+                .right(DETAILS_RIGHT_INSET)
+                .top(PANEL_TOP));
         mapArea.child(toolbar);
         mapArea.child(
             mapWidget.createSignalsWidget()
@@ -182,6 +302,113 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
 
     public OrbitalView.OrbitalMapWidget mapWidget() {
         return mapWidget;
+    }
+
+    public static ParentWidget<?> createTransitStatusWidget(Supplier<TransitView> current,
+        Function<CelestialObjectKey, Optional<CelestialObject>> bodies) {
+        var panel = new ParentWidget<>().name("rocket.transit.panel")
+            .size(TRANSIT_WIDTH, TRANSIT_HEIGHT)
+            .background(new Rectangle().color(EnumColors.MAP_COLOR_MODAL_BG.getColor()))
+            .setEnabledIf(widget -> current.get() != null);
+        panel.child(IKey.dynamic(() -> {
+            var view = current.get();
+            return view == null ? ""
+                : StatCollector.translateToLocalFormatted(
+                    TRANSIT_TEXT + "vehicle",
+                    view.vehicleId()
+                        .toString()
+                        .substring(0, 8),
+                    StatCollector.translateToLocal(TRANSIT_TEXT + (view.journey() == null ? "stop" : "flight")));
+        })
+            .asWidget()
+            .name("rocket.transit.vehicle")
+            .pos(8, 8)
+            .size(TRANSIT_WIDTH - 16, 10)
+            .color(EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
+        panel.child(IKey.dynamic(() -> {
+            var view = current.get();
+            if (view == null) return "";
+            if (view.journey() == null) return StatCollector.translateToLocalFormatted(
+                TRANSIT_TEXT + "location",
+                transitBodyName(
+                    view.source()
+                        .body(),
+                    bodies),
+                transitContext(
+                    view.source()
+                        .context()));
+            return StatCollector.translateToLocalFormatted(
+                TRANSIT_TEXT + "route",
+                transitBodyName(
+                    view.source()
+                        .body(),
+                    bodies),
+                transitContext(
+                    view.source()
+                        .context()),
+                transitBodyName(
+                    view.destination()
+                        .body(),
+                    bodies),
+                transitContext(
+                    view.destination()
+                        .context()));
+        })
+            .asWidget()
+            .name("rocket.transit.route")
+            .pos(8, 25)
+            .size(TRANSIT_WIDTH - 16, 10)
+            .color(EnumColors.MAP_COLOR_TEXT_BODY.getColor()));
+        panel.child(IKey.dynamic(() -> {
+            var view = current.get();
+            if (view == null || view.journey() == null) return "";
+            double total = (double) view.elapsedTicks() + view.remainingTicks();
+            long seconds = view.remainingTicks() / 20;
+            String remaining = String
+                .format(Locale.ROOT, "%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60);
+            return StatCollector.translateToLocalFormatted(
+                TRANSIT_TEXT + "progress",
+                total <= 0 ? 100 : Math.min(100, (int) (100 * view.elapsedTicks() / total)),
+                remaining);
+        })
+            .asWidget()
+            .name("rocket.transit.progress")
+            .pos(8, 42)
+            .size(TRANSIT_WIDTH - 16, 10)
+            .color(EnumColors.MAP_COLOR_TEXT_BODY.getColor()));
+        panel.child(IKey.dynamic(() -> {
+            var view = current.get();
+            if (view == null) return "";
+            if (view.problemKey() != null) return StatCollector.translateToLocal(view.problemKey());
+            return view.journey() != null && view.journey()
+                .geometrySeed() == null
+                    ? StatCollector.translateToLocalFormatted(
+                        TRANSIT_TEXT + "local",
+                        transitBodyName(
+                            view.source()
+                                .body(),
+                            bodies))
+                    : "";
+        })
+            .asWidget()
+            .name("rocket.transit.problem")
+            .pos(8, 59)
+            .size(TRANSIT_WIDTH - 16, 10)
+            .color(EnumColors.MAP_COLOR_TEXT_WARNING.getColor()));
+        return panel;
+    }
+
+    private static String transitBodyName(CelestialObjectKey body,
+        Function<CelestialObjectKey, Optional<CelestialObject>> bodies) {
+        return bodies.apply(body)
+            .orElseThrow()
+            .displayName();
+    }
+
+    private static String transitContext(VehicleSchedule.Context context) {
+        return StatCollector.translateToLocal(
+            "galaxia.rocket.schedule.context." + context.name()
+                .toLowerCase(Locale.ROOT));
     }
 
     private static String toolbarText(String key) {

@@ -102,6 +102,36 @@ final class ItemAttachmentInventoryTest {
         assertEquals(0L, root.totalItemsStored());
     }
 
+    /** Product contract: simulations use real slot admission and keep stored contents untouched. */
+    @Test
+    void simulationHonorsChildFiltersAndActualSlotStackability() {
+        var storage = new InventoryBasic("test", false, 1);
+        storage.setInventorySlotContents(0, new ItemStack(Items.diamond_sword));
+        var key = ItemStackWrapper.of(new ItemStack(Items.stick));
+        var filter = ResourceFilter.forItems();
+        filter.add(key);
+        var child = new ItemAttachmentInventory<>(new TestItemStorageHandler(storage, filter), new Object());
+        IDistributedInventory root = new Station(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            Buildable.Status.OPERATIONAL) {
+
+            @Override
+            public List<IDistributedInventory> getChildren() {
+                return List.of(child);
+            }
+        };
+        assertEquals(0, root.updateContents(key, 3, true));
+        assertEquals(0, child.getFreeItemSpace(key));
+        assertEquals(0, root.updateContents(ItemStackWrapper.of(new ItemStack(Items.diamond)), 3, true));
+        storage.setInventorySlotContents(0, null);
+        assertEquals(64, root.updateContents(key, 100, true));
+        assertEquals(0, root.getItemAmount(key));
+        assertEquals(7, root.updateContents(key, 7, false));
+        assertEquals(7, root.updateContents(key, -10, true));
+        assertEquals(7, root.getItemAmount(key));
+    }
+
     private record TestItemStorageHandler(IInventory storage, ResourceFilter<ItemStackWrapper> filter)
         implements IInventoryStorageHandler<Object> {
 

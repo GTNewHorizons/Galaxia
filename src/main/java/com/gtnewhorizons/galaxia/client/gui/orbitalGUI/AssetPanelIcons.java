@@ -13,7 +13,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
 
 /**
- * Low-level sprite blitter for solar-system asset rows. Textures live in {@link EnumTextures}.
+ * Shared asset sprite choices and drawing for orbital views and rows. Textures live in {@link EnumTextures}.
  */
 final class AssetPanelIcons {
 
@@ -24,12 +24,25 @@ final class AssetPanelIcons {
 
     private AssetPanelIcons() {}
 
+    static float assetMarkerAlpha(CelestialAsset asset) {
+        if (asset == null) return 0.0f;
+        return switch (asset.status()) {
+            case OPERATIONAL -> 1.0f;
+            case CONSTRUCTION_SITE -> 0.85f;
+            case DECONSTRUCTION -> 0.65f;
+            case DISABLED -> 0.45f;
+            case IN_CONSTRUCTION -> 0.0F;
+            case DESTROYED -> 0.0f;
+        };
+    }
+
     static ResourceLocation kindIcon(CelestialAsset.Kind kind) {
         return switch (kind) {
             case STATION -> EnumTextures.ICON_STATION.get();
             case AUTOMATED_STATION -> EnumTextures.ICON_STATION_AUTOMATED.get();
             case AUTOMATED_OUTPOST -> EnumTextures.ICON_OUTPOST_AUTOMATED.get();
             case SATELLITE -> EnumTextures.ICON_SATELLITE.get();
+            case TRANSPORT_SITE -> EnumTextures.SILO_ENTER_ROCKET_ICON.get();
         };
     }
 

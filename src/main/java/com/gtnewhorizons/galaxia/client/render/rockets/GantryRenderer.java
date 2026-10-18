@@ -15,7 +15,7 @@ import net.minecraftforge.client.model.IModelCustom;
 import org.lwjgl.opengl.GL11;
 
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RocketPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
@@ -99,7 +99,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         if (moduleId == -1) return;
 
         // TODO: clientModuleId -> clientPartInstance
-        IRocketPartDef def = RocketPartRegistry.instance()
+        RocketPartDef def = RocketPartRegistry.instance()
             .get(moduleId);
         if (def == null) return;
 

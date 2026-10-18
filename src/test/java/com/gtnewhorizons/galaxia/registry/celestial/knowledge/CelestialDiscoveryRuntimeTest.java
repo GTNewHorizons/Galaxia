@@ -8,17 +8,25 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.UUID;
 
+import net.minecraft.nbt.NBTTagCompound;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizon.gtnhlib.teams.TeamDataRegistry;
+import com.gtnewhorizon.gtnhlib.teams.TeamManager;
+import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData;
+import com.gtnewhorizons.galaxia.core.config.ConfigRocket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.CelestialResourceKnowledgeState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.Rocket;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
@@ -46,6 +54,43 @@ final class CelestialDiscoveryRuntimeTest {
         CelestialAssetStore.SERVER.clearInternal();
         SatelliteNetworkService.clear();
         CelestialKnowledgeService.clearFacts();
+        TeamManager.clear();
+    }
+
+    @Test
+    void openingSurveyAdvancesWithoutOnlinePlayersAndCompletesAfterRestoredProgress() {
+        if (!TeamDataRegistry.getRegisteredKeys()
+            .contains(GalaxiaTeamData.ID)) {
+            TeamDataRegistry.register(GalaxiaTeamData.ID, GalaxiaTeamData::new);
+        }
+        var team = TeamManager.createTeam("survey", UUID.randomUUID());
+        var data = (GalaxiaTeamData) team.getData(GalaxiaTeamData.ID);
+        data.award(GalaxiaTeamData.Achievement.STAR_MAP_ACTIVATION);
+        var luna = CelestialObjectKey.registered(CelestialObjectId.MOON);
+        int previousDuration = ConfigRocket.opening.lunaSurveyTicks;
+        ConfigRocket.opening.lunaSurveyTicks = 3;
+        try {
+            runtime.tick();
+            assertEquals(1, data.getOpeningSurveyTicks());
+            assertEquals(
+                CelestialResourceKnowledgeState.UNKNOWN,
+                CelestialKnowledgeService.resourceKnowledge(team.getTeamId(), luna));
+            var saved = new NBTTagCompound();
+            data.writeToNBT(saved);
+            runtime.reset();
+            data.readFromNBT(saved);
+            runtime.tick();
+            assertEquals(2, data.getOpeningSurveyTicks());
+            runtime.tick();
+            assertTrue(data.isOpeningSurveyComplete());
+            assertEquals(
+                CelestialResourceKnowledgeState.PROFILE,
+                CelestialKnowledgeService.resourceKnowledge(team.getTeamId(), luna));
+            runtime.tick();
+            assertEquals(3, data.getOpeningSurveyTicks());
+        } finally {
+            ConfigRocket.opening.lunaSurveyTicks = previousDuration;
+        }
     }
 
     @Test
@@ -194,7 +239,7 @@ final class CelestialDiscoveryRuntimeTest {
             }
         };
         CelestialDiscoveryScanService scans = new CelestialDiscoveryScanService(ignored -> domain);
-        CelestialServerRuntime mergingRuntime = new CelestialServerRuntime(scans, List::of);
+        CelestialServerRuntime mergingRuntime = new CelestialServerRuntime(scans, List::of, new Rocket.Registry());
         CelestialKnowledgeService.putFacts(TEAM, MARS, CelestialKnowledgeFacts.hidden());
         CelestialKnowledgeService.putFacts(TEAM, nextTarget, CelestialKnowledgeFacts.hidden());
         CelestialKnowledgeService.putFacts(consumedTeam, nextTarget, CelestialKnowledgeFacts.hidden());

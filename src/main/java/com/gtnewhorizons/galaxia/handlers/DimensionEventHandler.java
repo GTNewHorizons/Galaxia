@@ -69,6 +69,8 @@ public class DimensionEventHandler {
         if (event.phase != TickEvent.Phase.END) return;
         for (EntityPlayer player : MinecraftServer.getServer()
             .getConfigurationManager().playerEntityList) {
+            if (Galaxia.proxy.serverRuntime()
+                .restrictedPassenger(player.getUniqueID()) != null) continue;
             if (!isInGalaxiaDimension(player)) continue;
             if (player.ticksExisted % 20 != 0) continue;
             applyEffects(

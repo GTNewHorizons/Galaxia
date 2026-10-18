@@ -46,6 +46,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerTrajectoryLoad
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
@@ -58,7 +59,8 @@ public final class FacilityPersistenceManager {
     private static final String TASKS_FILE = "_tasks.json";
     private static final String KNOWLEDGE_FILE = "_celestial_knowledge.json";
     private static final String DISCOVERY_FILE = "_discovery.json";
-    private static final int ASSET_FORMAT_VERSION = 2;
+    private static final String ROCKETS_FILE = "_rockets.dat";
+    private static final int ASSET_FORMAT_VERSION = 3;
 
     private final Gson gson;
     private File worldSaveDir;
@@ -128,6 +130,7 @@ public final class FacilityPersistenceManager {
         // shared facts restore before scan progress that references them.
         celestialKnowledge.load(new File(galaxiaRoot, KNOWLEDGE_FILE), gson);
         celestialDiscovery.load(new File(galaxiaRoot, DISCOVERY_FILE), gson);
+        loadRockets(new File(galaxiaRoot, ROCKETS_FILE));
     }
 
     private void saveAll() {
@@ -138,6 +141,20 @@ public final class FacilityPersistenceManager {
         saveTasks(new File(galaxiaRoot, TASKS_FILE));
         celestialKnowledge.save(new File(galaxiaRoot, KNOWLEDGE_FILE), gson);
         celestialDiscovery.save(new File(galaxiaRoot, DISCOVERY_FILE), gson);
+        writeNbt(
+            new File(galaxiaRoot, ROCKETS_FILE),
+            celestialRuntime.rockets()
+                .serializeNBT());
+    }
+
+    private void loadRockets(File file) {
+        if (!file.exists()) return;
+        try (FileInputStream input = new FileInputStream(file)) {
+            celestialRuntime.rockets()
+                .restoreNBT(CompressedStreamTools.readCompressed(input), RocketPartRegistry.instance());
+        } catch (IOException | RuntimeException ex) {
+            throw new IllegalStateException("[PERSIST] LOAD FAILED: Rocket registry " + file, ex);
+        }
     }
 
     private void loadAssets(File file) {

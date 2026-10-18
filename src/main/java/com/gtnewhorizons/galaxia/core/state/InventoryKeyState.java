@@ -1,7 +1,11 @@
 package com.gtnewhorizons.galaxia.core.state;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
 import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
@@ -36,6 +40,28 @@ public final class InventoryKeyState {
 
     public static InventoryKey decode(NBTTagCompound encoded) {
         return decode(new NbtReader(encoded, PATH));
+    }
+
+    public static NBTTagList encodeAmounts(Map<? extends InventoryKey, Long> amounts) {
+        var out = new NBTTagList();
+        amounts.forEach((key, amount) -> {
+            var entry = encode(key);
+            entry.setLong("amount", amount);
+            out.appendTag(entry);
+        });
+        return out;
+    }
+
+    public static Map<InventoryKey, Long> decodeAmounts(NbtReader in, String key) {
+        var amounts = new LinkedHashMap<InventoryKey, Long>();
+        var entries = in.compounds(key);
+        for (int i = 0; i < entries.tagCount(); i++) {
+            var entry = in.element(key, i, entries.getCompoundTagAt(i));
+            if (amounts.put(decode(entry.tag()), entry.longValue("amount")) != null) {
+                throw fail(entry.path(), "duplicate inventory resource");
+            }
+        }
+        return Map.copyOf(amounts);
     }
 
     static InventoryKey decode(NbtReader in) {

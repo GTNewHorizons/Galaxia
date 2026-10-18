@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.core.state;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -18,9 +19,9 @@ import net.minecraftforge.common.util.Constants.NBT;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.Endpoint;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.PhysicalLocation;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
@@ -65,7 +66,7 @@ public final class AssetState {
         NBTTagCompound out = new NBTTagCompound();
         out.setString("team", teamId.toString());
         out.setString("id", asset.assetId.toString());
-        out.setTag("body", writeBodyKey(asset.celestialObjectKey));
+        out.setTag("body", CelestialObjectKeyState.encode(asset.celestialObjectKey));
         out.setString("name", asset.displayName());
         out.setString("kind", asset.kind.name());
         out.setString(
@@ -93,6 +94,11 @@ public final class AssetState {
             out.setTag("controller", controller);
         }
         out.setTag("logistics", writeLogistics(asset.logisticsConfig.snapshot()));
+        out.setTag(
+            "endpoints",
+            writeEndpoints(
+                asset.endpoints()
+                    .values()));
         if (asset instanceof AutomatedFacility facility) out.setTag("facility", encodeFacility(facility));
         return out;
     }
@@ -121,9 +127,11 @@ public final class AssetState {
         }
         CelestialAsset asset;
         try {
-            asset = CelestialAsset.create(assetId, readBodyKey(in.compound("body")), kind, status, satelliteKind);
+            asset = CelestialAsset
+                .create(assetId, CelestialObjectKeyState.decode(in.compound("body")), kind, status, satelliteKind);
             asset.setDisplayName(in.string("name"));
             asset.logisticsConfig.loadFromSnapshot(readLogistics(in, "logistics"));
+            asset.restoreEndpoints(readEndpoints(in));
         } catch (RuntimeException ex) {
             throw fail(path, "invalid asset state", ex);
         }
@@ -161,12 +169,77 @@ public final class AssetState {
         current.setDisplayName(source.displayName());
         current.updateStatus(source.status());
         current.logisticsConfig.loadFromSnapshot(source.logisticsConfig.snapshot());
+        current.restoreEndpoints(
+            source.endpoints()
+                .values());
         if (current instanceof Station station && source instanceof Station replacementStation) {
             station.setController(replacementStation.getController());
         } else if (current instanceof AutomatedFacility facility
             && source instanceof AutomatedFacility replacementFacility) {
                 replaceFacility(facility, replacementFacility);
             }
+    }
+
+    private static NBTTagList writeEndpoints(Collection<Endpoint> endpoints) {
+        var encoded = new NBTTagList();
+        endpoints.stream()
+            .sorted(Comparator.comparing(Endpoint::id))
+            .forEach(endpoint -> {
+                var out = new NBTTagCompound();
+                out.setString(
+                    "id",
+                    endpoint.id()
+                        .toString());
+                out.setString(
+                    "kind",
+                    endpoint.kind()
+                        .name());
+                out.setString("name", endpoint.routingName());
+                out.setInteger("serviceSlots", endpoint.serviceSlots());
+                if (endpoint.physical() != null) {
+                    var physical = endpoint.physical()
+                        .controller()
+                        .toNBT();
+                    physical.setInteger(
+                        "dimension",
+                        endpoint.physical()
+                            .dimension());
+                    out.setTag("physical", physical);
+                }
+                if (endpoint.serviceSiloId() != null) out.setString(
+                    "serviceSilo",
+                    endpoint.serviceSiloId()
+                        .toString());
+                encoded.appendTag(out);
+            });
+        return encoded;
+    }
+
+    private static List<Endpoint> readEndpoints(NbtReader in) {
+        var restored = new ArrayList<Endpoint>();
+        var encoded = in.compounds("endpoints");
+        for (int i = 0; i < encoded.tagCount(); i++) {
+            var entry = in.element("endpoints", i, encoded.getCompoundTagAt(i));
+            PhysicalLocation physical = null;
+            if (entry.tag()
+                .hasKey("physical")) {
+                var position = entry.compound("physical");
+                physical = new PhysicalLocation(
+                    position.integer("dimension"),
+                    new BlockPos(position.integer("x"), position.integer("y"), position.integer("z")));
+            }
+            UUID serviceSilo = entry.tag()
+                .hasKey("serviceSilo") ? UUID.fromString(entry.string("serviceSilo")) : null;
+            restored.add(
+                new Endpoint(
+                    UUID.fromString(entry.string("id")),
+                    entry.enumValue(Endpoint.Kind.class, "kind"),
+                    entry.nonBlankString("name"),
+                    physical,
+                    serviceSilo,
+                    entry.integer("serviceSlots", 0, Integer.MAX_VALUE)));
+        }
+        return restored;
     }
 
     private static void replaceFacility(AutomatedFacility current, AutomatedFacility replacement) {
@@ -875,54 +948,13 @@ public final class AssetState {
     }
 
     private static void writeOptionalBodyKey(NBTTagCompound target, String key, CelestialObjectKey bodyKey) {
-        if (bodyKey != null) target.setTag(key, writeBodyKey(bodyKey));
+        if (bodyKey != null) target.setTag(key, CelestialObjectKeyState.encode(bodyKey));
     }
 
     private static CelestialObjectKey readOptionalBodyKey(NbtReader in, String key) {
         if (!in.tag()
             .hasKey(key)) return null;
-        return readBodyKey(in.compound(key));
-    }
-
-    static NBTTagCompound writeBodyKey(CelestialObjectKey key) {
-        NBTTagCompound out = new NBTTagCompound();
-        if (key.isRegistered()) {
-            out.setString("type", "registered");
-            out.setString(
-                "body",
-                key.registeredBodyId()
-                    .name());
-        } else {
-            out.setString("type", "minor");
-            out.setString(
-                "parent",
-                key.minorBodyId()
-                    .parentBodyId()
-                    .name());
-            out.setInteger(
-                "index",
-                key.minorBodyId()
-                    .index());
-        }
-        return out;
-    }
-
-    static CelestialObjectKey readBodyKey(NbtReader in) {
-        String path = in.path();
-        String type = in.string("type");
-        if ("registered".equals(type)) {
-            return CelestialObjectKey.registered(in.enumValue(CelestialObjectId.class, "body"));
-        }
-        if ("minor".equals(type)) {
-            CelestialObjectId parent = in.enumValue(CelestialObjectId.class, "parent");
-            int index = in.integer("index");
-            try {
-                return CelestialObjectKey.minorBody(new MinorCelestialBodyId(parent, index));
-            } catch (RuntimeException ex) {
-                throw fail(path, "invalid minor celestial body key", ex);
-            }
-        }
-        throw fail(path + ".type", "unknown celestial object key type " + type);
+        return CelestialObjectKeyState.decode(in.compound(key));
     }
 
     private static ModuleInstance.ID requireModuleId(NbtReader in, String key) {
