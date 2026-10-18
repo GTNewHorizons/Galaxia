@@ -1,0 +1,4 @@
+gradle.projectsEvaluated {
+    def sources = new File(gradle.rootProject.projectDir, 'src/manualTest/java')
+    if (sources.isDirectory()) gradle.rootProject.sourceSets.main.java.srcDir(sources)
+}
