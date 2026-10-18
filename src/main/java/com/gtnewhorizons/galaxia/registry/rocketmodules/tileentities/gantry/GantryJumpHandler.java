@@ -10,7 +10,8 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
 /**
- * A vanilla jump peaks a bit below 1.25 blocks, so from the top of a gantry rail, 0.75 up its block, a full block one level
+ * A vanilla jump peaks a bit below 1.25 blocks, so from the top of a gantry rail, 0.75 up its block, a full block one
+ * level
  * higher was just out of reach. Jumps off a rail get a tiny push
  */
 public class GantryJumpHandler {
