@@ -55,11 +55,11 @@ final class SiloPanels {
 
     private SiloPanels() {}
 
-    private static ButtonWidget<?> closeButton(IPanelHandler handler) {
+    private static ButtonWidget<?> closeButton(Runnable close) {
         return RocketGuiStyle.textButton(IKey.str("x"))
             .size(12, 12)
             .onMousePressed(b -> {
-                handler.closePanel();
+                close.run();
                 return true;
             });
     }
@@ -77,7 +77,7 @@ final class SiloPanels {
         panel.child(
             RocketGuiStyle.title("galaxia.silo.destination.title")
                 .pos(8, 7));
-        panel.child(closeButton(handler).pos(232, 6));
+        panel.child(closeButton(handler::closePanel).pos(232, 6));
         panel.child(
             RocketGuiStyle
                 .label(
@@ -211,7 +211,7 @@ final class SiloPanels {
         panel.child(
             RocketGuiStyle.title("galaxia.silo.automation.title")
                 .pos(8, 7));
-        panel.child(closeButton(handler).pos(166, 6));
+        panel.child(closeButton(handler::closePanel).pos(166, 6));
 
         panel.child(
             toggle(enabled, "galaxia.silo.automation.enabled").name("silo.automation.enabled")
@@ -379,7 +379,7 @@ final class SiloPanels {
         panel.child(
             RocketGuiStyle.title("galaxia.silo.cargo.title")
                 .pos(8, 7));
-        panel.child(closeButton(handler).pos(282, 6));
+        panel.child(closeButton(handler::closePanel).pos(282, 6));
 
         sync.registerSlotGroup(new SlotGroup("cargo", 9, true));
         CargoItemHandler cargo = new CargoItemHandler(silo);
@@ -523,19 +523,22 @@ final class SiloPanels {
         Consumer<RocketFuel> onPicked) {
         List<RocketFuel> fuels = RocketPartRegistry.instance()
             .getFuelsFor(frame);
-        ModularPanel panel = RocketGuiStyle.panel("galaxia:silo_fuel_picker", 150, 24 + fuels.size() * 26);
+        ModularPanel panel = RocketGuiStyle.panel("galaxia:silo_fuel_picker", 168, 24 + fuels.size() * 26);
         panel.child(
             IKey.str(StatCollector.translateToLocalFormatted("galaxia.rocket_editor.pick_core", frame.label))
                 .color(RocketGuiStyle.TEXT_TITLE)
                 .shadow(true)
                 .asWidget()
                 .pos(8, 7));
+        panel.child(
+            closeButton(panel::closeIfOpen).name("silo.fuel_picker.close")
+                .pos(150, 6));
 
         for (int i = 0; i < fuels.size(); i++) {
             RocketFuel fuel = fuels.get(i);
             int y = 20 + i * 26;
             panel.child(
-                new ButtonWidget<>().size(134, 24)
+                new ButtonWidget<>().size(152, 24)
                     .name("silo.fuel_picker." + fuel.key())
                     .pos(8, y)
                     .background(
