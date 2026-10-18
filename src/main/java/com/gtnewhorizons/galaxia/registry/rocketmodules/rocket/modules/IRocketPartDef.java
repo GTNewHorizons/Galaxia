@@ -45,9 +45,9 @@ public interface IRocketPartDef {
     }
 
     /**
-     * Colour multiplier applied to the model group named {@code core}, if the model has one
+     * color multiplier applied to the model group named {@code core}, if the model has one
      *
-     * @return RGB colour, or -1 to render the core untinted
+     * @return RGB color, or -1 to render the core untinted
      */
     default int coreColor() {
         return -1;

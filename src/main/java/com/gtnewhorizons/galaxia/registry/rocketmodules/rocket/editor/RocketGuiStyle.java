@@ -15,7 +15,7 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 
 /**
- * Shared look of the silo and assembler screens, so every popup uses the same frame, buttons and colours as the
+ * Shared look of the silo and assembler screens, so every popup uses the same frame, buttons and colors as the
  * silo background texture
  */
 public final class RocketGuiStyle {
@@ -69,7 +69,7 @@ public final class RocketGuiStyle {
      * Horizontal fill bar drawn in the silo palette
      *
      * @param fraction Fill level from 0 to 1
-     * @param color    Fill colour, ARGB
+     * @param color    Fill color, ARGB
      *
      * @return A widget showing the bar
      */

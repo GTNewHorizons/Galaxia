@@ -239,7 +239,7 @@ public final class StationTerminalUI implements IGuiHolder<StationGuiFactory.Dat
     record Room(int x, int y, int z, boolean main, String behavior, boolean formed, boolean sealed, boolean open,
         double oxygen, int volume, int walls, long upkeep, int attachments, int plugs, int[] functional) {
 
-        /** Colour of the room on the graph: green when breathable, yellow when sealed, red when open to space */
+        /** color of the room on the graph: green when breathable, yellow when sealed, red when open to space */
         int color() {
             if (!formed) return RocketGuiStyle.TEXT_DIM;
             if (!sealed) return RocketGuiStyle.BAD;
