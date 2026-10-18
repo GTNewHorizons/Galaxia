@@ -22,6 +22,7 @@ import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.ModulePickerScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
 import com.gtnewhorizons.galaxia.compat.GTCompat;
+import com.gtnewhorizons.galaxia.compat.gt.GalaxiaCasingTextures;
 import com.gtnewhorizons.galaxia.compat.gt.GalaxiaGTAttachmentRegistration;
 import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData;
 import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
@@ -47,6 +48,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocketSeat;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.flight.RocketFlights;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.GantryJumpHandler;
 
 import baubles.api.expanded.BaubleExpandedSlots;
 import cpw.mods.fml.common.Loader;
@@ -71,6 +74,7 @@ public class CommonProxy {
         FMLBusRegister(new DimensionEventHandler());
         FMLBusRegister(new CelestialEventHandler(celestialRuntime));
         FMLBusRegister(new ServerTickTaskQueue());
+        FMLBusRegister(new RocketFlights());
         FMLBusRegister(new TetherEventHandler());
         FMLBusRegister(teamEventHandler);
 
@@ -78,6 +82,7 @@ public class CommonProxy {
         ForgeBusRegister(new FacilityPersistenceManager(celestialRuntime));
         ForgeBusRegister(teamEventHandler);
         ForgeBusRegister(new GalaxiaPlayerProperties.PlayerEventHandler());
+        ForgeBusRegister(new GantryJumpHandler());
 
         // GTNH Teams custom data
         TeamDataRegistry.register(GalaxiaTeamData.ID, GalaxiaTeamData::new);
@@ -134,6 +139,7 @@ public class CommonProxy {
     private void registerAttachments() {
         if (isGregTech5UnofficialNewHorizonsLoaded()) {
             GalaxiaGTAttachmentRegistration.init();
+            GalaxiaCasingTextures.register();
         }
 
         StationAttachmentRegistry.register(TileHammerTarget.class, TileHammerTarget.HANDLER);

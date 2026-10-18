@@ -1,114 +1,118 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.utility;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.play.server.S1BPacketEntityAttach;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.Teleporter;
 import net.minecraft.world.WorldServer;
 
 import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocketSeat;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.flight.RocketDestination;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.flight.RocketFlight;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.flight.RocketFlights;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 
+/**
+ * Moves the crew of a departing rocket to its destination and puts them into a rocket descending onto the pad
+ */
 public class RocketTeleportHelper {
 
-    private static final int SILO_SEARCH_RADIUS = 32;
-    private static final int SILO_SEARCH_HEIGHT = 5;
+    /** A crewed flight lands on its own after this many ticks if the descending rocket never touches down */
+    private static final int CREWED_LANDING_TIMEOUT = 2400;
 
     /**
-     * Executes the teleportation of players and handles spawning the landing rocket
-     * in the new dimension. Must be called on the server side.
+     * Ends the climb of a crewed rocket: spawns the descending rocket at the destination and moves the crew into it.
+     * Must be called on the server side
+     *
+     * @param rocket The rocket leaving the launch site
+     * @param flight What survived the burn and where it goes
      */
-    public static void teleportPlayers(int targetDim, double x, double y, double z, boolean hasRocket, int capsuleIndex,
-        List<Integer> modules, List<UUID> passengerUUIDs) {
-
+    public static void departCrewed(EntityRocket rocket, RocketFlight flight) {
         MinecraftServer server = MinecraftServer.getServer();
-        WorldServer targetWorld = server.worldServerForDimension(targetDim);
+        RocketDestination destination = flight.getDestination();
+        WorldServer targetWorld = server.worldServerForDimension(destination.dimension());
         if (targetWorld == null) return;
 
-        List<EntityPlayerMP> players = new ArrayList<>();
-        for (UUID uuid : passengerUUIDs) {
-            for (Object obj : server.getConfigurationManager().playerEntityList) {
-                if (obj instanceof EntityPlayerMP player && player.getUniqueID()
-                    .equals(uuid)) {
-                    players.add(player);
-                    break;
-                }
-            }
+        List<EntityPlayer> crew = rocket.getCrew();
+        TileEntitySilo silo = RocketFlights.loadSilo(destination.dimension(), destination.silo());
+
+        EntityRocket lander = new EntityRocket(targetWorld);
+        lander.setBlueprint(flight.getBlueprint());
+        double x;
+        double z;
+        double padY;
+        if (silo != null) {
+            int[] offset = silo.getRocketOffset();
+            x = silo.xCoord + offset[0] + 0.5;
+            z = silo.zCoord + offset[2] + 0.5;
+            padY = silo.yCoord + offset[1];
+
+            // Keeps the pad reserved while descending, and lands the rocket anyway if the lander gets lost
+            RocketFlights.dispatch(
+                new RocketFlight(
+                    flight.getId(),
+                    flight.getBlueprint(),
+                    flight.getLoadout(),
+                    flight.getSourceDimension(),
+                    flight.getSourceSilo(),
+                    destination,
+                    RocketFlights.now() + CREWED_LANDING_TIMEOUT));
+            lander.setTargetSilo(silo);
+            lander.setPosition(x, padY + EntityRocket.LANDING_START_HEIGHT, z);
+            lander.beginLanding(flight.getId(), padY);
+        } else {
+            // No silo at the other end, the capsule touches down on the surface below the crew
+            x = rocket.posX;
+            z = rocket.posZ;
+            padY = targetWorld.getTopSolidOrLiquidBlock((int) Math.floor(x), (int) Math.floor(z));
+            lander.turnToLanderAndCache();
+            lander.setPosition(x, padY + EntityRocket.LANDING_START_HEIGHT, z);
+            lander.beginLanding(null, padY);
         }
+        targetWorld.spawnEntityInWorld(lander);
+        lander.initializeSeats();
 
-        if (players.isEmpty() && !hasRocket) return;
-
-        EntityRocket lander = null;
-        if (hasRocket) {
-            lander = spawnLandingRocket(targetWorld, x, z, capsuleIndex);
-        }
-
-        for (int i = 0; i < players.size(); i++) {
-            EntityPlayerMP p = players.get(i);
-            p.mountEntity(null);
-
-            if (p.dimension != targetDim) {
-                server.getConfigurationManager()
-                    .transferPlayerToDimension(p, targetDim, new Teleporter(targetWorld) {
-
-                        @Override
-                        public void placeInPortal(Entity entity, double px, double py, double pz, float yaw) {
-                            placePlayer(entity, x, y, z, hasRocket);
-                        }
-
-                        @Override
-                        public boolean makePortal(Entity entity) {
-                            return true;
-                        }
-                    });
-            } else {
-                placePlayer(p, x, y, z, hasRocket);
-            }
-
-            if (lander != null) {
-                scheduleMount(p, lander, i, targetDim);
-            }
+        for (int i = 0; i < crew.size(); i++) {
+            if (!(crew.get(i) instanceof EntityPlayerMP player)) continue;
+            player.mountEntity(null);
+            movePlayer(player, targetWorld, x, padY + EntityRocket.LANDING_START_HEIGHT, z);
+            scheduleMount(player, lander, i, destination.dimension());
         }
     }
 
-    private static void placePlayer(Entity entity, double targetX, double targetY, double targetZ, boolean hasRocket) {
-        double landY = hasRocket ? EntityRocket.SPAWN_ALTITUDE : targetY + 0.5;
-        double fallingMotionY = hasRocket ? EntityRocket.TERMINAL_FALL_SPEED : 0;
-        entity.setLocationAndAngles(targetX, landY, targetZ, entity.rotationYaw, entity.rotationPitch);
+    private static void movePlayer(EntityPlayerMP player, WorldServer targetWorld, double x, double y, double z) {
+        if (player.dimension != targetWorld.provider.dimensionId) {
+            MinecraftServer.getServer()
+                .getConfigurationManager()
+                .transferPlayerToDimension(player, targetWorld.provider.dimensionId, new Teleporter(targetWorld) {
+
+                    @Override
+                    public void placeInPortal(Entity entity, double px, double py, double pz, float yaw) {
+                        placePlayer(entity, x, y, z);
+                    }
+
+                    @Override
+                    public boolean makePortal(Entity entity) {
+                        return true;
+                    }
+                });
+        } else {
+            placePlayer(player, x, y, z);
+            player.playerNetServerHandler.setPlayerLocation(x, y, z, player.rotationYaw, player.rotationPitch);
+        }
+    }
+
+    private static void placePlayer(Entity entity, double x, double y, double z) {
+        entity.setLocationAndAngles(x, y, z, entity.rotationYaw, entity.rotationPitch);
         entity.fallDistance = 0.0F;
         entity.motionX = entity.motionZ = 0.0D;
-        entity.motionY = fallingMotionY;
-    }
-
-    private static EntityRocket spawnLandingRocket(WorldServer world, double x, double z, int capsuleIndex) {
-        TileEntitySilo targetSilo = findNearbySilo(world, x, z);
-        boolean inSilo = targetSilo != null;
-
-        double landX = inSilo ? targetSilo.xCoord + 0.5 : x;
-        double landZ = inSilo ? targetSilo.zCoord + 0.5 : z;
-
-        EntityRocket lander = new EntityRocket(world);
-        if (!inSilo) {
-            lander.turnToLanderAndCache();
-        }
-
-        lander.setCapsuleIndex(capsuleIndex);
-        lander.setPosition(landX, EntityRocket.SPAWN_ALTITUDE, landZ);
-        lander.setTargetSilo(targetSilo);
-        world.spawnEntityInWorld(lander);
-
-        lander.initializeSeats();
-        lander.beginLanding(landX, landZ);
-
-        return lander;
+        entity.motionY = EntityRocket.TERMINAL_FALL_SPEED;
     }
 
     private static void scheduleMount(EntityPlayerMP player, EntityRocket lander, int riderIndex, int targetDim) {
@@ -128,27 +132,5 @@ public class RocketTeleportHelper {
             player.mountEntity(targetSeat);
             player.playerNetServerHandler.sendPacket(new S1BPacketEntityAttach(0, player, targetSeat));
         });
-    }
-
-    private static TileEntitySilo findNearbySilo(WorldServer world, double x, double z) {
-        int groundY = world.getTopSolidOrLiquidBlock((int) x, (int) z);
-        int searchX = (int) x;
-        int searchZ = (int) z;
-
-        for (int dx = -SILO_SEARCH_RADIUS; dx <= SILO_SEARCH_RADIUS; dx++) {
-            for (int dz = -SILO_SEARCH_RADIUS; dz <= SILO_SEARCH_RADIUS; dz++) {
-                for (int dy = -SILO_SEARCH_HEIGHT; dy <= SILO_SEARCH_HEIGHT; dy++) {
-                    TileEntity te = world.getTileEntity(searchX + dx, groundY + dy, searchZ + dz);
-                    // Prefer an empty silo (ready to receive the landing rocket)
-                    if (te instanceof TileEntitySilo silo && silo.isStructureValid()
-                        && silo.getDesignBlueprint()
-                            .getParts()
-                            .isEmpty()) {
-                        return silo;
-                    }
-                }
-            }
-        }
-        return null;
     }
 }

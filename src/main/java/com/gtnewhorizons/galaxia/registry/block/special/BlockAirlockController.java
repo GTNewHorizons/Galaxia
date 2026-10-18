@@ -15,7 +15,7 @@ import net.minecraftforge.common.util.ForgeDirection;
 import com.cleanroommc.modularui.factory.GuiFactories;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
-import com.gtnewhorizons.galaxia.registry.block.PlacementHelper;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
 
@@ -35,7 +35,9 @@ public class BlockAirlockController extends BlockUpdatable implements ITileEntit
 
     public BlockAirlockController() {
         super(Material.rock);
-        this.setHardness(1.5F);
+        this.setHardness(5.0F);
+        this.setResistance(10.0F);
+        this.setHarvestLevel("pickaxe", 1);
         this.setBlockName("airlock_controller");
         this.setCreativeTab(Galaxia.creativeTab);
     }
@@ -87,15 +89,13 @@ public class BlockAirlockController extends BlockUpdatable implements ITileEntit
         TileEntity te = world.getTileEntity(x, y, z);
 
         if (!(te instanceof TileEntityAirlock airlock)) return;
-        ForgeDirection facing = PlacementHelper.placeInEveryDirection(placer);
-
-        airlock.setPlacedFacing(facing);
-        airlock.setFacing(facing);
+        airlock.onPlacedBy(placer);
     }
 
     @Override
     public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer player, int side, float hitX,
         float hitY, float hitZ) {
+        if (GalaxiaMultiblockBase.handleWrench(world, x, y, z, player, side, hitX, hitY, hitZ)) return true;
         if (world.isRemote) return true;
         TileEntity te = world.getTileEntity(x, y, z);
         if (!(te instanceof TileEntityAirlock)) return false;

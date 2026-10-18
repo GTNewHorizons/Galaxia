@@ -131,10 +131,6 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
         if (pixelsPerCell < 1) pixelsPerCell = 1;
 
         for (RocketPartInstance part : parts) {
-            ResourceLocation tex = part.def()
-                .spriteLocation();
-            if (tex == null) tex = MISSING_TEXTURE;
-
             float x = PADDING + (usable - totalWidth * pixelsPerCell) / 2f + (part.x() - minX) * pixelsPerCell;
             float y = PADDING + (usable - totalHeight * pixelsPerCell) / 2f + (part.y() - minY) * pixelsPerCell;
             float w = part.def()
@@ -142,7 +138,12 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
             float h = part.def()
                 .height() * pixelsPerCell;
 
-            drawQuad(textureManager, tex, x, y, w, h, -0.02f);
+            if (part.def()
+                .modelLocation() != null) {
+                ModuleModelRenderer.drawInGui(part.def(), x, y, w, h, 1f);
+            } else {
+                drawQuad(textureManager, MISSING_TEXTURE, x, y, w, h, -0.02f);
+            }
         }
 
         GL11.glPopAttrib();

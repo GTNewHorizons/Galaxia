@@ -1,71 +1,87 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities;
 
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Queue;
 
 import net.minecraft.block.Block;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumChatFormatting;
-import net.minecraft.util.StatCollector;
+import net.minecraft.nbt.NBTTagString;
 import net.minecraftforge.common.util.Constants;
-import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
-import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
-import com.cleanroommc.modularui.utils.Alignment;
-import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
-import com.cleanroommc.modularui.value.sync.IntSyncValue;
-import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import com.cleanroommc.modularui.widgets.ButtonWidget;
-import com.cleanroommc.modularui.widgets.layout.Grid;
-import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
+import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.compat.gt.GalaxiaCasingTextures;
+import com.gtnewhorizons.galaxia.compat.gt.IRocketHatchHost;
+import com.gtnewhorizons.galaxia.compat.gt.RocketHatchElement;
+import com.gtnewhorizons.galaxia.compat.gt.RocketHatches;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.ModuleRecipe;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.GantryAPI;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.MachineTerminals;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gui.ModuleAssemblerUI;
 
+import gregtech.api.util.GTStructureUtility;
+import lombok.Getter;
+
+/**
+ * Builds rocket modules from items in its input buses and sends them along the gantry to whoever ordered them.
+ * Orders that are not in stock are crafted automatically, players can also queue crafts by hand to build up stock
+ */
 public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityModuleAssembler>
-    implements IGuiHolder<PosGuiData>, IRocketControllerTE {
+    implements IGuiHolder<PosGuiData>, IRocketHatchHost {
 
-    /** Ticks to simulate assembly work per part before injecting it into the gantry. */
-    private static final int ASSEMBLY_TICKS = 100;
+    /** Ticks between attempts to start a craft whose inputs are missing */
+    private static final int MISSING_INPUT_RETRY = 20;
 
-    private TileEntityGantryTerminal gantryTerminal;
+    /**
+     * A module promised to a terminal, sent as soon as one is in stock
+     *
+     * @param part     The module with its position in the ordering rocket
+     * @param terminal Position of the terminal it has to reach
+     */
+    private record Delivery(RocketPartInstance part, BlockPos terminal) {}
 
-    private record ProductionTask(RocketPartInstance part, TileEntitySilo targetSilo) {}
+    public enum Status {
+        IDLE,
+        CRAFTING,
+        MISSING_INPUTS
+    }
 
-    private final Queue<ProductionTask> productionQueue = new ArrayDeque<>();
-    private ProductionTask activeTask = null;
-    private int assemblyTicksRemaining = 0;
+    private final MachineTerminals terminals = new MachineTerminals();
+    @Getter
+    private final RocketHatches hatches = new RocketHatches();
 
-    /** Available module stock: maps id - count. */
-    private final Map<Integer, Integer> moduleStock = new HashMap<>();
+    /** Available module stock: maps key - count */
+    private final Map<String, Integer> moduleStock = new LinkedHashMap<>();
+    /** Debug switch, every module counts as in stock and sending one costs nothing */
+    private boolean infiniteStock = false;
+    private final Deque<Delivery> deliveries = new ArrayDeque<>();
+    private final Deque<String> craftQueue = new ArrayDeque<>();
+    @Getter
+    private String activeCraft = null;
+    private int craftTicks = 0;
+    private int craftDuration = 0;
+    private int retryCooldown = 0;
+    @Getter
+    private Status status = Status.IDLE;
 
-    // Pending coords for lazy-load after world load
-    private final List<int[]> pendingQueueSiloCoords = new ArrayList<>();
-    private final List<RocketPartInstance> pendingQueueParts = new ArrayList<>();
-    private int[] pendingActiveTaskSiloCoords = null;
-    private RocketPartInstance pendingActiveTaskPart = null;
-    private int pendingActiveTaskTicks = 0;
-
-    private ExtendedFacing currentFacing = ExtendedFacing.DEFAULT;
     private static final String STRUCTURE_PIECE_MAIN = "main";
 
     private static final IStructureDefinition<TileEntityModuleAssembler> STRUCTURE_DEFINITION = StructureDefinition
@@ -74,7 +90,13 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
             STRUCTURE_PIECE_MAIN,
             new String[][] { { "CCC", "CCC", "CCC" }, { "C C", "T T", "C C" }, { "C C", "C C", "C C" },
                 { "C C", "C C", "C C" }, { "CCC", "C~C", "CCC" } })
-        .addElement('C', StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0))
+        .addElement(
+            'C',
+            GTStructureUtility.<TileEntityModuleAssembler>buildHatchAdder()
+                .anyOf(RocketHatchElement.InputBus)
+                .casingIndex(GalaxiaCasingTextures.RUSTY_PANEL)
+                .hint(1)
+                .buildAndChain(StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0)))
         .addElement('T', StructureUtility.ofChain(StructureUtility.ofTileAdder((assembler, te) -> {
             if (te instanceof TileEntityGantryTerminal terminal) {
                 assembler.setGantryTerminal(terminal);
@@ -93,43 +115,158 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
     @Override
     public void updateEntity() {
         super.updateEntity();
-        if (worldObj.isRemote) return;
+        if (worldObj.isRemote || !structureValid) return;
 
-        resolvePendingTaskCoords();
+        dispatchDeliveries();
+        tickCrafting();
+    }
 
-        if (activeTask != null) {
-            assemblyTicksRemaining--;
-            if (assemblyTicksRemaining <= 0) {
-                GantryAPI.injectModule(activeTask.part(), this, activeTask.targetSilo(), false);
-                activeTask = null;
+    /**
+     * Sends every order that is in stock and queues crafts for the ones that are not
+     */
+    private void dispatchDeliveries() {
+        for (Iterator<Delivery> iterator = deliveries.iterator(); iterator.hasNext();) {
+            Delivery delivery = iterator.next();
+            IRocketPartDef def = delivery.part()
+                .def();
+            if (!(delivery.terminal()
+                .getTE(worldObj) instanceof TileEntityGantryTerminal target)) {
+                // The ordering silo is gone, nobody will collect this
+                iterator.remove();
                 markDirty();
-                tryStartNextTask();
+                continue;
             }
-        } else {
-            tryStartNextTask();
+            if (getStockCount(def) > 0 && GantryAPI.send(delivery.part(), terminals.reaching(target), target)) {
+                consumeFromStock(def);
+                iterator.remove();
+                markDirty();
+            }
+        }
+
+        for (Delivery delivery : deliveries) {
+            IRocketPartDef def = delivery.part()
+                .def();
+            if (countPromised(def) > getStockCount(def) + countQueued(def)) {
+                craftQueue.addLast(def.key());
+                markDirty();
+            }
+        }
+    }
+
+    private void tickCrafting() {
+        if (activeCraft != null) {
+            status = Status.CRAFTING;
+            if (++craftTicks >= craftDuration) {
+                moduleStock.merge(activeCraft, 1, Integer::sum);
+                activeCraft = null;
+                craftTicks = 0;
+                markDirty();
+            }
+            return;
+        }
+
+        if (craftQueue.isEmpty()) {
+            status = Status.IDLE;
+            return;
+        }
+        if (retryCooldown > 0) {
+            retryCooldown--;
+            return;
+        }
+
+        for (Iterator<String> iterator = craftQueue.iterator(); iterator.hasNext();) {
+            IRocketPartDef def = RocketPartRegistry.instance()
+                .getByKey(iterator.next());
+            if (def == null) {
+                iterator.remove();
+                continue;
+            }
+            if (hasInputs(def.recipe())) {
+                consumeInputs(def.recipe());
+                iterator.remove();
+                activeCraft = def.key();
+                craftTicks = 0;
+                craftDuration = Math.max(
+                    1,
+                    def.recipe()
+                        .duration());
+                status = Status.CRAFTING;
+                markDirty();
+                return;
+            }
+        }
+        status = Status.MISSING_INPUTS;
+        retryCooldown = MISSING_INPUT_RETRY;
+    }
+
+    /**
+     * Checks the input buses for every ingredient of a recipe
+     *
+     * @param recipe The recipe to check
+     *
+     * @return Boolean : True => all inputs are present
+     */
+    public boolean hasInputs(ModuleRecipe recipe) {
+        for (ModuleRecipe.Input input : recipe.inputs()) {
+            if (countInput(input) < input.amount()) return false;
+        }
+        return true;
+    }
+
+    /** How many items in the input buses match an ingredient */
+    public long countInput(ModuleRecipe.Input input) {
+        return hatches.countItems(worldObj, input::matches);
+    }
+
+    private void consumeInputs(ModuleRecipe recipe) {
+        for (ModuleRecipe.Input input : recipe.inputs()) {
+            hatches.extractItems(worldObj, input::matches, input.amount());
         }
     }
 
     /**
-     * Scans the production queue for the first task whose part type is currently in stock,
-     * consumes one unit, and begins assembly. Tasks whose parts are not yet in stock are
-     * skipped — they remain in the queue and are retried on the next tick when new stock
-     * arrives.
+     * Promises a module to a terminal. It is sent right away when in stock, otherwise crafted first
+     *
+     * @param part     The module to deliver
+     * @param terminal The terminal that should receive it
      */
-    private void tryStartNextTask() {
-        if (productionQueue.isEmpty() || activeTask != null) return;
+    public void requestDelivery(RocketPartInstance part, TileEntityGantryTerminal terminal) {
+        deliveries.addLast(new Delivery(part, new BlockPos(terminal.xCoord, terminal.yCoord, terminal.zCoord)));
+        markDirty();
+    }
 
-        for (var iterator = productionQueue.iterator(); iterator.hasNext();) {
-            ProductionTask task = iterator.next();
-            if (hasInStock(
-                task.part()
-                    .def())) {
+    /**
+     * Drops every pending order for a terminal, crafts already started still finish into stock
+     *
+     * @param terminal The terminal whose orders are cancelled
+     */
+    public void cancelDeliveries(TileEntityGantryTerminal terminal) {
+        BlockPos pos = new BlockPos(terminal.xCoord, terminal.yCoord, terminal.zCoord);
+        if (deliveries.removeIf(
+            d -> d.terminal()
+                .equals(pos)))
+            markDirty();
+    }
+
+    /**
+     * Queues crafts by hand to build up stock
+     *
+     * @param def   The module to craft
+     * @param count How many
+     */
+    public void queueCraft(IRocketPartDef def, int count) {
+        for (int i = 0; i < count; i++) craftQueue.addLast(def.key());
+        retryCooldown = 0;
+        markDirty();
+    }
+
+    /** Removes the last queued craft of a module, if any */
+    public void cancelCraft(IRocketPartDef def) {
+        Iterator<String> iterator = craftQueue.descendingIterator();
+        while (iterator.hasNext()) {
+            if (iterator.next()
+                .equals(def.key())) {
                 iterator.remove();
-                consumeFromStock(
-                    task.part()
-                        .def());
-                activeTask = task;
-                assemblyTicksRemaining = ASSEMBLY_TICKS;
                 markDirty();
                 return;
             }
@@ -137,89 +274,106 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
     }
 
     /**
-     * After a world load the silo TileEntity references are not yet available,
-     * so they are stored as coordinates and resolved here on the first server tick.
-     */
-    private void resolvePendingTaskCoords() {
-        if (pendingActiveTaskSiloCoords != null && pendingActiveTaskPart != null) {
-            TileEntity te = worldObj.getTileEntity(
-                pendingActiveTaskSiloCoords[0],
-                pendingActiveTaskSiloCoords[1],
-                pendingActiveTaskSiloCoords[2]);
-            if (te instanceof TileEntitySilo silo) {
-                activeTask = new ProductionTask(pendingActiveTaskPart, silo);
-                assemblyTicksRemaining = pendingActiveTaskTicks;
-            }
-            pendingActiveTaskSiloCoords = null;
-            pendingActiveTaskPart = null;
-        }
-
-        if (!pendingQueueSiloCoords.isEmpty()) {
-            for (int i = 0; i < pendingQueueSiloCoords.size(); i++) {
-                int[] coords = pendingQueueSiloCoords.get(i);
-                TileEntity te = worldObj.getTileEntity(coords[0], coords[1], coords[2]);
-                if (te instanceof TileEntitySilo silo) {
-                    productionQueue.offer(new ProductionTask(pendingQueueParts.get(i), silo));
-                }
-            }
-            pendingQueueSiloCoords.clear();
-            pendingQueueParts.clear();
-        }
-    }
-
-    /**
-     * Called by GantryAPI/TileEntitySilo to enqueue a single-part production job.
-     */
-    public void enqueueProduction(RocketPartInstance part, TileEntitySilo silo) {
-        productionQueue.offer(new ProductionTask(part, silo));
-        markDirty();
-    }
-
-    /**
      * Called by the gantry terminal when a returned module physically arrives at this assembler.
      * Adds the module back to stock so the queue can pick it up.
      */
-    public void addPart(IRocketPartDef def, int x, int y, int z) {
-        addToStock(def);
+    public void addPart(IRocketPartDef def) {
+        moduleStock.merge(def.key(), 1, Integer::sum);
         markDirty();
-        if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
     }
 
-    private void addToStock(IRocketPartDef def) {
-        moduleStock.merge(def.id(), 1, Integer::sum);
+    /** Stock reported for every module while {@link #infiniteStock} is on */
+    public static final int INFINITE_STOCK = 999;
+
+    public boolean isInfiniteStock() {
+        return infiniteStock;
+    }
+
+    /** Debug helper, switches infinite stock on or off */
+    public void toggleInfiniteStock() {
+        infiniteStock = !infiniteStock;
+        markDirty();
+    }
+
+    /** Debug helper, adds or removes stock without any cost */
+    public void debugAdjustStock(IRocketPartDef def, int delta) {
+        if (delta > 0) moduleStock.merge(def.key(), delta, Integer::sum);
+        else for (int i = 0; i < -delta; i++) consumeFromStock(def);
+        markDirty();
     }
 
     private void consumeFromStock(IRocketPartDef def) {
-        int count = moduleStock.getOrDefault(def.id(), 0);
+        if (infiniteStock) return;
+        int count = moduleStock.getOrDefault(def.key(), 0);
         if (count <= 1) {
-            moduleStock.remove(def.id());
+            moduleStock.remove(def.key());
         } else {
-            moduleStock.put(def.id(), count - 1);
+            moduleStock.put(def.key(), count - 1);
         }
     }
 
-    private boolean hasInStock(IRocketPartDef def) {
-        return moduleStock.getOrDefault(def.id(), 0) > 0;
-    }
-
     public int getStockCount(IRocketPartDef def) {
-        return moduleStock.getOrDefault(def.id(), 0);
+        return infiniteStock ? INFINITE_STOCK : moduleStock.getOrDefault(def.key(), 0);
     }
 
-    public Map<Integer, Integer> getModuleStock() {
+    public Map<String, Integer> getModuleStock() {
         return Collections.unmodifiableMap(moduleStock);
     }
 
+    /** Pending orders of a module type */
+    public int countPromised(IRocketPartDef def) {
+        int count = 0;
+        for (Delivery delivery : deliveries) {
+            if (delivery.part()
+                .def() == def) count++;
+        }
+        return count;
+    }
+
+    /** Queued and running crafts of a module type */
+    public int countQueued(IRocketPartDef def) {
+        int count = def.key()
+            .equals(activeCraft) ? 1 : 0;
+        for (String key : craftQueue) {
+            if (key.equals(def.key())) count++;
+        }
+        return count;
+    }
+
     public boolean isAssembling() {
-        return activeTask != null;
+        return activeCraft != null;
     }
 
-    public int getAssemblyTicksRemaining() {
-        return assemblyTicksRemaining;
+    /** Progress of the running craft from 0 to 1 */
+    public float getCraftProgress() {
+        return activeCraft == null || craftDuration <= 0 ? 0 : (float) craftTicks / craftDuration;
     }
 
+    /** Pending orders plus queued crafts */
     public int getQueueSize() {
-        return productionQueue.size();
+        return deliveries.size() + craftQueue.size();
+    }
+
+    public int getDeliveryCount() {
+        return deliveries.size();
+    }
+
+    public int getCraftQueueSize() {
+        return craftQueue.size();
+    }
+
+    @Override
+    protected boolean checkStructure() {
+        if (worldObj != null && !worldObj.isRemote) {
+            hatches.clear();
+            terminals.clear();
+        }
+        return super.checkStructure();
+    }
+
+    /** The terminal the gantry rails are attached to, null when the assembler has none */
+    public TileEntityGantryTerminal getGantryTerminal() {
+        return terminals.best();
     }
 
     @Override
@@ -248,58 +402,13 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
     }
 
     public void setGantryTerminal(TileEntityGantryTerminal terminal) {
-        this.gantryTerminal = terminal;
-    }
-
-    public TileEntityGantryTerminal getGantryTerminal() {
-        return gantryTerminal;
+        terminals.add(terminal);
     }
 
     @Override
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
         if (!worldObj.isRemote) markStructureDirty();
-
-        ModularPanel panel = new ModularPanel("galaxia:module_assembler");
-        panel.size(404, 300);
-
-        BooleanSyncValue validSync = new BooleanSyncValue(() -> structureValid, v -> {});
-        syncManager.syncValue("assemblerStructureValid", validSync);
-
-        panel.childIf(
-            !validSync.getBoolValue(),
-            () -> IKey
-                .str(EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.module_assembler.not_formed"))
-                .asWidget()
-                .pos(10, 35));
-
-        List<IRocketPartDef> defList = RocketPartRegistry.instance()
-            .getAll();
-
-        Grid grid = new Grid().coverChildren()
-            .padding(4)
-            .gridOfWidthElements(4, defList, (_, _, _, def) -> createStockButton(def, syncManager));
-        panel.childIf(validSync.getBoolValue(), () -> grid);
-
-        return panel;
-    }
-
-    private ButtonWidget<?> createStockButton(IRocketPartDef def, PanelSyncManager syncManager) {
-        IntSyncValue stockSync = new IntSyncValue(() -> getStockCount(def), v -> {});
-        syncManager.syncValue("stock_" + def.id(), stockSync);
-
-        return new ButtonWidget<>().size(100, 20)
-            .overlay(
-                IKey.dynamic(() -> def.name() + " (" + stockSync.getValue() + ")")
-                    .alignment(Alignment.Center))
-            .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
-                if (md.mouseButton == 0) {
-                    addToStock(def);
-                    markDirty();
-                } else if (md.mouseButton == 1 && hasInStock(def)) {
-                    consumeFromStock(def);
-                    markDirty();
-                }
-            }));
+        return ModuleAssemblerUI.build(this, data, syncManager, settings);
     }
 
     @Override
@@ -307,97 +416,73 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         super.writeToNBT(tag);
 
         NBTTagList stockList = new NBTTagList();
-        for (Map.Entry<Integer, Integer> entry : moduleStock.entrySet()) {
+        for (Map.Entry<String, Integer> entry : moduleStock.entrySet()) {
             NBTTagCompound e = new NBTTagCompound();
-            e.setInteger("id", entry.getKey());
+            e.setString("key", entry.getKey());
             e.setInteger("count", entry.getValue());
             stockList.appendTag(e);
         }
         tag.setTag("moduleStock", stockList);
+        tag.setBoolean("infiniteStock", infiniteStock);
 
-        NBTTagList queueList = new NBTTagList();
-        for (ProductionTask task : productionQueue) {
-            queueList.appendTag(serializeTask(task));
+        NBTTagList deliveryList = new NBTTagList();
+        for (Delivery delivery : deliveries) {
+            NBTTagCompound d = new NBTTagCompound();
+            d.setTag(
+                "part",
+                delivery.part()
+                    .serialize());
+            d.setTag(
+                "terminal",
+                delivery.terminal()
+                    .toNBT());
+            deliveryList.appendTag(d);
         }
-        tag.setTag("queue", queueList);
+        tag.setTag("deliveries", deliveryList);
 
-        if (activeTask != null) {
-            tag.setTag("activeTask", serializeTask(activeTask));
-            tag.setInteger("assemblyTicks", assemblyTicksRemaining);
+        NBTTagList craftList = new NBTTagList();
+        for (String key : craftQueue) craftList.appendTag(new NBTTagString(key));
+        tag.setTag("craftQueue", craftList);
+
+        if (activeCraft != null) {
+            tag.setString("activeCraft", activeCraft);
+            tag.setInteger("craftTicks", craftTicks);
+            tag.setInteger("craftDuration", craftDuration);
         }
+        tag.setInteger("status", status.ordinal());
     }
 
     @Override
     public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
+        RocketPartRegistry registry = RocketPartRegistry.instance();
 
         moduleStock.clear();
-        if (tag.hasKey("moduleStock")) {
-            NBTTagList stockList = tag.getTagList("moduleStock", Constants.NBT.TAG_COMPOUND);
-            for (int i = 0; i < stockList.tagCount(); i++) {
-                NBTTagCompound e = stockList.getCompoundTagAt(i);
-                moduleStock.put(e.getInteger("id"), e.getInteger("count"));
-            }
+        infiniteStock = tag.getBoolean("infiniteStock");
+        NBTTagList stockList = tag.getTagList("moduleStock", Constants.NBT.TAG_COMPOUND);
+        for (int i = 0; i < stockList.tagCount(); i++) {
+            NBTTagCompound e = stockList.getCompoundTagAt(i);
+            IRocketPartDef def = registry.getByKey(e.getString("key"));
+            if (def != null) moduleStock.merge(def.key(), e.getInteger("count"), Integer::sum);
         }
 
-        if (tag.hasKey("queue")) {
-            NBTTagList queueList = tag.getTagList("queue", Constants.NBT.TAG_COMPOUND);
-            for (int i = 0; i < queueList.tagCount(); i++) {
-                NBTTagCompound entry = queueList.getCompoundTagAt(i);
-                RocketPartInstance part = RocketPartInstance
-                    .deserialize(entry.getCompoundTag("part"), RocketPartRegistry.instance());
-                if (part != null) {
-                    pendingQueueParts.add(part);
-                    pendingQueueSiloCoords.add(
-                        new int[] { entry.getInteger("siloX"), entry.getInteger("siloY"), entry.getInteger("siloZ") });
-                }
-            }
+        deliveries.clear();
+        NBTTagList deliveryList = tag.getTagList("deliveries", Constants.NBT.TAG_COMPOUND);
+        for (int i = 0; i < deliveryList.tagCount(); i++) {
+            NBTTagCompound d = deliveryList.getCompoundTagAt(i);
+            RocketPartInstance part = RocketPartInstance.deserialize(d.getCompoundTag("part"), registry);
+            if (part != null) deliveries.addLast(new Delivery(part, BlockPos.fromNBT(d.getCompoundTag("terminal"))));
         }
 
-        if (tag.hasKey("activeTask")) {
-            NBTTagCompound taskTag = tag.getCompoundTag("activeTask");
-            pendingActiveTaskPart = RocketPartInstance
-                .deserialize(taskTag.getCompoundTag("part"), RocketPartRegistry.instance());
-            if (pendingActiveTaskPart != null) {
-                pendingActiveTaskSiloCoords = new int[] { taskTag.getInteger("siloX"), taskTag.getInteger("siloY"),
-                    taskTag.getInteger("siloZ") };
-                pendingActiveTaskTicks = tag.getInteger("assemblyTicks");
-            }
-        }
-    }
+        craftQueue.clear();
+        NBTTagList craftList = tag.getTagList("craftQueue", Constants.NBT.TAG_STRING);
+        for (int i = 0; i < craftList.tagCount(); i++) craftQueue.addLast(craftList.getStringTagAt(i));
 
-    private NBTTagCompound serializeTask(ProductionTask task) {
-        NBTTagCompound t = new NBTTagCompound();
-        t.setTag(
-            "part",
-            task.part()
-                .serialize());
-        t.setInteger("siloX", task.targetSilo().xCoord);
-        t.setInteger("siloY", task.targetSilo().yCoord);
-        t.setInteger("siloZ", task.targetSilo().zCoord);
-        return t;
-    }
-
-    @Override
-    public ForgeDirection getPlacedFacing() {
-        return currentFacing.getDirection();
-    }
-
-    @Override
-    public void setPlacedFacing(ForgeDirection dir) { /* handled by multiblock */ }
-
-    @Override
-    public boolean isStructureValid() {
-        return structureValid;
-    }
-
-    @Override
-    public ExtendedFacing getCurrentFacing() {
-        return currentFacing;
-    }
-
-    public boolean checkValidGraph() {
-        if (gantryTerminal == null) return false;
-        return gantryTerminal.checkValidGraph();
+        activeCraft = tag.hasKey("activeCraft") ? tag.getString("activeCraft") : null;
+        craftTicks = tag.getInteger("craftTicks");
+        craftDuration = tag.getInteger("craftDuration");
+        int statusOrdinal = tag.getInteger("status");
+        status = statusOrdinal >= 0 && statusOrdinal < Status.values().length ? Status.values()[statusOrdinal]
+            : Status.IDLE;
     }
 }

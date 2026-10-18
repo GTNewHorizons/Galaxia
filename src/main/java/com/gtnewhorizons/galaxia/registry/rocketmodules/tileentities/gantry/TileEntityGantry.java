@@ -1,9 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry;
 
-import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
 
@@ -14,72 +13,48 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.AxisAlignedBB;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.Vec3;
-import net.minecraftforge.client.model.AdvancedModelLoader;
-import net.minecraftforge.client.model.IModelCustom;
+import net.minecraft.world.IBlockAccess;
+import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants.NBT;
+import net.minecraftforge.common.util.ForgeDirection;
 
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.TransitModule;
 
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-
+/**
+ * One block of gantry rail. Rails connect to gantries and terminals on all six faces, like pipes, and the connections
+ * are always read from the world, so what the player sees is what the network uses
+ */
 public class TileEntityGantry extends TileEntity {
 
-    private final float SPEED = 0.1f;
-    private final Deque<TransitModule> queue = new ArrayDeque<>();
-    private final static int DISPATCH_INTERVAL = 40;
-    private int dispatchCooldown = 0;
-    private List<int[]> pendingNeighbourCoords = new ArrayList<>();
+    /** Blocks a module moves per tick */
+    public static final float SPEED = 0.1f;
+    /** Moves of the route sent to clients on each side of a module, enough for the hooks of the longest module */
+    public static final int PATH_WINDOW = TransitModule.TRAIL_LENGTH;
+    /** Marks an unknown move in the path window */
+    public static final byte NO_MOVE = -1;
 
-    List<TileEntityGantry> neighbours = new ArrayList<>();
+    private static final int DISPATCH_INTERVAL = 40;
+    private static final int NO_ROUTE_RETRY = 20;
+
+    private final Deque<TransitModule> queue = new ArrayDeque<>();
+    private int dispatchCooldown = 0;
+    // Modules saved with the world, resolved once their destination terminals are loaded
+    private NBTTagList pendingTransit;
+    private GantryNetwork network;
+    private boolean joinedNetwork = false;
+
+    private TransitModule containedTransitModule;
     private Vec3 currentDirection;
     private float progress = 0f;
-    private TransitModule containedTransitModule;
+    // Route around the moving module, PATH_WINDOW moves back, the current move, PATH_WINDOW moves ahead
+    private byte[] path = new byte[0];
+
     public int clientModuleId = -1;
     public float clientPrevProgress = 0f;
     public float clientProgress = 0f;
-    public List<Vec3> neighbourDirs = new ArrayList<>();
-    public boolean isJunction = false;
-    public Vec3 facing = null;
-
-    private Vec3 incomingDirection;
-    public Vec3 clientIncomingDirection;
-
-    // I beam
-    @SideOnly(Side.CLIENT)
-    private IModelCustom straightModel;
-    @SideOnly(Side.CLIENT)
-    private ResourceLocation straightTexture;
-
-    // 45° angle up beam
-    @SideOnly(Side.CLIENT)
-    private IModelCustom diagonalModel;
-    @SideOnly(Side.CLIENT)
-    private ResourceLocation diagonalTexture;
-
-    // L beam
-    @SideOnly(Side.CLIENT)
-    private IModelCustom cornerModel;
-    @SideOnly(Side.CLIENT)
-    private ResourceLocation cornerTexture;
-
-    // T beam
-    @SideOnly(Side.CLIENT)
-    private IModelCustom tModel;
-    @SideOnly(Side.CLIENT)
-    private ResourceLocation tTexture;
-
-    // crossway beam
-    @SideOnly(Side.CLIENT)
-    private IModelCustom plusModel;
-    @SideOnly(Side.CLIENT)
-    private ResourceLocation plusTexture;
-
-    @SideOnly(Side.CLIENT)
-    private ResourceLocation errorTexture;
+    public byte[] clientPath = new byte[0];
 
     /**
      * Updates the tile entity. In this case, handling current module progression
@@ -87,53 +62,26 @@ public class TileEntityGantry extends TileEntity {
      */
     @Override
     public void updateEntity() {
-        // Lazy loading for neighbours
-        if (!pendingNeighbourCoords.isEmpty()) {
-            for (int[] coords : pendingNeighbourCoords) {
-                TileEntity te = worldObj.getTileEntity(coords[0], coords[1], coords[2]);
-                if (te instanceof TileEntityGantry teg) {
-                    neighbours.add(teg);
-                }
-            }
-            pendingNeighbourCoords.clear();
-        }
         if (worldObj.isRemote) {
             // -1 used as "null" as 0 is a valid ID
             if (clientModuleId != -1) {
-                // If module, increase progress
+                // The module waits at the end of the block until the server hands it to the next gantry
                 clientPrevProgress = clientProgress;
-                clientProgress += SPEED;
-                if (clientProgress > 1.0f) {
-                    // If above 1, reset
-                    clientProgress = 0f;
-                    clientPrevProgress = 0f;
-                    clientModuleId = -1;
-                    currentDirection = null;
-                }
+                clientProgress = Math.min(1f, clientProgress + SPEED);
             }
             return;
         }
 
-        if (dispatchCooldown > 0) dispatchCooldown--;
-
-        // Handle dispatch queue
-        if (!queue.isEmpty()) {
-            // If cooling down, lower cooldown counter
-            if (dispatchCooldown == 0 && containedTransitModule == null) {
-                // If no contained module, take the next and process
-                TransitModule entry = queue.poll();
-                containedTransitModule = entry;
-                currentDirection = GantryAPI.getDirectionTo(this, entry.destination());
-                progress = 0f;
-
-                if (this instanceof TileEntityGantryTerminal) {
-                    dispatchCooldown = DISPATCH_INTERVAL;
-                }
-
-                markDirty();
-                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-            }
+        if (!joinedNetwork) {
+            // A gantry loading next to an existing network makes it rebuild with this one included
+            joinedNetwork = true;
+            invalidateAround();
         }
+
+        resolvePendingTransit();
+
+        if (dispatchCooldown > 0) dispatchCooldown--;
+        tryDispatch();
 
         if (containedTransitModule == null) {
             return;
@@ -151,108 +99,153 @@ public class TileEntityGantry extends TileEntity {
     }
 
     /**
+     * Starts the next queued module if this gantry is free and knows where to send it
+     */
+    private void tryDispatch() {
+        if (queue.isEmpty() || dispatchCooldown > 0 || containedTransitModule != null) return;
+
+        TransitModule entry = queue.peek();
+        if (entry.destination() == null || entry.destination()
+            .isInvalid()) {
+            // Destination was removed, send the module back to an assembler instead of losing it
+            List<TileEntityGantryTerminal> returns = getNetwork().getReturnPoints();
+            if (!returns.isEmpty()) {
+                queue.poll();
+                entry = entry.redirect(returns.getFirst());
+                queue.addFirst(entry);
+            }
+        }
+        Vec3 direction = getDirectionTo(entry.destination());
+        if (direction == null) {
+            // No route right now, the network may still be under construction
+            dispatchCooldown = NO_ROUTE_RETRY;
+            return;
+        }
+
+        queue.poll();
+        containedTransitModule = entry;
+        currentDirection = direction;
+        progress = 0f;
+        path = buildPath(entry, direction);
+
+        if (this instanceof TileEntityGantryTerminal) {
+            // Long modules need more room before the next one leaves
+            int length = entry.module()
+                .def()
+                .height();
+            dispatchCooldown = Math.max(DISPATCH_INTERVAL, (int) Math.ceil((length + 1) / SPEED));
+        }
+
+        markDirty();
+        worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+    }
+
+    /**
+     * The route around a module that just started moving here: the moves it made to get here, the move it starts now
+     * and the moves still ahead of it
+     */
+    private byte[] buildPath(TransitModule transit, Vec3 direction) {
+        byte[] result = new byte[PATH_WINDOW * 2 + 1];
+        Arrays.fill(result, NO_MOVE);
+        byte[] trail = transit.trail();
+        for (int i = 0; i < Math.min(trail.length, PATH_WINDOW); i++) {
+            result[PATH_WINDOW - 1 - i] = trail[i];
+        }
+
+        ForgeDirection move = toDirection(direction);
+        result[PATH_WINDOW] = (byte) move.ordinal();
+        TileEntityGantry next = getNeighbour(move);
+        TileEntityGantryTerminal destination = transit.destination();
+        for (int i = 1; i <= PATH_WINDOW && next != null && next != this; i++) {
+            Vec3 step = next.getDirectionTo(destination);
+            if (step == null) break;
+            move = toDirection(step);
+            result[PATH_WINDOW + i] = (byte) move.ordinal();
+            // At the destination the last move points into the machine
+            if (next == destination) break;
+            next = next.getNeighbour(move);
+        }
+        return result;
+    }
+
+    /**
+     * Closest axis direction of a step, steps into a machine can point at a controller further away
+     */
+    static ForgeDirection toDirection(Vec3 step) {
+        double ax = Math.abs(step.xCoord), ay = Math.abs(step.yCoord), az = Math.abs(step.zCoord);
+        if (ax == 0 && ay == 0 && az == 0) return ForgeDirection.EAST;
+        if (ay >= ax && ay >= az) return step.yCoord > 0 ? ForgeDirection.UP : ForgeDirection.DOWN;
+        if (ax >= az) return step.xCoord > 0 ? ForgeDirection.EAST : ForgeDirection.WEST;
+        return step.zCoord > 0 ? ForgeDirection.SOUTH : ForgeDirection.NORTH;
+    }
+
+    /**
+     * Gets the network this gantry belongs to, rebuilding it if the topology changed
+     *
+     * @return The current network
+     */
+    public GantryNetwork getNetwork() {
+        if (network == null || !network.isValid()) {
+            network = GantryNetwork.build(this);
+        }
+        return network;
+    }
+
+    void bindNetwork(GantryNetwork network) {
+        this.network = network;
+    }
+
+    /** Marks the current network stale so it is rebuilt on the next query */
+    public void invalidateNetwork() {
+        if (network != null) network.invalidate();
+        network = null;
+    }
+
+    /** Marks this network and the networks of all touching gantries stale, used whenever rails are added or removed */
+    public void invalidateAround() {
+        invalidateNetwork();
+        for (TileEntityGantry neighbour : getNeighbours()) neighbour.invalidateNetwork();
+    }
+
+    /**
+     * Direction from this gantry to the next step towards a terminal. Once at the terminal it points into the machine
+     * the terminal feeds
+     *
+     * @param destination The terminal to reach
+     *
+     * @return The step vector, or null if there is no route
+     */
+    public Vec3 getDirectionTo(TileEntityGantryTerminal destination) {
+        if (destination == null || destination.isInvalid()) return null;
+        TileEntityGantry next = getNetwork().nextHop(this, destination);
+        if (next == null) return null;
+        if (next == this) {
+            int[] machine = destination.getConsumerPosition();
+            if (machine == null) return Vec3.createVectorHelper(0, 0, 0);
+            return Vec3.createVectorHelper(machine[0] - xCoord, machine[1] - yCoord, machine[2] - zCoord);
+        }
+        return Vec3.createVectorHelper(next.xCoord - xCoord, next.yCoord - yCoord, next.zCoord - zCoord);
+    }
+
+    @Override
+    public void invalidate() {
+        super.invalidate();
+        invalidateNetwork();
+    }
+
+    @Override
+    public void onChunkUnload() {
+        super.onChunkUnload();
+        invalidateNetwork();
+    }
+
+    /**
      * Gets the current direction of the gantry
      *
      * @return The current direction
      */
     public Vec3 getDirection() {
         return currentDirection;
-    }
-
-    // TODO: ADD MODEL AND TEXTURE FOR GANTRY
-
-    // MODEL AND TEXTURE GETTERS
-    @SideOnly(Side.CLIENT)
-    public ResourceLocation getStraightTexture() {
-        if (straightTexture == null) {
-            straightTexture = LocationGalaxia("textures/model/gantry/straight.png");
-        }
-        return straightTexture;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public IModelCustom getStraightModel() {
-        if (straightModel == null) {
-            ResourceLocation loc = LocationGalaxia("textures/model/gantry/straight.obj");
-            straightModel = AdvancedModelLoader.loadModel(loc);
-        }
-        return straightModel;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public ResourceLocation getDiagonalTexture() {
-        if (diagonalTexture == null) {
-            diagonalTexture = LocationGalaxia("textures/model/gantry/diagonal.png");
-        }
-        return diagonalTexture;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public IModelCustom getDiagonalModel() {
-        if (diagonalModel == null) {
-            ResourceLocation loc = LocationGalaxia("textures/model/gantry/diagonal.obj");
-            diagonalModel = AdvancedModelLoader.loadModel(loc);
-        }
-        return diagonalModel;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public ResourceLocation getCornerTexture() {
-        if (cornerTexture == null) {
-            cornerTexture = LocationGalaxia("textures/model/gantry/corner.png");
-        }
-        return cornerTexture;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public IModelCustom getCornerModel() {
-        if (cornerModel == null) {
-            ResourceLocation loc = LocationGalaxia("textures/model/gantry/corner.obj");
-            cornerModel = AdvancedModelLoader.loadModel(loc);
-        }
-        return cornerModel;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public ResourceLocation getSemiCrossTexture() {
-        if (tTexture == null) {
-            tTexture = LocationGalaxia("textures/model/gantry/semicross.png");
-        }
-        return tTexture;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public IModelCustom getSemiCrossModel() {
-        if (tModel == null) {
-            ResourceLocation loc = LocationGalaxia("textures/model/gantry/semicross.obj");
-            tModel = AdvancedModelLoader.loadModel(loc);
-        }
-        return tModel;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public ResourceLocation getCrossTexture() {
-        if (plusTexture == null) {
-            plusTexture = LocationGalaxia("textures/model/gantry/cross.png");
-        }
-        return plusTexture;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public IModelCustom getCrossModel() {
-        if (plusModel == null) {
-            ResourceLocation loc = LocationGalaxia("textures/model/gantry/cross.obj");
-            plusModel = AdvancedModelLoader.loadModel(loc);
-        }
-        return plusModel;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public ResourceLocation getErrorTexture() {
-        if (errorTexture == null) {
-            errorTexture = LocationGalaxia("textures/model/gantry/error.png");
-        }
-        return errorTexture;
     }
 
     /**
@@ -275,21 +268,58 @@ public class TileEntityGantry extends TileEntity {
     }
 
     /**
-     * Gets the list of gantries that count as valid neighbours to this one
+     * Whether a gantry or terminal sits on the given side of a block
      *
-     * @return The list of valid gantry neighbours
+     * @param world The world to look in
+     * @param x     X position of the block
+     * @param y     Y position of the block
+     * @param z     Z position of the block
+     * @param side  The side to check
+     *
+     * @return Boolean : True => the rail connects on that side
      */
-    public List<TileEntityGantry> getNeighbours() {
-        return neighbours;
+    public static boolean connects(IBlockAccess world, int x, int y, int z, ForgeDirection side) {
+        return world.getTileEntity(x + side.offsetX, y + side.offsetY, z + side.offsetZ) instanceof TileEntityGantry;
     }
 
     /**
-     * Sets the current direction of the gantry
-     *
-     * @param dir The target direction
+     * Sides a block at the given position connects on, bit per {@link ForgeDirection} ordinal
      */
-    public void setDirection(Vec3 dir) {
-        currentDirection = dir;
+    public static int connectionMask(IBlockAccess world, int x, int y, int z) {
+        int mask = 0;
+        for (ForgeDirection side : ForgeDirection.VALID_DIRECTIONS) {
+            if (connects(world, x, y, z, side)) mask |= 1 << side.ordinal();
+        }
+        return mask;
+    }
+
+    /**
+     * Gets the gantry on one side, never loading chunks
+     *
+     * @param side The side to look at
+     *
+     * @return The gantry found or null
+     */
+    public TileEntityGantry getNeighbour(ForgeDirection side) {
+        if (worldObj == null || side == ForgeDirection.UNKNOWN) return null;
+        int x = xCoord + side.offsetX, y = yCoord + side.offsetY, z = zCoord + side.offsetZ;
+        if (!worldObj.blockExists(x, y, z)) return null;
+        return worldObj.getTileEntity(x, y, z) instanceof TileEntityGantry gantry && !gantry.isInvalid() ? gantry
+            : null;
+    }
+
+    /**
+     * Gets the gantries this one is connected to
+     *
+     * @return Every gantry or terminal touching one of the six faces
+     */
+    public List<TileEntityGantry> getNeighbours() {
+        List<TileEntityGantry> result = new ArrayList<>(6);
+        for (ForgeDirection side : ForgeDirection.VALID_DIRECTIONS) {
+            TileEntityGantry neighbour = getNeighbour(side);
+            if (neighbour != null) result.add(neighbour);
+        }
+        return result;
     }
 
     /**
@@ -302,78 +332,11 @@ public class TileEntityGantry extends TileEntity {
         clientModuleId = -1;
         containedTransitModule = null;
         currentDirection = null;
-        incomingDirection = null;
-        clientIncomingDirection = null;
+        path = new byte[0];
         markDirty();
         if (worldObj != null) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
         }
-    }
-
-    /**
-     * Ensures the graph is valid by all endpoints being terminals
-     *
-     * @return Boolean : True => is valid graph
-     */
-    public boolean checkValidGraph() {
-        return GantryAPI.terminatesWithTerminals(worldObj, xCoord, yCoord, zCoord);
-    }
-
-    /**
-     * Connects another gantry to this one and updates both
-     *
-     * @param other The other gantry to connect to
-     */
-    public void connect(TileEntityGantry other) {
-        this.neighbours.add(other);
-        other.neighbours.add(this);
-        this.updateNeighbourDirs();
-        other.updateNeighbourDirs();
-        this.markDirty();
-        other.markDirty();
-        if (worldObj != null) {
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-            worldObj.markBlockForUpdate(other.xCoord, other.yCoord, other.zCoord);
-        }
-    }
-
-    /**
-     * Update neighbour direction list
-     */
-    public void updateNeighbourDirs() {
-        if (worldObj.isRemote) return;
-
-        // Clear list and go through neighbours getting vectors
-        neighbourDirs.clear();
-        for (TileEntityGantry neighbour : neighbours) {
-            neighbourDirs.add(
-                Vec3.createVectorHelper(
-                    neighbour.xCoord - xCoord,
-                    neighbour.yCoord - yCoord,
-                    neighbour.zCoord - zCoord));
-        }
-        markDirty();
-        if (worldObj != null) {
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-        }
-        return;
-    }
-
-    /**
-     * Disconnects the gantry from another one and updates both
-     *
-     * @param other The other gantry to disconnect from
-     */
-    public void disconnect(TileEntityGantry other) {
-        this.neighbours.remove(other);
-        other.neighbours.remove(this);
-        this.updateNeighbourDirs();
-        other.updateNeighbourDirs();
-        if (worldObj != null) {
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-            worldObj.markBlockForUpdate(other.xCoord, other.yCoord, other.zCoord);
-        }
-
     }
 
     public RocketPartInstance getModule() {
@@ -382,25 +345,32 @@ public class TileEntityGantry extends TileEntity {
     }
 
     /**
-     * Hands off a module to the next gantry in the path of the module
+     * Hands off a module to the next gantry in the path of the module. If the path broke while the module was moving
+     * it waits here and gets routed again instead of being lost
      */
     public void handOff() {
+        TransitModule transit = containedTransitModule;
+        if (transit == null) return;
 
         // Get next gantry to hand to
         TileEntityGantry next = getNeighbourGantry(currentDirection);
         if (next == null || next == this) {
             // If terminal endpoint, pass to consumer (assembler / silo etc.)
-            if (this instanceof TileEntityGantryTerminal teg) {
-                teg.passModuleToConsumer();
+            if (this instanceof TileEntityGantryTerminal terminal && terminal == transit.destination()
+                && terminal.passModuleToConsumer(transit.module())) {
+                clearModule();
+                return;
             }
             clearModule();
+            queue.addFirst(transit);
+            dispatchCooldown = NO_ROUTE_RETRY;
             return;
         }
 
-        // If next gantry can take it, pass it on
-        if (next.acceptModule(containedTransitModule, currentDirection)) {
+        // If next gantry can take it, pass it on and let it start right away so the module never stops between blocks
+        if (next.acceptModule(transit.moved(toDirection(currentDirection)))) {
             clearModule();
-            if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            next.tryDispatch();
         }
     }
 
@@ -416,6 +386,7 @@ public class TileEntityGantry extends TileEntity {
         int nx = xCoord + (int) dir.xCoord;
         int ny = yCoord + (int) dir.yCoord;
         int nz = zCoord + (int) dir.zCoord;
+        if (!worldObj.blockExists(nx, ny, nz)) return null;
         TileEntity te = worldObj.getTileEntity(nx, ny, nz);
         return (te instanceof TileEntityGantry ? (TileEntityGantry) te : null);
     }
@@ -431,108 +402,80 @@ public class TileEntityGantry extends TileEntity {
     }
 
     /**
-     * Takes an incoming transit module and direction and adds it to the dispatch
-     * queue
+     * Takes an incoming transit module and adds it to the dispatch queue
      *
-     * @param transit       The transit module
-     * @param fromDirection The direction it came from
+     * @param transit The transit module
      *
      * @return Boolean : True => accepted module
      */
-    public boolean acceptModule(TransitModule transit, Vec3 fromDirection) {
-        if (worldObj.isRemote) return false;
-        if (transit == null) {
-            return false;
-        }
-        this.incomingDirection = fromDirection;
-
-        enqueueModule(transit);
-        markDirty();
-        if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-        return true;
-
-    }
-
-    // Overloaded method for initial injection with no previous direction
     public boolean acceptModule(TransitModule transit) {
-        return acceptModule(transit, null);
+        if (worldObj.isRemote || transit == null) return false;
+        enqueueModule(transit);
+        return true;
     }
 
     @Override
     public void writeToNBT(NBTTagCompound tag) {
         super.writeToNBT(tag);
-        NBTTagList neighbourList = new NBTTagList();
-        for (TileEntityGantry neighbour : neighbours) {
-            NBTTagCompound neighbourTag = new NBTTagCompound();
-            neighbourTag.setInteger("x", neighbour.xCoord);
-            neighbourTag.setInteger("y", neighbour.yCoord);
-            neighbourTag.setInteger("z", neighbour.zCoord);
-            neighbourList.appendTag(neighbourTag);
+        NBTTagList transit = new NBTTagList();
+        if (containedTransitModule != null) transit.appendTag(containedTransitModule.serialize());
+        for (TransitModule entry : queue) transit.appendTag(entry.serialize());
+        // Unresolved entries are kept as-is so an early save does not drop them
+        if (pendingTransit != null) {
+            for (int i = 0; i < pendingTransit.tagCount(); i++) {
+                transit.appendTag(pendingTransit.getCompoundTagAt(i));
+            }
         }
-        tag.setTag("neighbours", neighbourList);
+        tag.setTag("transit", transit);
+    }
 
-        NBTTagList dirList = new NBTTagList();
-        for (Vec3 dir : neighbourDirs) {
-            NBTTagCompound entry = new NBTTagCompound();
-            entry.setDouble("x", dir.xCoord);
-            entry.setDouble("y", dir.yCoord);
-            entry.setDouble("z", dir.zCoord);
-            dirList.appendTag(entry);
+    /**
+     * Restores modules that were moving when the world was saved. A module in the middle of a step restarts that
+     * step, which keeps the save format independent of animation state
+     */
+    private void resolvePendingTransit() {
+        if (pendingTransit == null) return;
+        NBTTagList entries = pendingTransit;
+        pendingTransit = null;
+        for (int i = 0; i < entries.tagCount(); i++) {
+            TransitModule entry = TransitModule.deserialize(worldObj, entries.getCompoundTagAt(i));
+            if (entry != null) queue.addLast(entry);
         }
-        tag.setTag("neighbourDirs", dirList);
-
+        markDirty();
     }
 
     @Override
     public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
-
-        NBTTagList neighbourList = tag.getTagList("neighbours", NBT.TAG_COMPOUND);
-        pendingNeighbourCoords = new ArrayList<>();
-
-        for (int i = 0; i < neighbourList.tagCount(); i++) {
-            NBTTagCompound entry = neighbourList.getCompoundTagAt(i);
-            pendingNeighbourCoords
-                .add(new int[] { entry.getInteger("x"), entry.getInteger("y"), entry.getInteger("z"), });
+        if (tag.hasKey("transit")) {
+            NBTTagList transit = tag.getTagList("transit", NBT.TAG_COMPOUND);
+            if (transit.tagCount() > 0) pendingTransit = transit;
         }
+    }
 
-        neighbourDirs.clear();
-        NBTTagList list = tag.getTagList("neighbourDirs", NBT.TAG_COMPOUND);
-        for (int i = 0; i < list.tagCount(); i++) {
-            NBTTagCompound entry = list.getCompoundTagAt(i);
-            neighbourDirs
-                .add(Vec3.createVectorHelper(entry.getDouble("x"), entry.getDouble("y"), entry.getDouble("z")));
-        }
+    /** Number of modules waiting in this gantry, including the one moving */
+    public int getLoad() {
+        return queue.size() + (containedTransitModule != null ? 1 : 0);
     }
 
     @Override
     public Packet getDescriptionPacket() {
         NBTTagCompound tag = new NBTTagCompound();
-        writeToNBT(tag);
+        writeDescription(tag);
+        return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 1, tag);
+    }
 
-        tag.setBoolean("hasModule", containedTransitModule != null);
-        tag.setFloat("progress", progress);
-
-        if (currentDirection != null) {
-            tag.setFloat("dirX", (float) currentDirection.xCoord);
-            tag.setFloat("dirY", (float) currentDirection.yCoord);
-            tag.setFloat("dirZ", (float) currentDirection.zCoord);
-        }
-
-        if (incomingDirection != null) {
-            tag.setFloat("inDirX", (float) incomingDirection.xCoord);
-            tag.setFloat("inDirY", (float) incomingDirection.yCoord);
-            tag.setFloat("inDirZ", (float) incomingDirection.zCoord);
-        }
+    /** Fills the description packet, subclasses add their own state */
+    protected void writeDescription(NBTTagCompound tag) {
         if (containedTransitModule != null) {
             tag.setInteger(
                 "moduleId",
                 containedTransitModule.module()
                     .def()
                     .id());
+            tag.setByteArray("path", path);
+            tag.setFloat("progress", progress);
         }
-
-        return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 1, tag);
     }
 
     @Override
@@ -540,37 +483,10 @@ public class TileEntityGantry extends TileEntity {
         NBTTagCompound tag = packet.func_148857_g();
 
         // DO NOT call readFromNBT(tag) here — it will clobber xCoord/yCoord/zCoord
-
-        // Re-read neighbourDirs manually
-        neighbourDirs.clear();
-        NBTTagList list = tag.getTagList("neighbourDirs", NBT.TAG_COMPOUND);
-        for (int i = 0; i < list.tagCount(); i++) {
-            NBTTagCompound entry = list.getCompoundTagAt(i);
-            neighbourDirs
-                .add(Vec3.createVectorHelper(entry.getDouble("x"), entry.getDouble("y"), entry.getDouble("z")));
-        }
-
-        // Module/direction sync
-        int incomingId = tag.hasKey("moduleId") ? tag.getInteger("moduleId") : -1;
-        if (incomingId != -1 && clientModuleId == -1) {
-            clientProgress = 0f;
-            clientPrevProgress = 0f;
-        }
-        clientModuleId = incomingId;
-
-        if (tag.hasKey("dirX")) {
-            currentDirection = Vec3
-                .createVectorHelper(tag.getFloat("dirX"), tag.getFloat("dirY"), tag.getFloat("dirZ"));
-        } else {
-            currentDirection = null;
-        }
-
-        if (tag.hasKey("inDirX")) {
-            clientIncomingDirection = Vec3
-                .createVectorHelper(tag.getFloat("inDirX"), tag.getFloat("inDirY"), tag.getFloat("inDirZ"));
-        } else {
-            clientIncomingDirection = null;
-        }
+        clientModuleId = tag.hasKey("moduleId") ? tag.getInteger("moduleId") : -1;
+        clientProgress = tag.getFloat("progress");
+        clientPrevProgress = clientProgress;
+        clientPath = tag.getByteArray("path");
     }
 
     @Override
@@ -581,5 +497,25 @@ public class TileEntityGantry extends TileEntity {
     @Override
     public double getMaxRenderDistanceSquared() {
         return 512 * 512;
+    }
+
+    /**
+     * Rebuilds the networks around a block that became or stopped being a rail
+     *
+     * @param world The world the block is in
+     * @param x     X position of the block
+     * @param y     Y position of the block
+     * @param z     Z position of the block
+     */
+    public static void onRailChanged(World world, int x, int y, int z) {
+        if (world.isRemote) return;
+        if (world.getTileEntity(x, y, z) instanceof TileEntityGantry gantry) gantry.invalidateNetwork();
+        for (ForgeDirection side : ForgeDirection.VALID_DIRECTIONS) {
+            int nx = x + side.offsetX, ny = y + side.offsetY, nz = z + side.offsetZ;
+            if (world.blockExists(nx, ny, nz)
+                && world.getTileEntity(nx, ny, nz) instanceof TileEntityGantry neighbour) {
+                neighbour.invalidateNetwork();
+            }
+        }
     }
 }

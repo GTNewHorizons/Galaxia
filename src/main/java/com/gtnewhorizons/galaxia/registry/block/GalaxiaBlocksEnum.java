@@ -70,16 +70,16 @@ public enum GalaxiaBlocksEnum {
     OXYGENATOR(new BlockCasing("space_station/oxygenator"), "oxygenator"),
 
     // MISC
-    BLOCK_OF_PYRITE(new BlockConfigurable("resource/block_of_pyrite")),
-    BLOCK_OF_CHEESE(new BlockConfigurable("resource/block_of_cheese")),
-    BLOCK_OF_CINNABAR(new BlockConfigurable("resource/block_of_cinnabar")),
-    METEORIC_IRON_BLOCK(new BlockConfigurable("resource/meteoric_iron_block")),
-    RAW_SULFUR_BLOCK(new BlockConfigurable("resource/raw_sulfur_block")),
-    ENCHANTED_BLOCK_OF_CINNABAR(new BlockConfigurable("resource/enchanted_block_of_cinnabar")),
+    BLOCK_OF_PYRITE(new BlockConfigurable("resource/block_of_pyrite").hardnessAndResistance(5, 10).harvest("pickaxe", 1)),
+    BLOCK_OF_CHEESE(new BlockConfigurable("resource/block_of_cheese").hardnessAndResistance(0.8F, 2).harvest("axe", 0)),
+    BLOCK_OF_CINNABAR(new BlockConfigurable("resource/block_of_cinnabar").hardnessAndResistance(5, 10).harvest("pickaxe", 1)),
+    METEORIC_IRON_BLOCK(new BlockConfigurable("resource/meteoric_iron_block").hardnessAndResistance(5, 10).harvest("pickaxe", 2)),
+    RAW_SULFUR_BLOCK(new BlockConfigurable("resource/raw_sulfur_block").hardnessAndResistance(3, 6).harvest("pickaxe", 0)),
+    ENCHANTED_BLOCK_OF_CINNABAR(new BlockConfigurable("resource/enchanted_block_of_cinnabar").hardnessAndResistance(5, 10).harvest("pickaxe", 1)),
     BLEEDING_OBSIDIAN(new BlockConfigurable("bleeding_obsidian")
             .hardnessAndResistance(16, 500)
             .harvest("pickaxe", 3)),
-    RESEARCH_OUTPOST_CASING(new BlockConfigurable("machine/research_outpost_casing")),
+    RESEARCH_OUTPOST_CASING(new BlockConfigurable("machine/research_outpost_casing").hardnessAndResistance(5, 10).harvest("wrench", 1)),
 
     // MISC - PLANET DECORATION BLOCKS
 
@@ -128,7 +128,7 @@ public enum GalaxiaBlocksEnum {
     LAUNCHPAD_REINFORCEMENT(new BlockCasing("machine/launchpad_reinforcement")),
     LAUNCHPAD_ASSEMBLING_CASING(new BlockCasing("machine/launchpad_assembling_casing")),
     LAUNCHPAD_SHEETING(new BlockCasing("machine/launchpad_sheeting")),
-    LAUNCHPAD_CASING(new BlockConfigurable("machine/launchpad")),
+    LAUNCHPAD_CASING(new BlockConfigurable("machine/launchpad").hardnessAndResistance(5, 10).harvest("wrench", 1)),
 
     ; // leave trailing semicolon
 

@@ -12,6 +12,7 @@ import com.cleanroommc.modularui.api.IMuiScreen;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.GalaxiaKeyBinds;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.GalacticMapWidget;
+import com.gtnewhorizons.galaxia.client.render.gear.PlayerGearRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryItemRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryPlacementPreviewHandler;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryRenderer;
@@ -74,6 +75,7 @@ public class ClientProxy extends CommonProxy {
         // Handlers
         ForgeBusRegister(new GalaxiaOverlayHandler());
         ForgeBusRegister(new GantryPlacementPreviewHandler());
+        ForgeBusRegister(new PlayerGearRenderer());
         FMLBusRegister(new SkyUpdateHandler());
 
         // Keys
