@@ -49,6 +49,7 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketP
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocketSeat;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.flight.RocketFlights;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.GantryJumpHandler;
 
 import baubles.api.expanded.BaubleExpandedSlots;
 import cpw.mods.fml.common.Loader;
@@ -81,6 +82,7 @@ public class CommonProxy {
         ForgeBusRegister(new FacilityPersistenceManager(celestialRuntime));
         ForgeBusRegister(teamEventHandler);
         ForgeBusRegister(new GalaxiaPlayerProperties.PlayerEventHandler());
+        ForgeBusRegister(new GantryJumpHandler());
 
         // GTNH Teams custom data
         TeamDataRegistry.register(GalaxiaTeamData.ID, GalaxiaTeamData::new);
