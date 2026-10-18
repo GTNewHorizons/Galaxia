@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import javax.annotation.Nullable;
 
+import net.minecraft.block.Block;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
@@ -34,6 +35,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializer;
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehavior;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehaviorWithAttachments;
@@ -170,9 +172,11 @@ public class TileStation extends TileStationBase<TileStation> {
     public IStructureDefinition<TileStation> getStructureDefinition() {
         if (DEFINITION != null) return DEFINITION;
 
-        DEFINITION = behavior.buildStructureDefinition(
-            CelestialDimensionMaterializer.findDefinitionById(worldObj.provider.dimensionId)
-                .orElse(null));
+        // Dimensions without a definition allow no station blocks, so nothing forms there instead of crashing
+        List<Block> stationBlocks = CelestialDimensionMaterializer.findDefinitionById(worldObj.provider.dimensionId)
+            .map(DimensionDef::validSpaceStationBlocks)
+            .orElse(null);
+        DEFINITION = behavior.buildStructureDefinition(stationBlocks == null ? List.of() : stationBlocks);
         return DEFINITION;
     }
 
@@ -272,7 +276,7 @@ public class TileStation extends TileStationBase<TileStation> {
         if (bodyKey == null) {
             return;
         }
-        Station station = (Station) CelestialAsset.create(bodyKey, CelestialAsset.Kind.STATION, true);
+        if (!(CelestialAsset.create(bodyKey, CelestialAsset.Kind.STATION, true) instanceof Station station)) return;
         station.setController(this.here);
         backingStation = station.assetId;
         CelestialAssetStore.registerAsset(owner, station);
@@ -328,16 +332,12 @@ public class TileStation extends TileStationBase<TileStation> {
         if (!structureValid || proximityBlocked) return;
 
         super.tick();
-        Station station = getBackingStation();
+        // Only the main room holds the station asset, secondary rooms power themselves from it too
+        Station station = graph != null && graph.getController() != this ? graph.getController()
+            .getBackingStation() : getBackingStation();
         if (station == null) return;
 
-        if (station.tryConsumeEnergy(
-            oxygenators.size() * OXYGENATOR_EUT + coolingCoils.size() * COIL_COOLING_EUT
-                + heatingCoils.size() * COIL_HEATING_EUT
-                + airPurifiers.size() * AIR_PURIFIER_EUT
-                + witherBlockers.size() * WITHER_BLOCKER_EUT
-                + getStructureBlocksAmount() * BASE_EUT_PER_BLOCK)
-            && isSealed()) {
+        if (station.tryConsumeEnergy(getUpkeepEUt()) && isSealed()) {
 
             oxygenLevel = Math
                 .clamp(oxygenLevel + (double) (oxygenators.size() * OXYGEN_FACTOR) / getVolume(), 0.0, 100.0);
@@ -351,6 +351,27 @@ public class TileStation extends TileStationBase<TileStation> {
             secondary.tick();
         }
         graph.tickAttachments();
+    }
+
+    /** Energy the room needs every tick: its functional blocks plus a share per wall block */
+    public long getUpkeepEUt() {
+        return oxygenators.size() * OXYGENATOR_EUT + coolingCoils.size() * COIL_COOLING_EUT
+            + heatingCoils.size() * COIL_HEATING_EUT
+            + airPurifiers.size() * AIR_PURIFIER_EUT
+            + witherBlockers.size() * WITHER_BLOCKER_EUT
+            + getStructureBlocksAmount() * BASE_EUT_PER_BLOCK;
+    }
+
+    /** Number of functional blocks of one kind in the room, for the station terminal */
+    public int countFunctionalBlocks(String kind) {
+        return switch (kind) {
+            case "oxygenator" -> oxygenators.size();
+            case "cooling_coil" -> coolingCoils.size();
+            case "heating_coil" -> heatingCoils.size();
+            case "air_purifier" -> airPurifiers.size();
+            case "wither_blocker" -> witherBlockers.size();
+            default -> 0;
+        };
     }
 
     public boolean isMainController() {
@@ -418,7 +439,8 @@ public class TileStation extends TileStationBase<TileStation> {
     }
 
     public @Nullable Station getBackingStation() {
-        return (Station) CelestialAssetStore.findAsset(backingStation);
+        if (backingStation == null) return null;
+        return CelestialAssetStore.findAsset(backingStation) instanceof Station station ? station : null;
     }
 
     @Override
@@ -427,7 +449,6 @@ public class TileStation extends TileStationBase<TileStation> {
             markStructureDirty();
         }
 
-        boolean isCtrl = controllerFlag == Role.MAIN;
         List<IStationBehavior> allBehaviors = GalaxiaBehaviors.getAll();
 
         BooleanSyncValue structureValidSync = new BooleanSyncValue(() -> structureValid, () -> structureValid);
@@ -475,7 +496,7 @@ public class TileStation extends TileStationBase<TileStation> {
                 })));
 
         // Structure status
-        int structY = isCtrl ? 40 : 58;
+        int structY = 58;
         panel.child(new TextWidget<>(IKey.dynamic(() -> {
             boolean valid = structureValidSync.getBoolValue();
             String structure = StatCollector.translateToLocal("galaxia.gui.station_controller.structure");
@@ -492,7 +513,7 @@ public class TileStation extends TileStationBase<TileStation> {
         activeGraphSyncHandler = graphSyncHandler;
 
         // Behavior-specific widgets
-        int behaviorY = isCtrl ? 60 : 78;
+        int behaviorY = 74;
         List<Widget<?>> behaviourWidgets = behavior.buildBehaviourWidgets(this, syncManager, behaviorY);
         if (behaviourWidgets != null) {
             for (Widget<?> w : behaviourWidgets) {
@@ -501,7 +522,7 @@ public class TileStation extends TileStationBase<TileStation> {
         }
 
         // Refresh button
-        int buttonY = isCtrl ? 95 : 130;
+        int buttonY = 120;
         panel.child(
             new ButtonWidget<>().size(190, 30)
                 .pos(10, buttonY)
@@ -509,12 +530,7 @@ public class TileStation extends TileStationBase<TileStation> {
                 .syncHandler(new InteractionSyncHandler().setOnMousePressed(mouseData -> {
                     if (mouseData.mouseButton != 0 || worldObj.isRemote) return;
                     markStructureDirty();
-                    if (graph != null) {
-                        graph.rebuild();
-                        for (TileStationBase<?> secondary : graph.iterateOver(TileStationBase.class)) {
-                            System.out.println(secondary.here);
-                        }
-                    }
+                    if (graph != null) graph.rebuild();
                 })));
 
         return panel;
@@ -719,7 +735,7 @@ public class TileStation extends TileStationBase<TileStation> {
                 case 0 -> UNDEFINED;
                 case 1 -> MAIN;
                 case 2 -> SECONDARY;
-                default -> throw new IllegalArgumentException("Unknown Role ID: " + id);
+                default -> UNDEFINED;
             };
         }
     }

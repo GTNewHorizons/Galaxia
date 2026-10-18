@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.compat.gt;
 
+import com.gtnewhorizons.galaxia.compat.gt.elevator.MTEGalaxiaSpaceElevator;
 import com.gtnewhorizons.galaxia.compat.gt.handlers.MTELapotronicSuperCapacitorHandler;
 import com.gtnewhorizons.galaxia.compat.gt.handlers.MTETankTFFTHandler;
 import com.gtnewhorizons.galaxia.compat.gt.handlers.MTEYottaFluidTankHandler;
@@ -46,9 +47,13 @@ public final class GalaxiaGTAttachmentRegistration {
             "Station Controller Hatch",
             1,
             false);
+        new MTEGalaxiaSpaceElevator(
+            MTEGalaxiaSpaceElevator.ID,
+            "multimachine.galaxia.space_elevator",
+            "Galaxia Space Elevator");
         mteHatchAutoStationMaintenance = new MTEHatchStationMaintenance(
             MTEHatchStationMaintenance.ID + 1,
-            "hatch.station_controller",
+            "hatch.station_controller.auto",
             "Station Controller Auto Hatch",
             1,
             true);

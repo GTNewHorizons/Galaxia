@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
@@ -31,6 +32,7 @@ import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.client.gui.mui.SafePhantomItemSlot;
 import com.gtnewhorizons.galaxia.client.render.rockets.ModuleDrawable;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.dimension.OrbitDimensions;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemRocketSchematic;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.assembly.RocketBuildStatus;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
@@ -136,6 +138,20 @@ final class SiloPanels {
                     state,
                     stats));
         }
+
+        list.child(sectionHeader("galaxia.silo.destination.orbits"));
+        for (OrbitDimensions.Orbit orbit : OrbitDimensions.all()) {
+            RocketDestination target = RocketDestination.ofDimension(orbit.dimensionId());
+            list.child(
+                destinationRow(
+                    () -> target,
+                    orbit::displayName,
+                    () -> StatCollector.translateToLocal("galaxia.silo.destination.crewed_only"),
+                    () -> -1,
+                    destination,
+                    state,
+                    stats));
+        }
         panel.child(list);
         return panel;
     }
@@ -143,6 +159,9 @@ final class SiloPanels {
     private static String describe(RocketDestination destination, String siloName) {
         if (!destination.isSet()) return StatCollector.translateToLocal("galaxia.silo.destination.none");
         if (destination.isSilo()) return siloName.isEmpty() ? "?" : siloName;
+        Optional<OrbitDimensions.Orbit> orbit = OrbitDimensions.byDimension(destination.dimension());
+        if (orbit.isPresent()) return orbit.get()
+            .displayName();
         DimensionEnum dimension = DimensionEnum.fromId(destination.dimension());
         return dimension != null ? StatCollector.translateToLocal(dimension.getTranslationKey()) : "?";
     }

@@ -21,6 +21,9 @@ galaxia.dimension.frozen_belt=Frozen Belt
 galaxia.dimension.mars=Mars
 galaxia.dimension.tenebrae=Tenebrae
 galaxia.dimension.moon=Moon
+galaxia.dimension.orbit=%s Orbit
+galaxia.config.category.dimensions=Dimensions
+galaxia.config.dimensions.orbit_base_id=Orbit dimension base id
 
 #### Celestial Bodies
 galaxia.celestial.novum_caelum=Novum Caelum
@@ -245,6 +248,24 @@ tile.tenebrae_lava.name=Tenebraen Lava
 # Blocks - "Tile Entities"
 tile.module_controller.name=Station Module Controller
 tile.station_controller.name=Station Controller
+tile.station_terminal.name=Station Terminal
+galaxia.chat.station_terminal.no_station=This terminal is not inside a station room
+galaxia.gui.station_terminal.title=Station Terminal - %s
+galaxia.gui.station_terminal.summary=Rooms %s, sealed %s, upkeep %s EU/t
+galaxia.gui.station_terminal.no_rooms=No rooms are connected yet
+galaxia.gui.station_terminal.select=Click a room on the map
+galaxia.gui.station_terminal.at=At %s, %s, %s
+galaxia.gui.station_terminal.not_formed=Structure incomplete
+galaxia.gui.station_terminal.open=Open to space
+galaxia.gui.station_terminal.sealed=Sealed
+galaxia.gui.station_terminal.breached=Breached
+galaxia.gui.station_terminal.oxygen=Oxygen %s%%
+galaxia.gui.station_terminal.volume=Volume %s
+galaxia.gui.station_terminal.walls=Wall blocks %s
+galaxia.gui.station_terminal.upkeep=Upkeep %s EU/t
+galaxia.gui.station_terminal.attachments=Attachments %s, plugs %s
+galaxia.gui.station_terminal.energy=Energy %s / %s EU
+galaxia.gui.station_terminal.fluids=Fluids %s / %s L
 tile.station_room.name=Station Room
 tile.silo_controller.name=Rocket Silo
 tile.module_assembler_controller.name=Module Assembler
@@ -436,6 +457,10 @@ galaxia.gui.station_controller.oxygen=Oxygen
 galaxia.gui.station_controller.structure=Structure
 galaxia.gui.station_controller.targets=Targets
 galaxia.gui.station_controller.refresh=Refresh
+galaxia.gui.hammer_cannon.title=Hammer Cannon
+galaxia.gui.hammer_target.title=Hammer Target
+galaxia.gui.station_controller.no_energy=No energy sources
+galaxia.gui.station_controller.energy=Energy: %s / %s EU (%s sources)
 galaxia.gui.station_controller.no_fluid_tanks=No fluid tanks
 galaxia.gui.station_controller.fluid_storage=Fluid Storage
 
@@ -909,6 +934,7 @@ galaxia.silo.destination.current=Current: %s
 galaxia.silo.destination.silos=Silos
 galaxia.silo.destination.no_silos=No other silos built yet
 galaxia.silo.destination.surfaces=Land anywhere (crewed only)
+galaxia.silo.destination.orbits=Stop in orbit (crewed only)
 galaxia.silo.destination.crewed_only=Lands the capsule, no silo
 galaxia.silo.destination.none=none
 galaxia.silo.destination.unknown_body=Unknown body
@@ -958,3 +984,21 @@ galaxia.gantry.terminal.hint=§8Sneak + right click with an empty hand to change
 
 # Multiblocks
 galaxia.chat.multiblock.facing=Facing: %s
+
+GT5U.gui.text.recipe_result.galaxia_no_exhaust_in_orbit=Exhaust has nowhere to go in orbit
+tile.elevator_cable.name=Space Elevator Cable
+tile.elevator_dock.name=Space Elevator Dock
+galaxia.elevator_dock.linked=Elevator connected below
+galaxia.elevator_dock.unlinked=No elevator below this dock
+galaxia.chat.elevator_dock.not_in_orbit=Elevator docks only work in orbit
+galaxia.elevator.type=Space Elevator
+galaxia.elevator.desc1=Carries items and fluids from its input buses and hatches up to the dock above it
+galaxia.elevator.desc2=The dock has to be in the orbit of the same planet, above the 3x3 chunks around the cable
+galaxia.elevator.desc3=Players ride up to the dock, energy is not carried
+galaxia.elevator.desc4=From motor tier %s it also carries players to any dimension
+galaxia.elevator.motor_tier=Motor tier %s
+galaxia.elevator.no_dock=No dock in orbit above the 3x3 chunks around the cable
+galaxia.elevator.dock=Dock in orbit at %s, %s, %s
+galaxia.elevator.ride=Ride up to the dock
+galaxia.elevator.travel=Travel to the chosen dimension
+galaxia.elevator.travel_target=Destination: %s

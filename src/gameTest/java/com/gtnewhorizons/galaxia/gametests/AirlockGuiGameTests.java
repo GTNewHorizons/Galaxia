@@ -22,8 +22,12 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockDoor;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockStationTerminal;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
+import com.gtnewhorizons.galaxia.registry.celestial.station.gui.StationGraphWidget;
+import com.gtnewhorizons.galaxia.registry.celestial.station.gui.StationGuiFactory;
 import com.gtnewhorizons.horizonqa.api.GameTestHelper;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTest;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTestHolder;
@@ -145,6 +149,59 @@ public final class AirlockGuiGameTests {
             .awaitServer("door closes on the server", () -> fixture.assertOpen(false))
             .awaitClient("controller shows the closed state", c -> fixture.assertClientOpen(false))
             .succeed();
+    }
+
+    /**
+     * Product contract: a station terminal inside any room shows every room of the station and the airlocks between
+     * them, and the starmap opens the same screen from anywhere.
+     */
+    @GameTest(timeoutTicks = 800)
+    public static void terminalShowsTheStationGraph(GameTestHelper helper) {
+        Fixture fixture = new Fixture();
+        CelestialAsset.ID[] station = new CelestialAsset.ID[1];
+        ClientTest.scenario(helper)
+            .defaultTimeoutTicks(300)
+            .server("build rooms", () -> fixture.build(helper))
+            .awaitServer("rooms ready", fixture::assertRoomsReady)
+            .server("put a terminal inside the first room", () -> {
+                fixture.place(3, 1, 3, GalaxiaBlocksEnum.STATION_TERMINAL.get(), 0);
+                fixture.room(0)
+                    .markStructureDirty();
+            })
+            .awaitServer("the terminal does not break the room", fixture::assertRoomsReady)
+            .server("use the terminal", () -> {
+                station[0] = BlockStationTerminal
+                    .stationAround(fixture.world, fixture.x + 3, 129, fixture.z + 3).assetId;
+                fixture.player.setPositionAndUpdate(fixture.x + 2.5, 129, fixture.z + 2.5);
+                GalaxiaBlocksEnum.STATION_TERMINAL.get()
+                    .onBlockActivated(
+                        fixture.world,
+                        fixture.x + 3,
+                        129,
+                        fixture.z + 3,
+                        fixture.player,
+                        1,
+                        0.5f,
+                        0.5f,
+                        0.5f);
+            })
+            .awaitClient("terminal shows both rooms and their airlock", c -> assertGraph(2, 1))
+            .capture("station-terminal")
+            .server("close the terminal", () -> fixture.player.closeScreen())
+            .client("open the station from the starmap", c -> StationGuiFactory.INSTANCE.openClient(station[0]))
+            .awaitClient("the starmap opens the same station", c -> assertGraph(2, 1))
+            .capture("station-terminal-starmap")
+            .succeed();
+    }
+
+    private static void assertGraph(int rooms, int links) {
+        GuiTestSupport.requireScreen("galaxia:station_terminal");
+        if (!(GuiTestSupport.findNamedWidget("station.graph") instanceof StationGraphWidget graph)) {
+            throw new AssertionError("Station graph is missing");
+        }
+        if (graph.roomCount() != rooms || graph.linkCount() != links) {
+            throw new AssertionError("Graph shows " + graph.roomCount() + " rooms and " + graph.linkCount() + " links");
+        }
     }
 
     /** Bug regression: ordinary door items build the orientation selected by the airlock, not the player's facing. */
@@ -395,15 +452,14 @@ public final class AirlockGuiGameTests {
         private boolean unexpectedDoorState;
 
         void prepare(GameTestHelper helper) {
-            world = helper.getWorld();
-            player = (EntityPlayerMP) world.playerEntities.get(0);
-            x = (int) player.posX + 32;
-            z = (int) player.posZ;
-            double oldX = player.posX, oldY = player.posY, oldZ = player.posZ;
+            player = (EntityPlayerMP) helper.getWorld().playerEntities.get(0);
+            x = 32;
+            z = 0;
+            // Stations only form in orbit
+            world = OrbitTestSupport.enterOrbit(helper, player, x - 4.5, 131, z + 3.5);
             helper.afterTest(() -> {
                 player.closeScreen();
                 for (BlockPos pos : placed) world.setBlockToAir(pos.x(), pos.y(), pos.z());
-                player.setPositionAndUpdate(oldX, oldY, oldZ);
             });
         }
 

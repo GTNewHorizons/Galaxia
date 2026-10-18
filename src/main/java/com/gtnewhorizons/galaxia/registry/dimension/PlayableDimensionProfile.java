@@ -16,7 +16,7 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
 public record PlayableDimensionProfile(DimensionEnum dimension, Class<? extends WorldProvider> provider,
     boolean keepLoaded, double airResistance, boolean removeSpeedCancelation, List<CelestialBody> celestialBodies,
     EffectBuilder effects, EnumTiers tier, ResourceLocation[] skyboxTexture, List<Block> validSpaceStationBlocks,
-    WorldGenerationAdapter worldGenerationAdapter) {
+    WorldGenerationAdapter worldGenerationAdapter, boolean hasOrbit, ResourceLocation orbitView) {
 
     public PlayableDimensionProfile {
         if (dimension == null) throw new IllegalStateException("Playable dimension requires a dimension enum");
@@ -52,6 +52,8 @@ public record PlayableDimensionProfile(DimensionEnum dimension, Class<? extends 
         private ResourceLocation[] skyboxTexture;
         private final List<Block> validSpaceStationBlocks = new ArrayList<>();
         private WorldGenerationAdapter worldGenerationAdapter;
+        private boolean hasOrbit = true;
+        private ResourceLocation orbitView;
 
         private Builder(DimensionEnum dimension) {
             this.dimension = dimension;
@@ -102,6 +104,18 @@ public record PlayableDimensionProfile(DimensionEnum dimension, Class<? extends 
             return this;
         }
 
+        /** Picture of the body seen from its orbit, the starmap icon when not set */
+        public Builder orbitView(ResourceLocation value) {
+            this.orbitView = value;
+            return this;
+        }
+
+        /** No orbit dimension is generated above this body */
+        public Builder forbidOrbit() {
+            this.hasOrbit = false;
+            return this;
+        }
+
         public Builder worldGeneration(WorldGenerationAdapter value) {
             this.worldGenerationAdapter = value;
             return this;
@@ -119,7 +133,9 @@ public record PlayableDimensionProfile(DimensionEnum dimension, Class<? extends 
                 tier,
                 skyboxTexture,
                 validSpaceStationBlocks,
-                worldGenerationAdapter);
+                worldGenerationAdapter,
+                hasOrbit,
+                orbitView);
         }
     }
 }

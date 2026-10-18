@@ -19,7 +19,6 @@ import com.gtnewhorizons.galaxia.compat.structure.IExtendedStructureElement;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
-import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehaviorWithAttachments;
 
 import gregtech.api.GregTechAPI;
@@ -35,12 +34,11 @@ public class DockBehavior implements IStationBehaviorWithAttachments {
     }
 
     @Override
-    public IStructureDefinition<TileStation> buildStructureDefinition(DimensionDef def) {
+    public IStructureDefinition<TileStation> buildStructureDefinition(List<Block> stationBlocks) {
         return ArbitraryShapeDefinition.<TileStation>builder()
             .addControllerBlock(GalaxiaBlocksEnum.STATION_CONTROLLER.get())
             .addElements(
-                def.validSpaceStationBlocks()
-                    .stream()
+                stationBlocks.stream()
                     .filter(b -> ALL_VALID_DOCK_BLOCKS.contains(b))
                     .map(b -> IExtendedStructureElement.extend(b, StructureUtility.ofBlock(b, 0))))
             .addElement(GalaxiaStructureUtility.<TileStation>ofTileAdderCheckHintsAnyMeta((dock, tileEntity) -> {

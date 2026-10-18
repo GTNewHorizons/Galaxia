@@ -36,6 +36,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
+import com.gtnewhorizons.galaxia.registry.celestial.station.gui.StationGuiFactory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
@@ -325,6 +326,11 @@ public final class StarmapAssetActions {
 
         void openStationManagement(OrbitalAssetUiState state, CelestialAsset asset) {
             if (asset == null || !asset.isManageable()) return;
+            // Built stations are run from their terminal, the starmap opens the same screen
+            if (asset.kind == CelestialAsset.Kind.STATION) {
+                StationGuiFactory.INSTANCE.openClient(asset.assetId);
+                return;
+            }
             StationManagementScreen.open(asset.assetId, view.creativeBuildMode());
         }
 

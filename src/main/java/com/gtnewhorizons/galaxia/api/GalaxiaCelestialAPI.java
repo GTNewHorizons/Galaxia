@@ -13,6 +13,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.dimension.OrbitDimensions;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 
 public final class GalaxiaCelestialAPI {
@@ -51,7 +52,12 @@ public final class GalaxiaCelestialAPI {
         return CelestialRegistry.findByDimension(dimension);
     }
 
+    /**
+     * Celestial body a dimension belongs to. Orbit dimensions belong to the body they circle
+     */
     public static Optional<CelestialObject> findByDimension(int dimensionId) {
+        Optional<OrbitDimensions.Orbit> orbit = OrbitDimensions.byDimension(dimensionId);
+        if (orbit.isPresent()) return orbit.map(OrbitDimensions.Orbit::body);
         DimensionEnum dimension = DimensionEnum.fromId(dimensionId);
         return dimension == null ? Optional.empty() : findByDimension(dimension);
     }

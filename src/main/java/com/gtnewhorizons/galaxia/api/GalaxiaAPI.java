@@ -28,6 +28,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
+import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializer;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
@@ -415,7 +416,13 @@ public final class GalaxiaAPI {
             if (pos == null) continue;
             if (!(world.getTileEntity(pos.x(), pos.y(), pos.z()) instanceof TileStation tileStation)) continue;
 
+            // Every room of the station protects, not just the one with the main controller
             if (tileStation.isInside(x, y, z)) return tileStation;
+            StationGraph graph = tileStation.getGraph();
+            if (graph == null) continue;
+            for (TileStation room : graph.iterateOver(TileStation.class)) {
+                if (room.isStructureValid() && room.isInside(x, y, z)) return room;
+            }
         }
 
         return null;

@@ -40,8 +40,9 @@ public enum GalaxiaBehaviors {
         return behavior;
     }
 
+    /** Behavior with the given id, a plain room for ids that no longer exist */
     public static GalaxiaBehaviors byId(int id) {
-        return BY_ID[id];
+        return id >= 0 && id < BY_ID.length && BY_ID[id] != null ? BY_ID[id] : ROOM;
     }
 
     public static GalaxiaBehaviors of(IStationBehavior behavior) {

@@ -29,6 +29,7 @@ public enum EnumTextures {
     PLEURA("textures/environment/planets/pleura.png"),
     TENEBRAE("textures/environment/planets/tenebrae.png"),
     OVERWORLD("textures/environment/planets/overworld.png"),
+    MOON("textures/environment/planets/moon.png"),
 
     CRAB_NEBULA("textures/environment/nebula/crab_nebula.png"),
     DUMBBELL_NEBULA("textures/environment/nebula/dumbbell_nebula.png"),

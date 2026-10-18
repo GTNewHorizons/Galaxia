@@ -22,9 +22,11 @@ import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.ModulePickerScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
 import com.gtnewhorizons.galaxia.compat.GTCompat;
+import com.gtnewhorizons.galaxia.compat.ae2.QuantumLinkRules;
 import com.gtnewhorizons.galaxia.compat.gt.GalaxiaCasingTextures;
 import com.gtnewhorizons.galaxia.compat.gt.GalaxiaGTAttachmentRegistration;
 import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData;
+import com.gtnewhorizons.galaxia.core.config.ConfigMain;
 import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
 import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
 import com.gtnewhorizons.galaxia.handlers.CelestialEventHandler;
@@ -40,6 +42,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.GalaxiaAtmosphereFluids;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerTarget;
+import com.gtnewhorizons.galaxia.registry.celestial.station.gui.StationGuiFactory;
 import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializer;
 import com.gtnewhorizons.galaxia.registry.effects.GalaxiaEffects;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
@@ -65,6 +68,9 @@ public class CommonProxy {
     // etc, and register them with the
     // GameRegistry." (Remove if not needed)
     public void preInit(FMLPreInitializationEvent event) {
+        // Dimension ids come from the config, so it is read before anything is registered, on servers too
+        ConfigMain.RegisterGalaxiaConfig();
+        StationGuiFactory.init();
         CelestialServerRuntime celestialRuntime = CelestialServerRuntime.create();
         TeamEventHandler teamEventHandler = new TeamEventHandler(celestialRuntime);
         GalaxiaAtmosphereFluids.init();
@@ -75,6 +81,8 @@ public class CommonProxy {
         FMLBusRegister(new CelestialEventHandler(celestialRuntime));
         FMLBusRegister(new ServerTickTaskQueue());
         FMLBusRegister(new RocketFlights());
+        // Quantum bridges are checked again now and then, after relays come or go
+        if (Loader.isModLoaded("appliedenergistics2")) FMLBusRegister(new QuantumLinkRules.Ticker());
         FMLBusRegister(new TetherEventHandler());
         FMLBusRegister(teamEventHandler);
 

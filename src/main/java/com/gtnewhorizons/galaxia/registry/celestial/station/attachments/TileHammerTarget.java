@@ -80,7 +80,7 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget> im
 
         @Override
         public BlockPos getPosition(TileHammerTarget attachment) {
-            return attachment.here;
+            return attachment.here();
         }
 
         @Override
@@ -110,18 +110,28 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget> im
     private final List<IInventory> inventory = new ArrayList<>();
     private final ResourceFilter<ItemStackWrapper> filter = ResourceFilter.forItems();
     private @Nullable StationGraph graph;
-    private final BlockPos here;
 
     public TileHammerTarget() {
         super();
-        here = new BlockPos(xCoord, yCoord, zCoord);
+    }
+
+    /** Coordinates are only set once the tile is placed, so the position is read when needed */
+    private BlockPos here() {
+        return new BlockPos(xCoord, yCoord, zCoord);
+    }
+
+    @Override
+    protected boolean checkStructure() {
+        // The chests are found again on every check
+        inventory.clear();
+        return super.checkStructure();
     }
 
     @Override
     public void onStructureDisformed() {
         super.onStructureDisformed();
         if (graph != null) {
-            graph.removeAttachment(here);
+            graph.removeAttachment(here());
         }
     }
 
@@ -183,14 +193,14 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget> im
         BooleanSyncValue structureValidSync = new BooleanSyncValue(() -> structureValid, () -> structureValid);
         syncManager.syncValue("structureValid", 0, structureValidSync);
 
-        return new ModularPanel("galaxia:station_room").size(210, 130)
+        return new ModularPanel("galaxia:hammer_target").size(210, 130)
             .child(
-                IKey.str(StatCollector.translateToLocal("galaxia.gui.station_room.title"))
+                IKey.str(StatCollector.translateToLocal("galaxia.gui.hammer_target.title"))
                     .asWidget()
                     .pos(8, 8))
             .child(new TextWidget<>(IKey.dynamic(() -> {
                 boolean valid = structureValidSync.getBoolValue();
-                String structure = StatCollector.translateToLocal("galaxia.gui.station_room.structure");
+                String structure = StatCollector.translateToLocal("galaxia.gui.station_controller.structure");
                 String status = StatCollector
                     .translateToLocal(valid ? "galaxia.gui.status_valid" : "galaxia.gui.status_invalid");
                 EnumChatFormatting color = valid ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;

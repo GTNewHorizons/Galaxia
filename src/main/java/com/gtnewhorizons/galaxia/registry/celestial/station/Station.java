@@ -18,6 +18,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
+import com.gtnewhorizons.galaxia.registry.dimension.OrbitDimensions;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -73,7 +74,8 @@ public class Station extends CelestialAsset implements IDistributedInventory {
 
     @Override
     public boolean tryConsumeEnergy(long powerDraw) {
-        return drawEnergy(powerDraw) > 0;
+        // A station that only gets part of its upkeep counts as unpowered
+        return drawEnergy(powerDraw) >= powerDraw;
     }
 
     public long drawEnergy(long maxPowerDraw) {
@@ -153,10 +155,11 @@ public class Station extends CelestialAsset implements IDistributedInventory {
         MinecraftServer server = MinecraftServer.getServer();
         if (server == null) return null;
 
-        int dimId = celestialObjectKey.requireRegisteredBodyId()
-            .dimension()
-            .getId();
-        WorldServer world = server.worldServerForDimension(dimId);
+        // Stations only exist in the orbit of their body
+        OrbitDimensions.Orbit orbit = OrbitDimensions.ofBody(celestialObjectKey)
+            .orElse(null);
+        if (orbit == null) return null;
+        WorldServer world = server.worldServerForDimension(orbit.dimensionId());
         if (world == null) return null;
 
         if (controller.getTE(world) instanceof TileStation s) return s;

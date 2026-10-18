@@ -218,6 +218,13 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
     }
 
     @Override
+    protected boolean checkStructure() {
+        // The chests are found again on every check
+        inventory.clear();
+        return super.checkStructure();
+    }
+
+    @Override
     public void onStructureDisformed() {
         super.onStructureDisformed();
         if (graph != null) {
@@ -303,12 +310,12 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
 
         return new ModularPanel("galaxia:hammer_cannon").size(210, 130)
             .child(
-                IKey.str(StatCollector.translateToLocal("galaxia.gui.station_room.title"))
+                IKey.str(StatCollector.translateToLocal("galaxia.gui.hammer_cannon.title"))
                     .asWidget()
                     .pos(8, 8))
             .child(new TextWidget<>(IKey.dynamic(() -> {
                 boolean valid = structureValidSync.getBoolValue();
-                String structure = StatCollector.translateToLocal("galaxia.gui.station_room.structure");
+                String structure = StatCollector.translateToLocal("galaxia.gui.station_controller.structure");
                 String status = StatCollector
                     .translateToLocal(valid ? "galaxia.gui.status_valid" : "galaxia.gui.status_invalid");
                 EnumChatFormatting color = valid ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;

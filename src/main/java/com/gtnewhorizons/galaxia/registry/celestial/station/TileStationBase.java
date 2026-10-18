@@ -18,12 +18,12 @@ import com.cleanroommc.modularui.factory.PosGuiData;
 import com.gtnewhorizon.structurelib.alignment.IAlignmentLimits;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.gt.MTEStationPlug;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
+import com.gtnewhorizons.galaxia.registry.dimension.OrbitDimensions;
 import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
 
 import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
@@ -145,9 +145,9 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
         return true;
     }
 
+    /** Stations can only be built in orbit */
     public boolean isValidDimension(World world) {
-        return GalaxiaCelestialAPI.findByDimension(world.provider.dimensionId)
-            .isPresent();
+        return OrbitDimensions.isOrbit(world.provider.dimensionId);
     }
 
     @Override
@@ -179,7 +179,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
     public void invalidate() {
         super.invalidate();
         for (BlockPos b : airlocks) {
-            TileEntityAirlock airlock = b.getTE(worldObj);
+            TileEntityAirlock airlock = b.getTE(worldObj, TileEntityAirlock.class);
             if (airlock == null) continue;
 
             airlock.untrackStationController(this.here);
@@ -239,7 +239,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
             }
 
             for (BlockPos airlockPos : room.airlocks) {
-                TileEntityAirlock airlock = airlockPos.getTE(worldObj);
+                TileEntityAirlock airlock = airlockPos.getTE(worldObj, TileEntityAirlock.class);
                 if (airlock == null || !airlock.isOpen()) continue;
 
                 if (airlock.isExternalConnection()) {
@@ -251,7 +251,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
 
                 for (BlockPos neighborPos : airlock.getStationControllers()) {
                     if (neighborPos.equals(room.here)) continue;
-                    TileStationBase<?> neighbor = neighborPos.getTE(worldObj);
+                    TileStationBase<?> neighbor = neighborPos.getTE(worldObj, TileStationBase.class);
                     if (neighbor == null || !neighbor.structureValid) continue;
                     if (component.add(neighbor)) {
                         queue.add(neighbor);

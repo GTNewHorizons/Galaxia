@@ -19,7 +19,6 @@ import com.gtnewhorizons.galaxia.compat.structure.IExtendedStructureElement;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
-import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehaviorWithAttachments;
 
 import gregtech.api.GregTechAPI;
@@ -40,16 +39,15 @@ public class PowerRoomBehavior implements IStationBehaviorWithAttachments {
     }
 
     @Override
-    public IStructureDefinition<TileStation> buildStructureDefinition(DimensionDef def) {
+    public IStructureDefinition<TileStation> buildStructureDefinition(List<Block> stationBlocks) {
         return ArbitraryShapeDefinition.<TileStation>builder()
             .addControllerBlock(GalaxiaBlocksEnum.STATION_CONTROLLER.get())
             .addElements(
-                def.validSpaceStationBlocks()
-                    .stream()
+                stationBlocks.stream()
                     .filter(b -> ALL_VALID_POWER_ROOM_BLOCKS.contains(b))
                     .map(b -> IExtendedStructureElement.extend(b, StructureUtility.ofBlock(b, 0))))
             .addInteriorElement(GalaxiaStructureUtility.ofTileAdderCheckHints((room, tileEntity) -> {
-                if (tileEntity instanceof IGregTechTileEntity gtTE) {
+                if (tileEntity instanceof IGregTechTileEntity gtTE && gtTE.getMetaTileEntity() != null) {
                     if (StationAttachmentRegistry.isRegisteredMTE(
                         gtTE.getMetaTileEntity()
                             .getClass())) {
@@ -96,9 +94,14 @@ public class PowerRoomBehavior implements IStationBehaviorWithAttachments {
         })).pos(10, yOffset), new TextWidget<>(IKey.dynamic(() -> {
             var snap = station.getActiveGraphSyncHandler()
                 .getSnapshot();
-            if (snap.attachmentCount() == 0) return "No energy sources";
-            return "Energy: " + snap
-                .totalStored() + " / " + snap.totalCapacity() + " EU (" + snap.attachmentCount() + " src)";
+            if (snap.attachmentCount() == 0) {
+                return StatCollector.translateToLocal("galaxia.gui.station_controller.no_energy");
+            }
+            return StatCollector.translateToLocalFormatted(
+                "galaxia.gui.station_controller.energy",
+                snap.totalStored(),
+                snap.totalCapacity(),
+                snap.attachmentCount());
         })).pos(10, yOffset + 12));
     }
 }

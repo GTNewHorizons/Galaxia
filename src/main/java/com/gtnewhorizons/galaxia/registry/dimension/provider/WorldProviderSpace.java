@@ -43,6 +43,8 @@ public class WorldProviderSpace extends WorldProvider implements ICubicWorldProv
     protected DimensionEnum dimension;
     protected boolean hasSky = true;
     protected float cloudHeight = Integer.MIN_VALUE;
+    /** Height the sky darkens below, null for the world type's own */
+    protected Double horizon;
     protected boolean isSurface = true;
     protected int avgGround = 64;
     protected Vec3 fogColor = Vec3.createVectorHelper(0.2D, 0.1D, 0.4D);
@@ -273,6 +275,18 @@ public class WorldProviderSpace extends WorldProvider implements ICubicWorldProv
     @SideOnly(Side.CLIENT)
     public float getCloudHeight() {
         return cloudHeight;
+    }
+
+    /**
+     * Gets the height below which the sky turns dark. The dark sky plane is drawn as far below the player as they are
+     * above this height
+     *
+     * @return The horizon height
+     */
+    @Override
+    @SideOnly(Side.CLIENT)
+    public double getHorizon() {
+        return horizon != null ? horizon : super.getHorizon();
     }
 
     /**

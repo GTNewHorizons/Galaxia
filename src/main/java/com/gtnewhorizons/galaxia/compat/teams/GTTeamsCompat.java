@@ -24,9 +24,24 @@ public final class GTTeamsCompat {
         return team != null ? team.getTeamId() : null;
     }
 
+    /**
+     * Team of a player, null when the player has none
+     */
     public static UUID getTeam(@Nonnull EntityPlayer player) {
-        Team team = TeamManager.getTeamByPlayer(player.getUniqueID());
-        return team.getTeamId();
+        return getTeam(player.getUniqueID());
+    }
+
+    /**
+     * Team of a player by id, also works while the player is offline
+     *
+     * @param playerId The player's UUID
+     *
+     * @return The team id, or null when the player has no team
+     */
+    public static UUID getTeam(UUID playerId) {
+        if (playerId == null) return null;
+        Team team = TeamManager.getTeamByPlayer(playerId);
+        return team != null ? team.getTeamId() : null;
     }
 
     @SideOnly(Side.CLIENT)

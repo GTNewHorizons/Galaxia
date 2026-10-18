@@ -11,10 +11,15 @@ import com.gtnewhorizons.galaxia.registry.block.machine.BlockOxygenFiller;
 import com.gtnewhorizons.galaxia.registry.block.machine.BlockOxygenPylon;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockController;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockDoor;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockElevatorCable;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockElevatorDock;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockFumarole;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockHammerCannon;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockHammerTarget;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockStationController;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockStationTerminal;
+import com.gtnewhorizons.galaxia.registry.block.special.TileElevatorCable;
+import com.gtnewhorizons.galaxia.registry.block.special.TileElevatorDock;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityFumarole;
 import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenCollector;
 import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenFiller;
@@ -59,9 +64,12 @@ public enum GalaxiaBlocksEnum {
     OXYGEN_COLLECTOR(new BlockOxygenCollector(), TileEntityOxygenCollector.class, "oxygen_collector"),
     OXYGEN_FILLER(new BlockOxygenFiller(), TileEntityOxygenFiller.class, "oxygen_filler"),
     OXYGEN_PYLON(new BlockOxygenPylon(), TileEntityOxygenPylon.class, "oxygen_pylon"),
+    ELEVATOR_CABLE(new BlockElevatorCable(), TileElevatorCable.class, "elevator_cable"),
+    ELEVATOR_DOCK(new BlockElevatorDock(), TileElevatorDock.class, "elevator_dock"),
 
     // NON-TE
     SPACE_STATION_GLASS(new BlockCasing("space_station/space_station_glass").glass(), "space_station_glass"),
+    STATION_TERMINAL(new BlockStationTerminal(), "station_terminal"),
     AIRLOCK_DOOR(new BlockAirlockDoor(), "airlock_door"),
     COOLING_COIL(new BlockCasing("space_station/cooling_coil"), "cooling_coil"),
     HEATING_COIL(new BlockCasing("space_station/heating_coil"), "heating_coil"),
