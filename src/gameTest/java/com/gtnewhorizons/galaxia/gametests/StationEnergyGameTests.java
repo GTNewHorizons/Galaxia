@@ -13,6 +13,9 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.compat.gt.station.MTEHatchStationOutputBus;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockDoor;
+import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.horizonqa.api.GameTestHelper;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTest;
@@ -59,6 +62,134 @@ public final class StationEnergyGameTests {
                     .getStoredEU() <= 0) throw new AssertionError("Machine inside got nothing from the dynamo");
             })
             .succeed();
+    }
+
+    /**
+     * Bug regression: an energy hatch in one room's wall stays a way into the station while the other rooms are
+     * rechecked and the station is put together again, instead of being lost until the player refreshes the room
+     */
+    @GameTest(timeoutTicks = 1200)
+    public static void wallHatchSurvivesOtherRoomChecks(GameTestHelper helper) {
+        TwoRooms fixture = new TwoRooms();
+        ClientTest.scenario(helper)
+            .defaultTimeoutTicks(300)
+            .server(
+                "build two rooms joined by an airlock, a hatch in the first room's wall",
+                () -> fixture.build(helper))
+            .awaitServer("both rooms share the station and its wall hatch", fixture::assertLinked)
+            .server(
+                "recheck the second room",
+                () -> fixture.watch(
+                    () -> fixture.room(12)
+                        .markStructureDirty()))
+            .awaitServer("the hatch stays after the second room's check", fixture::assertKept)
+            .server(
+                "put the station together again",
+                () -> fixture.watch(
+                    () -> fixture.room(0)
+                        .getGraph()
+                        .rebuild()))
+            .awaitServer("the hatch stays after the station is put together", fixture::assertKept)
+            .succeed();
+    }
+
+    private static final class TwoRooms {
+
+        /** In the west wall of the first room */
+        static final BlockPos WALL_ENERGY = new BlockPos(0, 3, 3);
+        private static final int WATCH_TICKS = 220;
+
+        private final List<BlockPos> placed = new ArrayList<>();
+        private World world;
+        private EntityPlayerMP player;
+        private final int x = 208;
+        private final int y = 128;
+        private final int z = 16;
+        private long watchEnd;
+        private boolean lost;
+
+        void build(GameTestHelper helper) {
+            player = (EntityPlayerMP) helper.getWorld().playerEntities.get(0);
+            player.capabilities.isFlying = true;
+            player.sendPlayerAbilities();
+            world = OrbitTestSupport.enterOrbit(helper, player, x + 3.5, y + 2, z + 3.5);
+            helper.afterTest(() -> { for (BlockPos pos : placed) world.setBlockToAir(pos.x(), pos.y(), pos.z()); });
+            for (int dx = 0; dx <= 6; dx++) for (int dy = 0; dy <= 6; dy++) for (int dz = 0; dz <= 12; dz++) {
+                if (dx == 0 || dx == 6 || dy == 0 || dy == 6 || dz == 0 || dz == 6 || dz == 12) {
+                    place(new BlockPos(dx, dy, dz), GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(), 0);
+                }
+            }
+            for (int dx = 1; dx <= 5; dx++) for (int dy = 1; dy <= 5; dy++) {
+                boolean frame = dx == 1 || dx == 5 || dy == 1 || dy == 5;
+                place(
+                    new BlockPos(dx, dy, 6),
+                    frame ? GalaxiaBlocksEnum.AIRLOCK_CASING.get() : GalaxiaBlocksEnum.AIRLOCK_DOOR.get(),
+                    frame ? 0 : BlockAirlockDoor.encodeMeta(false, BlockAirlockDoor.ORIENT_Z));
+            }
+            place(new BlockPos(1, 3, 6), GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0);
+            ((TileEntityAirlock) world.getTileEntity(x + 1, y + 3, z + 6)).setFacing(ForgeDirection.NORTH);
+            placeMachine(WALL_ENERGY, ItemList.Hatch_Energy_IV.get(1));
+            for (int dz : new int[] { 0, 12 }) {
+                place(new BlockPos(3, 3, dz), GalaxiaBlocksEnum.STATION_CONTROLLER.get(), 0);
+                room(dz).setOwner(GTTeamsCompat.getTeam(player));
+                room(dz).setFacing(dz == 0 ? ForgeDirection.SOUTH : ForgeDirection.NORTH);
+            }
+        }
+
+        void assertLinked() {
+            if (!room(0).isStructureValid() || !room(12).isStructureValid()) {
+                throw new AssertionError("Both rooms must form");
+            }
+            StationGraph graph = room(0).getGraph();
+            if (graph == null || graph != room(12).getGraph()) throw new AssertionError("Rooms are not one station");
+            if (!graph.hasAttachment(at(WALL_ENERGY))) throw new AssertionError("Wall hatch is not attached");
+        }
+
+        /** Runs a change, then watches the wall hatch for a while */
+        void watch(Runnable change) {
+            change.run();
+            watchEnd = world.getTotalWorldTime() + WATCH_TICKS;
+            lost = false;
+        }
+
+        void assertKept() {
+            StationGraph graph = room(0).getGraph();
+            if (graph == null || !graph.hasAttachment(at(WALL_ENERGY))) lost = true;
+            if (lost) throw new AssertionError("The station lost the wall hatch");
+            if (world.getTotalWorldTime() < watchEnd) throw new AssertionError("Still watching the wall hatch");
+        }
+
+        TileStation room(int dz) {
+            return (TileStation) world.getTileEntity(x + 3, y + 3, z + dz);
+        }
+
+        BlockPos at(BlockPos pos) {
+            return new BlockPos(x + pos.x(), y + pos.y(), z + pos.z());
+        }
+
+        void place(BlockPos pos, Block block, int meta) {
+            BlockPos at = at(pos);
+            if (!placed.contains(at)) placed.add(at);
+            world.setBlock(at.x(), at.y(), at.z(), block, meta, 3);
+        }
+
+        void placeMachine(BlockPos pos, ItemStack machine) {
+            BlockPos at = at(pos);
+            if (!placed.contains(at)) placed.add(at);
+            world.setBlockToAir(at.x(), at.y(), at.z());
+            ((ItemMachines) machine.getItem()).placeBlockAt(
+                machine,
+                player,
+                world,
+                at.x(),
+                at.y(),
+                at.z(),
+                ForgeDirection.UP.ordinal(),
+                0.5F,
+                0.5F,
+                0.5F,
+                machine.getItemDamage());
+        }
     }
 
     private static final class Fixture {

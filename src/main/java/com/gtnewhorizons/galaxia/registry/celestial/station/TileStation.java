@@ -722,22 +722,8 @@ public class TileStation extends TileStationBase<TileStation> {
     }
 
     @Override
-    public void onAttachmentConnected(BlockPos pos, Object attachment) {
-        if (!(behavior instanceof IStationBehaviorWithAttachments attacher)) return;
-        if (!attachments.contains(pos)) {
-            attachments.add(pos);
-            markDirty();
-            attacher.onAttachmentsChanged(this, pos, true);
-        }
-    }
-
-    @Override
     public void onAttachmentDisconnected(BlockPos pos) {
-        if (!(behavior instanceof IStationBehaviorWithAttachments attacher)) return;
-        if (attachments.remove(pos)) {
-            markDirty();
-            attacher.onAttachmentsChanged(this, pos, false);
-        }
+        if (attachments.remove(pos)) markDirty();
     }
 
     @Override

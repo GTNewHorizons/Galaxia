@@ -129,12 +129,16 @@ public final class StationStorageGameTests {
             })
             .server("open the output bus", () -> fixture.open(Fixture.OUTPUT_BUS))
             .awaitClient("output bus screen open", c -> requireOpenScreen())
-            .capture("station-input-bus")
+            .capture("station-output-bus")
             .server("close the output bus", () -> fixture.player.closeScreen())
             .server("open the output hatch", () -> fixture.open(Fixture.OUTPUT_HATCH))
             .awaitClient("output hatch screen open", c -> requireOpenScreen())
-            .capture("station-input-hatch")
+            .capture("station-output-hatch")
             .server("close the output hatch", () -> fixture.player.closeScreen())
+            .server("open the input bus", () -> fixture.open(Fixture.INPUT_BUS))
+            .awaitClient("input bus screen open", c -> requireOpenScreen())
+            .capture("station-input-bus")
+            .server("close the input bus", () -> fixture.player.closeScreen())
             .server(
                 "open the vault",
                 () -> GalaxiaBlocksEnum.STATION_ITEM_VAULT.get()

@@ -111,9 +111,7 @@ public abstract class TileStationDevice extends TileEntity
         }
         // Energy from cables comes in on its own, the station only makes up for what is missing
         StationGraph graph = room.getGraph();
-        if (graph != null && energy < getEnergyCapacity()) {
-            energy += graph.drawEnergy(Math.min(getEnergyCapacity() - energy, getEnergyUsage() * 2));
-        }
+        if (energy < getEnergyUsage()) topUp(graph);
         if (worldObj.getTotalWorldTime() % SUPPLY_INTERVAL == 0) {
             Station storage = station.storage(worldObj, xCoord, yCoord, zCoord);
             if (storage != null) supply(storage);
@@ -128,6 +126,13 @@ public abstract class TileStationDevice extends TileEntity
             consumeInput();
             setState(true, "galaxia.gui.station_device.working");
         }
+        // Refilled after the work, so a machine the station keeps up with shows a full buffer
+        topUp(graph);
+    }
+
+    private void topUp(StationGraph graph) {
+        if (graph == null || energy >= getEnergyCapacity()) return;
+        energy += graph.drawEnergy(Math.min(getEnergyCapacity() - energy, getEnergyUsage() * 2));
     }
 
     private void setState(boolean nowWorking, String nowStatus) {

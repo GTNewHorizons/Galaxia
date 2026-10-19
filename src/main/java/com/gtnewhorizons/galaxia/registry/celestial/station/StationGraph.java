@@ -357,11 +357,8 @@ public final class StationGraph {
     public void rebuild() {
         var oldPieces = new Object2ObjectOpenHashMap<>(pieces);
 
-        // Detach all current attachments before clearing
-        attachments.forEach((pos, ra) -> {
-            onDetached(ra, this);
-            fireListeners(l -> l.onAttachmentDisconnected(pos));
-        });
+        // Detach all current attachments before clearing. The rooms keep them and register them again once rebuilt
+        attachments.forEach((pos, ra) -> onDetached(ra, this));
 
         clearData();
         BlockPos start = controller.here;
@@ -412,10 +409,8 @@ public final class StationGraph {
             .filter(p -> p != null && p != controller)
             .forEach(p -> fireListeners(l -> l.onPieceDisconnected(p, null)));
 
-        attachments.forEach((pos, ra) -> {
-            onDetached(ra, this);
-            fireListeners(l -> l.onAttachmentDisconnected(pos));
-        });
+        // The rooms keep their attachments for the graph that replaces this one
+        attachments.forEach((pos, ra) -> onDetached(ra, this));
 
         clearData();
         listeners.clear();

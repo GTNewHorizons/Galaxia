@@ -3,6 +3,10 @@ package com.gtnewhorizons.galaxia.compat.gt.station;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
 
+import com.cleanroommc.modularui.factory.PosGuiData;
+import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.screen.UISettings;
+import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
@@ -60,5 +64,10 @@ public class MTEHatchStationInputBus extends MTEHatchOutputBus {
             changed = true;
         }
         if (changed) markDirty();
+    }
+
+    @Override
+    public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings uiSettings) {
+        return new StationInputBusGui(this).build(data, syncManager, uiSettings);
     }
 }

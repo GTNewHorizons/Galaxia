@@ -6,6 +6,7 @@ import java.util.List;
 import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 import net.minecraftforge.fluids.FluidRegistry;
@@ -53,6 +54,7 @@ public final class StationDevicesGameTests {
             .server("a cable feeds a coil", fixture::assertCableEnergy)
             .server("charge the station and stock what the machines use", fixture::stock)
             .awaitServer("every machine works and the room is liveable", fixture::assertLiveable)
+            .awaitServer("the station fills a machine's buffer", fixture::assertFullBuffer)
             .server("open the oxygenator", () -> fixture.open(Fixture.OXYGENATOR))
             .awaitClient("oxygenator screen open", c -> requireDeviceScreen())
             .capture("station-oxygenator")
@@ -136,6 +138,17 @@ public final class StationDevicesGameTests {
         void assertCableEnergy() {
             long accepted = ((IEnergyConnected) tile(COOLING_COIL)).injectEnergyUnits(ForgeDirection.UP, 32, 1);
             if (accepted != 1) throw new AssertionError("Coil refused energy from a cable");
+        }
+
+        /** A working machine the station keeps up with shows a full energy bar */
+        void assertFullBuffer() {
+            TileStationDevice oxygenator = (TileStationDevice) tile(OXYGENATOR);
+            NBTTagCompound tag = new NBTTagCompound();
+            oxygenator.writeToNBT(tag);
+            if (tag.getLong("energy") != oxygenator.getEnergyCapacity()) {
+                throw new AssertionError(
+                    "Oxygenator holds " + tag.getLong("energy") + " of " + oxygenator.getEnergyCapacity() + " EU");
+            }
         }
 
         void stock() {
