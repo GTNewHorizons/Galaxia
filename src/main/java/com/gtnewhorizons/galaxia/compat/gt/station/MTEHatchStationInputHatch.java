@@ -2,8 +2,15 @@ package com.gtnewhorizons.galaxia.compat.gt.station;
 
 import static gregtech.api.enums.Textures.BlockIcons.FLUID_IN_SIGN;
 
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
+import net.minecraftforge.common.util.ForgeDirection;
 
+import com.cleanroommc.modularui.factory.PosGuiData;
+import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.screen.UISettings;
+import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 
@@ -55,6 +62,37 @@ public class MTEHatchStationInputHatch extends MTEHatchOutput {
         mFluid.amount -= (int) stored;
         if (mFluid.amount <= 0) mFluid = null;
         markDirty();
+    }
+
+    /** True while the hatch stands inside a station */
+    public boolean isLinked() {
+        return link.storage(getBaseMetaTileEntity()) != null;
+    }
+
+    // The output modes and fluid lock of a GT output hatch do not apply, every fluid goes into the station
+
+    @Override
+    public boolean outputsSteam() {
+        return true;
+    }
+
+    @Override
+    public boolean outputsLiquids() {
+        return true;
+    }
+
+    @Override
+    public boolean isFluidLocked() {
+        return false;
+    }
+
+    @Override
+    public void onScrewdriverRightClick(ForgeDirection side, EntityPlayer player, float x, float y, float z,
+        ItemStack tool) {}
+
+    @Override
+    public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings uiSettings) {
+        return new StationInputHatchGui(this).build(data, syncManager, uiSettings);
     }
 
     @Override

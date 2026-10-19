@@ -30,10 +30,15 @@ import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
+import com.gtnewhorizons.galaxia.registry.celestial.station.StationLookup;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 /**
- * Where a space elevator ends in orbit. Everything the elevator below sends up lands in its buffer, from where pipes
- * and the station take it. While an elevator is connected the cable is drawn hanging down from the dock
+ * Where a space elevator ends in orbit. Everything the elevator below sends up lands in its buffer. Standing in a
+ * station room it unloads the buffer into the station's shared storage, elsewhere pipes take it. While an elevator is
+ * connected the cable is drawn hanging down from the dock
  */
 public class TileElevatorDock extends TileEntity implements IInventory, IFluidHandler, IGuiHolder<PosGuiData> {
 
@@ -42,11 +47,14 @@ public class TileElevatorDock extends TileEntity implements IInventory, IFluidHa
     public static final int TANK_CAPACITY = 64_000;
     /** Ticks an elevator counts as connected after its last delivery cycle */
     private static final int LINK_TIMEOUT = 100;
+    /** Ticks between two unloads into the station */
+    private static final int UNLOAD_INTERVAL = 20;
 
     private final ItemStack[] inventory = new ItemStack[SLOTS];
     private final FluidTank[] tanks = new FluidTank[TANKS];
     private long lastLinkTime = Long.MIN_VALUE / 2;
     private boolean linked;
+    private final StationLookup station = new StationLookup();
 
     public TileElevatorDock() {
         for (int i = 0; i < TANKS; i++) tanks[i] = new FluidTank(TANK_CAPACITY);
@@ -67,11 +75,37 @@ public class TileElevatorDock extends TileEntity implements IInventory, IFluidHa
 
     @Override
     public void updateEntity() {
-        if (worldObj.isRemote || !linked) return;
-        if (worldObj.getTotalWorldTime() - lastLinkTime > LINK_TIMEOUT) {
+        if (worldObj.isRemote) return;
+        if (linked && worldObj.getTotalWorldTime() - lastLinkTime > LINK_TIMEOUT) {
             linked = false;
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
         }
+        if (worldObj.getTotalWorldTime() % UNLOAD_INTERVAL == 0) unloadIntoStation();
+    }
+
+    /** Hands the buffer over to the shared storage of the station the dock stands in */
+    private void unloadIntoStation() {
+        IDistributedInventory storage = station.storage(worldObj, xCoord, yCoord, zCoord);
+        if (storage == null) return;
+        boolean changed = false;
+        for (int slot = 0; slot < SLOTS; slot++) {
+            ItemStack stack = inventory[slot];
+            if (stack == null || stack.stackSize <= 0) continue;
+            long stored = storage.updateItems(ItemStackWrapper.of(stack), stack.stackSize);
+            if (stored <= 0) continue;
+            stack.stackSize -= (int) stored;
+            if (stack.stackSize <= 0) inventory[slot] = null;
+            changed = true;
+        }
+        for (FluidTank tank : tanks) {
+            FluidStack fluid = tank.getFluid();
+            if (fluid == null || fluid.amount <= 0) continue;
+            long stored = storage.updateFluids(FluidKey.of(fluid), fluid.amount);
+            if (stored <= 0) continue;
+            tank.drain((int) stored, true);
+            changed = true;
+        }
+        if (changed) markDirty();
     }
 
     /**

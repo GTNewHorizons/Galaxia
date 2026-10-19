@@ -4,6 +4,7 @@ import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 
@@ -16,6 +17,8 @@ import gregtech.common.gui.modularui.util.FilterSlot;
  * which GT leaves out when the slot is bound to a bus
  */
 class StationInputBusGui extends MTEHatchOutputBusGui {
+
+    private BooleanSyncValue linked;
 
     StationInputBusGui(MTEHatchStationInputBus hatch) {
         super(hatch);
@@ -32,5 +35,21 @@ class StationInputBusGui extends MTEHatchOutputBusGui {
             filter.tooltip(tooltip -> tooltip.add(IKey.lang("GT5U.bus.filterTooltip.empty")));
         }
         return flow;
+    }
+
+    @Override
+    protected void registerSyncValues(PanelSyncManager syncManager) {
+        super.registerSyncValues(syncManager);
+        linked = StationHatchStatus.sync(syncManager, ((MTEHatchStationInputBus) machine)::isLinked);
+    }
+
+    @Override
+    protected boolean supportsTopRightCornerFlow() {
+        return true;
+    }
+
+    @Override
+    protected Flow createTopRightCornerFlow() {
+        return StationHatchStatus.corner(linked);
     }
 }

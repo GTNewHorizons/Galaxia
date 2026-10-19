@@ -68,6 +68,11 @@ public class MTEHatchStationInputBus extends MTEHatchOutputBus {
         if (changed) markDirty();
     }
 
+    /** True while the bus stands inside a station */
+    public boolean isLinked() {
+        return link.storage(getBaseMetaTileEntity()) != null;
+    }
+
     @Override
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings uiSettings) {
         return new StationInputBusGui(this).build(data, syncManager, uiSettings);

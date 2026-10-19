@@ -1,23 +1,33 @@
 package com.gtnewhorizons.galaxia.registry.items.special;
 
+import java.util.List;
+
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.Item;
+import net.minecraft.item.ItemMap;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.network.Packet;
 import net.minecraft.world.World;
+import net.minecraft.world.storage.MapData;
 
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 
-public class ItemRocketSchematic extends Item {
+/**
+ * A rocket design on paper. It is a map to the game only so it is held in both hands and drawn like one, it has no
+ * map data of its own
+ */
+public class ItemRocketSchematic extends ItemMap {
 
     private static final String NBT_KEY_BLUEPRINT = "GalaxiaRocketBlueprint";
     private static final String NBT_KEY_NAME = "SchematicName";
 
     public ItemRocketSchematic() {
         setMaxStackSize(1);
+        setHasSubtypes(false);
         setUnlocalizedName("galaxia.rocket_schematic");
     }
 
@@ -80,4 +90,24 @@ public class ItemRocketSchematic extends Item {
         }
         return super.getItemStackDisplayName(stack);
     }
+
+    // region No map behind the paper
+
+    @Override
+    public MapData getMapData(ItemStack stack, World world) {
+        return null;
+    }
+
+    @Override
+    public void onUpdate(ItemStack stack, World world, Entity entity, int slot, boolean held) {}
+
+    @Override
+    public Packet func_150911_c(ItemStack stack, World world, EntityPlayer player) {
+        return null;
+    }
+
+    @Override
+    public void addInformation(ItemStack stack, EntityPlayer player, List<String> tooltip, boolean advanced) {}
+
+    // endregion
 }

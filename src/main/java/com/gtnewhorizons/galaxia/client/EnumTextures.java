@@ -163,6 +163,8 @@ public enum EnumTextures {
     GUI_LED_ON("textures/gui/common/led_on.png"),
     GUI_LED_OFF("textures/gui/common/led_off.png"),
     GUI_LED_WAIT("textures/gui/common/led_wait.png"),
+    GUI_STATION_LINK_ON("textures/gui/station/station_link_on.png"),
+    GUI_STATION_LINK_OFF("textures/gui/station/station_link_off.png"),
     ICON_SETTINGS("textures/gui/common/icons/settings.png"),
     GUI_RADAR_CELL("textures/gui/common/radar_cell.png"),
     ICON_OXYGEN_COLLECTOR("textures/blocks/machine/oxygen_collector_on.png"),

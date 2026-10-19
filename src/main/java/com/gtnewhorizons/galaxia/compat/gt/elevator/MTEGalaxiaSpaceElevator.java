@@ -102,6 +102,8 @@ public class MTEGalaxiaSpaceElevator extends TTMultiblockBase implements ISurviv
     /** Dock found above at the last delivery, null when there is none */
     private TileElevatorDock dock;
     private String dockStatus = "";
+    /** Whether the machine is switched on, for the screen */
+    private boolean turnedOn = true;
 
     /**
      * Structure definition of this machine. Built on first use, the casings it is made of come into being after this
@@ -294,8 +296,10 @@ public class MTEGalaxiaSpaceElevator extends TTMultiblockBase implements ISurviv
 
         dock = findDock();
         dockStatus = describeDock();
-        if (dock == null || !mMachine || motorTier <= 0 || !aBaseMetaTileEntity.isAllowedToWork()) return;
+        if (dock == null || !mMachine || motorTier <= 0) return;
+        // A formed elevator reaches its dock even while turned off, it only stops sending things up
         dock.markLinked();
+        if (!aBaseMetaTileEntity.isAllowedToWork()) return;
         if (deliver() && cable != null && cable.getAnimation() == TileElevatorCable.ClimberAnimation.NO_ANIMATION) {
             // The climber carries the delivery up the cable
             cable.startAnimation(TileElevatorCable.ClimberAnimation.DELIVER_ANIMATION);
@@ -481,7 +485,11 @@ public class MTEGalaxiaSpaceElevator extends TTMultiblockBase implements ISurviv
                     .setEnabled(widget -> !mMachine))
             .widget(new FakeSyncWidget.BooleanSyncer(() -> mMachine, val -> mMachine = val))
             .widget(new FakeSyncWidget.IntegerSyncer(() -> motorTier, val -> motorTier = val))
-            .widget(new FakeSyncWidget.StringSyncer(() -> dockStatus, val -> dockStatus = val));
+            .widget(new FakeSyncWidget.StringSyncer(() -> dockStatus, val -> dockStatus = val))
+            .widget(
+                new FakeSyncWidget.BooleanSyncer(
+                    () -> getBaseMetaTileEntity().isAllowedToWork(),
+                    val -> turnedOn = val));
         screenElements.widget(
             TextWidget
                 .dynamicString(() -> StatCollector.translateToLocalFormatted("galaxia.elevator.motor_tier", motorTier))
@@ -491,6 +499,10 @@ public class MTEGalaxiaSpaceElevator extends TTMultiblockBase implements ISurviv
             TextWidget.dynamicString(MTEGalaxiaSpaceElevator.this::dockLine)
                 .setDefaultColor(COLOR_TEXT_WHITE.get())
                 .setEnabled(widget -> mMachine));
+        screenElements.widget(
+            new TextWidget(StatCollector.translateToLocal("galaxia.elevator.turned_off"))
+                .setDefaultColor(COLOR_TEXT_WHITE.get())
+                .setEnabled(widget -> mMachine && !turnedOn));
     }
 
     private String dockLine() {

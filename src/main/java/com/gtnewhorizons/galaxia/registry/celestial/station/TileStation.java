@@ -52,7 +52,7 @@ public class TileStation extends TileStationBase<TileStation> {
 
     public static final int COIL_COOLING_FACTOR = 1;
     public static final int COIL_HEATING_FACTOR = 1;
-    public static final int OXYGEN_FACTOR = 1;
+    public static final int OXYGEN_FACTOR = 10;
     public static final int OXYGEN_DECAY_RATE = 1;
 
     public static final long BASE_EUT_PER_BLOCK = 8;

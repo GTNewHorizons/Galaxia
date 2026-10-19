@@ -154,6 +154,17 @@ public final class StationStorageGameTests {
             .awaitClient("input bus screen open", c -> requireOpenScreen())
             .capture("station-input-bus")
             .server("close the input bus", () -> fixture.player.closeScreen())
+            .server("open the input hatch", () -> fixture.open(Fixture.INPUT_HATCH))
+            .awaitClient("input hatch screen open", c -> requireOpenScreen())
+            .capture("station-input-hatch")
+            .server("close the input hatch", () -> fixture.player.closeScreen())
+            .server("a screwdriver does not change what the input hatch takes", () -> {
+                MTEHatchStationInputHatch hatch = (MTEHatchStationInputHatch) fixture.gt(Fixture.INPUT_HATCH)
+                    .getMetaTileEntity();
+                hatch.onScrewdriverRightClick(ForgeDirection.UP, fixture.player, 0.5f, 0.5f, 0.5f, null);
+                int taken = hatch.fill(new FluidStack(FluidRegistry.WATER, 1000), true);
+                if (taken != 1000) throw new AssertionError("Input hatch took " + taken + " L of water");
+            })
             .server(
                 "open the vault",
                 () -> GalaxiaBlocksEnum.STATION_ITEM_VAULT.get()

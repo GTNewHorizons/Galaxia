@@ -26,6 +26,8 @@ import gregtech.common.modularui2.widget.builder.ItemSlotGridBuilder;
  */
 class StationOutputBusGui extends MTEHatchBaseGui<MTEHatchStationOutputBus> {
 
+    private BooleanSyncValue linked;
+
     private static final int GRID = 4;
 
     StationOutputBusGui(MTEHatchStationOutputBus hatch) {
@@ -34,8 +36,10 @@ class StationOutputBusGui extends MTEHatchBaseGui<MTEHatchStationOutputBus> {
 
     @Override
     protected ParentWidget<?> createContentSection(ModularPanel panel, PanelSyncManager syncManager) {
+        // The slots reach the right edge, so they start below the status lamp
         Flow mainRow = Flow.row()
-            .coverChildren();
+            .coverChildren()
+            .marginTop(StationHatchStatus.LAMP_SPACE);
         mainRow.child(createStockSlots(syncManager));
         mainRow.child(createMiddleColumn(syncManager));
         mainRow.child(createHeldSlots(syncManager));
@@ -136,7 +140,7 @@ class StationOutputBusGui extends MTEHatchBaseGui<MTEHatchStationOutputBus> {
 
     @Override
     protected int getBasePanelHeight() {
-        return super.getBasePanelHeight() + SLOT_SIZE;
+        return super.getBasePanelHeight() + SLOT_SIZE + StationHatchStatus.LAMP_SPACE;
     }
 
     @Override
@@ -152,8 +156,18 @@ class StationOutputBusGui extends MTEHatchBaseGui<MTEHatchStationOutputBus> {
     }
 
     @Override
-    protected Flow createBottomLeftCornerFlow(ModularPanel panel, PanelSyncManager syncManager) {
-        return super.createBottomLeftCornerFlow(panel, syncManager)
-            .child(StationHatchStatus.create(syncManager, machine::isLinked));
+    protected void registerSyncValues(PanelSyncManager syncManager) {
+        super.registerSyncValues(syncManager);
+        linked = StationHatchStatus.sync(syncManager, machine::isLinked);
+    }
+
+    @Override
+    protected boolean supportsTopRightCornerFlow() {
+        return true;
+    }
+
+    @Override
+    protected Flow createTopRightCornerFlow() {
+        return StationHatchStatus.corner(linked);
     }
 }

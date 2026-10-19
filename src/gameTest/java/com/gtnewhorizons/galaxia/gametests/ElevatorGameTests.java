@@ -1,5 +1,9 @@
 package com.gtnewhorizons.galaxia.gametests;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Blocks;
@@ -9,9 +13,14 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.common.util.ForgeDirection;
 
+import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.compat.gt.elevator.MTEGalaxiaSpaceElevator;
+import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.special.TileElevatorDock;
+import com.gtnewhorizons.galaxia.registry.block.special.TileStationItemVault;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.horizonqa.api.GameTestHelper;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTest;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTestHolder;
@@ -29,9 +38,10 @@ public final class ElevatorGameTests {
 
     /**
      * Product contract: a space elevator on a planet sends what is put into its input bus up to the dock straight
-     * above it in that planet's orbit, and carries players up there.
+     * above it in that planet's orbit, and carries players up there. A dock inside a station room unloads into the
+     * station's storage.
      */
-    @GameTest(timeoutTicks = 1600)
+    @GameTest(timeoutTicks = 2400)
     public static void elevatorDeliversToTheDockInOrbit(GameTestHelper helper) {
         Fixture fixture = new Fixture();
         ClientTest.scenario(helper)
@@ -44,6 +54,13 @@ public final class ElevatorGameTests {
                 () -> fixture.bus()
                     .setInventorySlotContents(0, new ItemStack(Blocks.cobblestone, 32)))
             .awaitServer("the cobblestone reached the dock", fixture::assertDelivered)
+            .server("turn the elevator off", fixture::turnOff)
+            .awaitServer("the dock stays connected to the turned off elevator", fixture::assertStillLinked)
+            .server(
+                "turn the elevator on",
+                () -> fixture.elevator()
+                    .getBaseMetaTileEntity()
+                    .enableWorking())
             .server(
                 "look at the elevator",
                 () -> fixture.player.playerNetServerHandler
@@ -95,6 +112,8 @@ public final class ElevatorGameTests {
                 }
             })
             .capture("elevator-dock")
+            .server("build a station room with a vault around the dock", fixture::enclose)
+            .awaitServer("the dock unloaded into the station", fixture::assertUnloaded)
             .succeed();
     }
 
@@ -105,6 +124,8 @@ public final class ElevatorGameTests {
         private EntityPlayerMP player;
         private int x, y, z;
         private int dockX, dockY, dockZ;
+        private final List<BlockPos> roomBlocks = new ArrayList<>();
+        private long watchEnd;
 
         void build(GameTestHelper helper) {
             world = helper.getWorld();
@@ -120,7 +141,9 @@ public final class ElevatorGameTests {
             helper.afterTest(() -> {
                 OrbitTestSupport.moveTo(player, home, oldX, oldY, oldZ);
                 clear(world, x - 30, y - 45, z - 30, x + 30, y + 5, z + 30);
-                if (orbit != null) orbit.setBlockToAir(dockX, dockY, dockZ);
+                if (orbit == null) return;
+                orbit.setBlockToAir(dockX, dockY, dockZ);
+                for (BlockPos pos : roomBlocks) orbit.setBlockToAir(pos.x(), pos.y(), pos.z());
             });
             player.setPositionAndUpdate(x + 0.5, y + 4, z - 20.5);
 
@@ -176,6 +199,50 @@ public final class ElevatorGameTests {
             orbit.theChunkProviderServer.loadChunk(dockX >> 4, dockZ >> 4);
             orbit.setBlock(dockX, dockY, dockZ, GalaxiaBlocksEnum.ELEVATOR_DOCK.get(), 0, 3);
             if (elevator().findDock() == null) throw new AssertionError("Elevator does not see the dock");
+        }
+
+        void turnOff() {
+            elevator().getBaseMetaTileEntity()
+                .disableWorking();
+            watchEnd = orbit.getTotalWorldTime() + 160;
+        }
+
+        /** Watches the dock longer than a link lasts without a word from the elevator */
+        void assertStillLinked() {
+            TileElevatorDock dock = (TileElevatorDock) orbit.getTileEntity(dockX, dockY, dockZ);
+            if (!dock.isLinked()) throw new AssertionError("The dock lost the turned off elevator");
+            if (orbit.getTotalWorldTime() < watchEnd) throw new AssertionError("Still watching the dock");
+        }
+
+        /** A room with the dock in its middle and a vault beside it */
+        void enclose() {
+            int ox = dockX - 3, oy = dockY - 3, oz = dockZ - 3;
+            for (int dx = 0; dx <= 6; dx++) for (int dy = 0; dy <= 6; dy++) for (int dz = 0; dz <= 6; dz++) {
+                if (dx == 0 || dx == 6 || dy == 0 || dy == 6 || dz == 0 || dz == 6) {
+                    roomBlock(ox + dx, oy + dy, oz + dz, GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get());
+                }
+            }
+            roomBlock(dockX + 1, dockY, dockZ, GalaxiaBlocksEnum.STATION_ITEM_VAULT.get());
+            roomBlock(dockX, dockY, oz, GalaxiaBlocksEnum.STATION_CONTROLLER.get());
+            TileStation room = (TileStation) orbit.getTileEntity(dockX, dockY, oz);
+            room.setOwner(GTTeamsCompat.getTeam(player));
+            room.setFacing(ForgeDirection.SOUTH);
+        }
+
+        void assertUnloaded() {
+            TileElevatorDock dock = (TileElevatorDock) orbit.getTileEntity(dockX, dockY, dockZ);
+            for (int i = 0; i < dock.getSizeInventory(); i++) {
+                if (dock.getStackInSlot(i) != null)
+                    throw new AssertionError("Dock still holds " + dock.getStackInSlot(i));
+            }
+            TileStationItemVault vault = (TileStationItemVault) orbit.getTileEntity(dockX + 1, dockY, dockZ);
+            long held = vault.getAmount(ItemStackWrapper.of(new ItemStack(Blocks.cobblestone)));
+            if (held != 32) throw new AssertionError("Vault holds " + held + " cobblestone");
+        }
+
+        private void roomBlock(int bx, int by, int bz, Block block) {
+            roomBlocks.add(new BlockPos(bx, by, bz));
+            orbit.setBlock(bx, by, bz, block, 0, 3);
         }
 
         void assertDelivered() {

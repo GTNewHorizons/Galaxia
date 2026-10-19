@@ -11,6 +11,7 @@ import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.MouseData;
 import com.cleanroommc.modularui.utils.fluid.FluidInteractions;
+import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
 import com.cleanroommc.modularui.value.sync.FluidSlotSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
@@ -28,6 +29,8 @@ import gregtech.common.gui.modularui.hatch.base.MTEHatchBaseGui;
  */
 class StationOutputHatchGui extends MTEHatchBaseGui<MTEHatchStationOutputHatch> {
 
+    private BooleanSyncValue linked;
+
     private static final int GRID = 4;
 
     StationOutputHatchGui(MTEHatchStationOutputHatch hatch) {
@@ -36,8 +39,10 @@ class StationOutputHatchGui extends MTEHatchBaseGui<MTEHatchStationOutputHatch> 
 
     @Override
     protected ParentWidget<?> createContentSection(ModularPanel panel, PanelSyncManager syncManager) {
+        // The tanks reach the right edge, so they start below the status lamp
         Flow mainRow = Flow.row()
             .coverChildren()
+            .marginTop(StationHatchStatus.LAMP_SPACE)
             .crossAxisAlignment(Alignment.CrossAxis.START);
         mainRow.child(createStockSlots(syncManager));
         mainRow.child(
@@ -113,13 +118,7 @@ class StationOutputHatchGui extends MTEHatchBaseGui<MTEHatchStationOutputHatch> 
 
     @Override
     protected int getBasePanelHeight() {
-        return super.getBasePanelHeight() + SLOT_SIZE;
-    }
-
-    @Override
-    protected Flow createBottomLeftCornerFlow(ModularPanel panel, PanelSyncManager syncManager) {
-        return super.createBottomLeftCornerFlow(panel, syncManager)
-            .child(StationHatchStatus.create(syncManager, machine::isLinked));
+        return super.getBasePanelHeight() + SLOT_SIZE + StationHatchStatus.LAMP_SPACE;
     }
 
     /** What a tank keeps in stock, read only */
@@ -160,5 +159,21 @@ class StationOutputHatchGui extends MTEHatchBaseGui<MTEHatchStationOutputHatch> 
         public FluidStack drain(int maxDrain, boolean doDrain) {
             return null;
         }
+    }
+
+    @Override
+    protected void registerSyncValues(PanelSyncManager syncManager) {
+        super.registerSyncValues(syncManager);
+        linked = StationHatchStatus.sync(syncManager, machine::isLinked);
+    }
+
+    @Override
+    protected boolean supportsTopRightCornerFlow() {
+        return true;
+    }
+
+    @Override
+    protected Flow createTopRightCornerFlow() {
+        return StationHatchStatus.corner(linked);
     }
 }
