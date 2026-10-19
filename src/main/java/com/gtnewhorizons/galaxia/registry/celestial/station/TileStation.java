@@ -6,11 +6,13 @@ import java.util.UUID;
 
 import javax.annotation.Nullable;
 
+import net.minecraft.block.Block;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
@@ -19,12 +21,12 @@ import com.cleanroommc.modularui.value.sync.IntSyncValue;
 import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.Widget;
-import com.cleanroommc.modularui.widgets.ButtonWidget;
-import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizon.gtnhlib.util.CoordinatePacker;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
+import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.AssetStateSync;
@@ -33,11 +35,15 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.station.devices.TileStationDevice;
 import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializer;
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehavior;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehaviorWithAttachments;
 
+import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
+import gregtech.api.metatileentity.implementations.MTEHatchEnergy;
 import it.unimi.dsi.fastutil.longs.LongArraySet;
 import lombok.Getter;
 import lombok.Setter;
@@ -46,14 +52,8 @@ public class TileStation extends TileStationBase<TileStation> {
 
     public static final int COIL_COOLING_FACTOR = 1;
     public static final int COIL_HEATING_FACTOR = 1;
-    public static final int OXYGEN_FACTOR = 1;
+    public static final int OXYGEN_FACTOR = 10;
     public static final int OXYGEN_DECAY_RATE = 1;
-
-    public static final long COIL_COOLING_EUT = 1024;
-    public static final long COIL_HEATING_EUT = 1024;
-    public static final long OXYGENATOR_EUT = 1024;
-    public static final long AIR_PURIFIER_EUT = 1024;
-    public static final long WITHER_BLOCKER_EUT = 1024;
 
     public static final long BASE_EUT_PER_BLOCK = 8;
 
@@ -95,7 +95,7 @@ public class TileStation extends TileStationBase<TileStation> {
     private double oxygenLevel = 0;
 
     public int getCoolingModifier() {
-        return isSealed() ? (coolingCoils.size() * COIL_COOLING_FACTOR) : 0;
+        return isSealed() ? (working(coolingCoils) * COIL_COOLING_FACTOR) : 0;
     }
 
     public void addCoolingCoil(int x, int y, int z) {
@@ -103,7 +103,7 @@ public class TileStation extends TileStationBase<TileStation> {
     }
 
     public int getHeatingModifier() {
-        return isSealed() ? (heatingCoils.size() * COIL_HEATING_FACTOR) : 0;
+        return isSealed() ? (working(heatingCoils) * COIL_HEATING_FACTOR) : 0;
     }
 
     public void addHeatingCoil(int x, int y, int z) {
@@ -123,7 +123,7 @@ public class TileStation extends TileStationBase<TileStation> {
     }
 
     public boolean hasAirPurifier() {
-        return isSealed() && !airPurifiers.isEmpty();
+        return isSealed() && working(airPurifiers) > 0;
     }
 
     public void addAirPurifier(int x, int y, int z) {
@@ -131,11 +131,25 @@ public class TileStation extends TileStationBase<TileStation> {
     }
 
     public boolean hasWitherBlocker() {
-        return isSealed() && !witherBlockers.isEmpty();
+        return isSealed() && working(witherBlockers) > 0;
     }
 
     public void addWitherBlocker(int x, int y, int z) {
         witherBlockers.add(CoordinatePacker.pack(x, y, z));
+    }
+
+    /** How many of the machines at these places are doing their job */
+    private int working(LongArraySet devices) {
+        if (worldObj == null) return 0;
+        int count = 0;
+        for (long packed : devices) {
+            TileEntity te = worldObj.getTileEntity(
+                CoordinatePacker.unpackX(packed),
+                CoordinatePacker.unpackY(packed),
+                CoordinatePacker.unpackZ(packed));
+            if (te instanceof TileStationDevice device && device.isWorking()) count++;
+        }
+        return count;
     }
 
     public void setBehavior(IStationBehavior newBehavior) {
@@ -160,6 +174,12 @@ public class TileStation extends TileStationBase<TileStation> {
         reset();
     }
 
+    /** Takes an energy hatch in the wall as a way for energy into the station */
+    public boolean addEnergyInput(IGregTechTileEntity hatch) {
+        addAttachment(new BlockPos(hatch.getXCoord(), hatch.getYCoord(), hatch.getZCoord()));
+        return true;
+    }
+
     public void addAttachment(BlockPos pos) {
         if (!attachments.contains(pos)) {
             attachments.add(pos);
@@ -170,9 +190,11 @@ public class TileStation extends TileStationBase<TileStation> {
     public IStructureDefinition<TileStation> getStructureDefinition() {
         if (DEFINITION != null) return DEFINITION;
 
-        DEFINITION = behavior.buildStructureDefinition(
-            CelestialDimensionMaterializer.findDefinitionById(worldObj.provider.dimensionId)
-                .orElse(null));
+        // Dimensions without a definition allow no station blocks, so nothing forms there instead of crashing
+        List<Block> stationBlocks = CelestialDimensionMaterializer.findDefinitionById(worldObj.provider.dimensionId)
+            .map(DimensionDef::validSpaceStationBlocks)
+            .orElse(null);
+        DEFINITION = behavior.buildStructureDefinition(stationBlocks == null ? List.of() : stationBlocks);
         return DEFINITION;
     }
 
@@ -190,6 +212,28 @@ public class TileStation extends TileStationBase<TileStation> {
         }
         proximityBlocked = false;
         behavior.onStructureFormed(this);
+    }
+
+    @Override
+    protected void onStructureChecked() {
+        // Every check takes the room's blocks again, so the inner energy hatches are sorted out after each one
+        if (structureValid) dropInnerEnergyInputs();
+        super.onStructureChecked();
+    }
+
+    /**
+     * Energy hatches are a way for energy into the station only when built into the outer wall. Inside the room they
+     * belong to machines the station feeds, even though the wall check takes every GT block for a wall
+     */
+    private void dropInnerEnergyInputs() {
+        if (!(getStructureDefinition() instanceof ArbitraryShapeDefinition<?>def)) return;
+        for (BlockPos pos : List.copyOf(attachments)) {
+            if (!(pos.getTE(worldObj) instanceof IGregTechTileEntity hatch)
+                || !(hatch.getMetaTileEntity() instanceof MTEHatchEnergy)) continue;
+            if (def.facesOutside(worldObj, pos.x(), pos.y(), pos.z())) continue;
+            attachments.remove(pos);
+            if (graph != null) graph.removeAttachment(pos);
+        }
     }
 
     @Override
@@ -272,7 +316,7 @@ public class TileStation extends TileStationBase<TileStation> {
         if (bodyKey == null) {
             return;
         }
-        Station station = (Station) CelestialAsset.create(bodyKey, CelestialAsset.Kind.STATION, true);
+        if (!(CelestialAsset.create(bodyKey, CelestialAsset.Kind.STATION, true) instanceof Station station)) return;
         station.setController(this.here);
         backingStation = station.assetId;
         CelestialAssetStore.registerAsset(owner, station);
@@ -328,19 +372,15 @@ public class TileStation extends TileStationBase<TileStation> {
         if (!structureValid || proximityBlocked) return;
 
         super.tick();
-        Station station = getBackingStation();
+        // Only the main room holds the station asset, secondary rooms power themselves from it too
+        Station station = graph != null && graph.getController() != this ? graph.getController()
+            .getBackingStation() : getBackingStation();
         if (station == null) return;
 
-        if (station.tryConsumeEnergy(
-            oxygenators.size() * OXYGENATOR_EUT + coolingCoils.size() * COIL_COOLING_EUT
-                + heatingCoils.size() * COIL_HEATING_EUT
-                + airPurifiers.size() * AIR_PURIFIER_EUT
-                + witherBlockers.size() * WITHER_BLOCKER_EUT
-                + getStructureBlocksAmount() * BASE_EUT_PER_BLOCK)
-            && isSealed()) {
+        if (station.tryConsumeEnergy(getUpkeepEUt()) && isSealed()) {
 
             oxygenLevel = Math
-                .clamp(oxygenLevel + (double) (oxygenators.size() * OXYGEN_FACTOR) / getVolume(), 0.0, 100.0);
+                .clamp(oxygenLevel + (double) (working(oxygenators) * OXYGEN_FACTOR) / getVolume(), 0.0, 100.0);
         } else {
             oxygenLevel = Math.max(oxygenLevel - OXYGEN_DECAY_RATE, 0);
         }
@@ -351,6 +391,23 @@ public class TileStation extends TileStationBase<TileStation> {
             secondary.tick();
         }
         graph.tickAttachments();
+    }
+
+    /** Energy the room itself needs every tick, a share per wall block. Its machines draw their own */
+    public long getUpkeepEUt() {
+        return getStructureBlocksAmount() * BASE_EUT_PER_BLOCK;
+    }
+
+    /** Number of functional blocks of one kind in the room, for the station terminal */
+    public int countFunctionalBlocks(String kind) {
+        return switch (kind) {
+            case "oxygenator" -> oxygenators.size();
+            case "cooling_coil" -> coolingCoils.size();
+            case "heating_coil" -> heatingCoils.size();
+            case "air_purifier" -> airPurifiers.size();
+            case "wither_blocker" -> witherBlockers.size();
+            default -> 0;
+        };
     }
 
     public boolean isMainController() {
@@ -418,7 +475,8 @@ public class TileStation extends TileStationBase<TileStation> {
     }
 
     public @Nullable Station getBackingStation() {
-        return (Station) CelestialAssetStore.findAsset(backingStation);
+        if (backingStation == null) return null;
+        return CelestialAssetStore.findAsset(backingStation) instanceof Station station ? station : null;
     }
 
     @Override
@@ -427,24 +485,34 @@ public class TileStation extends TileStationBase<TileStation> {
             markStructureDirty();
         }
 
-        boolean isCtrl = controllerFlag == Role.MAIN;
         List<IStationBehavior> allBehaviors = GalaxiaBehaviors.getAll();
 
         BooleanSyncValue structureValidSync = new BooleanSyncValue(() -> structureValid, () -> structureValid);
         syncManager.syncValue("structureValid", 0, structureValidSync);
 
-        int panelHeight = 160;
-        ModularPanel panel = new ModularPanel("galaxia:station_controller").size(210, panelHeight)
-            .child(
-                IKey.str(StatCollector.translateToLocal("galaxia.gui.station_controller.title"))
-                    .asWidget()
-                    .pos(8, 8));
+        ModularPanel panel = GalaxiaGuiStyle.panel("galaxia:station_controller", 210, 160);
+        panel.child(
+            new Widget<>().size(6)
+                .pos(8, 10)
+                .background(
+                    new DynamicDrawable(
+                        () -> structureValidSync.getBoolValue() ? EnumTextures.GUI_LED_ON.getImage()
+                            : EnumTextures.GUI_LED_OFF.getImage())));
+        panel.child(
+            GalaxiaGuiStyle.title("galaxia.gui.station_controller.title")
+                .pos(18, 8));
 
         // Role indicator
-        panel.child(new TextWidget<>(IKey.dynamic(() -> {
-            String roleKey = controllerFlag == Role.MAIN ? "galaxia.gui.role.main" : "galaxia.gui.role.secondary";
-            return StatCollector.translateToLocal("galaxia.gui.role") + ": " + StatCollector.translateToLocal(roleKey);
-        })).pos(10, 22));
+        panel.child(
+            GalaxiaGuiStyle
+                .label(
+                    () -> StatCollector.translateToLocalFormatted(
+                        "galaxia.gui.role",
+                        StatCollector.translateToLocal(
+                            controllerFlag == Role.MAIN ? "galaxia.gui.role.main" : "galaxia.gui.role.secondary")),
+                    () -> GalaxiaGuiStyle.TEXT,
+                    1f)
+                .pos(10, 24));
 
         IntSyncValue behaviorIdx = new IntSyncValue(
             () -> allBehaviors.indexOf(TileStation.this.behavior),
@@ -452,38 +520,39 @@ public class TileStation extends TileStationBase<TileStation> {
         syncManager.syncValue("behaviorIdx", 0, behaviorIdx);
 
         panel.child(
-            IKey.str(StatCollector.translateToLocal("galaxia.gui.behavior"))
-                .asWidget()
-                .pos(10, 38));
-        panel.child(
-            new ButtonWidget<>().size(120, 16)
-                .pos(70, 36)
-                .overlay(IKey.dynamic(() -> {
-                    int idx = Math.max(0, behaviorIdx.getIntValue());
-                    if (idx < allBehaviors.size()) {
-                        return StatCollector.translateToLocal(
-                            allBehaviors.get(idx)
-                                .getUnlocalizedName());
-                    }
-                    return "???";
-                }))
-                .syncHandler(new InteractionSyncHandler().setOnMousePressed(mouseData -> {
-                    if (mouseData.mouseButton != 0 || worldObj.isRemote) return;
-                    int next = (behaviorIdx.getIntValue() + 1) % allBehaviors.size();
-                    setBehavior(allBehaviors.get(next));
-                    markStructureDirty();
-                })));
+            GalaxiaGuiStyle
+                .label(() -> StatCollector.translateToLocal("galaxia.gui.behavior"), () -> GalaxiaGuiStyle.TEXT, 1f)
+                .pos(10, 40));
+        panel.child(GalaxiaGuiStyle.textButton(IKey.dynamic(() -> {
+            int idx = Math.max(0, behaviorIdx.getIntValue());
+            if (idx < allBehaviors.size()) {
+                return StatCollector.translateToLocal(
+                    allBehaviors.get(idx)
+                        .getUnlocalizedName());
+            }
+            return "???";
+        }))
+            .size(120, 16)
+            .pos(80, 36)
+            .syncHandler(new InteractionSyncHandler().setOnMousePressed(mouseData -> {
+                if (mouseData.mouseButton != 0 || worldObj.isRemote) return;
+                int next = (behaviorIdx.getIntValue() + 1) % allBehaviors.size();
+                setBehavior(allBehaviors.get(next));
+                markStructureDirty();
+            })));
 
         // Structure status
-        int structY = isCtrl ? 40 : 58;
-        panel.child(new TextWidget<>(IKey.dynamic(() -> {
-            boolean valid = structureValidSync.getBoolValue();
-            String structure = StatCollector.translateToLocal("galaxia.gui.station_controller.structure");
-            String status = StatCollector
-                .translateToLocal(valid ? "galaxia.gui.status_valid" : "galaxia.gui.status_invalid");
-            EnumChatFormatting color = valid ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;
-            return structure + ": " + color + status + EnumChatFormatting.RESET;
-        })).pos(10, structY));
+        panel.child(
+            GalaxiaGuiStyle
+                .label(
+                    () -> StatCollector.translateToLocalFormatted(
+                        "galaxia.gui.station_controller.structure",
+                        StatCollector.translateToLocal(
+                            structureValidSync.getBoolValue() ? "galaxia.gui.status_valid"
+                                : "galaxia.gui.status_invalid")),
+                    () -> structureValidSync.getBoolValue() ? GalaxiaGuiStyle.GOOD : GalaxiaGuiStyle.BAD,
+                    1f)
+                .pos(10, 58));
 
         // Register station graph sync handler for all behaviors to consume
         StationGraphSyncHandler graphSyncHandler = new StationGraphSyncHandler();
@@ -492,7 +561,7 @@ public class TileStation extends TileStationBase<TileStation> {
         activeGraphSyncHandler = graphSyncHandler;
 
         // Behavior-specific widgets
-        int behaviorY = isCtrl ? 60 : 78;
+        int behaviorY = 74;
         List<Widget<?>> behaviourWidgets = behavior.buildBehaviourWidgets(this, syncManager, behaviorY);
         if (behaviourWidgets != null) {
             for (Widget<?> w : behaviourWidgets) {
@@ -501,20 +570,14 @@ public class TileStation extends TileStationBase<TileStation> {
         }
 
         // Refresh button
-        int buttonY = isCtrl ? 95 : 130;
         panel.child(
-            new ButtonWidget<>().size(190, 30)
-                .pos(10, buttonY)
-                .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.station_controller.refresh")))
+            GalaxiaGuiStyle.textButton(IKey.lang("galaxia.gui.station_controller.refresh"))
+                .size(194, 20)
+                .pos(8, 130)
                 .syncHandler(new InteractionSyncHandler().setOnMousePressed(mouseData -> {
                     if (mouseData.mouseButton != 0 || worldObj.isRemote) return;
                     markStructureDirty();
-                    if (graph != null) {
-                        graph.rebuild();
-                        for (TileStationBase<?> secondary : graph.iterateOver(TileStationBase.class)) {
-                            System.out.println(secondary.here);
-                        }
-                    }
+                    if (graph != null) graph.rebuild();
                 })));
 
         return panel;
@@ -661,22 +724,8 @@ public class TileStation extends TileStationBase<TileStation> {
     }
 
     @Override
-    public void onAttachmentConnected(BlockPos pos, Object attachment) {
-        if (!(behavior instanceof IStationBehaviorWithAttachments attacher)) return;
-        if (!attachments.contains(pos)) {
-            attachments.add(pos);
-            markDirty();
-            attacher.onAttachmentsChanged(this, pos, true);
-        }
-    }
-
-    @Override
     public void onAttachmentDisconnected(BlockPos pos) {
-        if (!(behavior instanceof IStationBehaviorWithAttachments attacher)) return;
-        if (attachments.remove(pos)) {
-            markDirty();
-            attacher.onAttachmentsChanged(this, pos, false);
-        }
+        if (attachments.remove(pos)) markDirty();
     }
 
     @Override
@@ -719,7 +768,7 @@ public class TileStation extends TileStationBase<TileStation> {
                 case 0 -> UNDEFINED;
                 case 1 -> MAIN;
                 case 2 -> SECONDARY;
-                default -> throw new IllegalArgumentException("Unknown Role ID: " + id);
+                default -> UNDEFINED;
             };
         }
     }

@@ -12,6 +12,8 @@ import com.cleanroommc.modularui.api.IMuiScreen;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.GalaxiaKeyBinds;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.GalacticMapWidget;
+import com.gtnewhorizons.galaxia.client.render.elevator.RenderElevatorCable;
+import com.gtnewhorizons.galaxia.client.render.elevator.RenderElevatorDock;
 import com.gtnewhorizons.galaxia.client.render.gear.PlayerGearRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryItemRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryPlacementPreviewHandler;
@@ -21,13 +23,15 @@ import com.gtnewhorizons.galaxia.client.render.rockets.RocketSchematicItemRender
 import com.gtnewhorizons.galaxia.client.render.rockets.RocketTrophyRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.SiloRenderer;
 import com.gtnewhorizons.galaxia.client.render.sky.GalaxiaSkyBootstrap;
-import com.gtnewhorizons.galaxia.core.config.ConfigMain;
 import com.gtnewhorizons.galaxia.core.nei.GalaxiaMultiblockHandler;
 import com.gtnewhorizons.galaxia.core.nei.IMCForNEI;
 import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
 import com.gtnewhorizons.galaxia.handlers.KeyHandler;
 import com.gtnewhorizons.galaxia.handlers.SkyUpdateHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockElevatorCable;
+import com.gtnewhorizons.galaxia.registry.block.special.TileElevatorCable;
+import com.gtnewhorizons.galaxia.registry.block.special.TileElevatorDock;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerTarget;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
@@ -54,7 +58,6 @@ public class ClientProxy extends CommonProxy {
     @Override
     public void preInit(FMLPreInitializationEvent event) {
         super.preInit(event);
-        ConfigMain.RegisterGalaxiaConfig();
         ForgeBusRegister(new ItemKineticTether.ClientEventHandler());
         CelestialClient.EventHandler clientStateLifecycle = new CelestialClient.EventHandler();
         ForgeBusRegister(clientStateLifecycle);
@@ -85,6 +88,11 @@ public class ClientProxy extends CommonProxy {
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntitySilo.class, new SiloRenderer());
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntityRocketTrophy.class, new RocketTrophyRenderer());
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntityGantry.class, new GantryRenderer());
+        RenderElevatorCable cableRenderer = new RenderElevatorCable();
+        BlockElevatorCable.renderID = RenderingRegistry.getNextAvailableRenderId();
+        RenderingRegistry.registerBlockHandler(cableRenderer);
+        ClientRegistry.bindTileEntitySpecialRenderer(TileElevatorCable.class, cableRenderer);
+        ClientRegistry.bindTileEntitySpecialRenderer(TileElevatorDock.class, new RenderElevatorDock());
 
         // Entities
         RenderingRegistry.registerEntityRenderingHandler(EntityRocket.class, new RocketRenderer());

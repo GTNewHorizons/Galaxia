@@ -11,6 +11,7 @@ import net.minecraft.world.Teleporter;
 import net.minecraft.world.WorldServer;
 
 import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
+import com.gtnewhorizons.galaxia.registry.dimension.OrbitDimensions;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocketSeat;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.flight.RocketDestination;
@@ -22,6 +23,9 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityS
  * Moves the crew of a departing rocket to its destination and puts them into a rocket descending onto the pad
  */
 public class RocketTeleportHelper {
+
+    /** Height a capsule stops at when it arrives in an orbit without a silo */
+    private static final int ORBIT_ARRIVAL_Y = 100;
 
     /** A crewed flight lands on its own after this many ticks if the descending rocket never touches down */
     private static final int CREWED_LANDING_TIMEOUT = 2400;
@@ -67,10 +71,12 @@ public class RocketTeleportHelper {
             lander.setPosition(x, padY + EntityRocket.LANDING_START_HEIGHT, z);
             lander.beginLanding(flight.getId(), padY);
         } else {
-            // No silo at the other end, the capsule touches down on the surface below the crew
+            // No silo at the other end, the capsule touches down on the surface below the crew. Orbits have no
+            // surface, there it stops at a fixed height
             x = rocket.posX;
             z = rocket.posZ;
-            padY = targetWorld.getTopSolidOrLiquidBlock((int) Math.floor(x), (int) Math.floor(z));
+            padY = OrbitDimensions.isOrbit(destination.dimension()) ? ORBIT_ARRIVAL_Y
+                : targetWorld.getTopSolidOrLiquidBlock((int) Math.floor(x), (int) Math.floor(z));
             lander.turnToLanderAndCache();
             lander.setPosition(x, padY + EntityRocket.LANDING_START_HEIGHT, z);
             lander.beginLanding(null, padY);

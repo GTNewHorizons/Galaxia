@@ -9,6 +9,7 @@ import java.util.Set;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialBodyProperties;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import com.gtnewhorizons.galaxia.registry.dimension.OrbitDimensions;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAssembly;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketStage;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
@@ -33,6 +34,8 @@ public final class RocketFlightPlanner {
     public static final double AEROBRAKE_FRACTION = 0.25;
     /** Fraction of orbital speed needed to hop between two silos on the same body */
     public static final double HOP_FRACTION = 0.4;
+    /** Moving within one orbit costs a fraction of a surface hop */
+    private static final double ORBIT_HOP_FRACTION = 0.1;
     /** Minimum thrust to weight ratio of the first stage */
     public static final double MIN_TWR = 1.2;
     /** Mass of a single cargo item in kg */
@@ -176,8 +179,9 @@ public final class RocketFlightPlanner {
         return BASE_TRAVEL_TICKS + (int) (rawDeltaV(fromDim, toDim) / DV_PER_TRAVEL_TICK);
     }
 
-    /** Surface gravity of a dimension in g, 1 when unknown */
+    /** Surface gravity of a dimension in g, 1 when unknown and 0 in orbit */
     public static double surfaceGravity(int dim) {
+        if (OrbitDimensions.isOrbit(dim)) return 0;
         return GalaxiaCelestialAPI.findByDimension(dim)
             .map(RocketFlightPlanner::gravity)
             .orElse(1.0);
@@ -190,9 +194,17 @@ public final class RocketFlightPlanner {
 
         CelestialObject a = from.get();
         CelestialObject b = to.get();
+        // A rocket already in orbit skips the climb, one heading for an orbit skips the landing
+        boolean fromOrbit = OrbitDimensions.isOrbit(fromDim);
+        boolean toOrbit = OrbitDimensions.isOrbit(toDim);
         if (a.key()
-            .equals(b.key())) return surfaceOrbitSpeed(a) * HOP_FRACTION;
-        return ascent(a) + transfer(a, b) + descent(b);
+            .equals(b.key())) {
+            if (fromOrbit && toOrbit) return surfaceOrbitSpeed(a) * HOP_FRACTION * ORBIT_HOP_FRACTION;
+            if (toOrbit) return ascent(a);
+            if (fromOrbit) return descent(a);
+            return surfaceOrbitSpeed(a) * HOP_FRACTION;
+        }
+        return (fromOrbit ? 0 : ascent(a)) + transfer(a, b) + (toOrbit ? 0 : descent(b));
     }
 
     private static double ascent(CelestialObject body) {

@@ -392,6 +392,50 @@ public final class RocketGameTests {
             .succeed();
     }
 
+    /** Product contract: a rocket blueprint is held in both hands like a map, an empty one as a blank sheet */
+    @GameTest(timeoutTicks = 800)
+    public static void blueprintIsHeldLikeAMap(GameTestHelper helper) {
+        EntityPlayerMP player = (EntityPlayerMP) helper.getWorld().playerEntities.get(0);
+        ItemStack drawn = new ItemStack(GalaxiaItemList.ITEM_ROCKET_SCHEMATIC.getItem());
+        ItemRocketSchematic.setBlueprint(drawn, new Fixture().design());
+        ItemStack blank = new ItemStack(GalaxiaItemList.ITEM_ROCKET_SCHEMATIC.getItem());
+        long[] heldSince = { -1 };
+        ClientTest.scenario(helper)
+            .client("first person", c -> {
+                var settings = Minecraft.getMinecraft().gameSettings;
+                int oldView = settings.thirdPersonView;
+                c.afterTest(() -> settings.thirdPersonView = oldView);
+                settings.thirdPersonView = 0;
+            })
+            .server("hold a blueprint, looking down a little", () -> {
+                int slot = player.inventory.currentItem;
+                ItemStack old = player.inventory.getStackInSlot(slot);
+                helper.afterTest(() -> player.inventory.setInventorySlotContents(slot, old));
+                player.inventory.setInventorySlotContents(slot, drawn);
+                player.playerNetServerHandler
+                    .setPlayerLocation(player.posX, player.posY, player.posZ, player.rotationYaw, 30);
+            })
+            .awaitClient("the blueprint is raised", c -> awaitHeld(heldSince, true))
+            .capture("blueprint-held")
+            .server("hold an empty blueprint", () -> {
+                heldSince[0] = -1;
+                player.inventory.setInventorySlotContents(player.inventory.currentItem, blank);
+            })
+            .awaitClient("the empty blueprint is raised", c -> awaitHeld(heldSince, false))
+            .capture("blueprint-empty")
+            .succeed();
+    }
+
+    /** Waits until the hand holds a blueprint, with or without a design, and it has been raised into view */
+    private static void awaitHeld(long[] heldSince, boolean withDesign) {
+        ItemStack held = Minecraft.getMinecraft().thePlayer.getHeldItem();
+        if (held == null || !(held.getItem() instanceof ItemRocketSchematic)
+            || ItemRocketSchematic.hasBlueprint(held) != withDesign) throw new AssertionError("Hand holds " + held);
+        long now = Minecraft.getMinecraft().theWorld.getTotalWorldTime();
+        if (heldSince[0] < 0) heldSince[0] = now;
+        if (now - heldSince[0] < 10) throw new AssertionError("Blueprint is still being raised");
+    }
+
     /**
      * Presses a named button through its own input handler
      *

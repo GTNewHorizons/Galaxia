@@ -15,4 +15,13 @@ public interface IEnergyHandler<T> extends IAttachmentHandler<T> {
     long getOutputRate(T attachment);
 
     long drawEnergy(T attachment, long amount);
+
+    /**
+     * Stores energy handed to the station
+     *
+     * @return Energy taken in, 0 for stores that only give
+     */
+    default long addEnergy(T attachment, long amount) {
+        return 0;
+    }
 }

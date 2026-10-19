@@ -30,11 +30,11 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.ListWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
 import com.gtnewhorizons.galaxia.client.render.rockets.ModuleDrawable;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartCategory;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor.PartTooltips;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor.RocketGuiStyle;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.fuel.FuelTankFrame;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.fuel.RocketFuel;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
@@ -173,26 +173,26 @@ public final class ModuleAssemblerUI {
                 .adapter(ByteBufAdapters.NBT)
                 .build());
 
-        ModularPanel panel = RocketGuiStyle.panel("galaxia:module_assembler", 358, 216);
+        ModularPanel panel = GalaxiaGuiStyle.panel("galaxia:module_assembler", 358, 216);
 
         panel.child(
-            RocketGuiStyle.title("galaxia.gui.module_assembler.title")
+            GalaxiaGuiStyle.title("galaxia.gui.module_assembler.title")
                 .pos(8, 7));
         panel.child(
             new Widget<>().size(6, 6)
                 .pos(344, 9)
                 .background(
                     new DynamicDrawable(
-                        () -> !view.formed ? EnumTextures.ROCKET_LED_OFF.getImage()
+                        () -> !view.formed ? EnumTextures.GUI_LED_OFF.getImage()
                             : view.status == TileEntityModuleAssembler.Status.MISSING_INPUTS.ordinal()
-                                ? EnumTextures.ROCKET_LED_WAIT.getImage()
-                                : EnumTextures.ROCKET_LED_ON.getImage())));
-        panel.child(RocketGuiStyle.label(() -> {
+                                ? EnumTextures.GUI_LED_WAIT.getImage()
+                                : EnumTextures.GUI_LED_ON.getImage())));
+        panel.child(GalaxiaGuiStyle.label(() -> {
             if (!view.formed) return StatCollector.translateToLocal("galaxia.gui.module_assembler.not_formed");
             return StatCollector.translateToLocal(
                 "galaxia.gui.module_assembler.status." + TileEntityModuleAssembler.Status.values()[view.status].name()
                     .toLowerCase());
-        }, () -> view.formed ? RocketGuiStyle.TEXT_DIM : RocketGuiStyle.BAD, 0.7f)
+        }, () -> view.formed ? GalaxiaGuiStyle.TEXT_DIM : GalaxiaGuiStyle.BAD, 0.7f)
             .alignment(Alignment.CenterRight)
             .size(200, 10)
             .pos(140, 7));
@@ -248,7 +248,7 @@ public final class ModuleAssemblerUI {
     private static ListWidget<IWidget, ?> createModuleGrid(Browser browser, IntSyncValue selected, View view) {
         ListWidget<IWidget, ?> list = new ListWidget<>();
         list.size(COLUMNS * CELL + 8, 164)
-            .background(EnumTextures.ROCKET_WELL.getImage())
+            .background(EnumTextures.GUI_WELL.getImage())
             .padding(3);
         browser.list = list;
         fillGrid(browser, selected, view);
@@ -336,8 +336,8 @@ public final class ModuleAssemblerUI {
         cell.child(
             new ButtonWidget<>().size(CELL, CELL)
                 .name("assembler.group." + frame.label)
-                .background(EnumTextures.ROCKET_BUTTON_SELECTED.getImage())
-                .hoverBackground(EnumTextures.ROCKET_BUTTON_HOVERED.getImage())
+                .background(EnumTextures.GUI_BUTTON_SELECTED.getImage())
+                .hoverBackground(EnumTextures.GUI_BUTTON_HOVERED.getImage())
                 .overlay(new ModuleDrawable(first, 3))
                 .tooltip(t -> {
                     t.addLine(
@@ -354,13 +354,13 @@ public final class ModuleAssemblerUI {
                     return true;
                 }));
         cell.child(
-            RocketGuiStyle.label(() -> "+", () -> RocketGuiStyle.ACCENT, 0.6f)
+            GalaxiaGuiStyle.label(() -> "+", () -> GalaxiaGuiStyle.ACCENT, 0.6f)
                 .pos(3, 2));
-        cell.child(RocketGuiStyle.label(() -> {
+        cell.child(GalaxiaGuiStyle.label(() -> {
             int stock = 0;
             for (IRocketPartDef def : group) stock += view.stockOf(def);
             return stock > 0 ? view.stockText(stock) : "";
-        }, () -> RocketGuiStyle.TEXT_TITLE, 0.6f)
+        }, () -> GalaxiaGuiStyle.TEXT_TITLE, 0.6f)
             .alignment(Alignment.BottomRight)
             .size(CELL - 3, CELL - 3)
             .pos(0, 0));
@@ -371,16 +371,16 @@ public final class ModuleAssemblerUI {
         IntSyncValue selected, View view) {
         int fold = 10;
         ParentWidget<?> frameBox = new ParentWidget<>().size(fold + group.size() * CELL + 4, CELL + 4)
-            .background(EnumTextures.ROCKET_BUTTON_SELECTED.getImage());
+            .background(EnumTextures.GUI_BUTTON_SELECTED.getImage());
         frameBox.child(
             new ButtonWidget<>().size(fold, CELL)
                 .pos(2, 2)
                 .name("assembler.group." + frame.label + ".fold")
-                .background(EnumTextures.ROCKET_BUTTON.getImage())
-                .hoverBackground(EnumTextures.ROCKET_BUTTON_HOVERED.getImage())
+                .background(EnumTextures.GUI_BUTTON.getImage())
+                .hoverBackground(EnumTextures.GUI_BUTTON_HOVERED.getImage())
                 .overlay(
                     IKey.str("-")
-                        .color(RocketGuiStyle.ACCENT))
+                        .color(GalaxiaGuiStyle.ACCENT))
                 .tooltip(t -> t.addLine(IKey.lang("galaxia.gui.module_assembler.group_fold")))
                 .onMousePressed(b -> {
                     if (b != 0) return false;
@@ -412,10 +412,10 @@ public final class ModuleAssemblerUI {
                     selected.setValue(def.id());
                     return true;
                 }));
-        cell.child(RocketGuiStyle.label(() -> {
+        cell.child(GalaxiaGuiStyle.label(() -> {
             int stock = view.stockOf(def);
             return stock > 0 ? view.stockText(stock) : "";
-        }, () -> RocketGuiStyle.TEXT_TITLE, 0.6f)
+        }, () -> GalaxiaGuiStyle.TEXT_TITLE, 0.6f)
             .alignment(Alignment.BottomRight)
             .size(CELL - 3, CELL - 3)
             .pos(0, 0));
@@ -425,34 +425,34 @@ public final class ModuleAssemblerUI {
     private static ParentWidget<?> createDetails(TileEntityModuleAssembler assembler, PosGuiData data,
         IntSyncValue selected, View view) {
         ParentWidget<?> details = new ParentWidget<>().size(132, 164)
-            .background(EnumTextures.ROCKET_WELL.getImage());
+            .background(EnumTextures.GUI_WELL.getImage());
 
         details.child(
             new Widget<>().size(40, 40)
                 .pos(4, 4)
                 .background(new ModuleDrawable(() -> selectedDef(selected), 2)));
-        details.child(RocketGuiStyle.label(() -> {
+        details.child(GalaxiaGuiStyle.label(() -> {
             IRocketPartDef def = selectedDef(selected);
             return def == null ? "" : def.name();
-        }, () -> RocketGuiStyle.TEXT, 0.65f)
+        }, () -> GalaxiaGuiStyle.TEXT, 0.65f)
             .width(82)
             .pos(46, 6));
-        details.child(RocketGuiStyle.label(() -> {
+        details.child(GalaxiaGuiStyle.label(() -> {
             IRocketPartDef def = selectedDef(selected);
             if (def == null) return "";
             return StatCollector.translateToLocalFormatted(
                 "galaxia.gui.module_assembler.stock",
                 view.stockText(view.stockOf(def)),
                 view.queuedOf(def));
-        }, () -> RocketGuiStyle.TEXT_DIM, 0.6f)
+        }, () -> GalaxiaGuiStyle.TEXT_DIM, 0.6f)
             .name("assembler.stock")
             .pos(46, 30));
 
         details.child(
-            RocketGuiStyle
+            GalaxiaGuiStyle
                 .label(
                     () -> StatCollector.translateToLocal("galaxia.gui.module_assembler.recipe"),
-                    () -> RocketGuiStyle.ACCENT,
+                    () -> GalaxiaGuiStyle.ACCENT,
                     0.6f)
                 .pos(4, 48));
 
@@ -484,7 +484,7 @@ public final class ModuleAssemblerUI {
                     })
                     .tooltipAutoUpdate(true)
                     .setEnabledIf(w -> inputAt(selected, index) != null));
-            details.child(RocketGuiStyle.label(() -> {
+            details.child(GalaxiaGuiStyle.label(() -> {
                 ModuleRecipe.Input input = inputAt(selected, index);
                 if (input == null) return "";
                 long have = index < view.have.length ? view.have[index] : 0;
@@ -492,7 +492,7 @@ public final class ModuleAssemblerUI {
             }, () -> {
                 ModuleRecipe.Input input = inputAt(selected, index);
                 long have = index < view.have.length ? view.have[index] : 0;
-                return input != null && have >= input.amount() ? RocketGuiStyle.GOOD : RocketGuiStyle.BAD;
+                return input != null && have >= input.amount() ? GalaxiaGuiStyle.GOOD : GalaxiaGuiStyle.BAD;
             }, 0.6f)
                 .pos(20, y + 3));
         }
@@ -501,7 +501,7 @@ public final class ModuleAssemblerUI {
         details.child(craftButton(assembler, selected, 1, "galaxia.gui.module_assembler.craft_one").pos(4, 144));
         details.child(craftButton(assembler, selected, 5, "galaxia.gui.module_assembler.craft_five").pos(46, 144));
         details.child(
-            RocketGuiStyle.textButton(
+            GalaxiaGuiStyle.textButton(
                 IKey.lang("galaxia.gui.module_assembler.cancel")
                     .scale(0.6f))
                 .size(40, 16)
@@ -524,7 +524,7 @@ public final class ModuleAssemblerUI {
 
     private static ButtonWidget<?> craftButton(TileEntityModuleAssembler assembler, IntSyncValue selected, int count,
         String langKey) {
-        return RocketGuiStyle.textButton(
+        return GalaxiaGuiStyle.textButton(
             IKey.lang(langKey)
                 .scale(0.6f))
             .size(40, 16)
@@ -538,7 +538,7 @@ public final class ModuleAssemblerUI {
 
     private static ButtonWidget<?> debugButton(TileEntityModuleAssembler assembler, PosGuiData data,
         IntSyncValue selected, int delta, String text, String langKey) {
-        ButtonWidget<?> button = RocketGuiStyle.textButton(IKey.str(text))
+        ButtonWidget<?> button = GalaxiaGuiStyle.textButton(IKey.str(text))
             .size(12, 12)
             .tooltip(t -> t.addLine(IKey.lang(langKey)))
             .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
@@ -556,10 +556,10 @@ public final class ModuleAssemblerUI {
     private static ButtonWidget<?> infiniteStockButton(TileEntityModuleAssembler assembler, PosGuiData data,
         View view) {
         // The glyph sits a pixel left of centre, the margin moves it clear of the frame
-        ButtonWidget<?> button = RocketGuiStyle.button()
+        ButtonWidget<?> button = GalaxiaGuiStyle.button()
             .overlay(
                 IKey.dynamic(() -> (view.infinite ? EnumChatFormatting.GREEN : "") + "∞")
-                    .color(RocketGuiStyle.TEXT)
+                    .color(GalaxiaGuiStyle.TEXT)
                     .shadow(true)
                     .asIcon()
                     .marginLeft(2))
@@ -583,26 +583,26 @@ public final class ModuleAssemblerUI {
 
     private static ParentWidget<?> createFooter(View view) {
         ParentWidget<?> footer = new ParentWidget<>().size(342, 20);
-        footer.child(RocketGuiStyle.label(() -> {
+        footer.child(GalaxiaGuiStyle.label(() -> {
             IRocketPartDef active = RocketPartRegistry.instance()
                 .getByKey(view.activeCraft);
             return active == null ? StatCollector.translateToLocal("galaxia.gui.module_assembler.no_craft")
                 : StatCollector.translateToLocalFormatted("galaxia.gui.module_assembler.crafting", active.name());
-        }, () -> RocketGuiStyle.TEXT, 0.6f)
+        }, () -> GalaxiaGuiStyle.TEXT, 0.6f)
             .pos(0, 0));
         footer.child(
-            RocketGuiStyle.bar(() -> view.progress, () -> RocketGuiStyle.ACCENT)
+            GalaxiaGuiStyle.bar(() -> view.progress, () -> GalaxiaGuiStyle.ACCENT)
                 .size(202, 6)
                 .pos(0, 9));
         footer.child(
-            RocketGuiStyle
+            GalaxiaGuiStyle
                 .label(
                     () -> StatCollector.translateToLocalFormatted(
                         "galaxia.gui.module_assembler.queue",
                         view.craftQueue,
                         view.deliveries,
                         view.inputBuses),
-                    () -> RocketGuiStyle.TEXT_DIM,
+                    () -> GalaxiaGuiStyle.TEXT_DIM,
                     0.6f)
                 .alignment(Alignment.CenterRight)
                 .size(132, 16)

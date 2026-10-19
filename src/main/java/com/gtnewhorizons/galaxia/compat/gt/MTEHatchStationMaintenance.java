@@ -54,17 +54,7 @@ public class MTEHatchStationMaintenance extends MTEHatchMaintenance {
 
     @Override
     public MetaTileEntity newMetaEntity(IGregTechTileEntity aTileEntity) {
-        return new MTEHatchStationMaintenance(mName, mTier, mDescriptionArray, mTextures, true);
-    }
-
-    @Override
-    public void onPostTick(IGregTechTileEntity aBaseMetaTileEntity, long aTick) {
-        super.onPostTick(aBaseMetaTileEntity, aTick);
-        if (aBaseMetaTileEntity.isServerSide() && graph != null
-            && graph.getController() == null
-            && aTick % 100L == 0L) {
-            mWrench = mScrewdriver = mSoftMallet = mHardHammer = mCrowbar = mSolderingTool = false;
-        }
+        return new MTEHatchStationMaintenance(mName, mTier, mDescriptionArray, mTextures, mAuto);
     }
 
     @Override

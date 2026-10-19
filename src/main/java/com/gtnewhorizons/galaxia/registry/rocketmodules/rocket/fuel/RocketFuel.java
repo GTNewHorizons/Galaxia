@@ -84,7 +84,7 @@ public final class RocketFuel {
         return containment;
     }
 
-    /** RGB colour used to tint tank cores */
+    /** RGB color used to tint tank cores */
     public int color() {
         return color;
     }

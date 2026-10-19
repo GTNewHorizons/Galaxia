@@ -16,7 +16,7 @@ import cpw.mods.fml.relauncher.SideOnly;
 
 /**
  * Draws rocket module models, both in the world and flat in GUIs. Models may have a group named {@value #CORE_GROUP}
- * that gets tinted with the module's fuel colour, so one frame model serves every fuel
+ * that gets tinted with the module's fuel color, so one frame model serves every fuel
  */
 @SideOnly(Side.CLIENT)
 public final class ModuleModelRenderer {
@@ -69,13 +69,13 @@ public final class ModuleModelRenderer {
      * models. More ambient and less directional light keeps the shape readable without the hard shadows
      */
     private static void softenLighting() {
-        GL11.glLightModel(GL11.GL_LIGHT_MODEL_AMBIENT, colour(GUI_AMBIENT));
-        FloatBuffer diffuse = colour(GUI_DIFFUSE);
+        GL11.glLightModel(GL11.GL_LIGHT_MODEL_AMBIENT, color(GUI_AMBIENT));
+        FloatBuffer diffuse = color(GUI_DIFFUSE);
         GL11.glLight(GL11.GL_LIGHT0, GL11.GL_DIFFUSE, diffuse);
         GL11.glLight(GL11.GL_LIGHT1, GL11.GL_DIFFUSE, diffuse);
     }
 
-    private static FloatBuffer colour(float brightness) {
+    private static FloatBuffer color(float brightness) {
         LIGHT_BUFFER.clear();
         LIGHT_BUFFER.put(brightness)
             .put(brightness)

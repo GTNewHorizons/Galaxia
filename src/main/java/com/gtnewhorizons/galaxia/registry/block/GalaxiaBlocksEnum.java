@@ -11,10 +11,17 @@ import com.gtnewhorizons.galaxia.registry.block.machine.BlockOxygenFiller;
 import com.gtnewhorizons.galaxia.registry.block.machine.BlockOxygenPylon;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockController;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockDoor;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockElevatorCable;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockElevatorDock;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockFumarole;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockHammerCannon;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockHammerTarget;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockStationController;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockStationItemVault;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockStationTerminal;
+import com.gtnewhorizons.galaxia.registry.block.special.TileElevatorCable;
+import com.gtnewhorizons.galaxia.registry.block.special.TileElevatorDock;
+import com.gtnewhorizons.galaxia.registry.block.special.TileStationItemVault;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityFumarole;
 import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenCollector;
 import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenFiller;
@@ -23,6 +30,12 @@ import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerTarget;
+import com.gtnewhorizons.galaxia.registry.celestial.station.devices.BlockStationDevice;
+import com.gtnewhorizons.galaxia.registry.celestial.station.devices.TileAirPurifier;
+import com.gtnewhorizons.galaxia.registry.celestial.station.devices.TileCoolingCoil;
+import com.gtnewhorizons.galaxia.registry.celestial.station.devices.TileHeatingCoil;
+import com.gtnewhorizons.galaxia.registry.celestial.station.devices.TileOxygenator;
+import com.gtnewhorizons.galaxia.registry.celestial.station.devices.TileWitherBlocker;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.BlockRocketTrophy;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityRocketTrophy;
@@ -59,15 +72,19 @@ public enum GalaxiaBlocksEnum {
     OXYGEN_COLLECTOR(new BlockOxygenCollector(), TileEntityOxygenCollector.class, "oxygen_collector"),
     OXYGEN_FILLER(new BlockOxygenFiller(), TileEntityOxygenFiller.class, "oxygen_filler"),
     OXYGEN_PYLON(new BlockOxygenPylon(), TileEntityOxygenPylon.class, "oxygen_pylon"),
+    ELEVATOR_CABLE(new BlockElevatorCable(), TileElevatorCable.class, "elevator_cable"),
+    ELEVATOR_DOCK(new BlockElevatorDock(), TileElevatorDock.class, "elevator_dock"),
 
     // NON-TE
     SPACE_STATION_GLASS(new BlockCasing("space_station/space_station_glass").glass(), "space_station_glass"),
+    STATION_TERMINAL(new BlockStationTerminal(), "station_terminal"),
+    STATION_ITEM_VAULT(new BlockStationItemVault(), TileStationItemVault.class, "station_item_vault"),
     AIRLOCK_DOOR(new BlockAirlockDoor(), "airlock_door"),
-    COOLING_COIL(new BlockCasing("space_station/cooling_coil"), "cooling_coil"),
-    HEATING_COIL(new BlockCasing("space_station/heating_coil"), "heating_coil"),
-    AIR_PURIFIER(new BlockCasing("space_station/air_purifier"), "air_purifier"),
-    WITHER_BLOCKER(new BlockCasing("space_station/wither_blocker"), "wither_blocker"),
-    OXYGENATOR(new BlockCasing("space_station/oxygenator"), "oxygenator"),
+    COOLING_COIL(new BlockStationDevice("cooling_coil", TileCoolingCoil::new), TileCoolingCoil.class, "cooling_coil"),
+    HEATING_COIL(new BlockStationDevice("heating_coil", TileHeatingCoil::new), TileHeatingCoil.class, "heating_coil"),
+    AIR_PURIFIER(new BlockStationDevice("air_purifier", TileAirPurifier::new), TileAirPurifier.class, "air_purifier"),
+    WITHER_BLOCKER(new BlockStationDevice("wither_blocker", TileWitherBlocker::new), TileWitherBlocker.class, "wither_blocker"),
+    OXYGENATOR(new BlockStationDevice("oxygenator", TileOxygenator::new), TileOxygenator.class, "oxygenator"),
 
     // MISC
     BLOCK_OF_PYRITE(new BlockConfigurable("resource/block_of_pyrite").hardnessAndResistance(5, 10).harvest("pickaxe", 1)),

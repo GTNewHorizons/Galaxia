@@ -21,6 +21,9 @@ galaxia.dimension.frozen_belt=Frozen Belt
 galaxia.dimension.mars=Mars
 galaxia.dimension.tenebrae=Tenebrae
 galaxia.dimension.moon=Moon
+galaxia.dimension.orbit=%s Orbit
+galaxia.config.category.dimensions=Dimensions
+galaxia.config.dimensions.orbit_base_id=Orbit dimension base id
 
 #### Celestial Bodies
 galaxia.celestial.novum_caelum=Novum Caelum
@@ -245,6 +248,40 @@ tile.tenebrae_lava.name=Tenebraen Lava
 # Blocks - "Tile Entities"
 tile.module_controller.name=Station Module Controller
 tile.station_controller.name=Station Controller
+tile.station_terminal.name=Station Terminal
+galaxia.chat.station_terminal.no_station=This terminal is not inside a station room
+galaxia.gui.station_terminal.title=Station Terminal - %s
+galaxia.gui.station_terminal.summary=Rooms %s, sealed %s, upkeep %s EU/t
+galaxia.gui.station_terminal.no_rooms=No rooms are connected yet
+galaxia.gui.station_terminal.select=Click a room on the map
+galaxia.gui.station_terminal.at=At %s, %s, %s
+galaxia.gui.station_terminal.main_room=%s *
+galaxia.gui.station_terminal.functional=%s: %s
+galaxia.gui.station_terminal.not_formed=Structure incomplete
+galaxia.gui.station_terminal.open=Open to space
+galaxia.gui.station_terminal.sealed=Sealed
+galaxia.gui.station_terminal.breached=Breached
+galaxia.gui.station_terminal.oxygen=Oxygen %s%%
+galaxia.gui.station_terminal.volume=Volume %s
+galaxia.gui.station_terminal.walls=Wall blocks %s
+galaxia.gui.station_terminal.upkeep=Upkeep %s EU/t
+galaxia.gui.station_terminal.attachments=Attachments %s, plugs %s
+galaxia.gui.station_terminal.energy=Energy %s / %s EU
+galaxia.gui.station_terminal.fluids=Fluids %s / %s L
+galaxia.gui.station_terminal.items=Items %s / %s
+tile.station_item_vault.name=Station Item Vault
+galaxia.gui.station_item_vault.summary=%s / %s items, %s / %s types
+galaxia.station_hatch.input_bus.desc=Hands everything put into it over to the shared storage of the station it stands in
+The stock slots on the left set what each slot keeps, it is topped up to a full stack
+Anything else put in goes back to the station
+galaxia.station_hatch.input_hatch.desc=Hands the fluid put into it over to the shared storage of the station it stands in
+The stock slots on the left set the fluid each tank keeps, any other fluid goes back to the station
+Its locked fluid is the one it keeps, any other fluid goes back to the station
+galaxia.station_hatch.output_bus.desc=Stocks itself from the shared storage of the station it stands in
+galaxia.station_hatch.linked=Connected to a station
+galaxia.station_hatch.unlinked=Not connected to a station
+galaxia.station_hatch.output_hatch.desc=Fills its tanks from the shared storage of the station it stands in
+Takes up to %s EU/t at %s A
 tile.station_room.name=Station Room
 tile.silo_controller.name=Rocket Silo
 tile.module_assembler_controller.name=Module Assembler
@@ -319,6 +356,8 @@ item.galaxia.protection_shield_radiation.name=Radiation Shielding
 item.galaxia.protection_shield_pressure_high.name=High Pressure Shielding
 item.galaxia.protection_shield_pressure_low.name=Low Pressure Shielding
 item.galaxia.spore_filter.name=Spore Filter
+item.galaxia.air_filter.name=Air Filter
+item.galaxia.wither_cartridge.name=Anti-Wither Cartridge
 item.galaxia.wither_protection.name=Wither Protection
 item.galaxia.reaction_control_system.name=Reaction Control System
 
@@ -433,19 +472,23 @@ galaxia.gui.module_assembler.not_formed=Module Assembler not properly formed!
 # Elements - GUI - "Station Controller"
 galaxia.gui.station_controller.title=Station Controller
 galaxia.gui.station_controller.oxygen=Oxygen
-galaxia.gui.station_controller.structure=Structure
-galaxia.gui.station_controller.targets=Targets
+galaxia.gui.station_controller.structure=Structure: %s
+galaxia.gui.station_controller.sealed=Sealed: %s
+galaxia.gui.station_controller.targets=Targets: %s
 galaxia.gui.station_controller.refresh=Refresh
+galaxia.gui.hammer_cannon.title=Hammer Cannon
+galaxia.gui.hammer_target.title=Hammer Target
+galaxia.gui.station_controller.no_energy=No energy sources
+galaxia.gui.station_controller.energy=Energy: %s / %s EU (%s sources)
 galaxia.gui.station_controller.no_fluid_tanks=No fluid tanks
-galaxia.gui.station_controller.fluid_storage=Fluid Storage
+galaxia.gui.station_controller.fluid_storage=Fluid Storage: %s / %s L (%s)
 
 galaxia.gui.behavior=Behavior
-galaxia.gui.role=Role
+galaxia.gui.role=Role: %s
 galaxia.gui.role.main=Main
 galaxia.gui.role.secondary=Secondary
 galaxia.behavior.room=Room
 galaxia.behavior.dock=Dock
-galaxia.behavior.power_room=Power Room
 
 # Elements - GUI - "Station Monitor"
 galaxia.gui.station_monitor.title=Station Monitor
@@ -462,10 +505,12 @@ galaxia.gui.status_no=No
 # Elements - "Tooltip"
 galaxia.tooltip.oxygen_mask.desc=Allows the use of oxygen tanks to breathe in low oxygen environments
 galaxia.tooltip.spore_filter.desc=Filters out any atmospheric spores
+galaxia.tooltip.air_filter.desc=Cartridge for a station air purifier
+galaxia.tooltip.wither_cartridge.desc=Cartridge for a station atmospheric withering blocker
+galaxia.tooltip.station_cartridge.left=%s minutes of work left
 galaxia.tooltip.wither_protection.desc=Provides protection from atmospheric withering effects
 galaxia.tooltip.oxygen_tank.desc=Capacity: %s / %s
-galaxia.tooltip.oxygen_tank.desc.infinite=Capacity: %s
-galaxia.tooltip.oxygen_tank.infinite.value=Infinite
+galaxia.tooltip.oxygen_tank.desc.infinite=Capacity: §cInfinite§r
 galaxia.tooltip.thermal_protection.cold=Frost Protection: +%s
 galaxia.tooltip.thermal_protection.hot=Heat Protection: +%s
 galaxia.tooltip.protection_shield_radiation.desc=Radiation Shielding: +%s
@@ -701,7 +746,7 @@ galaxia.gui.station.recipe.not_doable_policy.back_to_beginning=Restart order
 
 # Machine GUI - Oxygen Collector GUI
 galaxia.gui.oxygen_collector.title=Oxygen Collector
-galaxia.gui.oxygen_collector.leaves_in_range=Leaves in range: %s
+galaxia.gui.oxygen_collector.leaves=Leaves in range
 
 # Machine GUI - Oxygen Filler GUI
 galaxia.gui.oxygen_filler.title=Oxygen Filler
@@ -709,7 +754,7 @@ galaxia.gui.oxygen_filler.title=Oxygen Filler
 # Machine GUI - Oxygen Pylon GUI
 galaxia.gui.oxygen_pylon.title=Oxygen Pylon
 galaxia.gui.oxygen_pylon.radius=Radius: %s
-galaxia.gui.oxygen_pylon.players_charged=Players Charged: %s
+galaxia.gui.oxygen_pylon.players=Players charged
 
 # Machine GUI - Team Permissions GUI
 galaxia.gui.team_config.title=Team Configuration
@@ -747,32 +792,35 @@ galaxia.rocket_editor.enter_rocket=Enter Rocket
 galaxia.rocket_editor.enter_rocket_not_ready=Enter Rocket (not ready)
 
 # Machine GUI - Team Info
-galaxia.gui.team_info.team=Team: %s
-galaxia.gui.team_info.members=Members: %s
+galaxia.gui.team_info.team=§7Team: %s§r
+galaxia.gui.team_info.members=§7Members: %s§r
 
 # Machine GUI - Common
 galaxia.gui.common.generating=Generating
 galaxia.gui.common.filling=Filling
 galaxia.gui.common.active=Active
 galaxia.gui.common.idle=Idle
+galaxia.gui.common.energy=Energy
+galaxia.gui.common.oxygen=Oxygen
 
 # Machine GUI - Airlock Controller
 galaxia.gui.airlock_controller.title=Airlock Controller
 galaxia.gui.airlock_controller.room_a=Room A
 galaxia.gui.airlock_controller.room_b=Room B
 galaxia.gui.airlock_controller.no_room=Not linked
+galaxia.gui.airlock_controller.not_formed=Structure incomplete
 galaxia.gui.airlock_controller.room.protection=Protection
-galaxia.gui.airlock_controller.room.protection.none=None
+galaxia.gui.airlock_controller.room.protection.none=Protection: None
 galaxia.gui.airlock_controller.room.protection.radiation=Radiation
 galaxia.gui.airlock_controller.room.protection.pressure=Pressure
 galaxia.gui.airlock_controller.room.protection.spores=Spores
 galaxia.gui.airlock_controller.room.protection.wither=Wither
 galaxia.gui.airlock_controller.room.protection.heat=Heat
 galaxia.gui.airlock_controller.room.protection.cold=Cold
-galaxia.gui.airlock_controller.room.oxygen=Oxygen
-galaxia.gui.airlock_controller.room.volume=Volume
-galaxia.gui.airlock_controller.room.attachments=Attachments
-galaxia.gui.airlock_controller.room.role=Role
+galaxia.gui.airlock_controller.room.oxygen=Oxygen: %s%%
+galaxia.gui.airlock_controller.room.volume=Volume: %s
+galaxia.gui.airlock_controller.room.attachments=Attachments: %s
+galaxia.gui.airlock_controller.room.role=Role: %s
 galaxia.gui.airlock_controller.on=On
 galaxia.gui.airlock_controller.off=Off
 galaxia.gui.airlock_controller.range=Range: %d-%d
@@ -820,15 +868,15 @@ galaxia.rocket_part.rider=Passenger Cabin
 galaxia.rocket_part.storage=Cargo Hold
 galaxia.rocket_part.engine=%s Engine
 galaxia.rocket_part.fuel_tank=Fuel Tank %s (%s)
-galaxia.rocket_part.stat.size=Size
-galaxia.rocket_part.stat.mass=Dry mass
-galaxia.rocket_part.stat.thrust=Thrust
-galaxia.rocket_part.stat.isp=Specific impulse
-galaxia.rocket_part.stat.burns=Burns
-galaxia.rocket_part.stat.capacity=Capacity
-galaxia.rocket_part.stat.full_mass=Fuelled mass
-galaxia.rocket_part.stat.slots=Cargo slots
-galaxia.rocket_part.stat.seats=Seats
+galaxia.rocket_part.stat.size=§7Size: §f%sx%s§r
+galaxia.rocket_part.stat.mass=§7Dry mass: §f%s kg§r
+galaxia.rocket_part.stat.thrust=§7Thrust: §f%s kgf§r
+galaxia.rocket_part.stat.isp=§7Specific impulse: §f%s s§r
+galaxia.rocket_part.stat.burns=§7Burns: §f%s§r
+galaxia.rocket_part.stat.capacity=§7Capacity: §f%s§r
+galaxia.rocket_part.stat.full_mass=§7Fuelled mass: §f%s kg§r
+galaxia.rocket_part.stat.slots=§7Cargo slots: §f%s§r
+galaxia.rocket_part.stat.seats=§7Seats: §f%s§r
 
 # Rocket fuels
 galaxia.rocket_fuel.nitrofuel=Cetane-Boosted Diesel
@@ -841,7 +889,7 @@ galaxia.rocket_fuel.containment.exotic=Containment field core
 
 # Elements - GUI - "Rocket Editor"
 galaxia.rocket_editor.pick_core=Core for the %s frame
-galaxia.rocket_editor.pick_core_hint=§8Right click to change the core
+galaxia.rocket_editor.pick_core_hint=§8Right click to change the core§r
 galaxia.rocket_editor.status.idle=No design
 galaxia.rocket_editor.status.designed=Designed
 galaxia.rocket_editor.status.assembling=Assembling...
@@ -851,7 +899,7 @@ galaxia.rocket_editor.delta_v_needed=Needs %s
 galaxia.rocket_editor.no_destination=No destination set
 galaxia.rocket_editor.mass=Dry mass %s kg
 galaxia.rocket_editor.stage=Stage %d
-galaxia.rocket_editor.stage_payload=Payload, no engines
+galaxia.rocket_editor.stage_payload=§7Payload, no engines§r
 galaxia.rocket_editor.automation=Automation
 galaxia.rocket_editor.cargo=Cargo and fuel
 galaxia.rocket_editor.problem.empty=The design is empty
@@ -909,6 +957,7 @@ galaxia.silo.destination.current=Current: %s
 galaxia.silo.destination.silos=Silos
 galaxia.silo.destination.no_silos=No other silos built yet
 galaxia.silo.destination.surfaces=Land anywhere (crewed only)
+galaxia.silo.destination.orbits=Stop in orbit (crewed only)
 galaxia.silo.destination.crewed_only=Lands the capsule, no silo
 galaxia.silo.destination.none=none
 galaxia.silo.destination.unknown_body=Unknown body
@@ -936,13 +985,13 @@ galaxia.gui.module_assembler.cancel=Cancel
 galaxia.gui.module_assembler.debug_add=Debug: add one to the stock for free (creative)
 galaxia.gui.module_assembler.debug_remove=Debug: remove one from the stock (creative)
 galaxia.gui.module_assembler.infinite_stock=Debug: infinite stock (creative)
-galaxia.gui.module_assembler.infinite_stock.on=§aOn§7, every module is always in stock
-galaxia.gui.module_assembler.infinite_stock.off=§7Off
+galaxia.gui.module_assembler.infinite_stock.on=§aOn§7, every module is always in stock§r
+galaxia.gui.module_assembler.infinite_stock.off=§7Off§r
 galaxia.gui.module_assembler.no_craft=Nothing being assembled
 galaxia.gui.module_assembler.crafting=Assembling %s
 galaxia.gui.module_assembler.queue=Queue %d, orders %d, input buses %d
 galaxia.gui.module_assembler.group=Fuel tanks %s
-galaxia.gui.module_assembler.group_hint=§8Click to show every core
+galaxia.gui.module_assembler.group_hint=§8Click to show every core§r
 galaxia.gui.module_assembler.group_fold=Fold the group
 
 # Gantry
@@ -954,7 +1003,38 @@ galaxia.gantry.machine.assembler=Module Assembler
 galaxia.gantry.machine.none=nothing
 galaxia.gantry.terminal.status=Terminal: %s, linked to %s
 galaxia.gantry.network.status=Network: %d gantries, %d assemblers, %d silos
-galaxia.gantry.terminal.hint=§8Sneak + right click with an empty hand to change the mode
+galaxia.gantry.terminal.hint=§8Sneak + right click with an empty hand to change the mode§r
 
 # Multiblocks
 galaxia.chat.multiblock.facing=Facing: %s
+
+GT5U.gui.text.recipe_result.galaxia_no_exhaust_in_orbit=Exhaust has nowhere to go in orbit
+tile.elevator_cable.name=Space Elevator Cable
+tile.elevator_dock.name=Space Elevator Dock
+galaxia.elevator_dock.linked=Elevator connected below
+galaxia.elevator_dock.unlinked=No elevator below this dock
+galaxia.chat.elevator_dock.not_in_orbit=Elevator docks only work in orbit
+galaxia.elevator.type=Space Elevator
+galaxia.elevator.desc1=Carries items and fluids from its input buses and hatches up to the dock above it
+galaxia.elevator.desc2=The dock has to be in the orbit of the same planet, above the 3x3 chunks around the cable
+galaxia.elevator.desc3=Players ride up to the dock, energy is not carried
+galaxia.elevator.desc4=From motor tier %s it also carries players to any dimension
+galaxia.elevator.motor_tier=Motor tier %s
+galaxia.elevator.no_dock=No dock in orbit above the 3x3 chunks around the cable
+galaxia.elevator.dock=Dock in orbit at %s, %s, %s
+galaxia.elevator.turned_off=Turned off, nothing goes up
+galaxia.elevator.ride=Ride up to the dock
+galaxia.elevator.travel=Travel to the chosen dimension
+galaxia.elevator.travel_target=Destination: %s
+
+# Station machines
+galaxia.gui.station_device.working=Working
+galaxia.gui.station_device.not_in_station=Not inside a station room
+galaxia.gui.station_device.no_energy=No power
+galaxia.gui.station_device.no_oxygen=Needs oxygen
+galaxia.gui.station_device.no_wither_cartridge=Needs an anti-wither cartridge
+galaxia.gui.station_device.no_filter=Needs an air filter
+galaxia.gui.station_device.energy=Energy
+galaxia.gui.station_device.energy.tooltip=%s / %s EU, uses %s EU/t
+galaxia.gui.station_device.progress=Progress
+galaxia.gui.station_device.fluid_use=Uses %s L/s

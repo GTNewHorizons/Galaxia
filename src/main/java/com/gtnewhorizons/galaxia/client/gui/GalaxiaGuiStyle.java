@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor;
+package com.gtnewhorizons.galaxia.client.gui;
 
 import java.util.function.DoubleSupplier;
 import java.util.function.IntSupplier;
@@ -15,10 +15,9 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 
 /**
- * Shared look of the silo and assembler screens, so every popup uses the same frame, buttons and colours as the
- * silo background texture
+ * Shared look of Galaxia's screens, so every screen and popup uses the same frame, buttons and colors
  */
-public final class RocketGuiStyle {
+public final class GalaxiaGuiStyle {
 
     public static final int TEXT = 0xFFD8DCEB;
     public static final int TEXT_DIM = 0xFF8D93AE;
@@ -30,12 +29,12 @@ public final class RocketGuiStyle {
     public static final int BAR_BACK = 0xFF27283B;
     public static final int BAR_EDGE = 0xFF54556B;
 
-    private RocketGuiStyle() {}
+    private GalaxiaGuiStyle() {}
 
     /** A popup panel with the silo frame */
     public static ModularPanel panel(String name, int width, int height) {
         return new ModularPanel(name).size(width, height)
-            .background(EnumTextures.ROCKET_PANEL.getImage());
+            .background(EnumTextures.GUI_PANEL.getImage());
     }
 
     public static TextWidget<?> title(String langKey) {
@@ -54,8 +53,8 @@ public final class RocketGuiStyle {
 
     /** Flat button in the silo style, highlighted while hovered */
     public static ButtonWidget<?> button() {
-        return new ButtonWidget<>().background(EnumTextures.ROCKET_BUTTON.getImage())
-            .hoverBackground(EnumTextures.ROCKET_BUTTON_HOVERED.getImage());
+        return new ButtonWidget<>().background(EnumTextures.GUI_BUTTON.getImage())
+            .hoverBackground(EnumTextures.GUI_BUTTON_HOVERED.getImage());
     }
 
     /** Button with a text label */
@@ -69,7 +68,7 @@ public final class RocketGuiStyle {
      * Horizontal fill bar drawn in the silo palette
      *
      * @param fraction Fill level from 0 to 1
-     * @param color    Fill colour, ARGB
+     * @param color    Fill color, ARGB
      *
      * @return A widget showing the bar
      */
@@ -85,7 +84,7 @@ public final class RocketGuiStyle {
 
     /** Player inventory with slots in the silo palette instead of the light vanilla ones */
     public static SlotGroupWidget playerInventory() {
-        return SlotGroupWidget.playerInventory((index, slot) -> slot.background(EnumTextures.ROCKET_SLOT.getImage()));
+        return SlotGroupWidget.playerInventory((index, slot) -> slot.background(EnumTextures.GUI_SLOT.getImage()));
     }
 
     /** Formats a delta-v in m/s with a thousands separator */

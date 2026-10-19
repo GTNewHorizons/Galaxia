@@ -9,6 +9,7 @@ import java.util.Optional;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.MathHelper;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.core.Galaxia;
@@ -141,9 +142,9 @@ public class DimensionEventHandler {
             GalaxiaAPI.getStationAround(
                 player.worldObj,
                 player.dimension,
-                (int) player.posX,
-                (int) player.posY,
-                (int) player.posZ));
+                MathHelper.floor_double(player.posX),
+                MathHelper.floor_double(player.posY),
+                MathHelper.floor_double(player.posZ)));
         for (IEnvironmentalHazard h : ENVIRONMENTAL_HAZARDS) {
             HazardWarnings w = h.apply(def, player, station);
             if (w != HazardWarnings.FINE) {

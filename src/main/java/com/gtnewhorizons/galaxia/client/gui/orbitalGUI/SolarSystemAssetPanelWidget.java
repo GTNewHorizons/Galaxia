@@ -11,7 +11,6 @@ import java.util.function.Supplier;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
-import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
 
@@ -400,13 +399,11 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
             }
             GTTeamsCompat.getTeamName()
                 .ifPresent(name -> {
-                    t.addLine(
-                        EnumChatFormatting.GRAY
-                            + StatCollector.translateToLocalFormatted("galaxia.gui.team_info.team", name));
+                    t.addLine(StatCollector.translateToLocalFormatted("galaxia.gui.team_info.team", name));
                     GTTeamsCompat.getTeamData()
                         .ifPresent(
                             team -> t.addLine(
-                                EnumChatFormatting.GRAY + StatCollector.translateToLocalFormatted(
+                                StatCollector.translateToLocalFormatted(
                                     "galaxia.gui.team_info.members",
                                     team.getMembers()
                                         .size())));

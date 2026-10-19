@@ -43,6 +43,8 @@ public class WorldProviderSpace extends WorldProvider implements ICubicWorldProv
     protected DimensionEnum dimension;
     protected boolean hasSky = true;
     protected float cloudHeight = Integer.MIN_VALUE;
+    /** Height the sky darkens below, null for the world type's own */
+    protected Double horizon;
     protected boolean isSurface = true;
     protected int avgGround = 64;
     protected Vec3 fogColor = Vec3.createVectorHelper(0.2D, 0.1D, 0.4D);
@@ -276,6 +278,18 @@ public class WorldProviderSpace extends WorldProvider implements ICubicWorldProv
     }
 
     /**
+     * Gets the height below which the sky turns dark. The dark sky plane is drawn as far below the player as they are
+     * above this height
+     *
+     * @return The horizon height
+     */
+    @Override
+    @SideOnly(Side.CLIENT)
+    public double getHorizon() {
+        return horizon != null ? horizon : super.getHorizon();
+    }
+
+    /**
      * Calculates the celestial angle based on world time
      *
      * @param worldTime    The current world time
@@ -381,6 +395,32 @@ public class WorldProviderSpace extends WorldProvider implements ICubicWorldProv
     @Override
     public boolean canRespawnHere() {
         return canRespawn;
+    }
+
+    /**
+     * Keeps the dimension without weather. Other dimensions share the overworld's rain, so without this it rains here
+     * whenever it rains there and snow piles up even in orbit
+     */
+    @Override
+    public void updateWeather() {
+        worldObj.prevRainingStrength = 0;
+        worldObj.rainingStrength = 0;
+        worldObj.prevThunderingStrength = 0;
+        worldObj.thunderingStrength = 0;
+    }
+
+    /**
+     * Gets whether snow can settle at a position
+     *
+     * @param x          X Position
+     * @param y          Y Position
+     * @param z          Z Position
+     * @param checkLight Whether the light level is checked
+     * @return Boolean : True => Snow can settle
+     */
+    @Override
+    public boolean canSnowAt(int x, int y, int z, boolean checkLight) {
+        return false;
     }
 
     /**

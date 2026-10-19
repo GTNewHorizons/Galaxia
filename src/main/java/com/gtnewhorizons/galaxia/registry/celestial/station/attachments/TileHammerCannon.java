@@ -38,6 +38,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IAttachmentHandler;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -143,7 +144,8 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
         return inventory;
     }
 
-    public Map<ItemStackWrapper, Long> getPackageItems() {
+    /** Items in the cannon's own chests */
+    public Map<ItemStackWrapper, Long> getChestItems() {
         Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
         for (IInventory chest : inventory) {
             if (chest == null) continue;
@@ -157,17 +159,44 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
         return Map.copyOf(result);
     }
 
-    public long getPackageAmount(ItemStackWrapper resource) {
+    /** Amount of an item in the cannon's own chests */
+    public long getChestAmount(ItemStackWrapper resource) {
         if (resource == null) return 0L;
         return availablePackageAmount(resource, Long.MAX_VALUE);
     }
 
+    /** Everything the cannon can load: its own chests and the shared storage of its station */
+    public Map<ItemStackWrapper, Long> getPackageItems() {
+        Map<ItemStackWrapper, Long> result = new LinkedHashMap<>(getChestItems());
+        IDistributedInventory storage = stationStorage();
+        if (storage != null) storage.aggregatedItems()
+            .forEach((key, amount) -> result.merge(key, amount, Long::sum));
+        return Map.copyOf(result);
+    }
+
+    public long getPackageAmount(ItemStackWrapper resource) {
+        if (resource == null) return 0L;
+        IDistributedInventory storage = stationStorage();
+        return getChestAmount(resource) + (storage == null ? 0L : storage.getItemAmount(resource));
+    }
+
+    /** Loads a package, from the cannon's own chests first and the station's storage for the rest */
     public boolean tryExtractPackage(ItemStackWrapper resource, long amount) {
         if (resource == null || amount <= 0L) return false;
-        if (availablePackageAmount(resource, amount) < amount) return false;
-        extractPackage(resource, amount);
+        if (getPackageAmount(resource) < amount) return false;
+        long fromChests = Math.min(amount, getChestAmount(resource));
+        extractPackage(resource, fromChests);
+        IDistributedInventory storage = stationStorage();
+        if (amount > fromChests && storage != null) storage.updateItems(resource, -(amount - fromChests));
         markDirty();
         return true;
+    }
+
+    /** Shared storage of the station the cannon is attached to, null while it is not */
+    private @Nullable IDistributedInventory stationStorage() {
+        if (graph == null || graph.getController() == null) return null;
+        return graph.getController()
+            .getBackingStation();
     }
 
     private long availablePackageAmount(ItemStackWrapper resource, long target) {
@@ -215,6 +244,13 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
     public void onStructureFormed() {
         super.onStructureFormed();
         here = new BlockPos(xCoord, yCoord, zCoord);
+    }
+
+    @Override
+    protected boolean checkStructure() {
+        // The chests are found again on every check
+        inventory.clear();
+        return super.checkStructure();
     }
 
     @Override
@@ -303,16 +339,17 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
 
         return new ModularPanel("galaxia:hammer_cannon").size(210, 130)
             .child(
-                IKey.str(StatCollector.translateToLocal("galaxia.gui.station_room.title"))
+                IKey.str(StatCollector.translateToLocal("galaxia.gui.hammer_cannon.title"))
                     .asWidget()
                     .pos(8, 8))
             .child(new TextWidget<>(IKey.dynamic(() -> {
                 boolean valid = structureValidSync.getBoolValue();
-                String structure = StatCollector.translateToLocal("galaxia.gui.station_room.structure");
                 String status = StatCollector
                     .translateToLocal(valid ? "galaxia.gui.status_valid" : "galaxia.gui.status_invalid");
                 EnumChatFormatting color = valid ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;
-                return structure + ": " + color + status + EnumChatFormatting.RESET;
+                return StatCollector.translateToLocalFormatted(
+                    "galaxia.gui.station_controller.structure",
+                    color + status + EnumChatFormatting.RESET);
             })).pos(10, 30));
     }
 

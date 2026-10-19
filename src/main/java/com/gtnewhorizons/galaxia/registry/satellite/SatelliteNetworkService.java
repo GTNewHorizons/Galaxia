@@ -61,7 +61,7 @@ public final class SatelliteNetworkService {
         /*
          * Rebuild is deliberately two-phase. First derive the topology from satellite ownership and capacity; then use
          * that topology to plan buffered data transfers. The final snapshot is what gets synced, so clients receive
-         * edges and their colours/usage atomically.
+         * edges and their colors/usage atomically.
          */
         SatelliteNetworkState unloaded = SatelliteNetworkCalculator
             .forTeam(teamId, previous.revision() + 1, activeNodes, capacityByBody, Map.of());
@@ -152,7 +152,7 @@ public final class SatelliteNetworkService {
     /*
      * Active usage is a visual bridge between the tick that applied a transfer and the next snapshot rebuild. Without
      * it
-     * small transfers can complete before the starmap ever receives a coloured link.
+     * small transfers can complete before the starmap ever receives a colored link.
      */
     private static void tickActiveUsage() {
         for (TeamRuntime runtime : RUNTIMES.values()) {
@@ -170,7 +170,7 @@ public final class SatelliteNetworkService {
     }
 
     /*
-     * Store both undirected and directed usage. Undirected usage colours the link; directed usage controls packet
+     * Store both undirected and directed usage. Undirected usage colors the link; directed usage controls packet
      * direction on that same link.
      */
     private static void recordActiveUsage(TeamRuntime runtime, SatelliteDataJobService.Usage usage) {
@@ -252,8 +252,8 @@ public final class SatelliteNetworkService {
     }
 
     /*
-     * If the edge set changes, old active-usage pulses would colour links that no longer exist. Drop them so topology
-     * changes and link colours arrive as one atomic snapshot.
+     * If the edge set changes, old active-usage pulses would color links that no longer exist. Drop them so topology
+     * changes and link colors arrive as one atomic snapshot.
      */
     private static void clearActiveUsageIfTopologyChanged(TeamRuntime runtime, SatelliteNetworkState previous,
         SatelliteNetworkState next) {

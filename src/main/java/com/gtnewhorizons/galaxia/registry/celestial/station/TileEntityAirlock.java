@@ -545,7 +545,7 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
 
     private void notifyDirtySeal() {
         for (BlockPos controllerPos : getStationControllers()) {
-            TileStationBase<?> controller = controllerPos.getTE(worldObj);
+            TileStationBase<?> controller = controllerPos.getTE(worldObj, TileStationBase.class);
             if (controller != null) controller.markSealedDirty();
         }
     }
