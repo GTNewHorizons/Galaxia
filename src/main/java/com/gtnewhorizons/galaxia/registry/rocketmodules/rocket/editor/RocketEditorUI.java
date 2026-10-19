@@ -31,6 +31,7 @@ import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
 import com.gtnewhorizons.galaxia.client.render.rockets.ModuleDrawable;
 import com.gtnewhorizons.galaxia.core.network.CommitBlueprintAndOrderPacket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAssembly;
@@ -403,40 +404,40 @@ public class RocketEditorUI {
         ParentWidget<?> side = new ParentWidget<>().size(90, 234);
 
         side.child(
-            RocketGuiStyle
+            GalaxiaGuiStyle
                 .label(
                     () -> StatCollector.translateToLocal(
                         "galaxia.rocket_editor.status." + state.buildStatus.name()
                             .toLowerCase()),
-                    () -> state.buildStatus == RocketBuildStatus.READY ? RocketGuiStyle.GOOD : RocketGuiStyle.ACCENT,
+                    () -> state.buildStatus == RocketBuildStatus.READY ? GalaxiaGuiStyle.GOOD : GalaxiaGuiStyle.ACCENT,
                     0.7f)
                 .pos(2, 2));
 
-        side.child(RocketGuiStyle.label(() -> {
+        side.child(GalaxiaGuiStyle.label(() -> {
             double available = state.buildStatus == RocketBuildStatus.READY ? state.availableDeltaV : stats.deltaV();
             return StatCollector
-                .translateToLocalFormatted("galaxia.rocket_editor.delta_v", RocketGuiStyle.deltaV(available));
-        }, () -> RocketGuiStyle.TEXT, 0.6f)
+                .translateToLocalFormatted("galaxia.rocket_editor.delta_v", GalaxiaGuiStyle.deltaV(available));
+        }, () -> GalaxiaGuiStyle.TEXT, 0.6f)
             .pos(2, 13));
 
         side.child(
-            RocketGuiStyle.label(
+            GalaxiaGuiStyle.label(
                 () -> state.destination.isSet()
                     ? StatCollector.translateToLocalFormatted(
                         "galaxia.rocket_editor.delta_v_needed",
-                        RocketGuiStyle.deltaV(state.requiredDeltaV))
+                        GalaxiaGuiStyle.deltaV(state.requiredDeltaV))
                     : StatCollector.translateToLocal("galaxia.rocket_editor.no_destination"),
                 () -> {
-                    if (!state.destination.isSet()) return RocketGuiStyle.TEXT_DIM;
+                    if (!state.destination.isSet()) return GalaxiaGuiStyle.TEXT_DIM;
                     double available = state.buildStatus == RocketBuildStatus.READY ? state.availableDeltaV
                         : stats.deltaV();
-                    return available >= state.requiredDeltaV ? RocketGuiStyle.GOOD : RocketGuiStyle.BAD;
+                    return available >= state.requiredDeltaV ? GalaxiaGuiStyle.GOOD : GalaxiaGuiStyle.BAD;
                 },
                 0.6f)
                 .pos(2, 21));
 
         side.child(
-            RocketGuiStyle
+            GalaxiaGuiStyle
                 .label(
                     () -> StatCollector.translateToLocalFormatted(
                         "galaxia.rocket_editor.mass",
@@ -444,16 +445,16 @@ public class RocketEditorUI {
                             "%,.0f",
                             stats.get()
                                 .getTotalMass())),
-                    () -> RocketGuiStyle.TEXT_DIM,
+                    () -> GalaxiaGuiStyle.TEXT_DIM,
                     0.6f)
                 .pos(2, 29));
 
-        side.child(RocketGuiStyle.label(() -> {
+        side.child(GalaxiaGuiStyle.label(() -> {
             List<String> problems = stats.get()
                 .problems();
             if (problems.isEmpty() || stats.blueprint.isEmpty()) return "";
             return StatCollector.translateToLocal(problems.getFirst());
-        }, () -> RocketGuiStyle.BAD, 0.6f)
+        }, () -> GalaxiaGuiStyle.BAD, 0.6f)
             .width(88)
             .pos(2, 39));
 
@@ -473,16 +474,16 @@ public class RocketEditorUI {
                         return s.hasEngines() ? EnumTextures.SILO_STAGE_BURN_LIQUID.getImage()
                             : EnumTextures.SILO_STAGE_PARACHUTE.getImage();
                     })));
-            stage.child(RocketGuiStyle.label(() -> {
+            stage.child(GalaxiaGuiStyle.label(() -> {
                 RocketStage s = stageAt(stats, slot);
                 return s == null ? ""
                     : StatCollector.translateToLocalFormatted("galaxia.rocket_editor.stage", slot + 1);
-            }, () -> RocketGuiStyle.TEXT, 0.6f)
+            }, () -> GalaxiaGuiStyle.TEXT, 0.6f)
                 .pos(29, 8));
-            stage.child(RocketGuiStyle.label(() -> {
+            stage.child(GalaxiaGuiStyle.label(() -> {
                 RocketStage s = stageAt(stats, slot);
                 return s == null ? "" : String.format("%,.0f kgf", s.getTotalThrust());
-            }, () -> RocketGuiStyle.TEXT_DIM, 0.55f)
+            }, () -> GalaxiaGuiStyle.TEXT_DIM, 0.55f)
                 .pos(29, 17));
             stage.tooltipDynamic(t -> {
                 RocketStage s = stageAt(stats, slot);
@@ -507,11 +508,11 @@ public class RocketEditorUI {
 
     private static ParentWidget<?> createStatusLine(SiloGuiState state, DesignStats stats) {
         return new ParentWidget<>().size(66, 12)
-            .child(RocketGuiStyle.label(() -> {
+            .child(GalaxiaGuiStyle.label(() -> {
                 if (!state.problem.isEmpty()) return StatCollector.translateToLocal(state.problem);
                 if (state.automationEnabled) return StatCollector.translateToLocal(state.automationStatus.langKey());
                 return "";
-            }, () -> state.problem.isEmpty() ? RocketGuiStyle.TEXT_DIM : RocketGuiStyle.BAD, 0.55f)
+            }, () -> state.problem.isEmpty() ? GalaxiaGuiStyle.TEXT_DIM : GalaxiaGuiStyle.BAD, 0.55f)
                 .width(66));
     }
 
@@ -600,7 +601,7 @@ public class RocketEditorUI {
                 "silo.toolbar.destination"));
         row.child(
             panelButton(
-                EnumTextures.SILO_AUTOMATION_ICON,
+                EnumTextures.ICON_CYCLE,
                 "galaxia.rocket_editor.automation",
                 automationPanel,
                 "silo.toolbar.automation"));

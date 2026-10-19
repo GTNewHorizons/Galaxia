@@ -5,13 +5,12 @@ import java.util.List;
 import net.minecraft.block.Block;
 import net.minecraft.util.StatCollector;
 
-import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.Widget;
-import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
 import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
 import com.gtnewhorizons.galaxia.compat.gt.StationHatchElement;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
@@ -88,11 +87,14 @@ public class DockBehavior implements IStationBehaviorWithAttachments {
 
     @Override
     public List<Widget<?>> buildBehaviourWidgets(TileStation station, PanelSyncManager syncManager, int yOffset) {
-        return List.of(new TextWidget<>(IKey.dynamic(() -> {
-            int count = station.getAttachments()
-                .size();
-            String key = "galaxia.gui.station_controller.targets";
-            return StatCollector.translateToLocal(key) + ": " + count;
-        })).pos(10, yOffset));
+        return List.of(
+            GalaxiaGuiStyle
+                .label(
+                    () -> StatCollector.translateToLocal("galaxia.gui.station_controller.targets") + ": "
+                        + station.getAttachments()
+                            .size(),
+                    () -> GalaxiaGuiStyle.TEXT,
+                    1f)
+                .pos(10, yOffset));
     }
 }

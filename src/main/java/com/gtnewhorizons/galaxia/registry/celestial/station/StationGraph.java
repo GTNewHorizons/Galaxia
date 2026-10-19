@@ -98,6 +98,21 @@ public final class StationGraph {
         return maxPowerDraw - remaining;
     }
 
+    /** Hands energy to the attached stores, returns how much they took */
+    public long addEnergy(long amount) {
+        long remaining = amount;
+        for (StationAttachmentRegistry.ResolvedAttachment<?> ra : (Iterable<StationAttachmentRegistry.ResolvedAttachment<?>>) getEnergyAttachments()::iterator) {
+            remaining -= addToAttachment(ra, remaining);
+            if (remaining <= 0) return amount;
+        }
+        return amount - remaining;
+    }
+
+    private <T> long addToAttachment(StationAttachmentRegistry.ResolvedAttachment<T> ra, long amount) {
+        return StationAttachmentRegistry.asEnergyHandler(ra.handler())
+            .addEnergy(ra.attachment(), amount);
+    }
+
     private <T> long drawFromAttachment(StationAttachmentRegistry.ResolvedAttachment<T> ra, long amount) {
         IEnergyHandler<T> h = StationAttachmentRegistry.asEnergyHandler(ra.handler());
         return h.drawEnergy(ra.attachment(), amount);
@@ -156,6 +171,34 @@ public final class StationGraph {
     private <T> long fluidCapacityFromAttachment(StationAttachmentRegistry.ResolvedAttachment<T> ra) {
         return StationAttachmentRegistry.asFluidStorageHandler(ra.handler())
             .getFluidCapacity(ra.attachment());
+    }
+
+    /** Items kept in all attached item stores */
+    public BigInteger getItemStored() {
+        BigInteger total = BigInteger.ZERO;
+        for (StationAttachmentRegistry.ResolvedAttachment<?> ra : (Iterable<StationAttachmentRegistry.ResolvedAttachment<?>>) getItemStorageAttachments()::iterator) {
+            total = total.add(BigInteger.valueOf(itemStoredFromAttachment(ra)));
+        }
+        return total;
+    }
+
+    private <T> long itemStoredFromAttachment(StationAttachmentRegistry.ResolvedAttachment<T> ra) {
+        return StationAttachmentRegistry.asItemStorageHandler(ra.handler())
+            .getItemStored(ra.attachment());
+    }
+
+    /** Items all attached item stores can hold */
+    public BigInteger getItemCapacity() {
+        BigInteger total = BigInteger.ZERO;
+        for (StationAttachmentRegistry.ResolvedAttachment<?> ra : (Iterable<StationAttachmentRegistry.ResolvedAttachment<?>>) getItemStorageAttachments()::iterator) {
+            total = total.add(BigInteger.valueOf(itemCapacityFromAttachment(ra)));
+        }
+        return total;
+    }
+
+    private <T> long itemCapacityFromAttachment(StationAttachmentRegistry.ResolvedAttachment<T> ra) {
+        return StationAttachmentRegistry.asItemStorageHandler(ra.handler())
+            .getItemCapacity(ra.attachment());
     }
 
     /** Every room of the station, the main controller's room included */

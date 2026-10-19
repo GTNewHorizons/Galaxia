@@ -15,7 +15,7 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.dimension.OrbitDimensions;
 
 /**
- * Upper end of a space elevator, placed in orbit straight above the elevator, in the same chunk column
+ * Upper end of a space elevator, placed in orbit above the ground the elevator stands on
  */
 public class BlockElevatorDock extends Block implements ITileEntityProvider {
 

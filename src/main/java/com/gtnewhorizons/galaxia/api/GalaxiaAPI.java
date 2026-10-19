@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 
 import javax.annotation.Nonnull;
@@ -402,6 +403,15 @@ public final class GalaxiaAPI {
     }
 
     public static @Nullable TileStation getStationAround(@Nonnull World world, int dim, int x, int y, int z) {
+        return findStationRoom(world, dim, room -> room.isInside(x, y, z));
+    }
+
+    /** The station room a block is part of, inside the room or in one of its walls */
+    public static @Nullable TileStation getStationContaining(@Nonnull World world, int dim, int x, int y, int z) {
+        return findStationRoom(world, dim, room -> room.isInsideOrWall(x, y, z));
+    }
+
+    private static @Nullable TileStation findStationRoom(@Nonnull World world, int dim, Predicate<TileStation> holds) {
         Optional<CelestialObject> body = GalaxiaCelestialAPI.findByDimension(dim);
         if (body.isEmpty()) return null;
 
@@ -416,12 +426,12 @@ public final class GalaxiaAPI {
             if (pos == null) continue;
             if (!(world.getTileEntity(pos.x(), pos.y(), pos.z()) instanceof TileStation tileStation)) continue;
 
-            // Every room of the station protects, not just the one with the main controller
-            if (tileStation.isInside(x, y, z)) return tileStation;
+            // Every room of the station counts, not just the one with the main controller
+            if (holds.test(tileStation)) return tileStation;
             StationGraph graph = tileStation.getGraph();
             if (graph == null) continue;
             for (TileStation room : graph.iterateOver(TileStation.class)) {
-                if (room.isStructureValid() && room.isInside(x, y, z)) return room;
+                if (room.isStructureValid() && holds.test(room)) return room;
             }
         }
 

@@ -48,4 +48,18 @@ public class MTELapotronicSuperCapacitorHandler extends GTEnergyHandler<MTELapot
         attachment.setStored(current.subtract(BigInteger.valueOf(drawn)));
         return drawn;
     }
+
+    @Override
+    public long addEnergy(MTELapotronicSuperCapacitor attachment, long amount) {
+        BigInteger current = attachment.getStored();
+        long room = attachment.getEnergyCapacity()
+            .subtract(current)
+            .min(BigInteger.valueOf(Long.MAX_VALUE))
+            .max(BigInteger.ZERO)
+            .longValue();
+        long added = Math.min(amount, room);
+        if (added <= 0) return 0;
+        attachment.setStored(current.add(BigInteger.valueOf(added)));
+        return added;
+    }
 }

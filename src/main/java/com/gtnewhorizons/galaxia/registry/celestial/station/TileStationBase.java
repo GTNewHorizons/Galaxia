@@ -132,6 +132,8 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
     }
 
     public boolean addStationPlug(IGregTechTileEntity gte, short tier) {
+        // Other hatches in the wall are left to their own adders
+        if (!(gte.getMetaTileEntity() instanceof MTEStationPlug)) return false;
         BlockPos plug = new BlockPos(gte.getXCoord(), gte.getYCoord(), gte.getZCoord());
         if (stationPlugs.size() >= 2) return this.stationPlugs.contains(plug);
         if (!this.stationPlugs.contains(plug)) {
@@ -184,6 +186,13 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
 
             airlock.untrackStationController(this.here);
         }
+    }
+
+    /** True for blocks inside the room and for the blocks of its walls */
+    public boolean isInsideOrWall(int x, int y, int z) {
+        if (isInside(x, y, z)) return true;
+        return getStructureDefinition() instanceof ArbitraryShapeDefinition<?>def && isStructureValid()
+            && def.isContainedInStructure("main", x, y, z);
     }
 
     public boolean isInside(int x, int y, int z) {

@@ -7,6 +7,7 @@ import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.RichTooltip;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketStage;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.fuel.RocketFuel;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.EnginePartDef;
@@ -42,7 +43,7 @@ public final class PartTooltips {
                     .name());
         }
         if (def instanceof FuelTankPartDef tank) {
-            line(tooltip, "galaxia.rocket_part.stat.capacity", RocketGuiStyle.fluid(tank.fuelCapacity()));
+            line(tooltip, "galaxia.rocket_part.stat.capacity", GalaxiaGuiStyle.fluid(tank.fuelCapacity()));
             line(
                 tooltip,
                 "galaxia.rocket_part.stat.full_mass",

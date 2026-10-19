@@ -122,29 +122,35 @@ public class Station extends CelestialAsset implements IDistributedInventory {
             .orElse(null);
     }
 
+    /** Items the station's hammers can send: the cannons' own chests and the station's shared storage */
     public Map<ItemStackWrapper, Long> getCannonChestItems() {
         Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
-        TileStation ctrl = getTileController();
-        if (ctrl == null) return result;
-        StationGraph graph = ctrl.getGraph();
-        if (graph == null) return result;
-        graph.getAttachments(TileHammerCannon.class)
-            .filter(TileHammerCannon::isStructureValid)
-            .forEach(
-                cannon -> cannon.getPackageItems()
-                    .forEach((key, amount) -> result.merge(key, amount, Long::sum)));
+        List<TileHammerCannon> cannons = formedCannons();
+        if (cannons.isEmpty()) return result;
+        cannons.forEach(
+            cannon -> cannon.getChestItems()
+                .forEach((key, amount) -> result.merge(key, amount, Long::sum)));
+        aggregatedItems().forEach((key, amount) -> result.merge(key, amount, Long::sum));
         return result;
     }
 
+    /** How much of an item the station's hammers can send while keeping the reserve */
     public long getCannonSupplyAmount(ItemStackWrapper resource, long reserve) {
+        List<TileHammerCannon> cannons = formedCannons();
+        if (cannons.isEmpty()) return 0L;
+        long available = getItemAmount(resource);
+        for (TileHammerCannon cannon : cannons) available += cannon.getChestAmount(resource);
+        return Math.max(available - reserve, 0L);
+    }
+
+    private List<TileHammerCannon> formedCannons() {
         TileStation ctrl = getTileController();
-        if (ctrl == null) return 0L;
+        if (ctrl == null) return List.of();
         StationGraph graph = ctrl.getGraph();
-        if (graph == null) return 0L;
+        if (graph == null) return List.of();
         return graph.getAttachments(TileHammerCannon.class)
             .filter(TileHammerCannon::isStructureValid)
-            .mapToLong(cannon -> Math.max(cannon.getPackageAmount(resource) - reserve, 0L))
-            .sum();
+            .toList();
     }
 
     /** Public so network handlers can route filter mutations. */

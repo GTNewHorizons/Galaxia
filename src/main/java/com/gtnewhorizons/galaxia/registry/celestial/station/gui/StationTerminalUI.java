@@ -20,6 +20,7 @@ import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.Widget;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
@@ -27,7 +28,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStationBase;
 import com.gtnewhorizons.galaxia.registry.dimension.OrbitDimensions;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor.RocketGuiStyle;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -71,25 +71,25 @@ public final class StationTerminalUI implements IGuiHolder<StationGuiFactory.Dat
                 .adapter(ByteBufAdapters.NBT)
                 .build());
 
-        ModularPanel panel = RocketGuiStyle.panel("galaxia:station_terminal", WIDTH, HEIGHT);
+        ModularPanel panel = GalaxiaGuiStyle.panel("galaxia:station_terminal", WIDTH, HEIGHT);
         panel
             .child(
-                RocketGuiStyle
+                GalaxiaGuiStyle
                     .label(
                         () -> StatCollector
                             .translateToLocalFormatted("galaxia.gui.station_terminal.title", view.location),
-                        () -> RocketGuiStyle.TEXT_TITLE,
+                        () -> GalaxiaGuiStyle.TEXT_TITLE,
                         1f)
                     .pos(8, 7));
         panel.child(
-            RocketGuiStyle
+            GalaxiaGuiStyle
                 .label(
                     () -> StatCollector.translateToLocalFormatted(
                         "galaxia.gui.station_terminal.summary",
                         view.rooms.size(),
                         view.sealedRooms(),
                         view.upkeep),
-                    () -> RocketGuiStyle.TEXT_DIM,
+                    () -> GalaxiaGuiStyle.TEXT_DIM,
                     0.6f)
                 .pos(8, 19));
 
@@ -97,17 +97,17 @@ public final class StationTerminalUI implements IGuiHolder<StationGuiFactory.Dat
         panel.child(
             new Widget<>().size(186, 148)
                 .pos(8, 30)
-                .background(EnumTextures.ROCKET_WELL.getImage()));
+                .background(EnumTextures.GUI_WELL.getImage()));
         panel.child(
             new StationGraphWidget(view).size(182, 144)
                 .pos(10, 32)
                 .name("station.graph"));
         panel.child(
-            RocketGuiStyle
+            GalaxiaGuiStyle
                 .label(
                     () -> view.rooms.isEmpty() ? StatCollector.translateToLocal("galaxia.gui.station_terminal.no_rooms")
                         : "",
-                    () -> RocketGuiStyle.TEXT_DIM,
+                    () -> GalaxiaGuiStyle.TEXT_DIM,
                     0.7f)
                 .pos(16, 100));
 
@@ -115,36 +115,47 @@ public final class StationTerminalUI implements IGuiHolder<StationGuiFactory.Dat
         panel.child(
             new Widget<>().size(124, 148)
                 .pos(198, 30)
-                .background(EnumTextures.ROCKET_WELL.getImage()));
+                .background(EnumTextures.GUI_WELL.getImage()));
         for (int i = 0; i < 13; i++) {
             final int line = i;
             panel.child(
-                RocketGuiStyle.label(() -> view.detailLine(line), () -> view.detailColor(line), 0.6f)
+                GalaxiaGuiStyle.label(() -> view.detailLine(line), () -> view.detailColor(line), 0.6f)
                     .pos(203, 35 + i * 10)
                     .name(i == 0 ? "station.room_title" : null));
         }
 
         // Station totals
         panel.child(
-            RocketGuiStyle
+            GalaxiaGuiStyle
                 .label(
                     () -> StatCollector.translateToLocalFormatted(
                         "galaxia.gui.station_terminal.energy",
                         view.energyStored,
                         view.energyCapacity),
-                    () -> RocketGuiStyle.TEXT,
+                    () -> GalaxiaGuiStyle.TEXT,
                     0.6f)
                 .pos(8, 184));
         panel.child(
-            RocketGuiStyle
+            GalaxiaGuiStyle
                 .label(
                     () -> StatCollector.translateToLocalFormatted(
                         "galaxia.gui.station_terminal.fluids",
                         view.fluidStored,
                         view.fluidCapacity),
-                    () -> RocketGuiStyle.TEXT,
+                    () -> GalaxiaGuiStyle.TEXT,
                     0.6f)
                 .pos(8, 195));
+        panel.child(
+            GalaxiaGuiStyle
+                .label(
+                    () -> StatCollector.translateToLocalFormatted(
+                        "galaxia.gui.station_terminal.items",
+                        view.itemStored,
+                        view.itemCapacity),
+                    () -> GalaxiaGuiStyle.TEXT,
+                    0.6f)
+                .pos(8, 206)
+                .name("station.items"));
         return panel;
     }
 
@@ -232,6 +243,14 @@ public final class StationTerminalUI implements IGuiHolder<StationGuiFactory.Dat
             "fluidCapacity",
             graph.getFluidCapacity()
                 .toString());
+        tag.setString(
+            "items",
+            graph.getItemStored()
+                .toString());
+        tag.setString(
+            "itemCapacity",
+            graph.getItemCapacity()
+                .toString());
         return tag;
     }
 
@@ -241,9 +260,9 @@ public final class StationTerminalUI implements IGuiHolder<StationGuiFactory.Dat
 
         /** color of the room on the graph: green when breathable, yellow when sealed, red when open to space */
         int color() {
-            if (!formed) return RocketGuiStyle.TEXT_DIM;
-            if (!sealed) return RocketGuiStyle.BAD;
-            return oxygen >= 100 ? RocketGuiStyle.GOOD : RocketGuiStyle.WARN;
+            if (!formed) return GalaxiaGuiStyle.TEXT_DIM;
+            if (!sealed) return GalaxiaGuiStyle.BAD;
+            return oxygen >= 100 ? GalaxiaGuiStyle.GOOD : GalaxiaGuiStyle.WARN;
         }
     }
 
@@ -260,6 +279,8 @@ public final class StationTerminalUI implements IGuiHolder<StationGuiFactory.Dat
         String energyCapacity = "0";
         String fluidStored = "0";
         String fluidCapacity = "0";
+        String itemStored = "0";
+        String itemCapacity = "0";
         int selected = -1;
 
         void read(NBTTagCompound tag) {
@@ -296,6 +317,8 @@ public final class StationTerminalUI implements IGuiHolder<StationGuiFactory.Dat
             energyCapacity = format(tag.getString("energyCapacity"));
             fluidStored = format(tag.getString("fluid"));
             fluidCapacity = format(tag.getString("fluidCapacity"));
+            itemStored = format(tag.getString("items"));
+            itemCapacity = format(tag.getString("itemCapacity"));
             if (selected >= rooms.size()) selected = -1;
             if (selected < 0) {
                 for (int i = 0; i < rooms.size(); i++) {
@@ -358,9 +381,9 @@ public final class StationTerminalUI implements IGuiHolder<StationGuiFactory.Dat
 
         int detailColor(int line) {
             Room room = selectedRoom();
-            if (line == 0) return RocketGuiStyle.TEXT_TITLE;
+            if (line == 0) return GalaxiaGuiStyle.TEXT_TITLE;
             if (room != null && line == 2) return room.color();
-            return RocketGuiStyle.TEXT;
+            return GalaxiaGuiStyle.TEXT;
         }
 
         private static String format(String number) {

@@ -29,7 +29,7 @@ import com.cleanroommc.modularui.widgets.slot.FluidSlot;
 import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor.RocketGuiStyle;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
 
 /**
  * Where a space elevator ends in orbit. Everything the elevator below sends up lands in its buffer, from where pipes
@@ -249,24 +249,24 @@ public class TileElevatorDock extends TileEntity implements IInventory, IFluidHa
 
     @Override
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
-        ModularPanel panel = RocketGuiStyle.panel("galaxia:elevator_dock", 176, 196);
+        ModularPanel panel = GalaxiaGuiStyle.panel("galaxia:elevator_dock", 176, 196);
         panel.child(
-            RocketGuiStyle.title("tile.elevator_dock.name")
+            GalaxiaGuiStyle.title("tile.elevator_dock.name")
                 .pos(8, 7));
         panel
             .child(
-                RocketGuiStyle
+                GalaxiaGuiStyle
                     .label(
                         () -> net.minecraft.util.StatCollector.translateToLocal(
                             linked ? "galaxia.elevator_dock.linked" : "galaxia.elevator_dock.unlinked"),
-                        () -> linked ? RocketGuiStyle.GOOD : RocketGuiStyle.TEXT_DIM,
+                        () -> linked ? GalaxiaGuiStyle.GOOD : GalaxiaGuiStyle.TEXT_DIM,
                         0.6f)
                     .pos(8, 18));
         InvWrapper items = new InvWrapper(this);
         for (int i = 0; i < SLOTS; i++) {
             panel.child(
                 new ItemSlot().slot(new ModularSlot(items, i))
-                    .background(EnumTextures.ROCKET_SLOT.getImage())
+                    .background(EnumTextures.GUI_SLOT.getImage())
                     .pos(7 + (i % 9) * 18, 28 + (i / 9) * 18));
         }
         for (int i = 0; i < TANKS; i++) {
@@ -276,7 +276,7 @@ public class TileElevatorDock extends TileEntity implements IInventory, IFluidHa
                     .pos(7 + i * 41, 86));
         }
         panel.child(
-            RocketGuiStyle.playerInventory()
+            GalaxiaGuiStyle.playerInventory()
                 .pos(7, 112));
         return panel;
     }

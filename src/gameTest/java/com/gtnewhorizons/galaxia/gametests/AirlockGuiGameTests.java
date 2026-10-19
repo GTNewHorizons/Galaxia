@@ -413,6 +413,21 @@ public final class AirlockGuiGameTests {
                     if (!fixture.lock()
                         .isStructureValid()) throw new AssertionError("Refresh did not recheck the structure");
                 })
+            .awaitClient("both rooms show on the screen", c -> {
+                GuiTestSupport.requireScreen("galaxia:airlock_controller");
+                // Hidden widgets are not found, so the warning is gone once the lookup comes back empty
+                if (GuiTestSupport.findNamedWidget("airlock.not_formed") != null) {
+                    throw new AssertionError("Screen still shows an incomplete airlock");
+                }
+            })
+            .capture("airlock-screen")
+            .click(GuiTestSupport.control("airlock.settings"))
+            .awaitClient("settings open", c -> {
+                if (GuiTestSupport.findNamedWidget("airlock.settings.reset") == null) {
+                    throw new AssertionError("Settings are not open");
+                }
+            })
+            .capture("airlock-settings")
             .succeed();
     }
 

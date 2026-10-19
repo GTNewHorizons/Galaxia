@@ -11,7 +11,7 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.cleanroommc.modularui.widget.Widget;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor.RocketGuiStyle;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
 
 /**
  * Rooms of a station drawn from above at their controller positions, airlock connections as lines between them.
@@ -39,7 +39,7 @@ public class StationGraphWidget extends Widget<StationGraphWidget> implements In
         GL11.glLineWidth(2f);
         Tessellator t = Tessellator.instance;
         t.startDrawing(GL11.GL_LINES);
-        t.setColorOpaque_I(RocketGuiStyle.ACCENT & 0xFFFFFF);
+        t.setColorOpaque_I(GalaxiaGuiStyle.ACCENT & 0xFFFFFF);
         for (int i = 0; i + 1 < view.links.length; i += 2) {
             int a = view.links[i], b = view.links[i + 1];
             if (a >= at.length || b >= at.length) continue;
@@ -54,13 +54,13 @@ public class StationGraphWidget extends Widget<StationGraphWidget> implements In
         for (int i = 0; i < at.length; i++) {
             StationTerminalUI.Room room = view.rooms.get(i);
             int x = at[i][0] - NODE / 2, y = at[i][1] - NODE / 2;
-            int frame = i == view.selected ? RocketGuiStyle.TEXT_TITLE
-                : i == hovered ? RocketGuiStyle.TEXT : RocketGuiStyle.BAR_EDGE;
+            int frame = i == view.selected ? GalaxiaGuiStyle.TEXT_TITLE
+                : i == hovered ? GalaxiaGuiStyle.TEXT : GalaxiaGuiStyle.BAR_EDGE;
             Gui.drawRect(x - 1, y - 1, x + NODE + 1, y + NODE + 1, frame);
-            Gui.drawRect(x, y, x + NODE, y + NODE, RocketGuiStyle.BAR_BACK);
+            Gui.drawRect(x, y, x + NODE, y + NODE, GalaxiaGuiStyle.BAR_BACK);
             Gui.drawRect(x + 2, y + 2, x + NODE - 2, y + NODE - 2, room.color());
             // The main room carries a dot in the middle
-            if (room.main()) Gui.drawRect(x + 4, y + 4, x + NODE - 4, y + NODE - 4, RocketGuiStyle.TEXT_TITLE);
+            if (room.main()) Gui.drawRect(x + 4, y + 4, x + NODE - 4, y + NODE - 4, GalaxiaGuiStyle.TEXT_TITLE);
         }
     }
 

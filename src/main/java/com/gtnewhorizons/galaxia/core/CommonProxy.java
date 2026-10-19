@@ -35,6 +35,7 @@ import com.gtnewhorizons.galaxia.handlers.TeamEventHandler;
 import com.gtnewhorizons.galaxia.handlers.TetherEventHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
+import com.gtnewhorizons.galaxia.registry.block.special.TileStationItemVault;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
@@ -152,6 +153,7 @@ public class CommonProxy {
 
         StationAttachmentRegistry.register(TileHammerTarget.class, TileHammerTarget.HANDLER);
         StationAttachmentRegistry.register(TileHammerCannon.class, TileHammerCannon.HANDLER);
+        StationAttachmentRegistry.register(TileStationItemVault.class, TileStationItemVault.HANDLER);
     }
 
     private void validateGtCelestialOrePools() {

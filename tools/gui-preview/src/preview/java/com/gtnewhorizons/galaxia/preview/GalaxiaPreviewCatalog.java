@@ -12,6 +12,10 @@ import com.gtnewhorizons.galaxia.registry.block.tile.machine.gui.OxygenPylonGUI;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerTarget;
+import com.gtnewhorizons.galaxia.registry.celestial.station.devices.TileAirPurifier;
+import com.gtnewhorizons.galaxia.registry.celestial.station.devices.TileCoolingCoil;
+import com.gtnewhorizons.galaxia.registry.celestial.station.devices.TileOxygenator;
+import com.gtnewhorizons.galaxia.registry.celestial.station.devices.TileWitherBlocker;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor.RocketEditorUI;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
 import dev.modularui.preview.PreviewCatalog;
@@ -34,7 +38,7 @@ public final class GalaxiaPreviewCatalog implements PreviewCatalog {
                 OxygenPreviews::collector).tags("default"),
             scenario("oxygen/filler", "oxygen filler", "oxygen", OxygenFillerGUI.class, OxygenPreviews::filler)
                 .tags("default")
-                .expectAssets("galaxia:textures/gui/oxygen_bar_fill.png"),
+                .expectAssets("galaxia:textures/gui/common/panel.png"),
             scenario("oxygen/pylon", "oxygen pylon", "oxygen", OxygenPylonGUI.class, OxygenPreviews::pylon)
                 .tags("default"),
             scenario("permissions-and-pickers/team-permissions", "team permissions", "permissions-and-pickers",
@@ -52,6 +56,14 @@ public final class GalaxiaPreviewCatalog implements PreviewCatalog {
             scenario("station/module-picker", "module picker", "station", ModulePickerScreen.class,
                 FacilityPreviews::modulePicker).tags("default", "interaction")
                     .actions("actions/module-picker.txt"),
+            scenario("station/oxygenator", "oxygenator", "station", TileOxygenator.class,
+                StationMachinePreviews::oxygenator).tags("default"),
+            scenario("station/air-purifier", "air purifier", "station", TileAirPurifier.class,
+                StationMachinePreviews::airPurifier).tags("default"),
+            scenario("station/wither-blocker", "wither blocker", "station", TileWitherBlocker.class,
+                StationMachinePreviews::witherBlocker).tags("default"),
+            scenario("station/cooling-coil", "cooling coil", "station", TileCoolingCoil.class,
+                StationMachinePreviews::coolingCoil).tags("default"),
             scenario("station/hammer-target", "hammer target", "station", TileHammerTarget.class,
                 StationMachinePreviews::hammerTarget).tags("default"),
             scenario("station/hammer-cannon", "hammer cannon", "station", TileHammerCannon.class,
