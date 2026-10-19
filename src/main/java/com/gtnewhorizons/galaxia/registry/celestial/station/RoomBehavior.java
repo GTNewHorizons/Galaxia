@@ -145,9 +145,10 @@ public class RoomBehavior implements IStationBehaviorWithAttachments {
         return List.of(
             GalaxiaGuiStyle
                 .label(
-                    () -> StatCollector.translateToLocal("galaxia.gui.station_controller.sealed") + ": "
-                        + StatCollector.translateToLocal(
-                            sealedSync.getBoolValue() ? "galaxia.gui.status_yes" : "galaxia.gui.status_no"),
+                    () -> StatCollector.translateToLocalFormatted(
+                        "galaxia.gui.station_controller.sealed",
+                        StatCollector.translateToLocal(
+                            sealedSync.getBoolValue() ? "galaxia.gui.status_yes" : "galaxia.gui.status_no")),
                     () -> sealedSync.getBoolValue() ? GalaxiaGuiStyle.GOOD : GalaxiaGuiStyle.BAD,
                     1f)
                 .pos(10, yOffset),
@@ -157,13 +158,11 @@ public class RoomBehavior implements IStationBehaviorWithAttachments {
                 if (snap.fluidAttachmentCount() == 0) {
                     return StatCollector.translateToLocal("galaxia.gui.station_controller.no_fluid_tanks");
                 }
-                return StatCollector.translateToLocal("galaxia.gui.station_controller.fluid_storage") + ": "
-                    + snap.fluidStored()
-                    + " / "
-                    + snap.fluidCapacity()
-                    + " L ("
-                    + snap.fluidAttachmentCount()
-                    + ")";
+                return StatCollector.translateToLocalFormatted(
+                    "galaxia.gui.station_controller.fluid_storage",
+                    snap.fluidStored(),
+                    snap.fluidCapacity(),
+                    snap.fluidAttachmentCount());
             }, () -> GalaxiaGuiStyle.TEXT, 1f)
                 .pos(10, yOffset + 14),
             GalaxiaGuiStyle.label(() -> {

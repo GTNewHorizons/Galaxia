@@ -106,8 +106,19 @@ class StationOutputBusGui extends MTEHatchBaseGui<MTEHatchStationOutputBus> {
     private Grid createHeldSlots(PanelSyncManager syncManager) {
         return new ItemSlotGridBuilder(machine.inventoryHandler, syncManager).size(GRID)
             .slotGroupKey("station_held")
-            .accessibility(false, false)
-            .itemSlotSupplier(() -> new ItemSlot().backgroundOverlay(GTGuiTextures.SLOT_ITEM_DARK))
+            // Items are taken out by hand, only the stock slots put them in
+            .accessibility(false, true)
+            .itemSlotSupplier(new Supplier<>() {
+
+                private int created;
+
+                @Override
+                public ItemSlot get() {
+                    ItemSlot slot = new ItemSlot().backgroundOverlay(GTGuiTextures.SLOT_ITEM_DARK);
+                    if (created++ == 0) slot.name("station.held.0");
+                    return slot;
+                }
+            })
             .build();
     }
 

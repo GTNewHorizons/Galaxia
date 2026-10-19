@@ -9,6 +9,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
+import net.minecraft.world.storage.WorldInfo;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
@@ -146,6 +147,32 @@ public final class OrbitGameTests {
                 if (OrbitMachineRules.isExhaustBlocked(fixture.multiblock(planet, 0, 200, 0))) {
                     throw new AssertionError("Furnace is held back on the planet");
                 }
+            })
+            .succeed();
+    }
+
+    /**
+     * Bug regression: space has no weather. Rain on the Overworld does not reach its orbit, so no snow piles up there
+     */
+    @GameTest(timeoutTicks = 600)
+    public static void overworldRainStaysOutOfOrbit(GameTestHelper helper) {
+        Fixture fixture = new Fixture();
+        ClientTest.scenario(helper)
+            .defaultTimeoutTicks(300)
+            .server("fly up into the Overworld orbit", () -> fixture.enter(helper))
+            .server("it starts to rain on the Overworld", () -> {
+                WorldInfo weather = helper.getWorld()
+                    .getWorldInfo();
+                helper.afterTest(() -> weather.setRaining(false));
+                weather.setRainTime(12_000);
+                weather.setRaining(true);
+            })
+            .awaitServer("it rains below but not in orbit", () -> {
+                if (!helper.getWorld()
+                    .isRaining()) throw new AssertionError("Still waiting for the rain below");
+                if (fixture.world.isRaining()) throw new AssertionError("It rains in orbit");
+                if (fixture.world.provider.canSnowAt(0, 129, 0, false))
+                    throw new AssertionError("Snow settles in orbit");
             })
             .succeed();
     }

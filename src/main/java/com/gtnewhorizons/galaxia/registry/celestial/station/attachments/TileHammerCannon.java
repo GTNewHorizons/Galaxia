@@ -344,11 +344,12 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
                     .pos(8, 8))
             .child(new TextWidget<>(IKey.dynamic(() -> {
                 boolean valid = structureValidSync.getBoolValue();
-                String structure = StatCollector.translateToLocal("galaxia.gui.station_controller.structure");
                 String status = StatCollector
                     .translateToLocal(valid ? "galaxia.gui.status_valid" : "galaxia.gui.status_invalid");
                 EnumChatFormatting color = valid ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;
-                return structure + ": " + color + status + EnumChatFormatting.RESET;
+                return StatCollector.translateToLocalFormatted(
+                    "galaxia.gui.station_controller.structure",
+                    color + status + EnumChatFormatting.RESET);
             })).pos(10, 30));
     }
 

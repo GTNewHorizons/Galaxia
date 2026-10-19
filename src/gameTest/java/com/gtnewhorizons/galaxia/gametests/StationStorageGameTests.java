@@ -101,6 +101,21 @@ public final class StationStorageGameTests {
                 fixture.assertVault(Blocks.cobblestone, 0);
                 fixture.assertVault(Blocks.dirt, 5);
             })
+            .server("open the output bus with an empty hand", () -> fixture.open(Fixture.OUTPUT_BUS))
+            .awaitClient("output bus screen open to take from", c -> requireOpenScreen())
+            .click(GuiTestSupport.control("station.held.0"))
+            .awaitServer("the hand takes the stocked items", () -> {
+                ItemStack held = fixture.player.inventory.getItemStack();
+                if (held == null || held.getItem() != new ItemStack(Blocks.cobblestone).getItem()
+                    || held.stackSize != 32) throw new AssertionError("Hand holds " + held);
+                if (fixture.gt(Fixture.OUTPUT_BUS)
+                    .getStackInSlot(0) != null) throw new AssertionError("The items stayed in the output bus");
+            })
+            .server("put the taken items away and close the output bus", () -> {
+                fixture.player.inventory.setItemStack(null);
+                fixture.player.updateHeldItem();
+                fixture.player.closeScreen();
+            })
             .server(
                 "fill the input hatch",
                 () -> ((MTEHatchStationInputHatch) fixture.gt(Fixture.INPUT_HATCH)

@@ -90,9 +90,10 @@ public class DockBehavior implements IStationBehaviorWithAttachments {
         return List.of(
             GalaxiaGuiStyle
                 .label(
-                    () -> StatCollector.translateToLocal("galaxia.gui.station_controller.targets") + ": "
-                        + station.getAttachments()
-                            .size(),
+                    () -> StatCollector.translateToLocalFormatted(
+                        "galaxia.gui.station_controller.targets",
+                        station.getAttachments()
+                            .size()),
                     () -> GalaxiaGuiStyle.TEXT,
                     1f)
                 .pos(10, yOffset));

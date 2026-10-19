@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.compat.gt.station;
 
+import static gregtech.api.enums.Textures.BlockIcons.FLUID_IN_SIGN;
+
 import net.minecraft.util.StatCollector;
 
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
@@ -53,5 +55,15 @@ public class MTEHatchStationInputHatch extends MTEHatchOutput {
         mFluid.amount -= (int) stored;
         if (mFluid.amount <= 0) mFluid = null;
         markDirty();
+    }
+
+    @Override
+    public ITexture[] getTexturesActive(ITexture base) {
+        return StationHatchTextures.input(base, getBaseMetaTileEntity().getColorization(), FLUID_IN_SIGN);
+    }
+
+    @Override
+    public ITexture[] getTexturesInactive(ITexture base) {
+        return StationHatchTextures.input(base, getBaseMetaTileEntity().getColorization(), FLUID_IN_SIGN);
     }
 }

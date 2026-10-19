@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.compat.gt.station;
 
 import java.util.function.BooleanSupplier;
 
-import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -24,9 +23,8 @@ final class StationHatchStatus {
         syncManager.syncValue("stationLinked", linkedSync);
         return IKey
             .dynamic(
-                () -> linkedSync.getBoolValue()
-                    ? EnumChatFormatting.GREEN + StatCollector.translateToLocal("galaxia.station_hatch.linked")
-                    : EnumChatFormatting.DARK_RED + StatCollector.translateToLocal("galaxia.station_hatch.unlinked"))
+                () -> StatCollector.translateToLocal(
+                    linkedSync.getBoolValue() ? "galaxia.station_hatch.linked" : "galaxia.station_hatch.unlinked"))
             .asWidget()
             .widgetTheme(GTWidgetThemes.DISPLAY_TEXT_WHITE);
     }

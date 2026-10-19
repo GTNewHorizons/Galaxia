@@ -252,13 +252,14 @@ public class AirlockGUI {
                         .setEnabledIf(w -> present.getAsBoolean())));
         column.child(
             line(
-                () -> StatCollector.translateToLocal("galaxia.gui.airlock_controller.room.role") + ": "
-                    + StatCollector.translateToLocal(
+                () -> StatCollector.translateToLocalFormatted(
+                    "galaxia.gui.airlock_controller.room.role",
+                    StatCollector.translateToLocal(
                         GalaxiaBehaviors.byId(
                             room.role()
                                 .getAsInt())
                             .get()
-                            .getUnlocalizedName()),
+                            .getUnlocalizedName())),
                 GalaxiaGuiStyle.TEXT).setEnabledIf(w -> present.getAsBoolean()));
         column.child(
             line(
@@ -266,12 +267,10 @@ public class AirlockGUI {
                 GalaxiaGuiStyle.TEXT_DIM).setEnabledIf(w -> !present.getAsBoolean()));
         column.child(
             line(
-                () -> StatCollector.translateToLocal("galaxia.gui.airlock_controller.room.protection")
-                    + (room.protection()
-                        .getAsInt() == 0
-                            ? ": "
-                                + StatCollector.translateToLocal("galaxia.gui.airlock_controller.room.protection.none")
-                            : ""),
+                () -> StatCollector.translateToLocal(
+                    room.protection()
+                        .getAsInt() == 0 ? "galaxia.gui.airlock_controller.room.protection.none"
+                            : "galaxia.gui.airlock_controller.room.protection"),
                 GalaxiaGuiStyle.TEXT).setEnabledIf(w -> present.getAsBoolean()));
         column.child(
             badges(room).setEnabledIf(
@@ -279,22 +278,24 @@ public class AirlockGUI {
                     .getAsInt() != 0));
         column.child(
             line(
-                () -> StatCollector.translateToLocal("galaxia.gui.airlock_controller.room.attachments") + ": "
-                    + room.attachments()
-                        .getAsInt(),
+                () -> StatCollector.translateToLocalFormatted(
+                    "galaxia.gui.airlock_controller.room.attachments",
+                    room.attachments()
+                        .getAsInt()),
                 GalaxiaGuiStyle.TEXT_DIM).setEnabledIf(w -> present.getAsBoolean()));
         column.child(
             line(
-                () -> StatCollector.translateToLocal("galaxia.gui.airlock_controller.room.volume") + ": "
-                    + room.volume()
-                        .getAsInt(),
+                () -> StatCollector.translateToLocalFormatted(
+                    "galaxia.gui.airlock_controller.room.volume",
+                    room.volume()
+                        .getAsInt()),
                 GalaxiaGuiStyle.TEXT_DIM).setEnabledIf(w -> present.getAsBoolean()));
         column.child(
             line(
-                () -> StatCollector.translateToLocal("galaxia.gui.airlock_controller.room.oxygen") + ": "
-                    + room.oxygenLevel()
-                        .getAsInt()
-                    + "%",
+                () -> StatCollector.translateToLocalFormatted(
+                    "galaxia.gui.airlock_controller.room.oxygen",
+                    room.oxygenLevel()
+                        .getAsInt()),
                 GalaxiaGuiStyle.TEXT).setEnabledIf(w -> present.getAsBoolean()));
         column.child(
             GalaxiaGuiStyle.bar(

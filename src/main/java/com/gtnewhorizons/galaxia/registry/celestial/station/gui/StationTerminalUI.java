@@ -344,7 +344,11 @@ public final class StationTerminalUI implements IGuiHolder<StationGuiFactory.Dat
             if (room == null)
                 return line == 0 ? StatCollector.translateToLocal("galaxia.gui.station_terminal.select") : "";
             List<String> lines = new ArrayList<>();
-            lines.add(StatCollector.translateToLocal(room.behavior()) + (room.main() ? " *" : ""));
+            String behavior = StatCollector.translateToLocal(room.behavior());
+            lines.add(
+                room.main()
+                    ? StatCollector.translateToLocalFormatted("galaxia.gui.station_terminal.main_room", behavior)
+                    : behavior);
             lines.add(
                 StatCollector
                     .translateToLocalFormatted("galaxia.gui.station_terminal.at", room.x(), room.y(), room.z()));
@@ -372,8 +376,10 @@ public final class StationTerminalUI implements IGuiHolder<StationGuiFactory.Dat
                 for (int k = 0; k < FUNCTIONAL_BLOCKS.length; k++) {
                     if (room.functional()[k] <= 0) continue;
                     lines.add(
-                        StatCollector.translateToLocal("tile." + FUNCTIONAL_BLOCKS[k] + ".name") + ": "
-                            + room.functional()[k]);
+                        StatCollector.translateToLocalFormatted(
+                            "galaxia.gui.station_terminal.functional",
+                            StatCollector.translateToLocal("tile." + FUNCTIONAL_BLOCKS[k] + ".name"),
+                            room.functional()[k]));
                 }
             }
             return line < lines.size() ? lines.get(line) : "";

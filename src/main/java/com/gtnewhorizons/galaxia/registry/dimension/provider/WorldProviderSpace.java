@@ -398,6 +398,32 @@ public class WorldProviderSpace extends WorldProvider implements ICubicWorldProv
     }
 
     /**
+     * Keeps the dimension without weather. Other dimensions share the overworld's rain, so without this it rains here
+     * whenever it rains there and snow piles up even in orbit
+     */
+    @Override
+    public void updateWeather() {
+        worldObj.prevRainingStrength = 0;
+        worldObj.rainingStrength = 0;
+        worldObj.prevThunderingStrength = 0;
+        worldObj.thunderingStrength = 0;
+    }
+
+    /**
+     * Gets whether snow can settle at a position
+     *
+     * @param x          X Position
+     * @param y          Y Position
+     * @param z          Z Position
+     * @param checkLight Whether the light level is checked
+     * @return Boolean : True => Snow can settle
+     */
+    @Override
+    public boolean canSnowAt(int x, int y, int z, boolean checkLight) {
+        return false;
+    }
+
+    /**
      * Gets the sky renderer
      *
      * @return The sky renderer being used

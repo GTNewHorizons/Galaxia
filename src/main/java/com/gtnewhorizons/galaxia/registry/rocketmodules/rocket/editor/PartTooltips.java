@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor;
 
 import java.util.Set;
 
-import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -30,12 +29,12 @@ public final class PartTooltips {
      * @param tooltip The tooltip to fill
      */
     public static void describe(IRocketPartDef def, RichTooltip tooltip) {
-        line(tooltip, "galaxia.rocket_part.stat.size", def.width() + "x" + def.height());
-        line(tooltip, "galaxia.rocket_part.stat.mass", String.format("%,d kg", def.weight()));
+        line(tooltip, "galaxia.rocket_part.stat.size", def.width(), def.height());
+        line(tooltip, "galaxia.rocket_part.stat.mass", String.format("%,d", def.weight()));
 
         if (def instanceof EnginePartDef engine) {
-            line(tooltip, "galaxia.rocket_part.stat.thrust", String.format("%,.0f kgf", engine.thrust()));
-            line(tooltip, "galaxia.rocket_part.stat.isp", String.format("%.0f s", engine.isp()));
+            line(tooltip, "galaxia.rocket_part.stat.thrust", String.format("%,.0f", engine.thrust()));
+            line(tooltip, "galaxia.rocket_part.stat.isp", String.format("%.0f", engine.isp()));
             line(
                 tooltip,
                 "galaxia.rocket_part.stat.burns",
@@ -48,15 +47,15 @@ public final class PartTooltips {
                 tooltip,
                 "galaxia.rocket_part.stat.full_mass",
                 String.format(
-                    "%,.0f kg",
+                    "%,.0f",
                     tank.weight() + tank.fuel()
                         .massOf(tank.fuelCapacity())));
         }
         if (def instanceof StoragePartDef storage) {
-            line(tooltip, "galaxia.rocket_part.stat.slots", Integer.toString(storage.slots()));
+            line(tooltip, "galaxia.rocket_part.stat.slots", storage.slots());
         }
         if (def instanceof RiderPartDef rider) {
-            line(tooltip, "galaxia.rocket_part.stat.seats", Integer.toString(rider.riderCapacity()));
+            line(tooltip, "galaxia.rocket_part.stat.seats", rider.riderCapacity());
         }
     }
 
@@ -69,25 +68,18 @@ public final class PartTooltips {
     public static void describeStage(RocketStage stage, RichTooltip tooltip) {
         tooltip.addLine(
             IKey.str(StatCollector.translateToLocalFormatted("galaxia.rocket_editor.stage", stage.getNumber() + 1)));
-        line(tooltip, "galaxia.rocket_part.stat.mass", String.format("%,.0f kg", stage.getDryMass()));
-        line(tooltip, "galaxia.rocket_part.stat.thrust", String.format("%,.0f kgf", stage.getTotalThrust()));
+        line(tooltip, "galaxia.rocket_part.stat.mass", String.format("%,.0f", stage.getDryMass()));
+        line(tooltip, "galaxia.rocket_part.stat.thrust", String.format("%,.0f", stage.getTotalThrust()));
         Set<RocketFuel> fuels = stage.getBurnableFuels();
         for (RocketFuel fuel : fuels) {
             line(tooltip, "galaxia.rocket_part.stat.burns", fuel.name());
         }
         if (!stage.hasEngines()) {
-            tooltip.addLine(
-                IKey.str(
-                    EnumChatFormatting.GRAY + StatCollector.translateToLocal("galaxia.rocket_editor.stage_payload")));
+            tooltip.addLine(IKey.lang("galaxia.rocket_editor.stage_payload"));
         }
     }
 
-    private static void line(RichTooltip tooltip, String key, String value) {
-        tooltip.addLine(
-            IKey.str(
-                EnumChatFormatting.GRAY + StatCollector.translateToLocal(key)
-                    + ": "
-                    + EnumChatFormatting.WHITE
-                    + value));
+    private static void line(RichTooltip tooltip, String key, Object... values) {
+        tooltip.addLine(IKey.str(StatCollector.translateToLocalFormatted(key, values)));
     }
 }

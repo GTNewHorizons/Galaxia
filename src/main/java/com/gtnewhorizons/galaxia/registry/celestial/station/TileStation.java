@@ -506,9 +506,10 @@ public class TileStation extends TileStationBase<TileStation> {
         panel.child(
             GalaxiaGuiStyle
                 .label(
-                    () -> StatCollector.translateToLocal("galaxia.gui.role") + ": "
-                        + StatCollector.translateToLocal(
-                            controllerFlag == Role.MAIN ? "galaxia.gui.role.main" : "galaxia.gui.role.secondary"),
+                    () -> StatCollector.translateToLocalFormatted(
+                        "galaxia.gui.role",
+                        StatCollector.translateToLocal(
+                            controllerFlag == Role.MAIN ? "galaxia.gui.role.main" : "galaxia.gui.role.secondary")),
                     () -> GalaxiaGuiStyle.TEXT,
                     1f)
                 .pos(10, 24));
@@ -544,10 +545,11 @@ public class TileStation extends TileStationBase<TileStation> {
         panel.child(
             GalaxiaGuiStyle
                 .label(
-                    () -> StatCollector.translateToLocal("galaxia.gui.station_controller.structure") + ": "
-                        + StatCollector.translateToLocal(
+                    () -> StatCollector.translateToLocalFormatted(
+                        "galaxia.gui.station_controller.structure",
+                        StatCollector.translateToLocal(
                             structureValidSync.getBoolValue() ? "galaxia.gui.status_valid"
-                                : "galaxia.gui.status_invalid"),
+                                : "galaxia.gui.status_invalid")),
                     () -> structureValidSync.getBoolValue() ? GalaxiaGuiStyle.GOOD : GalaxiaGuiStyle.BAD,
                     1f)
                 .pos(10, 58));

@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.compat.gt.station;
 
+import static gregtech.api.enums.Textures.BlockIcons.ITEM_OUT_SIGN;
+
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.StatCollector;
@@ -137,5 +139,15 @@ public class MTEHatchStationOutputBus extends MTEHatchInputBus {
     @Override
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings uiSettings) {
         return new StationOutputBusGui(this).build(data, syncManager, uiSettings);
+    }
+
+    @Override
+    public ITexture[] getTexturesActive(ITexture base) {
+        return StationHatchTextures.output(base, ITEM_OUT_SIGN);
+    }
+
+    @Override
+    public ITexture[] getTexturesInactive(ITexture base) {
+        return StationHatchTextures.output(base, ITEM_OUT_SIGN);
     }
 }

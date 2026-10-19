@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.compat.gt.station;
 
+import static gregtech.api.enums.Textures.BlockIcons.FLUID_OUT_SIGN;
+
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.StatCollector;
 import net.minecraftforge.fluids.FluidStack;
@@ -128,5 +130,15 @@ public class MTEHatchStationOutputHatch extends MTEHatchMultiInput {
     @Override
     public ModularPanel buildUI(PosGuiData guiData, PanelSyncManager syncManager, UISettings uiSettings) {
         return new StationOutputHatchGui(this).build(guiData, syncManager, uiSettings);
+    }
+
+    @Override
+    public ITexture[] getTexturesActive(ITexture base) {
+        return StationHatchTextures.output(base, FLUID_OUT_SIGN);
+    }
+
+    @Override
+    public ITexture[] getTexturesInactive(ITexture base) {
+        return StationHatchTextures.output(base, FLUID_OUT_SIGN);
     }
 }
