@@ -119,14 +119,6 @@ public enum EnumTextures {
     SILO_ENTER_ROCKET_ICON("textures/gui/silo/fields/enter_rocket_icon.png"),
 
     // Scroll Bars
-    SILO_SCROLL_BAR_BOTTOM("textures/gui/silo/scroll_bars/bar_bottom.png"),
-    SILO_SCROLL_BAR_BOTTOM_HOVERED("textures/gui/silo/scroll_bars/bar_bottom_hovered.png"),
-    SILO_SCROLL_BAR_HANDLE("textures/gui/silo/scroll_bars/bar_handle.png"),
-    SILO_SCROLL_BAR_HANDLE_HOVERED("textures/gui/silo/scroll_bars/bar_handle_hovered.png"),
-    SILO_SCROLL_BAR_MIDDLE("textures/gui/silo/scroll_bars/bar_middle.png"),
-    SILO_SCROLL_BAR_MIDDLE_HOVERED("textures/gui/silo/scroll_bars/bar_middle_hovered.png"),
-    SILO_SCROLL_BAR_TOP("textures/gui/silo/scroll_bars/bar_top.png"),
-    SILO_SCROLL_BAR_TOP_HOVERED("textures/gui/silo/scroll_bars/bar_top_hovered.png"),
 
     // Stages
     SILO_STAGE_ADD("textures/gui/silo/stages/stage_add.png"),
@@ -159,8 +151,18 @@ public enum EnumTextures {
     GUI_BUTTON("textures/gui/common/button.png", 16, 2),
     GUI_BUTTON_HOVERED("textures/gui/common/button_hovered.png", 16, 2),
     GUI_BUTTON_SELECTED("textures/gui/common/button_selected.png", 16, 2),
+    GUI_BUTTON_DISABLED("textures/gui/common/button_disabled.png", 16, 2),
+    GUI_PANEL_TRANSLUCENT("textures/gui/common/panel_translucent.png", 16, 16, 2, true),
+    GUI_SCROLLBAR_TRACK("textures/gui/common/scrollbar_track.png", 6, 8, 3, 2),
+    GUI_SCROLLBAR_TRACK_HOVERED("textures/gui/common/scrollbar_track_hovered.png", 6, 8, 3, 2),
+    GUI_SCROLLBAR_HANDLE("textures/gui/common/scrollbar_handle.png"),
+    GUI_SCROLLBAR_HANDLE_HOVERED("textures/gui/common/scrollbar_handle_hovered.png"),
+    GUI_TITLEBAR_GRIP("textures/gui/common/titlebar_grip.png"),
+    ICON_CLOSE("textures/gui/common/icons/close.png"),
     GUI_SLOT("textures/gui/common/slot.png"),
     GUI_ARROW("textures/gui/common/arrow.png"),
+    STARMAP_SIDEBAR_ARROW("textures/gui/starmap/sidebar_arrow.png"),
+    STARMAP_SIDEBAR_ARROW_DOWN("textures/gui/starmap/sidebar_arrow_down.png"),
     GUI_LED_ON("textures/gui/common/led_on.png"),
     GUI_LED_OFF("textures/gui/common/led_off.png"),
     GUI_LED_WAIT("textures/gui/common/led_wait.png"),
@@ -200,6 +202,43 @@ public enum EnumTextures {
             .location(Galaxia.MODID, location)
             .imageSize(size, size)
             .adaptable(border)
+            .build();
+    }
+
+    /**
+     * A texture whose border stays fixed while the centre stretches
+     *
+     * @param location    Path inside the mod's assets
+     * @param width       Width of the image in pixels
+     * @param height      Height of the image in pixels
+     * @param border      Width of the fixed border in pixels
+     * @param translucent Whether the image has see-through pixels that have to be blended
+     */
+    EnumTextures(String location, int width, int height, int border, boolean translucent) {
+        this.texture = LocationGalaxia(location);
+        UITexture.Builder builder = UITexture.builder()
+            .location(Galaxia.MODID, location)
+            .imageSize(width, height)
+            .adaptable(border);
+        if (translucent) builder.nonOpaque();
+        this.uiTexture = builder.build();
+    }
+
+    /**
+     * A vertical strip whose caps stay fixed while its middle stretches
+     *
+     * @param location Path inside the mod's assets
+     * @param width    Width of the image in pixels
+     * @param height   Height of the image in pixels
+     * @param top      Height of the fixed top cap
+     * @param bottom   Height of the fixed bottom cap
+     */
+    EnumTextures(String location, int width, int height, int top, int bottom) {
+        this.texture = LocationGalaxia(location);
+        this.uiTexture = UITexture.builder()
+            .location(Galaxia.MODID, location)
+            .imageSize(width, height)
+            .adaptable(0, top, 0, bottom)
             .build();
     }
 

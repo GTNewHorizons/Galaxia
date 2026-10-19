@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.preview;
 
+import com.cleanroommc.modularui.screen.ModularPanel;
+import com.gtnewhorizons.galaxia.client.gui.ui.WindowLayer;
 import com.cleanroommc.modularui.factory.GuiData;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.UISettings;
@@ -88,6 +90,20 @@ final class PreviewSupport {
     static void initializeFacilityModules() {
         initializeClient();
         if (!FacilityModuleRegistry.isRegistered(FacilityModuleKind.POWER)) FacilityModuleRegistry.init();
+    }
+
+    /** Screen-sized panel holding only a window layer, the way the galactic map hosts its windows */
+    static ModularPanel windowPanel() {
+        ModularPanel panel = ModularPanel.defaultPanel("galaxia_preview_windows", 760, 460);
+        panel.child(
+            new WindowLayer(() -> 1.0).widthRel(1f)
+                .heightRel(1f));
+        return panel;
+    }
+
+    static WindowLayer layerOf(ModularPanel panel) {
+        return (WindowLayer) panel.getChildren()
+            .get(0);
     }
 
     static PanelSyncManager sync(PreviewEntrypoint.Context context) {

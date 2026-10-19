@@ -1,23 +1,19 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.drawable.ItemDrawable;
-import com.cleanroommc.modularui.drawable.Rectangle;
-import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
-import com.cleanroommc.modularui.theme.WidgetThemeEntry;
-import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.Widget;
-import com.cleanroommc.modularui.widgets.TextWidget;
+import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
-import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
+import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaUi;
+import com.gtnewhorizons.galaxia.client.gui.ui.WindowLayer;
+import com.gtnewhorizons.galaxia.client.gui.ui.WindowSpec;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
 import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialDiscoveryCapability;
@@ -128,10 +124,27 @@ public final class OrbitalPinnedInfoContentBuilder {
 
         if (!canShowOreDetails(body)) return row("ores", tr("ore.unknown"));
 
-        List<ItemStack> gtOres = body.properties()
-            .getResolvedGtOreStacks();
+        List<ItemStack> gtOres = distinctOres(
+            body.properties()
+                .getResolvedGtOreStacks());
         if (gtOres.isEmpty()) return row("ores", tr("ore.undefined"));
         return new PinnedInfoRow(label("ores"), "", gtOres);
+    }
+
+    /** Each ore once, though several veins of the body can carry it */
+    private static List<ItemStack> distinctOres(List<ItemStack> ores) {
+        List<ItemStack> distinct = new ArrayList<>();
+        for (ItemStack ore : ores) {
+            boolean seen = false;
+            for (ItemStack kept : distinct) {
+                if (kept.getItem() == ore.getItem() && kept.getItemDamage() == ore.getItemDamage()) {
+                    seen = true;
+                    break;
+                }
+            }
+            if (!seen) distinct.add(ore);
+        }
+        return distinct;
     }
 
     private java.util.Optional<PinnedInfoRow> buildScanRow(CelestialObject body) {
@@ -233,7 +246,11 @@ public final class OrbitalPinnedInfoContentBuilder {
         return out.toString();
     }
 
-    public static final class OrbitalPinnedInfoWidget extends ParentWidget<OrbitalPinnedInfoWidget> {
+    /**
+     * Keeps the details window of the hovered or focused body open while there is one. The window can be dragged
+     * away but not closed, it follows the selection
+     */
+    public static final class OrbitalPinnedInfoWidget extends Widget<OrbitalPinnedInfoWidget> {
 
         interface Callbacks {
 
@@ -244,226 +261,77 @@ public final class OrbitalPinnedInfoContentBuilder {
             List<PinnedInfoRow> buildRows(CelestialObject body);
         }
 
-        private static final int PANEL_WIDTH = 116;
-        private static final int PANEL_PADDING = 12;
-        private static final int TEXT_LINE_HEIGHT = 9;
-        private static final int ROW_GAP = 6;
-        private static final int ICON_SIZE = 16;
-        private static final int ICON_GAP = 2;
-        private static final int GT_ORE_STACKS_PER_VEIN = 4;
-        private static final int INLINE_ICON_SIZE = 12;
-        private static final int INLINE_ICON_GAP = 1;
+        public static final String WINDOW = "starmap.panel.details";
+        private static final int MAX_TEXT_WIDTH = 180;
+        private static final int ORE_COLUMNS = 5;
+        private static final int ORES_SHOWN = 15;
+        /** Distance from the right edge of the layer the window opens at */
+        private static final int RIGHT_INSET = 18;
+
         private final Callbacks callbacks;
         private final StarmapViewContext view;
         private final StringBuilder sigBuf = new StringBuilder(256);
         private String lastSignature = "";
-        private List<PinnedInfoRow> cachedRows = List.of();
 
         OrbitalPinnedInfoWidget(Callbacks callbacks, StarmapViewContext view) {
             this.callbacks = callbacks;
             this.view = view;
-            setEnabled(false);
             size(0, 0);
         }
 
         @Override
         public void onUpdate() {
             super.onUpdate();
+            WindowLayer layer = WindowLayer.of(this);
+            if (layer == null) return;
             CelestialObject body = callbacks.getPinnedInfoBody();
             if (body == null) {
-                if (isEnabled()) {
-                    removeAll();
-                    scheduleResize();
-                }
+                layer.close(WINDOW);
                 lastSignature = "";
-                cachedRows = List.of();
-                setEnabled(false);
-                size(0, 0);
                 return;
             }
-            setEnabled(true);
             callbacks.buildSignatureInto(sigBuf, body, view.viewportWidth(), view.viewportHeight());
-            if (!lastSignature.contentEquals(sigBuf)) {
-                cachedRows = callbacks.buildRows(body);
-                rebuildChildren(body, cachedRows);
-                lastSignature = sigBuf.toString();
-            }
+            if (lastSignature.contentEquals(sigBuf) && layer.isOpen(WINDOW)) return;
+            lastSignature = sigBuf.toString();
+            List<PinnedInfoRow> rows = callbacks.buildRows(body);
+            // A new body gets a new title, so the window is opened again where it was left
+            layer.close(WINDOW);
+            layer.open(
+                WindowSpec.of(WINDOW, IKey.str(title(rows, body)))
+                    .closable(false)
+                    .anchor((lw, lh, w, h) -> new int[] { lw - w - RIGHT_INSET, Math.max(30, (lh - h) / 2) })
+                    .body(column -> fill(column, rows, body)));
         }
 
-        @Override
-        public void drawBackground(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
-            if (!isEnabled()) return;
-            super.drawBackground(context, widgetTheme);
-        }
-
-        @Override
-        public boolean canHoverThrough() {
-            return true;
-        }
-
-        private void rebuildChildren(CelestialObject body, List<PinnedInfoRow> rows) {
-            removeAll();
-            Minecraft mc = Minecraft.getMinecraft();
-            int viewportWidth = view.viewportWidth();
-            int contentWidth = getContentWidth(mc, rows, viewportWidth);
-            int boxWidth = contentWidth + PANEL_PADDING * 2;
-            // Pre-compute row heights once to avoid double wrapValue calls
-            int n = rows.size();
-            int[] rowHeights = new int[n];
-            int boxHeight = 8;
-            for (int i = 0; i < n; i++) {
-                rowHeights[i] = getRowHeight(mc, rows.get(i), contentWidth);
-                boxHeight += rowHeights[i] + ROW_GAP;
-            }
-            if (n > 0) boxHeight -= ROW_GAP;
-            boxHeight += 8;
-            size(boxWidth, boxHeight);
-            ParentWidget<?> root = new ParentWidget<>().pos(0, 0)
-                .size(boxWidth, boxHeight);
-            PassiveLayer backgroundLayer = new PassiveLayer().pos(0, 0)
-                .widthRel(1f)
-                .heightRel(1f)
-                .background(new Rectangle().color(EnumColors.MAP_COLOR_MODAL_BG.getColor()));
-            root.child(backgroundLayer);
-            root.child(WidgetOutline.create(backgroundLayer, 2, EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()));
-            int currentY = 8;
-            for (int i = 0; i < n; i++) {
-                buildRow(root, mc, rows.get(i), contentWidth, currentY);
-                currentY += rowHeights[i] + ROW_GAP;
-            }
-            child(root);
-            scheduleResize();
-        }
-
-        private void buildRow(ParentWidget<?> root, Minecraft mc, PinnedInfoRow row, int contentWidth, int y) {
-            if (row.inlineItems()) {
-                buildInlineRow(root, mc, row, contentWidth, y);
-                return;
-            }
-            root.child(
-                new TextWidget<>(IKey.str(row.label())).color(EnumColors.MAP_COLOR_TEXT_SECTION.getColor())
-                    .shadow(true)
-                    .pos(PANEL_PADDING, y));
-            if (!row.items()
-                .isEmpty()) {
-                buildItemGrid(root, row, PANEL_PADDING, y + 12, contentWidth);
-                return;
-            }
-            List<String> wrappedLines = wrapValue(mc, row.value(), contentWidth);
-            int lineY = y + 12;
-            for (String line : wrappedLines) {
-                root.child(
-                    new TextWidget<>(IKey.str(line)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
-                        .shadow(true)
-                        .pos(PANEL_PADDING, lineY));
-                lineY += TEXT_LINE_HEIGHT;
-            }
-        }
-
-        private void buildItemGrid(ParentWidget<?> root, PinnedInfoRow row, int x, int y, int contentWidth) {
-            List<ItemStack> items = row.items();
-            if (items == null || items.isEmpty()) return;
-            int itemsPerRow = itemGridColumns(row, contentWidth);
-            for (int i = 0; i < items.size(); i++) {
-                ItemStack stack = items.get(i);
-                if (stack == null) continue;
-                int col = i % itemsPerRow;
-                int rowIndex = i / itemsPerRow;
-                int itemX = x + col * (ICON_SIZE + ICON_GAP);
-                int itemY = y + rowIndex * (ICON_SIZE + ICON_GAP);
-                root.child(
-                    createItemWidget(stack).pos(itemX, itemY)
-                        .size(ICON_SIZE, ICON_SIZE));
-            }
-        }
-
-        private void buildInlineRow(ParentWidget<?> root, Minecraft mc, PinnedInfoRow row, int contentWidth, int y) {
-            int itemsWidth = row.items()
-                .size() * INLINE_ICON_SIZE
-                + Math.max(
-                    0,
-                    row.items()
-                        .size() - 1)
-                    * INLINE_ICON_GAP;
-            int iconsStartX = PANEL_PADDING + Math.max(0, contentWidth - itemsWidth);
-            int labelMaxWidth = Math.max(12, iconsStartX - PANEL_PADDING - 4);
-            String label = mc.fontRenderer.trimStringToWidth(row.value(), labelMaxWidth);
-            root.child(
-                new TextWidget<>(IKey.str(label)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
-                    .shadow(true)
-                    .pos(PANEL_PADDING, y + 1));
-            for (int i = 0; i < row.items()
-                .size(); i++) {
-                ItemStack stack = row.items()
-                    .get(i);
-                if (stack == null) continue;
-                int itemX = iconsStartX + i * (INLINE_ICON_SIZE + INLINE_ICON_GAP);
-                root.child(
-                    createItemWidget(stack).pos(itemX, y)
-                        .size(INLINE_ICON_SIZE, INLINE_ICON_SIZE));
-            }
-        }
-
-        private Widget<?> createItemWidget(ItemStack stack) {
-            ItemStack displayStack = stack.copy();
-            return new ItemDrawable(displayStack).asWidget()
-                .tooltip(t -> t.addLine(displayStack.getDisplayName()));
-        }
-
-        private int getContentWidth(Minecraft mc, List<PinnedInfoRow> rows, int widgetWidth) {
-            int minContentWidth = PANEL_WIDTH - PANEL_PADDING * 2;
-            int maxContentWidth = Math.max(minContentWidth, widgetWidth - 34 - PANEL_PADDING * 2);
-            int contentWidth = minContentWidth;
+        private static String title(List<PinnedInfoRow> rows, CelestialObject body) {
             for (PinnedInfoRow row : rows) {
-                if (!row.inlineItems()) continue;
-                int rowWidth = mc.fontRenderer.getStringWidth(row.value()) + 4
-                    + row.items()
-                        .size() * INLINE_ICON_SIZE
-                    + Math.max(
-                        0,
-                        row.items()
-                            .size() - 1)
-                        * INLINE_ICON_GAP;
-                contentWidth = Math.max(contentWidth, rowWidth);
+                if (label("name").equals(row.label())) return row.value();
             }
-            return Math.min(contentWidth, maxContentWidth);
+            return body.displayName();
         }
 
-        private int getRowHeight(Minecraft mc, PinnedInfoRow row, int contentWidth) {
-            int height = TEXT_LINE_HEIGHT;
-            if (row.inlineItems()) return Math.max(height, INLINE_ICON_SIZE);
-            if (!row.items()
-                .isEmpty()) {
-                int itemsPerRow = itemGridColumns(row, contentWidth);
-                int itemRows = (row.items()
-                    .size() + itemsPerRow
-                    - 1) / itemsPerRow;
-                return height + 4 + itemRows * ICON_SIZE + Math.max(0, itemRows - 1) * ICON_GAP;
+        private static void fill(GalaxiaUi.Column column, List<PinnedInfoRow> rows, CelestialObject body) {
+            for (PinnedInfoRow row : rows) {
+                if (label("name").equals(row.label())) continue;
+                if (row.inlineItems()) {
+                    Flow line = GalaxiaUi.row()
+                        .child(GalaxiaUi.clipped(row.value(), MAX_TEXT_WIDTH / 2, GalaxiaGuiStyle.TEXT));
+                    for (ItemStack stack : row.items()) line.child(GalaxiaUi.item(stack));
+                    column.add(line);
+                } else if (!row.items()
+                    .isEmpty()) {
+                        column.section(row.label())
+                            .add(
+                                GalaxiaUi.itemGrid(
+                                    "starmap.details.ores",
+                                    row.items(),
+                                    ORE_COLUMNS,
+                                    ORES_SHOWN,
+                                    StatCollector.translateToLocalFormatted(key("ores_of"), body.displayName())));
+                    } else {
+                        column.keyValue(row.label(), row.value(), MAX_TEXT_WIDTH);
+                    }
             }
-            List<String> wrappedLines = wrapValue(mc, row.value(), contentWidth);
-            if (wrappedLines.isEmpty()) return height;
-            return height + 4 + wrappedLines.size() * TEXT_LINE_HEIGHT;
         }
-
-        private int itemGridColumns(PinnedInfoRow row, int contentWidth) {
-            int columns = Math.max(1, contentWidth / (ICON_SIZE + ICON_GAP));
-            if (label("ores").equals(row.label())) return Math.min(GT_ORE_STACKS_PER_VEIN, columns);
-            return columns;
-        }
-
-        private List<String> wrapValue(Minecraft mc, String value, int width) {
-            if (value == null || value.isEmpty()) return Collections.EMPTY_LIST;
-            List<String> lines = new ArrayList<>();
-            String[] paragraphs = value.split("\\n");
-            for (String paragraph : paragraphs) {
-                if (paragraph.isEmpty()) {
-                    lines.add("");
-                    continue;
-                }
-                lines.addAll(mc.fontRenderer.listFormattedStringToWidth(paragraph, width));
-            }
-            return lines;
-        }
-
     }
 }

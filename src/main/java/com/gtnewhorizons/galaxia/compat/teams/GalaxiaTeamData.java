@@ -10,24 +10,16 @@ import com.gtnewhorizon.gtnhlib.teams.INetworkTeamData;
 import com.gtnewhorizon.gtnhlib.teams.ITeamData;
 import com.gtnewhorizon.gtnhlib.teams.Team;
 import com.gtnewhorizon.gtnhlib.teams.TeamDataTransferReason;
-import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.handlers.TeamEventHandler;
-
-import lombok.Getter;
 
 public class GalaxiaTeamData implements INetworkTeamData {
 
     public static final String ID = "GALAXIA";
 
-    @Getter
-    private int teamColor = EnumColors.MAP_COLOR_TEAM_ACCENT.getColor();
-
     private final EnumMap<TeamAction, TeamRole> permissions = new EnumMap<>(TeamAction.class);
 
     @Override
     public void writeToNBT(NBTTagCompound tag) {
-        tag.setInteger("teamColor", teamColor);
-
         int size = permissions.size();
         int[] actionOrdinals = new int[size];
         int[] roleOrdinals = new int[size];
@@ -45,9 +37,6 @@ public class GalaxiaTeamData implements INetworkTeamData {
 
     @Override
     public void readFromNBT(NBTTagCompound tag) {
-        teamColor = tag.hasKey("teamColor") ? tag.getInteger("teamColor")
-            : EnumColors.MAP_COLOR_MODAL_HEADER.getColor();
-
         permissions.clear();
         if (tag.hasKey("permActions")) {
             int[] actions = tag.getIntArray("permActions");
@@ -66,7 +55,6 @@ public class GalaxiaTeamData implements INetworkTeamData {
     @Override
     public void mergeData(Team consumed, Team surviving, ITeamData oldTeamData) {
         if (oldTeamData instanceof GalaxiaTeamData other) {
-            this.teamColor = other.teamColor;
             this.permissions.clear();
             this.permissions.putAll(other.permissions);
 
@@ -80,7 +68,6 @@ public class GalaxiaTeamData implements INetworkTeamData {
     public void transferData(Team prevTeam, Team newTeam, UUID playerId, ITeamData prevTeamData,
         TeamDataTransferReason reason) {
         if (prevTeamData instanceof GalaxiaTeamData other) {
-            this.teamColor = other.teamColor;
             this.permissions.clear();
             this.permissions.putAll(other.permissions);
 
@@ -92,10 +79,6 @@ public class GalaxiaTeamData implements INetworkTeamData {
 
     @Override
     public void markSyncedToClient() {}
-
-    public void setTeamColor(int color) {
-        this.teamColor = color;
-    }
 
     public TeamRole getRequiredRole(TeamAction action) {
         return permissions.getOrDefault(action, action.getDefaultRole());

@@ -65,7 +65,6 @@ import gregtech.nei.GTNEIDefaultHandler;
 @GameTestHolder(value = "galaxia", clientOnly = true, requiredMods = { "gregtech", "NotEnoughItems" })
 public final class StationGuiGameTests {
 
-    private static final String STATION_SCREEN = "galaxia_station_management";
     private static final String RECIPE_SCREEN = "galaxia_recipe_input";
     private static final StationTileCoord MACERATOR_TILE = StationTileCoord.of(1, 0);
     private static final StationTileCoord SECOND_MACERATOR_TILE = StationTileCoord.of(-1, 0);
@@ -116,9 +115,12 @@ public final class StationGuiGameTests {
     public static void recipeConfigurationClosesAndReopens(GameTestHelper helper) {
         StationFixture fixture = new StationFixture();
         openConfiguration(helper, fixture).step("close recipe configuration")
-            .click(control("recipe.close"))
+            .click(control("station.config.close"))
             .awaitClient("recipe configuration closed", c -> {
-                if (!TreeUtil.flatListByType(requireScreen(STATION_SCREEN).getMainPanel(), DropdownWidget.class)
+                if (!TreeUtil.flatListByType(
+                    GuiTestSupport.requireStation()
+                        .getPanel(),
+                    DropdownWidget.class)
                     .isEmpty()) {
                     throw new AssertionError("Recipe configuration is still open");
                 }
@@ -209,7 +211,10 @@ public final class StationGuiGameTests {
             .step("back to recipe list")
             .click(control("recipe.details.back"))
             .awaitClient("native details closed", c -> {
-                if (!TreeUtil.flatListByType(requireScreen(STATION_SCREEN).getMainPanel(), NativeRecipeWidget.class)
+                if (!TreeUtil.flatListByType(
+                    GuiTestSupport.requireStation()
+                        .getPanel(),
+                    NativeRecipeWidget.class)
                     .isEmpty()) throw new AssertionError("Native recipe is still open");
             })
             .step("use Add after details")
@@ -314,9 +319,12 @@ public final class StationGuiGameTests {
         openConfiguration(helper, fixture).step("capture doubled configuration")
             .capture("configuration-scale-2")
             .step("close visible configuration")
-            .click(control("recipe.close"))
+            .click(control("station.config.close"))
             .awaitClient("scaled configuration closed", c -> {
-                if (!TreeUtil.flatListByType(requireScreen(STATION_SCREEN).getMainPanel(), DropdownWidget.class)
+                if (!TreeUtil.flatListByType(
+                    GuiTestSupport.requireStation()
+                        .getPanel(),
+                    DropdownWidget.class)
                     .isEmpty()) throw new AssertionError("Scaled configuration is still open");
             })
             .succeed();
@@ -369,7 +377,7 @@ public final class StationGuiGameTests {
         openConfiguration(helper, fixture).step("disable draft recipe")
             .click(control("recipe.toggle.0"))
             .step("close without saving")
-            .click(control("recipe.close"))
+            .click(control("station.config.close"))
             .server("server recipe unchanged", () -> fixture.assertRecipeEnabled(false, true))
             .step("reopen discarded draft")
             .click(control("CONFIG"))
@@ -393,7 +401,10 @@ public final class StationGuiGameTests {
                     .equals(uniqueWidget(StationMapWidget.class).selection())) {
                     throw new AssertionError("Station core was not selected");
                 }
-                if (!TreeUtil.flatListByType(requireScreen(STATION_SCREEN).getMainPanel(), DropdownWidget.class)
+                if (!TreeUtil.flatListByType(
+                    GuiTestSupport.requireStation()
+                        .getPanel(),
+                    DropdownWidget.class)
                     .isEmpty()) throw new AssertionError("Module configuration remains open for the core");
             })
             .step("select macerator again")
@@ -415,9 +426,10 @@ public final class StationGuiGameTests {
             .client("arm resize after positioning close", c -> resize.arm(c))
             .withinTicks(150)
             .step("close while the window changes size")
-            .click(ClientTarget.of("recipe.close during resize", c -> resize.closeTarget()))
+            .click(ClientTarget.of("configuration close during resize", c -> resize.closeTarget()))
             .awaitClient("resized configuration closed", c -> {
-                if (findNamedWidget("recipe.close") != null) throw new AssertionError("Configuration is still open");
+                if (findNamedWidget("station.config.close") != null)
+                    throw new AssertionError("Configuration is still open");
                 if (Display.getWidth() != 1600 || Display.getHeight() != 900) {
                     throw new AssertionError("Window resize did not take effect");
                 }
@@ -618,7 +630,7 @@ public final class StationGuiGameTests {
         }
 
         void captureStationScreen() {
-            requireScreen(STATION_SCREEN);
+            GuiTestSupport.requireStation();
             Minecraft mc = Minecraft.getMinecraft();
             stationScreen = mc.currentScreen;
         }
@@ -632,7 +644,7 @@ public final class StationGuiGameTests {
         }
 
         void assertReturnedToStation() {
-            requireScreen(STATION_SCREEN);
+            GuiTestSupport.requireStation();
             if (Minecraft.getMinecraft().currentScreen != stationScreen) {
                 throw new AssertionError("Recipe editor did not return to its original station screen");
             }
@@ -776,7 +788,7 @@ public final class StationGuiGameTests {
         @SubscribeEvent
         public void afterFrame(TickEvent.RenderTickEvent event) {
             if (event.phase != TickEvent.Phase.END || !positioned || requested) return;
-            IWidget close = findNamedWidget("recipe.close");
+            IWidget close = findNamedWidget("station.config.close");
             if (close == null || !close.getPanel()
                 .isBelowMouse(close)) return;
             client.requestWindowResize(1600, 900);
@@ -784,7 +796,7 @@ public final class StationGuiGameTests {
         }
 
         ClickTarget closeTarget() {
-            IWidget close = findNamedWidget("recipe.close");
+            IWidget close = findNamedWidget("station.config.close");
             if (close == null) return null;
             return new ClickTarget(close, GuiTestSupport.widgetBounds(close), () -> {
                 positioned = true;
@@ -809,8 +821,11 @@ public final class StationGuiGameTests {
     }
 
     private static <T extends IWidget> T uniqueWidget(Class<T> type) {
-        List<T> widgets = TreeUtil
-            .flatListByType(requireScreen(STATION_SCREEN).getMainPanel(), type, IWidget::areAncestorsEnabled);
+        List<T> widgets = TreeUtil.flatListByType(
+            GuiTestSupport.requireStation()
+                .getPanel(),
+            type,
+            IWidget::areAncestorsEnabled);
         if (widgets.size() != 1) {
             throw new AssertionError("Expected one visible " + type.getSimpleName() + ", found " + widgets.size());
         }
@@ -829,7 +844,10 @@ public final class StationGuiGameTests {
 
     private static IWidget visibleText(String text) {
         List<IWidget> matches = new ArrayList<>();
-        for (var panel : requireScreen(STATION_SCREEN).getPanelManager()
+        for (var panel : GuiTestSupport.requireStation()
+            .getPanel()
+            .getScreen()
+            .getPanelManager()
             .getOpenPanels()) {
             matches.addAll(
                 TreeUtil.flatListBFS(

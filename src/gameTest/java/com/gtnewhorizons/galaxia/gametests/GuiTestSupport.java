@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.gametests;
 
+import java.awt.Point;
 import java.awt.Rectangle;
 
 import net.minecraft.client.Minecraft;
@@ -17,7 +18,6 @@ import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.viewport.LocatedWidget;
 import com.cleanroommc.modularui.utils.TreeUtil;
 import com.cleanroommc.modularui.widget.AbstractScrollWidget;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.CelestialSidebarWidget;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.OrbitalView.OrbitalMapWidget;
 import com.gtnewhorizons.galaxia.client.gui.station.StationMapWidget;
 import com.gtnewhorizons.galaxia.core.Galaxia;
@@ -140,7 +140,19 @@ final class GuiTestSupport {
     static ClientScenario openFacility(ClientScenario scenario, GameTestHelper helper, CelestialAsset.ID assetId,
         CelestialObjectKey body, int guiScale) {
         return manageBody(openMap(scenario, helper, guiScale), body).click(control("asset.manage." + assetId))
-            .awaitClient("station management opened", c -> requireScreen("galaxia_station_management"));
+            .awaitClient("station management opened", c -> requireStation());
+    }
+
+    /** The open window with this id, failing when there is none */
+    static IWidget requireWindow(String id) {
+        IWidget window = findNamedWidget(id);
+        if (window == null) throw new AssertionError("Expected window " + id);
+        return window;
+    }
+
+    /** Content of the open station window */
+    static IWidget requireStation() {
+        return requireWindow("station.content");
     }
 
     static ModularScreen requireScreen(String name) {
@@ -200,6 +212,18 @@ final class GuiTestSupport {
                         mouseButton)));
     }
 
+    /** Centre of the satellite marker beside a body in screen coordinates, or null when none is drawn */
+    static Point satelliteMarkerCenter(CelestialObjectKey key) {
+        OrbitalMapWidget map = map();
+        Rectangle local = map == null ? null : map.satelliteMarkerBounds(key);
+        if (local == null) return null;
+        var matrix = LocatedWidget.of(map)
+            .getTransformationMatrix();
+        int x = local.x + local.width / 2;
+        int y = local.y + local.height / 2;
+        return new Point(matrix.transformX(x, y), matrix.transformY(x, y));
+    }
+
     static ClickTarget tileTarget(StationMapWidget map, StationTileCoord coordinate) {
         Rectangle local = map.tileBounds(coordinate);
         var matrix = LocatedWidget.of(map)
@@ -254,22 +278,7 @@ final class GuiTestSupport {
     }
 
     static ClickTarget sidebarDebugTarget() {
-        ModularScreen screen = ModularScreen.getCurrent();
-        if (screen == null) return null;
-        var sidebars = TreeUtil.flatListByType(screen.getMainPanel(), CelestialSidebarWidget.class);
-        if (sidebars.size() != 1) return null;
-        CelestialSidebarWidget sidebar = sidebars.getFirst();
-        Rectangle bounds = sidebar.creativeButtonBounds();
-        if (bounds == null || bounds.isEmpty()) return null;
-        var matrix = LocatedWidget.of(sidebar)
-            .getTransformationMatrix();
-        bounds.translate(matrix.transformX(0, 0), matrix.transformY(0, 0));
-        return new ClickTarget(
-            "sidebar.debug",
-            bounds,
-            () -> sidebar.isValid() && sidebar.areAncestorsEnabled()
-                && sidebar.getPanel()
-                    .isBelowMouse(sidebar));
+        return namedTarget("starmap.sidebar.debug");
     }
 
     static IWidget findNamedWidget(String name) {
