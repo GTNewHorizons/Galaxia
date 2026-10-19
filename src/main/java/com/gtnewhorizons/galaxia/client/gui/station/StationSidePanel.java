@@ -66,7 +66,7 @@ final class StationSidePanel {
         int textWidth = width - GalaxiaUi.PAD * 2;
         GalaxiaUi.Column column = GalaxiaUi.columnOf(panel());
         column.add(
-            GalaxiaUi.dim(tr("galaxia.gui.station.panel.none"))
+            GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.station.panel.none"))
                 .setEnabledIf(w -> facility() == null));
         GalaxiaUi.Column station = GalaxiaUi.columnOf(GalaxiaUi.column());
         station
@@ -97,7 +97,7 @@ final class StationSidePanel {
         column.add(inventoryButton);
         column.rule();
         column.add(
-            GalaxiaUi.dim(tr("galaxia.gui.station.panel.no_tile"))
+            GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.station.panel.no_tile"))
                 .setEnabledIf(w -> facility() != null && selection() == null));
         column.add(
             GalaxiaUi.lines(this::statusLines, STATUS_LINES, textWidth)
@@ -125,7 +125,7 @@ final class StationSidePanel {
         Flow destroy = GalaxiaUi.row()
             .child(
                 GalaxiaUi.button(
-                    tr("galaxia.gui.station.copy_module"),
+                    StatCollector.translateToLocal("galaxia.gui.station.copy_module"),
                     () -> copyModule != null && canDestroySelected(),
                     () -> {
                         ModuleInstance module = selectedModule();
@@ -141,11 +141,11 @@ final class StationSidePanel {
         column.add(
             GalaxiaUi
                 .toggle(
-                    () -> tr("galaxia.gui.station.panel.multiple"),
+                    () -> StatCollector.translateToLocal("galaxia.gui.station.panel.multiple"),
                     half,
                     () -> destroyMultipleMode,
                     () -> destroyMultipleMode = !destroyMultipleMode)
-                .tooltip(t -> t.addLine(tr("galaxia.gui.station.panel.multiple.tooltip")))
+                .tooltip(t -> t.addLine(StatCollector.translateToLocal("galaxia.gui.station.panel.multiple.tooltip")))
                 .setEnabledIf(w -> armedDestroySelection != null)
                 .marginLeft(half + GalaxiaUi.GAP));
 
@@ -221,7 +221,7 @@ final class StationSidePanel {
     // region Destroy
 
     private String destroyLabel() {
-        return tr(
+        return StatCollector.translateToLocal(
             armedDestroySelection != null && armedDestroySelection.equals(selection())
                 ? "galaxia.gui.station.panel.confirm"
                 : "galaxia.gui.station.panel.destroy");
@@ -256,8 +256,8 @@ final class StationSidePanel {
         AutomatedFacility facility = facility();
         if (facility == null || facility.stationLayout() == null) return false;
         tilePickerController.start(
-            tr("galaxia.gui.station.panel.destroy_title"),
-            tr("galaxia.gui.station.panel.destroy"),
+            StatCollector.translateToLocal("galaxia.gui.station.panel.destroy_title"),
+            StatCollector.translateToLocal("galaxia.gui.station.panel.destroy"),
             coord -> moduleAt(facility, coord) != null,
             coord -> canonicalDestroyTarget(facility, coord),
             this::destroyTargets);
@@ -391,7 +391,4 @@ final class StationSidePanel {
         return tilePickerController != null && tilePickerController.isActive();
     }
 
-    private static String tr(String key) {
-        return StatCollector.translateToLocal(key);
-    }
 }

@@ -1193,7 +1193,8 @@ public final class InterplanetaryTransferSystem {
         private void updateTexts() {
             double currentSliderDv = state.sliderDv();
             if (Math.abs(currentSliderDv - lastSliderDv) > 1e-6) {
-                cachedDvLabel = tr("galaxia.gui.orbital.transfer.dv", currentSliderDv);
+                cachedDvLabel = StatCollector
+                    .translateToLocalFormatted("galaxia.gui.orbital.transfer.dv", currentSliderDv);
                 lastSliderDv = currentSliderDv;
             }
             boolean hasPreview = state.hasPreview();
@@ -1205,29 +1206,32 @@ public final class InterplanetaryTransferSystem {
             if (hasPreview) {
                 if (Math.abs(state.previewTof() - lastPreviewTof) > 1e-6
                     || Math.abs(currentTimeScale - lastTimeScale) > 1e-6) {
-                    cachedTof = tr(
+                    cachedTof = StatCollector.translateToLocalFormatted(
                         "galaxia.gui.orbital.transfer.tof",
                         state.previewTof() / Math.max(1e-6, currentTimeScale));
                     lastPreviewTof = state.previewTof();
                     lastTimeScale = currentTimeScale;
                 }
                 if (Math.abs(state.previewDvDep() - lastPreviewDvDep) > 1e-6) {
-                    cachedDepDv = tr("galaxia.gui.orbital.transfer.departure", state.previewDvDep());
+                    cachedDepDv = StatCollector
+                        .translateToLocalFormatted("galaxia.gui.orbital.transfer.departure", state.previewDvDep());
                     lastPreviewDvDep = state.previewDvDep();
                 }
                 if (Math.abs(state.previewDvCap() - lastPreviewDvCap) > 1e-6) {
-                    cachedCapDv = tr("galaxia.gui.orbital.transfer.capture", state.previewDvCap());
+                    cachedCapDv = StatCollector
+                        .translateToLocalFormatted("galaxia.gui.orbital.transfer.capture", state.previewDvCap());
                     lastPreviewDvCap = state.previewDvCap();
                 }
                 if (Math.abs(state.previewTotalDv() - lastPreviewTotalDv) > 1e-6) {
-                    cachedTotalDv = tr("galaxia.gui.orbital.transfer.total", state.previewTotalDv());
+                    cachedTotalDv = StatCollector
+                        .translateToLocalFormatted("galaxia.gui.orbital.transfer.total", state.previewTotalDv());
                     lastPreviewTotalDv = state.previewTotalDv();
                 }
             } else if (lastPreviewTof != -2) {
-                cachedTof = tr("galaxia.gui.orbital.transfer.tof.unknown");
-                cachedDepDv = tr("galaxia.gui.orbital.transfer.departure.unknown");
-                cachedCapDv = tr("galaxia.gui.orbital.transfer.capture.unknown");
-                cachedTotalDv = tr("galaxia.gui.orbital.transfer.total.unknown");
+                cachedTof = StatCollector.translateToLocal("galaxia.gui.orbital.transfer.tof.unknown");
+                cachedDepDv = StatCollector.translateToLocal("galaxia.gui.orbital.transfer.departure.unknown");
+                cachedCapDv = StatCollector.translateToLocal("galaxia.gui.orbital.transfer.capture.unknown");
+                cachedTotalDv = StatCollector.translateToLocal("galaxia.gui.orbital.transfer.total.unknown");
                 lastPreviewTof = -2;
             }
         }
@@ -1340,9 +1344,6 @@ public final class InterplanetaryTransferSystem {
             return body == null ? null : body.displayName();
         }
 
-        private static String tr(String key, Object... args) {
-            return StatCollector.translateToLocalFormatted(key, args);
-        }
     }
 
     // -----------------------------------------------------------------------

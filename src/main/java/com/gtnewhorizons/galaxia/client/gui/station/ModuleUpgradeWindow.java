@@ -49,7 +49,7 @@ final class ModuleUpgradeWindow implements ModuleConfigWindow {
     @Override
     public String title() {
         ModuleInstance module = selectedModule();
-        return module == null ? tr("galaxia.gui.station.upgrade.title")
+        return module == null ? StatCollector.translateToLocal("galaxia.gui.station.upgrade.title")
             : StationUiData.moduleTitle(module, "galaxia.gui.station.config.purpose.upgrade");
     }
 
@@ -78,7 +78,7 @@ final class ModuleUpgradeWindow implements ModuleConfigWindow {
         builtShape = optionShape();
         ModuleInstance module = selectedModule();
         if (module == null || !ModuleUpgradeUiModel.supports(module)) {
-            column.dim(tr("galaxia.gui.station.upgrade.none"));
+            column.dim(StatCollector.translateToLocal("galaxia.gui.station.upgrade.none"));
             return;
         }
         column.text(() -> currentLine(selectedModule()));
@@ -88,7 +88,7 @@ final class ModuleUpgradeWindow implements ModuleConfigWindow {
             .add(
                 GalaxiaUi.button(
                     this::cancelLabel,
-                    GalaxiaUi.width(tr("galaxia.gui.common.cancel")) + 10,
+                    GalaxiaUi.width(StatCollector.translateToLocal("galaxia.gui.common.cancel")) + 10,
                     () -> true,
                     this::cancelBuild));
         building.flow()
@@ -99,13 +99,13 @@ final class ModuleUpgradeWindow implements ModuleConfigWindow {
         plan.add(GalaxiaUi.colored(() -> targetLine(selectedModule()), GalaxiaGuiStyle.TEXT_DIM))
             .text(() -> effectLine(selectedModule()))
             .add(
-                GalaxiaUi.dim(tr("galaxia.gui.station.upgrade.nothing"))
+                GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.station.upgrade.nothing"))
                     .setEnabledIf(w -> !targetChanged()))
             .add(
                 GalaxiaUi.text(() -> buildLine(selectedModule()))
                     .setEnabledIf(w -> targetChanged()))
             .add(
-                GalaxiaUi.dim(tr("galaxia.gui.station.upgrade.cost"))
+                GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.station.upgrade.cost"))
                     .setEnabledIf(w -> targetChanged()));
         for (int line = 0; line < COST_LINES + 1; line++) {
             int index = line;
@@ -125,26 +125,33 @@ final class ModuleUpgradeWindow implements ModuleConfigWindow {
             .child(
                 GalaxiaUi
                     .toggle(
-                        () -> tr("galaxia.gui.station.upgrade.reserve"),
-                        GalaxiaUi.width(tr("galaxia.gui.station.upgrade.reserve")) + 10,
+                        () -> StatCollector.translateToLocal("galaxia.gui.station.upgrade.reserve"),
+                        GalaxiaUi.width(StatCollector.translateToLocal("galaxia.gui.station.upgrade.reserve")) + 10,
                         controller::hammerUpgradeReserveItems,
                         controller::toggleHammerUpgradeReserveItems)
-                    .tooltip(t -> t.addLine(tr("galaxia.gui.station.upgrade.reserve.tooltip"))))
+                    .tooltip(
+                        t -> t.addLine(StatCollector.translateToLocal("galaxia.gui.station.upgrade.reserve.tooltip"))))
             .child(
                 GalaxiaUi
                     .toggle(
-                        () -> tr("galaxia.gui.station.upgrade.void_refund"),
-                        GalaxiaUi.width(tr("galaxia.gui.station.upgrade.void_refund")) + 10,
+                        () -> StatCollector.translateToLocal("galaxia.gui.station.upgrade.void_refund"),
+                        GalaxiaUi.width(StatCollector.translateToLocal("galaxia.gui.station.upgrade.void_refund")) + 10,
                         controller::hammerUpgradeVoidRefund,
                         controller::toggleHammerUpgradeVoidRefund)
-                    .tooltip(t -> t.addLine(tr("galaxia.gui.station.upgrade.void_refund.tooltip"))));
+                    .tooltip(
+                        t -> t.addLine(
+                            StatCollector.translateToLocal("galaxia.gui.station.upgrade.void_refund.tooltip"))));
         flags.setEnabledIf(w -> selectedModule() != null && selectedModule().component() instanceof ModuleHammer);
         plan.add(flags);
         plan.row(
-            GalaxiaUi.button(tr("galaxia.gui.station.upgrade.confirm"), this::canConfirm, this::confirm)
+            GalaxiaUi
+                .button(
+                    StatCollector.translateToLocal("galaxia.gui.station.upgrade.confirm"),
+                    this::canConfirm,
+                    this::confirm)
                 .name("module.upgrade.confirm"),
             GalaxiaUi.button(
-                tr("galaxia.gui.station.upgrade.multiple"),
+                StatCollector.translateToLocal("galaxia.gui.station.upgrade.multiple"),
                 this::canConfirmMultiple,
                 this::startMultiplePicker));
         plan.flow()
@@ -241,8 +248,8 @@ final class ModuleUpgradeWindow implements ModuleConfigWindow {
         boolean voidCompletionRefund = controller.hammerUpgradeVoidRefund();
         controller.close();
         tilePickerController.start(
-            tr("galaxia.gui.station.upgrade.multiple_title"),
-            tr("galaxia.gui.station.upgrade.multiple_confirm"),
+            StatCollector.translateToLocal("galaxia.gui.station.upgrade.multiple_title"),
+            StatCollector.translateToLocal("galaxia.gui.station.upgrade.multiple_confirm"),
             coord -> ModuleUpgradeUiModel.isCompatibleTarget(facility, source, targetTier, targetVariant, coord),
             coord -> StationTilePickerController.normalizeModuleTarget(facility, coord),
             targets -> {
@@ -360,7 +367,8 @@ final class ModuleUpgradeWindow implements ModuleConfigWindow {
         if (module == null) return "";
         Map<ItemStackWrapper, Long> cost = ModuleUpgradeUiModel
             .upgradeMaterials(module, controller.moduleUpgradeSelection());
-        if (cost.isEmpty()) return index == 0 ? tr("galaxia.gui.station.upgrade.cost_none") : "";
+        if (cost.isEmpty())
+            return index == 0 ? StatCollector.translateToLocal("galaxia.gui.station.upgrade.cost_none") : "";
         List<Map.Entry<ItemStackWrapper, Long>> entries = new ArrayList<>(cost.entrySet());
         if (index == COST_LINES) return entries.size() > COST_LINES ? "..." : "";
         if (index >= entries.size()) return "";
@@ -376,7 +384,7 @@ final class ModuleUpgradeWindow implements ModuleConfigWindow {
     }
 
     private String cancelLabel() {
-        return tr(
+        return StatCollector.translateToLocal(
             controller.isModuleOperationCancelArmed() ? "galaxia.gui.station.upgrade.confirm"
                 : "galaxia.gui.common.cancel");
     }
@@ -393,8 +401,9 @@ final class ModuleUpgradeWindow implements ModuleConfigWindow {
 
     private String buildStatus(ModuleInstance module) {
         if (module == null || module.operationOrNull() == null) return "";
-        if (controller.isModuleOperationCancelArmed()) return tr("galaxia.gui.station.upgrade.cancel_confirm");
-        return tr(
+        if (controller.isModuleOperationCancelArmed())
+            return StatCollector.translateToLocal("galaxia.gui.station.upgrade.cancel_confirm");
+        return StatCollector.translateToLocal(
             switch (module.operationOrNull()
                 .phase()) {
             case WAITING_FOR_MATERIALS -> "galaxia.gui.station.upgrade.state.waiting";
@@ -410,10 +419,8 @@ final class ModuleUpgradeWindow implements ModuleConfigWindow {
     }
 
     private static String focusTierLabel(MinerFocusTier tier) {
-        return tier == MinerFocusTier.NONE ? tr("galaxia.gui.station.picker.none") : tier.name();
+        return tier == MinerFocusTier.NONE ? StatCollector.translateToLocal("galaxia.gui.station.picker.none")
+            : tier.name();
     }
 
-    private static String tr(String key) {
-        return StatCollector.translateToLocal(key);
-    }
 }

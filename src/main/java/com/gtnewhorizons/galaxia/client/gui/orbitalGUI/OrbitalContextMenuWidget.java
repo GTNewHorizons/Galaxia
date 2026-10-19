@@ -3,6 +3,8 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.minecraft.util.StatCollector;
+
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
@@ -121,8 +123,8 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
         if (body == null || body.objectClass() == CelestialObject.Class.GALAXY) return;
         List<ContextMenuAction> actions = buildActions(body, callbacks.canDebugSatellites(body));
         int width = Math.max(MIN_WIDTH, GalaxiaUi.width(body.displayName()));
-        for (ContextMenuAction action : actions)
-            width = Math.max(width, GalaxiaUi.width(tr(action.labelKey())) + GalaxiaUi.PAD * 2);
+        for (ContextMenuAction action : actions) width = Math
+            .max(width, GalaxiaUi.width(StatCollector.translateToLocal(action.labelKey())) + GalaxiaUi.PAD * 2);
 
         Flow column = GalaxiaUi.column();
         column.name("starmap.context.menu")
@@ -145,7 +147,7 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
     }
 
     private ButtonWidget<?> actionRow(CelestialObject body, ContextMenuAction action, int width) {
-        IKey label = IKey.str(tr(action.labelKey()))
+        IKey label = IKey.str(StatCollector.translateToLocal(action.labelKey()))
             .color(action.enabled() ? GalaxiaGuiStyle.TEXT : GalaxiaGuiStyle.TEXT_DIM)
             .alignment(Alignment.CenterLeft);
         ButtonWidget<?> row = new ButtonWidget<>().size(width, GalaxiaUi.BUTTON_H)
@@ -209,10 +211,6 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
                     ContextMenuActionType.DELETE_PROSPECTING_SATELLITES));
         }
         return actions;
-    }
-
-    private static String tr(String key) {
-        return net.minecraft.util.StatCollector.translateToLocal(key);
     }
 
     public enum ContextMenuActionType {

@@ -90,16 +90,16 @@ final class SettingsGroupSelector {
     /** The row to put in a module window; it hides itself for modules that have no groups */
     Flow row() {
         Flow row = GalaxiaUi.row()
-            .child(GalaxiaUi.dim(tr("galaxia.gui.station.settings_group.label")))
+            .child(GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.station.settings_group.label")))
             .child(dropdown)
             .child(
                 GalaxiaUi.button(
-                    tr("galaxia.gui.station.settings_group.rename"),
+                    StatCollector.translateToLocal("galaxia.gui.station.settings_group.rename"),
                     () -> currentGroup() != null,
                     this::editName))
             .child(
                 GalaxiaUi.button(
-                    tr("galaxia.gui.station.settings_group.members"),
+                    StatCollector.translateToLocal("galaxia.gui.station.settings_group.members"),
                     () -> currentGroup() != null,
                     this::showMembers));
         row.setEnabledIf(w -> available());
@@ -170,12 +170,12 @@ final class SettingsGroupSelector {
             .value(new StringValue.Dynamic(() -> groupName, value -> groupName = value == null ? "" : value))
             .setFocusOnGuiOpen(false);
         nameField.name("settings.group.name");
-        column.dim(tr("galaxia.gui.station.settings_group.name"))
+        column.dim(StatCollector.translateToLocal("galaxia.gui.station.settings_group.name"))
             .add(nameField);
         Flow footer = GalaxiaUi.footer(
-            tr("galaxia.gui.common.cancel"),
+            StatCollector.translateToLocal("galaxia.gui.common.cancel"),
             this::closeDialog,
-            tr("galaxia.gui.station.settings_group.save"),
+            StatCollector.translateToLocal("galaxia.gui.station.settings_group.save"),
             this::canSave,
             this::saveName);
         ((Widget<?>) footer.getChildren()
@@ -250,7 +250,8 @@ final class SettingsGroupSelector {
 
     private List<String> memberLabels() {
         AutomatedFacility facility = facility();
-        if (facility == null || editingGroupId == null) return List.of(tr("galaxia.gui.station.settings_group.gone"));
+        if (facility == null || editingGroupId == null)
+            return List.of(StatCollector.translateToLocal("galaxia.gui.station.settings_group.gone"));
         List<String> labels = facility.settingsGroupMembers(editingGroupId)
             .stream()
             .sorted(
@@ -271,7 +272,8 @@ final class SettingsGroupSelector {
                     module.anchor()
                         .dy()))
             .toList();
-        return labels.isEmpty() ? List.of(tr("galaxia.gui.station.settings_group.empty")) : labels;
+        return labels.isEmpty() ? List.of(StatCollector.translateToLocal("galaxia.gui.station.settings_group.empty"))
+            : labels;
     }
 
     private GroupOption selectedOption() {
@@ -293,15 +295,17 @@ final class SettingsGroupSelector {
 
     private String currentGroupName() {
         SettingsGroup group = currentGroup();
-        return group == null ? tr("galaxia.gui.station.settings_group.none") : group.displayName();
+        return group == null ? StatCollector.translateToLocal("galaxia.gui.station.settings_group.none")
+            : group.displayName();
     }
 
     private String groupOptionLabel(GroupOption option) {
-        if (option.create()) return tr("galaxia.gui.station.settings_group.create");
+        if (option.create()) return StatCollector.translateToLocal("galaxia.gui.station.settings_group.create");
         AutomatedFacility facility = facility();
         SettingsGroup group = option.groupId() == null || facility == null ? null
             : facility.settingsGroup(option.groupId());
-        return group == null ? tr("galaxia.gui.station.settings_group.none") : group.displayName();
+        return group == null ? StatCollector.translateToLocal("galaxia.gui.station.settings_group.none")
+            : group.displayName();
     }
 
     private boolean available() {
@@ -322,10 +326,6 @@ final class SettingsGroupSelector {
 
     private AutomatedFacility facility() {
         return StationUiData.facility(assetId);
-    }
-
-    private static String tr(String key) {
-        return StatCollector.translateToLocal(key);
     }
 
     private static final class GroupDropdown extends DropdownWidget<GroupOption, GroupDropdown> {

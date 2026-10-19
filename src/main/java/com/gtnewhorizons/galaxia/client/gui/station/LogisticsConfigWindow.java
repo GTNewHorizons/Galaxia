@@ -59,7 +59,7 @@ final class LogisticsConfigWindow implements ModuleConfigWindow {
         ModuleInstance.ID modId = controller.moduleId();
         ModuleInstance module = modId != null ? StationUiData.module(assetId, modId) : null;
         if (module != null) return StationUiData.moduleTitle(module, "galaxia.gui.station.config.purpose.logistics");
-        return tr(
+        return StatCollector.translateToLocal(
             logisticsAccessMode() == LogisticsConfigAccessMode.IMPORT_ONLY ? "galaxia.gui.station.logistics.core_title"
                 : "galaxia.gui.station.logistics.title");
     }
@@ -78,17 +78,18 @@ final class LogisticsConfigWindow implements ModuleConfigWindow {
     public void build(GalaxiaUi.Column column) {
         CelestialAsset asset = asset();
         if (asset == null) {
-            column.dim(tr("galaxia.gui.station.logistics.none"));
+            column.dim(StatCollector.translateToLocal("galaxia.gui.station.logistics.none"));
             return;
         }
         List<Map.Entry<ItemStackWrapper, LogisticsResourceConfig>> rows = rows(asset);
         rowSignature = rowSignature(rows);
         column.row(
-            GalaxiaUi.button(tr("galaxia.gui.station.logistics.back"), this::back)
+            GalaxiaUi.button(StatCollector.translateToLocal("galaxia.gui.station.logistics.back"), this::back)
                 .setEnabledIf(w -> selectedHammer() != null),
-            GalaxiaUi.button(tr("galaxia.gui.station.logistics.add"), this::openItemPicker));
+            GalaxiaUi
+                .button(StatCollector.translateToLocal("galaxia.gui.station.logistics.add"), this::openItemPicker));
         if (rows.isEmpty()) {
-            column.dim(tr("galaxia.gui.station.logistics.empty"));
+            column.dim(StatCollector.translateToLocal("galaxia.gui.station.logistics.empty"));
             return;
         }
         boolean supply = logisticsAccessMode().canEditSupply();
@@ -110,10 +111,12 @@ final class LogisticsConfigWindow implements ModuleConfigWindow {
     }
 
     private TextWidget<?> header(String column, int width) {
-        return GalaxiaUi.dim(tr("galaxia.gui.station.logistics.column." + column))
+        return GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.station.logistics.column." + column))
             .width(width)
             .alignment(Alignment.Center)
-            .tooltip(t -> t.addLine(tr("galaxia.gui.station.logistics.column." + column + ".tooltip")));
+            .tooltip(
+                t -> t.addLine(
+                    StatCollector.translateToLocal("galaxia.gui.station.logistics.column." + column + ".tooltip")));
     }
 
     private Flow row(CelestialAsset asset, ItemStackWrapper item, boolean supply) {
@@ -145,7 +148,7 @@ final class LogisticsConfigWindow implements ModuleConfigWindow {
         }
         return row.child(
             GalaxiaUi.button(() -> "X", STEP_WIDTH, () -> config(item) != null, () -> removeEntry(item))
-                .tooltip(t -> t.addLine(tr("galaxia.gui.station.logistics.remove"))));
+                .tooltip(t -> t.addLine(StatCollector.translateToLocal("galaxia.gui.station.logistics.remove"))));
     }
 
     private Flow amountControl(ItemStackWrapper item, boolean reserve) {
@@ -339,7 +342,7 @@ final class LogisticsConfigWindow implements ModuleConfigWindow {
     }
 
     private static String onOff(boolean on) {
-        return tr(on ? "galaxia.gui.common.on" : "galaxia.gui.common.off");
+        return StatCollector.translateToLocal(on ? "galaxia.gui.common.on" : "galaxia.gui.common.off");
     }
 
     private static String formatAmount(long amount) {
@@ -348,7 +351,4 @@ final class LogisticsConfigWindow implements ModuleConfigWindow {
         return (amount / 1_000_000L) + "M";
     }
 
-    private static String tr(String key) {
-        return StatCollector.translateToLocal(key);
-    }
 }

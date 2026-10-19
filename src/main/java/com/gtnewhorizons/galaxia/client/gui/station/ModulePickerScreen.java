@@ -94,7 +94,7 @@ public final class ModulePickerScreen {
         AutomatedFacility facility = CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility found ? found
             : null;
         if (facility == null) {
-            column.dim(tr("galaxia.gui.station.picker.no_station"));
+            column.dim(StatCollector.translateToLocal("galaxia.gui.station.picker.no_station"));
             return;
         }
         if (selectedKind == null) kindStep(column, facility);
@@ -104,7 +104,7 @@ public final class ModulePickerScreen {
     // region Kind step
 
     private void kindStep(GalaxiaUi.Column column, AutomatedFacility facility) {
-        String multiple = tr("galaxia.gui.station.picker.multiple");
+        String multiple = StatCollector.translateToLocal("galaxia.gui.station.picker.multiple");
         column.add(
             GalaxiaUi
                 .toggle(
@@ -112,7 +112,8 @@ public final class ModulePickerScreen {
                     GalaxiaUi.width(multiple) + 10,
                     () -> multipleBuild,
                     () -> multipleBuild = !multipleBuild)
-                .tooltip(t -> t.addLine(tr("galaxia.gui.station.picker.multiple.tooltip"))));
+                .tooltip(
+                    t -> t.addLine(StatCollector.translateToLocal("galaxia.gui.station.picker.multiple.tooltip"))));
 
         ListWidget<IWidget, ?> cards = GalaxiaUi.scroll(LIST_HEIGHT);
         Flow grid = GalaxiaUi.column();
@@ -130,7 +131,7 @@ public final class ModulePickerScreen {
             index++;
         }
         column.add(cards);
-        column.add(GalaxiaUi.button(tr("galaxia.gui.common.back"), this::close));
+        column.add(GalaxiaUi.button(StatCollector.translateToLocal("galaxia.gui.common.back"), this::close));
     }
 
     private ButtonWidget<?> kindCard(FacilityModuleKind kind) {
@@ -157,14 +158,16 @@ public final class ModulePickerScreen {
         if (data != null && data.powerDrawEuPerTick() != 0) {
             lines.child(
                 GalaxiaUi.clipped(
-                    tr("galaxia.gui.station.picker.energy", formatPower(data.powerDrawEuPerTick())),
+                    StatCollector.translateToLocalFormatted(
+                        "galaxia.gui.station.picker.energy",
+                        formatPower(data.powerDrawEuPerTick())),
                     textWidth,
                     GalaxiaGuiStyle.TEXT));
         }
         if (data != null) {
             lines.child(
                 GalaxiaUi.clipped(
-                    tr(
+                    StatCollector.translateToLocalFormatted(
                         "galaxia.gui.station.picker.time_and_cost",
                         formatTicks(data.buildTicks()),
                         formatCost(data.constructionCost())),
@@ -201,11 +204,13 @@ public final class ModulePickerScreen {
         ModuleTierData data = FacilityModuleRegistry.get(kind)
             .getTierData(tier);
         if (data != null) {
-            column.keyValue(tr("galaxia.gui.station.picker.time"), () -> formatTicks(data.buildTicks()));
+            column.keyValue(
+                StatCollector.translateToLocal("galaxia.gui.station.picker.time"),
+                () -> formatTicks(data.buildTicks()));
             column.add(costList(data.constructionCost()));
         }
 
-        column.section(tr("galaxia.gui.station.picker.tier"));
+        column.section(StatCollector.translateToLocal("galaxia.gui.station.picker.tier"));
         Flow tiers = GalaxiaUi.row();
         for (ModuleTier option : kind.allowedTiers()) {
             if (option == ModuleTier.NONE) continue;
@@ -223,7 +228,7 @@ public final class ModulePickerScreen {
         column.add(tiers);
 
         if (kind == FacilityModuleKind.HAMMER) {
-            column.section(tr("galaxia.gui.station.picker.variant"));
+            column.section(StatCollector.translateToLocal("galaxia.gui.station.picker.variant"));
             Flow variants = GalaxiaUi.row();
             for (HammerVariant option : HammerVariant.values()) {
                 variants
@@ -235,10 +240,12 @@ public final class ModulePickerScreen {
             column.add(variants);
         }
         if (kind == FacilityModuleKind.MINER) {
-            column.section(tr("galaxia.gui.station.picker.focus"));
+            column.section(StatCollector.translateToLocal("galaxia.gui.station.picker.focus"));
             Flow focus = GalaxiaUi.row();
             for (MinerFocusTier option : MinerFocusTier.values()) {
-                String label = option == MinerFocusTier.NONE ? tr("galaxia.gui.station.picker.none") : option.name();
+                String label = option == MinerFocusTier.NONE
+                    ? StatCollector.translateToLocal("galaxia.gui.station.picker.none")
+                    : option.name();
                 focus.child(
                     choice(
                         label,
@@ -252,7 +259,7 @@ public final class ModulePickerScreen {
 
         List<GroupOption> groups = groupOptions(facility, kind);
         if (groups.size() > 1) {
-            column.section(tr("galaxia.gui.station.picker.group"));
+            column.section(StatCollector.translateToLocal("galaxia.gui.station.picker.group"));
             Flow line = null;
             for (int i = 0; i < groups.size(); i++) {
                 if (i % GROUP_COLUMNS == 0) {
@@ -271,9 +278,9 @@ public final class ModulePickerScreen {
         }
 
         Flow footer = GalaxiaUi.footer(
-            tr("galaxia.gui.common.back"),
+            StatCollector.translateToLocal("galaxia.gui.common.back"),
             this::backToKinds,
-            tr("galaxia.gui.station.picker.build"),
+            StatCollector.translateToLocal("galaxia.gui.station.picker.build"),
             () -> true,
             this::confirmSelectedBuild);
         ((Widget<?>) footer.getChildren()
@@ -285,7 +292,7 @@ public final class ModulePickerScreen {
     private static Flow costList(Map<ItemStack, Long> cost) {
         Flow list = GalaxiaUi.column();
         if (cost.isEmpty()) {
-            list.child(GalaxiaUi.dim(tr("galaxia.gui.station.picker.free")));
+            list.child(GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.station.picker.free")));
             return list;
         }
         for (Map.Entry<ItemStack, Long> entry : cost.entrySet()) {
@@ -294,7 +301,7 @@ public final class ModulePickerScreen {
                     .child(GalaxiaUi.item(entry.getKey()))
                     .child(
                         GalaxiaUi.text(
-                            tr(
+                            StatCollector.translateToLocalFormatted(
                                 "galaxia.gui.station.picker.cost_line",
                                 formatAmount(entry.getValue()),
                                 entry.getKey()
@@ -322,7 +329,7 @@ public final class ModulePickerScreen {
 
     private static List<GroupOption> groupOptions(AutomatedFacility facility, FacilityModuleKind kind) {
         List<GroupOption> options = new ArrayList<>();
-        options.add(new GroupOption(tr("galaxia.gui.station.picker.no_group"), null));
+        options.add(new GroupOption(StatCollector.translateToLocal("galaxia.gui.station.picker.no_group"), null));
         FacilityModuleRegistry.Definition definition = FacilityModuleRegistry.get(kind);
         if (definition == null || !definition.settingsGroups()) return options;
         facility.settingsGroups()
@@ -365,7 +372,8 @@ public final class ModulePickerScreen {
             settingsGroupId,
             instantBuild,
             List.of(ModulePlacement.at(coord)));
-        if (!sent) StationNotificationHelper.showFailure(tr("galaxia.gui.station.picker.build_failed"));
+        if (!sent) StationNotificationHelper
+            .showFailure(StatCollector.translateToLocal("galaxia.gui.station.picker.build_failed"));
         close();
     }
 
@@ -382,7 +390,7 @@ public final class ModulePickerScreen {
     // region Formatting
 
     private static String moduleDescription(FacilityModuleKind kind) {
-        return tr(
+        return StatCollector.translateToLocal(
             "galaxia.gui.station.picker.description." + kind.name()
                 .toLowerCase());
     }
@@ -399,13 +407,13 @@ public final class ModulePickerScreen {
     }
 
     private static String formatCost(Map<ItemStack, Long> cost) {
-        if (cost.isEmpty()) return tr("galaxia.gui.station.picker.free");
+        if (cost.isEmpty()) return StatCollector.translateToLocal("galaxia.gui.station.picker.free");
         int shown = 0;
         StringBuilder out = new StringBuilder();
         for (Map.Entry<ItemStack, Long> entry : cost.entrySet()) {
             if (shown > 0) out.append(", ");
             out.append(
-                tr(
+                StatCollector.translateToLocalFormatted(
                     "galaxia.gui.station.picker.cost_line",
                     formatAmount(entry.getValue()),
                     entry.getKey()
@@ -423,10 +431,6 @@ public final class ModulePickerScreen {
         if (amount >= 1_000_000L) return amount / 1_000_000L + "M";
         if (amount >= 1_000L) return amount / 1_000L + "k";
         return Long.toString(amount);
-    }
-
-    private static String tr(String key, Object... args) {
-        return StatCollector.translateToLocalFormatted(key, args);
     }
 
     // endregion

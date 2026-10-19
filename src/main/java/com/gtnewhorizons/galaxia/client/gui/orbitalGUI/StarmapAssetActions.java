@@ -677,7 +677,8 @@ public final class StarmapAssetActions {
                     "galaxia.asset_manager.create.outpost",
                     () -> callbacks.canCreateAutomatedFacility(body),
                     () -> callbacks.triggerAssetCreation(body, CelestialAsset.Kind.AUTOMATED_OUTPOST, false)));
-            if (!view.gt5AutomationAvailable()) column.dim(tr("galaxia.asset_manager.gt5_required"));
+            if (!view.gt5AutomationAvailable())
+                column.dim(StatCollector.translateToLocal("galaxia.asset_manager.gt5_required"));
             column.row(
                 tabButton("galaxia.asset_manager.tab.assets", AssetManagementTab.ASSETS),
                 tabButton("galaxia.asset_manager.tab.satellites", AssetManagementTab.SATELLITES));
@@ -688,12 +689,12 @@ public final class StarmapAssetActions {
 
         private ButtonWidget<?> createButton(CelestialAsset.Kind kind, String labelKey, BooleanSupplier enabled,
             Runnable action) {
-            return GalaxiaUi.button(tr(labelKey), enabled, action)
+            return GalaxiaUi.button(StatCollector.translateToLocal(labelKey), enabled, action)
                 .name("asset.create." + kind.name());
         }
 
         private ButtonWidget<?> tabButton(String labelKey, AssetManagementTab tab) {
-            String label = tr(labelKey);
+            String label = StatCollector.translateToLocal(labelKey);
             return GalaxiaUi.toggle(() -> label, GalaxiaUi.width(label) + 10, () -> currentTab == tab, () -> {
                 if (currentTab == tab) return;
                 currentTab = tab;
@@ -705,15 +706,15 @@ public final class StarmapAssetActions {
         private void fillAssets(GalaxiaUi.Column column, List<CelestialAsset> assetState) {
             List<CelestialAsset> construction = getConstructionAssets(assetState);
             if (!construction.isEmpty()) {
-                column.section(tr("galaxia.asset_manager.construction"));
+                column.section(StatCollector.translateToLocal("galaxia.asset_manager.construction"));
                 for (CelestialAsset asset : construction) column.add(constructionRow(asset));
             }
             List<CelestialAsset> deployed = deployedAssetRows(assetState);
             if (deployed.isEmpty()) {
-                column.dim(tr("galaxia.asset_manager.none"));
+                column.dim(StatCollector.translateToLocal("galaxia.asset_manager.none"));
                 return;
             }
-            column.section(tr("galaxia.asset_manager.deployed"));
+            column.section(StatCollector.translateToLocal("galaxia.asset_manager.deployed"));
             for (CelestialAsset asset : deployed) column.add(assetRow(asset));
         }
 
@@ -724,7 +725,8 @@ public final class StarmapAssetActions {
                 buildConstructionInventorySummary(asset));
             ButtonWidget<?> action = GalaxiaUi
                 .button(
-                    tr(deconstruction ? "galaxia.asset_manager.send" : "galaxia.asset_manager.cancel_build"),
+                    StatCollector.translateToLocal(
+                        deconstruction ? "galaxia.asset_manager.send" : "galaxia.asset_manager.cancel_build"),
                     () -> handleConstructionAction(asset))
                 .name("asset.constructionAction." + asset.assetId);
             return row(
@@ -744,7 +746,10 @@ public final class StarmapAssetActions {
             if (asset.isManageable()) {
                 buttonsWidth += buttonWidth("galaxia.asset_manager.manage");
                 actions.add(
-                    GalaxiaUi.button(tr("galaxia.asset_manager.manage"), () -> callbacks.openStationManagement(asset))
+                    GalaxiaUi
+                        .button(
+                            StatCollector.translateToLocal("galaxia.asset_manager.manage"),
+                            () -> callbacks.openStationManagement(asset))
                         .name("asset.manage." + asset.assetId));
             }
             boolean canDestroy = asset.kind != CelestialAsset.Kind.STATION || view.creativeBuildMode();
@@ -752,7 +757,9 @@ public final class StarmapAssetActions {
                 buttonsWidth += buttonWidth("galaxia.asset_manager.destroy");
                 actions.add(
                     GalaxiaUi
-                        .button(tr("galaxia.asset_manager.destroy"), () -> callbacks.openPendingAssetDestruction(asset))
+                        .button(
+                            StatCollector.translateToLocal("galaxia.asset_manager.destroy"),
+                            () -> callbacks.openPendingAssetDestruction(asset))
                         .name("asset.destroy." + asset.assetId));
             }
             return row(asset, detail, buttonsWidth, actions.toArray(new ButtonWidget<?>[0]));
@@ -775,7 +782,7 @@ public final class StarmapAssetActions {
                             IKey.str(GalaxiaUi.clip(name, textWidth))
                                 .color(GalaxiaGuiStyle.ACCENT)
                                 .alignment(com.cleanroommc.modularui.utils.Alignment.CenterLeft))
-                        .tooltip(t -> t.addLine(tr("galaxia.asset_manager.rename_hint"))))
+                        .tooltip(t -> t.addLine(StatCollector.translateToLocal("galaxia.asset_manager.rename_hint"))))
                 .child(GalaxiaUi.clipped(detail, textWidth, GalaxiaGuiStyle.TEXT_DIM));
             Flow line = GalaxiaUi.row()
                 .width(ROW_W)
@@ -790,13 +797,13 @@ public final class StarmapAssetActions {
         }
 
         private static int buttonWidth(String labelKey) {
-            return GalaxiaUi.width(tr(labelKey)) + 10 + GalaxiaUi.GAP;
+            return GalaxiaUi.width(StatCollector.translateToLocal(labelKey)) + 10 + GalaxiaUi.GAP;
         }
 
         private void fillSatellites(GalaxiaUi.Column column, List<CelestialAsset> assetState) {
             List<SatelliteAssetRow> satellites = satelliteAssetRows(assetState);
             if (satellites.isEmpty()) {
-                column.dim(tr("galaxia.asset_manager.satellites.empty"));
+                column.dim(StatCollector.translateToLocal("galaxia.asset_manager.satellites.empty"));
                 return;
             }
             for (SatelliteAssetRow satellite : satellites) {
@@ -820,7 +827,7 @@ public final class StarmapAssetActions {
                             satelliteDeleteButton(
                                 satellite.kind(),
                                 1,
-                                tr("galaxia.asset_manager.satellites.delete_one")))
+                                StatCollector.translateToLocal("galaxia.asset_manager.satellites.delete_one")))
                         .child(
                             satelliteDeleteButton(
                                 satellite.kind(),
@@ -832,14 +839,15 @@ public final class StarmapAssetActions {
                             satelliteDeleteButton(
                                 satellite.kind(),
                                 0,
-                                tr("galaxia.asset_manager.satellites.delete_all"))));
+                                StatCollector.translateToLocal("galaxia.asset_manager.satellites.delete_all"))));
             }
         }
 
         private ButtonWidget<?> satelliteDeleteButton(SatelliteKind kind, int amount, String label) {
             boolean armed = state.pendingSatelliteDeletion != null && state.pendingSatelliteDeletion.kind() == kind
                 && state.pendingSatelliteDeletion.amount() == amount;
-            String visible = armed ? tr("galaxia.asset_manager.satellites.confirm_delete") : label;
+            String visible = armed ? StatCollector.translateToLocal("galaxia.asset_manager.satellites.confirm_delete")
+                : label;
             return GalaxiaUi.button(
                 IKey.str(visible)
                     .color(armed ? GalaxiaGuiStyle.BAD : GalaxiaGuiStyle.TEXT),
@@ -894,7 +902,7 @@ public final class StarmapAssetActions {
                             .getDisplayName()),
                     callbacks::dismissPendingAssetCreation).body(column -> {
                         column.text(creation.displayName());
-                        column.section(tr("galaxia.asset_manager.dialog.resources"));
+                        column.section(StatCollector.translateToLocal("galaxia.asset_manager.dialog.resources"));
                         for (Map.Entry<ItemStack, Long> requirement : creation.requiredResources()
                             .entrySet()) {
                             column.add(
@@ -911,30 +919,35 @@ public final class StarmapAssetActions {
                         column.add(
                             footer(
                                 callbacks::dismissPendingAssetCreation,
-                                tr("galaxia.gui.common.confirm"),
+                                StatCollector.translateToLocal("galaxia.gui.common.confirm"),
                                 callbacks::confirmPendingAssetCreation));
                     });
             }
             if (state.pendingAssetDestruction != null) {
                 PendingAssetDestruction destruction = state.pendingAssetDestruction;
-                return dialog(tr("galaxia.asset_manager.dialog.destroy"), callbacks::dismissPendingAssetDestruction)
-                    .body(column -> {
+                return dialog(
+                    StatCollector.translateToLocal("galaxia.asset_manager.dialog.destroy"),
+                    callbacks::dismissPendingAssetDestruction).body(column -> {
                         column.add(
-                            GalaxiaUi
-                                .colored(() -> tr("galaxia.asset_manager.dialog.irreversible"), GalaxiaGuiStyle.BAD));
+                            GalaxiaUi.colored(
+                                () -> StatCollector.translateToLocal("galaxia.asset_manager.dialog.irreversible"),
+                                GalaxiaGuiStyle.BAD));
                         column.text(formatAssetDisplayName(destruction.asset()));
                         column.dim(
-                            tr(
+                            StatCollector.translateToLocal(
                                 destruction.armed() ? "galaxia.asset_manager.dialog.destroy_again"
                                     : "galaxia.asset_manager.dialog.destroy_arm"));
                         ButtonWidget<?> cancel = GalaxiaUi
-                            .button(tr("galaxia.gui.common.back"), callbacks::dismissPendingAssetDestruction)
+                            .button(
+                                StatCollector.translateToLocal("galaxia.gui.common.back"),
+                                callbacks::dismissPendingAssetDestruction)
                             .name("asset.cancel");
-                        ButtonWidget<?> destroy = GalaxiaUi.button(
-                            IKey.str(tr("galaxia.asset_manager.destroy"))
-                                .color(GalaxiaGuiStyle.BAD),
-                            GalaxiaUi.width(tr("galaxia.asset_manager.destroy")) + 10,
-                            callbacks::advancePendingAssetDestruction)
+                        ButtonWidget<?> destroy = GalaxiaUi
+                            .button(
+                                IKey.str(StatCollector.translateToLocal("galaxia.asset_manager.destroy"))
+                                    .color(GalaxiaGuiStyle.BAD),
+                                GalaxiaUi.width(StatCollector.translateToLocal("galaxia.asset_manager.destroy")) + 10,
+                                callbacks::advancePendingAssetDestruction)
                             .name("asset.confirm");
                         // The buttons swap once armed, so a double click cannot destroy by accident
                         column.add(
@@ -950,63 +963,66 @@ public final class StarmapAssetActions {
             if (state.pendingConstructionCancellation != null) {
                 CelestialAsset asset = state.pendingConstructionCancellation.asset();
                 return dialog(
-                    tr("galaxia.asset_manager.dialog.cancel_build"),
+                    StatCollector.translateToLocal("galaxia.asset_manager.dialog.cancel_build"),
                     callbacks::dismissPendingConstructionCancellation).body(
                         column -> column.text(formatAssetDisplayName(asset))
                             .add(
                                 GalaxiaUi.colored(
-                                    () -> tr("galaxia.asset_manager.dialog.cancel_build_hint"),
+                                    () -> StatCollector
+                                        .translateToLocal("galaxia.asset_manager.dialog.cancel_build_hint"),
                                     GalaxiaGuiStyle.WARN))
                             .add(
                                 footer(
                                     callbacks::dismissPendingConstructionCancellation,
-                                    tr("galaxia.gui.common.confirm"),
+                                    StatCollector.translateToLocal("galaxia.gui.common.confirm"),
                                     callbacks::confirmPendingConstructionCancellation)));
             }
             if (state.pendingResourceTransfer != null) {
                 PendingResourceTransfer transfer = state.pendingResourceTransfer;
-                return dialog(tr("galaxia.asset_manager.dialog.send"), callbacks::dismissPendingResourceTransfer)
-                    .maxHeight(200)
-                    .body(column -> {
-                        column.text(formatAssetDisplayName(transfer.asset()));
-                        column.dim(tr("galaxia.asset_manager.dialog.send_hint"));
-                        if (transfer.targets()
-                            .isEmpty()) {
-                            column.dim(tr("galaxia.asset_manager.dialog.send_none"));
-                            return;
-                        }
-                        for (CelestialAsset target : transfer.targets()) {
-                            String bodyName = GalaxiaCelestialAPI.get(target.celestialObjectKey)
-                                .map(CelestialObject::displayName)
-                                .orElse("?");
-                            column.add(
-                                GalaxiaUi.row()
-                                    .width(DIALOG_TEXT_W)
-                                    .padding(GalaxiaUi.PAD)
-                                    .background(EnumTextures.GUI_WELL.getImage())
-                                    .child(
-                                        assetIcon(CelestialAsset.Kind.STATION, 1f).asWidget()
-                                            .size(ICON_SIZE))
-                                    .child(
-                                        GalaxiaUi
-                                            .clipped(
-                                                StatCollector.translateToLocalFormatted(
-                                                    "galaxia.asset_manager.dialog.send_target",
-                                                    target.displayName(),
-                                                    bodyName),
-                                                DIALOG_TEXT_W - ICON_SIZE - 60,
-                                                GalaxiaGuiStyle.TEXT)
-                                            .expanded())
-                                    .child(
-                                        GalaxiaUi.button(
-                                            tr("galaxia.asset_manager.send"),
-                                            () -> callbacks.sendPendingResourceTransfer(target))));
-                        }
-                    });
+                return dialog(
+                    StatCollector.translateToLocal("galaxia.asset_manager.dialog.send"),
+                    callbacks::dismissPendingResourceTransfer).maxHeight(200)
+                        .body(column -> {
+                            column.text(formatAssetDisplayName(transfer.asset()));
+                            column.dim(StatCollector.translateToLocal("galaxia.asset_manager.dialog.send_hint"));
+                            if (transfer.targets()
+                                .isEmpty()) {
+                                column.dim(StatCollector.translateToLocal("galaxia.asset_manager.dialog.send_none"));
+                                return;
+                            }
+                            for (CelestialAsset target : transfer.targets()) {
+                                String bodyName = GalaxiaCelestialAPI.get(target.celestialObjectKey)
+                                    .map(CelestialObject::displayName)
+                                    .orElse("?");
+                                column.add(
+                                    GalaxiaUi.row()
+                                        .width(DIALOG_TEXT_W)
+                                        .padding(GalaxiaUi.PAD)
+                                        .background(EnumTextures.GUI_WELL.getImage())
+                                        .child(
+                                            assetIcon(CelestialAsset.Kind.STATION, 1f).asWidget()
+                                                .size(ICON_SIZE))
+                                        .child(
+                                            GalaxiaUi
+                                                .clipped(
+                                                    StatCollector.translateToLocalFormatted(
+                                                        "galaxia.asset_manager.dialog.send_target",
+                                                        target.displayName(),
+                                                        bodyName),
+                                                    DIALOG_TEXT_W - ICON_SIZE - 60,
+                                                    GalaxiaGuiStyle.TEXT)
+                                                .expanded())
+                                        .child(
+                                            GalaxiaUi.button(
+                                                StatCollector.translateToLocal("galaxia.asset_manager.send"),
+                                                () -> callbacks.sendPendingResourceTransfer(target))));
+                            }
+                        });
             }
             CelestialAsset renamed = state.pendingAssetRename.asset();
-            return dialog(tr("galaxia.asset_manager.dialog.rename"), callbacks::closePendingAssetRename)
-                .body(column -> {
+            return dialog(
+                StatCollector.translateToLocal("galaxia.asset_manager.dialog.rename"),
+                callbacks::closePendingAssetRename).body(column -> {
                     column.text(formatAssetDisplayName(renamed));
                     TextFieldWidget field = callbacks.renameField();
                     if (field != null) column.add(
@@ -1015,7 +1031,7 @@ public final class StarmapAssetActions {
                     column.add(
                         footer(
                             callbacks::closePendingAssetRename,
-                            tr("galaxia.gui.common.confirm"),
+                            StatCollector.translateToLocal("galaxia.gui.common.confirm"),
                             callbacks::confirmPendingAssetRename));
                 });
         }
@@ -1029,7 +1045,12 @@ public final class StarmapAssetActions {
         }
 
         private static Flow footer(Runnable back, String confirm, Runnable onConfirm) {
-            Flow footer = GalaxiaUi.footer(tr("galaxia.gui.common.back"), back, confirm, () -> true, onConfirm);
+            Flow footer = GalaxiaUi.footer(
+                StatCollector.translateToLocal("galaxia.gui.common.back"),
+                back,
+                confirm,
+                () -> true,
+                onConfirm);
             ((Widget<?>) footer.getChildren()
                 .get(0)).name("asset.cancel");
             ((Widget<?>) footer.getChildren()
@@ -1045,7 +1066,7 @@ public final class StarmapAssetActions {
         }
 
         private String satelliteKindLabel(SatelliteKind kind) {
-            return tr(
+            return StatCollector.translateToLocal(
                 "galaxia.satellite.kind." + kind.name()
                     .toLowerCase(Locale.ROOT));
         }
@@ -1062,10 +1083,6 @@ public final class StarmapAssetActions {
 
         private void handleConstructionAction(CelestialAsset asset) {
             callbacks.handleConstructionAction(asset);
-        }
-
-        private static String tr(String key) {
-            return StatCollector.translateToLocal(key);
         }
 
         private enum AssetManagementTab {

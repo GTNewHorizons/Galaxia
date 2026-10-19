@@ -41,7 +41,7 @@ final class HammerConfigWindow implements ModuleConfigWindow {
     @Override
     public String title() {
         ModuleInstance module = selectedModule();
-        return module == null ? tr("galaxia.gui.station.hammer.title")
+        return module == null ? StatCollector.translateToLocal("galaxia.gui.station.hammer.title")
             : StationUiData.moduleTitle(module, "galaxia.gui.station.config.purpose.configuration");
     }
 
@@ -55,7 +55,7 @@ final class HammerConfigWindow implements ModuleConfigWindow {
     @Override
     public void build(GalaxiaUi.Column column) {
         column.add(
-            GalaxiaUi.dim(tr("galaxia.gui.station.hammer.none"))
+            GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.station.hammer.none"))
                 .setEnabledIf(w -> selectedHammer() == null));
         column.add(
             GalaxiaUi.text(this::statusLine, this::statusColor)
@@ -64,21 +64,25 @@ final class HammerConfigWindow implements ModuleConfigWindow {
             GalaxiaUi.colored(this::operationLine, GalaxiaGuiStyle.WARN)
                 .setEnabledIf(w -> selectedModule() != null && selectedModule().operationOrNull() != null));
 
-        column.section(tr("galaxia.gui.station.hammer.controls"));
+        column.section(StatCollector.translateToLocal("galaxia.gui.station.hammer.controls"));
         column.row(
-            GalaxiaUi.dim(tr("galaxia.gui.station.hammer.mode")),
+            GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.station.hammer.mode")),
             GalaxiaUi.button(this::shootingModeLabel, MODE_WIDTH, this::canConfigureHammer, this::cycleShootingMode),
-            GalaxiaUi.dim(tr("galaxia.gui.station.hammer.priority")),
+            GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.station.hammer.priority")),
             GalaxiaUi
                 .button(this::routePriorityLabel, PRIORITY_WIDTH, this::canConfigureHammer, this::toggleRoutePriority));
         column.row(
-            GalaxiaUi.dim(tr("galaxia.gui.station.hammer.limit")),
+            GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.station.hammer.limit")),
             GalaxiaUi.button(() -> "-", STEP_WIDTH, this::canUseThresholdField, this::decrementThreshold),
             thresholdField(),
             GalaxiaUi.button(() -> "+", STEP_WIDTH, this::canUseThresholdField, this::incrementThreshold),
             GalaxiaUi.text(this::unitLabel));
         column.add(
-            GalaxiaUi.button(tr("galaxia.gui.station.items"), () -> selectedModule() != null, this::openLogistics)
+            GalaxiaUi
+                .button(
+                    StatCollector.translateToLocal("galaxia.gui.station.items"),
+                    () -> selectedModule() != null,
+                    this::openLogistics)
                 .name("hammer.items"));
     }
 
@@ -128,8 +132,8 @@ final class HammerConfigWindow implements ModuleConfigWindow {
 
     private String shootingModeLabel() {
         ModuleHammer hammer = selectedHammer();
-        if (hammer == null) return tr("galaxia.gui.station.hammer.mode");
-        return tr(
+        if (hammer == null) return StatCollector.translateToLocal("galaxia.gui.station.hammer.mode");
+        return StatCollector.translateToLocal(
             switch (hammer.config()
                 .mode()) {
             case ALWAYS -> "galaxia.gui.station.hammer.mode.always";
@@ -140,8 +144,8 @@ final class HammerConfigWindow implements ModuleConfigWindow {
 
     private String routePriorityLabel() {
         ModuleHammer hammer = selectedHammer();
-        if (hammer == null) return tr("galaxia.gui.station.hammer.priority");
-        return tr(
+        if (hammer == null) return StatCollector.translateToLocal("galaxia.gui.station.hammer.priority");
+        return StatCollector.translateToLocal(
             hammer.routePriority() == OrbitalTransferPlanner.RoutePriority.PRIORITIZE_DV
                 ? "galaxia.gui.station.hammer.priority.dv"
                 : "galaxia.gui.station.hammer.priority.tof");
@@ -154,8 +158,8 @@ final class HammerConfigWindow implements ModuleConfigWindow {
         return switch (hammer.config()
             .mode()) {
             case ALWAYS -> "";
-            case WHEN_DV_UNDER -> tr("galaxia.gui.station.hammer.unit.dv");
-            case WHEN_TOF_UNDER -> tr("galaxia.gui.station.hammer.unit.tof");
+            case WHEN_DV_UNDER -> StatCollector.translateToLocal("galaxia.gui.station.hammer.unit.dv");
+            case WHEN_TOF_UNDER -> StatCollector.translateToLocal("galaxia.gui.station.hammer.unit.tof");
         };
     }
 
@@ -262,7 +266,4 @@ final class HammerConfigWindow implements ModuleConfigWindow {
         return StationUiData.module(assetId, controller.moduleId());
     }
 
-    private static String tr(String key) {
-        return StatCollector.translateToLocal(key);
-    }
 }

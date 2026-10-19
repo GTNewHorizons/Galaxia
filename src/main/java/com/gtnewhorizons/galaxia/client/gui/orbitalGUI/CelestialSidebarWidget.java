@@ -93,7 +93,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
                 .child(
                     GalaxiaUi
                         .toggle(
-                            () -> tr("galaxia.gui.orbital.layer.galaxy"),
+                            () -> StatCollector.translateToLocal("galaxia.gui.orbital.layer.galaxy"),
                             labelWidth("galaxia.gui.orbital.layer.galaxy"),
                             () -> activeLayer == root,
                             () -> selectLayer(root))
@@ -110,7 +110,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         Flow tools = GalaxiaUi.row()
             .child(
                 GalaxiaUi.toggle(
-                    () -> tr("galaxia.gui.orbital.debug"),
+                    () -> StatCollector.translateToLocal("galaxia.gui.orbital.debug"),
                     labelWidth("galaxia.gui.orbital.debug"),
                     map::isCreativeBuildModeEnabled,
                     () -> {
@@ -121,7 +121,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
                     .setEnabledIf(w -> map.isCreativeModeAvailable()))
             .child(
                 GalaxiaUi.toggle(
-                    () -> tr("galaxia.gui.orbital.hidden"),
+                    () -> StatCollector.translateToLocal("galaxia.gui.orbital.hidden"),
                     labelWidth("galaxia.gui.orbital.hidden"),
                     map::areHiddenObjectsShown,
                     () -> {
@@ -133,7 +133,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             .child(
                 GalaxiaUi
                     .toggle(
-                        () -> tr("galaxia.gui.orbital.simulator"),
+                        () -> StatCollector.translateToLocal("galaxia.gui.orbital.simulator"),
                         labelWidth("galaxia.gui.orbital.simulator"),
                         map::isTransferSimulatorOpen,
                         map::toggleTransferSimulator)
@@ -142,7 +142,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             .child(
                 GalaxiaUi
                     .toggle(
-                        () -> tr("galaxia.gui.orbital.supply_debug"),
+                        () -> StatCollector.translateToLocal("galaxia.gui.orbital.supply_debug"),
                         labelWidth("galaxia.gui.orbital.supply_debug"),
                         this::isSupplyDebugOpen,
                         this::toggleSupplyDebug)
@@ -150,7 +150,10 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
                     .setEnabledIf(w -> map.isCreativeBuildModeEnabled()));
         column.child(tools.setEnabledIf(w -> map.isCreativeModeAvailable()));
 
-        searchField = GalaxiaUi.textField(tr("galaxia.gui.orbital.search.placeholder"), inner - GalaxiaUi.PAD * 4)
+        searchField = GalaxiaUi
+            .textField(
+                StatCollector.translateToLocal("galaxia.gui.orbital.search.placeholder"),
+                inner - GalaxiaUi.PAD * 4)
             .name("starmap.sidebar.search")
             .setMaxLength(64)
             .setFocusOnGuiOpen(false);
@@ -168,7 +171,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             GalaxiaUi
                 .button(
                     IKey.lang("galaxia.gui.team_config.button"),
-                    GalaxiaUi.width(tr("galaxia.gui.team_config.button")) + 10,
+                    GalaxiaUi.width(StatCollector.translateToLocal("galaxia.gui.team_config.button")) + 10,
                     TeamPermissionScreen::open)
                 .name("starmap.sidebar.team"));
         child(column);
@@ -283,7 +286,8 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     }
 
     private String currentSystemLabel() {
-        return currentSystem == null ? tr("galaxia.gui.orbital.layer.system") : currentSystem.displayName();
+        return currentSystem == null ? StatCollector.translateToLocal("galaxia.gui.orbital.layer.system")
+            : currentSystem.displayName();
     }
 
     private void selectLayer(CelestialObject layerRoot) {
@@ -338,16 +342,18 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         supplyDebugAmountField.setText("64");
         column.add(GalaxiaUi.text(this::resolveSupplyDebugTargetLabel))
             .row(
-                GalaxiaUi.dim(tr("galaxia.gui.orbital.supply_debug.item")),
+                GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.orbital.supply_debug.item")),
                 ghost,
-                GalaxiaUi.button(tr("galaxia.gui.common.select"), () -> {
+                GalaxiaUi.button(StatCollector.translateToLocal("galaxia.gui.common.select"), () -> {
                     ItemPickerScreen.setPendingForSidebarDebug();
                     ItemPickerScreen.FACTORY.openClient();
                 }))
-            .row(GalaxiaUi.dim(tr("galaxia.gui.orbital.supply_debug.amount")), supplyDebugAmountField)
+            .row(
+                GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.orbital.supply_debug.amount")),
+                supplyDebugAmountField)
             .add(
                 GalaxiaUi.confirm(
-                    tr("galaxia.gui.orbital.supply_debug.add"),
+                    StatCollector.translateToLocal("galaxia.gui.orbital.supply_debug.add"),
                     () -> resolveSupplyDebugAsset() != null && supplyDebugGhostHandler.getStackInSlot(0) != null,
                     this::confirmSupplyDebug));
     }
@@ -356,7 +362,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         CelestialAsset asset = resolveSupplyDebugAsset();
         if (asset != null) return asset.displayName();
         CelestialObject focused = map.getFocusedBody();
-        if (focused == null) return tr("galaxia.gui.orbital.supply_debug.no_body");
+        if (focused == null) return StatCollector.translateToLocal("galaxia.gui.orbital.supply_debug.no_body");
         return StatCollector
             .translateToLocalFormatted("galaxia.gui.orbital.supply_debug.no_outpost", focused.displayName());
     }
@@ -419,10 +425,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     // endregion
 
     private static int labelWidth(String key) {
-        return GalaxiaUi.width(tr(key)) + 10;
+        return GalaxiaUi.width(StatCollector.translateToLocal(key)) + 10;
     }
 
-    private static String tr(String key) {
-        return StatCollector.translateToLocal(key);
-    }
 }

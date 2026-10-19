@@ -36,7 +36,11 @@ public final class OrbitalPinnedInfoContentBuilder {
         List<PinnedInfoRow> rows = new ArrayList<>();
         rows.add(row("name", body.displayName()));
         rows.add(row("type", formatObjectClass(body.objectClass())));
-        rows.add(row("landable", isLandable(body) ? tr("value.yes") : tr("value.no")));
+        rows.add(
+            row(
+                "landable",
+                isLandable(body) ? StatCollector.translateToLocal("galaxia.gui.orbital.pinned_info.value.yes")
+                    : StatCollector.translateToLocal("galaxia.gui.orbital.pinned_info.value.no")));
         rows.add(row("dangers", buildDangerSummary(body)));
         if (body.objectClass() != CelestialObject.Class.STAR && body.objectClass() != CelestialObject.Class.GALAXY) {
             rows.add(row("surface", formatSurfaceType(body)));
@@ -119,15 +123,18 @@ public final class OrbitalPinnedInfoContentBuilder {
                 : projection.oreKnowledgeState();
             // Asteroids can have real ore data before the player knows it. The
             // sidebar gates presentation on knowledge state, not on the profile.
-            if (oreKnowledge == CelestialResourceKnowledgeState.UNKNOWN) return row("ores", tr("ore.unknown"));
+            if (oreKnowledge == CelestialResourceKnowledgeState.UNKNOWN)
+                return row("ores", StatCollector.translateToLocal("galaxia.gui.orbital.pinned_info.ore.unknown"));
         }
 
-        if (!canShowOreDetails(body)) return row("ores", tr("ore.unknown"));
+        if (!canShowOreDetails(body))
+            return row("ores", StatCollector.translateToLocal("galaxia.gui.orbital.pinned_info.ore.unknown"));
 
         List<ItemStack> gtOres = distinctOres(
             body.properties()
                 .getResolvedGtOreStacks());
-        if (gtOres.isEmpty()) return row("ores", tr("ore.undefined"));
+        if (gtOres.isEmpty())
+            return row("ores", StatCollector.translateToLocal("galaxia.gui.orbital.pinned_info.ore.undefined"));
         return new PinnedInfoRow(label("ores"), "", gtOres);
     }
 
@@ -169,9 +176,9 @@ public final class OrbitalPinnedInfoContentBuilder {
                                 / scan.step()
                                     .durationTicks())));
         return StatCollector.translateToLocalFormatted(
-            key("scan.progress"),
-            tr(
-                "scan.pass." + scan.step()
+            "galaxia.gui.orbital.pinned_info.scan.progress",
+            StatCollector.translateToLocal(
+                "galaxia.gui.orbital.pinned_info.scan.pass." + scan.step()
                     .name()
                     .toLowerCase()),
             percent);
@@ -185,24 +192,27 @@ public final class OrbitalPinnedInfoContentBuilder {
     private String buildDangerSummary(CelestialObject body) {
         List<String> dangers = new ArrayList<>();
         if (body.properties()
-            .radiation() >= 0.25) dangers.add(tr("danger.radiation"));
+            .radiation() >= 0.25)
+            dangers.add(StatCollector.translateToLocal("galaxia.gui.orbital.pinned_info.danger.radiation"));
         if (body.properties()
-            .temperature() > 360) dangers.add(tr("danger.heat"));
+            .temperature() > 360)
+            dangers.add(StatCollector.translateToLocal("galaxia.gui.orbital.pinned_info.danger.heat"));
         if (body.properties()
             .temperature() > 0
             && body.properties()
                 .temperature() < 120)
-            dangers.add(tr("danger.cold"));
+            dangers.add(StatCollector.translateToLocal("galaxia.gui.orbital.pinned_info.danger.cold"));
         if (!body.properties()
             .visitable() && body.properties()
                 .canCreateOutpost())
-            dangers.add(tr("danger.remote"));
-        return dangers.isEmpty() ? tr("danger.none") : String.join(", ", dangers);
+            dangers.add(StatCollector.translateToLocal("galaxia.gui.orbital.pinned_info.danger.remote"));
+        return dangers.isEmpty() ? StatCollector.translateToLocal("galaxia.gui.orbital.pinned_info.danger.none")
+            : String.join(", ", dangers);
     }
 
     private String formatObjectClass(CelestialObject.Class objectClass) {
-        return tr(
-            "type." + objectClass.name()
+        return StatCollector.translateToLocal(
+            "galaxia.gui.orbital.pinned_info.type." + objectClass.name()
                 .toLowerCase());
     }
 
@@ -214,7 +224,8 @@ public final class OrbitalPinnedInfoContentBuilder {
         String surfaceType = body.properties()
             .metadata()
             .get("surface");
-        if (surfaceType == null || surfaceType.isEmpty()) return tr("surface.undefined");
+        if (surfaceType == null || surfaceType.isEmpty())
+            return StatCollector.translateToLocal("galaxia.gui.orbital.pinned_info.surface.undefined");
         return formatInfoToken(surfaceType);
     }
 
@@ -223,15 +234,7 @@ public final class OrbitalPinnedInfoContentBuilder {
     }
 
     private static String label(String suffix) {
-        return tr("label." + suffix);
-    }
-
-    private static String tr(String suffix) {
-        return StatCollector.translateToLocal(key(suffix));
-    }
-
-    private static String key(String suffix) {
-        return "galaxia.gui.orbital.pinned_info." + suffix;
+        return StatCollector.translateToLocal("galaxia.gui.orbital.pinned_info.label." + suffix);
     }
 
     private String formatInfoToken(String value) {
@@ -327,7 +330,9 @@ public final class OrbitalPinnedInfoContentBuilder {
                                     row.items(),
                                     ORE_COLUMNS,
                                     ORES_SHOWN,
-                                    StatCollector.translateToLocalFormatted(key("ores_of"), body.displayName())));
+                                    StatCollector.translateToLocalFormatted(
+                                        "galaxia.gui.orbital.pinned_info.ores_of",
+                                        body.displayName())));
                     } else {
                         column.keyValue(row.label(), row.value(), MAX_TEXT_WIDTH);
                     }

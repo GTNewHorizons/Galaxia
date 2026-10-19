@@ -40,7 +40,7 @@ final class MinerConfigWindow implements ModuleConfigWindow {
     @Override
     public String title() {
         ModuleInstance module = selectedModule();
-        return module == null ? tr("galaxia.gui.station.miner.title")
+        return module == null ? StatCollector.translateToLocal("galaxia.gui.station.miner.title")
             : StationUiData.moduleTitle(module, "galaxia.gui.station.config.purpose.configuration");
     }
 
@@ -52,7 +52,7 @@ final class MinerConfigWindow implements ModuleConfigWindow {
     @Override
     public void build(GalaxiaUi.Column column) {
         column.add(
-            GalaxiaUi.dim(tr("galaxia.gui.station.miner.none"))
+            GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.station.miner.none"))
                 .setEnabledIf(w -> selectedMiner() == null));
         column.add(settingsGroupSelector.row());
 
@@ -60,7 +60,7 @@ final class MinerConfigWindow implements ModuleConfigWindow {
         List<MinerBlacklistOptions.Entry> options = facility == null ? List.of()
             : MinerBlacklistOptions.forFacility(facility);
         if (options.isEmpty()) {
-            column.dim(tr("galaxia.gui.station.miner.no_ores"));
+            column.dim(StatCollector.translateToLocal("galaxia.gui.station.miner.no_ores"));
         } else {
             column.add(
                 GalaxiaUi.row()
@@ -68,10 +68,10 @@ final class MinerConfigWindow implements ModuleConfigWindow {
                         new Widget<>().size(GalaxiaUi.ICON + GalaxiaUi.GAP + NAME_WIDTH, 1)
                             .marginTop(GalaxiaUi.GAP))
                     .child(
-                        GalaxiaUi.dim(tr("galaxia.gui.station.miner.focus"))
+                        GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.station.miner.focus"))
                             .width(FOCUS_WIDTH)
                             .setEnabledIf(w -> MinerFocusUiModel.canShowOreFocus(selectedModule())))
-                    .child(GalaxiaUi.dim(tr("galaxia.gui.station.miner.blacklist"))));
+                    .child(GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.station.miner.blacklist"))));
             ListWidget<IWidget, ?> list = GalaxiaUi.scroll(LIST_HEIGHT);
             Flow rows = GalaxiaUi.column();
             for (MinerBlacklistOptions.Entry option : options) rows.child(oreRow(option));
@@ -79,8 +79,10 @@ final class MinerConfigWindow implements ModuleConfigWindow {
             column.add(list);
         }
         column.add(
-            GalaxiaUi
-                .button(tr("galaxia.gui.station.copy_settings"), this::canCopySettings, this::startCopySettingsPicker));
+            GalaxiaUi.button(
+                StatCollector.translateToLocal("galaxia.gui.station.copy_settings"),
+                this::canCopySettings,
+                this::startCopySettingsPicker));
     }
 
     private Flow oreRow(MinerBlacklistOptions.Entry option) {
@@ -95,7 +97,7 @@ final class MinerConfigWindow implements ModuleConfigWindow {
                     .width(NAME_WIDTH))
             .child(
                 GalaxiaUi.button(
-                    () -> tr(
+                    () -> StatCollector.translateToLocal(
                         MinerFocusUiModel.isFocusedOre(selectedModule(), option.key())
                             ? "galaxia.gui.station.miner.focus.clear"
                             : "galaxia.gui.station.miner.focus.set"),
@@ -109,7 +111,8 @@ final class MinerConfigWindow implements ModuleConfigWindow {
                         GalaxiaUi.BUTTON_H,
                         () -> isBlacklisted(option),
                         () -> { if (canUseControls()) setBlacklisted(option.key(), !isBlacklisted(option)); })
-                    .tooltip(t -> t.addLine(tr("galaxia.gui.station.miner.blacklist.tooltip"))));
+                    .tooltip(
+                        t -> t.addLine(StatCollector.translateToLocal("galaxia.gui.station.miner.blacklist.tooltip"))));
     }
 
     private boolean isBlacklisted(MinerBlacklistOptions.Entry option) {
@@ -146,15 +149,17 @@ final class MinerConfigWindow implements ModuleConfigWindow {
         ModuleInstance source = selectedModule();
         if (facility == null || source == null || tilePickerController == null) return;
         controller.close();
-        tilePickerController
-            .start(tr("galaxia.gui.station.miner.copy_title"), tr("galaxia.gui.station.copy"), coord -> {
+        tilePickerController.start(
+            StatCollector.translateToLocal("galaxia.gui.station.miner.copy_title"),
+            StatCollector.translateToLocal("galaxia.gui.station.copy"),
+            coord -> {
                 ModuleInstance target = facility.stationLayout()
                     .moduleAt(coord);
                 return target != null && facility.canCopyModuleRuntimeSettings(source, target);
             },
-                coord -> StationTilePickerController.normalizeModuleTarget(facility, coord),
-                targets -> CelestialClient
-                    .copyModuleSettings(assetId, source.id, StationTilePickerController.moduleIds(facility, targets)));
+            coord -> StationTilePickerController.normalizeModuleTarget(facility, coord),
+            targets -> CelestialClient
+                .copyModuleSettings(assetId, source.id, StationTilePickerController.moduleIds(facility, targets)));
     }
 
     private ModuleMiner selectedMiner() {
@@ -166,7 +171,4 @@ final class MinerConfigWindow implements ModuleConfigWindow {
         return StationUiData.module(assetId, controller.moduleId());
     }
 
-    private static String tr(String key) {
-        return StatCollector.translateToLocal(key);
-    }
 }

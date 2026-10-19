@@ -156,19 +156,19 @@ public final class LogisticsSignalsWidget extends Widget<LogisticsSignalsWidget>
 
     private void fill(GalaxiaUi.Column column, List<SignalRow> rows) {
         if (rows.isEmpty()) {
-            column.dim(tr("galaxia.gui.orbital.signals.none"));
+            column.dim(StatCollector.translateToLocal("galaxia.gui.orbital.signals.none"));
             return;
         }
         column.add(
             GalaxiaUi.row()
                 .child(
-                    GalaxiaUi.dim(tr("galaxia.gui.orbital.signals.item"))
+                    GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.orbital.signals.item"))
                         .width(GalaxiaUi.ICON + GalaxiaUi.GAP + NAME_W))
                 .child(
-                    GalaxiaUi.dim(tr("galaxia.gui.orbital.signals.net"))
+                    GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.orbital.signals.net"))
                         .width(NUMBER_W))
                 .child(
-                    GalaxiaUi.dim(tr("galaxia.gui.orbital.signals.transit"))
+                    GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.orbital.signals.transit"))
                         .width(NUMBER_W)));
         for (SignalRow row : rows) {
             SignalRowState state = rowStates.get(row.item());
@@ -190,7 +190,8 @@ public final class LogisticsSignalsWidget extends Widget<LogisticsSignalsWidget>
     }
 
     private String buildScopeLabel(ViewScope scope, CelestialObject viewRoot) {
-        if (scope == ViewScope.GALACTIC) return tr("galaxia.gui.orbital.signals.title.galaxy");
+        if (scope == ViewScope.GALACTIC)
+            return StatCollector.translateToLocal("galaxia.gui.orbital.signals.title.galaxy");
         if (scope == ViewScope.SYSTEM)
             return StatCollector.translateToLocalFormatted("galaxia.gui.orbital.signals.title", viewRoot.displayName());
         CelestialObject anchor = GalaxiaCelestialAPI.findPlanetaryAnchor(galaxyRoot, viewRoot);
@@ -310,10 +311,6 @@ public final class LogisticsSignalsWidget extends Widget<LogisticsSignalsWidget>
         if (abs < 1_000) return String.valueOf(v);
         if (abs < 1_000_000) return sign + (abs / 1_000) + "k";
         return sign + (abs / 1_000_000) + "M";
-    }
-
-    private static String tr(String key) {
-        return StatCollector.translateToLocal(key);
     }
 
     private final class SignalRowState {

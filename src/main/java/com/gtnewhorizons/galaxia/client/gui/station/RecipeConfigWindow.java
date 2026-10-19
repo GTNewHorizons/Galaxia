@@ -98,7 +98,7 @@ final class RecipeConfigWindow implements ModuleConfigWindow {
     public String title() {
         ModuleInstance module = selectedModule();
         return module != null ? StationUiData.moduleTitle(module, "galaxia.gui.station.config.purpose.recipes")
-            : tr("galaxia.gui.station.config.purpose.recipes");
+            : StatCollector.translateToLocal("galaxia.gui.station.config.purpose.recipes");
     }
 
     @Override
@@ -126,16 +126,22 @@ final class RecipeConfigWindow implements ModuleConfigWindow {
             GalaxiaUi.button(this::modeLabel, 96, this::canConfigureRecipes, this::cycleMode),
             GalaxiaUi.button(this::notDoablePolicyLabel, 140, this::canConfigureRecipes, this::cycleNotDoablePolicy));
         if (editor.size() == 0) {
-            column.dim(tr("galaxia.gui.station.recipe.empty"));
+            column.dim(StatCollector.translateToLocal("galaxia.gui.station.recipe.empty"));
         } else {
             column.add(
                 GalaxiaUi.row()
                     .child(header("#", INDEX_WIDTH))
-                    .child(header(tr("galaxia.gui.station.recipe.column.on"), TOGGLE_WIDTH))
-                    .child(header(tr("galaxia.gui.station.recipe.column.flow"), NAME_WIDTH))
+                    .child(header(StatCollector.translateToLocal("galaxia.gui.station.recipe.column.on"), TOGGLE_WIDTH))
+                    .child(header(StatCollector.translateToLocal("galaxia.gui.station.recipe.column.flow"), NAME_WIDTH))
                     .child(header("", DETAILS_WIDTH))
-                    .child(header(tr("galaxia.gui.station.recipe.column.priority"), FIELD_WIDTH))
-                    .child(header(tr("galaxia.gui.station.recipe.column.request"), FIELD_WIDTH)));
+                    .child(
+                        header(
+                            StatCollector.translateToLocal("galaxia.gui.station.recipe.column.priority"),
+                            FIELD_WIDTH))
+                    .child(
+                        header(
+                            StatCollector.translateToLocal("galaxia.gui.station.recipe.column.request"),
+                            FIELD_WIDTH)));
             ListWidget<IWidget, ?> list = GalaxiaUi.scroll(LIST_HEIGHT);
             Flow rows = GalaxiaUi.column();
             for (int slot = 0; slot < editor.size(); slot++) rows.child(slotRow(slot));
@@ -143,11 +149,21 @@ final class RecipeConfigWindow implements ModuleConfigWindow {
             column.add(list);
         }
         column.row(
-            GalaxiaUi.button(tr("galaxia.gui.station.recipe.add"), this::canAddRecipe, this::addRecipe)
-                .name("recipe.add"),
             GalaxiaUi
-                .button(tr("galaxia.gui.station.copy_settings"), this::canCopySettings, this::startCopySettingsPicker),
-            GalaxiaUi.button(tr("galaxia.gui.station.recipe.save"), this::canConfigureRecipes, this::save)
+                .button(
+                    StatCollector.translateToLocal("galaxia.gui.station.recipe.add"),
+                    this::canAddRecipe,
+                    this::addRecipe)
+                .name("recipe.add"),
+            GalaxiaUi.button(
+                StatCollector.translateToLocal("galaxia.gui.station.copy_settings"),
+                this::canCopySettings,
+                this::startCopySettingsPicker),
+            GalaxiaUi
+                .button(
+                    StatCollector.translateToLocal("galaxia.gui.station.recipe.save"),
+                    this::canConfigureRecipes,
+                    this::save)
                 .name("recipe.save"));
     }
 
@@ -166,7 +182,7 @@ final class RecipeConfigWindow implements ModuleConfigWindow {
             .child(
                 GalaxiaUi
                     .button(
-                        () -> tr(
+                        () -> StatCollector.translateToLocal(
                             recipe(slot) != null && recipe(slot).enabled() ? "galaxia.gui.common.on"
                                 : "galaxia.gui.common.off"),
                         TOGGLE_WIDTH,
@@ -177,7 +193,7 @@ final class RecipeConfigWindow implements ModuleConfigWindow {
             .child(
                 GalaxiaUi
                     .button(
-                        () -> tr("galaxia.gui.station.recipe.details.open"),
+                        () -> StatCollector.translateToLocal("galaxia.gui.station.recipe.details.open"),
                         DETAILS_WIDTH,
                         () -> canUseSlot(slot),
                         () -> openDetails(slot))
@@ -186,7 +202,7 @@ final class RecipeConfigWindow implements ModuleConfigWindow {
             .child(numberField(slot, Field.REQUEST_AMOUNT))
             .child(
                 GalaxiaUi.button(() -> "X", REMOVE_WIDTH, () -> canUseSlot(slot), () -> removeSlot(slot))
-                    .tooltip(t -> t.addLine(tr("galaxia.gui.station.recipe.remove"))));
+                    .tooltip(t -> t.addLine(StatCollector.translateToLocal("galaxia.gui.station.recipe.remove"))));
     }
 
     /** The recipe's name, clicked to rename it */
@@ -204,7 +220,7 @@ final class RecipeConfigWindow implements ModuleConfigWindow {
             .overlay(
                 new com.cleanroommc.modularui.drawable.DynamicDrawable(
                     () -> recipe(slot) != null && recipe(slot).enabled() ? on : off))
-            .tooltip(t -> t.addLine(tr("galaxia.gui.station.recipe.rename_hint")));
+            .tooltip(t -> t.addLine(StatCollector.translateToLocal("galaxia.gui.station.recipe.rename_hint")));
     }
 
     private TextFieldWidget numberField(int slot, Field field) {
@@ -310,15 +326,17 @@ final class RecipeConfigWindow implements ModuleConfigWindow {
         settingsGroupSelector.closeMenu();
         CelestialClient.replaceRecipeBook(assetId, editor.moduleId(), editor.replacement());
         controller.close();
-        tilePickerController
-            .start(tr("galaxia.gui.station.recipe.copy_title"), tr("galaxia.gui.station.copy"), coord -> {
+        tilePickerController.start(
+            StatCollector.translateToLocal("galaxia.gui.station.recipe.copy_title"),
+            StatCollector.translateToLocal("galaxia.gui.station.copy"),
+            coord -> {
                 ModuleInstance target = facility.stationLayout()
                     .moduleAt(coord);
                 return target != null && facility.canCopyModuleRuntimeSettings(source, target);
             },
-                coord -> StationTilePickerController.normalizeModuleTarget(facility, coord),
-                targets -> CelestialClient
-                    .copyModuleSettings(assetId, source.id, StationTilePickerController.moduleIds(facility, targets)));
+            coord -> StationTilePickerController.normalizeModuleTarget(facility, coord),
+            targets -> CelestialClient
+                .copyModuleSettings(assetId, source.id, StationTilePickerController.moduleIds(facility, targets)));
     }
 
     private String modeLabel() {
@@ -367,12 +385,14 @@ final class RecipeConfigWindow implements ModuleConfigWindow {
             .value(
                 new StringValue.Dynamic(() -> recipeNameInput, input -> recipeNameInput = input == null ? "" : input))
             .setFocusOnGuiOpen(false);
-        column.dim(tr("galaxia.gui.station.recipe.name"))
+        column.dim(StatCollector.translateToLocal("galaxia.gui.station.recipe.name"))
             .add(recipeNameField)
             .row(
-                GalaxiaUi.button(tr("galaxia.gui.station.recipe.details.clear"), this::clearRecipeName),
                 GalaxiaUi.button(
-                    tr("galaxia.gui.station.settings_group.save"),
+                    StatCollector.translateToLocal("galaxia.gui.station.recipe.details.clear"),
+                    this::clearRecipeName),
+                GalaxiaUi.button(
+                    StatCollector.translateToLocal("galaxia.gui.station.settings_group.save"),
                     this::canSaveRecipeName,
                     this::saveRecipeName));
     }
@@ -588,11 +608,7 @@ final class RecipeConfigWindow implements ModuleConfigWindow {
     }
 
     private static String detailText(String key) {
-        return tr("galaxia.gui.station.recipe.details." + key);
-    }
-
-    private static String tr(String key) {
-        return StatCollector.translateToLocal(key);
+        return StatCollector.translateToLocal("galaxia.gui.station.recipe.details." + key);
     }
 
     private enum Field {

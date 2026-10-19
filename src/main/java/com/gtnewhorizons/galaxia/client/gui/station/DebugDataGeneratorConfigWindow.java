@@ -30,13 +30,13 @@ final class DebugDataGeneratorConfigWindow implements ModuleConfigWindow {
 
     @Override
     public String title() {
-        return tr("galaxia.gui.station.debug_data.title");
+        return StatCollector.translateToLocal("galaxia.gui.station.debug_data.title");
     }
 
     @Override
     public void build(GalaxiaUi.Column column) {
         column.add(
-            GalaxiaUi.dim(tr("galaxia.gui.station.debug_data.none"))
+            GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.station.debug_data.none"))
                 .setEnabledIf(w -> module() == null));
         column.add(GalaxiaUi.button(this::modeLabel, WIDE, () -> module() != null, this::toggleMode));
         column.add(GalaxiaUi.button(this::dataTypeLabel, WIDE, () -> module() != null, this::cycleDataType));
@@ -101,7 +101,7 @@ final class DebugDataGeneratorConfigWindow implements ModuleConfigWindow {
 
     private String originLabel() {
         CelestialObjectKey origin = config().originBodyKey();
-        if (origin == null) return tr("galaxia.gui.station.debug_data.any_origin");
+        if (origin == null) return StatCollector.translateToLocal("galaxia.gui.station.debug_data.any_origin");
         return origin.isRegistered() ? origin.registeredBodyId()
             .name() : origin.toString();
     }
@@ -190,7 +190,7 @@ final class DebugDataGeneratorConfigWindow implements ModuleConfigWindow {
 
     private String counterpartStatus(ModuleDebugDataGenerator generator) {
         CelestialObjectKey bodyKey = generator.detectedCounterpartBodyKey();
-        String role = tr(
+        String role = StatCollector.translateToLocal(
             generator.isProducer() ? "galaxia.gui.station.debug_data.consumer"
                 : "galaxia.gui.station.debug_data.producer");
         if (bodyKey == null)
@@ -210,7 +210,4 @@ final class DebugDataGeneratorConfigWindow implements ModuleConfigWindow {
         return nextOrdinal >= values.length ? null : CelestialObjectKey.registered(values[nextOrdinal]);
     }
 
-    private static String tr(String key) {
-        return StatCollector.translateToLocal(key);
-    }
 }

@@ -38,13 +38,17 @@ final class ModuleStatusTextRegistry {
     private static void appendSelectedTileText(Context context, Lines lines) {
         PlacedTile tile = context.tile();
         if (tile == null) {
-            lines.line(tr("galaxia.gui.station.status.expansion_slot"), EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+            lines.line(
+                StatCollector.translateToLocal("galaxia.gui.station.status.expansion_slot"),
+                EnumColors.MAP_COLOR_TEXT_BODY.getColor());
             return;
         }
 
         ModuleInstance module = tile.module();
         if (module == null) {
-            lines.line(tr("galaxia.gui.station.status.core"), EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+            lines.line(
+                StatCollector.translateToLocal("galaxia.gui.station.status.core"),
+                EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         } else {
             lines.line(moduleDisplayName(module), EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         }
@@ -64,7 +68,10 @@ final class ModuleStatusTextRegistry {
         if (module == null || !(module.component() instanceof ModuleHammer hammer)) return;
 
         lines.line(
-            tr("galaxia.gui.station.status.buffer", formatEu(hammer.energyStored()), formatEu(hammer.energyCapacity())),
+            StatCollector.translateToLocalFormatted(
+                "galaxia.gui.station.status.buffer",
+                formatEu(hammer.energyStored()),
+                formatEu(hammer.energyCapacity())),
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         lines.line(
             cooldownText(hammer.shotCooldownTicks()),
@@ -88,8 +95,11 @@ final class ModuleStatusTextRegistry {
             long effectivePower = context.facility()
                 .effectivePowerDrawEuPerTick(module);
             String powerLine = effectivePower == basePower
-                ? tr("galaxia.gui.station.status.power", formatEu(effectivePower))
-                : tr("galaxia.gui.station.status.power_base", formatEu(effectivePower), formatEu(basePower));
+                ? StatCollector.translateToLocalFormatted("galaxia.gui.station.status.power", formatEu(effectivePower))
+                : StatCollector.translateToLocalFormatted(
+                    "galaxia.gui.station.status.power_base",
+                    formatEu(effectivePower),
+                    formatEu(basePower));
             lines.line(powerLine, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         }
 
@@ -113,11 +123,12 @@ final class ModuleStatusTextRegistry {
         ModuleInstance module = context.module();
         if (module == null || !(module.component() instanceof ModuleMiner miner)) return;
 
-        String focusLine = miner.focusOreKeyOrNull() == null ? tr(
-            "galaxia.gui.station.status.focus",
-            miner.focusTier()
-                .name())
-            : tr(
+        String focusLine = miner.focusOreKeyOrNull() == null
+            ? StatCollector.translateToLocalFormatted(
+                "galaxia.gui.station.status.focus",
+                miner.focusTier()
+                    .name())
+            : StatCollector.translateToLocalFormatted(
                 "galaxia.gui.station.status.focus_ore",
                 miner.focusTier()
                     .name(),
@@ -126,7 +137,8 @@ final class ModuleStatusTextRegistry {
         lines.line(focusLine, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         if (miner.focusOreKeyOrNull() != null) {
             lines.line(
-                tr("galaxia.gui.station.status.alignment", focusAlignmentPercent(miner)),
+                StatCollector
+                    .translateToLocalFormatted("galaxia.gui.station.status.alignment", focusAlignmentPercent(miner)),
                 EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         }
     }
@@ -162,7 +174,7 @@ final class ModuleStatusTextRegistry {
 
     private static String moduleDisplayName(ModuleInstance module) {
         if (module.component() instanceof ModuleHammer hammer) {
-            return tr(
+            return StatCollector.translateToLocalFormatted(
                 "galaxia.gui.station.status.hammer_name",
                 hammer.variant()
                     .name(),
@@ -180,8 +192,8 @@ final class ModuleStatusTextRegistry {
     }
 
     private static String cooldownText(int ticks) {
-        if (ticks <= 0) return tr("galaxia.gui.station.status.cooldown_ready");
-        return tr("galaxia.gui.station.status.cooldown", (ticks + 19) / 20);
+        if (ticks <= 0) return StatCollector.translateToLocal("galaxia.gui.station.status.cooldown_ready");
+        return StatCollector.translateToLocalFormatted("galaxia.gui.station.status.cooldown", (ticks + 19) / 20);
     }
 
     private static int focusAlignmentPercent(ModuleMiner miner) {
@@ -196,7 +208,7 @@ final class ModuleStatusTextRegistry {
 
     private static String operationTargetLine(IModuleOperation spec) {
         if (spec instanceof IModuleOperation.Hammer hammerSpec) {
-            return tr(
+            return StatCollector.translateToLocalFormatted(
                 "galaxia.gui.station.status.target_hammer",
                 hammerSpec.targetVariant(),
                 hammerSpec.targetTier()
@@ -204,14 +216,15 @@ final class ModuleStatusTextRegistry {
         }
         if (spec instanceof IModuleOperation.MinerFocus minerSpec) {
             return minerSpec.targetFocusOreKey() == null
-                ? tr("galaxia.gui.station.status.target_focus", minerSpec.targetFocusTier())
-                : tr(
+                ? StatCollector
+                    .translateToLocalFormatted("galaxia.gui.station.status.target_focus", minerSpec.targetFocusTier())
+                : StatCollector.translateToLocalFormatted(
                     "galaxia.gui.station.status.target_focus_ore",
                     minerSpec.targetFocusTier(),
                     minerSpec.targetFocusOreKey());
         }
         if (spec instanceof IModuleOperation.Tier tierSpec) {
-            return tr(
+            return StatCollector.translateToLocalFormatted(
                 "galaxia.gui.station.status.target_tier",
                 tierSpec.targetTier()
                     .name());
@@ -222,7 +235,7 @@ final class ModuleStatusTextRegistry {
         if (spec == IModuleOperation.CONSTRUCTION) {
             return StatCollector.translateToLocal("galaxia.module.operation.construction_pending");
         }
-        return tr("galaxia.gui.station.status.operation_pending");
+        return StatCollector.translateToLocal("galaxia.gui.station.status.operation_pending");
     }
 
     static String hammerDispatchStatusLine(HammerDispatchStatus.Status status) {
@@ -230,15 +243,13 @@ final class ModuleStatusTextRegistry {
             .name()
             .toLowerCase();
         return switch (status.code()) {
-            case DESTINATION_LACKS_PACKAGE_SPACE -> tr(key, status.sendAmount(), status.orderSize());
-            case DESTINATION_CAPACITY_BLOCKED -> tr(key, status.sendAmount());
-            case NEED_ENERGY -> tr(key, formatEu(status.requiredEnergy()), formatEu(status.storedEnergy()));
-            default -> tr(key);
+            case DESTINATION_LACKS_PACKAGE_SPACE -> StatCollector
+                .translateToLocalFormatted(key, status.sendAmount(), status.orderSize());
+            case DESTINATION_CAPACITY_BLOCKED -> StatCollector.translateToLocalFormatted(key, status.sendAmount());
+            case NEED_ENERGY -> StatCollector
+                .translateToLocalFormatted(key, formatEu(status.requiredEnergy()), formatEu(status.storedEnergy()));
+            default -> StatCollector.translateToLocal(key);
         };
-    }
-
-    private static String tr(String key, Object... args) {
-        return StatCollector.translateToLocalFormatted(key, args);
     }
 
     record Context(AutomatedFacility facility, StationTileCoord selected, PlacedTile tile, ModuleInstance module,

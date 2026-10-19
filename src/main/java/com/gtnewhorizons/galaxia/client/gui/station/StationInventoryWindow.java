@@ -85,7 +85,7 @@ final class StationInventoryWindow {
 
     /** The button on the station window that opens and closes the inventory */
     ButtonWidget<?> toggleButton() {
-        String label = tr("galaxia.gui.station.inventory.button");
+        String label = StatCollector.translateToLocal("galaxia.gui.station.inventory.button");
         toggle = GalaxiaUi.toggle(() -> label, GalaxiaUi.width(label) + 10, () -> window != null, this::toggleOpen);
         toggle.name("station.inventory.toggle")
             .setEnabledIf(w -> visibleSupplier.getAsBoolean() && inventoryOwner() != null);
@@ -105,7 +105,7 @@ final class StationInventoryWindow {
                 .of(
                     WINDOW_ID,
                     com.cleanroommc.modularui.api.drawable.IKey.dynamic(
-                        () -> tr(
+                        () -> StatCollector.translateToLocal(
                             resourceMode == ResourceMode.UPKEEP ? "galaxia.gui.station.inventory.upkeep_title"
                                 : "galaxia.gui.station.inventory.title")))
                 .owner(StationManagementScreen.windowId(assetId))
@@ -173,7 +173,7 @@ final class StationInventoryWindow {
         };
         if (empty) {
             column.dim(
-                tr(
+                StatCollector.translateToLocal(
                     resourceMode == ResourceMode.UPKEEP ? "galaxia.gui.station.inventory.no_upkeep"
                         : "galaxia.gui.station.inventory.empty"));
             return;
@@ -207,7 +207,7 @@ final class StationInventoryWindow {
     }
 
     private ButtonWidget<?> modeTab(ResourceMode mode, String key, boolean available) {
-        String label = tr(key);
+        String label = StatCollector.translateToLocal(key);
         return GalaxiaUi
             .choice(() -> label, GalaxiaUi.width(label) + 10, () -> resourceMode == mode, () -> available, () -> {
                 if (resourceMode == mode) return;
@@ -238,7 +238,7 @@ final class StationInventoryWindow {
     }
 
     private static TextWidget<?> headerText(String key, int width) {
-        return GalaxiaUi.dim(tr(key))
+        return GalaxiaUi.dim(StatCollector.translateToLocal(key))
             .width(width)
             .alignment(Alignment.Center);
     }
@@ -256,7 +256,7 @@ final class StationInventoryWindow {
                 GalaxiaUi
                     .iconButton(
                         EnumTextures.ICON_STATION_ITEM_INTERACTIONS.getImage(),
-                        () -> tr("galaxia.gui.station.inventory.interactions"),
+                        () -> StatCollector.translateToLocal("galaxia.gui.station.inventory.interactions"),
                         () -> af() != null,
                         () -> openItemInteractions(item))
                     .name("station.inventory.interactions." + index))
@@ -279,7 +279,7 @@ final class StationInventoryWindow {
                 GalaxiaUi
                     .iconButton(
                         EnumTextures.ICON_STATION_INVENTORY_BOUNDS.getImage(),
-                        () -> tr("galaxia.gui.station.inventory.bounds"),
+                        () -> StatCollector.translateToLocal("galaxia.gui.station.inventory.bounds"),
                         () -> af() != null,
                         () -> openBoundEditor(item))
                     .name("station.inventory.bounds." + index))
@@ -289,7 +289,7 @@ final class StationInventoryWindow {
                     new DynamicDrawable(
                         () -> (isAmountMode(item) ? EnumTextures.ICON_STATION_INVENTORY_AMOUNT
                             : EnumTextures.ICON_STATION_INVENTORY_ALL).getImage()),
-                    () -> tr(
+                    () -> StatCollector.translateToLocal(
                         isAmountMode(item) ? "galaxia.gui.station.inventory.mode.amount"
                             : "galaxia.gui.station.inventory.mode.all"),
                     () -> true,
@@ -297,7 +297,7 @@ final class StationInventoryWindow {
             .child(
                 GalaxiaUi.iconButton(
                     EnumTextures.ICON_STATION_INVENTORY_VOID.getImage(),
-                    () -> tr("galaxia.gui.station.inventory.void"),
+                    () -> StatCollector.translateToLocal("galaxia.gui.station.inventory.void"),
                     () -> currentAmount(item) > 0L,
                     () -> voidRow(item)));
     }
@@ -323,7 +323,7 @@ final class StationInventoryWindow {
             .child(
                 GalaxiaUi.iconButton(
                     EnumTextures.ICON_STATION_INVENTORY_BOUNDS.getImage(),
-                    () -> tr("galaxia.gui.station.inventory.fluid_bounds"),
+                    () -> StatCollector.translateToLocal("galaxia.gui.station.inventory.fluid_bounds"),
                     () -> af() != null,
                     () -> openBoundEditor(fluid)));
     }
@@ -354,11 +354,14 @@ final class StationInventoryWindow {
             .child(
                 GalaxiaUi
                     .toggle(
-                        () -> tr("galaxia.gui.station.inventory.auto_order"),
-                        GalaxiaUi.width(tr("galaxia.gui.station.inventory.auto_order")) + 10,
+                        () -> StatCollector.translateToLocal("galaxia.gui.station.inventory.auto_order"),
+                        GalaxiaUi.width(StatCollector.translateToLocal("galaxia.gui.station.inventory.auto_order"))
+                            + 10,
                         () -> isUpkeepAutoOrderEnabled(item),
                         () -> toggleUpkeepAutoOrder(item))
-                    .tooltip(t -> t.addLine(tr("galaxia.gui.station.inventory.auto_order.tooltip"))));
+                    .tooltip(
+                        t -> t.addLine(
+                            StatCollector.translateToLocal("galaxia.gui.station.inventory.auto_order.tooltip"))));
     }
 
     private TextFieldWidget amountField(ItemStackWrapper item) {
@@ -368,7 +371,7 @@ final class StationInventoryWindow {
                 new StringValue.Dynamic(
                     () -> amountInputs.getOrDefault(item, "0"),
                     text -> amountInputs.put(item, text == null ? "" : text)))
-            .tooltip(t -> t.addLine(tr("galaxia.gui.station.inventory.amount_field")))
+            .tooltip(t -> t.addLine(StatCollector.translateToLocal("galaxia.gui.station.inventory.amount_field")))
             .setEnabledIf(w -> isAmountMode(item));
         return field;
     }
@@ -548,23 +551,29 @@ final class StationInventoryWindow {
                 else outputBoundAmount = text == null ? "" : text;
             }))
             .tooltipDynamic(
-                t -> { if (!boundsInputValid()) t.addLine(tr("galaxia.gui.station.inventory.bounds_invalid")); })
+                t -> {
+                    if (!boundsInputValid())
+                        t.addLine(StatCollector.translateToLocal("galaxia.gui.station.inventory.bounds_invalid"));
+                })
             .onUpdateListener(TextFieldWidget::markTooltipDirty, true);
         return GalaxiaUi.row()
             .child(
                 GalaxiaUi
                     .dim(
-                        tr(
+                        StatCollector.translateToLocal(
                             low ? "galaxia.gui.station.inventory.input_lower"
                                 : "galaxia.gui.station.inventory.output_upper"))
                     .width(70))
             .child(field)
             .child(
                 GalaxiaUi.button(
-                    tr("galaxia.gui.station.recipe.details.set"),
+                    StatCollector.translateToLocal("galaxia.gui.station.recipe.details.set"),
                     this::boundsInputValid,
                     () -> applyBound(low)))
-            .child(GalaxiaUi.button(tr("galaxia.gui.station.recipe.details.clear"), () -> clearBound(low)));
+            .child(
+                GalaxiaUi.button(
+                    StatCollector.translateToLocal("galaxia.gui.station.recipe.details.clear"),
+                    () -> clearBound(low)));
     }
 
     private boolean boundsInputValid() {
@@ -632,7 +641,7 @@ final class StationInventoryWindow {
 
     private void fillItemInteractions(GalaxiaUi.Column column, List<StationItemInteractionModel.Entry> entries) {
         if (entries.isEmpty()) {
-            column.dim(tr("galaxia.gui.station.interactions.none"));
+            column.dim(StatCollector.translateToLocal("galaxia.gui.station.interactions.none"));
             return;
         }
         ListWidget<IWidget, ?> list = GalaxiaUi.scroll(INTERACTIONS_HEIGHT);
@@ -649,7 +658,10 @@ final class StationInventoryWindow {
                     GalaxiaUi.clipped(StationItemInteractionText.textFor(entry), 220, GalaxiaGuiStyle.TEXT)
                         .width(220));
             if (canOpen(entry)) {
-                line.child(GalaxiaUi.button(tr("galaxia.gui.station.interactions.open"), () -> openEntry(entry)));
+                line.child(
+                    GalaxiaUi.button(
+                        StatCollector.translateToLocal("galaxia.gui.station.interactions.open"),
+                        () -> openEntry(entry)));
             }
             lines.child(line);
         }
@@ -658,7 +670,7 @@ final class StationInventoryWindow {
     }
 
     private static String sectionTitle(StationItemInteractionModel.Section section) {
-        return tr(switch (section) {
+        return StatCollector.translateToLocal(switch (section) {
             case LOGISTICS -> "galaxia.gui.station.interactions.logistics";
             case MACHINES -> "galaxia.gui.station.interactions.machines";
             case UPKEEP -> "galaxia.gui.station.interactions.upkeep";
@@ -752,10 +764,6 @@ final class StationInventoryWindow {
         if (amount < 1_000L) return Long.toString(amount);
         if (amount < 1_000_000L) return (amount / 1_000L) + "k";
         return (amount / 1_000_000L) + "M";
-    }
-
-    private static String tr(String key) {
-        return StatCollector.translateToLocal(key);
     }
 
     private enum ResourceMode {
