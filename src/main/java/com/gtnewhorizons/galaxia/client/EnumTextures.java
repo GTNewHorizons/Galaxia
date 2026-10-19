@@ -160,6 +160,7 @@ public enum EnumTextures {
     GUI_BUTTON_HOVERED("textures/gui/common/button_hovered.png", 16, 2),
     GUI_BUTTON_SELECTED("textures/gui/common/button_selected.png", 16, 2),
     GUI_SLOT("textures/gui/common/slot.png"),
+    GUI_ARROW("textures/gui/common/arrow.png"),
     GUI_LED_ON("textures/gui/common/led_on.png"),
     GUI_LED_OFF("textures/gui/common/led_off.png"),
     GUI_LED_WAIT("textures/gui/common/led_wait.png"),

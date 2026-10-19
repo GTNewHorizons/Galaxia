@@ -306,8 +306,9 @@ public class TileElevatorDock extends TileEntity implements IInventory, IFluidHa
         for (int i = 0; i < TANKS; i++) {
             panel.child(
                 new FluidSlot().syncHandler(new FluidSlotSyncHandler(tanks[i]).canFillSlot(false))
+                    .background(EnumTextures.GUI_WELL.getImage())
                     .size(36, 16)
-                    .pos(7 + i * 41, 86));
+                    .pos(7 + i * 42, 86));
         }
         panel.child(
             GalaxiaGuiStyle.playerInventory()
