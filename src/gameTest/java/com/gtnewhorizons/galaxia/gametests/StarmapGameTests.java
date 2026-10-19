@@ -17,9 +17,7 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import org.lwjgl.input.Keyboard;
 
 import com.cleanroommc.modularui.screen.viewport.LocatedWidget;
-import com.cleanroommc.modularui.utils.TreeUtil;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.CelestialSidebarWidget;
 import com.gtnewhorizons.galaxia.compat.GTCompat;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.network.AssetStateSync;
@@ -284,16 +282,7 @@ public final class StarmapGameTests {
     }
 
     private static ClickTarget sidebarLayerTarget(boolean system) {
-        var screen = GuiTestSupport.requireScreen("galactic_orbital_map");
-        var sidebar = TreeUtil.flatListByType(screen.getMainPanel(), CelestialSidebarWidget.class)
-            .getFirst();
-        var matrix = LocatedWidget.of(sidebar)
-            .getTransformationMatrix();
-        return new ClickTarget(
-            sidebar,
-            new Rectangle(matrix.transformX(system ? 110 : 40, 23), matrix.transformY(system ? 110 : 40, 23), 1, 1),
-            () -> sidebar.isValid() && sidebar.getPanel()
-                .isBelowMouse(sidebar));
+        return GuiTestSupport.namedTarget(system ? "starmap.sidebar.layer.system" : "starmap.sidebar.layer.galaxy");
     }
 
     /** Integration contract: text entry owns keys while focused, and screen shortcuts execute once elsewhere. */

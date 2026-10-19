@@ -5,21 +5,20 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
-import com.cleanroommc.modularui.api.IGuiHolder;
-import com.cleanroommc.modularui.factory.GuiData;
-import com.cleanroommc.modularui.factory.SimpleGuiFactory;
-import com.cleanroommc.modularui.screen.ModularPanel;
-import com.cleanroommc.modularui.screen.ModularScreen;
-import com.cleanroommc.modularui.screen.UISettings;
-import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
-import com.cleanroommc.modularui.theme.WidgetThemeEntry;
-import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import net.minecraft.util.StatCollector;
+
+import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.widget.ParentWidget;
+import com.cleanroommc.modularui.widgets.ListWidget;
+import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
-import com.gtnewhorizons.galaxia.client.EnumColors;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
-import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
+import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
+import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaUi;
+import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaWindow;
+import com.gtnewhorizons.galaxia.client.gui.ui.WindowLayer;
+import com.gtnewhorizons.galaxia.client.gui.ui.WindowSpec;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -34,22 +33,28 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup
 
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
 
-public final class StationManagementScreen implements IGuiHolder<GuiData> {
+/**
+ * Management of an automated station or outpost, opened as a window over the galactic map: the module layout with its
+ * side panel, the inventory and the module settings
+ */
+public final class StationManagementScreen {
 
-    public static final SimpleGuiFactory FACTORY = new SimpleGuiFactory(
-        "galaxia_station_management",
-        StationManagementScreen::new);
-
+    /** Space left around the station window, which otherwise takes the whole map like the workspace it is */
+    private static final int MARGIN = 20;
     private static final int LEFT_PANEL_WIDTH = 216;
     private static final int PADDING = 12;
-    private static final int MAP_ACTION_BUTTON_WIDTH = 128;
-    private static final int MAP_ACTION_BUTTON_HEIGHT = 20;
+    private static final int PICKER_WIDTH = 190;
+    private static final int PICKER_CONFIRM_WIDTH = 76;
 
-    private static volatile @Nullable CelestialAsset.ID pendingAssetId;
-    private static volatile boolean pendingCreativeBuildMode;
     private static volatile @Nullable BuildPickerRequest pendingBuildPickerRequest;
+
+    private StationManagementScreen() {}
+
+    /** Id of the window of a station, for finding or closing it */
+    public static String windowId(CelestialAsset.ID assetId) {
+        return "station." + assetId;
+    }
 
     public static void open(CelestialAsset.ID assetId) {
         open(assetId, false);
@@ -62,10 +67,19 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
 
     private static void openScreen(CelestialAsset.ID assetId, boolean creativeBuildMode) {
         CelestialAsset asset = CelestialClient.getByAssetId(assetId);
-        if (asset != null && asset.kind == CelestialAsset.Kind.SATELLITE) return;
-        pendingAssetId = assetId;
-        pendingCreativeBuildMode = creativeBuildMode;
-        FACTORY.openClient();
+        if (asset == null || asset.kind == CelestialAsset.Kind.SATELLITE) return;
+        WindowLayer layer = WindowLayer.current();
+        if (layer == null) return;
+        String id = windowId(assetId);
+        // Opened again so a pending build picker starts on a fresh view
+        layer.close(id);
+        int width = layer.getArea().width - MARGIN * 2;
+        int height = layer.getArea().height - MARGIN * 2 - GalaxiaUi.ICON - GalaxiaUi.PAD * 2 - GalaxiaUi.GAP;
+        layer.open(
+            WindowSpec.of(id, IKey.str(asset.displayName()))
+                .centered()
+                .maxHeight(height)
+                .body(column -> column.add(build(assetId, creativeBuildMode, width, height))));
     }
 
     static void openBuildPicker(CelestialAsset.ID assetId, FacilityModuleKind kind, boolean creativeBuildMode) {
@@ -95,53 +109,31 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         openScreen(assetId, creativeBuildMode);
     }
 
-    public static @Nullable CelestialAsset.ID pendingAssetId() {
-        return pendingAssetId;
-    }
-
-    static boolean pendingCreativeBuildMode() {
-        return pendingCreativeBuildMode;
-    }
-
-    @Override
-    @SideOnly(Side.CLIENT)
-    public ModularScreen createScreen(GuiData data, ModularPanel mainPanel) {
-        return new ModularScreen(Galaxia.MODID, mainPanel);
-    }
-
-    @Override
-    public ModularPanel buildUI(GuiData guiData, PanelSyncManager syncManager, UISettings settings) {
-        syncManager.syncValue(StarmapActionSyncHandler.KEY, new StarmapActionSyncHandler());
-        ModularPanel panel = ModularPanel.defaultPanel("galaxia_station_management")
-            .fullScreenInvisible();
-        CelestialAsset.ID assetId = pendingAssetId;
-        boolean creativeBuildMode = pendingCreativeBuildMode;
-        boolean isAutomatedFacility = CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility;
-        StationOverlayCoordinator overlayCoordinator = new StationOverlayCoordinator();
-        panel.onUpdateListener(w -> overlayCoordinator.processDeferredActions());
+    /**
+     * The content of a station window
+     *
+     * @param assetId           The station
+     * @param creativeBuildMode Whether modules are built without materials
+     * @param width             Width of the content
+     * @param height            Height of the content
+     */
+    public static ParentWidget<?> build(CelestialAsset.ID assetId, boolean creativeBuildMode, int width, int height) {
+        ParentWidget<?> panel = new ParentWidget<>().name("station.content")
+            .size(width, height)
+            .background(EnumTextures.GUI_WELL.getImage());
         int overlayX = LEFT_PANEL_WIDTH + PADDING * 2;
+        int overlayY = PADDING + GalaxiaUi.BUTTON_H + GalaxiaUi.GAP;
+        int columnWidth = LEFT_PANEL_WIDTH - PADDING;
 
-        panel.child(
-            new StationScreenBackground().left(0)
-                .top(0)
-                .widthRel(1f)
-                .heightRel(1f));
-
-        if (isAutomatedFacility) {
+        if (CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility) {
             StationTilePickerController tilePickerController = new StationTilePickerController();
-            int overlayY = PADDING + StationInventoryPanelWidget.BUTTON_HEIGHT + 4;
             ModuleConfigModalController configController = new ModuleConfigModalController(
                 panel,
                 assetId,
                 overlayX,
                 overlayY,
-                tilePickerController,
-                overlayCoordinator);
-            StationInventoryPanelWidget inventoryPanel = new StationInventoryPanelWidget(
-                assetId,
-                overlayCoordinator,
-                configController,
-                () -> !tilePickerController.isActive());
+                tilePickerController);
+            panel.onUpdateListener(w -> configController.processDeferredActions(), true);
             StationMapWidget map = new StationMapWidget(
                 assetId,
                 coord -> ModulePickerScreen.open(assetId, coord, creativeBuildMode),
@@ -150,79 +142,111 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 PADDING,
                 PADDING,
                 StationVisionLayer.BASE,
-                overlayCoordinator::containsMouse,
+                (x, y) -> coveredByWindow(panel, assetId, x, y),
                 tilePickerController);
-
+            StationSidePanel side = new StationSidePanel(
+                assetId,
+                map,
+                tilePickerController,
+                configController,
+                columnWidth);
             panel.child(
                 map.left(0)
                     .top(0)
                     .widthRel(1f)
                     .heightRel(1f));
+            StationInventoryWindow inventory = new StationInventoryWindow(
+                assetId,
+                configController,
+                () -> !tilePickerController.isActive());
             panel.child(
-                new StationSidePanelWidget(assetId, map, tilePickerController, configController).left(PADDING)
-                    .top(PADDING)
-                    .width(LEFT_PANEL_WIDTH - PADDING)
-                    .heightRelOffset(0.55f, -PADDING * 2));
-            panel.child(
-                new ModuleDetailPanel(map, tilePickerController).left(PADDING)
-                    .width(LEFT_PANEL_WIDTH - PADDING)
-                    .heightRelOffset(0.45f, -PADDING)
-                    .bottom(PADDING));
-            panel.child(
-                new StationTilePickerControlsWidget(tilePickerController).left(LEFT_PANEL_WIDTH + PADDING * 2)
-                    .top(PADDING * 2)
-                    .width(StationTilePickerControlsWidget.WIDTH)
-                    .height(StationTilePickerControlsWidget.HEIGHT));
-            panel.child(
-                inventoryPanel.left(overlayX)
-                    .top(PADDING)
-                    .width(StationInventoryPanelWidget.PANEL_WIDTH)
-                    .height(StationInventoryPanelWidget.PANEL_HEIGHT + StationInventoryPanelWidget.BUTTON_HEIGHT + 4));
-            panel.child(
-                new StationCopyModuleMapButton(assetId, map, tilePickerController, creativeBuildMode)
-                    .left(LEFT_PANEL_WIDTH + PADDING * 2)
-                    .bottom(PADDING)
-                    .size(MAP_ACTION_BUTTON_WIDTH, MAP_ACTION_BUTTON_HEIGHT));
-            panel.child(
-                new ModalInputBlocker(overlayCoordinator).left(0)
-                    .top(0)
-                    .widthRel(1f)
-                    .heightRel(1f));
+                sideColumn(
+                    height,
+                    side.overview(
+                        inventory.toggleButton(),
+                        moduleId -> openCopyBuildPicker(assetId, moduleId, creativeBuildMode)),
+                    side.details()).pos(PADDING, PADDING));
+            panel.child(pickerControls(tilePickerController).pos(overlayX, PADDING * 2));
             startPendingBuildPicker(assetId, tilePickerController);
         } else {
-            int overlayY = PADDING + StationInventoryPanelWidget.BUTTON_HEIGHT + 4;
             ModuleConfigModalController configController = new ModuleConfigModalController(
                 panel,
                 assetId,
                 overlayX,
                 overlayY,
-                null,
-                overlayCoordinator);
-            StationInventoryPanelWidget inventoryPanel = new StationInventoryPanelWidget(
-                assetId,
-                overlayCoordinator,
-                configController);
-            panel.child(
-                new StationSidePanelWidget(assetId, null).left(PADDING)
-                    .top(PADDING)
-                    .width(LEFT_PANEL_WIDTH - PADDING)
-                    .heightRelOffset(1f, -PADDING * 2));
-            panel.child(
-                inventoryPanel.left(overlayX)
-                    .top(PADDING)
-                    .width(StationInventoryPanelWidget.PANEL_WIDTH)
-                    .height(StationInventoryPanelWidget.PANEL_HEIGHT + StationInventoryPanelWidget.BUTTON_HEIGHT + 4));
-            panel.child(
-                ModuleConfigModalSupport.button("Items", () -> configController.openStationLogistics())
-                    .pos(PADDING, PADDING + 200)
-                    .size(88, 20));
-            panel.child(
-                new ModalInputBlocker(overlayCoordinator).left(0)
-                    .top(0)
-                    .widthRel(1f)
-                    .heightRel(1f));
+                null);
+            panel.onUpdateListener(w -> configController.processDeferredActions(), true);
+            StationSidePanel side = new StationSidePanel(assetId, null, null, null, columnWidth);
+            Flow overview = side
+                .overview(new StationInventoryWindow(assetId, configController, () -> true).toggleButton(), null);
+            overview.child(
+                GalaxiaUi.button(
+                    StatCollector.translateToLocal("galaxia.gui.station.items"),
+                    configController::openStationLogistics));
+            panel.child(sideColumn(height, overview).pos(PADDING, PADDING));
         }
         return panel;
+    }
+
+    /** The side panels stacked on the left, scrolling when they do not fit the window */
+    private static ListWidget<IWidget, ?> sideColumn(int height, Flow... panels) {
+        Flow column = GalaxiaUi.column()
+            .childPadding(PADDING / 2);
+        for (Flow part : panels) column.child(part);
+        ListWidget<IWidget, ?> scroll = GalaxiaUi.scroll(height - PADDING * 2);
+        scroll.child(column);
+        return scroll;
+    }
+
+    /** Title, count and buttons of the tile picker, shown while tiles are being chosen */
+    private static Flow pickerControls(StationTilePickerController controller) {
+        Flow panel = GalaxiaUi.column()
+            .padding(GalaxiaUi.PAD)
+            .background(EnumTextures.GUI_PANEL.getImage());
+        panel
+            .child(
+                GalaxiaUi.colored(() -> GalaxiaUi.clip(controller.title(), PICKER_WIDTH), GalaxiaGuiStyle.TEXT_TITLE))
+            .child(
+                GalaxiaUi.row()
+                    .child(
+                        GalaxiaUi.text(
+                            () -> StatCollector.translateToLocalFormatted(
+                                "galaxia.gui.station.picker_controls.selected",
+                                controller.selectedCount())))
+                    .child(
+                        GalaxiaUi
+                            .colored(
+                                () -> StatCollector.translateToLocalFormatted(
+                                    "galaxia.gui.station.picker_controls.anchor",
+                                    controller.footprintRotation() + 1),
+                                GalaxiaGuiStyle.TEXT_DIM)
+                            .setEnabledIf(w -> controller.rotatesFootprint())))
+            .child(
+                GalaxiaUi.row()
+                    .child(
+                        GalaxiaUi.button(
+                            StatCollector.translateToLocal("galaxia.gui.common.cancel"),
+                            controller::isActive,
+                            controller::cancel))
+                    .child(
+                        GalaxiaUi.button(
+                            controller::confirmLabel,
+                            PICKER_CONFIRM_WIDTH,
+                            controller::canConfirm,
+                            controller::confirm)));
+        panel.setEnabledIf(w -> controller.isActive());
+        return panel;
+    }
+
+    /** Whether a window other than the station's own lies over this point of the screen */
+    private static boolean coveredByWindow(ParentWidget<?> content, CelestialAsset.ID assetId, int screenX,
+        int screenY) {
+        WindowLayer layer = WindowLayer.of(content);
+        if (layer == null) return false;
+        int[] local = GalaxiaUi.toLocal(layer, screenX, screenY);
+        GalaxiaWindow top = layer.windowAt(local[0], local[1]);
+        return top != null && !top.id()
+            .equals(windowId(assetId));
     }
 
     private static void startPendingBuildPicker(CelestialAsset.ID assetId, StationTilePickerController controller) {
@@ -240,110 +264,55 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         ModuleShape shape = copySource == null ? request.shape() : copySource.shape();
         ModuleTier tier = copySource == null ? request.tier() : copySource.tier();
         if (kind == null || shape == null || tier == null) return;
-        controller.startWithPlacements(
-            (copySource == null ? "Build " : "Copy ") + kind.getDisplayName(),
-            "Confirm",
-            (coord, selected) -> {
-                List<ModulePlacement> proposed = new ArrayList<>(selected.size() + 1);
-                for (StationTileCoord target : selected) {
-                    proposed.add(new ModulePlacement(target, controller.selectedTargetRotation(target)));
-                }
-                proposed.add(new ModulePlacement(coord, controller.footprintRotation()));
-                return facility.buildablePlacements(kind, shape, tier, proposed)
-                    .equals(proposed);
-            },
-            coord -> coord,
-            placements -> {
-                boolean sent;
-                if (copySource != null) {
-                    sent = com.gtnewhorizons.galaxia.client.CelestialClient
-                        .copyModule(assetId, request.copySourceModuleId(), request.creativeBuildMode(), placements);
-                } else {
-                    sent = com.gtnewhorizons.galaxia.client.CelestialClient.createModules(
-                        assetId,
-                        kind,
-                        shape,
-                        tier,
-                        request.hammerVariant(),
-                        request.minerFocusTier(),
-                        request.settingsGroupId(),
-                        request.creativeBuildMode(),
-                        placements);
-                }
-                if (!sent) StationNotificationHelper.showFailure("Module build request failed");
-            },
-            targets -> {
-                List<ModulePlacement> proposed = new ArrayList<>(targets.size());
-                for (StationTileCoord target : targets) {
-                    proposed.add(new ModulePlacement(target, controller.selectedTargetRotation(target)));
-                }
-                return facility.connectedBuildablePlacements(kind, shape, tier, proposed)
-                    .stream()
-                    .map(ModulePlacement::anchor)
-                    .toList();
-            });
+        controller
+            .startWithPlacements(
+                StatCollector.translateToLocalFormatted(
+                    copySource == null ? "galaxia.gui.station.picker.build_title"
+                        : "galaxia.gui.station.picker.copy_title",
+                    kind.getDisplayName()),
+                StatCollector.translateToLocal("galaxia.gui.common.confirm"),
+                (coord, selected) -> {
+                    List<ModulePlacement> proposed = new ArrayList<>(selected.size() + 1);
+                    for (StationTileCoord target : selected) {
+                        proposed.add(new ModulePlacement(target, controller.selectedTargetRotation(target)));
+                    }
+                    proposed.add(new ModulePlacement(coord, controller.footprintRotation()));
+                    return facility.buildablePlacements(kind, shape, tier, proposed)
+                        .equals(proposed);
+                },
+                coord -> coord,
+                placements -> {
+                    boolean sent;
+                    if (copySource != null) {
+                        sent = com.gtnewhorizons.galaxia.client.CelestialClient
+                            .copyModule(assetId, request.copySourceModuleId(), request.creativeBuildMode(), placements);
+                    } else {
+                        sent = com.gtnewhorizons.galaxia.client.CelestialClient.createModules(
+                            assetId,
+                            kind,
+                            shape,
+                            tier,
+                            request.hammerVariant(),
+                            request.minerFocusTier(),
+                            request.settingsGroupId(),
+                            request.creativeBuildMode(),
+                            placements);
+                    }
+                    if (!sent) StationNotificationHelper
+                        .showFailure(StatCollector.translateToLocal("galaxia.gui.station.picker.build_failed"));
+                },
+                targets -> {
+                    List<ModulePlacement> proposed = new ArrayList<>(targets.size());
+                    for (StationTileCoord target : targets) {
+                        proposed.add(new ModulePlacement(target, controller.selectedTargetRotation(target)));
+                    }
+                    return facility.connectedBuildablePlacements(kind, shape, tier, proposed)
+                        .stream()
+                        .map(ModulePlacement::anchor)
+                        .toList();
+                });
         controller.setSelectionFootprint(shape, shape != ModuleShape.SINGLE);
         controller.setPreviewModuleKind(kind);
-    }
-
-    private static final class StationScreenBackground extends ParentWidget<StationScreenBackground> {
-
-        @Override
-        public boolean canHover() {
-            return false;
-        }
-
-        @Override
-        public boolean canHoverThrough() {
-            return true;
-        }
-
-        @Override
-        public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
-            BorderedRect.draw(
-                0,
-                0,
-                getArea().width,
-                getArea().height,
-                EnumColors.MAP_COLOR_STATION_SCREEN_BG.getColor(),
-                EnumColors.MAP_COLOR_STATION_SCREEN_BORDER.getColor());
-        }
-    }
-
-    private static final class ModalInputBlocker extends ParentWidget<ModalInputBlocker> {
-
-        private final StationOverlayCoordinator overlayCoordinator;
-        private boolean listenersRegistered;
-
-        private ModalInputBlocker(StationOverlayCoordinator overlayCoordinator) {
-            this.overlayCoordinator = overlayCoordinator;
-        }
-
-        @Override
-        public void onInit() {
-            super.onInit();
-            if (listenersRegistered) return;
-            listenersRegistered = true;
-            listenGuiAction(
-                (com.cleanroommc.modularui.api.widget.IGuiAction.MousePressed) button -> overlayCoordinator
-                    .blocksInputAt(getContext().getMouseX(), getContext().getMouseY()));
-            listenGuiAction(
-                (com.cleanroommc.modularui.api.widget.IGuiAction.MouseReleased) button -> overlayCoordinator
-                    .blocksInputAt(getContext().getMouseX(), getContext().getMouseY()));
-            listenGuiAction(
-                (com.cleanroommc.modularui.api.widget.IGuiAction.MouseDrag) (mouseButton, time) -> overlayCoordinator
-                    .blocksInputAt(getContext().getMouseX(), getContext().getMouseY()));
-        }
-
-        @Override
-        public boolean canHover() {
-            return overlayCoordinator.blocksInputAt(getContext().getMouseX(), getContext().getMouseY());
-        }
-
-        @Override
-        public boolean canHoverThrough() {
-            return !overlayCoordinator.blocksInputAt(getContext().getMouseX(), getContext().getMouseY());
-        }
     }
 
     private record BuildPickerRequest(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,

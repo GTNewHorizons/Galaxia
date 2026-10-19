@@ -1,35 +1,36 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
-import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Gui;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
 
-import org.lwjgl.opengl.GL11;
-
 import com.cleanroommc.modularui.api.drawable.IDrawable;
-import com.cleanroommc.modularui.api.widget.IGuiAction;
-import com.cleanroommc.modularui.drawable.GuiTextures;
-import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
-import com.cleanroommc.modularui.theme.WidgetThemeEntry;
+import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.api.widget.IWidget;
+import com.cleanroommc.modularui.drawable.DynamicDrawable;
+import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.item.ItemStackHandler;
 import com.cleanroommc.modularui.widget.ParentWidget;
+import com.cleanroommc.modularui.widget.Widget;
+import com.cleanroommc.modularui.widgets.ListWidget;
+import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
-import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
 import com.gtnewhorizons.galaxia.client.gui.TeamPermissionScreen;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
 import com.gtnewhorizons.galaxia.client.gui.mui.SafePhantomItemSlot;
+import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaScrollbar;
+import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaUi;
+import com.gtnewhorizons.galaxia.client.gui.ui.WindowLayer;
+import com.gtnewhorizons.galaxia.client.gui.ui.WindowSpec;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
@@ -37,9 +38,16 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 record VisibleEntry(CelestialObject body, int depth, boolean hasChildren) {}
 
-record RowLayout(VisibleEntry entry, int left, int right, int top, int bottom) {}
-
+/**
+ * Translucent column on the left of the map: the galaxy and system layers, the debug tools, a search field and the tree
+ * of bodies in the shown system
+ */
 public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget> {
+
+    public static final String SUPPLY_DEBUG_WINDOW = "starmap.supplyDebug";
+    private static final int ROW_H = 16;
+    private static final int INDENT = 10;
+    private static final int ARROW = 8;
 
     private final CelestialObject root;
     private final OrbitalView.OrbitalMapWidget map;
@@ -47,50 +55,15 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     private CelestialObject activeLayer;
     private String searchQuery = "";
     private final Set<CelestialObject> expanded = new HashSet<>();
-    private double scrollOffset = 0;
+    private boolean entriesDirty = true;
     private TextFieldWidget searchField;
-    // Supply Debug panel state
-    private boolean supplyDebugPanelOpen = false;
-    private CelestialAsset.ID supplyDebugTargetAssetId = null;
+    private ListWidget<IWidget, ?> bodyList;
+
+    // Supply Debug window state
+    private CelestialAsset.ID supplyDebugTargetAssetId;
+    private final ItemStackHandler supplyDebugGhostHandler = new ItemStackHandler(1);
     private TextFieldWidget supplyDebugAmountField;
-    private ItemSlot supplyDebugGhostSlot;
-    private ItemStackHandler supplyDebugGhostHandler;
-    private final List<VisibleEntry> cachedVisibleEntries = new ArrayList<>();
-    private final List<RowLayout> cachedRowLayouts = new ArrayList<>();
-    private boolean visibleEntriesDirty = true;
-    private boolean rowLayoutsDirty = true;
-    private double cachedRowLayoutScrollOffset = Double.NaN;
-    private int cachedRowLayoutHeight = -1;
-    private int cachedRowLayoutWidth = -1;
-    private int cachedSearchOffset = Integer.MIN_VALUE;
-    private long lastSupplyDebugClickMs = 0L;
-
-    private static final int LAYER_BUTTON_TOP = 14;
-    private static final int LAYER_BUTTON_HEIGHT = 18;
-    private static final int LAYER_BUTTON_GAP = 8;
-    private static final int CREATIVE_BUTTON_TOP = 42;
-    private static final int HIDDEN_OBJECTS_BUTTON_TOP = 68;
-    private static final int TRANSFER_SIMULATOR_BUTTON_TOP = 94;
-    private static final int SUPPLY_DEBUG_BUTTON_TOP = 120;
-    private static final int SEARCH_LABEL_TOP = 42;
-    private static final int SEARCH_FIELD_TOP = 54;
-    private static final int LIST_TOP = 82;
-    private static final int LINE_HEIGHT = 26;
-    private static final int ARROW_ZONE = 42;
-
-    // Supply Debug panel constants
-    private static final int DEBUG_PANEL_TOP = 146;
-    private static final int DEBUG_PANEL_PADDING = 10;
-    private static final int DEBUG_FIELD_HEIGHT = 14;
-    private static final int DEBUG_BUTTON_HEIGHT = 14;
-    private static final int DEBUG_GHOST_SLOT_LEFT = DEBUG_PANEL_PADDING + 110;
-    private static final int DEBUG_PICK_BUTTON_LEFT = DEBUG_PANEL_PADDING + 134;
-    private static final int DEBUG_PICK_BUTTON_WIDTH = 68;
-
-    // Permissions button (bottom-anchored, only for team owners)
-    private static final int PERMISSIONS_BTN_WIDTH = 100;
-    private static final int PERMISSIONS_BTN_HEIGHT = 16;
-    private static final int PERMISSIONS_BTN_BOTTOM = 6;
+    private long lastSupplyDebugClickMs;
 
     public CelestialSidebarWidget(CelestialObject root, CelestialObject currentSystem,
         OrbitalView.OrbitalMapWidget map) {
@@ -100,56 +73,110 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         this.activeLayer = currentSystem == null ? root : currentSystem;
         expanded.add(root);
         if (this.currentSystem != null) expanded.add(this.currentSystem);
+        background(EnumTextures.GUI_PANEL_TRANSLUCENT.getImage());
     }
 
     @Override
     public void onInit() {
         super.onInit();
-        searchField = new TextFieldWidget().name("starmap.sidebar.search")
-            .left(14)
-            .top(SEARCH_FIELD_TOP)
-            .right(8)
-            .height(16)
+        int inner = getArea().width > 0 ? getArea().width : 216;
+        Flow column = Flow.column()
+            .widthRel(1f)
+            .heightRel(1f)
+            .padding(GalaxiaUi.PAD * 2)
+            .childPadding(GalaxiaUi.GAP * 2)
+            .crossAxisAlignment(Alignment.CrossAxis.START)
+            .collapseDisabledChild();
+
+        column.child(
+            GalaxiaUi.row()
+                .child(
+                    GalaxiaUi
+                        .toggle(
+                            () -> StatCollector.translateToLocal("galaxia.gui.orbital.layer.galaxy"),
+                            labelWidth("galaxia.gui.orbital.layer.galaxy"),
+                            () -> activeLayer == root,
+                            () -> selectLayer(root))
+                        .name("starmap.sidebar.layer.galaxy"))
+                .child(
+                    GalaxiaUi
+                        .toggle(
+                            this::currentSystemLabel,
+                            80,
+                            () -> activeLayer == currentSystem && currentSystem != null,
+                            () -> { if (currentSystem != null) selectLayer(currentSystem); })
+                        .name("starmap.sidebar.layer.system")));
+
+        Flow tools = GalaxiaUi.row()
+            .child(
+                GalaxiaUi.toggle(
+                    () -> StatCollector.translateToLocal("galaxia.gui.orbital.debug"),
+                    labelWidth("galaxia.gui.orbital.debug"),
+                    map::isCreativeBuildModeEnabled,
+                    () -> {
+                        map.toggleCreativeBuildMode();
+                        markEntriesDirty();
+                    })
+                    .name("starmap.sidebar.debug")
+                    .setEnabledIf(w -> map.isCreativeModeAvailable()))
+            .child(
+                GalaxiaUi.toggle(
+                    () -> StatCollector.translateToLocal("galaxia.gui.orbital.hidden"),
+                    labelWidth("galaxia.gui.orbital.hidden"),
+                    map::areHiddenObjectsShown,
+                    () -> {
+                        map.toggleHiddenObjectsShown();
+                        markEntriesDirty();
+                    })
+                    .name("starmap.sidebar.hidden")
+                    .setEnabledIf(w -> map.isCreativeBuildModeEnabled()))
+            .child(
+                GalaxiaUi
+                    .toggle(
+                        () -> StatCollector.translateToLocal("galaxia.gui.orbital.simulator"),
+                        labelWidth("galaxia.gui.orbital.simulator"),
+                        map::isTransferSimulatorOpen,
+                        map::toggleTransferSimulator)
+                    .name("starmap.sidebar.simulator")
+                    .setEnabledIf(w -> map.isCreativeBuildModeEnabled()))
+            .child(
+                GalaxiaUi
+                    .toggle(
+                        () -> StatCollector.translateToLocal("galaxia.gui.orbital.supply_debug"),
+                        labelWidth("galaxia.gui.orbital.supply_debug"),
+                        this::isSupplyDebugOpen,
+                        this::toggleSupplyDebug)
+                    .name("starmap.sidebar.supply")
+                    .setEnabledIf(w -> map.isCreativeBuildModeEnabled()));
+        column.child(tools.setEnabledIf(w -> map.isCreativeModeAvailable()));
+
+        searchField = GalaxiaUi
+            .textField(
+                StatCollector.translateToLocal("galaxia.gui.orbital.search.placeholder"),
+                inner - GalaxiaUi.PAD * 4)
+            .name("starmap.sidebar.search")
             .setMaxLength(64)
-            .setTextColor(EnumColors.MapSidebarSearchInput.getColor())
-            .hintText(localizeOrFallback("galaxia.gui.orbital.search.placeholder", "Enter name..."))
-            .hintColor(EnumColors.MapSidebaSearchLabel.getColor())
             .setFocusOnGuiOpen(false);
-        child(searchField);
+        searchField.setEnabledIf(w -> activeLayer != root);
+        column.child(searchField);
 
-        supplyDebugAmountField = new TextFieldWidget().left(DEBUG_PANEL_PADDING)
-            .top(-1000)
-            .right(DEBUG_PANEL_PADDING)
-            .height(DEBUG_FIELD_HEIGHT)
-            .setMaxLength(12)
-            .setTextColor(EnumColors.MapSidebarSearchInput.getColor())
-            .hintText("amount (max int)")
-            .hintColor(EnumColors.MapSidebaSearchLabel.getColor())
-            .setFocusOnGuiOpen(false);
-        supplyDebugAmountField.setEnabled(false);
-        child(supplyDebugAmountField);
+        bodyList = new ListWidget<>();
+        bodyList.scrollDirection(new GalaxiaScrollbar())
+            .widthRel(1f)
+            .expanded()
+            .crossAxisAlignment(Alignment.CrossAxis.START);
+        column.child(bodyList);
 
-        supplyDebugGhostHandler = new ItemStackHandler(1);
-        ModularSlot supplyDebugModularSlot = new ModularSlot(supplyDebugGhostHandler, 0);
-        supplyDebugGhostSlot = SafePhantomItemSlot.create()
-            .slot(supplyDebugModularSlot)
-            .left(DEBUG_GHOST_SLOT_LEFT)
-            .top(-1000)
-            .size(18, 18);
-        child(supplyDebugGhostSlot);
+        column.child(
+            GalaxiaUi
+                .button(
+                    IKey.lang("galaxia.gui.team_config.button"),
+                    GalaxiaUi.width(StatCollector.translateToLocal("galaxia.gui.team_config.button")) + 10,
+                    TeamPermissionScreen::open)
+                .name("starmap.sidebar.team"));
+        child(column);
 
         map.setBodySelectionListener(this::handleMapSelection);
-        listenGuiAction((IGuiAction.MouseScroll) (dir, amt) -> {
-            scrollOffset += dir.isUp() ? -35 : 35;
-            scrollOffset = Math.max(0, Math.min(scrollOffset, getMaxScroll()));
-            rowLayoutsDirty = true;
-            return true;
-        });
-        listenGuiAction((IGuiAction.MousePressed) button -> {
-            int mouseX = getContext().getMouseX();
-            int mouseY = getContext().getMouseY();
-            return handleClick(mouseX, mouseY, button);
-        });
     }
 
     @Override
@@ -157,68 +184,99 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         super.onUpdate();
         if (ItemPickerScreen.hasPendingPickForSidebarDebug()) {
             ItemStack pickedStack = ItemPickerScreen.pollPendingPickForSidebarDebug();
-            if (pickedStack != null && supplyDebugGhostHandler != null) {
+            if (pickedStack != null) {
                 ItemStack displayStack = pickedStack.copy();
                 displayStack.stackSize = 1;
                 supplyDebugGhostHandler.setStackInSlot(0, displayStack);
             }
         }
-    }
-
-    private boolean handleClick(int mx, int my, int button) {
-        if (button != 0) return false;
-        int localX = mx - getArea().rx;
-        int localYAbsolute = my - getArea().ry;
-        if (localX < 0 || localYAbsolute < 0 || localX >= getArea().width || localYAbsolute >= getArea().height)
-            return false;
-        if (handleLayerButtonClick(localX, localYAbsolute)) return true;
-        if (handleCreativeButtonClick(localX, localYAbsolute)) return true;
-        if (handleHiddenObjectsButtonClick(localX, localYAbsolute)) return true;
-        if (handleTransferSimulatorButtonClick(localX, localYAbsolute)) return true;
-        if (handleSupplyDebugButtonClick(localX, localYAbsolute)) return true;
-        if (supplyDebugPanelOpen && handleSupplyDebugPanelClick(localX, localYAbsolute)) return true;
-        if (handlePermissionsButtonClick(localX, localYAbsolute)) return true;
-        if (activeLayer == root) return false;
-        VisibleEntry entry = findVisibleRowAt(localX, localYAbsolute);
-        if (entry == null) return false;
-        if (entry.hasChildren() && localX < ARROW_ZONE + entry.depth() * 24) {
-            if (expanded.contains(entry.body())) expanded.remove(entry.body());
-            else expanded.add(entry.body());
-            markEntriesDirty();
-            return true;
+        if (!map.isCreativeBuildModeEnabled() && isSupplyDebugOpen()) {
+            WindowLayer layer = WindowLayer.of(this);
+            if (layer != null) layer.close(SUPPLY_DEBUG_WINDOW);
         }
-        map.focusOn(entry.body());
-        handleMapSelection(entry.body(), map.getClickMode() == OrbitalMapClickMode.HIERARCHY);
-        return true;
+        String query = searchField == null ? ""
+            : searchField.getText()
+                .toLowerCase();
+        if (!query.equals(searchQuery)) {
+            searchQuery = query;
+            markEntriesDirty();
+        }
+        if (entriesDirty && bodyList != null && bodyList.isValid()) {
+            entriesDirty = false;
+            rebuildBodyList();
+        }
     }
 
     private void markEntriesDirty() {
-        visibleEntriesDirty = true;
-        rowLayoutsDirty = true;
+        entriesDirty = true;
     }
 
-    private void ensureVisibleEntries() {
-        if (!visibleEntriesDirty) return;
-        cachedVisibleEntries.clear();
+    private void rebuildBodyList() {
+        bodyList.removeAll();
         if (activeLayer != root) {
-            for (CelestialObject child : CelestialClient.getChildren(activeLayer))
-                collect(child, 0, cachedVisibleEntries);
+            List<VisibleEntry> entries = new ArrayList<>();
+            for (CelestialObject child : CelestialClient.getChildren(activeLayer)) collect(child, 0, entries);
+            for (VisibleEntry entry : entries) bodyList.child(bodyRow(entry));
         }
-        visibleEntriesDirty = false;
-        rowLayoutsDirty = true;
+        bodyList.getScrollData()
+            .scrollTo(bodyList.getScrollArea(), 0);
+        bodyList.scheduleResize();
+    }
+
+    private IWidget bodyRow(VisibleEntry entry) {
+        CelestialObject body = entry.body();
+        Flow row = Flow.row()
+            .coverChildren()
+            .height(ROW_H)
+            .crossAxisAlignment(Alignment.CrossAxis.CENTER)
+            .marginLeft(entry.depth() * INDENT);
+        if (entry.hasChildren()) {
+            row.child(GalaxiaUi.flatButton(ROW_H, ROW_H, () -> {
+                if (!expanded.remove(body)) expanded.add(body);
+                markEntriesDirty();
+            })
+                // Arrow pointing down while the branch is open
+                .overlay(
+                    new DynamicDrawable(
+                        () -> (expanded.contains(body) ? EnumTextures.STARMAP_SIDEBAR_ARROW_DOWN
+                            : EnumTextures.STARMAP_SIDEBAR_ARROW).getImage()).asIcon()
+                                .size(ARROW)));
+        } else {
+            row.child(new Widget<>().size(ROW_H));
+        }
+        String name = body.displayName();
+        row.child(GalaxiaUi.flatButton(GalaxiaUi.width(name) + GalaxiaUi.PAD * 2, ROW_H, () -> {
+            map.focusOn(body);
+            handleMapSelection(body, map.getClickMode() == OrbitalMapClickMode.HIERARCHY);
+        })
+            // The selected body is marked the way a selected button is
+            .background(
+                new DynamicDrawable(
+                    () -> body.equals(map.getFocusedBody()) ? EnumTextures.GUI_BUTTON_SELECTED.getImage()
+                        : IDrawable.EMPTY))
+            .overlay(
+                IKey.str(name)
+                    .color(GalaxiaGuiStyle.TEXT)
+                    .alignment(Alignment.CenterLeft)
+                    .asIcon()
+                    .marginLeft(GalaxiaUi.PAD))
+            .hoverOverlay(
+                IKey.str(name)
+                    .color(GalaxiaGuiStyle.TEXT_TITLE)
+                    .alignment(Alignment.CenterLeft)
+                    .asIcon()
+                    .marginLeft(GalaxiaUi.PAD)));
+        return row;
     }
 
     private void collect(CelestialObject body, int depth, List<VisibleEntry> list) {
         boolean matches = searchQuery.isEmpty() || (isMajorBodySearchResult(body) && body.displayName()
             .toLowerCase()
             .contains(searchQuery));
-
-        List<CelestialObject> childs = CelestialClient.getChildren(body);
-        if (matches || searchQuery.isEmpty()) {
-            list.add(new VisibleEntry(body, depth, !childs.isEmpty()));
-        }
+        List<CelestialObject> children = CelestialClient.getChildren(body);
+        if (matches) list.add(new VisibleEntry(body, depth, !children.isEmpty()));
         if (expanded.contains(body) || !searchQuery.isEmpty()) {
-            for (CelestialObject child : childs) collect(child, depth + 1, list);
+            for (CelestialObject child : children) collect(child, depth + 1, list);
         }
     }
 
@@ -227,180 +285,14 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             .isRegistered();
     }
 
-    private double getMaxScroll() {
-        ensureVisibleEntries();
-        return Math.max(0, cachedVisibleEntries.size() * LINE_HEIGHT - getArea().height + getListTop() + 20);
-    }
-
-    private void ensureRowLayouts() {
-        ensureVisibleEntries();
-        if (!rowLayoutsDirty && Double.compare(cachedRowLayoutScrollOffset, scrollOffset) == 0
-            && cachedRowLayoutHeight == getArea().height
-            && cachedRowLayoutWidth == getArea().width) {
-            return;
-        }
-        cachedRowLayouts.clear();
-        int y = getListTop() - (int) scrollOffset;
-        for (int i = 0; i < cachedVisibleEntries.size(); i++) {
-            int sy = y + i * LINE_HEIGHT;
-            if (sy < 50 || sy > getArea().height - 10) continue;
-            VisibleEntry entry = cachedVisibleEntries.get(i);
-            int iconX = 10 + entry.depth() * 24;
-            int textX = 22 + entry.depth() * 24;
-            int textWidth = Minecraft.getMinecraft().fontRenderer.getStringWidth(
-                entry.body()
-                    .displayName());
-            int rowLeft = Math.max(0, iconX - 4);
-            int rowRight = Math.min(getArea().width - 10, Math.max(textX + textWidth + 4, rowLeft + 16));
-            cachedRowLayouts.add(new RowLayout(entry, rowLeft, rowRight, sy, sy + LINE_HEIGHT));
-        }
-        cachedRowLayoutScrollOffset = scrollOffset;
-        cachedRowLayoutHeight = getArea().height;
-        cachedRowLayoutWidth = getArea().width;
-        rowLayoutsDirty = false;
-    }
-
-    private VisibleEntry findVisibleRowAt(int localX, int localYAbsolute) {
-        ensureRowLayouts();
-        for (RowLayout row : cachedRowLayouts) {
-            if (localX < row.left() || localX > row.right()) continue;
-            if (localYAbsolute >= row.top() && localYAbsolute < row.bottom()) return row.entry();
-        }
-        return null;
-    }
-
-    private String getCurrentSystemLabel() {
-        return currentSystem == null ? "System" : currentSystem.displayName();
-    }
-
-    private boolean shouldShowCreativeButton() {
-        return map.isCreativeModeAvailable();
-    }
-
-    private boolean shouldShowTransferSimulatorButton() {
-        return map.isCreativeBuildModeEnabled();
-    }
-
-    private boolean shouldShowHiddenObjectsButton() {
-        return map.isCreativeBuildModeEnabled();
-    }
-
-    private int getSearchOffset() {
-        int offset = shouldShowCreativeButton() ? 28 : 0;
-        if (shouldShowHiddenObjectsButton()) offset += 26;
-        if (shouldShowTransferSimulatorButton()) offset += 26;
-        if (shouldShowSupplyDebugButton()) offset += 26;
-        if (supplyDebugPanelOpen) offset += 128; // Add panel height + padding to clear it
-        return offset;
-    }
-
-    private int getSearchLabelTop() {
-        return SEARCH_LABEL_TOP + getSearchOffset();
-    }
-
-    private int getSearchFieldTop() {
-        return SEARCH_FIELD_TOP + getSearchOffset();
-    }
-
-    private int getListTop() {
-        return LIST_TOP + getSearchOffset();
-    }
-
-    private int getCreativeButtonWidth() {
-        return Math.max(
-            78,
-            Minecraft.getMinecraft().fontRenderer
-                .getStringWidth(StatCollector.translateToLocal("galaxia.gui.orbital.debug")) + 18);
-    }
-
-    private boolean handleLayerButtonClick(int localX, int localY) {
-        int galaxyButtonWidth = 70;
-        int starButtonX = 18 + galaxyButtonWidth + LAYER_BUTTON_GAP;
-        int starButtonWidth = Math
-            .max(80, Minecraft.getMinecraft().fontRenderer.getStringWidth(getCurrentSystemLabel()) + 18);
-        if (localY >= LAYER_BUTTON_TOP && localY <= LAYER_BUTTON_TOP + LAYER_BUTTON_HEIGHT) {
-            if (localX >= 18 && localX <= 18 + galaxyButtonWidth) {
-                selectLayer(root);
-                return true;
-            }
-            if (currentSystem != null && localX >= starButtonX && localX <= starButtonX + starButtonWidth) {
-                selectLayer(currentSystem);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public @Nullable Rectangle creativeButtonBounds() {
-        return shouldShowCreativeButton()
-            ? new Rectangle(18, CREATIVE_BUTTON_TOP, getCreativeButtonWidth() + 1, LAYER_BUTTON_HEIGHT + 1)
-            : null;
-    }
-
-    private boolean handleCreativeButtonClick(int localX, int localY) {
-        Rectangle bounds = creativeButtonBounds();
-        if (bounds != null && bounds.contains(localX, localY)) {
-            map.toggleCreativeBuildMode();
-            rowLayoutsDirty = true;
-            return true;
-        }
-        return false;
-    }
-
-    private boolean handleHiddenObjectsButtonClick(int localX, int localY) {
-        if (!shouldShowHiddenObjectsButton()) return false;
-        int width = Math.max(120, Minecraft.getMinecraft().fontRenderer.getStringWidth(hiddenObjectsLabel()) + 18);
-        if (localY >= HIDDEN_OBJECTS_BUTTON_TOP && localY <= HIDDEN_OBJECTS_BUTTON_TOP + LAYER_BUTTON_HEIGHT
-            && localX >= 18
-            && localX <= 18 + width) {
-            map.toggleHiddenObjectsShown();
-            rowLayoutsDirty = true;
-            visibleEntriesDirty = true;
-            return true;
-        }
-        return false;
-    }
-
-    private String hiddenObjectsLabel() {
-        return map.areHiddenObjectsShown() ? "Hide Hidden" : "Show Hidden";
-    }
-
-    private boolean handleTransferSimulatorButtonClick(int localX, int localY) {
-        if (!shouldShowTransferSimulatorButton()) return false;
-        int width = Math.max(132, Minecraft.getMinecraft().fontRenderer.getStringWidth("Transfer Simulator") + 18);
-        if (localY >= TRANSFER_SIMULATOR_BUTTON_TOP && localY <= TRANSFER_SIMULATOR_BUTTON_TOP + LAYER_BUTTON_HEIGHT
-            && localX >= 18
-            && localX <= 18 + width) {
-            map.toggleTransferSimulator();
-            return true;
-        }
-        return false;
-    }
-
-    private boolean handlePermissionsButtonClick(int localX, int localY) {
-        int btnLeft = getPermissionsButtonLeft();
-        int btnTop = getPermissionsButtonTop();
-        if (localX >= btnLeft && localX <= btnLeft + PERMISSIONS_BTN_WIDTH
-            && localY >= btnTop
-            && localY <= btnTop + PERMISSIONS_BTN_HEIGHT) {
-            TeamPermissionScreen.open();
-            return true;
-        }
-        return false;
-    }
-
-    private int getPermissionsButtonLeft() {
-        return (getArea().width - PERMISSIONS_BTN_WIDTH) / 2;
-    }
-
-    private int getPermissionsButtonTop() {
-        return getArea().height - PERMISSIONS_BTN_HEIGHT - PERMISSIONS_BTN_BOTTOM;
+    private String currentSystemLabel() {
+        return currentSystem == null ? StatCollector.translateToLocal("galaxia.gui.orbital.layer.system")
+            : currentSystem.displayName();
     }
 
     private void selectLayer(CelestialObject layerRoot) {
         activeLayer = layerRoot == null ? root : layerRoot;
-        if (activeLayer != null) expanded.add(activeLayer);
-        scrollOffset = 0;
+        expanded.add(activeLayer);
         markEntriesDirty();
         map.showLayer(activeLayer);
     }
@@ -411,7 +303,6 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             currentSystem = body;
             if (activeLayer == root && enterSystem) {
                 activeLayer = body;
-                scrollOffset = 0;
                 expanded.add(body);
                 markEntriesDirty();
                 map.showLayer(body);
@@ -419,198 +310,64 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Supply Debug button and panel
-    // -------------------------------------------------------------------------
+    // region Supply Debug window
 
-    private boolean shouldShowSupplyDebugButton() {
-        return map.isCreativeBuildModeEnabled();
+    private boolean isSupplyDebugOpen() {
+        WindowLayer layer = isValid() ? WindowLayer.of(this) : null;
+        return layer != null && layer.isOpen(SUPPLY_DEBUG_WINDOW);
     }
 
-    private boolean handleSupplyDebugButtonClick(int localX, int localY) {
-        if (!shouldShowSupplyDebugButton()) return false;
-        int width = Math.max(112, Minecraft.getMinecraft().fontRenderer.getStringWidth("Supply Debug") + 18);
-        if (localY >= SUPPLY_DEBUG_BUTTON_TOP && localY <= SUPPLY_DEBUG_BUTTON_TOP + LAYER_BUTTON_HEIGHT
-            && localX >= 18
-            && localX <= 18 + width) {
-            supplyDebugPanelOpen = !supplyDebugPanelOpen;
-            if (supplyDebugPanelOpen) {
-                supplyDebugTargetAssetId = resolveSupplyDebugAssetId();
-                supplyDebugAmountField.setText("64");
-                if (supplyDebugGhostHandler != null) {
-                    supplyDebugGhostHandler.setStackInSlot(0, null);
-                }
-            } else {
-                supplyDebugTargetAssetId = null;
-            }
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Handles clicks within the Supply Debug inline panel (Confirm and Cancel buttons).
-     * Returns true if the click was consumed.
-     */
-    private boolean handleSupplyDebugPanelClick(int localX, int localY) {
-        int panelWidth = getArea().width - DEBUG_PANEL_PADDING * 2;
-        int pickTop = DEBUG_PANEL_TOP + 28;
-        int confirmTop = DEBUG_PANEL_TOP + 80;
-        int cancelTop = confirmTop + DEBUG_BUTTON_HEIGHT + 4;
-        if (localY >= pickTop && localY <= pickTop + 18
-            && localX >= DEBUG_PICK_BUTTON_LEFT
-            && localX <= DEBUG_PICK_BUTTON_LEFT + DEBUG_PICK_BUTTON_WIDTH) {
-            ItemPickerScreen.setPendingForSidebarDebug();
-            ItemPickerScreen.FACTORY.openClient();
-            return true;
-        }
-        // Confirm button
-        if (localY >= confirmTop && localY <= confirmTop + DEBUG_BUTTON_HEIGHT
-            && localX >= DEBUG_PANEL_PADDING
-            && localX <= DEBUG_PANEL_PADDING + panelWidth) {
-            confirmSupplyDebug();
-            return true;
-        }
-        // Cancel button
-        if (localY >= cancelTop && localY <= cancelTop + DEBUG_BUTTON_HEIGHT
-            && localX >= DEBUG_PANEL_PADDING
-            && localX <= DEBUG_PANEL_PADDING + panelWidth) {
-            supplyDebugPanelOpen = false;
-            supplyDebugTargetAssetId = null;
-            return true;
-        }
-        return false;
-    }
-
-    /** Positions the Supply Debug text fields when the panel is open, hides them otherwise. */
-    private void updateSupplyDebugFieldPositions() {
-        if (!supplyDebugPanelOpen || !shouldShowSupplyDebugButton()) {
-            if (supplyDebugAmountField != null && supplyDebugAmountField.isEnabled()) {
-                supplyDebugAmountField.top(-1000);
-                supplyDebugAmountField.setEnabled(false);
-            }
-            if (supplyDebugGhostSlot != null && supplyDebugGhostSlot.isEnabled()) {
-                supplyDebugGhostSlot.top(-1000);
-                supplyDebugGhostSlot.setEnabled(false);
-            }
+    private void toggleSupplyDebug() {
+        WindowLayer layer = WindowLayer.of(this);
+        if (layer == null) return;
+        if (layer.isOpen(SUPPLY_DEBUG_WINDOW)) {
+            layer.close(SUPPLY_DEBUG_WINDOW);
             return;
         }
-        int amountFieldTop = DEBUG_PANEL_TOP + 60;
-        int ghostSlotTop = DEBUG_PANEL_TOP + 28;
-        if (supplyDebugAmountField != null) {
-            supplyDebugAmountField.top(amountFieldTop);
-            supplyDebugAmountField.setEnabled(true);
-        }
-        if (supplyDebugGhostSlot != null) {
-            supplyDebugGhostSlot.top(ghostSlotTop);
-            supplyDebugGhostSlot.setEnabled(true);
-        }
+        supplyDebugTargetAssetId = resolveSupplyDebugAssetId();
+        supplyDebugGhostHandler.setStackInSlot(0, null);
+        layer.open(
+            WindowSpec.of(SUPPLY_DEBUG_WINDOW, "galaxia.gui.orbital.supply_debug")
+                .anchor((lw, lh, w, h) -> new int[] { getArea().width + GalaxiaUi.PAD, 30 })
+                .onClose(() -> supplyDebugTargetAssetId = null)
+                .body(this::fillSupplyDebug));
     }
 
-    private void drawSupplyDebugPanel(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
-        int panelLeft = DEBUG_PANEL_PADDING;
-        int panelRight = getArea().width - DEBUG_PANEL_PADDING;
-
-        // Panel background
-        Gui.drawRect(
-            panelLeft,
-            DEBUG_PANEL_TOP,
-            panelRight,
-            DEBUG_PANEL_TOP + 126,
-            EnumColors.MAP_COLOR_SIDEBAR_DEBUG_PANEL_BG.getColor());
-        Gui.drawRect(
-            panelLeft,
-            DEBUG_PANEL_TOP,
-            panelRight,
-            DEBUG_PANEL_TOP + 1,
-            EnumColors.MapSidebarListHovered.getColor());
-
-        // Resolve target asset
-        String targetLabel = resolveSupplyDebugTargetLabel();
-
-        // Title
-        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
-            "Supply Debug",
-            panelLeft + 4,
-            DEBUG_PANEL_TOP + 5,
-            EnumColors.MAP_COLOR_SIDEBAR_DEBUG_TITLE.getColor());
-        // Target
-        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
-            targetLabel,
-            panelLeft + 4,
-            DEBUG_PANEL_TOP + 17,
-            EnumColors.MapSidebarListNormal.getColor());
-
-        // Item picker row
-        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
-            "Item:",
-            panelLeft + 4,
-            DEBUG_PANEL_TOP + 28,
-            EnumColors.MapSidebaSearchLabel.getColor());
-        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
-            "Amount:",
-            panelLeft + 4,
-            DEBUG_PANEL_TOP + 46,
-            EnumColors.MapSidebaSearchLabel.getColor());
-
-        // Ghost slot background
-        Gui.drawRect(
-            DEBUG_GHOST_SLOT_LEFT,
-            DEBUG_PANEL_TOP + 28,
-            DEBUG_GHOST_SLOT_LEFT + 18,
-            DEBUG_PANEL_TOP + 46,
-            EnumColors.MAP_COLOR_SIDEBAR_GHOST_SLOT_BG.getColor());
-        Gui.drawRect(
-            DEBUG_GHOST_SLOT_LEFT + 1,
-            DEBUG_PANEL_TOP + 29,
-            DEBUG_GHOST_SLOT_LEFT + 17,
-            DEBUG_PANEL_TOP + 45,
-            EnumColors.MAP_COLOR_SIDEBAR_GHOST_SLOT_INNER.getColor());
-        drawInlineButton(DEBUG_PICK_BUTTON_LEFT, DEBUG_PANEL_TOP + 28, DEBUG_PICK_BUTTON_WIDTH, 18, "Select", true);
-
-        // Confirm button
-        int confirmTop = DEBUG_PANEL_TOP + 86;
-        boolean canConfirm = resolveSupplyDebugAsset() != null && supplyDebugGhostHandler != null
-            && supplyDebugGhostHandler.getStackInSlot(0) != null;
-        int confirmBg = canConfirm ? EnumColors.MAP_COLOR_SIDEBAR_CONFIRM_BG_ENABLED.getColor()
-            : EnumColors.MAP_COLOR_SIDEBAR_CONFIRM_BG_DISABLED.getColor();
-        Gui.drawRect(panelLeft, confirmTop, panelRight, confirmTop + DEBUG_BUTTON_HEIGHT, confirmBg);
-        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
-            "Add to Inventory",
-            panelLeft + 4,
-            confirmTop + 3,
-            canConfirm ? EnumColors.MAP_COLOR_SIDEBAR_CONFIRM_TEXT_ENABLED.getColor()
-                : EnumColors.MAP_COLOR_SIDEBAR_CONFIRM_TEXT_DISABLED.getColor());
-
-        // Cancel button
-        int cancelTop = confirmTop + DEBUG_BUTTON_HEIGHT + 4;
-        Gui.drawRect(
-            panelLeft,
-            cancelTop,
-            panelRight,
-            cancelTop + DEBUG_BUTTON_HEIGHT,
-            EnumColors.MAP_COLOR_SIDEBAR_CONFIRM_BG_DISABLED.getColor());
-        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
-            "Close",
-            panelLeft + 4,
-            cancelTop + 3,
-            EnumColors.MAP_COLOR_SIDEBAR_CANCEL_TEXT.getColor());
+    private void fillSupplyDebug(GalaxiaUi.Column column) {
+        ItemSlot ghost = SafePhantomItemSlot.create()
+            .slot(new ModularSlot(supplyDebugGhostHandler, 0))
+            .background(EnumTextures.GUI_SLOT.getImage());
+        supplyDebugAmountField = GalaxiaUi.textField(null, 60)
+            .setMaxLength(12);
+        supplyDebugAmountField.setText("64");
+        column.add(GalaxiaUi.text(this::resolveSupplyDebugTargetLabel))
+            .row(
+                GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.orbital.supply_debug.item")),
+                ghost,
+                GalaxiaUi.button(StatCollector.translateToLocal("galaxia.gui.common.select"), () -> {
+                    ItemPickerScreen.setPendingForSidebarDebug();
+                    ItemPickerScreen.FACTORY.openClient();
+                }))
+            .row(
+                GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.orbital.supply_debug.amount")),
+                supplyDebugAmountField)
+            .add(
+                GalaxiaUi.confirm(
+                    StatCollector.translateToLocal("galaxia.gui.orbital.supply_debug.add"),
+                    () -> resolveSupplyDebugAsset() != null && supplyDebugGhostHandler.getStackInSlot(0) != null,
+                    this::confirmSupplyDebug));
     }
 
     private String resolveSupplyDebugTargetLabel() {
         CelestialAsset asset = resolveSupplyDebugAsset();
-        if (asset == null) {
-            CelestialObject focused = map.getFocusedBody();
-            if (focused == null) return "No body selected";
-            return "No outpost on " + focused.displayName();
-        }
-        return asset.displayName();
+        if (asset != null) return asset.displayName();
+        CelestialObject focused = map.getFocusedBody();
+        if (focused == null) return StatCollector.translateToLocal("galaxia.gui.orbital.supply_debug.no_body");
+        return StatCollector
+            .translateToLocalFormatted("galaxia.gui.orbital.supply_debug.no_outpost", focused.displayName());
     }
 
-    /**
-     * Finds the first operational AUTOMATED_OUTPOST or AUTOMATED_STATION asset
-     * on the currently focused body.
-     */
+    /** First working automated outpost or station on the focused body */
     private CelestialAsset resolveSupplyDebugAsset() {
         if (supplyDebugTargetAssetId != null) {
             CelestialAsset pinned = CelestialClient.getByAssetId(supplyDebugTargetAssetId);
@@ -632,8 +389,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     private CelestialAsset.ID resolveSupplyDebugAssetId() {
         CelestialObject focused = map.getFocusedBody();
         if (focused == null) return null;
-        List<CelestialAsset> state = CelestialClient.getState(focused.key());
-        for (CelestialAsset asset : state) {
+        for (CelestialAsset asset : CelestialClient.getState(focused.key())) {
             if (asset.status() != CelestialAsset.Status.OPERATIONAL) continue;
             if (asset.kind == CelestialAsset.Kind.AUTOMATED_OUTPOST
                 || asset.kind == CelestialAsset.Kind.AUTOMATED_STATION) {
@@ -648,15 +404,13 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         if (now - lastSupplyDebugClickMs < 200L) return;
         lastSupplyDebugClickMs = now;
         CelestialAsset asset = resolveSupplyDebugAsset();
-        if (asset == null) return;
-        String amountText = supplyDebugAmountField == null ? "64"
-            : supplyDebugAmountField.getText()
-                .trim();
-        ItemStack selectedStack = supplyDebugGhostHandler == null ? null : supplyDebugGhostHandler.getStackInSlot(0);
-        if (selectedStack == null) return;
+        ItemStack selectedStack = supplyDebugGhostHandler.getStackInSlot(0);
+        if (asset == null || selectedStack == null) return;
         long amount;
         try {
-            amount = Long.parseLong(amountText);
+            amount = Long.parseLong(
+                supplyDebugAmountField.getText()
+                    .trim());
         } catch (NumberFormatException e) {
             return;
         }
@@ -668,151 +422,10 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         CelestialClient.addInventory(asset.assetId, resource, amount);
     }
 
-    private void drawInlineButton(int x, int y, int width, int height, String label, boolean enabled) {
-        int bg = enabled ? EnumColors.MAP_COLOR_SIDEBAR_INLINE_BTN_BG_ENABLED.getColor()
-            : EnumColors.MAP_COLOR_SIDEBAR_INLINE_BTN_BG_DISABLED.getColor();
-        int border = enabled ? EnumColors.MapSidebarListHovered.getColor()
-            : EnumColors.MAP_COLOR_SIDEBAR_INLINE_BTN_BORDER_DISABLED.getColor();
-        Gui.drawRect(x, y, x + width, y + height, bg);
-        Gui.drawRect(x, y, x + width, y + 1, border);
-        Gui.drawRect(x, y + height - 1, x + width, y + height, border);
-        Gui.drawRect(x, y, x + 1, y + height, border);
-        Gui.drawRect(x + width - 1, y, x + width, y + height, border);
-        int textWidth = Minecraft.getMinecraft().fontRenderer.getStringWidth(label);
-        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
-            label,
-            x + (width - textWidth) / 2,
-            y + (height - Minecraft.getMinecraft().fontRenderer.FONT_HEIGHT) / 2 + 1,
-            enabled ? EnumColors.MapSidebarListNormal.getColor()
-                : EnumColors.MAP_COLOR_SIDEBAR_INLINE_BTN_TEXT_DISABLED.getColor());
+    // endregion
+
+    private static int labelWidth(String key) {
+        return GalaxiaUi.width(StatCollector.translateToLocal(key)) + 10;
     }
 
-    private void drawLayerButton(int x, int y, int width, String label, boolean selected) {
-        int bg = selected ? EnumColors.MAP_COLOR_SIDEBAR_LAYER_BTN_BG_SELECTED.getColor()
-            : EnumColors.MAP_COLOR_SIDEBAR_LAYER_BTN_BG_NORMAL.getColor();
-        int border = selected ? EnumColors.MapSidebarListHovered.getColor()
-            : EnumColors.MAP_COLOR_SIDEBAR_INLINE_BTN_BORDER_DISABLED.getColor();
-        Gui.drawRect(x, y, x + width, y + LAYER_BUTTON_HEIGHT, bg);
-        Gui.drawRect(x, y, x + width, y + 1, border);
-        Gui.drawRect(x, y + LAYER_BUTTON_HEIGHT - 1, x + width, y + LAYER_BUTTON_HEIGHT, border);
-        Gui.drawRect(x, y, x + 1, y + LAYER_BUTTON_HEIGHT, border);
-        Gui.drawRect(x + width - 1, y, x + width, y + LAYER_BUTTON_HEIGHT, border);
-        Minecraft.getMinecraft().fontRenderer
-            .drawStringWithShadow(label, x + 8, y + 5, EnumColors.MapSidebarListNormal.getColor());
-    }
-
-    @Override
-    public void drawBackground(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
-        super.drawBackground(context, widgetTheme);
-        int currentSearchOffset = getSearchOffset();
-        if (currentSearchOffset != cachedSearchOffset) {
-            cachedSearchOffset = currentSearchOffset;
-            rowLayoutsDirty = true;
-        }
-        String newQuery = searchField == null ? ""
-            : searchField.getText()
-                .toLowerCase();
-        if (!newQuery.equals(searchQuery)) {
-            searchQuery = newQuery;
-            scrollOffset = 0;
-            markEntriesDirty();
-        }
-        if (searchField != null) {
-            if (activeLayer == root || supplyDebugPanelOpen) {
-                searchField.top(-1000);
-                if (searchField.isEnabled()) searchField.setEnabled(false);
-            } else {
-                searchField.top(getSearchFieldTop());
-                if (!searchField.isEnabled()) searchField.setEnabled(true);
-            }
-        }
-        Gui.drawRect(0, 0, getArea().width, getArea().height, EnumColors.MapSidebarBackground.getColor());
-        drawLayerButton(18, LAYER_BUTTON_TOP, 70, "Galaxy", activeLayer == root);
-        drawLayerButton(
-            18 + 70 + LAYER_BUTTON_GAP,
-            LAYER_BUTTON_TOP,
-            Math.max(80, Minecraft.getMinecraft().fontRenderer.getStringWidth(getCurrentSystemLabel()) + 18),
-            getCurrentSystemLabel(),
-            activeLayer == currentSystem);
-        if (shouldShowCreativeButton()) drawLayerButton(
-            18,
-            CREATIVE_BUTTON_TOP,
-            getCreativeButtonWidth(),
-            StatCollector.translateToLocal("galaxia.gui.orbital.debug"),
-            map.isCreativeBuildModeEnabled());
-        if (shouldShowHiddenObjectsButton()) drawLayerButton(
-            18,
-            HIDDEN_OBJECTS_BUTTON_TOP,
-            Math.max(120, Minecraft.getMinecraft().fontRenderer.getStringWidth(hiddenObjectsLabel()) + 18),
-            hiddenObjectsLabel(),
-            map.areHiddenObjectsShown());
-        if (shouldShowTransferSimulatorButton()) drawLayerButton(
-            18,
-            TRANSFER_SIMULATOR_BUTTON_TOP,
-            Math.max(132, Minecraft.getMinecraft().fontRenderer.getStringWidth("Transfer Simulator") + 18),
-            "Transfer Simulator",
-            map.isTransferSimulatorOpen());
-        if (!shouldShowSupplyDebugButton() && supplyDebugPanelOpen) supplyDebugPanelOpen = false;
-        if (shouldShowSupplyDebugButton()) drawLayerButton(
-            18,
-            SUPPLY_DEBUG_BUTTON_TOP,
-            Math.max(112, Minecraft.getMinecraft().fontRenderer.getStringWidth("Supply Debug") + 18),
-            "Supply Debug",
-            supplyDebugPanelOpen);
-        updateSupplyDebugFieldPositions();
-        int btnLeft = getPermissionsButtonLeft();
-        int btnTop = getPermissionsButtonTop();
-        drawInlineButton(
-            btnLeft,
-            btnTop,
-            PERMISSIONS_BTN_WIDTH,
-            PERMISSIONS_BTN_HEIGHT,
-            StatCollector.translateToLocal("galaxia.gui.team_config.button"),
-            true);
-        if (supplyDebugPanelOpen) {
-            drawSupplyDebugPanel(context, widgetTheme);
-            return;
-        }
-        if (activeLayer == root) return;
-        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
-            localizeOrFallback("galaxia.gui.orbital.search", "Search"),
-            18,
-            getSearchLabelTop(),
-            EnumColors.MapSidebaSearchLabel.getColor());
-        ensureRowLayouts();
-        int mouseLocalX = getContext().getMouseX() - getArea().rx;
-        int mouseLocalY = getContext().getMouseY() - getArea().ry;
-        VisibleEntry hoveredEntry = findVisibleRowAt(mouseLocalX, mouseLocalY);
-        CelestialObject hoveredBody = hoveredEntry == null ? null : hoveredEntry.body();
-        for (RowLayout row : cachedRowLayouts) {
-            VisibleEntry e = row.entry();
-            int sy = row.top();
-            boolean hovered = hoveredBody != null && e.body() == hoveredBody;
-            int iconX = 10 + e.depth() * 24;
-            int textX = 22 + e.depth() * 24;
-            String text = e.body()
-                .displayName();
-            int color = hovered ? EnumColors.MAP_COLOR_SIDEBAR_ENTRY_HOVER.getColor()
-                : EnumColors.MapSidebarListNormal.getColor();
-            if (e.hasChildren()) {
-                IDrawable play = IDrawable.of(GuiTextures.PLAY);
-                if (expanded.contains(e.body())) {
-                    GL11.glPushMatrix();
-                    GL11.glTranslatef(iconX + 4f, sy + 10f, 0f);
-                    GL11.glRotatef(90f, 0f, 0f, 1f);
-                    GL11.glTranslatef(-4f, -4f, 0f);
-                    play.draw(context, 0, 0, 8, 8, widgetTheme.getTheme());
-                    GL11.glPopMatrix();
-                } else {
-                    play.draw(context, iconX, sy + 6, 8, 8, widgetTheme.getTheme());
-                }
-            }
-            Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(text, textX, sy + 6, color);
-        }
-    }
-
-    private String localizeOrFallback(String key, String fallback) {
-        String translated = StatCollector.translateToLocal(key);
-        return key.equals(translated) ? fallback : translated;
-    }
 }

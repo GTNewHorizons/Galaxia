@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.gametests;
 
+import java.awt.Point;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -9,6 +10,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayerMP;
 
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
@@ -34,6 +36,7 @@ import com.gtnewhorizons.horizonqa.api.client.ClickTarget;
 import com.gtnewhorizons.horizonqa.api.client.ClientScenario;
 import com.gtnewhorizons.horizonqa.api.client.ClientTarget;
 import com.gtnewhorizons.horizonqa.api.client.ClientTest;
+import com.gtnewhorizons.horizonqa.client.LwjglInput;
 
 /** A real GUI network showcase in the disposable Horizon world. Scan progress may persist until world shutdown. */
 @GameTestHolder(value = "galaxia", clientOnly = true, requiredMods = { "gregtech", "NotEnoughItems" })
@@ -102,6 +105,22 @@ public final class SatelliteNetworkGuiGameTests {
             })
             .step("capture completed visible network")
             .capture("network-final");
+        scenario.step("hover the satellite marker beside the Earth")
+            .client("point at the marker", c -> {
+                Point marker = GuiTestSupport
+                    .satelliteMarkerCenter(CelestialObjectKey.registered(CelestialObjectId.OVERWORLD));
+                if (marker == null) throw new AssertionError("No satellite marker beside the Earth");
+                LwjglInput.move(Minecraft.getMinecraft().currentScreen, marker.x, marker.y);
+                c.afterTest(LwjglInput::end);
+            })
+            .awaitClient("marker tooltip shown", c -> {
+                var map = GuiTestSupport.map();
+                if (map.getPanel()
+                    .getTopHovering() != map || map.tooltip()
+                        .isEmpty())
+                    throw new AssertionError("The satellite marker shows no tooltip");
+            })
+            .capture("satellite-tooltip");
         scenario.serverSequence()
             .thenIdle(40);
         scenario.succeed();

@@ -9,25 +9,25 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Gui;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.widget.ParentWidget;
-import com.cleanroommc.modularui.widget.ScrollWidget;
-import com.cleanroommc.modularui.widget.scroll.VerticalScrollData;
+import com.cleanroommc.modularui.drawable.UITexture;
+import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
-import com.cleanroommc.modularui.widgets.TextWidget;
+import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
-import com.gtnewhorizons.galaxia.client.EnumColors;
-import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
-import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData;
+import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
+import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaUi;
+import com.gtnewhorizons.galaxia.client.gui.ui.WindowLayer;
+import com.gtnewhorizons.galaxia.client.gui.ui.WindowSpec;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
@@ -48,35 +48,19 @@ import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
  * Row click hands the host {@link CelestialObject} back through the constructor-supplied
  * callback; this widget does not open management screens itself.
  */
-public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemAssetPanelWidget> {
+public final class SolarSystemAssetPanelWidget extends Widget<SolarSystemAssetPanelWidget> {
 
-    private static final int PANEL_W = 348;
-    private static final int HEADER_H = 24;
-    private static final int CONTROLS_H = 22;
-    private static final int ROW_H = 20;
-    private static final int SECTION_HEADER_H = 14;
-    private static final int MAX_VISIBLE_ROWS = 16;
-    private static final int CONTENT_SCROLLBAR_GAP = 14;
-    private static final int FILTER_BTN_W = 96;
-    private static final int SORT_BTN_W = 96;
-    private static final int CTRL_GAP = 6;
+    public static final String WINDOW = "starmap.panel.assets";
+    private static final int ROW_W = 236;
+    private static final int ROW_H = 18;
+    private static final int MAX_VISIBLE_ROWS = 12;
     private static final int BODY_ICON_SIZE = 16;
     private static final int CAP_ICON_SIZE = 16;
     private static final int CAP_ICON_GAP = 2;
     private static final int ROW_PAD_X = 4;
-    private static final int NAME_W = 132;
-    private static final int ROW_GAP = 2;
-    private static final int PANEL_PAD_X = 10;
-    private static final int SCROLL_PAD_X = 4;
-    private static final int PANEL_BOTTOM_PAD = 8;
-    private static final int EMPTY_VIEWPORT_H = 18;
-    private static final int OUTLINE_THICKNESS = 3;
-    private static final int TITLE_Y = 7;
-    private static final int CONTROLS_TOP_GAP = 3;
-    private static final int CTRL_BTN_H = CONTROLS_H - 6;
-    private static final int LIST_TOP_GAP = 2;
-    private static final int EMPTY_TEXT_NUDGE_Y = 4;
     private static final int ASSET_REFRESH_INTERVAL_TICKS = 20;
+    /** Left edge of the map area in the window layer, right of the sidebar */
+    private static final int MAP_LEFT = 226;
 
     private final CelestialObject galaxyRoot;
     private final Supplier<CelestialObject> viewRootSupplier;
@@ -84,10 +68,8 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     private final Consumer<CelestialAsset.ID> onAssetSelect;
     private final Function<CelestialObject, List<CelestialAsset>> assetProvider;
 
-    private final ParentWidget<?> panelRoot;
-    private ParentWidget<?> rowsContainer;
-    private ScrollWidget<?> scrollWidget;
-    private VerticalScrollData scrollData;
+    private final Runnable onClosedByPlayer;
+    private boolean closing;
 
     private SystemAssetFilter currentFilter = SystemAssetFilter.ALL;
     private SystemAssetSort currentSort = SystemAssetSort.BY_BODY;
@@ -103,28 +85,26 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     private int assetRefreshTicks;
 
     public SolarSystemAssetPanelWidget(CelestialObject galaxyRoot, Supplier<CelestialObject> viewRootSupplier,
-        Supplier<Boolean> openSupplier, Consumer<CelestialAsset.ID> onAssetSelect) {
+        Supplier<Boolean> openSupplier, Runnable onClosedByPlayer, Consumer<CelestialAsset.ID> onAssetSelect) {
         this(
             galaxyRoot,
             viewRootSupplier,
             openSupplier,
+            onClosedByPlayer,
             onAssetSelect,
             viewRoot -> CelestialClient.listAssetsInSystem(viewRoot.key()));
     }
 
     SolarSystemAssetPanelWidget(CelestialObject galaxyRoot, Supplier<CelestialObject> viewRootSupplier,
-        Supplier<Boolean> openSupplier, Consumer<CelestialAsset.ID> onAssetSelect,
+        Supplier<Boolean> openSupplier, Runnable onClosedByPlayer, Consumer<CelestialAsset.ID> onAssetSelect,
         Function<CelestialObject, List<CelestialAsset>> assetProvider) {
         this.galaxyRoot = galaxyRoot;
         this.viewRootSupplier = viewRootSupplier;
         this.openSupplier = openSupplier;
+        this.onClosedByPlayer = onClosedByPlayer;
         this.onAssetSelect = onAssetSelect;
         this.assetProvider = assetProvider;
-        this.panelRoot = new ParentWidget<>().pos(0, 0)
-            .size(PANEL_W, 0);
-        this.panelRoot.setEnabled(false);
         size(0, 0);
-        child(panelRoot);
     }
 
     @Override
@@ -132,17 +112,19 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         super.onUpdate();
         CelestialObject viewRoot = viewRootSupplier.get();
         boolean shouldShow = openSupplier.get() && isSystemScope(viewRoot);
+        WindowLayer layer = isValid() ? WindowLayer.of(this) : null;
         if (!shouldShow) {
-            if (panelRoot.isEnabled()) hidePanel();
+            if (layer != null && layer.isOpen(WINDOW)) hidePanel(layer);
             return;
         }
         refreshRowsIfNeeded(viewRoot);
+        if (layer == null) return;
         String signature = buildStructureSignature();
         boolean structureChanged = !signature.equals(lastStructureSignature) || viewRoot != lastViewRoot
             || currentFilter != lastFilter
             || currentSort != lastSort;
-        if (structureChanged) {
-            rebuildPanel(viewRoot);
+        if (structureChanged || !layer.isOpen(WINDOW)) {
+            rebuildPanel(layer, viewRoot);
             lastStructureSignature = signature;
             lastViewRoot = viewRoot;
             lastFilter = currentFilter;
@@ -150,21 +132,14 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         }
     }
 
-    @Override
-    public boolean canHoverThrough() {
-        return true;
-    }
-
     private boolean isSystemScope(CelestialObject viewRoot) {
         return viewRoot != null && viewRoot.objectClass() == CelestialObject.Class.STAR;
     }
 
-    private void hidePanel() {
-        panelRoot.setEnabled(false);
-        panelRoot.removeAll();
-        rowsContainer = null;
-        scrollWidget = null;
-        scrollData = null;
+    private void hidePanel(WindowLayer layer) {
+        closing = true;
+        layer.close(WINDOW);
+        closing = false;
         visibleRows.clear();
         visibleSatelliteRows.clear();
         lastStructureSignature = "";
@@ -175,9 +150,6 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         lastRefreshFilter = null;
         lastRefreshSort = null;
         assetRefreshTicks = 0;
-        size(0, 0);
-        panelRoot.scheduleResize();
-        scheduleResize();
     }
 
     private void refreshRowsIfNeeded(CelestialObject viewRoot) {
@@ -241,8 +213,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
             .append(':')
             .append(visibleSatelliteRows.size())
             .append('|');
-        int rowsToShow = Math.min(MAX_VISIBLE_ROWS, visibleRows.size());
-        for (int i = 0; i < rowsToShow; i++) {
+        for (int i = 0; i < visibleRows.size(); i++) {
             SystemAssetRowView row = visibleRows.get(i);
             sig.append(row.assetId.id())
                 .append(':')
@@ -269,127 +240,101 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         return sig.toString();
     }
 
-    private void rebuildPanel(CelestialObject viewRoot) {
-        String teamName = GTTeamsCompat.getTeamName()
-            .orElse(null);
-        String title = teamName != null ? teamName + " Assets \u2014 " + viewRoot.displayName() + " system"
-            : "Assets \u2014 " + viewRoot.displayName() + " system";
-        int contentRows = visibleRows.size() + visibleSatelliteRows.size() + (visibleSatelliteRows.isEmpty() ? 0 : 1);
-        int rowsToShow = Math.clamp(contentRows, 1, MAX_VISIBLE_ROWS);
-        int viewportH = contentRows == 0 ? EMPTY_VIEWPORT_H : rowsToShow * (ROW_H + ROW_GAP);
-        int panelH = HEADER_H + CONTROLS_H + viewportH + PANEL_BOTTOM_PAD;
+    private void rebuildPanel(WindowLayer layer, CelestialObject viewRoot) {
+        String title = StatCollector
+            .translateToLocalFormatted("galaxia.gui.orbital.assets.title", viewRoot.displayName());
+        WindowSpec spec = WindowSpec.of(WINDOW, IKey.str(title))
+            .anchor((lw, lh, w, h) -> new int[] { MAP_LEFT, 30 })
+            .maxHeight(GalaxiaUi.BUTTON_H + GalaxiaUi.GAP * 2 + MAX_VISIBLE_ROWS * (ROW_H + GalaxiaUi.GAP))
+            .onClose(() -> { if (!closing) onClosedByPlayer.run(); })
+            .body(this::fill);
+        closing = true;
+        layer.close(WINDOW);
+        closing = false;
+        layer.open(spec);
+    }
 
-        panelRoot.removeAll();
-        scrollWidget = null;
-        scrollData = null;
-        size(PANEL_W, panelH);
-        panelRoot.size(PANEL_W, panelH);
-        panelRoot.setEnabled(true);
-
-        ParentWidget<?> backgroundLayer = new ParentWidget<>().pos(0, 0)
-            .size(PANEL_W, panelH)
-            .background((ctx, x, y, w, h, ignoredTheme) -> {
-                Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_MODAL_BG.getColor());
-                Gui.drawRect(x, y, x + w, y + HEADER_H, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
-            });
-        panelRoot.child(backgroundLayer);
-        panelRoot.child(
-            WidgetOutline.create(backgroundLayer, OUTLINE_THICKNESS, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
-
-        panelRoot.child(
-            new TextWidget<>(IKey.str(title)).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
-                .shadow(true)
-                .pos(PANEL_PAD_X, TITLE_Y));
-
-        int controlsY = HEADER_H + CONTROLS_TOP_GAP;
-        panelRoot.child(
-            cycleButton(
-                () -> "Filter: " + currentFilter.getDisplayName(),
-                () -> currentFilter = cycleEnum(currentFilter, SystemAssetFilter.values()))
-                    .name("starmap.assets.filter")
-                    .pos(PANEL_PAD_X, controlsY)
-                    .size(FILTER_BTN_W, CTRL_BTN_H));
-        panelRoot.child(
-            cycleButton(
-                () -> "Sort: " + currentSort.getDisplayName(),
-                () -> currentSort = cycleEnum(currentSort, SystemAssetSort.values()))
-                    .pos(PANEL_PAD_X + FILTER_BTN_W + CTRL_GAP, controlsY)
-                    .size(SORT_BTN_W, CTRL_BTN_H));
-
-        int listY = HEADER_H + CONTROLS_H + LIST_TOP_GAP;
-        if (contentRows == 0) {
-            panelRoot.child(
-                new TextWidget<>(IKey.str("No assets in this system."))
-                    .color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
-                    .pos(PANEL_PAD_X, listY + EMPTY_TEXT_NUDGE_Y));
-            panelRoot.scheduleResize();
-            scheduleResize();
+    private void fill(GalaxiaUi.Column column) {
+        column.row(
+            GalaxiaUi
+                .button(
+                    IKey.dynamic(
+                        () -> StatCollector.translateToLocalFormatted(
+                            "galaxia.gui.orbital.assets.filter",
+                            currentFilter.getDisplayName())),
+                    widestLabel("galaxia.gui.orbital.assets.filter", SystemAssetFilter.values()),
+                    () -> currentFilter = cycleEnum(currentFilter, SystemAssetFilter.values()))
+                .name("starmap.assets.filter"),
+            GalaxiaUi
+                .button(
+                    IKey.dynamic(
+                        () -> StatCollector.translateToLocalFormatted(
+                            "galaxia.gui.orbital.assets.sort",
+                            currentSort.getDisplayName())),
+                    widestLabel("galaxia.gui.orbital.assets.sort", SystemAssetSort.values()),
+                    () -> currentSort = cycleEnum(currentSort, SystemAssetSort.values()))
+                .name("starmap.assets.sort"));
+        if (visibleRows.isEmpty() && visibleSatelliteRows.isEmpty()) {
+            column.dim(StatCollector.translateToLocal("galaxia.gui.orbital.assets.none"));
             return;
         }
-
-        int contentHeight = visibleRows.size() * (ROW_H + ROW_GAP)
-            + (visibleSatelliteRows.isEmpty() ? 0 : SECTION_HEADER_H + visibleSatelliteRows.size() * (ROW_H + ROW_GAP));
-        rowsContainer = new ParentWidget<>().widthRel(1f)
-            .height(contentHeight);
-        scrollData = new VerticalScrollData();
-        scrollWidget = new ScrollWidget<>(scrollData).pos(SCROLL_PAD_X, listY)
-            .size(PANEL_W - 2 * SCROLL_PAD_X - CONTENT_SCROLLBAR_GAP, viewportH);
-        scrollWidget.child(rowsContainer);
-        panelRoot.child(scrollWidget);
-        int rowY = 0;
-        for (int i = 0; i < visibleRows.size(); i++) {
-            rowsContainer.child(buildRowWidget(visibleRows.get(i)).pos(0, rowY));
-            rowY += ROW_H + ROW_GAP;
-        }
+        for (SystemAssetRowView row : visibleRows) column.add(buildRowWidget(row));
         if (!visibleSatelliteRows.isEmpty()) {
-            rowsContainer.child(
-                new TextWidget<>(IKey.str("Satellites")).color(EnumColors.MAP_COLOR_TEXT_SECTION.getColor())
-                    .shadow(true)
-                    .pos(ROW_PAD_X, rowY + 2));
-            rowY += SECTION_HEADER_H;
-            for (SatelliteRow row : visibleSatelliteRows) {
-                rowsContainer.child(buildSatelliteRowWidget(row).pos(0, rowY));
-                rowY += ROW_H + ROW_GAP;
-            }
+            column.section(StatCollector.translateToLocal("galaxia.gui.orbital.assets.satellites"));
+            for (SatelliteRow row : visibleSatelliteRows) column.add(buildSatelliteRowWidget(row));
         }
-        scrollData.setScrollSize(contentHeight);
-        panelRoot.scheduleResize();
-        scheduleResize();
+    }
+
+    private static int widestLabel(String key, Enum<?>[] values) {
+        int width = 0;
+        for (Enum<?> value : values) {
+            String name = value instanceof SystemAssetFilter filter ? filter.getDisplayName()
+                : ((SystemAssetSort) value).getDisplayName();
+            width = Math.max(width, GalaxiaUi.width(StatCollector.translateToLocalFormatted(key, name)));
+        }
+        return width + 10;
     }
 
     private ButtonWidget<?> buildRowWidget(SystemAssetRowView row) {
         CelestialObject hostBody = GalaxiaCelestialAPI.findBodyByKey(galaxyRoot, row.hostBodyKey);
-        String displayName = trimToPixels(row.displayName, NAME_W);
-        ResourceLocation bodyIcon = AssetPanelIcons.iconForBody(hostBody);
+        List<ResourceLocation> icons = new ArrayList<>();
+        icons.add(AssetPanelIcons.iconForBody(hostBody));
+        if (row.hasMining) icons.add(AssetPanelIcons.CAP_MINING);
+        if (row.hasProduction) icons.add(AssetPanelIcons.CAP_PRODUCTION);
+        if (row.underConstruction) icons.add(AssetPanelIcons.CAP_CONSTRUCTION);
+        if (row.underDeconstruction) icons.add(AssetPanelIcons.CAP_DECONSTRUCTION);
+        ResourceLocation warn = AssetPanelIcons.warningIcon(row.warning);
+        if (warn != null) icons.add(warn);
 
-        ButtonWidget<?> button = new ButtonWidget<>().widthRel(1f)
-            .height(ROW_H)
-            .background(
-
-                (ctx, x, y, w, h, ignoredTheme) -> Gui
-                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor()))
-            .hoverBackground(
-
-                (ctx, x, y, w, h, ignoredTheme) -> Gui
-                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor()))
-            .overlay((ctx, x, y, w, h, ignoredTheme) -> drawRowContent(row, displayName, bodyIcon, x, y, h))
-            .onMousePressed(btn -> {
-                if (btn != 0 || onAssetSelect == null) return false;
-                onAssetSelect.accept(row.assetId);
-                return true;
-            });
+        // The name takes what the icons leave and is cut short only when it must be
+        int nameWidth = ROW_W - GalaxiaUi.PAD * 2 - GalaxiaUi.GAP - icons.size() * (BODY_ICON_SIZE + GalaxiaUi.GAP);
+        Flow content = GalaxiaUi.row()
+            .padding(GalaxiaUi.PAD, 0)
+            .child(
+                GalaxiaUi.clipped(row.displayName, nameWidth, GalaxiaGuiStyle.TEXT)
+                    .width(nameWidth));
+        for (ResourceLocation icon : icons) content.child(icon(icon));
+        ButtonWidget<?> button = GalaxiaUi
+            .flatButton(ROW_W, ROW_H, () -> { if (onAssetSelect != null) onAssetSelect.accept(row.assetId); })
+            .background(EnumTextures.GUI_WELL.getImage());
+        button.child(content);
         button.tooltip(t -> {
             t.addLine(row.displayName);
             t.addLine(
                 StatCollector.translateToLocalFormatted(
                     "galaxia.system_asset.tooltip.body",
                     hostBody != null ? hostBody.displayName() : "?"));
-            t.addLine(
-                StatCollector.translateToLocalFormatted("galaxia.system_asset.tooltip.status", row.status.name()));
+            if (row.status != Buildable.Status.OPERATIONAL) {
+                t.addLine(
+                    StatCollector.translateToLocal(
+                        "galaxia.system_asset.status." + row.status.name()
+                            .toLowerCase()));
+            }
             if (row.warning.isWarning()) {
                 t.addLine(
-                    StatCollector
-                        .translateToLocalFormatted("galaxia.system_asset.tooltip.warning", row.warning.name()));
+                    StatCollector.translateToLocal(
+                        "galaxia.system_asset.warning." + row.warning.name()
+                            .toLowerCase()));
             }
             if (row.underConstruction) {
                 t.addLine(
@@ -397,41 +342,42 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
                         "galaxia.system_asset.tooltip.construction",
                         Math.round(row.constructionProgress * 100f)));
             }
-            GTTeamsCompat.getTeamName()
-                .ifPresent(name -> {
-                    t.addLine(StatCollector.translateToLocalFormatted("galaxia.gui.team_info.team", name));
-                    GTTeamsCompat.getTeamData()
-                        .ifPresent(
-                            team -> t.addLine(
-                                StatCollector.translateToLocalFormatted(
-                                    "galaxia.gui.team_info.members",
-                                    team.getMembers()
-                                        .size())));
-                });
         });
         return button;
     }
 
-    private ParentWidget<?> buildSatelliteRowWidget(SatelliteRow row) {
+    private static Widget<?> icon(ResourceLocation texture) {
+        return UITexture.fullImage(texture == null ? EnumTextures.ICON_MISSING.get() : texture)
+            .asWidget()
+            .size(BODY_ICON_SIZE);
+    }
+
+    private Flow buildSatelliteRowWidget(SatelliteRow row) {
         CelestialObject hostBody = GalaxiaCelestialAPI.findBodyByKey(galaxyRoot, row.bodyKey());
         String bodyName = hostBody != null ? hostBody.displayName()
             : row.bodyKey()
                 .toString();
-        String displayName = trimToPixels(
-            bodyName + " "
-                + row.kind()
-                    .name()
-                + " x"
-                + row.count(),
-            NAME_W + BODY_ICON_SIZE + CAP_ICON_SIZE);
-        ResourceLocation satelliteIcon = CelestialMarkerBase.CelestialAssetIcons.get(CelestialAsset.Kind.SATELLITE);
-        return new ParentWidget<>().widthRel(1f)
+        int nameWidth = ROW_W - GalaxiaUi.PAD * 2 - GalaxiaUi.GAP - BODY_ICON_SIZE;
+        Flow content = GalaxiaUi.row()
+            .padding(GalaxiaUi.PAD, 0)
+            .child(icon(CelestialMarkerBase.CelestialAssetIcons.get(CelestialAsset.Kind.SATELLITE)))
+            .child(
+                GalaxiaUi.clipped(
+                    StatCollector.translateToLocalFormatted(
+                        "galaxia.system_asset.satellites",
+                        bodyName,
+                        StatCollector.translateToLocal(
+                            "galaxia.satellite.kind." + row.kind()
+                                .name()
+                                .toLowerCase()),
+                        row.count()),
+                    nameWidth,
+                    GalaxiaGuiStyle.TEXT));
+        content.coverChildrenWidth()
+            .width(ROW_W)
             .height(ROW_H)
-            .background(
-
-                (ctx, x, y, w, h, ignoredTheme) -> Gui
-                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor()))
-            .overlay((ctx, x, y, w, h, ignoredTheme) -> drawSatelliteRowContent(displayName, satelliteIcon, x, y, h));
+            .background(EnumTextures.GUI_WELL.getImage());
+        return content;
     }
 
     /**
@@ -439,104 +385,8 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
      * (avoids hover-blocking surfaces wider than the thing they render).
      * Order left-to-right per design brief: name -> body icon -> capability icons.
      */
-    private static void drawRowContent(SystemAssetRowView row, String displayName, ResourceLocation bodyIcon, int x,
-        int y, int h) {
-        net.minecraft.client.gui.FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
-        int textY = y + (h - fr.FONT_HEIGHT) / 2 + 1;
-        int cursor = x + ROW_PAD_X;
-
-        int teamColor = GTTeamsCompat.getGalaxiaTeamData()
-            .map(GalaxiaTeamData::getTeamColor)
-            .orElse(EnumColors.MAP_COLOR_TEAM_ACCENT.getColor());
-        Gui.drawRect(cursor, y + 2, cursor + 3, y + h - 2, teamColor);
-        cursor += 5;
-
-        fr.drawStringWithShadow(displayName, cursor, textY, EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
-        cursor += NAME_W + ROW_PAD_X;
-
-        int iconY = y + (h - BODY_ICON_SIZE) / 2;
-        AssetPanelIcons.drawSprite(bodyIcon, cursor, iconY, BODY_ICON_SIZE);
-        cursor += BODY_ICON_SIZE + ROW_PAD_X;
-
-        int capY = y + (h - CAP_ICON_SIZE) / 2;
-        if (row.hasMining) {
-            AssetPanelIcons.drawSprite(AssetPanelIcons.CAP_MINING, cursor, capY, CAP_ICON_SIZE);
-            cursor += CAP_ICON_SIZE + CAP_ICON_GAP;
-        }
-        if (row.hasProduction) {
-            AssetPanelIcons.drawSprite(AssetPanelIcons.CAP_PRODUCTION, cursor, capY, CAP_ICON_SIZE);
-            cursor += CAP_ICON_SIZE + CAP_ICON_GAP;
-        }
-        if (row.underConstruction) {
-            AssetPanelIcons.drawSprite(AssetPanelIcons.CAP_CONSTRUCTION, cursor, capY, CAP_ICON_SIZE);
-            cursor += CAP_ICON_SIZE + CAP_ICON_GAP;
-        }
-        if (row.underDeconstruction) {
-            AssetPanelIcons.drawSprite(AssetPanelIcons.CAP_DECONSTRUCTION, cursor, capY, CAP_ICON_SIZE);
-            cursor += CAP_ICON_SIZE + CAP_ICON_GAP;
-        }
-        ResourceLocation warn = AssetPanelIcons.warningIcon(row.warning);
-        if (warn != null) {
-            AssetPanelIcons.drawSprite(warn, cursor, capY, CAP_ICON_SIZE);
-        }
-    }
-
-    private static void drawSatelliteRowContent(String displayName, ResourceLocation satelliteIcon, int x, int y,
-        int h) {
-        net.minecraft.client.gui.FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
-        int textY = y + (h - fr.FONT_HEIGHT) / 2 + 1;
-        int cursor = x + ROW_PAD_X + 5;
-        int iconY = y + (h - BODY_ICON_SIZE) / 2;
-        AssetPanelIcons.drawSprite(satelliteIcon, cursor, iconY, BODY_ICON_SIZE);
-        cursor += BODY_ICON_SIZE + ROW_PAD_X;
-        fr.drawStringWithShadow(displayName, cursor, textY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-    }
-
-    private ButtonWidget<?> cycleButton(Supplier<String> labelSupplier, Runnable onClick) {
-        return new ButtonWidget<>().background(
-
-            (ctx, x, y, w, h, ignoredTheme) -> BorderedRect.draw(
-                x,
-                y,
-                w,
-                h,
-                EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()))
-            .hoverBackground(
-
-                (ctx, x, y, w, h, ignoredTheme) -> BorderedRect.draw(
-                    x,
-                    y,
-                    w,
-                    h,
-                    EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor(),
-                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()))
-            .overlay((ctx, x, y, w, h, ignoredTheme) -> {
-                String label = labelSupplier.get();
-                net.minecraft.client.gui.FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
-                String trimmed = fr.trimStringToWidth(label, w - 6);
-                int textW = fr.getStringWidth(trimmed);
-                fr.drawStringWithShadow(
-                    trimmed,
-                    x + (w - textW) / 2,
-                    y + (h - fr.FONT_HEIGHT) / 2 + 1,
-                    EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
-            })
-            .onMousePressed(btn -> {
-                if (btn != 0) return false;
-                onClick.run();
-                return true;
-            });
-    }
-
     private static <E extends Enum<E>> E cycleEnum(E current, E[] values) {
         return values[(current.ordinal() + 1) % values.length];
-    }
-
-    private static String trimToPixels(String s, int maxPx) {
-        Minecraft mc = Minecraft.getMinecraft();
-        if (mc == null || mc.fontRenderer == null || s == null) return s;
-        return mc.fontRenderer.trimStringToWidth(s, maxPx);
     }
 
     record SatelliteRow(CelestialObjectKey bodyKey, SatelliteKind kind, int count) {}

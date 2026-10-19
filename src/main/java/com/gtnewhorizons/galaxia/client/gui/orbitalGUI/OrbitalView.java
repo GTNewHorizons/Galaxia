@@ -17,6 +17,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
+import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
 
@@ -25,8 +26,10 @@ import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.api.UpOrDown;
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IGuiAction;
 import com.cleanroommc.modularui.api.widget.Interactable;
+import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.screen.viewport.LocatedWidget;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
@@ -38,6 +41,7 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
 import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
@@ -514,7 +518,8 @@ public class OrbitalView {
         private final StarmapAssetActions.StarmapAssetActionsWidget assetActionsWidget;
         private final InterplanetaryTransferSystem.OrbitalTransferState transferState = new InterplanetaryTransferSystem.OrbitalTransferState();
         private final InterplanetaryTransferSystem.OrbitalTransferRenderer transferRenderer;
-        private final InterplanetaryTransferSystem.OrbitalTransferTooltipWidget transferTooltipWidget;
+        // What the map tooltip shows this frame when no transfer is hovered
+        private final List<String> hoverLines = new ArrayList<>();
         private final InterplanetaryTransferSystem.OrbitalTransferSimulatorWidget transferSimulatorWidget;
         private final OrbitalScene.OrbitalSceneRenderer sceneRenderer;
         private final OrbitalPinnedInfoContentBuilder pinnedInfoContentBuilder = new OrbitalPinnedInfoContentBuilder();
@@ -620,11 +625,6 @@ public class OrbitalView {
                     }
 
                     @Override
-                    public boolean canCreateBaseStation(CelestialObject body) {
-                        return OrbitalMapWidget.this.canCreateBaseStation(body);
-                    }
-
-                    @Override
                     public boolean canCreateAutomatedStation(CelestialObject body) {
                         return OrbitalMapWidget.this.canCreateAutomatedStation(body);
                     }
@@ -637,12 +637,6 @@ public class OrbitalView {
                     @Override
                     public void drawAssetIcon(CelestialAsset.Kind kind, int x, int y, int size, float alpha) {
                         OrbitalMapWidget.this.drawAssetIcon(kind, x, y, size, alpha);
-                    }
-
-                    @Override
-                    public void createBaseStation(CelestialObject body) {
-                        assetActionController.createBaseStation(body);
-                        assetActionsWidget.markContentDirty();
                     }
 
                     @Override
@@ -776,6 +770,11 @@ public class OrbitalView {
                     public void showActionStatus(String message) {
                         OrbitalMapWidget.this.showActionStatus(message);
                     }
+
+                    @Override
+                    public TextFieldWidget renameField() {
+                        return renameField;
+                    }
                 },
                 viewContext);
             this.transferRenderer = new InterplanetaryTransferSystem.OrbitalTransferRenderer(
@@ -790,29 +789,6 @@ public class OrbitalView {
                     public boolean isBodyRendered(CelestialObject body) {
                         return OrbitalMapWidget.this.isTransferEndpointRendered(body);
                     }
-                },
-                viewContext);
-            this.transferTooltipWidget = new InterplanetaryTransferSystem.OrbitalTransferTooltipWidget(
-                new InterplanetaryTransferSystem.OrbitalTransferTooltipWidget.Callbacks() {
-
-                    @Override
-                    public InterplanetaryTransferJob getHoveredTransfer() {
-                        InterplanetaryTransferJob simulatedTransfer = clientSimulatedTransferState.hoveredTransfer();
-                        return simulatedTransfer == null ? transferState.hoveredTransfer() : simulatedTransfer;
-                    }
-
-                    @Override
-                    public int getTooltipMouseX() {
-                        return clientSimulatedTransferState.hoveredTransfer() == null ? transferState.hoverX()
-                            : clientSimulatedTransferState.hoverX();
-                    }
-
-                    @Override
-                    public int getTooltipMouseY() {
-                        return clientSimulatedTransferState.hoveredTransfer() == null ? transferState.hoverY()
-                            : clientSimulatedTransferState.hoverY();
-                    }
-
                 },
                 viewContext);
             this.transferSimulatorWidget = new InterplanetaryTransferSystem.OrbitalTransferSimulatorWidget(
@@ -831,15 +807,17 @@ public class OrbitalView {
                             return;
                         }
                         if (viewRoot.objectClass() != CelestialObject.Class.STAR) {
-                            showActionStatus("Open a star system first");
+                            showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.open_system"));
                             transferSimulatorState.cancelPick();
                             return;
                         }
                         transferSimulatorState.beginPick(pickMode);
                         closeContextMenu();
                         showActionStatus(
-                            pickMode == InterplanetaryTransferSystem.TransferPickMode.ORIGIN ? "Pick transfer origin"
-                                : "Pick transfer destination");
+                            StatCollector.translateToLocal(
+                                pickMode == InterplanetaryTransferSystem.TransferPickMode.ORIGIN
+                                    ? "galaxia.gui.orbital.status.pick_origin"
+                                    : "galaxia.gui.orbital.status.pick_destination"));
                     }
 
                     @Override
@@ -967,11 +945,16 @@ public class OrbitalView {
                     }
                 },
                 viewContext);
-            this.signalsWidget = new LogisticsSignalsWidget(root, () -> this.viewRoot, () -> this.signalsOpen);
+            this.signalsWidget = new LogisticsSignalsWidget(
+                root,
+                () -> this.viewRoot,
+                () -> this.signalsOpen,
+                () -> this.signalsOpen = false);
             this.assetsPanelWidget = new SolarSystemAssetPanelWidget(
                 root,
                 () -> this.viewRoot,
                 () -> this.assetsPanelOpen,
+                () -> this.assetsPanelOpen = false,
                 assetId -> StationManagementScreen.open(assetId, isCreativeBuildModeEnabled()));
         }
 
@@ -983,6 +966,17 @@ public class OrbitalView {
         public OrbitalMapWidget setBodySelectionListener(BodySelectionListener listener) {
             this.bodySelectionListener = listener;
             return this;
+        }
+
+        /** Bounds of the satellite marker beside a body in widget-local coordinates, or null when none is drawn */
+        public @Nullable Rectangle satelliteMarkerBounds(CelestialObjectKey key) {
+            for (OrbitalScene.SatelliteMarkerBounds bounds : sceneFrame.satelliteMarkerBounds) {
+                if (key.equals(
+                    bounds.body()
+                        .key()))
+                    return bounds.rectangle();
+            }
+            return null;
         }
 
         /** Returns interaction bounds for a visible body or its navigation marker in widget-local coordinates. */
@@ -1042,10 +1036,6 @@ public class OrbitalView {
 
         public OrbitalContextMenuWidget createContextMenuWidget() {
             return contextMenuWidget;
-        }
-
-        public InterplanetaryTransferSystem.OrbitalTransferTooltipWidget createTransferTooltipWidget() {
-            return transferTooltipWidget;
         }
 
         public InterplanetaryTransferSystem.OrbitalTransferSimulatorWidget createTransferSimulatorWidget() {
@@ -1177,7 +1167,10 @@ public class OrbitalView {
                 transferSimulatorState.close();
                 CelestialClient.setShowHiddenAsteroidObjects(false);
             }
-            showActionStatus("Creative build mode " + (creativeBuildMode ? "enabled" : "disabled"));
+            showActionStatus(
+                StatCollector.translateToLocal(
+                    creativeBuildMode ? "galaxia.gui.orbital.status.creative_on"
+                        : "galaxia.gui.orbital.status.creative_off"));
         }
 
         public boolean isTransferSimulatorOpen() {
@@ -1195,16 +1188,18 @@ public class OrbitalView {
             }
             if (transferSimulatorState.isOpen()) {
                 transferSimulatorState.close();
-                showActionStatus("Transfer simulator closed");
+                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.simulator_closed"));
                 return;
             }
             transferSimulatorState.open();
-            showActionStatus("Transfer simulator opened");
+            showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.simulator_opened"));
         }
 
         @Override
         public void onInit() {
             super.onInit();
+            tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE).tooltipAutoUpdate(true)
+                .tooltipDynamic(this::hoverTooltip);
             lastAnimationFrameNanos = System.nanoTime();
             CelestialObject startingLayer = initialLayer == null ? root : initialLayer;
             resetForLayer(startingLayer);
@@ -1875,7 +1870,6 @@ public class OrbitalView {
         public void drawBackground(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
             clock.advance(isInWorld(), getServerOrbitalTime());
             updateManualDragging();
-            updateRenameFieldLayout();
             double animationSeconds = transitionState.hasPending() ? LAYER_CENTER_SECONDS
                 : isLayerSwitchActive() ? LAYER_ZOOM_PHASE_SECONDS : VIEW_ANIMATION_SECONDS;
             long nowNanos = System.nanoTime();
@@ -1985,7 +1979,6 @@ public class OrbitalView {
             sceneRenderer.drawCollectedMarkers(sceneFrame);
             drawActionStatusMessage();
             sceneRenderer.drawViewTitleBanner(viewRoot, getArea().width);
-            drawViewStatusLabel(viewRoot, getArea().width);
             drawHammerTrajectoryLoadDebug(getArea().width);
             int localMouseX = getContext().getMouseX();
             int localMouseY = getContext().getMouseY();
@@ -2021,15 +2014,13 @@ public class OrbitalView {
                 && isVisibleInCurrentLayer(focusedBody)) sceneRenderer.drawSelectionHighlight(focusedBody, sceneFrame);
             if (debugOverlayEnabled) sceneRenderer.drawDebugOverlay(sceneFrame, getArea().height);
             super.drawBackground(context, widgetTheme);
+            hoverLines.clear();
             if (!dragging && !contextMenuState.isOpen() && !assetUiState.isAssetActionsOpen()) {
                 OrbitalScene.MarkerDrawCall marker = findNavigationMarkerAt(localMouseX, localMouseY);
-                if (marker != null) drawTooltip(
-                    List.of(
-                        marker.navigationBody()
-                            .displayName()),
-                    localMouseX + 10,
-                    localMouseY + 10);
-                else drawSatelliteMarkerTooltip(sceneFrame, localMouseX, localMouseY);
+                if (marker != null) hoverLines.add(
+                    marker.navigationBody()
+                        .displayName());
+                else addSatelliteMarkerLines(sceneFrame, localMouseX, localMouseY);
             }
         }
 
@@ -2116,18 +2107,20 @@ public class OrbitalView {
             if (!transferSimulatorState.isWaitingForPick()) return false;
             if (viewRoot.objectClass() != CelestialObject.Class.STAR) {
                 transferSimulatorState.cancelPick();
-                showActionStatus("Open a star system first");
+                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.open_system"));
                 return true;
             }
             if (clickedBody == null || clickedBody == root
                 || clickedBody.objectClass() == CelestialObject.Class.GALAXY
                 || !isDescendantOrSelf(viewRoot, clickedBody)) {
                 transferSimulatorState.cancelPick();
-                showActionStatus("Pick a body from the current system");
+                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.pick_in_system"));
                 return true;
             }
             transferSimulatorState.applyPickedBody(clickedBody);
-            showActionStatus("Selected " + clickedBody.displayName());
+            showActionStatus(
+                StatCollector
+                    .translateToLocalFormatted("galaxia.gui.orbital.status.selected", clickedBody.displayName()));
             return true;
         }
 
@@ -2137,7 +2130,7 @@ public class OrbitalView {
                 : GalaxiaCelestialAPI.get(target.celestialObjectKey)
                     .orElse(null);
             if (sourceBody == null || sourceAsset == null || targetBody == null) {
-                showActionStatus("Transfer failed");
+                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.transfer_failed"));
                 return;
             }
             InterplanetaryTransferJob transfer = transferSupport.createTransferJob(
@@ -2148,11 +2141,11 @@ public class OrbitalView {
                 StarmapAssetActions.buildConstructionInventorySummary(sourceAsset),
                 clock.time());
             if (transfer == null) {
-                showActionStatus("Transfer failed");
+                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.transfer_failed"));
                 return;
             }
             transferState.addTransfer(transfer);
-            showActionStatus("Transfer dispatched");
+            showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.transfer_dispatched"));
         }
 
         private static boolean isInWorld() {
@@ -2239,38 +2232,38 @@ public class OrbitalView {
         private void dispatchSimulatedTransfer() {
             if (!transferSimulatorState.isOpen()) return;
             if (transferSimulatorState.originBody() == null || transferSimulatorState.destinationBody() == null) {
-                /// TODO: LOCALLIZE
-                showActionStatus("Select transfer origin and destination first");
+                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.select_endpoints"));
                 return;
             }
             if (!transferSimulatorState.hasPreview() || transferSimulatorState.previewTof() <= 0.0) {
-                showActionStatus("No valid transfer trajectory");
-                /// TODO: LOCALLIZE
+                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.no_trajectory"));
                 return;
             }
             InterplanetaryTransferJob transfer = transferSupport.createTransferJob(
                 root,
                 transferSimulatorState.originBody(),
                 transferSimulatorState.destinationBody(),
-                transferSimulatorState.originBody()
-                    .displayName() + " -> "
-                    + transferSimulatorState.destinationBody()
+                StatCollector.translateToLocalFormatted(
+                    "galaxia.gui.orbital.transfer.simulated_name",
+                    transferSimulatorState.originBody()
                         .displayName(),
-                "Simulation",
+                    transferSimulatorState.destinationBody()
+                        .displayName()),
+                StatCollector.translateToLocal("galaxia.gui.orbital.transfer.simulated_cargo"),
                 clock.time(),
                 transferSimulatorState.previewTof());
             if (transfer == null) {
-                showActionStatus("Transfer failed");
+                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.transfer_failed"));
                 return;
             }
             clientSimulatedTransferState.addTransfer(transfer);
-            showActionStatus("Transfer dispatched");
+            showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.transfer_dispatched"));
         }
 
         private void runTransferPlannerStressTest() {
             if (!transferSimulatorState.isOpen()) return;
             if (viewRoot.objectClass() != CelestialObject.Class.STAR) {
-                showActionStatus("Open a star system first");
+                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.open_system"));
                 return;
             }
 
@@ -2336,30 +2329,15 @@ public class OrbitalView {
                 actionStatusMessage = "";
                 return;
             }
-            // TODO: COLOR
             String[] lines = actionStatusMessage.split("\\R");
             for (int i = 0; i < lines.length; i++) {
-                Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(lines[i], 12, 36 + i * 11, 0xFFD9E0FF);
+                Minecraft.getMinecraft().fontRenderer
+                    .drawStringWithShadow(lines[i], 12, 36 + i * 11, GalaxiaGuiStyle.TEXT);
             }
         }
 
-        private void drawViewStatusLabel(CelestialObject viewRoot, int widgetWidth) {
-            if (viewRoot == null) return;
-            String title = viewRoot.objectClass() == CelestialObject.Class.GALAXY ? viewRoot.displayName()
-                : viewRoot.objectClass() == CelestialObject.Class.STAR ? viewRoot.displayName() + " System" : null;
-            if (title == null) return;
-
-            String statusText = "Zoom: x" + formatCompactDecimal(getDisplayZoomMultiplier(), 3);
-
-            Minecraft mc = Minecraft.getMinecraft();
-            int titleWidth = mc.fontRenderer.getStringWidth(title);
-            int statusX = Math.round(widgetWidth / 2f + titleWidth / 2f + 68f);
-            int statusY = 18;
-            mc.fontRenderer.drawStringWithShadow(statusText, statusX, statusY, EnumColors.MapStatusText.getColor());
-        }
-
         private void drawHammerTrajectoryLoadDebug(int widgetWidth) {
-            if (!isCreativeModeAvailable()) return;
+            if (!isCreativeBuildModeEnabled()) return;
             HammerTrajectoryLoadSample sample = CelestialClient.hammerTrajectoryLoadSample();
             String text = "route ms/tick own=" + formatDebugMillis(sample.ownMsPerTick())
                 + " all="
@@ -2367,21 +2345,13 @@ public class OrbitalView {
 
             Minecraft mc = Minecraft.getMinecraft();
             int x = Math.max(12, widgetWidth - mc.fontRenderer.getStringWidth(text) - 12);
-            mc.fontRenderer.drawStringWithShadow(text, x, 36, 0xFF9FD7FF);
+            mc.fontRenderer.drawStringWithShadow(text, x, 36, GalaxiaGuiStyle.TEXT_DIM);
         }
 
         private String formatDebugMillis(double value) {
             if (value < 1.0) return String.format(java.util.Locale.ROOT, "%.3f", value);
             if (value < 10.0) return String.format(java.util.Locale.ROOT, "%.2f", value);
             return String.format(java.util.Locale.ROOT, "%.1f", value);
-        }
-
-        private String formatCompactDecimal(double value, int maxDecimals) {
-            String text = String.format(java.util.Locale.ROOT, "%." + maxDecimals + "f", value);
-            int cut = text.length();
-            while (cut > 0 && text.charAt(cut - 1) == '0') cut--;
-            if (cut > 0 && text.charAt(cut - 1) == '.') cut--;
-            return cut <= 0 ? "0" : text.substring(0, cut);
         }
 
         private void openContextMenu(CelestialObject body, int localMouseX, int localMouseY) {
@@ -2444,13 +2414,11 @@ public class OrbitalView {
         }
 
         private String formatDecimal1(double value) {
-            long scaled = Math.round(value * 10.0);
-            return (scaled / 10L) + "." + Math.abs(scaled % 10L);
+            return String.format(java.util.Locale.ROOT, "%.1f", value);
         }
 
         private String formatDecimal2(double value) {
-            long scaled = Math.round(value * 100.0);
-            return (scaled / 100L) + "." + Math.abs((scaled / 10L) % 10L) + Math.abs(scaled % 10L);
+            return String.format(java.util.Locale.ROOT, "%.2f", value);
         }
 
         private String formatStressBenchmarkBreakdown(InterplanetaryTransferSystem.LambertStressReport report) {
@@ -2484,17 +2452,30 @@ public class OrbitalView {
             return nanos / 1_000_000.0 / Math.max(1, runs);
         }
 
-        private void drawSatelliteMarkerTooltip(OrbitalScene.OrbitalSceneFrame frame, int localMouseX,
-            int localMouseY) {
+        private void addSatelliteMarkerLines(OrbitalScene.OrbitalSceneFrame frame, int localMouseX, int localMouseY) {
             CelestialObject body = findSatelliteMarkerBodyAt(frame, localMouseX, localMouseY);
             if (body == null) return;
-            List<String> lines = new ArrayList<>();
-            lines.add(satelliteCountSummary(body, SatelliteKind.COMMUNICATION));
-            lines.add(satelliteBandwidthSummary(body));
-            lines.add(satelliteCountSummary(body, SatelliteKind.PROSPECTING));
-            satelliteScanningSummary(body).ifPresent(lines::add);
-            lines.addAll(satellitePendingDataSummaries(body));
-            drawTooltip(lines, localMouseX + 10, localMouseY + 10);
+            hoverLines.add(satelliteCountSummary(body, SatelliteKind.COMMUNICATION));
+            hoverLines.add(satelliteBandwidthSummary(body));
+            hoverLines.add(satelliteCountSummary(body, SatelliteKind.PROSPECTING));
+            satelliteScanningSummary(body).ifPresent(hoverLines::add);
+            hoverLines.addAll(satellitePendingDataSummaries(body));
+        }
+
+        /** The hovered transfer, else the marker under the cursor, as a normal tooltip */
+        private void hoverTooltip(RichTooltip tooltip) {
+            InterplanetaryTransferJob simulated = clientSimulatedTransferState.hoveredTransfer();
+            InterplanetaryTransferJob transfer = simulated == null ? transferState.hoveredTransfer() : simulated;
+            if (transfer != null) {
+                InterplanetaryTransferSystem.transferTooltip(tooltip, transfer, viewContext);
+                return;
+            }
+            for (int i = 0; i < hoverLines.size(); i++) {
+                if (i == 0) tooltip.addLine(hoverLines.get(i));
+                else tooltip.addLine(
+                    IKey.str(hoverLines.get(i))
+                        .style(EnumChatFormatting.GRAY));
+            }
         }
 
         private CelestialObject findSatelliteMarkerBodyAt(OrbitalScene.OrbitalSceneFrame frame, int localMouseX,
@@ -2503,44 +2484,6 @@ public class OrbitalView {
                 if (bounds.contains(localMouseX, localMouseY)) return bounds.body();
             }
             return null;
-        }
-
-        private void drawTooltip(List<String> lines, int x, int y) {
-            if (lines == null || lines.isEmpty()) return;
-            Minecraft mc = Minecraft.getMinecraft();
-            int width = 0;
-            for (String line : lines) {
-                width = Math.max(width, mc.fontRenderer.getStringWidth(line));
-            }
-            int padding = 6;
-            int lineHeight = 10;
-            int tooltipWidth = width + padding * 2;
-            int tooltipHeight = padding * 2 + lines.size() * lineHeight;
-            int left = Math.min(Math.max(6, x), getArea().width - tooltipWidth - 6);
-            int top = Math.min(Math.max(6, y), getArea().height - tooltipHeight - 6);
-            Gui.drawRect(left, top, left + tooltipWidth, top + tooltipHeight, EnumColors.MAP_COLOR_MODAL_BG.getColor());
-            for (int i = 0; i < lines.size(); i++) {
-                mc.fontRenderer.drawStringWithShadow(
-                    lines.get(i),
-                    left + padding,
-                    top + padding + i * lineHeight,
-                    EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-            }
-        }
-
-        private void updateRenameFieldLayout() {
-            if (renameField == null) return;
-            ButtonRect layout = assetActionsWidget.getRenameInputBounds();
-            if (layout == null) {
-                renameField.top(-1000);
-                if (renameField.isEnabled()) renameField.setEnabled(false);
-                return;
-            }
-            if (!renameField.isEnabled()) renameField.setEnabled(true);
-            renameField.left(getArea().x + layout.left())
-                .top(getArea().y + layout.top())
-                .width(layout.right() - layout.left())
-                .height(layout.bottom() - layout.top());
         }
 
         private ResourceLocation getAssetIconTexture(CelestialAsset.Kind kind) {
@@ -2555,19 +2498,14 @@ public class OrbitalView {
             return isGregTech5UnofficialNewHorizonsLoaded();
         }
 
-        private boolean canCreateBaseStation(CelestialObject body) {
-            return body != null && body.properties()
-                .canCreateStation();
-        }
-
         private boolean canCreateAutomatedStation(CelestialObject body) {
-            return canCreateBaseStation(body) && isGT5AutomationAvailable();
+            return body != null && isGT5AutomationAvailable()
+                && assetActionController.canCreateAssetOnBody(body, CelestialAsset.Kind.AUTOMATED_STATION);
         }
 
         private boolean canCreateAutomatedFacility(CelestialObject body) {
             return body != null && isGT5AutomationAvailable()
-                && body.properties()
-                    .canCreateOutpost();
+                && assetActionController.canCreateAssetOnBody(body, CelestialAsset.Kind.AUTOMATED_OUTPOST);
         }
 
         private boolean canDebugSatellites(CelestialObject body) {
@@ -2595,7 +2533,7 @@ public class OrbitalView {
             if ((operation == SatelliteMutationOperation.ADD || operation == SatelliteMutationOperation.SET)
                 && !canDebugSatellites(body)) return;
             if (StarmapActionSyncHandler.sendSatelliteMutation(currentTeamId(), body.key(), kind, operation, amount)) {
-                showActionStatus("Satellite request sent");
+                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.satellite_sent"));
             }
         }
 
@@ -2631,15 +2569,18 @@ public class OrbitalView {
                 usedKbps = networkState.usedKbps(satelliteNetworkBodyKey);
                 capacityKbps = networkState.capacityKbps(satelliteNetworkBodyKey);
             }
-            return "Bandwidth: " + SatelliteBandwidthFormatter.formatKbps(usedKbps)
-                + " / "
-                + SatelliteBandwidthFormatter.formatKbps(capacityKbps);
+            return StatCollector.translateToLocalFormatted(
+                "galaxia.satellite.tooltip.bandwidth",
+                SatelliteBandwidthFormatter.formatKbps(usedKbps),
+                SatelliteBandwidthFormatter.formatKbps(capacityKbps));
         }
 
         private java.util.Optional<String> satelliteScanningSummary(CelestialObject body) {
             if (satelliteCount(body, SatelliteKind.PROSPECTING) <= 0) return java.util.Optional.empty();
             return CelestialDiscoveryClientState.scan(body.key(), CelestialDiscoveryCapability.PROSPECTING)
-                .map(scan -> "Scanning: " + scanProgressPercent(scan) + "%");
+                .map(
+                    scan -> StatCollector
+                        .translateToLocalFormatted("galaxia.satellite.tooltip.scanning", scanProgressPercent(scan)));
         }
 
         private int scanProgressPercent(CelestialDiscoveryScanSnapshot scan) {
@@ -2657,20 +2598,25 @@ public class OrbitalView {
                 return List.of();
             return networkState.pendingData(satelliteNetworkBodyKey)
                 .stream()
-                .map(
-                    entry -> SatelliteBandwidthFormatter.formatDataDeciKb(entry.deciKb()) + " "
-                        + pendingDataLabel(entry.key())
-                        + pendingDataDestinationLabel(entry))
+                .map(this::pendingDataLine)
                 .toList();
         }
 
-        private String pendingDataDestinationLabel(SatelliteNetworkState.PendingData entry) {
+        private String pendingDataLine(SatelliteNetworkState.PendingData entry) {
+            String amount = SatelliteBandwidthFormatter.formatDataDeciKb(entry.deciKb());
+            String label = pendingDataLabel(entry.key());
             if (entry.destinationBodyKeys()
-                .isEmpty()) return " waiting";
-            return " to " + entry.destinationBodyKeys()
-                .stream()
-                .map(this::bodyDisplayName)
-                .collect(Collectors.joining(", "));
+                .isEmpty())
+                return StatCollector
+                    .translateToLocalFormatted("galaxia.satellite.tooltip.pending_waiting", amount, label);
+            return StatCollector.translateToLocalFormatted(
+                "galaxia.satellite.tooltip.pending_to",
+                amount,
+                label,
+                entry.destinationBodyKeys()
+                    .stream()
+                    .map(this::bodyDisplayName)
+                    .collect(Collectors.joining(", ")));
         }
 
         private String bodyDisplayName(CelestialObjectKey bodyKey) {
@@ -2681,13 +2627,15 @@ public class OrbitalView {
                         .name()
                         .toLowerCase(Locale.ROOT)
                         .replace('_', ' ')
-                        : bodyKey.minorBodyId()
-                            .parentBodyId()
-                            .name()
-                            .toLowerCase(Locale.ROOT)
-                            .replace('_', ' ') + " asteroid "
-                            + bodyKey.minorBodyId()
-                                .index());
+                        : StatCollector.translateToLocalFormatted(
+                            "galaxia.satellite.tooltip.asteroid",
+                            bodyKey.minorBodyId()
+                                .parentBodyId()
+                                .name()
+                                .toLowerCase(Locale.ROOT)
+                                .replace('_', ' '),
+                            bodyKey.minorBodyId()
+                                .index()));
         }
 
         private String bodyDisplayName(CelestialObjectId bodyId) {
@@ -2699,8 +2647,10 @@ public class OrbitalView {
                 .name()
                 .toLowerCase(Locale.ROOT)
                 .replace('_', ' ');
-            if (!key.hasOrigin()) return type + " data";
-            return bodyDisplayName(key.origin()) + " " + type + " data";
+            if (!key.hasOrigin())
+                return StatCollector.translateToLocalFormatted("galaxia.satellite.tooltip.data", type);
+            return StatCollector
+                .translateToLocalFormatted("galaxia.satellite.tooltip.data_from", bodyDisplayName(key.origin()), type);
         }
 
         private float getInteractionRadius(float renderedRadius) {

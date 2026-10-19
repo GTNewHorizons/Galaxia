@@ -80,7 +80,7 @@ public final class FacilityGameplayGameTests {
             .client(
                 "show station while API commands build modules",
                 c -> StationManagementScreen.open(fixture.ids.getFirst(), false))
-            .awaitClient("station observation visible", c -> GuiTestSupport.requireScreen("galaxia_station_management"))
+            .awaitClient("station observation visible", c -> GuiTestSupport.requireStation())
             .client("request paid storage and tank", c -> {
                 CelestialClient.createModules(
                     fixture.ids.getFirst(),
@@ -122,7 +122,7 @@ public final class FacilityGameplayGameTests {
             .client("register client cleanup", c -> c.afterTest(fixture::cleanupClient))
             .awaitClient("station synchronized", c -> fixture.facility(true, 0))
             .client("show station before ordering construction", c -> fixture.showStation(0))
-            .awaitClient("station observation visible", c -> GuiTestSupport.requireScreen("galaxia_station_management"))
+            .awaitClient("station observation visible", c -> GuiTestSupport.requireStation())
             .client(
                 "request paid storage construction",
                 c -> CelestialClient.createModules(
@@ -164,7 +164,7 @@ public final class FacilityGameplayGameTests {
                 "original operational storage synchronized",
                 c -> fixture.assertUpgradeState(true, ModuleTier.HV))
             .client("show storage before ordering its upgrade", c -> fixture.showStation(0))
-            .awaitClient("station observation visible", c -> GuiTestSupport.requireScreen("galaxia_station_management"))
+            .awaitClient("station observation visible", c -> GuiTestSupport.requireStation())
             .client(
                 "request paid EV storage upgrade",
                 c -> CelestialClient
@@ -195,7 +195,7 @@ public final class FacilityGameplayGameTests {
             .client("register client cleanup", c -> c.afterTest(fixture::cleanupClient))
             .awaitClient("original storage synchronized", c -> fixture.assertUpgradeState(true, ModuleTier.HV))
             .client("show storage before ordering and cancelling upgrades", c -> fixture.showStation(0))
-            .awaitClient("station observation visible", c -> GuiTestSupport.requireScreen("galaxia_station_management"))
+            .awaitClient("station observation visible", c -> GuiTestSupport.requireStation())
             .client(
                 "request paid storage upgrade",
                 c -> CelestialClient
@@ -291,7 +291,7 @@ public final class FacilityGameplayGameTests {
                 fixture.facility(true, 1);
             })
             .client("show receiving station and material-dependent construction", c -> fixture.showStation(1))
-            .awaitClient("station observation visible", c -> GuiTestSupport.requireScreen("galaxia_station_management"))
+            .awaitClient("station observation visible", c -> GuiTestSupport.requireStation())
             .client("enable supplier and order paid storage with receiver import off", c -> {
                 CelestialClient.configureHammer(
                     fixture.ids.getFirst(),

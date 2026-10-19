@@ -2,9 +2,10 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import javax.annotation.Nullable;
 
-import com.cleanroommc.modularui.widget.ParentWidget;
+import net.minecraft.util.StatCollector;
+
 import com.gtnewhorizons.galaxia.client.CelestialClient;
-import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaUi;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
@@ -13,102 +14,79 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGe
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteBandwidthFormatter;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteDataType;
 
-final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGeneratorConfigModalWidget> {
+/** Debug module that makes or uses satellite data, for testing the satellite network */
+final class DebugDataGeneratorConfigWindow implements ModuleConfigWindow {
 
-    static final int WIDTH = 236;
-    static final int HEIGHT = 208;
-
-    private static final int LEFT = 8;
-    private static final int BODY_TOP = 32;
-    private static final int BUTTON_W = 74;
-    private static final int BUTTON_H = 18;
-    private static final int SMALL_W = 24;
+    private static final int WIDE = 154;
+    private static final int STEP = 34;
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
 
-    DebugDataGeneratorConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller) {
+    DebugDataGeneratorConfigWindow(CelestialAsset.ID assetId, ModuleConfigModalController controller) {
         this.assetId = assetId;
         this.controller = controller;
-        overlay((ctx, x, y, w, h, ignoredTheme) -> draw());
-        addButtons();
     }
 
     @Override
-    public boolean canHoverThrough() {
-        return false;
+    public String title() {
+        return StatCollector.translateToLocal("galaxia.gui.station.debug_data.title");
     }
 
-    private void addButtons() {
-        child(
-            ModuleConfigModalSupport.button(() -> module() != null, this::modeLabel, this::toggleMode)
-                .pos(LEFT, BODY_TOP)
-                .size(BUTTON_W, BUTTON_H));
-        child(
-            ModuleConfigModalSupport.button(() -> module() != null, this::dataTypeLabel, this::cycleDataType)
-                .pos(LEFT, BODY_TOP + 28)
-                .size(BUTTON_W * 2 + 6, BUTTON_H));
-        child(
-            ModuleConfigModalSupport
-                .button(
-                    () -> module() != null && config().mode() == ModuleDebugDataGenerator.Mode.CONSUME,
-                    this::originLabel,
-                    this::cycleOrigin)
-                .pos(LEFT, BODY_TOP + 56)
-                .size(BUTTON_W * 2 + 6, BUTTON_H));
-        child(
-            ModuleConfigModalSupport.button(() -> module() != null, "-10", () -> adjustAmount(-10L))
-                .pos(LEFT, BODY_TOP + 90)
-                .size(SMALL_W, BUTTON_H));
-        child(
-            ModuleConfigModalSupport.button(() -> module() != null, "+10", () -> adjustAmount(10L))
-                .pos(LEFT + 126, BODY_TOP + 90)
-                .size(SMALL_W + 10, BUTTON_H));
-        child(
-            ModuleConfigModalSupport.button(() -> module() != null, "-20t", () -> adjustDuration(-20))
-                .pos(LEFT, BODY_TOP + 118)
-                .size(SMALL_W + 10, BUTTON_H));
-        child(
-            ModuleConfigModalSupport.button(() -> module() != null, "+20t", () -> adjustDuration(20))
-                .pos(LEFT + 126, BODY_TOP + 118)
-                .size(SMALL_W + 10, BUTTON_H));
+    @Override
+    public void build(GalaxiaUi.Column column) {
+        column.add(
+            GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.station.debug_data.none"))
+                .setEnabledIf(w -> module() == null));
+        column.add(GalaxiaUi.button(this::modeLabel, WIDE, () -> module() != null, this::toggleMode));
+        column.add(GalaxiaUi.button(this::dataTypeLabel, WIDE, () -> module() != null, this::cycleDataType));
+        column.add(
+            GalaxiaUi.button(
+                this::originLabel,
+                WIDE,
+                () -> module() != null && config().mode() == ModuleDebugDataGenerator.Mode.CONSUME,
+                this::cycleOrigin));
+        column.row(
+            GalaxiaUi.button(() -> "-10", STEP, () -> module() != null, () -> adjustAmount(-10L)),
+            GalaxiaUi.text(this::amountLine),
+            GalaxiaUi.button(() -> "+10", STEP, () -> module() != null, () -> adjustAmount(10L)));
+        column.row(
+            GalaxiaUi.button(() -> "-20t", STEP, () -> module() != null, () -> adjustDuration(-20)),
+            GalaxiaUi.text(this::durationLine),
+            GalaxiaUi.button(() -> "+20t", STEP, () -> module() != null, () -> adjustDuration(20)));
+        column.add(GalaxiaUi.text(() -> module() == null ? "" : progressLine()));
+        column.add(
+            GalaxiaUi.colored(
+                () -> module() == null ? "" : consumedLine(),
+                com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle.TEXT_DIM));
+        column.add(
+            GalaxiaUi.colored(
+                () -> module() == null ? "" : counterpartStatus(module()),
+                com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle.TEXT_DIM));
     }
 
-    private void draw() {
-        ModuleConfigModalSupport.drawFrame("Debug Data Generator", WIDTH, HEIGHT);
-        ModuleDebugDataGenerator generator = module();
-        if (generator == null) {
-            ModuleConfigModalSupport
-                .drawLine("No module selected", LEFT, BODY_TOP, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-            return;
-        }
-        ModuleDebugDataGenerator.Config config = generator.config();
-        int y = BODY_TOP + 88;
-        ModuleConfigModalSupport.drawCenteredLine(
-            "Amount: "
-                + SatelliteBandwidthFormatter.formatDataDeciKb(SatelliteBandwidthFormatter.kilobits(config.amountKb())),
-            82,
-            y,
-            88,
-            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-        ModuleConfigModalSupport.drawCenteredLine(
-            "Duration: " + config.durationTicks() + "t",
-            82,
-            y + 28,
-            88,
-            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-        ModuleConfigModalSupport.drawLine(
-            "Progress: " + generator.jobProgressTicks() + "/" + config.durationTicks() + "t",
-            LEFT,
-            y + 54,
-            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-        ModuleConfigModalSupport.drawLine(
-            "Consumed: " + SatelliteBandwidthFormatter.formatDataDeciKb(generator.consumedDeciKb()),
-            LEFT,
-            y + 66,
-            EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-        ModuleConfigModalSupport
-            .drawLine(counterpartStatus(generator), LEFT, y + 78, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+    private String amountLine() {
+        return StatCollector.translateToLocalFormatted(
+            "galaxia.gui.station.debug_data.amount",
+            SatelliteBandwidthFormatter.formatDataDeciKb(SatelliteBandwidthFormatter.kilobits(config().amountKb())));
+    }
+
+    private String durationLine() {
+        return StatCollector
+            .translateToLocalFormatted("galaxia.gui.station.debug_data.duration", config().durationTicks());
+    }
+
+    private String progressLine() {
+        return StatCollector.translateToLocalFormatted(
+            "galaxia.gui.station.debug_data.progress",
+            module().jobProgressTicks(),
+            config().durationTicks());
+    }
+
+    private String consumedLine() {
+        return StatCollector.translateToLocalFormatted(
+            "galaxia.gui.station.debug_data.consumed",
+            SatelliteBandwidthFormatter.formatDataDeciKb(module().consumedDeciKb()));
     }
 
     private String modeLabel() {
@@ -123,7 +101,7 @@ final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGe
 
     private String originLabel() {
         CelestialObjectKey origin = config().originBodyKey();
-        if (origin == null) return "Any origin";
+        if (origin == null) return StatCollector.translateToLocal("galaxia.gui.station.debug_data.any_origin");
         return origin.isRegistered() ? origin.registeredBodyId()
             .name() : origin.toString();
     }
@@ -206,17 +184,20 @@ final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGe
     }
 
     private @Nullable ModuleDebugDataGenerator module() {
-        ModuleInstance module = ModuleConfigModalSupport.module(assetId, controller.moduleId());
+        ModuleInstance module = StationUiData.module(assetId, controller.moduleId());
         return module != null && module.component() instanceof ModuleDebugDataGenerator generator ? generator : null;
     }
 
     private String counterpartStatus(ModuleDebugDataGenerator generator) {
         CelestialObjectKey bodyKey = generator.detectedCounterpartBodyKey();
-        String role = generator.isProducer() ? "Consumer" : "Producer";
-        if (bodyKey == null) return role + " not detected";
+        String role = StatCollector.translateToLocal(
+            generator.isProducer() ? "galaxia.gui.station.debug_data.consumer"
+                : "galaxia.gui.station.debug_data.producer");
+        if (bodyKey == null)
+            return StatCollector.translateToLocalFormatted("galaxia.gui.station.debug_data.not_detected", role);
         String label = bodyKey.isRegistered() ? bodyKey.registeredBodyId()
             .name() : bodyKey.toString();
-        return role + " detected at: " + label;
+        return StatCollector.translateToLocalFormatted("galaxia.gui.station.debug_data.detected", role, label);
     }
 
     private static @Nullable CelestialObjectKey nextOrigin(@Nullable CelestialObjectKey current) {
@@ -228,4 +209,5 @@ final class DebugDataGeneratorConfigModalWidget extends ParentWidget<DebugDataGe
         int nextOrdinal = currentId.ordinal() + 1;
         return nextOrdinal >= values.length ? null : CelestialObjectKey.registered(values[nextOrdinal]);
     }
+
 }

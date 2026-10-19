@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.block.tile.machine.gui;
 
-import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.utils.item.IItemHandler;
@@ -9,7 +8,6 @@ import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
-import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
 import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenFiller;
 
 public class OxygenFillerGUI {
@@ -33,10 +31,10 @@ public class OxygenFillerGUI {
                 .background(EnumTextures.GUI_SLOT.getImage())
                 .pos(8, GUIHelper.CONTENT_Y));
         panel.child(
-            IKey.str(">")
-                .color(GalaxiaGuiStyle.TEXT)
+            EnumTextures.GUI_ARROW.getImage()
                 .asWidget()
-                .pos(31, GUIHelper.CONTENT_Y + 5));
+                .size(8)
+                .pos(30, GUIHelper.CONTENT_Y + 5));
         panel.child(
             new ItemSlot().slot(new ModularSlot(items, 1))
                 .background(EnumTextures.GUI_SLOT.getImage())

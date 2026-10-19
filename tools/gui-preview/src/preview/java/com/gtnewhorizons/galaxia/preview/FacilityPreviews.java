@@ -1,6 +1,9 @@
 package com.gtnewhorizons.galaxia.preview;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.screen.ModularPanel;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
+import com.gtnewhorizons.galaxia.client.gui.ui.WindowSpec;
 import com.gtnewhorizons.galaxia.client.gui.station.ModulePickerScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
 import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeInputScreen;
@@ -25,24 +28,23 @@ final class FacilityPreviews {
     static PreviewEntrypoint stationManagement() {
         return PreviewEntrypoint.of(StationManagementScreen.class, context -> {
             FacilityState state = createFacility();
-            PreviewSupport.setStaticField(StationManagementScreen.class, "pendingAssetId", state.facility().assetId);
-            PreviewSupport.setStaticField(StationManagementScreen.class, "pendingCreativeBuildMode", false);
-            return new StationManagementScreen()
-                .buildUI(PreviewSupport.guiData(), PreviewSupport.sync(context), PreviewSupport.settings());
+            CelestialAsset.ID id = state.facility().assetId;
+            ModularPanel panel = PreviewSupport.windowPanel();
+            PreviewSupport.layerOf(panel).open(
+                WindowSpec.of(StationManagementScreen.windowId(id), IKey.str(state.facility().displayName()))
+                    .centered()
+                    .maxHeight(400)
+                    .body(column -> column.add(StationManagementScreen.build(id, false, 700, 400))));
+            return panel;
         });
     }
 
     static PreviewEntrypoint modulePicker() {
         return PreviewEntrypoint.of(ModulePickerScreen.class, context -> {
             FacilityState state = createFacility();
-            PreviewSupport.setStaticField(ModulePickerScreen.class, "pendingAssetId", state.facility().assetId);
-            PreviewSupport.setStaticField(ModulePickerScreen.class, "pendingCoord", StationTileCoord.of(3, 0));
-            PreviewSupport.setStaticField(ModulePickerScreen.class, "pendingInstantBuild", false);
-            PreviewSupport.setStaticField(ModulePickerScreen.class, "pendingMultipleBuild", false);
-            PreviewSupport.setStaticField(ModulePickerScreen.class, "pendingSelectedKind", null);
-            PreviewSupport.setStaticField(ModulePickerScreen.class, "pendingSettingsGroupId", null);
-            return new ModulePickerScreen()
-                .buildUI(PreviewSupport.guiData(), PreviewSupport.sync(context), PreviewSupport.settings());
+            ModularPanel panel = PreviewSupport.windowPanel();
+            ModulePickerScreen.open(PreviewSupport.layerOf(panel), state.facility().assetId, StationTileCoord.of(3, 0), false);
+            return panel;
         });
     }
 

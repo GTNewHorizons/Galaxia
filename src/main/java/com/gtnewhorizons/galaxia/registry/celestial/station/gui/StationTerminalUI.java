@@ -11,6 +11,7 @@ import net.minecraft.util.StatCollector;
 import net.minecraftforge.common.util.Constants;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
+import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.UISettings;
@@ -18,9 +19,11 @@ import com.cleanroommc.modularui.utils.serialization.ByteBufAdapters;
 import com.cleanroommc.modularui.value.sync.GenericSyncValue;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.Widget;
+import com.cleanroommc.modularui.widgets.ListWidget;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
+import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaUi;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
@@ -45,6 +48,8 @@ public final class StationTerminalUI implements IGuiHolder<StationGuiFactory.Dat
     static final String[] FUNCTIONAL_BLOCKS = { "oxygenator", "air_purifier", "wither_blocker", "cooling_coil",
         "heating_coil" };
 
+    /** Fixed lines of a formed room plus one per functional block */
+    private static final int DETAIL_LINES = 9 + FUNCTIONAL_BLOCKS.length;
     private static final int WIDTH = 330;
     private static final int HEIGHT = 214;
 
@@ -116,13 +121,22 @@ public final class StationTerminalUI implements IGuiHolder<StationGuiFactory.Dat
             new Widget<>().size(124, 148)
                 .pos(198, 30)
                 .background(EnumTextures.GUI_WELL.getImage()));
-        for (int i = 0; i < 13; i++) {
+        // Lines past the room's last one are off, so the list scrolls only over what the room has
+        ListWidget<IWidget, ?> details = new ListWidget<>();
+        details.scrollDirection(GalaxiaUi.scrollbar())
+            .pos(203, 34)
+            .size(117, 142);
+        for (int i = 0; i < DETAIL_LINES; i++) {
             final int line = i;
-            panel.child(
+            details.child(
                 GalaxiaGuiStyle.label(() -> view.detailLine(line), () -> view.detailColor(line), 0.6f)
-                    .pos(203, 35 + i * 10)
+                    .height(10)
+                    .setEnabledIf(
+                        w -> !view.detailLine(line)
+                            .isEmpty())
                     .name(i == 0 ? "station.room_title" : null));
         }
+        panel.child(details);
 
         // Station totals
         panel.child(
