@@ -21,11 +21,13 @@ import javax.annotation.Nullable;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.StatCollector;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.value.DoubleValue;
 import com.cleanroommc.modularui.value.StringValue;
 import com.cleanroommc.modularui.widget.ParentWidget;
@@ -37,8 +39,8 @@ import com.cleanroommc.modularui.widgets.SliderWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
-import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
 import com.gtnewhorizons.galaxia.core.state.CelestialObjectKeyState;
 import com.gtnewhorizons.galaxia.core.state.NbtReader;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.Endpoint.Kind;
@@ -63,35 +65,45 @@ public final class VehicleScheduleUI {
     private static final int WIDTH = 600;
     private static final int HEIGHT = 400;
     private static final int INSET = 10;
-    private static final int HEADER = 58;
+    private static final int HEADER = 76;
     private static final int LIST_WIDTH = 268;
     private static final int DETAIL_X = 290;
     private static final int DETAIL_WIDTH = 300;
-    private static final int CONTENT_HEIGHT = 292;
+    private static final int CONTENT_HEIGHT = 274;
     private static final int CARD_HEADER_HEIGHT = 52;
-    private static final int ACTION_ROW_HEIGHT = 24;
+    private static final int ACTION_ROW_HEIGHT = 28;
     private static final int CARD_PADDING = 6;
+    private static final int CARD_GAP = 6;
+    private static final int LIST_PADDING = 4;
+    private static final int CARD_HEADER_INSET = 3;
+    private static final int ACTION_INDENT = 20;
     private static final int CARD_BUTTON_GAP = 4;
     private static final int ACTION_BUTTON_HEIGHT = 21;
-    private static final int ACTION_KIND_WIDTH = 57;
-    private static final int ACTION_RESOURCE_WIDTH = 132;
-    private static final int ACTION_AMOUNT_WIDTH = 59;
-    private static final int ACTION_ARGUMENT_X = ACTION_KIND_WIDTH + CARD_BUTTON_GAP;
-    private static final int ACTION_AMOUNT_X = ACTION_ARGUMENT_X + ACTION_RESOURCE_WIDTH + CARD_BUTTON_GAP;
-    private static final int CARD_ADD_WIDTH = 82;
-    private static final int CARD_ACTIONS_HEIGHT = 54;
+    private static final int ACTION_EDIT_WIDTH = 40;
+    private static final int ACTION_REMOVE_WIDTH = 48;
+    private static final int CARD_ACTIONS_HEIGHT = ACTION_BUTTON_HEIGHT + 2 * CARD_BUTTON_GAP;
     private static final int INSPECTOR_HEADER_HEIGHT = 40;
-    private static final int TRAVEL_HEADER_Y = 76;
-    private static final int TRAVEL_DETAILS_Y = 104;
+    private static final int SECTION_LABEL_HEIGHT = 18;
+    private static final int ACTION_CHOICE_HEIGHT = 40;
+    private static final int ACTION_CHOICE_DESCRIPTION_Y = 23;
+    private static final int DESTINATION_FIELD_Y = 16;
+    private static final int ARRIVAL_LABEL_Y = 48;
+    private static final int ARRIVAL_FIELD_Y = 64;
+    private static final int ARRIVAL_CONTEXT_WIDTH = 96;
+    private static final int ARRIVAL_SITE_X = 102;
+    private static final int DOCK_POLICY_Y = 88;
+    private static final int TRAVEL_HEADER_Y = 116;
+    private static final int TRAVEL_DETAILS_Y = 144;
     private static final int TRAVEL_DETAILS_HEIGHT = 224;
     private static final int SUMMARY_ROW_HEIGHT = 18;
     private static final int BODY_SELECTION_WIDTH = 270;
     private static final int BODY_SELECTION_HEIGHT = 96;
     private static final int WARNING_WIDTH = 440;
     private static final int WARNING_HEIGHT = 208;
-    private static final int TEXT = EnumColors.MAP_COLOR_TEXT_BODY.getColor();
-    private static final int MUTED = EnumColors.MAP_COLOR_TEXT_MUTED.getColor();
-    private static final int ACCENT = EnumColors.MAP_COLOR_MODAL_ACCENT.getColor();
+    private static final int FOOTER_HEIGHT = 46;
+    private static final int TEXT = GalaxiaGuiStyle.TEXT;
+    private static final int MUTED = GalaxiaGuiStyle.TEXT_DIM;
+    private static final int ACCENT = GalaxiaGuiStyle.ACCENT;
 
     private VehicleScheduleUI() {}
 
@@ -834,6 +846,7 @@ public final class VehicleScheduleUI {
 
     private enum Picker {
         NONE,
+        ACTION,
         ENDPOINT,
         RESOURCE,
     }
@@ -849,11 +862,24 @@ public final class VehicleScheduleUI {
                 return super.getScale() * fit;
             }
         }.size(WIDTH, HEIGHT)
-            .background(new Rectangle().color(EnumColors.MAP_COLOR_MODAL_BG.getColor()));
-        panel.child(
-            new ParentWidget<>().pos(0, 0)
-                .size(WIDTH, 29)
-                .background(new Rectangle().color(EnumColors.MAP_COLOR_MODAL_HEADER.getColor())));
+            .background((context, x, y, width, height, theme) -> {
+                EnumTextures.GUI_PANEL.getImage()
+                    .draw(context, x, y, width, height, theme);
+                EnumTextures.GUI_WELL.getImage()
+                    .draw(context, x + 4, y + height - FOOTER_HEIGHT, width - 8, FOOTER_HEIGHT - 4, theme);
+            });
+        BooleanSupplier unsaved = () -> session.dirty() || panel.getContext()
+            .getFocusedWidget()
+            .getElement() instanceof ScheduleField field
+            && !field.getText()
+                .equals(
+                    field.getStringValue()
+                        .getStringValue());
+        var header = new ParentWidget<>().pos(4, 4)
+            .widthRelOffset(1f, -8)
+            .height(25)
+            .background(EnumTextures.GUI_WELL.getImage());
+        panel.child(header);
         panel.child(
             new ParentWidget<>().pos(INSET, 6)
                 .size(16, 16)
@@ -862,7 +888,7 @@ public final class VehicleScheduleUI {
             IKey.lang(PREFIX + "title")
                 .asWidget()
                 .pos(34, 10)
-                .color(ACCENT));
+                .color(TEXT));
         panel.child(
             buttonText(
                 () -> session.view == null ? tr("vehicle")
@@ -880,15 +906,21 @@ public final class VehicleScheduleUI {
                     if (!session.vehicles.isEmpty())
                         session.selectVehicle.accept(session.vehicles.get((index + 1) % session.vehicles.size()));
                 }).name("rocket.schedule.vehicle")
-                    .pos(350, 6)
-                    .size(206, 18)
+                    .relative(header)
+                    .right(40)
+                    .top(0)
+                    .widthRel(0.35f)
+                    .heightRel(1f)
                     .setEnabledIf(
                         widget -> session.vehicles.size() > 1 && !session.pending && !session.warningRequired()));
         panel.child(
             ButtonWidget.panelCloseButton()
                 .name("rocket.schedule.close"));
         panel.child(
-            button("add_visit", session::addVisit).pos(INSET, 35)
+            button("add_visit", session::addVisit).primaryWhen(
+                () -> session.draft != null && session.draft.visits()
+                    .isEmpty())
+                .pos(INSET, 35)
                 .size(100, 18)
                 .setEnabledIf(
                     widget -> session.view != null && !session.manual
@@ -924,11 +956,18 @@ public final class VehicleScheduleUI {
                             && !session.pending
                             && !session.warningRequired()));
         panel.child(
-            IKey.dynamic(() -> session.view == null ? tr("loading") : tr("revision", session.view.revision()))
+            IKey.dynamic(
+                () -> session.view == null ? tr("loading")
+                    : session.pending ? tr("pending") : unsaved.getAsBoolean() ? tr("unsaved") : tr("saved"))
                 .asWidget()
-                .name("rocket.schedule.revision")
-                .pos(402, 40)
-                .color(MUTED));
+                .name("rocket.schedule.save_state")
+                .pos(398, 35)
+                .size(84, 18)
+                .color(() -> unsaved.getAsBoolean() ? GalaxiaGuiStyle.WARN : MUTED)
+                .tooltip(
+                    t -> {
+                        if (session.view != null) t.addLine(IKey.lang(PREFIX + "revision", session.view.revision()));
+                    }));
 
         var content = new ScheduleContent(session);
         panel.child(content);
@@ -939,26 +978,22 @@ public final class VehicleScheduleUI {
                 .pos(INSET, HEIGHT - 42)
                 .size(WIDTH - 2 * INSET, 16)
                 .color(
-                    () -> !session.safeDurability() ? EnumColors.MAP_COLOR_TEXT_DANGER.getColor()
-                        : session.problemKey != null ? EnumColors.MAP_COLOR_TEXT_WARNING.getColor() : MUTED));
+                    () -> !session.safeDurability() ? GalaxiaGuiStyle.BAD
+                        : session.problemKey != null || session.view != null && session.view.problemKey() != null
+                            || session.draft != null && !session.draft.hasValidRefueling() ? GalaxiaGuiStyle.WARN
+                                : MUTED));
         panel.child(button("cancel", () -> {
             session.cancel();
             panel.closeIfOpen();
-        }).pos(WIDTH - 240, HEIGHT - 25)
+        }).quiet()
+            .pos(WIDTH - 240, HEIGHT - 25)
             .size(70, 18));
-        var save = button("save", session::requestSave).pos(WIDTH - 164, HEIGHT - 25)
-            .size(70, 18);
+        var save = button("save", session::requestSave).primaryWhen(unsaved)
+            .pos(WIDTH - 164, HEIGHT - 25)
+            .size(70, 18)
+            .tooltip(t -> t.addLine(IKey.lang(PREFIX + "save_hint")));
         save.setEnabledIf(
-            widget -> (session.dirty() || panel.getContext()
-                .getFocusedWidget()
-                .getElement() instanceof ScheduleField field
-                && !field.getText()
-                    .equals(
-                        field.getStringValue()
-                            .getStringValue()))
-                && !session.manual
-                && !session.pending
-                && !session.warningRequired());
+            widget -> unsaved.getAsBoolean() && !session.manual && !session.pending && !session.warningRequired());
         save.onMousePressed(mouse -> {
             if (mouse != 0) return false;
             // MUI removes focus after dispatching the press. Save needs the committed field first.
@@ -970,19 +1005,29 @@ public final class VehicleScheduleUI {
         });
         panel.child(save);
         panel.child(
-            button("start", session::requestStart).pos(WIDTH - 88, HEIGHT - 25)
+            button("start", session::requestStart)
+                .primaryWhen(
+                    () -> !unsaved.getAsBoolean() && session.draft != null
+                        && !session.draft.visits()
+                            .isEmpty())
+                .tooltip(
+                    t -> t.addLine(IKey.dynamic(() -> tr(unsaved.getAsBoolean() ? "start_unsaved" : "start_hint"))))
+                .pos(WIDTH - 88, HEIGHT - 25)
                 .size(78, 18)
                 .setEnabledIf(
                     widget -> session.view != null && session.view.manualMission() == null
                         && !session.manual
-                        && !session.dirty()
+                        && !unsaved.getAsBoolean()
                         && !session.pending
                         && !session.warningRequired()
-                        && session.start != null));
+                        && session.start != null
+                        && !session.draft.visits()
+                            .isEmpty()));
         panel.child(buttonText(() -> tr(session.overview ? "schedule_view" : "overview"), () -> {
             session.overview = !session.overview;
             session.changed();
-        }).name("rocket.schedule.overview")
+        }).quiet()
+            .name("rocket.schedule.overview")
             .pos(WIDTH - 110, 35)
             .size(100, 18)
             .setEnabledIf(widget -> session.view != null && !session.manual && !session.warningRequired()));
@@ -992,10 +1037,42 @@ public final class VehicleScheduleUI {
                 session.picker = Picker.NONE;
                 session.changed();
             } else session.openManual();
-        }).name("rocket.schedule.manual")
+        }).quiet()
+            .name("rocket.schedule.manual")
             .pos(INSET, HEIGHT - 25)
             .size(110, 18)
             .setEnabledIf(w -> session.view != null && !session.pending && !session.warningRequired()));
+        var sections = new ParentWidget<>().pos(INSET, HEADER - SECTION_LABEL_HEIGHT)
+            .size(WIDTH - 2 * INSET, SECTION_LABEL_HEIGHT)
+            .setEnabledIf(
+                widget -> session.view != null && session.draft != null
+                    && !session.manual
+                    && !session.overview
+                    && !session.warningRequired());
+        sections.child(
+            IKey.dynamic(
+                () -> tr(
+                    "route_count",
+                    session.draft == null ? 0
+                        : session.draft.visits()
+                            .size()))
+                .asWidget()
+                .name("rocket.schedule.route.heading")
+                .size(LIST_WIDTH, 14)
+                .color(MUTED));
+        sections.child(
+            IKey.dynamic(
+                () -> tr(
+                    session.picker == Picker.ACTION ? "choose_action"
+                        : session.picker == Picker.RESOURCE ? "choose_resource"
+                            : session.picker == Picker.ENDPOINT ? "choose_endpoint"
+                                : session.selectedAction == null ? "destination_settings" : "action_settings"))
+                .asWidget()
+                .name("rocket.schedule.details.heading")
+                .pos(DETAIL_X - INSET, 0)
+                .size(DETAIL_WIDTH, 14)
+                .color(MUTED));
+        panel.child(sections);
         panel.onCloseAction(session::cancel);
         return panel;
     }
@@ -1033,7 +1110,7 @@ public final class VehicleScheduleUI {
             name(name);
             size(width, height);
             rows.pos(0, 0)
-                .width(width);
+                .widthRel(1f);
             rows.resizer()
                 .coverChildrenHeight(0);
             child(rows);
@@ -1072,8 +1149,10 @@ public final class VehicleScheduleUI {
     private static final class ScheduleContent extends ParentWidget<ScheduleContent> {
 
         private final Session session;
-        private final ParentWidget<?> main = new ParentWidget<>().size(WIDTH - 2 * INSET, CONTENT_HEIGHT);
-        private final ParentWidget<?> overlay = new ParentWidget<>().size(WIDTH - 2 * INSET, CONTENT_HEIGHT);
+        private final ParentWidget<?> main = new ParentWidget<>().widthRel(1f)
+            .heightRel(1f);
+        private final ParentWidget<?> overlay = new ParentWidget<>().widthRel(1f)
+            .heightRel(1f);
         private final ScrollContent visits;
         private final ParentWidget<?> heading = new ParentWidget<>().pos(DETAIL_X - INSET, 0)
             .size(DETAIL_WIDTH, INSPECTOR_HEADER_HEIGHT);
@@ -1108,8 +1187,9 @@ public final class VehicleScheduleUI {
                 value -> session.choicesScroll = value);
             name("rocket.schedule.content");
             pos(INSET, HEADER);
-            size(WIDTH - 2 * INSET, CONTENT_HEIGHT);
-            visits.background(new Rectangle().color(EnumColors.MAP_COLOR_SCROLL_BG.getColor()));
+            widthRelOffset(1f, -2 * INSET).height(CONTENT_HEIGHT);
+            visits.background(EnumTextures.GUI_WELL.getImage());
+            visits.rows.padding(LIST_PADDING);
             inspector.pos(DETAIL_X - INSET, INSPECTOR_HEADER_HEIGHT);
             pickerHeader.pos(DETAIL_X - INSET, INSPECTOR_HEADER_HEIGHT);
             choices.pos(DETAIL_X - INSET, INSPECTOR_HEADER_HEIGHT + 25);
@@ -1156,7 +1236,8 @@ public final class VehicleScheduleUI {
                 visits.rows.child(
                     IKey.lang(PREFIX + "empty")
                         .asWidget()
-                        .size(LIST_WIDTH - 12, 48)
+                        .widthRelOffset(1f, -12)
+                        .height(48)
                         .color(MUTED)
                         .margin(6));
             for (int i = 0; i < session.draft.visits()
@@ -1191,7 +1272,7 @@ public final class VehicleScheduleUI {
                         .asWidget()
                         .name("rocket.schedule.inspector.target")
                         .size(DETAIL_WIDTH, 18)
-                        .color(ACCENT));
+                        .color(TEXT));
                 heading.child(
                     IKey.dynamic(() -> placeContext(inspected.place(), session.catalog))
                         .asWidget()
@@ -1203,14 +1284,12 @@ public final class VehicleScheduleUI {
                     if (shownPicker != session.picker) choices.scrollData.scrollTo(choices.getScrollArea(), 0);
                     picker(pickerHeader, choices.rows, session);
                 } else {
-                    var editor = new ParentWidget<>().width(DETAIL_WIDTH);
+                    var editor = new ParentWidget<>().widthRel(1f);
+                    editor.resizer()
+                        .coverChildrenHeight(0);
                     if (session.selectedAction != null) {
-                        editor.height(CONTENT_HEIGHT - INSPECTOR_HEADER_HEIGHT);
                         actionDetails(editor, session);
                     } else {
-                        boolean expanded = incomingLeg(session) != null
-                            && incomingLeg(session).equals(session.selectedLeg);
-                        editor.height(expanded ? TRAVEL_DETAILS_Y + TRAVEL_DETAILS_HEIGHT + 60 : 150);
                         visitDetails(editor, session);
                     }
                     inspector.rows.child(editor);
@@ -1382,13 +1461,13 @@ public final class VehicleScheduleUI {
         var dialog = new ParentWidget<>().name("rocket.schedule.risk")
             .pos((WIDTH - 2 * INSET - WARNING_WIDTH) / 2, (CONTENT_HEIGHT - WARNING_HEIGHT) / 2)
             .size(WARNING_WIDTH, WARNING_HEIGHT)
-            .background(new Rectangle().color(EnumColors.MAP_COLOR_MODAL_HEADER.getColor()));
+            .background(EnumTextures.GUI_PANEL.getImage());
         dialog.child(
             IKey.lang(PREFIX + "risk_title")
                 .asWidget()
                 .pos(INSET, INSET)
                 .size(WARNING_WIDTH - 2 * INSET, 18)
-                .color(EnumColors.MAP_COLOR_TEXT_WARNING.getColor()));
+                .color(GalaxiaGuiStyle.WARN));
         dialog.child(
             IKey.lang(PREFIX + (warning.returnDataAvailable() ? "risk_without_replenishment" : "risk_return_unknown"))
                 .asWidget()
@@ -1449,52 +1528,58 @@ public final class VehicleScheduleUI {
         boolean expanded = visit.id()
             .equals(session.selectedVisit);
         boolean editable = session.editable(visit.id());
-        int actionRows = visit.actions()
-            .stream()
-            .mapToInt(
-                action -> action instanceof VehicleSchedule.Refuel refuel ? Math.max(
-                    1,
-                    refuel.targets()
-                        .size())
-                    : 1)
-            .sum();
-        int height = CARD_HEADER_HEIGHT
-            + (expanded ? ACTION_ROW_HEIGHT + actionRows * ACTION_ROW_HEIGHT + (editable ? CARD_ACTIONS_HEIGHT : 38)
-                : 0);
+        int height = CARD_HEADER_HEIGHT + (expanded ? ACTION_ROW_HEIGHT + visit.actions()
+            .size() * ACTION_ROW_HEIGHT + (editable ? CARD_ACTIONS_HEIGHT : 38) : 0);
         var row = new ParentWidget<>().name("rocket.schedule.visit." + visit.id())
-            .size(LIST_WIDTH, height)
-            .background(
-                new Rectangle().color(
-                    expanded ? EnumColors.MAP_COLOR_MODAL_HEADER.getColor() : EnumColors.MAP_COLOR_ROW_BG.getColor()));
+            .widthRel(1f)
+            .height(height)
+            .marginBottom(CARD_GAP)
+            .background(EnumTextures.GUI_PANEL.getImage());
+        var headerBackground = expanded ? EnumTextures.GUI_BUTTON_SELECTED.getImage()
+            : EnumTextures.GUI_BUTTON.getImage();
+        Supplier<String> destinationLabel = () -> ordinal + ". " + destinationName(visit.place(), session.catalog);
         row.child(
-            buttonText(
-                () -> ordinal + ". " + destinationName(visit.place(), session.catalog),
-                () -> session.selectVisit(visit.id())).name("rocket.schedule.select." + visit.id())
-                    .pos(3, 2)
-                    .size(LIST_WIDTH - 77, 22));
+            buttonText(destinationLabel, () -> session.selectVisit(visit.id())).background(headerBackground)
+                .overlay(
+                    IKey.dynamic(destinationLabel)
+                        .color(TEXT)
+                        .alignment(Alignment.CenterLeft)
+                        .asIcon()
+                        .expandWidth()
+                        .marginLeft(CARD_PADDING - CARD_HEADER_INSET)
+                        .marginRight(CARD_PADDING))
+                .name("rocket.schedule.select." + visit.id())
+                .pos(CARD_HEADER_INSET, 2)
+                .widthRelOffset(1f, -77)
+                .height(22));
         row.child(
             button("settings", () -> session.selectVisit(visit.id())).name("rocket.schedule.settings." + visit.id())
-                .pos(LIST_WIDTH - 72, 2)
+                .right(3)
+                .top(2)
                 .size(69, 22));
         row.child(
             IKey.dynamic(() -> placeContext(visit.place(), session.catalog))
                 .asWidget()
                 .pos(CARD_PADDING, 29)
-                .size(LIST_WIDTH - 65, 18)
+                .widthRelOffset(1f, -65)
+                .height(18)
                 .color(MUTED));
         row.child(
             symbol("^", () -> session.moveVisit(visit.id(), -1)).name("rocket.schedule.visit.up." + visit.id())
-                .pos(LIST_WIDTH - 57, 27)
+                .right(39)
+                .top(27)
                 .size(18, 18)
                 .setEnabledIf(w -> editable));
         row.child(
             symbol("v", () -> session.moveVisit(visit.id(), 1)).name("rocket.schedule.visit.down." + visit.id())
-                .pos(LIST_WIDTH - 38, 27)
+                .right(20)
+                .top(27)
                 .size(18, 18)
                 .setEnabledIf(w -> editable));
         row.child(
             symbol("x", () -> session.removeVisit(visit.id())).name("rocket.schedule.visit.remove." + visit.id())
-                .pos(LIST_WIDTH - 19, 27)
+                .right(1)
+                .top(27)
                 .size(18, 18)
                 .setEnabledIf(w -> editable));
         if (!expanded) return row;
@@ -1503,119 +1588,74 @@ public final class VehicleScheduleUI {
                 PREFIX + (visit.place()
                     .context() == VehicleSchedule.Context.SURFACE ? "after_landing" : "after_arrival"))
                 .asWidget()
-                .pos(CARD_PADDING, CARD_HEADER_HEIGHT + 3)
-                .size(LIST_WIDTH - 2 * CARD_PADDING, 18)
-                .color(ACCENT));
+                .pos(ACTION_INDENT, CARD_HEADER_HEIGHT + 3)
+                .widthRelOffset(1f, -ACTION_INDENT - CARD_PADDING)
+                .height(18)
+                .color(MUTED));
         int y = CARD_HEADER_HEIGHT + ACTION_ROW_HEIGHT;
         for (var action : visit.actions()) {
-            if (action instanceof VehicleSchedule.Refuel refuel && !refuel.targets()
-                .isEmpty()) {
-                int targetIndex = 0;
-                for (var target : refuel.targets()
-                    .entrySet()) {
-                    String suffix = "." + target.getKey()
-                        .fluid()
-                        .getName() + "." + targetIndex++;
-                    row.child(
-                        arrivalActionRow(session, visit, action, target.getKey(), target.getValue(), suffix, editable)
-                            .pos(CARD_PADDING, y));
-                    y += ACTION_ROW_HEIGHT;
-                }
-            } else {
-                row.child(
-                    arrivalActionRow(session, visit, action, actionResource(action), actionAmount(action), "", editable)
-                        .pos(CARD_PADDING, y));
-                y += ACTION_ROW_HEIGHT;
-            }
+            row.child(arrivalActionRow(session, visit, action, editable).pos(ACTION_INDENT, y));
+            y += ACTION_ROW_HEIGHT;
         }
         if (editable) {
             row.child(
-                button("load", () -> addAction(session, "load")).pos(CARD_PADDING, y + CARD_BUTTON_GAP)
-                    .size(CARD_ADD_WIDTH, ACTION_BUTTON_HEIGHT));
-            row.child(
-                button("unload", () -> addAction(session, "unload"))
-                    .pos(CARD_PADDING + CARD_ADD_WIDTH + CARD_BUTTON_GAP, y + CARD_BUTTON_GAP)
-                    .size(CARD_ADD_WIDTH, ACTION_BUTTON_HEIGHT));
-            row.child(
-                button("refuel", () -> addAction(session, "refuel"))
-                    .pos(CARD_PADDING + 2 * (CARD_ADD_WIDTH + CARD_BUTTON_GAP), y + CARD_BUTTON_GAP)
-                    .size(CARD_ADD_WIDTH, ACTION_BUTTON_HEIGHT)
-                    .setEnabledIf(
-                        w -> visit.place()
-                            .canRefuel())
-                    .tooltip(t -> t.addLine(IKey.lang(PREFIX + "refuel_silo_hint"))));
-            int serviceWidth = (LIST_WIDTH - 2 * CARD_PADDING - CARD_BUTTON_GAP) / 2;
-            int serviceY = y + 2 * CARD_BUTTON_GAP + ACTION_BUTTON_HEIGHT;
-            row.child(
-                button("repair", () -> addAction(session, "repair")).pos(CARD_PADDING, serviceY)
-                    .size(serviceWidth, ACTION_BUTTON_HEIGHT)
-                    .setEnabledIf(
-                        w -> visit.place()
-                            .target() != null
-                            && visit.place()
-                                .target()
-                                .kind() == Kind.LANDING_PAD));
-            row.child(
-                button("deploy", () -> addAction(session, "deploy"))
-                    .pos(CARD_PADDING + serviceWidth + CARD_BUTTON_GAP, serviceY)
-                    .size(serviceWidth, ACTION_BUTTON_HEIGHT));
+                button("add_action", () -> openPicker(session, Picker.ACTION)).pos(ACTION_INDENT, y + CARD_BUTTON_GAP)
+                    .widthRelOffset(1f, -ACTION_INDENT - CARD_PADDING)
+                    .height(ACTION_BUTTON_HEIGHT));
         } else {
             row.child(
                 IKey.lang(PREFIX + "active_locked")
                     .asWidget()
-                    .pos(CARD_PADDING, y + CARD_BUTTON_GAP)
-                    .size(LIST_WIDTH - 2 * CARD_PADDING, 34)
+                    .pos(ACTION_INDENT, y + CARD_BUTTON_GAP)
+                    .widthRelOffset(1f, -ACTION_INDENT - CARD_PADDING)
+                    .height(34)
                     .color(MUTED));
         }
         return row;
     }
 
     private static ParentWidget<?> arrivalActionRow(Session session, VehicleSchedule.Visit visit,
-        VehicleSchedule.Action action, @Nullable InventoryKey resource, long amount, String targetSuffix, boolean editable) {
-        String targetId = action.id() + targetSuffix;
-        var row = new ParentWidget<>().name("rocket.schedule.action." + targetId)
-            .size(LIST_WIDTH - 2 * CARD_PADDING, ACTION_ROW_HEIGHT);
+        VehicleSchedule.Action action, boolean editable) {
+        var row = new ParentWidget<>().name("rocket.schedule.action." + action.id())
+            .widthRelOffset(1f, -ACTION_INDENT - CARD_PADDING).height(ACTION_ROW_HEIGHT)
+            .background(EnumTextures.GUI_WELL.getImage());
         String type = switch (action) {
             case VehicleSchedule.Transfer transfer -> transfer.direction() == VehicleSchedule.Direction.LOAD ? "load" : "unload";
             case VehicleSchedule.Refuel ignored -> "refuel";
             case VehicleSchedule.Deploy ignored -> "deploy";
             case VehicleSchedule.Repair ignored -> "repair";
         };
-        row.child(button(type, () -> openAction(session, visit.id(), action.id(), false))
-            .name("rocket.schedule.action.edit." + targetId).pos(0, 1).size(ACTION_KIND_WIDTH, ACTION_BUTTON_HEIGHT)
+        String parameter = switch (action) {
+            case VehicleSchedule.Refuel refuel -> refuel.toFull() ? tr("refuel_full")
+                : refuel.targets().isEmpty() ? tr("refuel_choose_targets")
+                : refuel.targets().entrySet().stream()
+                    .map(target -> tr("summary_amount", resourceName(target.getKey()), target.getValue()))
+                    .collect(java.util.stream.Collectors.joining(", "));
+            case VehicleSchedule.Repair repair -> tr("repair_below", Math.round(repair.thresholdPercent()));
+            default -> tr("summary_amount", resourceName(actionResource(action)), actionAmount(action));
+        };
+        String summary = tr("action_summary", tr(type), parameter);
+        row.child(IKey.str(summary).asWidget()
+            .name("rocket.schedule.action.summary." + action.id()).pos(3, 3)
+            .widthRelOffset(1f, -ACTION_EDIT_WIDTH - ACTION_REMOVE_WIDTH - 2 * CARD_BUTTON_GAP - 3)
+            .height(ACTION_BUTTON_HEIGHT).color(TEXT)
+            .tooltip(t -> t.addLine(IKey.str(summary))));
+        row.child(button("edit", () -> openAction(session, visit.id(), action.id()))
+            .name("rocket.schedule.action.edit." + action.id())
+            .right(ACTION_REMOVE_WIDTH + CARD_BUTTON_GAP).top(3).size(ACTION_EDIT_WIDTH, ACTION_BUTTON_HEIGHT)
             .setEnabledIf(w -> editable));
-        if (action instanceof VehicleSchedule.Refuel refuel && (refuel.toFull() || refuel.targets().isEmpty())) {
-            row.child(button(refuel.toFull() ? "refuel_full" : "refuel_choose_targets",
-                () -> openAction(session, visit.id(), action.id(), false))
-                    .name("rocket.schedule.action.amount." + targetId).pos(ACTION_ARGUMENT_X, 1)
-                    .size(ACTION_RESOURCE_WIDTH + CARD_BUTTON_GAP + ACTION_AMOUNT_WIDTH, ACTION_BUTTON_HEIGHT)
-                    .setEnabledIf(w -> editable));
-        } else if (action instanceof VehicleSchedule.Repair repair) {
-            row.child(buttonText(() -> tr("repair_below", Math.round(repair.thresholdPercent())),
-                () -> openAction(session, visit.id(), action.id(), false))
-                    .name("rocket.schedule.action.amount." + targetId).pos(ACTION_ARGUMENT_X, 1)
-                    .size(ACTION_RESOURCE_WIDTH + CARD_BUTTON_GAP + ACTION_AMOUNT_WIDTH, ACTION_BUTTON_HEIGHT)
-                    .setEnabledIf(w -> editable));
-        } else {
-            row.child(buttonText(() -> resourceName(resource),
-                () -> openAction(session, visit.id(), action.id(), !(action instanceof VehicleSchedule.Refuel)))
-                    .name("rocket.schedule.action.resource." + targetId).pos(ACTION_ARGUMENT_X, 1)
-                    .size(ACTION_RESOURCE_WIDTH, ACTION_BUTTON_HEIGHT)
-                    .tooltip(t -> t.addLine(IKey.str(resourceName(resource)))).setEnabledIf(w -> editable));
-            row.child(buttonText(() -> Long.toString(amount),
-                () -> openAction(session, visit.id(), action.id(), false))
-                    .name("rocket.schedule.action.amount." + targetId).pos(ACTION_AMOUNT_X, 1)
-                    .size(ACTION_AMOUNT_WIDTH, ACTION_BUTTON_HEIGHT).setEnabledIf(w -> editable));
-        }
+        row.child(button("remove", () -> session.removeAction(action.id())).quiet().danger()
+            .name("rocket.schedule.action.remove." + action.id())
+            .right(0).top(3)
+            .size(ACTION_REMOVE_WIDTH, ACTION_BUTTON_HEIGHT).setEnabledIf(w -> editable));
         return row;
     }
 
-    private static void openAction(Session session, UUID visit, UUID action, boolean resource) {
+    private static void openAction(Session session, UUID visit, UUID action) {
         if (!session.editable(visit)) return;
         session.selectVisit(visit);
         session.selectedAction = action;
-        if (resource) openPicker(session, Picker.RESOURCE);
-        else session.changed();
+        session.changed();
     }
 
     @Nullable
@@ -1649,8 +1689,9 @@ public final class VehicleScheduleUI {
                     visit.place()
                         .body(),
                     session.catalog)).name("rocket.schedule.body")
-                        .pos(0, 0)
-                        .size(DETAIL_WIDTH, 20)
+                        .pos(0, DESTINATION_FIELD_Y)
+                        .widthRel(1f)
+                        .height(20)
                         .setEnabledIf(w -> editable && session.bodyMap != null));
         details.child(
             buttonText(
@@ -1667,14 +1708,15 @@ public final class VehicleScheduleUI {
                             .context() == VehicleSchedule.Context.SURFACE ? VehicleSchedule.Context.ORBIT
                                 : VehicleSchedule.Context.SURFACE,
                         null))).name("rocket.schedule.context")
-                            .pos(0, 25)
-                            .size(96, 18)
+                            .pos(0, ARRIVAL_FIELD_Y)
+                            .size(ARRIVAL_CONTEXT_WIDTH, 20)
                             .setEnabledIf(w -> editable));
         details.child(
             buttonText(() -> targetName(visit.place(), session.catalog), () -> openPicker(session, Picker.ENDPOINT))
                 .name("rocket.schedule.target")
-                .pos(102, 25)
-                .size(DETAIL_WIDTH - 102, 18)
+                .pos(ARRIVAL_SITE_X, ARRIVAL_FIELD_Y)
+                .widthRelOffset(1f, -ARRIVAL_SITE_X)
+                .height(20)
                 .setEnabledIf(w -> editable));
         details.child(
             buttonText(
@@ -1682,8 +1724,9 @@ public final class VehicleScheduleUI {
                 () -> session.replaceVisit(
                     new VehicleSchedule.Visit(visit.id(), visit.place(), visit.actions(), !visit.blockDockActions())))
                         .name("rocket.schedule.dock_policy")
-                        .pos(0, 48)
-                        .size(DETAIL_WIDTH, 18)
+                        .pos(0, DOCK_POLICY_Y)
+                        .widthRel(1f)
+                        .height(20)
                         .setEnabledIf(w -> editable));
         var incoming = incomingLeg(session);
         boolean expanded = incoming != null && incoming.equals(session.selectedLeg);
@@ -1693,10 +1736,12 @@ public final class VehicleScheduleUI {
                 session.changed();
             }).name("rocket.schedule.travel." + incoming.fromVisit() + "." + incoming.toVisit())
                 .pos(0, TRAVEL_HEADER_Y)
-                .size(DETAIL_WIDTH, 22));
+                .widthRel(1f)
+                .height(22));
             if (expanded) {
                 var travel = new ParentWidget<>().pos(0, TRAVEL_DETAILS_Y)
-                    .size(DETAIL_WIDTH, TRAVEL_DETAILS_HEIGHT);
+                    .widthRel(1f)
+                    .height(TRAVEL_DETAILS_HEIGHT);
                 routeDetails(travel, session);
                 details.child(travel);
             }
@@ -1704,8 +1749,32 @@ public final class VehicleScheduleUI {
         details.child(
             IKey.lang(PREFIX + (editable ? "arrival_edit_hint" : "active_locked"))
                 .asWidget()
-                .pos(0, expanded ? TRAVEL_DETAILS_Y + TRAVEL_DETAILS_HEIGHT + 8 : incoming == null ? 88 : 108)
-                .size(DETAIL_WIDTH, 50)
+                .pos(
+                    0,
+                    expanded ? TRAVEL_DETAILS_Y + TRAVEL_DETAILS_HEIGHT + 8
+                        : incoming == null ? DOCK_POLICY_Y + 32 : TRAVEL_HEADER_Y + 32)
+                .widthRel(1f)
+                .height(50)
+                .color(MUTED));
+        details.child(
+            IKey.lang(PREFIX + "destination_body")
+                .asWidget()
+                .pos(0, 0)
+                .widthRel(1f)
+                .height(12)
+                .color(MUTED));
+        details.child(
+            IKey.lang(PREFIX + "arrival_mode")
+                .asWidget()
+                .pos(0, ARRIVAL_LABEL_Y)
+                .size(ARRIVAL_CONTEXT_WIDTH, 12)
+                .color(MUTED));
+        details.child(
+            IKey.lang(PREFIX + "arrival_site")
+                .asWidget()
+                .pos(ARRIVAL_SITE_X, ARRIVAL_LABEL_Y)
+                .widthRelOffset(1f, -ARRIVAL_SITE_X)
+                .height(12)
                 .color(MUTED));
     }
 
@@ -1727,7 +1796,8 @@ public final class VehicleScheduleUI {
             IKey.lang(PREFIX + "generated_travel")
                 .asWidget()
                 .pos(0, 21)
-                .size(DETAIL_WIDTH, 25)
+                .widthRel(1f)
+                .height(25)
                 .color(MUTED));
         details.child(
             IKey.lang(PREFIX + "allowance")
@@ -1768,13 +1838,15 @@ public final class VehicleScheduleUI {
                             settings.priority()
                                 .toggled())))).name("rocket.schedule.priority")
                                     .pos(0, 92)
-                                    .size(DETAIL_WIDTH, 22)
+                                    .widthRel(1f)
+                                    .height(22)
                                     .setEnabledIf(w -> editable));
         details.child(
             IKey.lang(PREFIX + "server_validation")
                 .asWidget()
                 .pos(0, 197)
-                .size(DETAIL_WIDTH, 26)
+                .widthRel(1f)
+                .height(26)
                 .color(MUTED));
         final Catalog[] evaluatedCatalog = { null };
         final LocalVehicle[] evaluatedVehicle = { null };
@@ -1787,7 +1859,8 @@ public final class VehicleScheduleUI {
                 guidance[0] = forecastText(session, leg);
             }
             return guidance[0];
-        }).pos(0, 126));
+        }).pos(0, 126)
+            .widthRel(1f));
     }
 
     private static String forecastText(Session session, VehicleSchedule.Leg leg) {
@@ -2026,6 +2099,7 @@ public final class VehicleScheduleUI {
         actions.add(action);
         session.replaceVisit(new VehicleSchedule.Visit(visit.id(), visit.place(), actions, visit.blockDockActions()));
         session.selectedAction = id;
+        session.picker = Picker.NONE;
     }
 
     private static VehicleSchedule.Action selectedAction(Session session) {
@@ -2056,31 +2130,37 @@ public final class VehicleScheduleUI {
             .size(80, 18));
         details.child(
             symbol("^", () -> session.moveAction(action.id(), -1)).name("rocket.schedule.action.up." + action.id())
-                .pos(218, 0)
+                .right(56)
+                .top(0)
                 .size(24, 18)
                 .setEnabledIf(w -> editable));
         details.child(
             symbol("v", () -> session.moveAction(action.id(), 1)).name("rocket.schedule.action.down." + action.id())
-                .pos(246, 0)
+                .right(28)
+                .top(0)
                 .size(24, 18)
                 .setEnabledIf(w -> editable));
         details.child(
-            symbol("x", () -> session.removeAction(action.id())).name("rocket.schedule.action.remove." + action.id())
-                .pos(274, 0)
+            symbol("x", () -> session.removeAction(action.id()))
+                .name("rocket.schedule.action.details.remove." + action.id())
+                .right(0)
+                .top(0)
                 .size(24, 18)
                 .setEnabledIf(w -> editable));
         details.child(
             IKey.dynamic(() -> actionName(action))
                 .asWidget()
                 .pos(0, 30)
-                .size(DETAIL_WIDTH, 20)
+                .widthRel(1f)
+                .height(20)
                 .color(ACCENT));
         if (action instanceof VehicleSchedule.Repair repair) {
             details.child(
                 IKey.lang(PREFIX + "repair_threshold")
                     .asWidget()
                     .pos(0, 66)
-                    .size(DETAIL_WIDTH, 34)
+                    .widthRel(1f)
+                    .height(34)
                     .color(TEXT));
             details.child(
                 field(
@@ -2095,7 +2175,8 @@ public final class VehicleScheduleUI {
                 IKey.lang(PREFIX + "repair_hint")
                     .asWidget()
                     .pos(0, 139)
-                    .size(DETAIL_WIDTH, 25)
+                    .widthRel(1f)
+                    .height(25)
                     .color(MUTED));
             if (editable) {
                 final double[] threshold = { repair.thresholdPercent() };
@@ -2104,8 +2185,9 @@ public final class VehicleScheduleUI {
                     .value(new DoubleValue.Dynamic(() -> threshold[0], value -> threshold[0] = value))
                     .name("rocket.schedule.threshold.slider")
                     .pos(132, 108)
-                    .size(DETAIL_WIDTH - 132, 20)
-                    .background(new Rectangle().color(EnumColors.MAP_COLOR_RENAME_INPUT_BG.getColor()));
+                    .widthRelOffset(1f, -132)
+                    .height(20)
+                    .background(EnumTextures.GUI_WELL.getImage());
                 slider.onUpdateListener(widget -> {
                     if (!widget.isDragging() && threshold[0] != repair.thresholdPercent())
                         session.replaceAction(new VehicleSchedule.Repair(action.id(), threshold[0]));
@@ -2125,7 +2207,8 @@ public final class VehicleScheduleUI {
                     .color(ACCENT));
             var modules = new ListWidget<>().name("rocket.schedule.repair.candidates")
                 .pos(0, 185)
-                .size(DETAIL_WIDTH, 38);
+                .widthRel(1f)
+                .height(38);
             var displayed = new ArrayList<Rocket.ModuleView>();
             modules.onUpdateListener(widget -> {
                 if (displayed.equals(session.view.modules())) return;
@@ -2139,7 +2222,8 @@ public final class VehicleScheduleUI {
                             StatCollector.translateToLocal(module.nameKey()),
                             Math.round(module.durabilityPercent()))
                             .asWidget()
-                            .size(DETAIL_WIDTH, SUMMARY_ROW_HEIGHT)
+                            .widthRel(1f)
+                            .height(SUMMARY_ROW_HEIGHT)
                             .color(TEXT));
                 }
                 widget.scheduleResize();
@@ -2155,7 +2239,8 @@ public final class VehicleScheduleUI {
             buttonText(() -> resourceName(actionResource(action)), () -> openPicker(session, Picker.RESOURCE))
                 .name("rocket.schedule.resource")
                 .pos(0, 65)
-                .size(DETAIL_WIDTH, 24)
+                .widthRel(1f)
+                .height(24)
                 .setEnabledIf(w -> editable));
         details.child(
             IKey.lang(PREFIX + (action instanceof VehicleSchedule.Refuel ? "target_amount" : "amount"))
@@ -2182,13 +2267,15 @@ public final class VehicleScheduleUI {
                         transfer.direction() == VehicleSchedule.Direction.LOAD ? VehicleSchedule.Direction.UNLOAD
                             : VehicleSchedule.Direction.LOAD))).name("rocket.schedule.direction")
                                 .pos(0, 156)
-                                .size(DETAIL_WIDTH, 20)
+                                .widthRel(1f)
+                                .height(20)
                                 .setEnabledIf(w -> editable));
         details.child(
             IKey.lang(PREFIX + (action instanceof VehicleSchedule.Deploy ? "deploy_hint" : "exact_hint"))
                 .asWidget()
                 .pos(0, 188)
-                .size(DETAIL_WIDTH, 34)
+                .widthRel(1f)
+                .height(34)
                 .color(MUTED));
     }
 
@@ -2201,14 +2288,16 @@ public final class VehicleScheduleUI {
                     refuel.toFull() ? new VehicleSchedule.Refuel(refuel.id(), Map.of())
                         : VehicleSchedule.Refuel.full(refuel.id()))).name("rocket.schedule.refuel.mode")
                             .pos(0, 56)
-                            .size(DETAIL_WIDTH, 22)
+                            .widthRel(1f)
+                            .height(22)
                             .setEnabledIf(w -> editable));
         if (refuel.toFull()) {
             details.child(
                 IKey.lang(PREFIX + "refuel_full_hint")
                     .asWidget()
                     .pos(0, 90)
-                    .size(DETAIL_WIDTH, 60)
+                    .widthRel(1f)
+                    .height(60)
                     .color(MUTED));
             return;
         }
@@ -2218,28 +2307,33 @@ public final class VehicleScheduleUI {
                 .pos(0, 88)
                 .color(TEXT));
         var targets = new ListWidget<>().pos(0, 106)
-            .size(DETAIL_WIDTH, 86);
+            .widthRel(1f)
+            .height(86);
         for (var entry : refuel.targets()
             .entrySet()) {
-            var row = new ParentWidget<>().size(DETAIL_WIDTH, 35);
+            var row = new ParentWidget<>().widthRel(1f)
+                .height(35);
             row.child(
                 IKey.dynamic(() -> resourceName(entry.getKey()))
                     .asWidget()
                     .pos(0, 3)
-                    .size(170, 28)
+                    .widthRelOffset(1f, -126)
+                    .height(28)
                     .color(TEXT));
             row.child(field(session, () -> Long.toString(entry.getValue()), value -> {
                 var edited = new java.util.LinkedHashMap<>(refuel.targets());
                 edited.put(entry.getKey(), Long.parseLong(value));
                 session.replaceAction(new VehicleSchedule.Refuel(refuel.id(), edited));
-            }).pos(174, 4)
+            }).right(26)
+                .top(4)
                 .size(96, 20)
                 .setEnabledIf(w -> editable));
             row.child(symbol("x", () -> {
                 var edited = new java.util.LinkedHashMap<>(refuel.targets());
                 edited.remove(entry.getKey());
                 session.replaceAction(new VehicleSchedule.Refuel(refuel.id(), edited));
-            }).pos(276, 4)
+            }).right(0)
+                .top(4)
                 .size(20, 20)
                 .setEnabledIf(w -> editable));
             targets.child(row);
@@ -2253,7 +2347,8 @@ public final class VehicleScheduleUI {
             IKey.lang(PREFIX + "refuel_hint")
                 .asWidget()
                 .pos(0, 230)
-                .size(DETAIL_WIDTH, 14)
+                .widthRel(1f)
+                .height(14)
                 .color(MUTED));
     }
 
@@ -2327,8 +2422,55 @@ public final class VehicleScheduleUI {
             session.changed();
         }).name("rocket.schedule.search")
             .pos(67, 0)
-            .size(DETAIL_WIDTH - 67, 18));
+            .widthRelOffset(1f, -67)
+            .height(18)
+            .hintText(tr("search_choices")));
         switch (session.picker) {
+            case ACTION -> {
+                var place = session.visit()
+                    .place();
+                boolean found = false;
+                for (String type : List.of("load", "unload", "refuel", "repair", "deploy")) {
+                    if (!matches(tr(type), session.search)) continue;
+                    found = true;
+                    boolean available = switch (type) {
+                        case "refuel" -> place.canRefuel();
+                        case "repair" -> place.target() != null && place.target()
+                            .kind() == Kind.LANDING_PAD;
+                        default -> true;
+                    };
+                    var row = new ParentWidget<>().widthRel(1f)
+                        .height(ACTION_CHOICE_HEIGHT);
+                    row.child(
+                        button(type, () -> addAction(session, type)).widthRel(1f)
+                            .height(ACTION_BUTTON_HEIGHT)
+                            .overlay(
+                                IKey.lang(PREFIX + type)
+                                    .color(available ? TEXT : MUTED)
+                                    .alignment(Alignment.CenterLeft)
+                                    .asIcon()
+                                    .expandWidth()
+                                    .marginLeft(CARD_PADDING)
+                                    .marginRight(CARD_PADDING))
+                            .setEnabledIf(w -> available));
+                    String description = !available && type.equals("refuel") ? "refuel_silo_hint"
+                        : !available && type.equals("repair") ? "repair_pad_hint" : "action_description." + type;
+                    row.child(
+                        IKey.lang(PREFIX + description)
+                            .asWidget()
+                            .pos(CARD_PADDING, ACTION_CHOICE_DESCRIPTION_Y)
+                            .widthRelOffset(1f, -2 * CARD_PADDING)
+                            .height(ACTION_CHOICE_HEIGHT - ACTION_CHOICE_DESCRIPTION_Y)
+                            .color(available ? MUTED : GalaxiaGuiStyle.WARN));
+                    choices.child(row);
+                }
+                if (!found) choices.child(
+                    IKey.lang(PREFIX + "no_matching_actions")
+                        .asWidget()
+                        .widthRel(1f)
+                        .height(ACTION_CHOICE_HEIGHT)
+                        .color(MUTED));
+            }
             case ENDPOINT -> endpointChoices(choices, session);
             case RESOURCE -> {
                 var action = selectedAction(session);
@@ -2339,7 +2481,8 @@ public final class VehicleScheduleUI {
                     choices.child(buttonText(() -> resourceName(resource), () -> {
                         session.replaceAction(withResource(action, resource));
                         session.picker = Picker.NONE;
-                    }).size(DETAIL_WIDTH, 22));
+                    }).widthRel(1f)
+                        .height(22));
                 }
             }
             default -> {}
@@ -2365,12 +2508,14 @@ public final class VehicleScheduleUI {
             choices.child(button("no_endpoint", () -> {
                 session.replacePlace(new VehicleSchedule.Place(place.body(), place.context(), null));
                 session.picker = Picker.NONE;
-            }).size(DETAIL_WIDTH, 22));
+            }).widthRel(1f)
+                .height(22));
         } else {
             choices.child(
                 IKey.lang(PREFIX + "manual_automation_hint")
                     .asWidget()
-                    .size(DETAIL_WIDTH, 38)
+                    .widthRel(1f)
+                    .height(38)
                     .color(MUTED));
         }
         choices.child(
@@ -2382,7 +2527,8 @@ public final class VehicleScheduleUI {
                     session.groupKind = Kind.values()[(session.groupKind.ordinal() + 1) % Kind.values().length];
                     session.changed();
                 }).name("rocket.schedule.group_kind")
-                    .size(DETAIL_WIDTH, 22));
+                    .widthRel(1f)
+                    .height(22));
         choices.child(buttonText(() -> groupScope(session), () -> {
             var scopes = new ArrayList<UUID>();
             scopes.add(null);
@@ -2396,7 +2542,8 @@ public final class VehicleScheduleUI {
             session.groupStation = scopes.get((scopes.indexOf(session.groupStation) + 1) % scopes.size());
             session.changed();
         }).name("rocket.schedule.group_scope")
-            .size(DETAIL_WIDTH, 22));
+            .widthRel(1f)
+            .height(22));
         choices.child(
             field(
                 session,
@@ -2413,17 +2560,20 @@ public final class VehicleScheduleUI {
                     }
                 }).name("rocket.schedule.group_name")
                     .hintText(tr("group_name_hint"))
-                    .size(DETAIL_WIDTH, 20));
+                    .widthRel(1f)
+                    .height(20));
         choices.child(
             IKey.lang(PREFIX + "group_hint")
                 .asWidget()
-                .size(DETAIL_WIDTH, 32)
+                .widthRel(1f)
+                .height(32)
                 .color(MUTED));
         for (var endpoint : session.catalog.endpoints()) {
             if (!endpoint.body()
                 .equals(place.body()) || endpoint.context() != place.context()
                 || !matches(endpoint.routingName(), session.search)) continue;
-            var row = new ParentWidget<>().size(DETAIL_WIDTH, 43);
+            var row = new ParentWidget<>().widthRel(1f)
+                .height(43);
             row.child(
                 buttonText(
                     () -> endpoint.routingName() + "  ["
@@ -2438,7 +2588,8 @@ public final class VehicleScheduleUI {
                                 place.context(),
                                 new VehicleSchedule.Exact(endpoint.endpointId(), endpoint.kind())));
                         session.picker = Picker.NONE;
-                    }).size(DETAIL_WIDTH, 22));
+                    }).widthRel(1f)
+                        .height(22));
             row.child(buttonText(() -> tr("group_named", endpoint.routingName()), () -> {
                 session.replacePlace(
                     new VehicleSchedule.Place(
@@ -2447,7 +2598,8 @@ public final class VehicleScheduleUI {
                         new VehicleSchedule.Group(endpoint.routingName(), endpoint.kind(), endpoint.stationId())));
                 session.picker = Picker.NONE;
             }).pos(10, 23)
-                .size(DETAIL_WIDTH - 10, 18));
+                .widthRelOffset(1f, -10)
+                .height(18));
             choices.child(row);
         }
     }
@@ -2596,25 +2748,19 @@ public final class VehicleScheduleUI {
             case "v" -> "move_down";
             default -> "remove";
         };
-        return buttonText(() -> text, action).tooltip(tooltip -> tooltip.addLine(IKey.lang(PREFIX + key)));
+        return buttonText(() -> text, action).quiet()
+            .dangerIf("x".equals(text))
+            .tooltip(tooltip -> tooltip.addLine(IKey.lang(PREFIX + key)));
     }
 
     private static ScheduleButton buttonText(Supplier<String> text, Runnable action) {
         var button = new ScheduleButton();
-        return button
-            .background(
-                new DynamicDrawable(
-                    () -> new Rectangle().color(
-                        button.canInteract.getAsBoolean() ? EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor()
-                            : EnumColors.MAP_COLOR_ROW_BG.getColor())))
-            .hoverBackground(
-                new DynamicDrawable(
-                    () -> new Rectangle().color(
-                        button.canInteract.getAsBoolean() ? EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor()
-                            : EnumColors.MAP_COLOR_ROW_BG.getColor())))
+        return button.background(new DynamicDrawable(() -> button.surface(false)))
+            .hoverBackground(new DynamicDrawable(() -> button.surface(true)))
             .overlay(
                 IKey.dynamic(text)
-                    .color(() -> button.canInteract.getAsBoolean() ? TEXT : MUTED))
+                    .color(button::textColor)
+                    .shadow(false))
             .onMousePressed(mouse -> {
                 if (mouse != 0 || !button.canInteract.getAsBoolean()) return false;
                 action.run();
@@ -2626,6 +2772,46 @@ public final class VehicleScheduleUI {
     private static final class ScheduleButton extends ButtonWidget<ScheduleButton> {
 
         private BooleanSupplier canInteract = () -> true;
+        private BooleanSupplier primary = () -> false;
+        private boolean quiet;
+        private boolean danger;
+
+        private ScheduleButton primaryWhen(BooleanSupplier condition) {
+            primary = condition;
+            return this;
+        }
+
+        private ScheduleButton quiet() {
+            quiet = true;
+            return this;
+        }
+
+        private ScheduleButton danger() {
+            return dangerIf(true);
+        }
+
+        private ScheduleButton dangerIf(boolean value) {
+            danger = value;
+            return this;
+        }
+
+        private int textColor() {
+            if (!canInteract.getAsBoolean()) return MUTED;
+            if (primary.getAsBoolean()) return GalaxiaGuiStyle.TEXT_TITLE;
+            return danger ? GalaxiaGuiStyle.BAD : TEXT;
+        }
+
+        private IDrawable surface(boolean hovered) {
+            boolean enabled = canInteract.getAsBoolean();
+            if (quiet && (!hovered || !enabled)) return IDrawable.EMPTY;
+            if (!enabled) return EnumTextures.GUI_WELL.getImage();
+            if (primary.getAsBoolean()) return hovered ? IDrawable.of(
+                EnumTextures.GUI_BUTTON_SELECTED.getImage(),
+                new Rectangle().hollow(1)
+                    .color(GalaxiaGuiStyle.TEXT_TITLE))
+                : EnumTextures.GUI_BUTTON_SELECTED.getImage();
+            return hovered ? EnumTextures.GUI_BUTTON_HOVERED.getImage() : EnumTextures.GUI_BUTTON.getImage();
+        }
 
         @Override
         public ScheduleButton setEnabledIf(Predicate<ScheduleButton> condition) {
@@ -2645,7 +2831,8 @@ public final class VehicleScheduleUI {
             .setMaxLength(80)
             .autoUpdateOnChange(false)
             .setTextColor(TEXT)
-            .background(new Rectangle().color(EnumColors.MAP_COLOR_RENAME_INPUT_BG.getColor()));
+            .hintColor(MUTED)
+            .background(EnumTextures.GUI_WELL.getImage());
     }
 
     private static final class ScheduleField extends TextFieldWidget {

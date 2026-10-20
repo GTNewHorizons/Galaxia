@@ -149,6 +149,14 @@ public enum EnumTextures {
     SILO_STAGE_SINGLE("textures/gui/silo/stages/stage_single.png"),
     SILO_STAGE_SINGLE_HOVERED("textures/gui/silo/stages/stage_single_hovered.png"),
 
+    // Shared GUI surfaces, with fixed borders and stretchable centres.
+    GUI_PANEL("textures/gui/common/panel.png", 16, 2),
+    GUI_WELL("textures/gui/common/well.png", 16, 2),
+    GUI_BUTTON("textures/gui/common/button.png", 16, 2),
+    GUI_BUTTON_HOVERED("textures/gui/common/button_hovered.png", 16, 2),
+    GUI_BUTTON_SELECTED("textures/gui/common/button_selected.png", 16, 2),
+    GUI_SLOT("textures/gui/common/slot.png"),
+
     // Add more textures here
     ; // leave trailing semicolon
 
@@ -158,6 +166,16 @@ public enum EnumTextures {
     EnumTextures(String location) {
         this.texture = LocationGalaxia(location);
         this.uiTexture = UITexture.fullImage(Galaxia.MODID, location);
+    }
+
+    /** A square texture whose border stays fixed while the centre stretches. */
+    EnumTextures(String location, int size, int border) {
+        this.texture = LocationGalaxia(location);
+        this.uiTexture = UITexture.builder()
+            .location(Galaxia.MODID, location)
+            .imageSize(size, size)
+            .adaptable(border)
+            .build();
     }
 
     public ResourceLocation get() {

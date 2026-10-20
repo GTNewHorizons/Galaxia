@@ -87,6 +87,7 @@ public final class RocketScheduleGuiGameTests {
             .click(control("rocket.schedule.group_name"))
             .key(Keyboard.KEY_G, 'g')
             .click(control("rocket.schedule.back"))
+            .click(control("rocket.schedule.add_action"))
             .click(control("rocket.schedule.repair"))
             .click(control("rocket.schedule.threshold"))
             .key(Keyboard.KEY_END, '\0');
@@ -94,6 +95,7 @@ public final class RocketScheduleGuiGameTests {
         scenario.key(Keyboard.KEY_3, '3')
             .key(Keyboard.KEY_5, '5')
             .click(control("rocket.schedule.back"))
+            .click(control("rocket.schedule.add_action"))
             .click(control("rocket.schedule.refuel"))
             .server(
                 "draft has not changed accepted schedule",
@@ -347,6 +349,7 @@ public final class RocketScheduleGuiGameTests {
             .click(control("rocket.schedule.group_name"))
             .key(Keyboard.KEY_G, 'g')
             .click(control("rocket.schedule.back"))
+            .click(control("rocket.schedule.add_action"))
             .click(control("rocket.schedule.unload"))
             .click(control("rocket.schedule.resource"))
             .click(
@@ -356,6 +359,7 @@ public final class RocketScheduleGuiGameTests {
                         fixture.dish.toStack(1)
                             .getDisplayName())))
             .click(control("rocket.schedule.back"))
+            .click(control("rocket.schedule.add_action"))
             .click(control("rocket.schedule.load"))
             .click(control("rocket.schedule.resource"))
             .click(
@@ -365,6 +369,7 @@ public final class RocketScheduleGuiGameTests {
                         fixture.dish.toStack(1)
                             .getDisplayName())))
             .click(control("rocket.schedule.back"))
+            .click(control("rocket.schedule.add_action"))
             .click(control("rocket.schedule.refuel"))
             .click(control("rocket.schedule.back"))
             .click(control("rocket.schedule.save"))
@@ -376,7 +381,7 @@ public final class RocketScheduleGuiGameTests {
             .click(
                 ClientTarget.of(
                     "open saved tank-to-full action",
-                    ignored -> GuiTestSupport.namedTarget("rocket.schedule.action.amount." + fixture.refuelAction)))
+                    ignored -> GuiTestSupport.namedTarget("rocket.schedule.action.edit." + fixture.refuelAction)))
             .awaitClient("full refuel requires no numeric input", ignored -> {
                 var details = GuiTestSupport.findNamedWidget("rocket.schedule.inspector");
                 if (details == null) throw new AssertionError("Action inspector has not opened");
@@ -395,6 +400,7 @@ public final class RocketScheduleGuiGameTests {
         scenario.key(Keyboard.KEY_2, '2')
             .key(Keyboard.KEY_0, '0')
             .click(control("rocket.schedule.back"))
+            .click(control("rocket.schedule.add_action"))
             .click(control("rocket.schedule.deploy"))
             .click(control("rocket.schedule.resource"))
             .click(
@@ -409,9 +415,10 @@ public final class RocketScheduleGuiGameTests {
             .awaitClient("saved resource actions synchronized", ignored -> fixture.assertClientRevision())
             .click(
                 ClientTarget.of(
-                    "edit cargo resource directly on destination card",
+                    "open cargo settings from destination card",
                     ignored -> GuiTestSupport
-                        .namedTarget("rocket.schedule.action.resource." + fixture.resourceActionIds.getFirst())))
+                        .namedTarget("rocket.schedule.action.edit." + fixture.resourceActionIds.getFirst())))
+            .click(control("rocket.schedule.resource"))
             .click(
                 ClientTarget.of(
                     "keep selected cargo",
@@ -421,9 +428,9 @@ public final class RocketScheduleGuiGameTests {
             .click(control("rocket.schedule.back"))
             .click(
                 ClientTarget.of(
-                    "edit cargo amount directly on destination card",
+                    "reopen cargo settings to edit its amount",
                     ignored -> GuiTestSupport
-                        .namedTarget("rocket.schedule.action.amount." + fixture.resourceActionIds.getFirst())))
+                        .namedTarget("rocket.schedule.action.edit." + fixture.resourceActionIds.getFirst())))
             .click(control("rocket.schedule.amount"))
             .key(Keyboard.KEY_END, '\0')
             .key(Keyboard.KEY_BACK, '\b')
