@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import net.minecraft.entity.player.EntityPlayer;
 
@@ -42,6 +43,21 @@ public final class GTTeamsCompat {
         if (playerId == null) return null;
         Team team = TeamManager.getTeamByPlayer(playerId);
         return team != null ? team.getTeamId() : null;
+    }
+
+    /** Resolves physical ownership references through the surviving team's persisted merge history. */
+    @Nullable
+    public static UUID resolveTeamId(@Nullable UUID teamId) {
+        if (teamId == null) return null;
+        Team active = TeamManager.getTeamById(teamId);
+        if (active != null) return active.getTeamId();
+        for (Team team : TeamManager.getTeamMap()
+            .values()) {
+            if (team.getData(GalaxiaTeamData.ID) instanceof GalaxiaTeamData data && data.hasMergedTeamId(teamId)) {
+                return team.getTeamId();
+            }
+        }
+        return null;
     }
 
     @SideOnly(Side.CLIENT)

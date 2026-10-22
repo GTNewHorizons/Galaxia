@@ -1,10 +1,17 @@
 package com.gtnewhorizons.galaxia.compat.teams;
 
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
+import javax.annotation.Nonnull;
+
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.nbt.NBTTagString;
+import net.minecraftforge.common.util.Constants.NBT;
 
 import com.gtnewhorizon.gtnhlib.teams.INetworkTeamData;
 import com.gtnewhorizon.gtnhlib.teams.ITeamData;
@@ -17,6 +24,7 @@ public class GalaxiaTeamData implements INetworkTeamData {
     public static final String ID = "GALAXIA";
 
     private final EnumMap<TeamAction, TeamRole> permissions = new EnumMap<>(TeamAction.class);
+    private final Set<UUID> mergedTeamIds = new HashSet<>();
 
     @Override
     public void writeToNBT(NBTTagCompound tag) {
@@ -33,11 +41,19 @@ public class GalaxiaTeamData implements INetworkTeamData {
         }
         tag.setIntArray("permActions", actionOrdinals);
         tag.setIntArray("permRoles", roleOrdinals);
+        NBTTagList merged = new NBTTagList();
+        mergedTeamIds.stream()
+            .sorted()
+            .forEach(id -> merged.appendTag(new NBTTagString(id.toString())));
+        tag.setTag("mergedTeamIds", merged);
     }
 
     @Override
     public void readFromNBT(NBTTagCompound tag) {
         permissions.clear();
+        mergedTeamIds.clear();
+        NBTTagList merged = tag.getTagList("mergedTeamIds", NBT.TAG_STRING);
+        for (int i = 0; i < merged.tagCount(); i++) mergedTeamIds.add(UUID.fromString(merged.getStringTagAt(i)));
         if (tag.hasKey("permActions")) {
             int[] actions = tag.getIntArray("permActions");
             int[] roles = tag.getIntArray("permRoles");
@@ -54,7 +70,9 @@ public class GalaxiaTeamData implements INetworkTeamData {
 
     @Override
     public void mergeData(Team consumed, Team surviving, ITeamData oldTeamData) {
+        mergedTeamIds.add(consumed.getTeamId());
         if (oldTeamData instanceof GalaxiaTeamData other) {
+            mergedTeamIds.addAll(other.mergedTeamIds);
             this.permissions.clear();
             this.permissions.putAll(other.permissions);
 
@@ -79,6 +97,10 @@ public class GalaxiaTeamData implements INetworkTeamData {
 
     @Override
     public void markSyncedToClient() {}
+
+    public boolean hasMergedTeamId(@Nonnull UUID teamId) {
+        return mergedTeamIds.contains(teamId);
+    }
 
     public TeamRole getRequiredRole(TeamAction action) {
         return permissions.getOrDefault(action, action.getDefaultRole());
