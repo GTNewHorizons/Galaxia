@@ -19,6 +19,106 @@ public class ConfigMachines {
     @Config.LangKey("galaxia.config.category.machines.filler")
     public static final OxygenFiller filler = new OxygenFiller();
 
+    @Config.LangKey("galaxia.config.category.machines.android")
+    public static final Android android = new Android();
+
+    /** EV operating and charging costs. Each chassis supplies its own scaling. */
+    public static class Android {
+
+        @Config.LangKey("galaxia.config.machines.android.max_health")
+        @Config.DefaultFloat(20)
+        @Config.RangeFloat(min = 1f, max = 1000f)
+        public float maxHealth;
+
+        @Config.LangKey("galaxia.config.machines.android.required_bandwidth")
+        @Config.DefaultInt(64)
+        @Config.RangeInt(min = 1, max = 1000000)
+        public int requiredBandwidthKbps;
+
+        @Config.LangKey("galaxia.config.machines.android.base_energy")
+        @Config.DefaultInt(128)
+        @Config.RangeInt(min = 0, max = 1000000)
+        public int baseEnergyPerTick;
+
+        @Config.LangKey("galaxia.config.machines.android.walking_energy")
+        @Config.DefaultInt(64)
+        @Config.RangeInt(min = 0, max = 1000000)
+        public int walkingEnergyPerTick;
+
+        @Config.LangKey("galaxia.config.machines.android.sprinting_energy")
+        @Config.DefaultInt(192)
+        @Config.RangeInt(min = 0, max = 1000000)
+        public int sprintingEnergyPerTick;
+
+        @Config.LangKey("galaxia.config.machines.android.jump_energy")
+        @Config.DefaultInt(640)
+        @Config.RangeInt(min = 0, max = 1000000)
+        public int jumpEnergy;
+
+        @Config.LangKey("galaxia.config.machines.android.heating_energy")
+        @Config.DefaultInt(128)
+        @Config.RangeInt(min = 0, max = 1000000)
+        public int heatingEnergyPerTick;
+
+        @Config.LangKey("galaxia.config.machines.android.zero_g_energy")
+        @Config.DefaultInt(128)
+        @Config.RangeInt(min = 0, max = 1000000)
+        public int zeroGEnergyPerTick;
+
+        @Config.LangKey("galaxia.config.machines.android.capsule_energy")
+        @Config.DefaultInt(128)
+        @Config.RangeInt(min = 1, max = 1000000)
+        public int capsuleEuPerTick;
+
+        @Config.LangKey("galaxia.config.machines.android.dock_energy")
+        @Config.DefaultInt(128)
+        @Config.RangeInt(min = 1, max = 1000000)
+        public int dockEuPerTick;
+
+        @Config.LangKey("galaxia.config.machines.android.charge_energy")
+        @Config.DefaultInt(1024)
+        @Config.RangeInt(min = 1, max = 1000000)
+        public int chargeEuPerTick;
+
+        @Config.LangKey("galaxia.config.machines.android.repair_health")
+        @Config.DefaultFloat(4)
+        @Config.RangeFloat(min = 0.1f, max = 1000f)
+        public float repairHealth;
+
+        @Config.LangKey("galaxia.config.machines.android.countdown_ticks")
+        @Config.DefaultInt(60)
+        @Config.RangeInt(min = 1, max = 1200)
+        public int countdownTicks;
+
+        @Config.LangKey("galaxia.config.machines.android.view_ticks")
+        @Config.DefaultInt(2)
+        @Config.RangeInt(min = 0, max = 200)
+        public int viewTicks;
+
+        @Config.LangKey("galaxia.config.machines.android.low_battery_percent")
+        @Config.DefaultInt(10)
+        @Config.RangeInt(min = 1, max = 99)
+        public int lowBatteryPercent;
+
+        @Config.LangKey("galaxia.config.machines.android.critical_battery_percent")
+        @Config.DefaultInt(5)
+        @Config.RangeInt(min = 1, max = 99)
+        public int criticalBatteryPercent;
+
+        @Config.LangKey("galaxia.config.machines.android.checkpoint_ticks")
+        @Config.DefaultInt(100)
+        @Config.RangeInt(min = 1, max = 12000)
+        public int checkpointIntervalTicks;
+
+        public long energyPerTick(boolean moving, boolean sprinting, boolean heating, boolean zeroGravity) {
+            long load = baseEnergyPerTick;
+            if (moving) load += sprinting ? sprintingEnergyPerTick : walkingEnergyPerTick;
+            if (heating) load += heatingEnergyPerTick;
+            if (zeroGravity) load += zeroGEnergyPerTick;
+            return load;
+        }
+    }
+
     public static class Energy {
 
         /**

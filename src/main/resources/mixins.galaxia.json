@@ -3,6 +3,16 @@
   "package": "com.gtnewhorizons.galaxia.mixin",
   "compatibilityLevel": "JAVA_8",
   "mixins": [
+    "EntityFireAccessor",
+    "LivingEquipmentAccessor",
+    "BlockBreakingAccessor",
+    "AndroidInputMixin",
+    "AndroidPlayerMixin",
+    "AndroidPlayerMixin$Transfers",
+    "AndroidPlayerMixin$PlayerData",
+    "AndroidPlayerMixin$PlayerMarker",
+    "AndroidPlayerMixin$Health",
+    "AndroidPlayerMixin$Food",
     "EntityTrackerEntryMixin",
     "FallDamageMixin",
     "GravityAirResistanceMixin",
@@ -18,6 +28,7 @@
     "UnifiedGravityMixin$ThrowableEntities"
   ],
   "client": [
+    "AndroidSkinMixin",
     "MixinEntityRenderer",
     "RenderGlobalSkyMixin",
     "RenderStarsMixin"

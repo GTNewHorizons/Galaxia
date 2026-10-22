@@ -4,7 +4,7 @@ import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.hasWitherProtection;
 
 import java.util.Optional;
 
-import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
 
@@ -18,22 +18,22 @@ public class HazardWithering implements IEnvironmentalHazard {
      * Applies wither where needed
      *
      * @param def     The EffectDef holding the dimensional effects
-     * @param player  The player entity
+     * @param body    The body entity
      * @param station
      * @return
      */
     @Override
-    public HazardWarnings apply(EffectBuilder def, EntityPlayer player, Optional<TileStation> station) {
-        if (!def.getWithering(player.worldObj)) return HazardWarnings.FINE;
-        if (hasWitherProtection(player)) return HazardWarnings.FINE;
-        if (player.isPotionActive(Potion.wither)) return HazardWarnings.WITHER;
+    public HazardWarnings apply(EffectBuilder def, EntityLivingBase body, Optional<TileStation> station) {
+        if (!def.getWithering(body.worldObj)) return HazardWarnings.FINE;
+        if (hasWitherProtection(body)) return HazardWarnings.FINE;
+        if (body.isPotionActive(Potion.wither)) return HazardWarnings.WITHER;
 
         if (station.filter(TileStation::hasWitherBlocker)
             .isPresent()) {
             return HazardWarnings.FINE;
         }
 
-        player.addPotionEffect(new PotionEffect(Potion.wither.id, BASE_EFFECT_DURATION, 1));
+        body.addPotionEffect(new PotionEffect(Potion.wither.id, BASE_EFFECT_DURATION, 1));
         return HazardWarnings.WITHER;
     }
 }

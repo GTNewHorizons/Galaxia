@@ -4,11 +4,13 @@ import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.*;
 
 import java.util.Optional;
 
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.DamageSource;
 
 import com.gtnewhorizons.galaxia.core.GalaxiaPlayerProperties;
+import com.gtnewhorizons.galaxia.registry.android.AndroidControl;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.effects.GalaxiaEffects;
@@ -23,12 +25,13 @@ public class HazardOxygen implements IEnvironmentalHazard {
      * Applies the effects of low oxygen to the player
      *
      * @param def     The EffectDef of the dimension
-     * @param player  The player entity
+     * @param body    The body entity
      * @param station
      * @return warning
      */
     @Override
-    public HazardWarnings apply(EffectBuilder def, EntityPlayer player, Optional<TileStation> station) {
+    public HazardWarnings apply(EffectBuilder def, EntityLivingBase body, Optional<TileStation> station) {
+        if (!(body instanceof EntityPlayer player) || AndroidControl.isAndroid(body)) return HazardWarnings.FINE;
         final int oxygenPercent = def.getOxygenPercent(player.worldObj);
         if (oxygenPercent >= 100) return HazardWarnings.FINE;
 

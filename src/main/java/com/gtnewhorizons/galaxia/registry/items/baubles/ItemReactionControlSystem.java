@@ -1,24 +1,30 @@
 package com.gtnewhorizons.galaxia.registry.items.baubles;
 
+import javax.annotation.Nonnull;
+
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.registry.android.AndroidControl;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
-import com.gtnewhorizons.galaxia.registry.interfaces.IZeroGMovementProvider;
 
 import baubles.api.BaubleType;
 import baubles.api.expanded.IBaubleExpanded;
 
-public class ItemReactionControlSystem extends Item implements IBaubleExpanded, IZeroGMovementProvider {
+public class ItemReactionControlSystem extends Item implements IBaubleExpanded {
 
     public static final String BAUBLE_TYPE_REACTION_CONTROL_SYSTEM = "reaction_control_system";
 
-    private boolean enabled = true;
+    private static final String NBT_DISABLED = "rcs_disabled";
+    private static final String NBT_MOTION_X = "rcs_motion_x";
+    private static final String NBT_MOTION_Y = "rcs_motion_y";
+    private static final String NBT_MOTION_Z = "rcs_motion_z";
 
     @Override
     public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
@@ -35,23 +41,22 @@ public class ItemReactionControlSystem extends Item implements IBaubleExpanded, 
         return BaubleType.UNIVERSAL;
     }
 
-    static private double prevMotionX = 0;
-    static private double prevMotionY = 0;
-    static private double prevMotionZ = 0;
-
     @Override
     public void onWornTick(ItemStack itemstack, EntityLivingBase player) {
-        if (!this.enabled) return;
+        if (!(player instanceof EntityPlayer operator)) return;
+        if (!isEnabled(itemstack)) return;
         if (player.ticksExisted % 40 != 0 || player.worldObj.isRemote) return;
+        if (AndroidControl.isAndroid(operator)) return;
         if (GalaxiaAPI.getGravity(player) != 0) return;
 
-        final boolean isThrusting = Math.abs(prevMotionX - player.motionX) > 1e-6
-            || Math.abs(prevMotionY - player.motionY) > 1e-6
-            || Math.abs(prevMotionZ - player.motionZ) > 1e-6;
+        NBTTagCompound state = state(itemstack);
+        final boolean isThrusting = Math.abs(state.getDouble(NBT_MOTION_X) - player.motionX) > 1e-6
+            || Math.abs(state.getDouble(NBT_MOTION_Y) - player.motionY) > 1e-6
+            || Math.abs(state.getDouble(NBT_MOTION_Z) - player.motionZ) > 1e-6;
 
-        prevMotionX = player.motionX;
-        prevMotionY = player.motionY;
-        prevMotionZ = player.motionZ;
+        state.setDouble(NBT_MOTION_X, player.motionX);
+        state.setDouble(NBT_MOTION_Y, player.motionY);
+        state.setDouble(NBT_MOTION_Z, player.motionZ);
 
         if (isThrusting) {
             return;
@@ -61,7 +66,7 @@ public class ItemReactionControlSystem extends Item implements IBaubleExpanded, 
         int oxygen = def.getOxygenPercent(player.worldObj);
 
         // TODO: Adjust for balance
-        this.enabled = GalaxiaAPI.checkOxygenAndDrain((EntityPlayer) player, oxygen);
+        setEnabled(itemstack, GalaxiaAPI.checkOxygenAndDrain(operator, oxygen));
     }
 
     @Override
@@ -84,13 +89,18 @@ public class ItemReactionControlSystem extends Item implements IBaubleExpanded, 
         return true;
     }
 
-    @Override
-    public boolean isEnabled() {
-        return this.enabled;
+    public boolean isEnabled(@Nonnull ItemStack stack) {
+        return !stack.hasTagCompound() || !stack.getTagCompound()
+            .getBoolean(NBT_DISABLED);
     }
 
-    @Override
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
+    public void setEnabled(@Nonnull ItemStack stack, boolean enabled) {
+        state(stack).setBoolean(NBT_DISABLED, !enabled);
+    }
+
+    @Nonnull
+    private static NBTTagCompound state(@Nonnull ItemStack stack) {
+        if (!stack.hasTagCompound()) stack.setTagCompound(new NBTTagCompound());
+        return stack.getTagCompound();
     }
 }

@@ -7,10 +7,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 
-import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
 
+import com.gtnewhorizons.galaxia.registry.android.AndroidControl;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
@@ -29,17 +30,17 @@ public class HazardSpores implements IEnvironmentalHazard {
     private static final Random rand = new Random();
 
     /**
-     * Applies the "Spore" effect to the player - a random negative effect on player
+     * Applies the "Spore" effect to the body - a random negative effect on body
      *
      * @param def     The dimensional Effect Definition
-     * @param player  The player entity
+     * @param body    The body entity
      * @param station
      * @return
      */
     @Override
-    public HazardWarnings apply(EffectBuilder def, EntityPlayer player, Optional<TileStation> station) {
-        if (!def.getSpore(player.worldObj)) return HazardWarnings.FINE;
-        final boolean hasFilter = hasSporeFilter(player);
+    public HazardWarnings apply(EffectBuilder def, EntityLivingBase body, Optional<TileStation> station) {
+        if (!def.getSpore(body.worldObj)) return HazardWarnings.FINE;
+        final boolean hasFilter = hasSporeFilter(body);
         final int harshness = 1;
 
         if (station.filter(TileStation::hasAirPurifier)
@@ -50,7 +51,8 @@ public class HazardSpores implements IEnvironmentalHazard {
         if (hasFilter) return HazardWarnings.FINE;
 
         int effectToAdd = possibleEffects.get(rand.nextInt(possibleEffects.size() - 1) + 1).id;
-        player.addPotionEffect(new PotionEffect(effectToAdd, BASE_EFFECT_DURATION, harshness));
+        if (effectToAdd == Potion.hunger.id && AndroidControl.isAndroid(body)) return HazardWarnings.SPORES;
+        body.addPotionEffect(new PotionEffect(effectToAdd, BASE_EFFECT_DURATION, harshness));
         return HazardWarnings.SPORES;
     }
 }

@@ -14,6 +14,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.block.Block;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.IInventory;
@@ -25,6 +26,9 @@ import net.minecraftforge.common.MinecraftForge;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
+import com.gtnewhorizons.galaxia.registry.android.AndroidControl;
+import com.gtnewhorizons.galaxia.registry.android.BodyState;
+import com.gtnewhorizons.galaxia.registry.android.EntityBody;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
@@ -35,10 +39,10 @@ import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializ
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.hazards.HazardTemperature;
-import com.gtnewhorizons.galaxia.registry.interfaces.IZeroGMovementProvider;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemReactionControlSystem;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection;
@@ -207,12 +211,9 @@ public final class GalaxiaAPI {
         return false;
     }
 
-    private static boolean hasBaubleInSlots(EntityPlayer player, int[] slots, Class<?> itemClass) {
-        IInventory baubles = BaublesApi.getBaubles(player);
-        if (baubles == null) return false;
-
+    private static boolean hasBaubleInSlots(EntityLivingBase body, int[] slots, Class<?> itemClass) {
         for (int slot : slots) {
-            ItemStack stack = baubles.getStackInSlot(slot);
+            ItemStack stack = selectedBauble(body, slot);
             if (stack != null && itemClass.isInstance(stack.getItem())) {
                 return true;
             }
@@ -220,20 +221,30 @@ public final class GalaxiaAPI {
         return false;
     }
 
-    private static <T> int sumBaubleProtection(EntityPlayer player, int[] slots, Class<T> clazz,
+    private static <T> int sumBaubleProtection(EntityLivingBase body, int[] slots, Class<T> clazz,
         ToIntFunction<T> getter) {
-        IInventory baubles = BaublesApi.getBaubles(player);
-        if (baubles == null) return 0;
-
         int total = 0;
         for (int i : slots) {
-            ItemStack stack = baubles.getStackInSlot(i);
+            ItemStack stack = selectedBauble(body, i);
             if (stack != null && clazz.isInstance(stack.getItem())) {
                 T item = clazz.cast(stack.getItem());
                 total += getter.applyAsInt(item);
             }
         }
         return total;
+    }
+
+    @Nullable
+    private static ItemStack selectedBauble(EntityLivingBase body, int slot) {
+        if (body instanceof EntityPlayer player) {
+            return PlayerHandler.getPlayerBaubles(player)
+                .getStackInSlot(slot);
+        }
+        if (body instanceof EntityBody physical) {
+            BodyState state = AndroidControl.stateOf(physical);
+            return state == null ? null : state.bauble(slot);
+        }
+        return null;
     }
 
     public static boolean hasOxygenTank(@Nonnull EntityPlayer player) {
@@ -244,66 +255,69 @@ public final class GalaxiaAPI {
         return hasBaubleInSlots(player, Galaxia.oxygenMaskSlots, ItemOxygenMask.class);
     }
 
-    public static boolean hasSporeFilter(@Nonnull EntityPlayer player) {
-        return hasBaubleInSlots(player, Galaxia.sporeFilterSlots, ItemSporeFilter.class);
+    public static boolean hasSporeFilter(@Nonnull EntityLivingBase body) {
+        return hasBaubleInSlots(body, Galaxia.sporeFilterSlots, ItemSporeFilter.class);
     }
 
-    public static boolean hasWitherProtection(@Nonnull EntityPlayer player) {
-        return hasBaubleInSlots(player, Galaxia.witherSlots, ItemWitherProtection.class);
+    public static boolean hasWitherProtection(@Nonnull EntityLivingBase body) {
+        return hasBaubleInSlots(body, Galaxia.witherSlots, ItemWitherProtection.class);
     }
 
-    public static boolean hasThermalProtection(@Nonnull EntityPlayer player) {
-        return hasBaubleInSlots(player, Galaxia.thermalSlot, ItemThermalProtection.class);
+    public static boolean hasThermalProtection(@Nonnull EntityLivingBase body) {
+        return hasBaubleInSlots(body, Galaxia.thermalSlot, ItemThermalProtection.class);
     }
 
-    public static int getRadiationProtection(@Nonnull EntityPlayer player) {
+    public static int getRadiationProtection(@Nonnull EntityLivingBase body) {
         return sumBaubleProtection(
-            player,
+            body,
             Galaxia.shieldSlots,
             ItemProtectionShield.class,
             ItemProtectionShield::getRadiationProtection);
     }
 
-    public static int getThermalProtection(@Nonnull EntityPlayer player, boolean heat) {
+    public static int getThermalProtection(@Nonnull EntityLivingBase body, boolean heat) {
         return sumBaubleProtection(
-            player,
+            body,
             Galaxia.thermalSlot,
             ItemThermalProtection.class,
             item -> heat ? item.getHeatProtection() : item.getColdProtection());
     }
 
-    public static int getPressureProtection(@Nonnull EntityPlayer player, boolean highPressure) {
+    public static int getPressureProtection(@Nonnull EntityLivingBase body, boolean highPressure) {
         return sumBaubleProtection(
-            player,
+            body,
             Galaxia.shieldSlots,
             ItemProtectionShield.class,
             item -> highPressure ? item.getPressureProtectionHigh() : item.getPressureProtectionLow());
     }
 
-    private static IZeroGMovementProvider getZeroGMovementProvider(EntityPlayer player) {
+    @Nullable
+    private static ItemStack getReactionControlSystem(@Nonnull EntityPlayer player) {
         IInventory baubles = BaublesApi.getBaubles(player);
         if (baubles == null) return null;
 
         for (int slot : Galaxia.rcsSlot) {
             ItemStack stack = baubles.getStackInSlot(slot);
-            if (stack != null && stack.getItem() instanceof IZeroGMovementProvider provider) {
-                return provider;
+            if (stack != null && stack.getItem() instanceof ItemReactionControlSystem) {
+                return stack;
             }
         }
         return null;
     }
 
     public static void setZeroGMovement(@Nonnull EntityPlayer player, boolean enabled) {
-        IZeroGMovementProvider provider = getZeroGMovementProvider(player);
-        if (provider != null) provider.setEnabled(enabled);
+        ItemStack stack = getReactionControlSystem(player);
+        if (stack != null) {
+            ((ItemReactionControlSystem) stack.getItem()).setEnabled(stack, enabled);
+        }
     }
 
     public static boolean hasZeroGMovementCapability(@Nonnull EntityPlayer player) {
         if (ConfigPlayer.ConfigPlayerGlobal.applyZeroGravityMovement && player.capabilities.isCreativeMode) {
             return true;
         }
-        IZeroGMovementProvider provider = getZeroGMovementProvider(player);
-        return provider != null && provider.isEnabled();
+        ItemStack stack = getReactionControlSystem(player);
+        return stack != null && ((ItemReactionControlSystem) stack.getItem()).isEnabled(stack);
     }
 
     public static boolean checkOxygenAndDrain(@Nonnull EntityPlayer player, int oxygenPercent) {
