@@ -1546,4 +1546,5 @@ galaxia.gui.station.alert.upkeep=Upkeep
 galaxia.gui.station.alert.upkeep.message=Missing upkeep resources
 
 galaxia.android.death.name=Android %s
+galaxia.android.death.operated_name=Android %s (operated by %s)
 death.attack.galaxia.android.selfDestruct=%1$s self-destructed
