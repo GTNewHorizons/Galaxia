@@ -734,3 +734,6 @@ galaxia.gui.station.recipe.details.unavailable=The original recipe is unavailabl
 galaxia.gui.station.recipe.details.select_resource=Select an input or output slot to configure its inventory bound
 galaxia.gui.station.settings_group.rename=Rename
 galaxia.gui.station.settings_group.members=Members
+
+key.galaxia.starmap_offscreen=Toggle star map window
+galaxia.gui.orbital.window.title=Galaxia star map

@@ -25,24 +25,14 @@ final class FacilityPreviews {
     static PreviewEntrypoint stationManagement() {
         return PreviewEntrypoint.of(StationManagementScreen.class, context -> {
             FacilityState state = createFacility();
-            PreviewSupport.setStaticField(StationManagementScreen.class, "pendingAssetId", state.facility().assetId);
-            PreviewSupport.setStaticField(StationManagementScreen.class, "pendingCreativeBuildMode", false);
-            return new StationManagementScreen()
-                .buildUI(PreviewSupport.guiData(), PreviewSupport.sync(context), PreviewSupport.settings());
+            return StationManagementScreen.build(state.facility().assetId, false);
         });
     }
 
     static PreviewEntrypoint modulePicker() {
         return PreviewEntrypoint.of(ModulePickerScreen.class, context -> {
             FacilityState state = createFacility();
-            PreviewSupport.setStaticField(ModulePickerScreen.class, "pendingAssetId", state.facility().assetId);
-            PreviewSupport.setStaticField(ModulePickerScreen.class, "pendingCoord", StationTileCoord.of(3, 0));
-            PreviewSupport.setStaticField(ModulePickerScreen.class, "pendingInstantBuild", false);
-            PreviewSupport.setStaticField(ModulePickerScreen.class, "pendingMultipleBuild", false);
-            PreviewSupport.setStaticField(ModulePickerScreen.class, "pendingSelectedKind", null);
-            PreviewSupport.setStaticField(ModulePickerScreen.class, "pendingSettingsGroupId", null);
-            return new ModulePickerScreen()
-                .buildUI(PreviewSupport.guiData(), PreviewSupport.sync(context), PreviewSupport.settings());
+            return ModulePickerScreen.build(state.facility().assetId, StationTileCoord.of(3, 0), false);
         });
     }
 

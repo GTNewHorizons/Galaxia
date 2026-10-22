@@ -19,9 +19,6 @@ import com.gtnewhorizon.gtnhlib.teams.TeamDataRegistry;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.gui.TeamPermissionScreen;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.OffscreenStarmapGui;
-import com.gtnewhorizons.galaxia.client.gui.station.ModulePickerScreen;
-import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
 import com.gtnewhorizons.galaxia.compat.gt.GalaxiaGTAttachmentRegistration;
 import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData;
 import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
@@ -109,9 +106,6 @@ public class CommonProxy {
 
         // Why Gui code on server? idk ask mui2
         ItemPickerScreen.FACTORY.init();
-        ModulePickerScreen.FACTORY.init();
-        OffscreenStarmapGui.FACTORY.init();
-        StationManagementScreen.FACTORY.init();
         TeamPermissionScreen.FACTORY.init();
     }
 

@@ -218,9 +218,9 @@ public final class ModuleConstructionGuiGameTests {
         return kind == FacilityModuleKind.HAMMER ? ModuleTier.LuV : ModuleTier.HV;
     }
 
-    private static final class Fixture {
+    static final class Fixture {
 
-        private final CelestialAsset.ID assetId = CelestialAsset.ID.create();
+        final CelestialAsset.ID assetId = CelestialAsset.ID.create();
         private final Map<ItemStackWrapper, Long> materials = new LinkedHashMap<>();
         private ModuleInstance.ID upgradeModuleId;
         private int prerequisiteModules;

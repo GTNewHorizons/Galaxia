@@ -1,32 +1,58 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
-import com.cleanroommc.modularui.factory.GuiData;
-import com.cleanroommc.modularui.screen.ModularPanel;
-import com.cleanroommc.modularui.screen.UISettings;
-import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.sbancuz.offscreen.integration.mui2.OffscreenSimpleFactory;
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.StatCollector;
 
-/**
- * Server-synced galactic starmap shown in an Offscreen window.
- * <p>
- * This is an {@link OffscreenSimpleFactory} so the keybind can open it without holding anything. The builder runs on
- * both sides (same panel as the {@code ItemGalacticMap} flow), while the Offscreen mod owns the synced session, the
- * divert mixins, and the window lifecycle ({@code openOffscreen}/{@code toggleOffscreen}).
- * <p>
- * This class must stay free of client-only references: the factory is registered on both sides.
- */
+import com.cleanroommc.modularui.screen.GuiContainerWrapper;
+import com.cleanroommc.modularui.screen.GuiScreenWrapper;
+import com.cleanroommc.modularui.screen.ModularScreen;
+import com.cleanroommc.modularui.screen.UISettings;
+import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.sbancuz.offscreen.api.OffscreenAPI;
+import com.sbancuz.offscreen.api.UIRegistry;
+import com.sbancuz.offscreen.integration.mui2.Mui2UI;
+import com.sbancuz.offscreen.window.Window;
+import com.sbancuz.offscreen.window.input.MouseShadow;
+
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+
+/** Optional client-only map. Gameplay commands do not occupy the player's server container. */
+@SideOnly(Side.CLIENT)
 public final class OffscreenStarmapGui {
+
+    private static Window window;
+
+    static {
+        // Navigation hands Offscreen a Minecraft wrapper, while its MUI adapter accepts ModularScreen.
+        UIRegistry
+            .register(GuiScreenWrapper.class, screen -> UIRegistry.resolve(((GuiScreenWrapper) screen).getScreen()));
+        UIRegistry.register(
+            GuiContainerWrapper.class,
+            screen -> UIRegistry.resolve(((GuiContainerWrapper) screen).getScreen()));
+    }
 
     private OffscreenStarmapGui() {}
 
-    public static final OffscreenSimpleFactory FACTORY = new OffscreenSimpleFactory(
-        "galaxia_offscreen_starmap",
-        Galaxia.MODID,
-        OffscreenStarmapGui::build);
-
-    private static ModularPanel build(final GuiData data, final PanelSyncManager syncManager,
-        final UISettings settings) {
-        return GalacticMapWidget.build(syncManager, data.getPlayer());
+    public static Window toggle() {
+        if (OffscreenAPI.isOpen(window)) {
+            OffscreenAPI.close(window);
+            window = null;
+            return null;
+        }
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc.theWorld == null || mc.thePlayer == null) return null;
+        window = OffscreenAPI.open(
+            () -> new ModularScreen(
+                Galaxia.MODID,
+                GalacticMapWidget.build(mc.thePlayer, MouseShadow::getPixelWidth, MouseShadow::getPixelHeight)),
+            screen -> {
+                ModularScreen map = (ModularScreen) screen;
+                map.getContext()
+                    .setSettings(new UISettings());
+                return new Mui2UI(map);
+            });
+        OffscreenAPI.setTitle(window, StatCollector.translateToLocal("galaxia.gui.orbital.window.title"));
+        return window;
     }
 }

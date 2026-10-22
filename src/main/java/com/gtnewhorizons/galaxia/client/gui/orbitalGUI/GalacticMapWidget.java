@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
+import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 import net.minecraft.client.Minecraft;
@@ -12,7 +13,6 @@ import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.layout.IViewportStack;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.ModularPanel;
-import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Unit;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
@@ -20,7 +20,6 @@ import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.EnumColors;
-import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 
 public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
@@ -35,6 +34,8 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
         .color(EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
 
     private float interfaceScale = 1f;
+    private final IntSupplier viewportWidth;
+    private final IntSupplier viewportHeight;
 
     private static final int PANEL_INSET = 10;
     private static final int PANEL_TOP = 30;
@@ -49,14 +50,17 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
 
     private final OrbitalView.OrbitalMapWidget mapWidget;
 
-    public static ModularPanel build(PanelSyncManager syncManager, EntityPlayer player) {
-        syncManager.syncValue(StarmapActionSyncHandler.KEY, new StarmapActionSyncHandler());
+    public static ModularPanel build(EntityPlayer player) {
+        return build(player, () -> Minecraft.getMinecraft().displayWidth, () -> Minecraft.getMinecraft().displayHeight);
+    }
+
+    public static ModularPanel build(EntityPlayer player, IntSupplier viewportWidth, IntSupplier viewportHeight) {
         CelestialObject galaxyRoot = GalaxiaCelestialAPI.root();
         CelestialObject currentStar = GalaxiaCelestialAPI.findCurrentStar(player.dimension)
             .orElseGet(
                 () -> GalaxiaCelestialAPI.getPrimaryStar()
                     .orElse(galaxyRoot));
-        GalacticMapWidget content = new GalacticMapWidget(galaxyRoot, currentStar);
+        GalacticMapWidget content = new GalacticMapWidget(galaxyRoot, currentStar, viewportWidth, viewportHeight);
         return new ModularPanel(SCREEN_NAME) {
 
             @Override
@@ -68,6 +72,17 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
     }
 
     public GalacticMapWidget(CelestialObject galaxyRoot, CelestialObject initialLayer) {
+        this(
+            galaxyRoot,
+            initialLayer,
+            () -> Minecraft.getMinecraft().displayWidth,
+            () -> Minecraft.getMinecraft().displayHeight);
+    }
+
+    private GalacticMapWidget(CelestialObject galaxyRoot, CelestialObject initialLayer, IntSupplier viewportWidth,
+        IntSupplier viewportHeight) {
+        this.viewportWidth = viewportWidth;
+        this.viewportHeight = viewportHeight;
         name("starmap.screen");
         TextFieldWidget renameField = new TextFieldWidget().left(SIDEBAR_WIDTH)
             .top(-1000)
@@ -164,9 +179,10 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
     public void beforeResize(boolean onOpen) {
         super.beforeResize(onOpen);
         Minecraft mc = Minecraft.getMinecraft();
-        int minecraftScale = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight).getScaleFactor();
-        int mapScale = Math
-            .max(1, Math.min(mc.displayWidth / MINIMUM_CANVAS_WIDTH, mc.displayHeight / MINIMUM_CANVAS_HEIGHT));
+        int pixelWidth = viewportWidth.getAsInt();
+        int pixelHeight = viewportHeight.getAsInt();
+        int minecraftScale = new ScaledResolution(mc, pixelWidth, pixelHeight).getScaleFactor();
+        int mapScale = Math.max(1, Math.min(pixelWidth / MINIMUM_CANVAS_WIDTH, pixelHeight / MINIMUM_CANVAS_HEIGHT));
         interfaceScale = (float) mapScale / minecraftScale;
         var screen = getScreen().getScreenArea();
         int width = (int) Math.ceil(screen.width / interfaceScale);

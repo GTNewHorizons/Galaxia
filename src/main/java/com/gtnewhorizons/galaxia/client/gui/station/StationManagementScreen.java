@@ -5,21 +5,16 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
-import com.cleanroommc.modularui.api.IGuiHolder;
-import com.cleanroommc.modularui.factory.GuiData;
-import com.cleanroommc.modularui.factory.SimpleGuiFactory;
+import com.cleanroommc.modularui.factory.ClientGUI;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.ModularScreen;
-import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
-import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -36,11 +31,8 @@ import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
-public final class StationManagementScreen implements IGuiHolder<GuiData> {
-
-    public static final SimpleGuiFactory FACTORY = new SimpleGuiFactory(
-        "galaxia_station_management",
-        StationManagementScreen::new);
+@SideOnly(Side.CLIENT)
+public final class StationManagementScreen {
 
     private static final int LEFT_PANEL_WIDTH = 216;
     private static final int PADDING = 12;
@@ -65,7 +57,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         if (asset != null && asset.kind == CelestialAsset.Kind.SATELLITE) return;
         pendingAssetId = assetId;
         pendingCreativeBuildMode = creativeBuildMode;
-        FACTORY.openClient();
+        ClientGUI.open(new ModularScreen(Galaxia.MODID, build(assetId, creativeBuildMode)));
     }
 
     static void openBuildPicker(CelestialAsset.ID assetId, FacilityModuleKind kind, boolean creativeBuildMode) {
@@ -103,19 +95,9 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         return pendingCreativeBuildMode;
     }
 
-    @Override
-    @SideOnly(Side.CLIENT)
-    public ModularScreen createScreen(GuiData data, ModularPanel mainPanel) {
-        return new ModularScreen(Galaxia.MODID, mainPanel);
-    }
-
-    @Override
-    public ModularPanel buildUI(GuiData guiData, PanelSyncManager syncManager, UISettings settings) {
-        syncManager.syncValue(StarmapActionSyncHandler.KEY, new StarmapActionSyncHandler());
+    public static ModularPanel build(CelestialAsset.ID assetId, boolean creativeBuildMode) {
         ModularPanel panel = ModularPanel.defaultPanel("galaxia_station_management")
             .fullScreenInvisible();
-        CelestialAsset.ID assetId = pendingAssetId;
-        boolean creativeBuildMode = pendingCreativeBuildMode;
         boolean isAutomatedFacility = CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility;
         StationOverlayCoordinator overlayCoordinator = new StationOverlayCoordinator();
         panel.onUpdateListener(w -> overlayCoordinator.processDeferredActions());

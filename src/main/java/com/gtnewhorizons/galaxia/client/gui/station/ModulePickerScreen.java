@@ -11,16 +11,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.item.ItemStack;
 
-import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.factory.GuiData;
-import com.cleanroommc.modularui.factory.SimpleGuiFactory;
+import com.cleanroommc.modularui.factory.ClientGUI;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.ModularScreen;
-import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
-import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
@@ -29,7 +25,6 @@ import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.WidgetOutline;
 import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -47,11 +42,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
-public final class ModulePickerScreen implements IGuiHolder<GuiData> {
-
-    public static final SimpleGuiFactory FACTORY = new SimpleGuiFactory(
-        "galaxia_station_module_picker",
-        ModulePickerScreen::new);
+@SideOnly(Side.CLIENT)
+public final class ModulePickerScreen {
 
     private static final int PANEL_WIDTH = 640;
     private static final int PANEL_HEIGHT = 430;
@@ -102,35 +94,35 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private static final int LIST_CARD_WIDTH = (LIST_WIDTH - LIST_COLUMN_GAP * (BUTTON_COLUMNS - 1)) / BUTTON_COLUMNS;
     private static final int LIST_CARD_HEIGHT = 72;
 
-    private static volatile @Nullable CelestialAsset.ID pendingAssetId;
-    private static volatile @Nullable StationTileCoord pendingCoord;
-    private static volatile @Nullable FacilityModuleKind pendingSelectedKind;
-    private static volatile ModuleTier pendingSelectedTier = ModuleTier.NONE;
-    private static volatile HammerVariant pendingHammerVariant = HammerVariant.BASE;
-    private static volatile MinerFocusTier pendingMinerFocusTier = MinerFocusTier.NONE;
-    private static volatile @Nullable SettingsGroup.ID pendingSettingsGroupId;
-    private static volatile boolean pendingInstantBuild;
-    private static volatile boolean pendingMultipleBuild;
+    private @Nullable CelestialAsset.ID pendingAssetId;
+    private @Nullable StationTileCoord pendingCoord;
+    private @Nullable FacilityModuleKind pendingSelectedKind;
+    private ModuleTier pendingSelectedTier = ModuleTier.NONE;
+    private HammerVariant pendingHammerVariant = HammerVariant.BASE;
+    private MinerFocusTier pendingMinerFocusTier = MinerFocusTier.NONE;
+    private @Nullable SettingsGroup.ID pendingSettingsGroupId;
+    private boolean pendingInstantBuild;
+    private boolean pendingMultipleBuild;
 
     public static void open(CelestialAsset.ID assetId, StationTileCoord coord, boolean instantBuild) {
+        new ModulePickerScreen(assetId, coord, instantBuild).show();
+    }
+
+    public static ModularPanel build(CelestialAsset.ID assetId, StationTileCoord coord, boolean instantBuild) {
+        return new ModulePickerScreen(assetId, coord, instantBuild).buildUI();
+    }
+
+    private ModulePickerScreen(CelestialAsset.ID assetId, StationTileCoord coord, boolean instantBuild) {
         pendingAssetId = assetId;
         pendingCoord = coord;
         pendingInstantBuild = instantBuild;
-        pendingMultipleBuild = false;
-        pendingSelectedKind = null;
-        pendingSettingsGroupId = null;
-        FACTORY.openClient();
     }
 
-    @Override
-    @SideOnly(Side.CLIENT)
-    public ModularScreen createScreen(GuiData data, ModularPanel mainPanel) {
-        return new ModularScreen(Galaxia.MODID, mainPanel);
+    private void show() {
+        ClientGUI.open(new ModularScreen(Galaxia.MODID, buildUI()));
     }
 
-    @Override
-    public ModularPanel buildUI(GuiData guiData, PanelSyncManager syncManager, UISettings settings) {
-        syncManager.syncValue(StarmapActionSyncHandler.KEY, new StarmapActionSyncHandler());
+    private ModularPanel buildUI() {
         ModularPanel panel = ModularPanel.defaultPanel("galaxia_station_module_picker", PANEL_WIDTH, PANEL_HEIGHT);
         ParentWidget<?> backgroundLayer = new PassiveBackgroundLayer().pos(0, 0)
             .sizeRel(FULL_REL, FULL_REL)
@@ -204,7 +196,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         return row * (LIST_CARD_HEIGHT + LIST_ROW_GAP);
     }
 
-    private static @Nullable AutomatedFacility resolveFacility() {
+    private @Nullable AutomatedFacility resolveFacility() {
         CelestialAsset.ID assetId = pendingAssetId;
         if (assetId == null) return null;
         return CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility facility ? facility : null;
@@ -245,7 +237,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
             .onMouseTapped(mouseButton -> {
                 if (mouseButton != 0) return false;
                 selectKind(kind);
-                FACTORY.openClient();
+                show();
                 return true;
             });
     }
@@ -339,7 +331,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                 .size(SPEC_BUILD_WIDTH, 20));
     }
 
-    private static void selectKind(FacilityModuleKind kind) {
+    private void selectKind(FacilityModuleKind kind) {
         pendingSelectedKind = kind;
         pendingSelectedTier = kind.defaultTier();
         pendingHammerVariant = HammerVariant.BASE;
@@ -350,7 +342,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
 
     private void backToKinds() {
         pendingSelectedKind = null;
-        FACTORY.openClient();
+        show();
     }
 
     private void backToMap() {
@@ -460,11 +452,11 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
             color);
     }
 
-    private static boolean canSelectTier(FacilityModuleKind kind, ModuleTier tier) {
+    private boolean canSelectTier(FacilityModuleKind kind, ModuleTier tier) {
         return kind != FacilityModuleKind.HAMMER || ModuleHammer.supportsTier(pendingHammerVariant, tier);
     }
 
-    private static void normalizeSelectedTier(FacilityModuleKind kind) {
+    private void normalizeSelectedTier(FacilityModuleKind kind) {
         pendingSelectedTier = ModuleUpgradeUiModel.normalizeBuildTier(kind, pendingSelectedTier, pendingHammerVariant);
     }
 
@@ -482,7 +474,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         return options;
     }
 
-    private static void drawMultipleToggle(int x, int y, int width, int height, boolean hovered) {
+    private void drawMultipleToggle(int x, int y, int width, int height, boolean hovered) {
         FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
         int boxY = y + (height - CHECKBOX_SIZE) / 2;
         BorderedRect.draw(
@@ -613,7 +605,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         return Long.toString(amount);
     }
 
-    private static void clearPending() {
+    private void clearPending() {
         pendingAssetId = null;
         pendingCoord = null;
         pendingSelectedKind = null;
@@ -638,7 +630,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         }
     }
 
-    private static final class BuildSpecLayer extends ParentWidget<BuildSpecLayer> {
+    private final class BuildSpecLayer extends ParentWidget<BuildSpecLayer> {
 
         private final FacilityModuleKind kind;
 
@@ -697,7 +689,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                 EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
         }
 
-        private static String physicalSuffix(FacilityModuleKind kind) {
+        private String physicalSuffix(FacilityModuleKind kind) {
             if (kind == FacilityModuleKind.HAMMER) return " " + pendingHammerVariant.name();
             if (kind == FacilityModuleKind.MINER) return " focus " + pendingMinerFocusTier.name();
             return "";
