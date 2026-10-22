@@ -4,6 +4,7 @@ import net.minecraft.block.Block;
 import net.minecraft.tileentity.TileEntity;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.registry.android.TileEntityBodyStation;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockCasing;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockConfigurable;
 import com.gtnewhorizons.galaxia.registry.block.machine.BlockOxygenCollector;
@@ -11,6 +12,7 @@ import com.gtnewhorizons.galaxia.registry.block.machine.BlockOxygenFiller;
 import com.gtnewhorizons.galaxia.registry.block.machine.BlockOxygenPylon;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockController;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockDoor;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockBodyStation;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockElevatorCable;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockElevatorDock;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockFumarole;
@@ -72,6 +74,8 @@ public enum GalaxiaBlocksEnum {
     OXYGEN_COLLECTOR(new BlockOxygenCollector(), TileEntityOxygenCollector.class, "oxygen_collector"),
     OXYGEN_FILLER(new BlockOxygenFiller(), TileEntityOxygenFiller.class, "oxygen_filler"),
     OXYGEN_PYLON(new BlockOxygenPylon(), TileEntityOxygenPylon.class, "oxygen_pylon"),
+    ANDROID_DOCK(new BlockBodyStation(TileEntityBodyStation.Kind.DOCK), TileEntityBodyStation.Dock.class, "android_dock"),
+    CONTROL_CAPSULE(new BlockBodyStation(TileEntityBodyStation.Kind.CAPSULE), TileEntityBodyStation.Capsule.class, "control_capsule"),
     ELEVATOR_CABLE(new BlockElevatorCable(), TileElevatorCable.class, "elevator_cable"),
     ELEVATOR_DOCK(new BlockElevatorDock(), TileElevatorDock.class, "elevator_dock"),
 
