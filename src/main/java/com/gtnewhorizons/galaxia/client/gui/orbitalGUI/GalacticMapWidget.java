@@ -1,17 +1,21 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.StatCollector;
 
 import org.lwjgl.input.Keyboard;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.layout.IViewportStack;
+import com.cleanroommc.modularui.network.ModularNetwork;
 import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
@@ -20,8 +24,13 @@ import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaUi;
 import com.gtnewhorizons.galaxia.client.gui.ui.WindowLayer;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 
 public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
 
@@ -39,19 +48,52 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
     private final OrbitalView.OrbitalMapWidget mapWidget;
     private final WindowLayer windows = new WindowLayer(() -> interfaceScale);
 
+    public static void prepareOpen(EntityPlayerMP player) {
+        ModularNetwork.SERVER.closeAll(player);
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static void prepareClientOpen() {
+        // A map replaces the current UI. Let native close events dispose its panels and sync state first.
+        Minecraft mc = Minecraft.getMinecraft();
+        // The server replaced its old containers. Echoing close-all would also close the new one.
+        ModularNetwork.CLIENT.closeAll(mc.thePlayer, false);
+        mc.displayGuiScreen(null);
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static ModularScreen createScreen(ModularPanel mainPanel) {
+        prepareClientOpen();
+        return new ModularScreen(Galaxia.MODID, mainPanel);
+    }
+
     public static ModularPanel build(PanelSyncManager syncManager, EntityPlayer player) {
-        syncManager.syncValue(StarmapActionSyncHandler.KEY, new StarmapActionSyncHandler());
+        return buildPanel(syncManager, contentFor(player));
+    }
+
+    public static ModularPanel buildBodyPicker(PanelSyncManager syncManager, EntityPlayer player,
+        Consumer<CelestialObjectKey> onSelected, ParentWidget<?> choices) {
+        GalacticMapWidget content = contentFor(player);
+        content.mapWidget()
+            .selectBodies(onSelected, choices);
+        return buildPanel(syncManager, content);
+    }
+
+    private static GalacticMapWidget contentFor(EntityPlayer player) {
         CelestialObject galaxyRoot = GalaxiaCelestialAPI.root();
         CelestialObject currentStar = GalaxiaCelestialAPI.findCurrentStar(player.dimension)
             .orElseGet(
                 () -> GalaxiaCelestialAPI.getPrimaryStar()
                     .orElse(galaxyRoot));
-        GalacticMapWidget content = new GalacticMapWidget(galaxyRoot, currentStar);
+        return new GalacticMapWidget(galaxyRoot, currentStar);
+    }
+
+    private static ModularPanel buildPanel(PanelSyncManager syncManager, GalacticMapWidget content) {
+        syncManager.syncValue(StarmapActionSyncHandler.KEY, new StarmapActionSyncHandler());
         return new ModularPanel(SCREEN_NAME) {
 
             @Override
             public boolean onKeyPressed(char character, int keyCode) {
-                // Esc closes the window on top before it reaches the map, unless a text field takes it
                 if (keyCode == Keyboard.KEY_ESCAPE && !(getContext().getFocusedWidget()
                     .getElement() instanceof TextFieldWidget) && content.windows.closeTop()) return true;
                 return content.mapWidget.handleKeyPressed(keyCode) || super.onKeyPressed(character, keyCode);

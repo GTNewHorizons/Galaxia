@@ -35,6 +35,7 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.cleanroommc.modularui.utils.Interpolation;
+import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
@@ -1038,6 +1039,10 @@ public class OrbitalView {
             return contextMenuWidget;
         }
 
+        public void selectBodies(java.util.function.Consumer<CelestialObjectKey> onSelected, ParentWidget<?> choices) {
+            contextMenuWidget.selectBodies(onSelected, choices);
+        }
+
         public InterplanetaryTransferSystem.OrbitalTransferSimulatorWidget createTransferSimulatorWidget() {
             return transferSimulatorWidget;
         }
@@ -1210,7 +1215,9 @@ public class OrbitalView {
             guiActionsRegistered = true;
             listenGuiAction((IGuiAction.MousePressed) button -> {
                 pressedNavigationMarker = false;
-                pressedMapButton = getPanel().getTopHovering() == this ? button : -1;
+                pressedMapButton = getPanel().getTopHovering() == this && getContext().getScreen()
+                    .getPanelManager()
+                    .isBelowMouseInTopPanel(this) ? button : -1;
                 if (pressedMapButton < 0) {
                     dragging = false;
                     dragEnabledForCurrentPress = false;
@@ -1288,7 +1295,7 @@ public class OrbitalView {
                     pressedBodyCandidate = null;
                     return mouseButton == 1;
                 }
-                if (contextMenuState.isOpen()) {
+                if (contextMenuState.isOpen() && mapOwnsRelease) {
                     if (mouseButton == 0) {
                         if (isPointInContextMenu(localMouseX, localMouseY)) {
                             dragging = false;
@@ -2360,6 +2367,7 @@ public class OrbitalView {
                 return;
             }
             contextMenuState.open(body, localMouseX, localMouseY);
+            contextMenuWidget.onBodyOpened(body);
         }
 
         private boolean isPointInContextMenu(int localMouseX, int localMouseY) {

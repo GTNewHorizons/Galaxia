@@ -79,7 +79,7 @@ final class OrbitalBodyZoom {
 
     double overviewZoom(CelestialObject body, boolean isometric) {
         double extent = isometric ? focusedOrbitExtent(body) : overviewExtent(body);
-        return OrbitalZoom.overviewZoomForExtent(extent, isometric);
+        return OrbitalZoom.overviewZoomForExtent(extent, isometric, viewportWidth(), viewportHeight());
     }
 
     /** How far out the system is pulled just before the map cuts away from it. */

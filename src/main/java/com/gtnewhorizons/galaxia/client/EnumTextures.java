@@ -15,6 +15,7 @@ public enum EnumTextures {
     TEMP_BG("textures/gui/temp_bar_bg.png"),
     TEMP_FILL_HOT("textures/gui/temp_bar_fill_hot.png"),
     TEMP_FILL_COLD("textures/gui/temp_bar_fill_cold.png"),
+    ANDROID_ASSEMBLY("textures/gui/android/assembly.png"),
 
     // Space Objects
     AMBERGRIS("textures/environment/planets/ambergris.png"),

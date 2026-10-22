@@ -14,6 +14,7 @@ import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import org.lwjgl.opengl.GL11;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.client.AndroidClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.client.HazardWarningClient;
@@ -52,7 +53,8 @@ public class GalaxiaOverlayHandler {
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 
-        if (ConfigOverlay.ConfigOverlayOxygenBar.showOxygenBar && GalaxiaAPI.hasOxygenTank(player)) {
+        if (!AndroidClient.isAndroid(player) && ConfigOverlay.ConfigOverlayOxygenBar.showOxygenBar
+            && GalaxiaAPI.hasOxygenTank(player)) {
             drawBar(
                 pos.oxygenX,
                 pos.oxygenY,
