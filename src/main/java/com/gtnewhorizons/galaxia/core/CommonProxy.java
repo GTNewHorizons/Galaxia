@@ -28,6 +28,8 @@ import com.gtnewhorizons.galaxia.core.config.ConfigMain;
 import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
 import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
 import com.gtnewhorizons.galaxia.gt5.AndroidRecipes;
+import com.gtnewhorizons.galaxia.gt5.OrbitalItems;
+import com.gtnewhorizons.galaxia.gt5.OrbitalRecipes;
 import com.gtnewhorizons.galaxia.handlers.CelestialEventHandler;
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
 import com.gtnewhorizons.galaxia.handlers.TeamEventHandler;
@@ -106,6 +108,7 @@ public class CommonProxy {
 
         // Registration
         GalaxiaItemList.registerAll();
+        OrbitalItems.register();
         GalaxiaBlocksEnum.registerBlocks();
         PlanetBlocks.init();
         GalaxiaEffects.init();
@@ -147,7 +150,10 @@ public class CommonProxy {
         Galaxia.rcsSlot = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_REACTION_CONTROL_SYSTEM);
         CelestialRegistry.freezeAndBake();
         validateGtCelestialOrePools();
-        if (isGregTech5UnofficialNewHorizonsLoaded()) AndroidRecipes.init();
+        if (isGregTech5UnofficialNewHorizonsLoaded()) {
+            AndroidRecipes.init();
+            OrbitalRecipes.init();
+        }
     }
 
     // register server commands in this event handler (Remove if not needed)

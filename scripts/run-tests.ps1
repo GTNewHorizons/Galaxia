@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('unit', 'physical-stations', 'automated-facilities', 'rocket-production', 'starmap', 'satellites', 'androids', 'all')]
+    [ValidateSet('unit', 'physical-stations', 'automated-facilities', 'rocket-production', 'starmap', 'satellites', 'androids', 'orbital-production', 'all')]
     [string[]] $Suite = @('unit'),
     [string] $HorizonQaRoot = '',
     [string] $HorizonQaJar = '',
@@ -20,6 +20,7 @@ $groups = [ordered]@{
     'rocket-production' = @('galaxia:ModuleConstructionGuiGameTests.')
     'starmap' = @('galaxia:StarmapGameTests.')
     'satellites' = @('galaxia:SatelliteNetworkGuiGameTests.')
+    'orbital-production' = @('galaxia:OrbitalProductionGameTests.')
     'androids' = @('galaxia:AndroidStationGameTests.', 'galaxia:AndroidControlGameTests.')
 }
 if ($ListSuites) {
