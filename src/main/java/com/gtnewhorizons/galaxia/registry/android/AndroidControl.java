@@ -24,7 +24,9 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ChatComponentTranslation;
 import net.minecraft.util.DamageSource;
+import net.minecraft.util.IChatComponent;
 import net.minecraft.util.MathHelper;
+import net.minecraft.util.StatCollector;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.ChunkCoordIntPair;
 import net.minecraft.world.Teleporter;
@@ -77,6 +79,7 @@ public final class AndroidControl implements ForgeChunkManager.LoadingCallback {
     private static final double MOVEMENT_EPSILON = 1e-6;
     private static final float EXPLOSION_SOUND_VOLUME = 4F;
     private static final float EXPLOSION_SOUND_PITCH = .7F;
+    private static final DamageSource SELF_DESTRUCTION = new DamageSource("galaxia.android.selfDestruct");
     private static int ticks;
 
     public static AndroidBodies bodies() {
@@ -361,8 +364,13 @@ public final class AndroidControl implements ForgeChunkManager.LoadingCallback {
         UUID id = bodies().session(player.getUniqueID())
             .orElseThrow()
             .bodyId();
+        IChatComponent message = deathMessage(
+            bodies().body(id)
+                .orElseThrow(),
+            source,
+            player);
         endControl(player);
-        destroy(id);
+        destroy(id, message);
         return true;
     }
 
@@ -377,10 +385,29 @@ public final class AndroidControl implements ForgeChunkManager.LoadingCallback {
                     .withHealth(0));
             endControl(operator);
             operator.onDeath(source);
-        } else destroy(entity.bodyId());
+        } else {
+            bodies().body(entity.bodyId())
+                .ifPresent(body -> destroy(body.id(), deathMessage(body, source, entity)));
+        }
     }
 
-    private static void destroy(UUID bodyId) {
+    static IChatComponent deathMessage(AndroidBody body, DamageSource source, @Nullable EntityLivingBase actor) {
+        String name = body.name()
+            .isEmpty()
+                ? body.chassis()
+                    .name() + " "
+                    + body.id()
+                        .toString()
+                        .substring(0, 8)
+                : body.name();
+        // An unspawned display subject keeps the operator's player identity out of the death message.
+        EntityBody subject = new EntityBody(actor == null ? null : actor.worldObj, body.id(), null);
+        subject.setCustomNameTag(StatCollector.translateToLocalFormatted("galaxia.android.death.name", name));
+        if (actor != null) subject.setRevengeTarget(actor.func_94060_bK());
+        return source.func_151519_b(subject);
+    }
+
+    private static void destroy(UUID bodyId, IChatComponent message) {
         AndroidBody body = bodies().body(bodyId)
             .orElse(null);
         if (body == null) return;
@@ -410,6 +437,9 @@ public final class AndroidControl implements ForgeChunkManager.LoadingCallback {
                     body.state()
                         .z(),
                     stack));
+            MinecraftServer.getServer()
+                .getConfigurationManager()
+                .sendChatMsg(message);
         } catch (IOException ex) {
             throw new IllegalStateException("Cannot commit android destruction", ex);
         }
@@ -645,7 +675,7 @@ public final class AndroidControl implements ForgeChunkManager.LoadingCallback {
                 }
                 endControl(operator);
             }
-            destroy(body.id());
+            destroy(body.id(), deathMessage(body, SELF_DESTRUCTION, null));
         }
         if (ticks % ConfigMachines.android.checkpointIntervalTicks == 0) checkpoint();
     }
