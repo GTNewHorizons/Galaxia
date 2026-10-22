@@ -13,6 +13,7 @@ import net.minecraftforge.common.MinecraftForge;
 import org.lwjgl.opengl.Display;
 
 import com.cleanroommc.modularui.ModularUIConfig;
+import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.viewport.LocatedWidget;
@@ -94,13 +95,20 @@ final class GuiTestSupport {
             })
             .useHeldItem()
             .awaitClient("galactic map opened after item use", c -> requireScreen("galactic_orbital_map"));
-        for (int step = 0; step < 20; step++) {
-            scenario.step("frame the inner Solar System")
-                .scroll(
-                    ClientTarget.of("Sol", c -> bodyTarget(CelestialObjectKey.registered(CelestialObjectId.SOL))),
-                    120);
-        }
-        return scenario;
+        return frameInnerSolarSystem(scenario);
+    }
+
+    static ClientScenario frameInnerSolarSystem(ClientScenario scenario) {
+        // Camera preparation is fixture work. Scroll behavior tests still dispatch native wheel events.
+        return scenario.step("position camera preparation over Sol")
+            .scroll(ClientTarget.of("Sol", c -> bodyTarget(CelestialObjectKey.registered(CelestialObjectId.SOL))), 120)
+            .client("frame the inner Solar System", c -> {
+                OrbitalMapWidget map = map();
+                for (int step = 1; step < 20; step++) {
+                    if (!map.onMouseScroll(UpOrDown.UP, 120))
+                        throw new AssertionError("Map did not accept camera preparation");
+                }
+            });
     }
 
     public static final class PauseTrace {
@@ -128,7 +136,12 @@ final class GuiTestSupport {
 
     static ClientScenario manageBody(ClientScenario scenario, CelestialObjectKey body) {
         return scenario.withinTicks(200)
-            .rightClick(ClientTarget.of("body " + body, c -> bodyTarget(body)))
+            .async(
+                "dismiss any previous body context",
+                c -> findNamedWidget("starmap.context.menu") == null
+                    ? java.util.concurrent.CompletableFuture.completedFuture(null)
+                    : c.click(0, "map outside context menu", ignored -> contextMenuDismissTarget()))
+            .rightClick(ClientTarget.of("body " + body, c -> bodyTarget(body, 1)))
             .click(control("starmap.context.MANAGE_ASSETS"));
     }
 
@@ -168,7 +181,9 @@ final class GuiTestSupport {
     static OrbitalMapWidget map() {
         ModularScreen screen = ModularScreen.getCurrent();
         if (screen == null) return null;
-        var maps = TreeUtil.flatListByType(screen.getMainPanel(), OrbitalMapWidget.class);
+        var maps = new java.util.ArrayList<OrbitalMapWidget>();
+        for (var panel : screen.getPanelManager()
+            .getOpenPanels()) maps.addAll(TreeUtil.flatListByType(panel, OrbitalMapWidget.class));
         if (maps.size() > 1) throw new AssertionError("Ambiguous active orbital map");
         return maps.isEmpty() ? null : maps.getFirst();
     }

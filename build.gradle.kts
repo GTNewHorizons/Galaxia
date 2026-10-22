@@ -36,3 +36,22 @@ tasks.register("printRuntimeClasspath") {
         runtimeClasspath.get().files.forEach { println(it.absolutePath) }
     }
 }
+
+// Applied after Horizon-QA assigns the isolated game directory.
+tasks.named<JavaExec>("runClient") {
+    val manualGameplayClient = providers.gradleProperty("horizonQaManual").map { it.toBoolean() }.orElse(false)
+    doFirst {
+        if (manualGameplayClient.get()) {
+            val options = workingDir.resolve("options.txt")
+            val defaults = mapOf("guiScale" to "2", "fov" to "1.0", "clouds" to "false")
+            val retained = if (options.isFile) {
+                options.readLines().filter { it.substringBefore(':') !in defaults }
+            } else {
+                emptyList()
+            }
+            options.parentFile.mkdirs()
+            options.writeText((retained + defaults.map { (key, value) -> "$key:$value" }).joinToString("\n", postfix = "\n"))
+            logger.lifecycle("Manual gameplay settings: GUI Scale 2, Quake Pro FOV, clouds disabled")
+        }
+    }
+}

@@ -110,29 +110,6 @@ public final class StationGuiGameTests {
             .succeed();
     }
 
-    /** Integration contract: closing configuration leaves Configure usable for another edit. */
-    @GameTest(timeoutTicks = 400)
-    public static void recipeConfigurationClosesAndReopens(GameTestHelper helper) {
-        StationFixture fixture = new StationFixture();
-        openConfiguration(helper, fixture).step("close recipe configuration")
-            .click(control("station.config.close"))
-            .awaitClient("recipe configuration closed", c -> {
-                if (!TreeUtil.flatListByType(
-                    GuiTestSupport.requireStation()
-                        .getPanel(),
-                    DropdownWidget.class)
-                    .isEmpty()) {
-                    throw new AssertionError("Recipe configuration is still open");
-                }
-            })
-            .step("reopen configuration")
-            .click(control("CONFIG"))
-            .awaitClient("configuration usable again", c -> requiredWidget("recipe.add"))
-            .step("capture reopened configuration")
-            .capture("configuration-reopened")
-            .succeed();
-    }
-
     /** Integration contract: canceling group creation must not block recipe editing. */
     @GameTest(timeoutTicks = 400)
     public static void cancelGroupCreationLeavesRecipesUsable(GameTestHelper helper) {
@@ -223,32 +200,6 @@ public final class StationGuiGameTests {
             .succeed();
     }
 
-    // The server owns fixture state. UI changes use real commands and synchronization.
-    /** Integration contract: a new settings group is server-owned and retains its recipe settings. */
-    @GameTest(timeoutTicks = 500)
-    public static void createdGroupSurvivesReopen(GameTestHelper helper) {
-        StationFixture fixture = new StationFixture(true);
-        openConfiguration(helper, fixture).step("open groups")
-            .click(control("settings.group.selector"))
-            .awaitClient("group menu ready", c -> requiredWidget("settings.group.create"))
-            .step("create group")
-            .click(control("settings.group.create"))
-            .awaitClient("group editor ready", c -> groupNameOverlay())
-            .step("save group")
-            .click(ClientTarget.of("settings.group.save", c -> fixture.saveGroupTarget()))
-            .awaitServer("server created group", () -> fixture.assertGroupCreated(false))
-            .awaitClient("group synchronized", c -> fixture.assertGroupCreated(true))
-            .step("reopen grouped configuration")
-            .click(control("CONFIG"))
-            .awaitClient("group name visible", c -> visibleText(fixture.groupName))
-            .step("capture saved group")
-            .capture("saved-group")
-            .step("open grouped recipe details")
-            .click(control("recipe.details.0"))
-            .awaitClient("group retained native recipe", c -> uniqueWidget(NativeRecipeWidget.class))
-            .succeed();
-    }
-
     /** Integration contract: group members share recipe edits, while detached modules retain independent recipes. */
     @GameTest(timeoutTicks = 1000)
     public static void groupedMaceratorsShareRecipeChangesThroughGui(GameTestHelper helper) {
@@ -259,6 +210,14 @@ public final class StationGuiGameTests {
             .click(ClientTarget.of("save shared group", c -> fixture.saveGroupTarget()))
             .awaitServer("first module owns the new group", () -> fixture.assertGroupCreated(false))
             .awaitClient("new group synchronized", c -> fixture.assertGroupCreated(true))
+            .click(control("CONFIG"))
+            .awaitClient("reopened group name visible", c -> visibleText(fixture.groupName))
+            .capture("saved-group")
+            .click(control("recipe.details.0"))
+            .awaitClient("reopened group retained its native recipe", c -> uniqueWidget(NativeRecipeWidget.class))
+            .click(control("recipe.details.back"))
+            .awaitClient("group recipe list usable after native details", c -> requiredWidget("recipe.toggle.0"))
+            .click(control("station.config.close"))
             .click(ClientTarget.of("second macerator", c -> fixture.tileTarget(SECOND_MACERATOR_TILE)))
             .click(control("CONFIG"))
             .awaitClient("second module configuration ready", c -> requiredWidget("recipe.add"))
@@ -378,10 +337,21 @@ public final class StationGuiGameTests {
             .click(control("recipe.toggle.0"))
             .step("close without saving")
             .click(control("station.config.close"))
+            .awaitClient("configuration and its dropdowns closed", c -> {
+                if (!TreeUtil.flatListByType(
+                    GuiTestSupport.requireStation()
+                        .getPanel(),
+                    DropdownWidget.class)
+                    .isEmpty()) throw new AssertionError("Recipe configuration remains open after Close");
+            })
             .server("server recipe unchanged", () -> fixture.assertRecipeEnabled(false, true))
             .step("reopen discarded draft")
             .click(control("CONFIG"))
-            .awaitClient("original recipe restored", c -> requiredWidget("recipe.toggle.0"))
+            .awaitClient("configuration reopens with the original recipe and usable controls", c -> {
+                requiredWidget("recipe.toggle.0");
+                requiredWidget("recipe.add");
+                fixture.assertRecipeEnabled(true, true);
+            })
             .step("disable original recipe")
             .click(control("recipe.toggle.0"))
             .step("save current draft")
