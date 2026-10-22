@@ -64,8 +64,12 @@ public final class OffscreenGuiGameTests {
                 station.facility(true);
             }))
             .async("size map independently of the game window", c -> map[0].resize(1280, 800))
-            .async("position camera preparation over Sol", c -> map[0].scroll(120, "Sol",
-                w -> GuiTestSupport.bodyTarget(CelestialObjectKey.registered(CelestialObjectId.SOL))))
+            .async(
+                "position camera preparation over Sol",
+                c -> map[0].scroll(
+                    120,
+                    "Sol",
+                    w -> GuiTestSupport.bodyTarget(CelestialObjectKey.registered(CelestialObjectId.SOL))))
             .async("frame the inner Solar System", c -> map[0].run(w -> GuiTestSupport.zoomInnerSolarSystem()))
             .server("open a real server-owned chest container", () -> {
                 player[0].displayGUIChest(new InventoryBasic("Offscreen coexistence", true, 9));

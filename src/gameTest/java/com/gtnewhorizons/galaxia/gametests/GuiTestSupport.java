@@ -108,8 +108,7 @@ final class GuiTestSupport {
     static void zoomInnerSolarSystem() {
         OrbitalMapWidget map = map();
         for (int step = 1; step < 20; step++) {
-            if (!map.onMouseScroll(UpOrDown.UP, 120))
-                throw new AssertionError("Map did not accept camera preparation");
+            if (!map.onMouseScroll(UpOrDown.UP, 120)) throw new AssertionError("Map did not accept camera preparation");
         }
     }
 
