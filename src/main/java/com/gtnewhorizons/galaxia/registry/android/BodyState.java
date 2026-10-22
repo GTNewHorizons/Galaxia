@@ -22,6 +22,7 @@ import net.minecraft.network.play.server.S04PacketEntityEquipment;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.FoodStats;
+import net.minecraft.world.EnumDifficulty;
 
 import com.gtnewhorizons.galaxia.core.GalaxiaPlayerProperties;
 import com.gtnewhorizons.galaxia.mixin.EntityFireAccessor;
@@ -320,6 +321,68 @@ public final class BodyState {
     public BodyState withPhysicalState(@Nonnull EntityLivingBase body) {
         NBTTagCompound updated = write();
         capturePhysical(body, updated);
+        return new BodyState(updated);
+    }
+
+    public record Metabolism(BodyState state, boolean starvationDue) {}
+
+    /**
+     * Passive capsule metabolism uses vanilla saved food fields. It consumes saturation before food and preserves
+     * fractional exhaustion on return. It does not simulate player movement or hunger-mod callbacks.
+     */
+    public Metabolism tickBiological(EntityLivingBase body, int periodTicks) {
+        if (periodTicks <= 0) throw new IllegalArgumentException("Metabolism period must be positive");
+        NBTTagCompound updated = write();
+        capturePhysical(body, updated);
+        EnumDifficulty difficulty = body.worldObj.difficultySetting;
+        NBTTagCompound food = updated.getCompoundTag("food");
+        FoodStats stats = new FoodStats();
+        stats.readNBT(food);
+        stats.addExhaustion(4F / periodTicks);
+        stats.writeNBT(food);
+        float exhaustion = food.getFloat("foodExhaustionLevel");
+        if (exhaustion >= 4F) {
+            food.setFloat("foodExhaustionLevel", exhaustion - 4F);
+            float saturation = food.getFloat("foodSaturationLevel");
+            if (saturation > 0) food.setFloat("foodSaturationLevel", Math.max(0, saturation - 1));
+            else if (difficulty != EnumDifficulty.PEACEFUL)
+                food.setInteger("foodLevel", Math.max(0, food.getInteger("foodLevel") - 1));
+        }
+        int starvationTicks = food.getInteger("foodLevel") <= 0 && difficulty != EnumDifficulty.PEACEFUL
+            ? food.getInteger("foodTickTimer") + 1
+            : 0;
+        boolean starvationDue = starvationTicks >= 80;
+        food.setInteger("foodTickTimer", starvationDue ? 0 : starvationTicks);
+        return new Metabolism(new BodyState(updated), starvationDue);
+    }
+
+    public int lowOxygenDuration() {
+        return state.getInteger("lowOxygen");
+    }
+
+    public BodyState withLowOxygenDuration(int duration) {
+        if (duration < 0) throw new IllegalArgumentException("Oxygen deprivation duration cannot be negative");
+        NBTTagCompound updated = write();
+        updated.setInteger("lowOxygen", duration);
+        return new BodyState(updated);
+    }
+
+    /** Replaces a saved bauble after a resource operation without invoking player-only equipment callbacks. */
+    public BodyState withBauble(int slot, @Nonnull ItemStack stack) {
+        if (slot < 0) throw new IllegalArgumentException("Invalid body bauble slot");
+        NBTTagCompound updated = write();
+        NBTTagList previous = updated.getCompoundTag("baubles")
+            .getTagList("Baubles.Inventory", 10);
+        NBTTagList baubles = new NBTTagList();
+        for (int index = 0; index < previous.tagCount(); index++) {
+            NBTTagCompound saved = previous.getCompoundTagAt(index);
+            if ((saved.getByte("Slot") & 255) != slot) baubles.appendTag(saved);
+        }
+        NBTTagCompound replacement = stack.writeToNBT(new NBTTagCompound());
+        replacement.setByte("Slot", (byte) slot);
+        baubles.appendTag(replacement.copy());
+        updated.getCompoundTag("baubles")
+            .setTag("Baubles.Inventory", baubles);
         return new BodyState(updated);
     }
 

@@ -941,6 +941,7 @@ galaxia.config.machines.android.view_ticks=Self-destruction viewing ticks
 galaxia.config.machines.android.low_battery_percent=Low battery warning threshold (%)
 galaxia.config.machines.android.critical_battery_percent=Critical battery warning threshold (%)
 galaxia.config.machines.android.checkpoint_ticks=Body checkpoint interval ticks
+galaxia.config.machines.android.biological_metabolism_ticks=Biological metabolism interval (ticks)
 key.galaxia.end_android_control=End Android Control
 galaxia.android.hud.battery=Battery: %s / %s EU
 galaxia.android.body.biological.name=%s's Body

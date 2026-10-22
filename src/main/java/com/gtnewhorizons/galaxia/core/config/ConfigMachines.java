@@ -110,6 +110,13 @@ public class ConfigMachines {
         @Config.RangeInt(min = 1, max = 12000)
         public int checkpointIntervalTicks;
 
+        /** Passive capsule metabolism: ticks per saturation point, then food point. No movement is simulated. */
+        @Config.LangKey("galaxia.config.machines.android.biological_metabolism_ticks")
+        @Config.Comment("Ticks per saturation point, then food point, consumed by a biological body in remote control")
+        @Config.DefaultInt(1200)
+        @Config.RangeInt(min = 1, max = 72000)
+        public int biologicalMetabolismPeriodTicks;
+
         public long energyPerTick(boolean moving, boolean sprinting, boolean heating, boolean zeroGravity) {
             long load = baseEnergyPerTick;
             if (moving) load += sprinting ? sprintingEnergyPerTick : walkingEnergyPerTick;

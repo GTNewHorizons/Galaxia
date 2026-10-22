@@ -13,9 +13,11 @@ import net.minecraft.nbt.NBTUtil;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
+import net.minecraft.world.EnumDifficulty;
 import net.minecraft.world.World;
 import net.minecraftforge.common.ISpecialArmor;
 
+import com.gtnewhorizons.galaxia.core.config.ConfigMachines;
 import com.gtnewhorizons.galaxia.core.network.PacketUtil;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.minecraft.MinecraftProfileTexture;
@@ -43,6 +45,7 @@ public final class EntityBody extends EntityLiving implements IEntityAdditionalS
     private boolean skinRequested;
     private BodyState projected;
     private boolean processingDamage;
+    private boolean tickingPhysical;
     private final ItemStack[] clientEquipment = new ItemStack[5];
 
     public EntityBody(World world) {
@@ -122,11 +125,28 @@ public final class EntityBody extends EntityLiving implements IEntityAdditionalS
 
     public BodyState currentState() {
         BodyState state = AndroidControl.stateOf(this);
-        if (state != null && state != projected) {
+        if (state != null && state != projected && !tickingPhysical) {
             AndroidControl.applyPhysical(this, state);
             projected = state;
         }
         return state;
+    }
+
+    public void writeBauble(int slot, ItemStack stack) {
+        publishState(currentState().withBauble(slot, stack));
+    }
+
+    public int lowOxygenDuration() {
+        return currentState().lowOxygenDuration();
+    }
+
+    public void setLowOxygenDuration(int duration) {
+        publishState(currentState().withLowOxygenDuration(duration));
+    }
+
+    private void publishState(BodyState state) {
+        projected = state.withPhysicalState(this);
+        AndroidControl.observe(this, projected);
     }
 
     @Override
@@ -151,15 +171,34 @@ public final class EntityBody extends EntityLiving implements IEntityAdditionalS
                             .isEmpty());
                 }
             });
-        super.onUpdate();
-        if (isDead) return;
-        if (isBiological()) {
-            setPosition(state.x(), state.y(), state.z());
-            motionX = motionY = motionZ = 0;
-            fallDistance = 0;
+        tickingPhysical = true;
+        try {
+            super.onUpdate();
+            if (isDead) return;
+            if (isBiological()) {
+                setPosition(state.x(), state.y(), state.z());
+                motionX = motionY = motionZ = 0;
+                fallDistance = 0;
+            }
+            // Hazards and equipment may have changed canonical fields during the living update.
+            BodyState latest = AndroidControl.stateOf(this);
+            if (latest == null) return;
+            if (isBiological()) {
+                BodyState.Metabolism metabolism = latest
+                    .tickBiological(this, ConfigMachines.android.biologicalMetabolismPeriodTicks);
+                projected = metabolism.state();
+                AndroidControl.observe(this, projected);
+                if (metabolism.starvationDue() && (getHealth() > 10 || worldObj.difficultySetting == EnumDifficulty.HARD
+                    || getHealth() > 1 && worldObj.difficultySetting == EnumDifficulty.NORMAL)) {
+                    attackEntityFrom(DamageSource.starve, 1);
+                    if (isDead) return;
+                    BodyState surviving = AndroidControl.stateOf(this);
+                    if (surviving != null) publishState(surviving);
+                }
+            } else publishState(latest);
+        } finally {
+            tickingPhysical = false;
         }
-        projected = state.withPhysicalState(this);
-        AndroidControl.observe(this, projected);
     }
 
     @Override
@@ -187,7 +226,7 @@ public final class EntityBody extends EntityLiving implements IEntityAdditionalS
 
     @Override
     public boolean canBreatheUnderwater() {
-        return true;
+        return !isBiological();
     }
 
     @Override
@@ -215,8 +254,7 @@ public final class EntityBody extends EntityLiving implements IEntityAdditionalS
         } else {
             BodyState state = currentState();
             if (state != null) {
-                projected = state.withEquipment(slot, stack, this);
-                AndroidControl.observe(this, projected);
+                publishState(state.withEquipment(slot, stack, this));
             }
         }
     }
@@ -227,8 +265,7 @@ public final class EntityBody extends EntityLiving implements IEntityAdditionalS
         if (state == null) return amount;
         ItemStack[] armor = state.armor();
         float remaining = ISpecialArmor.ArmorProperties.ApplyArmor(this, armor, source, amount);
-        projected = state.withArmor(armor, this);
-        AndroidControl.observe(this, projected);
+        publishState(state.withArmor(armor, this));
         return remaining;
     }
 

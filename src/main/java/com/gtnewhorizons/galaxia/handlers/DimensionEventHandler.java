@@ -144,6 +144,7 @@ public class DimensionEventHandler {
                 MathHelper.floor_double(body.posY),
                 MathHelper.floor_double(body.posZ)));
         for (IEnvironmentalHazard h : ENVIRONMENTAL_HAZARDS) {
+            if (body.isDead) break;
             HazardWarnings w = h.apply(def, body, station);
             if (w != HazardWarnings.FINE) {
                 warnings.add(w);

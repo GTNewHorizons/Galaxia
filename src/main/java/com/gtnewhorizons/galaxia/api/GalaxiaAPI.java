@@ -135,11 +135,14 @@ public final class GalaxiaAPI {
      *         bars)
      */
     public static float getPlayerOxygenLevel(EntityPlayer player) {
+        return getPlayerOxygenLevel((EntityLivingBase) player);
+    }
+
+    public static float getPlayerOxygenLevel(EntityLivingBase body) {
         float maximum = 0;
         float current = 0;
         for (int index : Galaxia.oxygenSlots) {
-            ItemStack tank = BaublesApi.getBaubles(player)
-                .getStackInSlot(index);
+            ItemStack tank = selectedBauble(body, index);
             if (tank != null && tank.getItem() instanceof ItemOxygenTank tankItem) {
                 maximum += 1;
                 current += tankItem.getPercentFull(tank);
@@ -252,7 +255,11 @@ public final class GalaxiaAPI {
     }
 
     public static boolean hasOxygenmask(@Nonnull EntityPlayer player) {
-        return hasBaubleInSlots(player, Galaxia.oxygenMaskSlots, ItemOxygenMask.class);
+        return hasOxygenmask((EntityLivingBase) player);
+    }
+
+    public static boolean hasOxygenmask(@Nonnull EntityLivingBase body) {
+        return hasBaubleInSlots(body, Galaxia.oxygenMaskSlots, ItemOxygenMask.class);
     }
 
     public static boolean hasSporeFilter(@Nonnull EntityLivingBase body) {
@@ -321,24 +328,23 @@ public final class GalaxiaAPI {
     }
 
     public static boolean checkOxygenAndDrain(@Nonnull EntityPlayer player, int oxygenPercent) {
-        boolean found = false;
+        return checkOxygenAndDrain((EntityLivingBase) player, oxygenPercent);
+    }
 
+    public static boolean checkOxygenAndDrain(@Nonnull EntityLivingBase body, int oxygenPercent) {
         for (int index : Galaxia.oxygenSlots) {
-            ItemStack tank = BaublesApi.getBaubles(player)
-                .getStackInSlot(index);
-            if (tank == null || !(tank.getItem() instanceof ItemOxygenTank tankItem)) {
-                continue;
-            }
-
-            if (tankItem.drainTank(tank, (100 - oxygenPercent) / 5)) {
-                GALAXIA_NETWORK
-                    .sendTo(new OxygenSyncPacket(index, tankItem.getCurrentOxygen(tank)), (EntityPlayerMP) player);
-
-                found = true;
-                break;
+            ItemStack tank = selectedBauble(body, index);
+            if (tank == null || !(tank.getItem() instanceof ItemOxygenTank tankItem)) continue;
+            boolean supplied = tankItem.drainTank(tank, (100 - oxygenPercent) / 5);
+            // Partial drains still consume oxygen. Physical projections expose isolated stack copies.
+            if (body instanceof EntityBody physical) physical.writeBauble(index, tank);
+            if (supplied) {
+                if (body instanceof EntityPlayerMP player)
+                    GALAXIA_NETWORK.sendTo(new OxygenSyncPacket(index, tankItem.getCurrentOxygen(tank)), player);
+                return true;
             }
         }
-        return found;
+        return false;
     }
 
     /**
