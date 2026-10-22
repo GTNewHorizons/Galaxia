@@ -6,16 +6,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.MathHelper;
+import net.minecraftforge.event.entity.living.LivingEvent;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.GalaxiaPlayerProperties;
 import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
 import com.gtnewhorizons.galaxia.core.network.HazardWarningPacket;
+import com.gtnewhorizons.galaxia.registry.android.EntityBody;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializer;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
@@ -38,10 +41,6 @@ import cpw.mods.fml.common.gameevent.TickEvent;
  */
 public class DimensionEventHandler {
 
-    public int counter;
-
-    private List<HazardWarnings> batchedWarnings;
-
     private static final List<IEnvironmentalHazard> ENVIRONMENTAL_HAZARDS = List.of(
         new HazardTemperature(),
         new HazardSpores(),
@@ -50,11 +49,6 @@ public class DimensionEventHandler {
         new HazardPressure(),
         new HazardZeroG(),
         new HazardRadiation());
-
-    public DimensionEventHandler() {
-        this.counter = 0;
-        this.batchedWarnings = new ArrayList<>();
-    }
 
     /**
      * Event Handler method that runs every tick, primarily used at the moment to
@@ -70,14 +64,22 @@ public class DimensionEventHandler {
         if (event.phase != TickEvent.Phase.END) return;
         for (EntityPlayer player : MinecraftServer.getServer()
             .getConfigurationManager().playerEntityList) {
-            if (!isInGalaxiaDimension(player)) continue;
-            if (player.ticksExisted % 20 != 0) continue;
-            applyEffects(
-                CelestialDimensionMaterializer.findDefinitionById(player.dimension)
-                    .orElseThrow()
-                    .effects(),
-                player);
+            applyEffectsIfDue(player);
         }
+    }
+
+    @SubscribeEvent
+    public void onLivingUpdate(LivingEvent.LivingUpdateEvent event) {
+        if (event.entityLiving instanceof EntityBody body && !body.worldObj.isRemote) applyEffectsIfDue(body);
+    }
+
+    private void applyEffectsIfDue(EntityLivingBase body) {
+        if (body.isDead || !isInGalaxiaDimension(body) || body.ticksExisted % 20 != 0) return;
+        applyEffects(
+            CelestialDimensionMaterializer.findDefinitionById(body.dimension)
+                .orElseThrow()
+                .effects(),
+            body);
     }
 
     /**
@@ -120,40 +122,37 @@ public class DimensionEventHandler {
     }
 
     /**
-     * Generic function to apply effects to a player based off of dimension
+     * Applies the shared environmental rules to the physical body in its current dimension.
      *
-     * @param def    The EffectDef holding all effects of the relevant dimension
-     * @param player The player entity
+     * @param def  The EffectDef holding all effects of the relevant dimension
+     * @param body The living body
      */
-    private void applyEffects(EffectBuilder def, EntityPlayer player) {
-        if (player.capabilities.isCreativeMode && !ConfigPlayer.ConfigPlayerGlobal.applyDebuffsInCreative) {
-            if (!this.batchedWarnings.isEmpty()) {
-                this.batchedWarnings.clear();
-                // Clear warnings on the client
-                Galaxia.GALAXIA_NETWORK.sendTo(new HazardWarningPacket(this.batchedWarnings), (EntityPlayerMP) player);
+    private void applyEffects(EffectBuilder def, EntityLivingBase body) {
+        if (body instanceof EntityPlayer player && player.capabilities.isCreativeMode
+            && !ConfigPlayer.ConfigPlayerGlobal.applyDebuffsInCreative) {
+            if (player instanceof EntityPlayerMP connected) {
+                Galaxia.GALAXIA_NETWORK.sendTo(new HazardWarningPacket(List.of()), connected);
             }
-
             return;
         }
-
-        this.batchedWarnings.clear();
-
+        List<HazardWarnings> warnings = new ArrayList<>();
         Optional<TileStation> station = Optional.ofNullable(
             GalaxiaAPI.getStationAround(
-                player.worldObj,
-                player.dimension,
-                MathHelper.floor_double(player.posX),
-                MathHelper.floor_double(player.posY),
-                MathHelper.floor_double(player.posZ)));
+                body.worldObj,
+                body.dimension,
+                MathHelper.floor_double(body.posX),
+                MathHelper.floor_double(body.posY),
+                MathHelper.floor_double(body.posZ)));
         for (IEnvironmentalHazard h : ENVIRONMENTAL_HAZARDS) {
-            HazardWarnings w = h.apply(def, player, station);
+            if (body.isDead) break;
+            HazardWarnings w = h.apply(def, body, station);
             if (w != HazardWarnings.FINE) {
-                batchedWarnings.add(w);
+                warnings.add(w);
             }
         }
 
-        if (!player.worldObj.isRemote) {
-            Galaxia.GALAXIA_NETWORK.sendTo(new HazardWarningPacket(this.batchedWarnings), (EntityPlayerMP) player);
+        if (body instanceof EntityPlayerMP connected && !body.worldObj.isRemote) {
+            Galaxia.GALAXIA_NETWORK.sendTo(new HazardWarningPacket(warnings), connected);
         }
     }
 

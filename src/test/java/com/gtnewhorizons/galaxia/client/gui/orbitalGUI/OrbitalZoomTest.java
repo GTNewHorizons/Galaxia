@@ -49,8 +49,8 @@ final class OrbitalZoomTest {
 
     @Test
     void anEmptyBodyGetsADefaultOverviewPerProjection() {
-        assertEquals(-0.8, OrbitalZoom.overviewZoomForExtent(0.0, false), 1.0e-9);
-        assertEquals(3.0, OrbitalZoom.overviewZoomForExtent(0.0, true), 1.0e-9);
+        assertEquals(-0.8, OrbitalZoom.overviewZoomForExtent(0.0, false, 960, 640), 1.0e-9);
+        assertEquals(3.0, OrbitalZoom.overviewZoomForExtent(0.0, true, 960, 640), 1.0e-9);
     }
 
     @Test

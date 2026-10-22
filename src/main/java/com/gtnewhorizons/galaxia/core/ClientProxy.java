@@ -9,6 +9,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.MinecraftForgeClient;
 
 import com.cleanroommc.modularui.api.IMuiScreen;
+import com.gtnewhorizons.galaxia.client.AndroidClient;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.GalaxiaKeyBinds;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.GalacticMapWidget;
@@ -28,6 +29,7 @@ import com.gtnewhorizons.galaxia.core.nei.IMCForNEI;
 import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
 import com.gtnewhorizons.galaxia.handlers.KeyHandler;
 import com.gtnewhorizons.galaxia.handlers.SkyUpdateHandler;
+import com.gtnewhorizons.galaxia.registry.android.EntityBody;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockElevatorCable;
 import com.gtnewhorizons.galaxia.registry.block.special.TileElevatorCable;
@@ -59,10 +61,11 @@ public class ClientProxy extends CommonProxy {
     public void preInit(FMLPreInitializationEvent event) {
         super.preInit(event);
         ForgeBusRegister(new ItemKineticTether.ClientEventHandler());
-        CelestialClient.EventHandler clientStateLifecycle = new CelestialClient.EventHandler();
-        ForgeBusRegister(clientStateLifecycle);
-        FMLBusRegister(clientStateLifecycle);
+        FMLBusRegister(new CelestialClient.EventHandler());
         FMLBusRegister(new KeyHandler());
+        AndroidClient androidClient = new AndroidClient();
+        ForgeBusRegister(androidClient);
+        FMLBusRegister(androidClient);
     }
 
     @Override
@@ -96,6 +99,7 @@ public class ClientProxy extends CommonProxy {
 
         // Entities
         RenderingRegistry.registerEntityRenderingHandler(EntityRocket.class, new RocketRenderer());
+        RenderingRegistry.registerEntityRenderingHandler(EntityBody.class, new AndroidClient.BodyRenderer());
 
         // Items
         MinecraftForgeClient
@@ -128,7 +132,10 @@ public class ClientProxy extends CommonProxy {
             public VisiblityData modifyVisiblity(GuiContainer gui, VisiblityData visibility) {
                 if (gui instanceof IMuiScreen modular) {
                     var screen = modular.getScreen();
-                    if (GalacticMapWidget.SCREEN_NAME.equals(screen.getName())
+                    if (screen.getPanelManager()
+                        .getOpenPanels()
+                        .stream()
+                        .anyMatch(panel -> GalacticMapWidget.SCREEN_NAME.equals(panel.getName()))
                         || Galaxia.MODID.equals(screen.getOwner())
                             && (!visibility.showWidgets || !visibility.showItemSection || !visibility.showItemPanel))
                         visibility.showNEI = false;

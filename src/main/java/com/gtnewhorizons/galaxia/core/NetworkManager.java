@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.core;
 
 import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
 
+import com.gtnewhorizons.galaxia.core.network.AndroidControlPacket;
 import com.gtnewhorizons.galaxia.core.network.AssetCreateRequestPacket;
 import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetStateFramePacket;
@@ -32,6 +33,10 @@ public final class NetworkManager {
     // spotless:off
     public static void registerPackets() {
         int id = 0;
+        GALAXIA_NETWORK.registerMessage(AndroidControlPacket.EndRequest.Handler.class,
+            AndroidControlPacket.EndRequest.class, id++, Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(AndroidControlPacket.Handler.class,
+            AndroidControlPacket.class, id++, Side.CLIENT);
 
         GALAXIA_NETWORK.registerMessage(TetherPacket.Handler.class, TetherPacket.class, id++,
             Side.SERVER);
@@ -78,6 +83,11 @@ public final class NetworkManager {
             Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(StarmapActionStatusPacket.Handler.class, StarmapActionStatusPacket.class, id++,
             Side.CLIENT);
+        GALAXIA_NETWORK.registerMessage(AndroidControlPacket.BiologicalDamage.Handler.class,
+            AndroidControlPacket.BiologicalDamage.class, id++, Side.CLIENT);
+        GALAXIA_NETWORK.registerMessage(AndroidControlPacket.StationStatus.Handler.class,
+            AndroidControlPacket.StationStatus.class, id++, Side.CLIENT);
+
     }
     // spotless:on
 }

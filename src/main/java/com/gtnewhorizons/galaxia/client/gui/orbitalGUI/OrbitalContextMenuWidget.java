@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import net.minecraft.util.StatCollector;
 
@@ -18,6 +19,7 @@ import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
 import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaUi;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 record ContextMenuAction(String labelKey, boolean enabled, OrbitalContextMenuWidget.ContextMenuActionType actionType) {}
@@ -46,6 +48,17 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
     private final StarmapViewContext view;
     private String lastSignature = "";
     private Flow menu;
+    private Consumer<CelestialObjectKey> bodySelection;
+    private ParentWidget<?> bodyChoices;
+
+    void selectBodies(Consumer<CelestialObjectKey> onSelected, ParentWidget<?> choices) {
+        bodySelection = onSelected;
+        bodyChoices = choices;
+    }
+
+    void onBodyOpened(CelestialObject body) {
+        if (bodySelection != null) bodySelection.accept(body.key());
+    }
 
     OrbitalContextMenuWidget(OrbitalView.OrbitalContextMenuState state, Callbacks callbacks, StarmapViewContext view) {
         this.state = state;
@@ -117,15 +130,18 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
     }
 
     private void rebuildChildren() {
+        if (menu != null && bodyChoices != null) menu.remove(bodyChoices);
         removeAll();
         menu = null;
         CelestialObject body = state.body();
         if (body == null || body.objectClass() == CelestialObject.Class.GALAXY) return;
-        List<ContextMenuAction> actions = buildActions(body, callbacks.canDebugSatellites(body));
+        List<ContextMenuAction> actions = bodyChoices == null ? buildActions(body, callbacks.canDebugSatellites(body))
+            : List.of();
         int width = Math.max(MIN_WIDTH, GalaxiaUi.width(body.displayName()));
         for (ContextMenuAction action : actions) width = Math
             .max(width, GalaxiaUi.width(StatCollector.translateToLocal(action.labelKey())) + GalaxiaUi.PAD * 2);
 
+        if (bodyChoices != null) width = Math.max(width, bodyChoices.getArea().width);
         Flow column = GalaxiaUi.column();
         column.name("starmap.context.menu")
             .padding(GalaxiaUi.PAD)
@@ -133,7 +149,8 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
         column.child(
             GalaxiaUi.clipped(body.displayName(), width, GalaxiaGuiStyle.TEXT_TITLE)
                 .height(GalaxiaUi.ICON));
-        for (ContextMenuAction action : actions) column.child(actionRow(body, action, width));
+        if (bodyChoices != null) column.child(bodyChoices);
+        else for (ContextMenuAction action : actions) column.child(actionRow(body, action, width));
         // Opens at the click, pulled back inside the map when it would cross an edge
         Flow placed = column;
         column.left(() -> clamp(state.x(), getArea().width - placed.getArea().width), Unit.Measure.PIXEL)

@@ -19,7 +19,7 @@ import appeng.me.cluster.implementations.QuantumCluster;
 import appeng.tile.qnb.TileQuantumBridge;
 
 /**
- * Quantum bridges only link across space when both ends have a relay satellite, see {@link QuantumLinkRules}
+ * Quantum bridge creation, validation and teardown share the satellite allocation owned by {@link QuantumLinkRules}.
  */
 @Mixin(value = QuantumCluster.class, remap = false)
 public abstract class QuantumClusterMixin implements IQuantumLink {
@@ -41,9 +41,9 @@ public abstract class QuantumClusterMixin implements IQuantumLink {
         QuantumLinkRules.track(this);
         if (connection == null) return;
         IGridConnection link = connection.getConnection();
-        if (link == null || QuantumLinkRules.isLinkAllowed(link.a(), link.b())) return;
+        if (link == null || galaxia$isAlive() && QuantumLinkRules.isConnectionAllowed(link)) return;
         // Both ends share the wrapper, clearing it unlinks both
-        link.destroy();
+        QuantumLinkRules.destroyConnection(link);
         connection.setConnection(null);
     }
 
@@ -54,10 +54,21 @@ public abstract class QuantumClusterMixin implements IQuantumLink {
             target = "Lappeng/api/IAppEngApi;createGridConnection(Lappeng/api/networking/IGridNode;Lappeng/api/networking/IGridNode;)Lappeng/api/networking/IGridConnection;"))
     private IGridConnection galaxia$vetoForbiddenLink(IAppEngApi api, IGridNode a, IGridNode b)
         throws FailedConnection {
-        if (!QuantumLinkRules.isLinkAllowed(a, b)) {
-            throw new FailedConnection("No relay satellites between the bridges");
-        }
-        return api.createGridConnection(a, b);
+        return QuantumLinkRules.createConnection(api, a, b);
+    }
+
+    @Redirect(
+        method = "updateStatus",
+        at = @At(value = "INVOKE", target = "Lappeng/api/networking/IGridConnection;destroy()V"))
+    private void galaxia$releaseConnection(IGridConnection link) {
+        QuantumLinkRules.destroyConnection(link);
+    }
+
+    @Inject(method = "destroy", at = @At("HEAD"))
+    private void galaxia$releaseDestroyedBridge(CallbackInfo ci) {
+        if (connection == null || connection.getConnection() == null) return;
+        QuantumLinkRules.destroyConnection(connection.getConnection());
+        connection.setConnection(null);
     }
 
     @Override

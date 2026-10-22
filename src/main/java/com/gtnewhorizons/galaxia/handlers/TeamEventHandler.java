@@ -11,6 +11,7 @@ import com.gtnewhorizon.gtnhlib.teams.TeamEvents.TeamCreateEvent;
 import com.gtnewhorizon.gtnhlib.teams.TeamEvents.TeamMergeEvent;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.AssetStateSync;
+import com.gtnewhorizons.galaxia.registry.android.AndroidControl;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -56,6 +57,7 @@ public final class TeamEventHandler {
             surviving.getTeamName(),
             surviving.getTeamId());
 
+        AndroidControl.mergeTeams(consumed.getTeamId(), surviving.getTeamId());
         celestialRuntime.mergeTeams(consumed.getTeamId(), surviving.getTeamId());
     }
 }

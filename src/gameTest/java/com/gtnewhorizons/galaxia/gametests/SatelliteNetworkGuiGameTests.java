@@ -14,6 +14,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayerMP;
 
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
+import com.gtnewhorizons.galaxia.core.network.AssetCreateRequestPacket;
 import com.gtnewhorizons.galaxia.core.network.AssetStateSync;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
@@ -32,13 +33,12 @@ import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkState;
 import com.gtnewhorizons.horizonqa.api.GameTestHelper;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTest;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTestHolder;
-import com.gtnewhorizons.horizonqa.api.client.ClickTarget;
 import com.gtnewhorizons.horizonqa.api.client.ClientScenario;
 import com.gtnewhorizons.horizonqa.api.client.ClientTarget;
 import com.gtnewhorizons.horizonqa.api.client.ClientTest;
 import com.gtnewhorizons.horizonqa.client.LwjglInput;
 
-/** A real GUI network showcase in the disposable Horizon world. Scan progress may persist until world shutdown. */
+/** A seeded network fixture with representative real GUI additions. Scan progress may persist until shutdown. */
 @GameTestHolder(value = "galaxia", clientOnly = true, requiredMods = { "gregtech", "NotEnoughItems" })
 public final class SatelliteNetworkGuiGameTests {
 
@@ -46,11 +46,16 @@ public final class SatelliteNetworkGuiGameTests {
         .of(CelestialObjectId.OVERWORLD, CelestialObjectId.MARS, CelestialObjectId.VENUS);
     private static final int ASTEROID_COUNT = 30;
     private static final int ASTEROID_CANDIDATES = 200;
+    private static final Map<Integer, List<SatelliteKind>> GUI_ADDITIONS = Map.of(
+        0,
+        List.of(SatelliteKind.COMMUNICATION),
+        PLANETS.size(),
+        List.of(SatelliteKind.COMMUNICATION, SatelliteKind.PROSPECTING));
 
     private SatelliteNetworkGuiGameTests() {}
 
     /**
-     * Integration contract: GUI-created planetary hubs and asteroid satellites form a real capacity-weighted network.
+     * Integration contract: three GUI additions extend an existing fleet into a real capacity-weighted network.
      */
     @GameTest(timeoutTicks = 6000)
     public static void watchPlanetBackboneAndAsteroidNetworkGrow(GameTestHelper helper) {
@@ -65,28 +70,27 @@ public final class SatelliteNetworkGuiGameTests {
                     .isCreativeBuildModeEnabled()) throw new AssertionError("Expected Debug initially off");
                 c.afterTest(fixture::cleanupClient);
             })
+            .awaitClient("choose the visible asteroid used by the GUI additions", c -> fixture.chooseBodies())
+            .server("seed eighty-seven operational satellites", fixture::seedNetwork)
+            .awaitClient("seeded identities and operational state synchronized", c -> fixture.assertSeeded(true))
             .step("enable Debug through sidebar")
             .click(ClientTarget.of("sidebar.debug", c -> GuiTestSupport.sidebarDebugTarget()))
             .awaitClient("Debug enabled", c -> fixture.assertDebug(true));
-        for (int index = 0; index < PLANETS.size() + ASTEROID_COUNT; index++) {
-            int bodyIndex = index;
-            String step = index < PLANETS.size() ? "planet hub " + PLANETS.get(index) + ": "
-                : "asteroid " + (index - PLANETS.size() + 1) + "/" + ASTEROID_COUNT + ": ";
+        for (int bodyIndex : GUI_ADDITIONS.keySet()) {
+            String step = "representative body " + bodyIndex + ": ";
             scenario.withinTicks(400)
                 .async(
-                    step + "create both satellite kinds in one client GUI batch",
+                    step + "add representative satellites through the GUI",
                     c -> fixture.createBodyThroughGui(c, bodyIndex))
                 .awaitClient(step + "context menu dismissed", c -> {
                     if (GuiTestSupport.findNamedWidget("starmap.context.menu") != null)
                         throw new AssertionError("Satellite context menu is still open after dismissal");
                 })
-                .awaitServer(step + "completed batch and previous bodies verified on server", () -> {
-                    for (int previous = 0; previous <= bodyIndex; previous++) {
-                        for (SatelliteKind kind : SatelliteKind.values())
-                            fixture.assertCreated(false, previous, kind, expectedCount(previous, kind));
-                    }
+                .awaitServer(step + "exact requested additions verified on server", () -> {
+                    for (SatelliteKind kind : SatelliteKind.values())
+                        fixture.assertCreated(false, bodyIndex, kind, expectedCount(bodyIndex, kind));
                 })
-                .awaitClient(step + "both satellite kinds and exact identities synchronized", c -> {
+                .awaitClient(step + "same new identities synchronized", c -> {
                     for (SatelliteKind kind : SatelliteKind.values())
                         fixture.assertCreated(true, bodyIndex, kind, expectedCount(bodyIndex, kind));
                 });
@@ -94,10 +98,23 @@ public final class SatelliteNetworkGuiGameTests {
         scenario.step("disable Debug through sidebar")
             .click(ClientTarget.of("sidebar.debug", c -> GuiTestSupport.sidebarDebugTarget()))
             .awaitClient("Debug disabled", c -> fixture.assertDebug(false));
-        scenario.serverSequence()
-            .thenIdle(40);
-        scenario.awaitServer("server fleet and network remain active", () -> fixture.assertNetwork(false))
-            .withinTicks(150)
+        scenario
+            .awaitServer(
+                "initial fleet identities and operational ownership verified",
+                () -> fixture.assertNetwork(false))
+            .awaitClient("initial fleet synchronized", c -> fixture.assertNetwork(true))
+            .server(
+                "begin ordinary fleet retention observation",
+                () -> fixture.observationStart = helper.getWorld()
+                    .getTotalWorldTime())
+            .withinTicks(100)
+            .awaitServer("fleet survives forty ordinary simulation ticks", () -> {
+                if (helper.getWorld()
+                    .getTotalWorldTime() - fixture.observationStart < 40)
+                    throw new AssertionError("Forty ordinary simulation ticks have not elapsed");
+                fixture.assertNetwork(false);
+            });
+        scenario.withinTicks(150)
             .awaitClient("real network synchronized and overview displayed", c -> {
                 fixture.assertDebug(false);
                 fixture.assertNetwork(true);
@@ -121,8 +138,6 @@ public final class SatelliteNetworkGuiGameTests {
                     throw new AssertionError("The satellite marker shows no tooltip");
             })
             .capture("satellite-tooltip");
-        scenario.serverSequence()
-            .thenIdle(40);
         scenario.succeed();
     }
 
@@ -130,23 +145,30 @@ public final class SatelliteNetworkGuiGameTests {
         return bodyIndex < PLANETS.size() ? (kind == SatelliteKind.COMMUNICATION ? 8 : 2) : 1;
     }
 
+    private static int seededCount(int bodyIndex, SatelliteKind kind) {
+        return expectedCount(bodyIndex, kind) - (GUI_ADDITIONS.getOrDefault(bodyIndex, List.of())
+            .contains(kind) ? 1 : 0);
+    }
+
     private static final class Fixture {
 
         private final List<CelestialObjectKey> bodies = new ArrayList<>();
         private final List<CelestialObjectKey> asteroidCandidates = new ArrayList<>();
         private final Set<CelestialAsset.ID> baseline = new HashSet<>();
+        private final Set<CelestialAsset.ID> seeded = new HashSet<>();
         private final Map<CelestialObjectKey, CelestialKnowledgeFacts> priorFacts = new LinkedHashMap<>();
         private final Map<CelestialObjectKey, Map<SatelliteKind, Set<CelestialAsset.ID>>> created = new LinkedHashMap<>();
         private UUID team;
+        private UUID playerId;
+        private long observationStart;
 
         CompletableFuture<Void> createBodyThroughGui(ClientTest client, int bodyIndex) {
-            CompletableFuture<Void> batch = client.click(1, "body context", c -> bodyContextTarget(bodyIndex));
-            for (SatelliteKind kind : SatelliteKind.values()) {
+            CompletableFuture<Void> batch = client
+                .click(1, "body context", c -> GuiTestSupport.bodyTarget(bodies.get(bodyIndex), 1));
+            for (SatelliteKind kind : GUI_ADDITIONS.get(bodyIndex)) {
                 String control = "starmap.context.ADD_" + kind.name() + "_SATELLITE";
-                for (int count = 0; count < expectedCount(bodyIndex, kind); count++) {
-                    batch = batch
-                        .thenCompose(ignored -> client.click(0, control, c -> GuiTestSupport.namedTarget(control)));
-                }
+                batch = batch
+                    .thenCompose(ignored -> client.click(0, control, c -> GuiTestSupport.namedTarget(control)));
             }
             return batch.thenCompose(
                 ignored -> client.click(0, "map outside context menu", c -> GuiTestSupport.contextMenuDismissTarget()));
@@ -162,6 +184,7 @@ public final class SatelliteNetworkGuiGameTests {
             }
             if (player == null) throw new AssertionError("Integrated client player has not joined");
             EntityPlayerMP owner = player;
+            playerId = owner.getUniqueID();
             team = GTTeamsCompat.getTeamData(owner)
                 .orElseThrow()
                 .getTeamId();
@@ -194,22 +217,49 @@ public final class SatelliteNetworkGuiGameTests {
             owner.sendPlayerAbilities();
         }
 
-        ClickTarget bodyContextTarget(int bodyIndex) {
-            if (bodyIndex < PLANETS.size()) return GuiTestSupport.bodyTarget(bodies.get(bodyIndex), 1);
+        void chooseBodies() {
+            if (bodies.size() == PLANETS.size() + ASTEROID_COUNT) return;
             var map = GuiTestSupport.map();
-            if (map == null) return null;
-            for (CelestialObjectKey key : asteroidCandidates) {
-                if (bodies.subList(0, bodyIndex)
-                    .contains(key)) continue;
+            CelestialObjectKey visible = null;
+            if (map != null) for (CelestialObjectKey key : asteroidCandidates) {
                 var bounds = map.visibleBodyBounds(key);
                 if (bounds != null && key
                     .equals(map.interactableBodyAt(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, 1))) {
-                    if (bodies.size() == bodyIndex) bodies.add(key);
-                    else bodies.set(bodyIndex, key);
-                    return GuiTestSupport.bodyTarget(key, 1);
+                    visible = key;
+                    break;
                 }
             }
-            return null;
+            if (visible == null) throw new AssertionError("No visible asteroid for the native GUI additions");
+            bodies.add(visible);
+            for (CelestialObjectKey key : asteroidCandidates) {
+                if (bodies.size() == PLANETS.size() + ASTEROID_COUNT) break;
+                if (!bodies.contains(key)) bodies.add(key);
+            }
+            if (bodies.size() != PLANETS.size() + ASTEROID_COUNT)
+                throw new AssertionError("Need thirty distinct asteroid fixture bodies");
+        }
+
+        void seedNetwork() {
+            for (int index = 0; index < bodies.size(); index++) {
+                for (SatelliteKind kind : SatelliteKind.values()) {
+                    for (int count = 0; count < seededCount(index, kind); count++) {
+                        CelestialAsset asset = AssetCreateRequestPacket.createSatellite(bodies.get(index), kind, true)
+                            .apply(team, true);
+                        if (asset == null || !seeded.add(asset.assetId))
+                            throw new AssertionError("Satellite fixture creation did not produce a distinct asset");
+                        AssetStateSync.SERVER.publishFullTo(playerId, asset.assetId);
+                    }
+                }
+            }
+            if (seeded.size() != 87) throw new AssertionError("Expected exactly eighty-seven prerequisite satellites");
+            assertSeeded(false);
+        }
+
+        void assertSeeded(boolean client) {
+            for (int index = 0; index < bodies.size(); index++) {
+                for (SatelliteKind kind : SatelliteKind.values())
+                    assertCreated(client, index, kind, seededCount(index, kind));
+            }
         }
 
         void assertDebug(boolean enabled) {
@@ -230,7 +280,7 @@ public final class SatelliteNetworkGuiGameTests {
                 .toList();
             if (matches.size() != expectedCount) throw new AssertionError(
                 "Expected " + expectedCount
-                    + " GUI-created "
+                    + " fixture "
                     + kind
                     + " at "
                     + body
@@ -248,7 +298,7 @@ public final class SatelliteNetworkGuiGameTests {
             for (Satellite satellite : matches) {
                 if (!satellite.isOperational() || !body.equals(satellite.celestialObjectKey)
                     || !store.isOwnedByInternal(team, satellite.assetId))
-                    throw new AssertionError("GUI satellite lost operational status, body or team ownership");
+                    throw new AssertionError("Satellite lost operational status, body or team ownership");
                 actual.add(satellite.assetId);
             }
             if (!client) {
@@ -270,6 +320,17 @@ public final class SatelliteNetworkGuiGameTests {
                 for (SatelliteKind kind : SatelliteKind.values())
                     assertCreated(client, index, kind, expectedCount(index, kind));
             }
+            long additions = created.values()
+                .stream()
+                .flatMap(
+                    kinds -> kinds.values()
+                        .stream())
+                .flatMap(Set::stream)
+                .filter(id -> !seeded.contains(id))
+                .distinct()
+                .count();
+            if (additions != 3)
+                throw new AssertionError("Expected exactly three GUI-created satellites beyond the fixture");
             SatelliteNetworkState network = client ? SatelliteNetworkClientState.current()
                 : SatelliteNetworkService.current(team);
             if (!team.equals(network.teamId())) throw new AssertionError("Network belongs to the wrong team");
@@ -307,6 +368,7 @@ public final class SatelliteNetworkGuiGameTests {
         }
 
         void cleanupClient() {
+            seeded.forEach(CelestialAssetStore.CLIENT::destroyAssetInternal);
             created.values()
                 .forEach(
                     kinds -> kinds.values()

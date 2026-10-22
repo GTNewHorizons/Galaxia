@@ -4,7 +4,7 @@ import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.getRadiationProtection;
 
 import java.util.Optional;
 
-import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.util.DamageSource;
 
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
@@ -19,16 +19,16 @@ public class HazardRadiation implements IEnvironmentalHazard {
         .setMagicDamage();
 
     /**
-     * Applies the effects of radiation to the player
+     * Applies the effects of radiation to the body
      *
      * @param def     The EffectDef holding dimensional effects
-     * @param player  The player entity
+     * @param body    The body entity
      * @param station
      * @return
      */
     @Override
-    public HazardWarnings apply(EffectBuilder def, EntityPlayer player, Optional<TileStation> station) {
-        int radiation = def.getRadiation(player.worldObj);
+    public HazardWarnings apply(EffectBuilder def, EntityLivingBase body, Optional<TileStation> station) {
+        int radiation = def.getRadiation(body.worldObj);
         if (radiation == 0) return HazardWarnings.FINE;
         int acceptableMax = DEFAULT_MAX;
 
@@ -37,9 +37,9 @@ public class HazardRadiation implements IEnvironmentalHazard {
             return HazardWarnings.FINE;
         }
 
-        acceptableMax += getRadiationProtection(player);
+        acceptableMax += getRadiationProtection(body);
         if (radiation <= acceptableMax) return HazardWarnings.FINE;
-        player.attackEntityFrom(radiationDamage, 5.0f);
+        body.attackEntityFrom(radiationDamage, 5.0f);
         return HazardWarnings.HIGH_RADIATION;
     }
 }

@@ -75,12 +75,13 @@ public final class ModuleConstructionGuiGameTests {
                 .awaitClient(
                     step + "module picker visible",
                     c -> GuiTestSupport.requireWindow(ModulePickerScreen.WINDOW_ID))
-                .click(control("module.kind." + kind.name()))
-                .click(control("module.tier." + tier.name()));
+                .click(control("module.kind." + kind.name()));
             if (kind == FacilityModuleKind.HAMMER) {
-                scenario.click(control("module.hammer.BIG"));
+                scenario.click(control("module.hammer.BIG"))
+                    .click(control("module.tier.UV"));
             }
-            scenario.click(control("module.build"))
+            scenario.click(control("module.tier." + tier.name()))
+                .click(control("module.build"))
                 .awaitServer(
                     step + "server accepted paid construction",
                     () -> fixture.assertBuilt(false, buildIndex, false, buildIndex + 1))
@@ -91,8 +92,9 @@ public final class ModuleConstructionGuiGameTests {
             String step = KINDS.get(index)
                 .name() + ": ";
             scenario.withinTicks(600)
-                .awaitServer(
-                    step + "normal ticks completed construction",
+                .awaitServerAccelerated(
+                    step + "simulation ticks completed construction",
+                    10,
                     () -> fixture.assertBuilt(false, buildIndex, true, KINDS.size()))
                 .withinTicks(150)
                 .awaitClient(
@@ -111,27 +113,14 @@ public final class ModuleConstructionGuiGameTests {
     public static void builtBigHammerCanUpgradeToUvThroughGui(GameTestHelper helper) {
         Fixture fixture = new Fixture();
         ClientScenario scenario = ClientTest.scenario(helper)
-            .server("prepare station with build and UV upgrade materials", () -> fixture.prepare(helper, true))
+            .server(
+                "prepare an operational BIG LuV HAMMER and exact UV upgrade materials",
+                () -> fixture.prepare(helper, true))
             .client(
                 "register fixture mirror cleanup",
                 c -> c.afterTest(() -> CelestialAssetStore.CLIENT.destroyAssetInternal(fixture.assetId)));
         GuiTestSupport.openFacility(scenario, helper, fixture.assetId, BODY)
-            .click(ClientTarget.of("empty HAMMER tile", c -> fixture.emptyTileTarget(TILES.getFirst())))
-            .awaitClient("module picker visible", c -> GuiTestSupport.requireWindow(ModulePickerScreen.WINDOW_ID))
-            .click(control("module.kind.HAMMER"))
-            .click(control("module.hammer.BIG"))
-            .click(control("module.tier.UV"))
-            .click(control("module.tier.LuV"))
-            .click(control("module.build"))
-            .withinTicks(700)
-            .awaitServerAccelerated("BIG LuV HAMMER completed", 10, () -> fixture.assertBuilt(false, 0, true, 1))
-            .withinTicks(150)
-            .awaitClient("built HAMMER synchronized", c -> fixture.assertBuilt(true, 0, true, 1))
-            .server(
-                "remember the built module identity",
-                () -> fixture.upgradeModuleId = fixture.facility(false)
-                    .stationLayout()
-                    .moduleAt(TILES.getFirst()).id)
+            .awaitClient("prepared BIG LuV HAMMER synchronized", c -> fixture.assertBuilt(true, 0, true, 1))
             .click(ClientTarget.of("built HAMMER tile", c -> fixture.tileTarget(TILES.getFirst())))
             .click(control("UPGRADE"))
             .click(control("module.upgrade.hammer.variant.BASE"))
@@ -140,7 +129,14 @@ public final class ModuleConstructionGuiGameTests {
             .click(control("module.upgrade.hammer.tier.UV"))
             .capture("big-hammer-uv-upgrade-selected")
             .click(control("module.upgrade.confirm"))
-            .awaitServer("GUI submitted the UV upgrade", () -> fixture.assertHammerUpgrade(false, false))
+            .awaitServer("GUI submitted the paid UV upgrade and reserved its materials", () -> {
+                fixture.assertHammerUpgrade(false, false);
+                fixture.assertMaterialsConsumed(false);
+            })
+            .awaitClient("paid UV upgrade and reserved materials synchronized", c -> {
+                fixture.assertHammerUpgrade(true, false);
+                fixture.assertMaterialsConsumed(true);
+            })
             .withinTicks(700)
             .awaitServerAccelerated(
                 "simulation ticks completed UV upgrade",
@@ -332,12 +328,21 @@ public final class ModuleConstructionGuiGameTests {
                 throw new AssertionError("Could not seed prerequisite cargo storage");
             prerequisiteModules = facility.modules()
                 .size();
-            for (FacilityModuleKind kind : KINDS) {
-                FacilityModuleRegistry.operationCost(
-                    FacilityModuleRegistry.get(kind)
-                        .getTierData(tier(kind))
-                        .constructionCost())
-                    .forEach((resource, amount) -> materials.merge(resource, amount, Long::sum));
+            if (includeHammerUpgrade) {
+                FacilityCommand.Result hammer = facility.applyCommand(
+                    new FacilityCommand.BuildModules(
+                        assetId,
+                        FacilityModuleKind.HAMMER,
+                        FacilityModuleKind.HAMMER.defaultShape(),
+                        new IModuleComponent.BuildPhysicalSpec.Hammer(ModuleTier.LuV, HammerVariant.BIG),
+                        null,
+                        true,
+                        List.of(ModulePlacement.at(TILES.getFirst()))),
+                    new FacilityCommand.Authority(true, true));
+                if (hammer.status() != FacilityCommand.Status.CHANGED)
+                    throw new AssertionError("Could not seed the operational BIG LuV HAMMER");
+                upgradeModuleId = facility.stationLayout()
+                    .moduleAt(TILES.getFirst()).id;
             }
             if (includeHammerUpgrade) {
                 FacilityModuleRegistry.operationCost(
@@ -345,6 +350,14 @@ public final class ModuleConstructionGuiGameTests {
                         .getTierData(ModuleTier.UV)
                         .constructionCost())
                     .forEach((resource, amount) -> materials.merge(resource, amount, Long::sum));
+            } else {
+                for (FacilityModuleKind kind : KINDS) {
+                    FacilityModuleRegistry.operationCost(
+                        FacilityModuleRegistry.get(kind)
+                            .getTierData(tier(kind))
+                            .constructionCost())
+                        .forEach((resource, amount) -> materials.merge(resource, amount, Long::sum));
+                }
             }
             materials.forEach(
                 (resource, amount) -> {
