@@ -6,7 +6,6 @@ import javax.annotation.Nullable;
 
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot.Resource;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
@@ -16,10 +15,6 @@ final class RecipeSlotUiModel {
     static final int MAX_BYTE_SETTING = Byte.MAX_VALUE;
 
     private RecipeSlotUiModel() {}
-
-    static String modeLabel(RecipeSchedulerMode mode) {
-        return "Mode: " + mode.name();
-    }
 
     static String slotTitle(SavedRecipe slot) {
         if (slot.displayName() != null && !slot.displayName()

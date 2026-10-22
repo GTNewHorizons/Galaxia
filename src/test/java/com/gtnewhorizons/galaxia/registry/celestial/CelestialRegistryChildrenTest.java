@@ -31,14 +31,13 @@ final class CelestialRegistryChildrenTest {
     }
 
     @Test
-    void marsChildrenIncludeRegisteredMoon() {
+    void registeredChildrenAreVisibleWithoutDiscovery() {
         List<CelestialObject> children = CelestialRegistry
             .children(CelestialObjectKey.registered(CelestialObjectId.MARS), CelestialDiscoveryView.empty(), false);
 
-        assertTrue(
-            children.stream()
-                .map(CelestialObject::key)
-                .anyMatch(CelestialObjectKey.registered(CelestialObjectId.MOON)::equals));
+        var registered = CelestialRegistry.getChildren(CelestialObjectKey.registered(CelestialObjectId.MARS));
+        assertFalse(registered.isEmpty());
+        assertEquals(childKeys(registered), childKeys(children));
         assertTrue(
             children.stream()
                 .map(CelestialObject::key)

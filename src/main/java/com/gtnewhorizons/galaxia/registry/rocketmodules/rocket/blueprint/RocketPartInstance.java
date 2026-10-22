@@ -8,7 +8,7 @@ public record RocketPartInstance(IRocketPartDef def, int x, int y, int z, boolea
 
     public NBTTagCompound serialize() {
         NBTTagCompound tag = new NBTTagCompound();
-        tag.setInteger("id", def.id());
+        tag.setString("key", def.key());
         tag.setInteger("x", x);
         tag.setInteger("y", y);
         tag.setInteger("z", z);
@@ -17,8 +17,7 @@ public record RocketPartInstance(IRocketPartDef def, int x, int y, int z, boolea
     }
 
     public static RocketPartInstance deserialize(NBTTagCompound tag, RocketPartRegistry registry) {
-        int id = tag.getInteger("id");
-        IRocketPartDef def = registry.get(id);
+        IRocketPartDef def = registry.getByKey(tag.getString("key"));
         if (def == null) return null;
         return new RocketPartInstance(
             def,

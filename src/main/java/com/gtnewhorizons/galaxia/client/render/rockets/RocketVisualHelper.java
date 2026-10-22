@@ -1,8 +1,6 @@
 package com.gtnewhorizons.galaxia.client.render.rockets;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.OpenGlHelper;
-import net.minecraftforge.client.model.IModelCustom;
 
 import org.lwjgl.opengl.GL11;
 
@@ -50,11 +48,7 @@ public final class RocketVisualHelper {
         RocketBlueprint blueprint = silo.getBuiltBlueprint();
         if (blueprint == null || blueprint.isEmpty()) return;
 
-        final int[] offset = TileEntitySilo.getRotatedOffset(
-            TileEntitySilo.SILO_DEFAULT_X_OFFSET,
-            TileEntitySilo.SILO_DEFAULT_Y_OFFSET,
-            TileEntitySilo.SILO_DEFAULT_Z_OFFSET,
-            silo.currentFacing);
+        final int[] offset = silo.getRocketOffset();
 
         int px = silo.xCoord + offset[0];
         int py = silo.yCoord + offset[1];
@@ -118,33 +112,19 @@ public final class RocketVisualHelper {
         GL11.glPushMatrix();
 
         GL11.glTranslated(
-            -(part.x() - centerX + 1.5),
+            -(part.x() + part.def()
+                .width() / 2.0 - centerX),
             -(part.y() - totalHeight
                 + (double) part.def()
                     .height() / 2),
             part.z() - centerZ + 0.5);
 
-        IRocketPartDef def = part.def();
-
-        if (def.modelLocation() != null) {
-            IModelCustom model = ModelCache.get(def.modelLocation());
-            if (model != null) {
-                GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT);
-                GL11.glDisable(GL11.GL_CULL_FACE);
-                GL11.glEnable(GL11.GL_BLEND);
-                GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-
-                Minecraft.getMinecraft()
-                    .getTextureManager()
-                    .bindTexture(def.textureLocation());
-
-                model.renderAll();
-
-                GL11.glPopAttrib();
-                GL11.glPopMatrix();
-                return;
-            }
-        }
+        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT);
+        GL11.glDisable(GL11.GL_CULL_FACE);
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        ModuleModelRenderer.renderModel(part.def(), 1f);
+        GL11.glPopAttrib();
 
         GL11.glPopMatrix();
     }

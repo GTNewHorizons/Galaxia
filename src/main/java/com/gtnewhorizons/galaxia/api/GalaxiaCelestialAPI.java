@@ -13,6 +13,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.dimension.OrbitDimensions;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 
 public final class GalaxiaCelestialAPI {
@@ -51,7 +52,12 @@ public final class GalaxiaCelestialAPI {
         return CelestialRegistry.findByDimension(dimension);
     }
 
+    /**
+     * Celestial body a dimension belongs to. Orbit dimensions belong to the body they circle
+     */
     public static Optional<CelestialObject> findByDimension(int dimensionId) {
+        Optional<OrbitDimensions.Orbit> orbit = OrbitDimensions.byDimension(dimensionId);
+        if (orbit.isPresent()) return orbit.map(OrbitDimensions.Orbit::body);
         DimensionEnum dimension = DimensionEnum.fromId(dimensionId);
         return dimension == null ? Optional.empty() : findByDimension(dimension);
     }
@@ -174,14 +180,14 @@ public final class GalaxiaCelestialAPI {
     public static CelestialObject findStar(CelestialObject root, CelestialObjectKey targetKey) {
         if (root == null || targetKey == null) return null;
         CelestialObject target = ancestryTarget(targetKey);
-        CelestialObject star = findStar(root, target);
-        if (star != null || target == null || target.parentKey() == null) return star;
-        return findStar(root, target.parentKey());
+        return findStar(root, target);
     }
 
     public static CelestialObject findStar(CelestialObject root, CelestialObject target) {
         if (root == null || target == null) return null;
-        return findStarRec(root, target, null);
+        CelestialObject star = findStarRec(root, target, null);
+        if (star != null || target.parentKey() == null) return star;
+        return findStar(root, target.parentKey());
     }
 
     private static CelestialObject findStarRec(CelestialObject current, CelestialObject target,

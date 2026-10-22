@@ -28,7 +28,7 @@ public final class OrbitalTransferPlanner {
     public static final double OSU_PER_SECOND = OSU_PER_TICK * 20.0;
     private static final double MIN_TRANSFER_ANGLE_SIN = 1e-3;
     private static final double BRANCH_TIE_DV_EPS = 1e-7;
-    private static final int MAX_TRAJECTORY_INTEGRATION_SUBSTEPS_PER_SEGMENT = 16;
+    private static final int TRAJECTORY_INTEGRATION_STEPS_PER_SAMPLE = 16;
     private static final double TRAJECTORY_INTEGRATION_TIME_SCALE_FRACTION = 0.03;
 
     private OrbitalTransferPlanner() {}
@@ -298,6 +298,7 @@ public final class OrbitalTransferPlanner {
         return dvDelta < 0.0 ? prograde : retrograde;
     }
 
+    /** Samples equal-time points, returning zero if the shared integration budget cannot complete the trajectory. */
     public static int sampleTransferArcInto(double ax, double ay, double rx1, double ry1, double vx1, double vy1,
         double tof, double mu, double[] outXs, double[] outYs, int n) {
         if (outXs == null || outYs == null) return 0;
@@ -307,12 +308,17 @@ public final class OrbitalTransferPlanner {
         double segmentDt = tof / (sampleCount - 1);
         outXs[0] = ax + state.x();
         outYs[0] = ay + state.y();
+        int remainingSteps = sampleCount * TRAJECTORY_INTEGRATION_STEPS_PER_SAMPLE;
         for (int i = 1; i < sampleCount; i++) {
-            int substeps = trajectoryIntegrationSubsteps(state, mu, segmentDt);
-            double integrationDt = segmentDt / substeps;
-            for (int step = 0; step < substeps; step++) {
+            double remainingTime = segmentDt;
+            while (remainingTime != 0.0) {
+                // Re-evaluate the local orbit scale as the trajectory approaches or leaves the attractor.
+                if (remainingSteps-- <= 0) return 0;
+                int substeps = trajectoryIntegrationSubsteps(state, mu, Math.abs(remainingTime));
+                double integrationDt = remainingTime / substeps;
                 state = OrbitalMechanics.propagateTwoBodyState(state, mu, integrationDt);
                 if (state == null) return i;
+                remainingTime -= integrationDt;
             }
             outXs[i] = ax + state.x();
             outYs[i] = ay + state.y();
@@ -323,12 +329,12 @@ public final class OrbitalTransferPlanner {
     private static int trajectoryIntegrationSubsteps(OrbitalMechanics.OrbitalState state, double mu, double segmentDt) {
         if (state == null || mu <= 0.0 || segmentDt <= 0.0) return 1;
         double radius = Math.hypot(state.x(), state.y());
-        if (radius <= 1e-9) return MAX_TRAJECTORY_INTEGRATION_SUBSTEPS_PER_SEGMENT;
+        if (radius <= 1e-9) return Integer.MAX_VALUE;
         double localTimeScale = Math.sqrt(radius * radius * radius / mu);
         if (!Double.isFinite(localTimeScale) || localTimeScale <= 1e-9) {
-            return MAX_TRAJECTORY_INTEGRATION_SUBSTEPS_PER_SEGMENT;
+            return Integer.MAX_VALUE;
         }
         int substeps = (int) Math.ceil(segmentDt / (localTimeScale * TRAJECTORY_INTEGRATION_TIME_SCALE_FRACTION));
-        return Math.max(1, Math.min(MAX_TRAJECTORY_INTEGRATION_SUBSTEPS_PER_SEGMENT, substeps));
+        return Math.max(1, substeps);
     }
 }

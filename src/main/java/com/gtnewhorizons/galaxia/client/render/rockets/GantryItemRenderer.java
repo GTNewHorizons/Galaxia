@@ -1,56 +1,50 @@
 package com.gtnewhorizons.galaxia.client.render.rockets;
 
-import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.IItemRenderer;
-import net.minecraftforge.client.model.AdvancedModelLoader;
 
 import org.lwjgl.opengl.GL11;
 
+/**
+ * Draws the Gantry Shaft item as a straight rail. Forge's block helpers place it like any other block item, the beam
+ * is only scaled up so it fills a slot the way a full block does
+ */
 public class GantryItemRenderer implements IItemRenderer {
+
+    /** A beam is half as thick as a block, scaled up it covers a slot like a cube */
+    private static final float INVENTORY_SCALE = 1.45f;
 
     @Override
     public boolean handleRenderType(ItemStack item, ItemRenderType type) {
         return type == ItemRenderType.INVENTORY || type == ItemRenderType.EQUIPPED
             || type == ItemRenderType.EQUIPPED_FIRST_PERSON
-            || type == ItemRenderType.FIRST_PERSON_MAP
             || type == ItemRenderType.ENTITY;
     }
 
     @Override
     public boolean shouldUseRenderHelper(ItemRenderType type, ItemStack item, ItemRendererHelper helper) {
-        return type == ItemRenderType.ENTITY;
+        return switch (type) {
+            case INVENTORY -> helper == ItemRendererHelper.INVENTORY_BLOCK;
+            case ENTITY -> helper == ItemRendererHelper.ENTITY_ROTATION || helper == ItemRendererHelper.ENTITY_BOBBING
+                || helper == ItemRendererHelper.BLOCK_3D;
+            case EQUIPPED, EQUIPPED_FIRST_PERSON -> helper == ItemRendererHelper.EQUIPPED_BLOCK;
+            default -> false;
+        };
     }
 
     @Override
     public void renderItem(ItemRenderType type, ItemStack item, Object... data) {
         GL11.glPushMatrix();
-        GL11.glEnable(GL11.GL_BLEND);
-        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-
         switch (type) {
-            case INVENTORY:
-                GL11.glTranslatef(8.5f, 8.5f, 8.5f);
-                GL11.glRotatef(-30f, 1f, 0f, 0f);
-                GL11.glRotatef(45f, 0f, 1f, 0f);
-                GL11.glScalef(5f, 5f, 5f);
-                break;
-            case EQUIPPED:
-            case EQUIPPED_FIRST_PERSON:
-            case FIRST_PERSON_MAP:
-                GL11.glTranslatef(0.5f, 0.5f, 0.5f);
-                break;
-            case ENTITY:
-                GL11.glTranslatef(0f, 0.15f, 0f);
-                GL11.glScalef(0.5f, 0.5f, 0.5f);
-                break;
+            case INVENTORY -> GL11.glScalef(INVENTORY_SCALE, INVENTORY_SCALE, INVENTORY_SCALE);
+            // The equipped helper moves the origin to the corner of the block
+            case EQUIPPED, EQUIPPED_FIRST_PERSON -> GL11.glTranslatef(0.5f, 0.5f, 0.5f);
+            default -> {}
         }
-        Minecraft.getMinecraft().renderEngine.bindTexture(LocationGalaxia("textures/model/gantry/straight.png"));
-        AdvancedModelLoader.loadModel(LocationGalaxia("textures/model/gantry/straight.obj"))
+        Minecraft.getMinecraft().renderEngine.bindTexture(GantryRailModels.TEXTURE);
+        ModelCache.get(GantryRailModels.STRAIGHT)
             .renderAll();
-
         GL11.glPopMatrix();
     }
 }

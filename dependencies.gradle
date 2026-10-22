@@ -69,6 +69,8 @@ dependencies {
     // Speeds up mod identification and loading in dev
     runtimeOnlyNonPublishable(rfg.deobf("com.github.GTNewHorizons:CoreTweaks:0.3.4.7-GTNH"))
 
+    compileOnly("com.github.GTNewHorizons:SimpleSkinBackport:1.0.3-GTNH:dev") { transitive = false }
+
     // @Data annotation for the data class, see: [https://projectlombok.org/api/lombok/Data]
     compileOnly('org.projectlombok:lombok:1.18.46')
     annotationProcessor('org.projectlombok:lombok:1.18.46')

@@ -4,6 +4,8 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketP
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor.RocketEditorUI;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.fuel.FuelTankFrame;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.fuel.RocketFuels;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 import dev.modularui.preview.PreviewEntrypoint;
@@ -44,10 +46,10 @@ final class RocketPreviews {
         if (state == BlueprintState.EMPTY) return blueprint;
         RocketPartRegistry registry = RocketPartRegistry.instance();
         blueprint.setName(state == BlueprintState.VALID ? "Mars Lander" : "Incomplete Rocket");
-        blueprint.addPart(new RocketPartInstance(registry.get(0), 0, 0, 0, false));
+        blueprint.addPart(new RocketPartInstance(RocketPartRegistry.CAPSULE, 1, 0, 0, false));
         if (state == BlueprintState.INVALID) return blueprint;
-        blueprint.addPart(new RocketPartInstance(registry.get(1), 0, 3, 0, false));
-        blueprint.addPart(new RocketPartInstance(registry.get(2), 0, 8, 0, false));
+        blueprint.addPart(new RocketPartInstance(registry.getFuelTank(FuelTankFrame.WIDE_5, RocketFuels.NITROFUEL), 0, 3, 0, false));
+        blueprint.addPart(new RocketPartInstance(registry.getByKey("engine_nitrofuel"), 1, 8, 0, false));
         return blueprint;
     }
 
@@ -57,8 +59,8 @@ final class RocketPreviews {
             TileEntityModuleAssembler assembler = new TileEntityModuleAssembler();
             PreviewWorld world = PreviewWorld.create(assembler);
             PreviewSupport.setField(assembler, "structureValid", true);
-            Map<Integer, Integer> stock = new HashMap<>();
-            RocketPartRegistry.instance().getAll().forEach(part -> stock.put(part.id(), 4));
+            Map<String, Integer> stock = new HashMap<>();
+            RocketPartRegistry.instance().getAll().forEach(part -> stock.put(part.key(), 4));
             PreviewSupport.setField(assembler, "moduleStock", stock);
             return assembler.buildUI(
                 PreviewSupport.posGuiData(world, 0, 0, 0),

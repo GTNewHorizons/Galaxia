@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('unit', 'physical-stations', 'automated-facilities', 'rocket-production', 'starmap', 'satellites', 'all')]
+    [ValidateSet('unit', 'physical-stations', 'automated-facilities', 'rocket-production', 'starmap', 'satellites', 'androids', 'all')]
     [string[]] $Suite = @('unit'),
     [string] $HorizonQaRoot = '',
     [string] $HorizonQaJar = '',
@@ -20,6 +20,7 @@ $groups = [ordered]@{
     'rocket-production' = @('galaxia:ModuleConstructionGuiGameTests.')
     'starmap' = @('galaxia:StarmapGameTests.')
     'satellites' = @('galaxia:SatelliteNetworkGuiGameTests.')
+    'androids' = @('galaxia:AndroidStationGameTests.', 'galaxia:AndroidControlGameTests.')
 }
 if ($ListSuites) {
     'unit: JUnit tests and build'
@@ -67,16 +68,19 @@ if (-not $HorizonQaJar) { $HorizonQaJar = Join-Path $projectRoot 'AI/Cache/horiz
 if (-not $ReportDir) {
     $ReportDir = Join-Path $projectRoot ('build/horizonqa/' + ($Suite -join '-') + '-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff'))
 }
-$launcher = Join-Path $HorizonQaRoot 'scripts/client-tests'
-if (-not (Test-Path -LiteralPath (Join-Path $launcher 'build.gradle'))) { throw "Horizon-QA launcher not found: $launcher. Set -HorizonQaRoot" }
+$launcher = Join-Path $HorizonQaRoot 'gradlew.bat'
+$launcherProject = Join-Path $HorizonQaRoot 'scripts/client-tests'
+if (-not (Test-Path -LiteralPath (Join-Path $launcherProject 'build.gradle'))) {
+    throw "Horizon-QA launcher not found: $launcherProject. Set -HorizonQaRoot"
+}
 if (-not (Test-Path -LiteralPath $HorizonQaJar)) { throw "Client testing JAR not found: $HorizonQaJar. Set -HorizonQaJar" }
 
 $launcherArguments = @(
-    '-p', $launcher, 'runClientTests',
-    '--project-root', $projectRoot, '--client-task', ':runClient',
-    '--tests', $selectors, '--horizon-qa-jar', $HorizonQaJar,
-    '--report-dir', $ReportDir, '--timeout-seconds', $TimeoutSeconds
+    '-p', $launcherProject, 'runClientTests', '--console=plain', '--max-workers=2',
+    '--project-root', $projectRoot, '--client-task', ':runClient', '--tests', $selectors,
+    '--horizon-qa-jar', $HorizonQaJar, '--report-dir', $ReportDir,
+    '--timeout-seconds', "$TimeoutSeconds"
 )
 foreach ($argument in $GradleArguments) { $launcherArguments += "--gradle-argument=$argument" }
-& (Join-Path $HorizonQaRoot 'gradlew.bat') @launcherArguments
+& $launcher @launcherArguments
 exit $LASTEXITCODE

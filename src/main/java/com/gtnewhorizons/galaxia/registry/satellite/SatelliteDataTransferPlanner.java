@@ -239,7 +239,7 @@ public final class SatelliteDataTransferPlanner {
         return availableKbps;
     }
 
-    private static List<CelestialObjectKey> routeBodies(CelestialObjectKey sourceBodyKey,
+    static List<CelestialObjectKey> routeBodies(CelestialObjectKey sourceBodyKey,
         List<SatelliteNetworkGraph.Edge> path) {
         if (sourceBodyKey == null || path == null) return List.of();
         List<CelestialObjectKey> bodies = new ArrayList<>();

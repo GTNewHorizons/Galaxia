@@ -16,7 +16,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.BlockingReason;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 
+/** A problem shown on a module tile; the title and the message are lang keys */
 public record StationModuleAlert(Severity severity, String title, String message, @Nullable ResourceLocation icon) {
+
+    private static final String UPKEEP_TITLE = "galaxia.gui.station.alert.upkeep";
+    private static final String UPKEEP_MESSAGE = "galaxia.gui.station.alert.upkeep.message";
 
     public StationModuleAlert {
         Objects.requireNonNull(severity, "severity");
@@ -39,7 +43,7 @@ public record StationModuleAlert(Severity severity, String title, String message
         for (ModuleInstance module : facility.modules()) {
             StationModuleAlert alert;
             if (module.blocking() == BlockingReason.UPKEEP_SHORTAGE) {
-                alert = critical("Upkeep", "Missing upkeep resources.", EnumTextures.ICON_STATION_ALERT_ERROR.get());
+                alert = critical(UPKEEP_TITLE, UPKEEP_MESSAGE, EnumTextures.ICON_STATION_ALERT_ERROR.get());
             } else {
                 if (unpaid == null) {
                     unpaid = Set.copyOf(
@@ -51,7 +55,7 @@ public record StationModuleAlert(Severity severity, String title, String message
                             .unpaidModuleIds());
                 }
                 if (!unpaid.contains(module.id)) continue;
-                alert = warning("Upkeep", "Missing upkeep resources.", EnumTextures.ICON_STATION_ALERT_WARNING.get());
+                alert = warning(UPKEEP_TITLE, UPKEEP_MESSAGE, EnumTextures.ICON_STATION_ALERT_WARNING.get());
             }
             result.put(module.id, alert);
         }

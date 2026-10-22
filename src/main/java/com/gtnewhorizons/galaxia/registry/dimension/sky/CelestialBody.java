@@ -13,7 +13,10 @@ import net.minecraft.util.ResourceLocation;
  * @param phaseCount         amount of phases
  * @param phaseOffsetTicks   offset in ticks from default position
  * @param isMainLightSource  sets if this object is the main light source on a planet
+ * @param isHorizon          the body fills the ground below and hides everything in the sky behind it
+ * @param solidFraction      part of the picture's width the solid body takes, the rest is its glow
  */
 
 public record CelestialBody(ResourceLocation texture, float size, double distance, float inclination,
-    long orbitalPeriodTicks, boolean hasPhases, int phaseCount, long phaseOffsetTicks, boolean isMainLightSource) {}
+    long orbitalPeriodTicks, boolean hasPhases, int phaseCount, long phaseOffsetTicks, boolean isMainLightSource,
+    boolean isHorizon, float solidFraction) {}

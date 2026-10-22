@@ -17,6 +17,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
+import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
 
@@ -25,18 +26,23 @@ import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.api.UpOrDown;
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IGuiAction;
 import com.cleanroommc.modularui.api.widget.Interactable;
+import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.screen.viewport.LocatedWidget;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.GlStateManager;
+import com.cleanroommc.modularui.utils.Interpolation;
+import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
 import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
@@ -203,6 +209,15 @@ public class OrbitalView {
 
     public static final class OrbitalViewState {
 
+        private static final long FOLLOW_CLICK_GRACE_NANOS = 50_000_000L;
+        private static final long FOLLOW_CENTER_DURATION_NANOS = 300_000_000L;
+        private boolean centeringOnFollowedBody;
+        private long followStartedNanos;
+        private double followOffsetX, followOffsetY;
+        private double animationElapsedSeconds, animationDurationSeconds = -1;
+        private double animationStartX, animationStartY, animationStartZoom, animationStartIsometric;
+        private double animationTargetX, animationTargetY, animationTargetZoom, animationTargetIsometric;
+
         double cameraX, cameraY, zoomLevel, targetCameraX, targetCameraY, targetZoomLevel, isometricProgress,
             targetIsometricProgress;
 
@@ -211,28 +226,45 @@ public class OrbitalView {
             this.targetZoomLevel = initialZoom;
         }
 
-        void step(double lerpSpeed) {
-            cameraX = lerp(cameraX, targetCameraX, lerpSpeed);
-            cameraY = lerp(cameraY, targetCameraY, lerpSpeed);
-            zoomLevel = lerp(zoomLevel, targetZoomLevel, lerpSpeed);
-            isometricProgress = lerp(isometricProgress, targetIsometricProgress, lerpSpeed);
-        }
-
-        void snap(double threshold) {
-            if (Math.abs(cameraX - targetCameraX) < threshold) cameraX = targetCameraX;
-            if (Math.abs(cameraY - targetCameraY) < threshold) cameraY = targetCameraY;
-            if (Math.abs(zoomLevel - targetZoomLevel) < threshold) zoomLevel = targetZoomLevel;
-            if (Math.abs(isometricProgress - targetIsometricProgress) < threshold)
-                isometricProgress = targetIsometricProgress;
+        void step(double durationSeconds, double elapsedSeconds) {
+            boolean cameraMoving = !centeringOnFollowedBody && (cameraX != targetCameraX || cameraY != targetCameraY);
+            // A followed body's changing position must not keep restarting the zoom animation.
+            if (animationDurationSeconds != durationSeconds || animationTargetZoom != targetZoomLevel
+                || animationTargetIsometric != targetIsometricProgress
+                || cameraMoving && (animationTargetX != targetCameraX || animationTargetY != targetCameraY)) {
+                animationElapsedSeconds = 0;
+                animationDurationSeconds = durationSeconds;
+                animationStartX = cameraX;
+                animationStartY = cameraY;
+                animationStartZoom = zoomLevel;
+                animationStartIsometric = isometricProgress;
+                animationTargetX = targetCameraX;
+                animationTargetY = targetCameraY;
+                animationTargetZoom = targetZoomLevel;
+                animationTargetIsometric = targetIsometricProgress;
+            }
+            animationElapsedSeconds = Math.min(durationSeconds, animationElapsedSeconds + Math.max(0, elapsedSeconds));
+            boolean finished = animationElapsedSeconds >= durationSeconds;
+            double blend = Interpolation.QUINT_INOUT
+                .interpolate(0f, 1f, (float) (animationElapsedSeconds / durationSeconds));
+            if (cameraMoving) {
+                cameraX = finished ? targetCameraX : lerp(animationStartX, targetCameraX, blend);
+                cameraY = finished ? targetCameraY : lerp(animationStartY, targetCameraY, blend);
+            }
+            zoomLevel = finished ? targetZoomLevel : lerp(animationStartZoom, targetZoomLevel, blend);
+            isometricProgress = finished ? targetIsometricProgress
+                : lerp(animationStartIsometric, targetIsometricProgress, blend);
         }
 
         void reset(boolean resetCameraToOrigin) {
+            centeringOnFollowedBody = false;
             isometricProgress = 0.0;
             targetIsometricProgress = 0.0;
             if (resetCameraToOrigin) setCamera(0.0, 0.0);
         }
 
         void setCamera(double x, double y) {
+            centeringOnFollowedBody = false;
             cameraX = x;
             cameraY = y;
             targetCameraX = x;
@@ -240,15 +272,53 @@ public class OrbitalView {
         }
 
         void syncCameraToTarget() {
+            centeringOnFollowedBody = false;
             cameraX = targetCameraX;
             cameraY = targetCameraY;
         }
 
+        void beginFollowing(double x, double y, long nowNanos) {
+            targetCameraX = x;
+            targetCameraY = y;
+            followOffsetX = x - cameraX;
+            followOffsetY = y - cameraY;
+            followStartedNanos = nowNanos;
+            centeringOnFollowedBody = true;
+        }
+
+        void beginLayerTransition(double x, double y) {
+            centeringOnFollowedBody = false;
+            animationDurationSeconds = -1;
+            targetCameraX = x;
+            targetCameraY = y;
+            targetZoomLevel = zoomLevel;
+            targetIsometricProgress = 0.0;
+        }
+
+        void follow(double x, double y, long nowNanos) {
+            targetCameraX = x;
+            targetCameraY = y;
+            double remaining = 0.0;
+            if (centeringOnFollowedBody) {
+                double progress = Math.max(
+                    0.0,
+                    Math.min(
+                        1.0,
+                        (double) (nowNanos - followStartedNanos - FOLLOW_CLICK_GRACE_NANOS)
+                            / FOLLOW_CENTER_DURATION_NANOS));
+                remaining = Interpolation.QUINT_INOUT.interpolate(1f, 0f, (float) progress);
+                centeringOnFollowedBody = progress < 1.0;
+            }
+            // Preserve the body's screen offset during the click grace period, including orbital movement.
+            cameraX = x - followOffsetX * remaining;
+            cameraY = y - followOffsetY * remaining;
+        }
+
         void syncToTargets() {
-            cameraX = targetCameraX;
-            cameraY = targetCameraY;
+            syncCameraToTarget();
             zoomLevel = targetZoomLevel;
             isometricProgress = targetIsometricProgress;
+            animationDurationSeconds = -1;
         }
 
         private static double lerp(double a, double b, double t) {
@@ -358,7 +428,7 @@ public class OrbitalView {
         @FunctionalInterface
         public interface BodySelectionListener {
 
-            void onBodySelected(CelestialObject body);
+            void onBodySelected(CelestialObject body, boolean enterSystem);
         }
 
         private final CelestialObject root;
@@ -380,6 +450,7 @@ public class OrbitalView {
         private InterplanetaryTransferJob focusedTransfer = null;
         private boolean isFollowing = false;
         private CelestialObject pendingFocusBody = null;
+        private boolean pressedNavigationMarker;
         private boolean dragEnabledForCurrentPress = false;
         private int pressedMapButton = -1;
         private CelestialObject pressedBodyCandidate = null;
@@ -448,7 +519,8 @@ public class OrbitalView {
         private final StarmapAssetActions.StarmapAssetActionsWidget assetActionsWidget;
         private final InterplanetaryTransferSystem.OrbitalTransferState transferState = new InterplanetaryTransferSystem.OrbitalTransferState();
         private final InterplanetaryTransferSystem.OrbitalTransferRenderer transferRenderer;
-        private final InterplanetaryTransferSystem.OrbitalTransferTooltipWidget transferTooltipWidget;
+        // What the map tooltip shows this frame when no transfer is hovered
+        private final List<String> hoverLines = new ArrayList<>();
         private final InterplanetaryTransferSystem.OrbitalTransferSimulatorWidget transferSimulatorWidget;
         private final OrbitalScene.OrbitalSceneRenderer sceneRenderer;
         private final OrbitalPinnedInfoContentBuilder pinnedInfoContentBuilder = new OrbitalPinnedInfoContentBuilder();
@@ -468,21 +540,24 @@ public class OrbitalView {
         private boolean creativeBuildMode = creativeBuildModePersisted;
         private final OrbitalPlanetTrackingController planetTrackingController = new OrbitalPlanetTrackingController();
         private boolean guiActionsRegistered = false;
+        private long lastAnimationFrameNanos;
         private OrbitalLayerTransitionState transitionState = new OrbitalLayerTransitionState();
         private static final double SERVER_OSU_PER_SECOND = OrbitalTransferPlanner.OSU_PER_SECOND;
-        private static final double LERP_SPEED = 0.045;
-        private static final double PENDING_LAYER_CENTER_LERP_SPEED = 0.08;
-        private static final double LAYER_SWITCH_LERP_SPEED = 0.036;
-        private static final float ISO_BASE_CUBE_SIZE = 42f;
+        private static final double VIEW_ANIMATION_SECONDS = 0.3;
+        private static final double LAYER_CENTER_SECONDS = 0.15;
+        private static final double LAYER_ZOOM_PHASE_SECONDS = 0.225;
         private static final float ISO_SPACING = 90f;
         private static final float ISO_OFFSET = 110f;
         private static final float ISO_Y_OFFSET = 20f;
-        private static final double CONVERGE_THRESHOLD = 0.001;
-        private static final double PENDING_LAYER_SWITCH_CAMERA_THRESHOLD = 1.5;
-        private static final double LAYER_SWITCH_CONVERGE_THRESHOLD = 0.03;
         private static final int CLICK_DRAG_THRESHOLD = 6;
         private static final float MAP_ICON_BASE_SCALE = 18f;
         private static final float MAP_ICON_ZOOM_SCALE = 0.8f;
+        private static final float MAP_STAR_MIN_RADIUS = 10f;
+        private static final float MAP_GAS_GIANT_MIN_RADIUS = 8f;
+        private static final float MAP_PLANET_MIN_RADIUS = 6f;
+        private static final float MAP_MOON_MIN_RADIUS = 4f;
+        private static final float MAP_OTHER_MIN_RADIUS = 3f;
+        private static final float MAP_RADIUS_RANGE = 2f;
         private static final float GALAXY_MAP_STAR_SPRITE_SIZE = 0.5f;
 
         public OrbitalMapWidget(CelestialObject root) {
@@ -551,11 +626,6 @@ public class OrbitalView {
                     }
 
                     @Override
-                    public boolean canCreateBaseStation(CelestialObject body) {
-                        return OrbitalMapWidget.this.canCreateBaseStation(body);
-                    }
-
-                    @Override
                     public boolean canCreateAutomatedStation(CelestialObject body) {
                         return OrbitalMapWidget.this.canCreateAutomatedStation(body);
                     }
@@ -568,12 +638,6 @@ public class OrbitalView {
                     @Override
                     public void drawAssetIcon(CelestialAsset.Kind kind, int x, int y, int size, float alpha) {
                         OrbitalMapWidget.this.drawAssetIcon(kind, x, y, size, alpha);
-                    }
-
-                    @Override
-                    public void createBaseStation(CelestialObject body) {
-                        assetActionController.createBaseStation(body);
-                        assetActionsWidget.markContentDirty();
                     }
 
                     @Override
@@ -707,6 +771,11 @@ public class OrbitalView {
                     public void showActionStatus(String message) {
                         OrbitalMapWidget.this.showActionStatus(message);
                     }
+
+                    @Override
+                    public TextFieldWidget renameField() {
+                        return renameField;
+                    }
                 },
                 viewContext);
             this.transferRenderer = new InterplanetaryTransferSystem.OrbitalTransferRenderer(
@@ -721,29 +790,6 @@ public class OrbitalView {
                     public boolean isBodyRendered(CelestialObject body) {
                         return OrbitalMapWidget.this.isTransferEndpointRendered(body);
                     }
-                },
-                viewContext);
-            this.transferTooltipWidget = new InterplanetaryTransferSystem.OrbitalTransferTooltipWidget(
-                new InterplanetaryTransferSystem.OrbitalTransferTooltipWidget.Callbacks() {
-
-                    @Override
-                    public InterplanetaryTransferJob getHoveredTransfer() {
-                        InterplanetaryTransferJob simulatedTransfer = clientSimulatedTransferState.hoveredTransfer();
-                        return simulatedTransfer == null ? transferState.hoveredTransfer() : simulatedTransfer;
-                    }
-
-                    @Override
-                    public int getTooltipMouseX() {
-                        return clientSimulatedTransferState.hoveredTransfer() == null ? transferState.hoverX()
-                            : clientSimulatedTransferState.hoverX();
-                    }
-
-                    @Override
-                    public int getTooltipMouseY() {
-                        return clientSimulatedTransferState.hoveredTransfer() == null ? transferState.hoverY()
-                            : clientSimulatedTransferState.hoverY();
-                    }
-
                 },
                 viewContext);
             this.transferSimulatorWidget = new InterplanetaryTransferSystem.OrbitalTransferSimulatorWidget(
@@ -762,15 +808,17 @@ public class OrbitalView {
                             return;
                         }
                         if (viewRoot.objectClass() != CelestialObject.Class.STAR) {
-                            showActionStatus("Open a star system first");
+                            showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.open_system"));
                             transferSimulatorState.cancelPick();
                             return;
                         }
                         transferSimulatorState.beginPick(pickMode);
                         closeContextMenu();
                         showActionStatus(
-                            pickMode == InterplanetaryTransferSystem.TransferPickMode.ORIGIN ? "Pick transfer origin"
-                                : "Pick transfer destination");
+                            StatCollector.translateToLocal(
+                                pickMode == InterplanetaryTransferSystem.TransferPickMode.ORIGIN
+                                    ? "galaxia.gui.orbital.status.pick_origin"
+                                    : "galaxia.gui.orbital.status.pick_destination"));
                     }
 
                     @Override
@@ -896,12 +944,18 @@ public class OrbitalView {
                     public boolean isOnScreen(float sx, float sy, float radius) {
                         return OrbitalMapWidget.this.isOnScreen(sx, sy, radius);
                     }
-                });
-            this.signalsWidget = new LogisticsSignalsWidget(root, () -> this.viewRoot, () -> this.signalsOpen);
+                },
+                viewContext);
+            this.signalsWidget = new LogisticsSignalsWidget(
+                root,
+                () -> this.viewRoot,
+                () -> this.signalsOpen,
+                () -> this.signalsOpen = false);
             this.assetsPanelWidget = new SolarSystemAssetPanelWidget(
                 root,
                 () -> this.viewRoot,
                 () -> this.assetsPanelOpen,
+                () -> this.assetsPanelOpen = false,
                 assetId -> StationManagementScreen.open(assetId, isCreativeBuildModeEnabled()));
         }
 
@@ -915,8 +969,27 @@ public class OrbitalView {
             return this;
         }
 
-        /** Returns the body's visible interaction bounds in widget-local coordinates from the last rendered frame. */
+        /** Bounds of the satellite marker beside a body in widget-local coordinates, or null when none is drawn */
+        public @Nullable Rectangle satelliteMarkerBounds(CelestialObjectKey key) {
+            for (OrbitalScene.SatelliteMarkerBounds bounds : sceneFrame.satelliteMarkerBounds) {
+                if (key.equals(
+                    bounds.body()
+                        .key()))
+                    return bounds.rectangle();
+            }
+            return null;
+        }
+
+        /** Returns interaction bounds for a visible body or its navigation marker in widget-local coordinates. */
         public @Nullable Rectangle visibleBodyBounds(CelestialObjectKey key) {
+            for (OrbitalScene.MarkerDrawCall marker : sceneFrame.markerDrawCalls) {
+                if (marker.navigationBody() != null && key.equals(
+                    marker.navigationBody()
+                        .key())) {
+                    if (transitionState.hasPending() || isLayerSwitchActive()) return null;
+                    return new Rectangle(marker.x(), marker.y(), marker.size(), marker.size());
+                }
+            }
             for (OrbitalScene.ScreenBodyBounds bounds : sceneFrame.screenBodies) {
                 if (!key.equals(
                     bounds.body()
@@ -939,8 +1012,12 @@ public class OrbitalView {
                 || (contextMenuState.isOpen() && (mouseButton != 1 || isPointInContextMenu((int) localX, (int) localY)))
                 || transferSimulatorState.isWaitingForPick()
                 || (transferSimulatorState.isOpen()
-                    && transferSimulatorWidget.isPointInPanel((int) localX, (int) localY))
-                || (mouseButton == 0 && findTransferAtLocal((int) localX, (int) localY) != null)) return null;
+                    && transferSimulatorWidget.isPointInPanel((int) localX, (int) localY)))
+                return null;
+            OrbitalScene.MarkerDrawCall marker = findNavigationMarkerAt(localX, localY);
+            if (marker != null && mouseButton == 0) return marker.navigationBody()
+                .key();
+            if (mouseButton == 0 && findTransferAtLocal((int) localX, (int) localY) != null) return null;
             CelestialObject body = findBodyAtLocal(localX, localY);
             return body == null || !isVisibleInCurrentLayer(body) ? null : body.key();
         }
@@ -962,8 +1039,8 @@ public class OrbitalView {
             return contextMenuWidget;
         }
 
-        public InterplanetaryTransferSystem.OrbitalTransferTooltipWidget createTransferTooltipWidget() {
-            return transferTooltipWidget;
+        public void selectBodies(java.util.function.Consumer<CelestialObjectKey> onSelected, ParentWidget<?> choices) {
+            contextMenuWidget.selectBodies(onSelected, choices);
         }
 
         public InterplanetaryTransferSystem.OrbitalTransferSimulatorWidget createTransferSimulatorWidget() {
@@ -1054,9 +1131,11 @@ public class OrbitalView {
                 transitionState = transitionState
                     .beginPending(targetLayer, anchorBody, viewState.zoomLevel, transitionTargetZoom);
                 pendingFocusBody = null;
-                viewState.targetIsometricProgress = 0.0;
-                centerOnBody(anchorBody);
-                viewState.targetZoomLevel = transitionTargetZoom;
+                focusedBody = anchorBody;
+                focusedTransfer = null;
+                isFollowing = false;
+                double[] pos = getAbsoluteWorldPos(anchorBody);
+                if (pos != null) viewState.beginLayerTransition(pos[0], pos[1]);
                 return;
             }
             applyLayerSwitch(targetLayer, targetLayer);
@@ -1093,7 +1172,10 @@ public class OrbitalView {
                 transferSimulatorState.close();
                 CelestialClient.setShowHiddenAsteroidObjects(false);
             }
-            showActionStatus("Creative build mode " + (creativeBuildMode ? "enabled" : "disabled"));
+            showActionStatus(
+                StatCollector.translateToLocal(
+                    creativeBuildMode ? "galaxia.gui.orbital.status.creative_on"
+                        : "galaxia.gui.orbital.status.creative_off"));
         }
 
         public boolean isTransferSimulatorOpen() {
@@ -1111,16 +1193,19 @@ public class OrbitalView {
             }
             if (transferSimulatorState.isOpen()) {
                 transferSimulatorState.close();
-                showActionStatus("Transfer simulator closed");
+                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.simulator_closed"));
                 return;
             }
             transferSimulatorState.open();
-            showActionStatus("Transfer simulator opened");
+            showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.simulator_opened"));
         }
 
         @Override
         public void onInit() {
             super.onInit();
+            tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE).tooltipAutoUpdate(true)
+                .tooltipDynamic(this::hoverTooltip);
+            lastAnimationFrameNanos = System.nanoTime();
             CelestialObject startingLayer = initialLayer == null ? root : initialLayer;
             resetForLayer(startingLayer);
             this.viewRoot = startingLayer;
@@ -1129,7 +1214,10 @@ public class OrbitalView {
             if (guiActionsRegistered) return;
             guiActionsRegistered = true;
             listenGuiAction((IGuiAction.MousePressed) button -> {
-                pressedMapButton = getPanel().getTopHovering() == this ? button : -1;
+                pressedNavigationMarker = false;
+                pressedMapButton = getPanel().getTopHovering() == this && getContext().getScreen()
+                    .getPanelManager()
+                    .isBelowMouseInTopPanel(this) ? button : -1;
                 if (pressedMapButton < 0) {
                     dragging = false;
                     dragEnabledForCurrentPress = false;
@@ -1163,8 +1251,17 @@ public class OrbitalView {
                 pressMouseY = localMouseY;
                 lastMouseX = pressMouseX;
                 lastMouseY = pressMouseY;
+                OrbitalScene.MarkerDrawCall marker = findNavigationMarkerAt(pressMouseX, pressMouseY);
+                if (marker != null) {
+                    pressedBodyCandidate = marker.navigationBody();
+                    pressedNavigationMarker = true;
+                    dragEnabledForCurrentPress = false;
+                    dragging = false;
+                    return true;
+                }
                 InterplanetaryTransferJob clickedTransfer = findTransferAtLocal(pressMouseX, pressMouseY);
                 if (clickedTransfer != null) {
+                    viewState.centeringOnFollowedBody = false;
                     focusedTransfer = clickedTransfer;
                     focusedBody = null;
                     isFollowing = true;
@@ -1198,7 +1295,7 @@ public class OrbitalView {
                     pressedBodyCandidate = null;
                     return mouseButton == 1;
                 }
-                if (contextMenuState.isOpen()) {
+                if (contextMenuState.isOpen() && mapOwnsRelease) {
                     if (mouseButton == 0) {
                         if (isPointInContextMenu(localMouseX, localMouseY)) {
                             dragging = false;
@@ -1240,7 +1337,10 @@ public class OrbitalView {
                         pressedBodyCandidate = null;
                         return true;
                     }
-                    if (clickedBody != null) handleBodyClick(clickedBody);
+                    if (clickedBody != null) {
+                        if (pressedNavigationMarker) navigateToHiddenBody(clickedBody);
+                        else handleBodyClick(clickedBody);
+                    }
                 }
                 dragging = false;
                 dragEnabledForCurrentPress = false;
@@ -1330,8 +1430,7 @@ public class OrbitalView {
             if (dx == 0.0 && dy == 0.0) return;
             viewState.cameraX -= dx / getScale();
             viewState.cameraY -= dy / getScale();
-            viewState.targetCameraX = viewState.cameraX;
-            viewState.targetCameraY = viewState.cameraY;
+            viewState.setCamera(viewState.cameraX, viewState.cameraY);
             isFollowing = false;
             focusedTransfer = null;
             planetTrackingController.onManualCameraMoved();
@@ -1382,20 +1481,9 @@ public class OrbitalView {
             return a + (b - a) * t;
         }
 
-        private float getCubeSizeForBody(CelestialObject body) {
-            if (focusedBody == null) return body.spriteSize() <= 0.0001f ? ISO_BASE_CUBE_SIZE
-                : (float) (ISO_BASE_CUBE_SIZE * Math.sqrt(body.spriteSize()));
-            double focusSize = focusedBody.spriteSize();
-            if (focusSize <= 0.0001) return body.spriteSize() <= 0.0001f ? ISO_BASE_CUBE_SIZE
-                : (float) (ISO_BASE_CUBE_SIZE * Math.sqrt(body.spriteSize()));
-            double scale = body.spriteSize() / focusSize;
-            return (float) (ISO_BASE_CUBE_SIZE * scale);
-        }
-
         private float getSpriteRadius(CelestialObject body) {
             if (body != null && body.isAsteroid()) {
-                // Asteroids use relative zoom so their apparent size tracks the
-                // current focused system instead of being clamped like planet icons.
+                // Relative zoom lets distant asteroids disappear, while close markers remain compact.
                 return mapAsteroidSpriteRadiusForRelativeZoom(
                     body,
                     getDisplaySpriteSize(body),
@@ -1422,8 +1510,15 @@ public class OrbitalView {
 
         private static float mapSpriteRadiusForScale(CelestialObject body, float spriteSize, double scale) {
             if (spriteSize <= 0.0001f) return 2f;
+            float minimum = switch (body.objectClass()) {
+                case STAR -> MAP_STAR_MIN_RADIUS;
+                case GAS_GIANT -> MAP_GAS_GIANT_MIN_RADIUS;
+                case PLANET -> MAP_PLANET_MIN_RADIUS;
+                case MOON -> MAP_MOON_MIN_RADIUS;
+                default -> MAP_OTHER_MIN_RADIUS;
+            };
             float radius = spriteSize * (MAP_ICON_BASE_SCALE + (float) scale * MAP_ICON_ZOOM_SCALE);
-            return Math.max(2.0f, radius);
+            return Math.min(minimum * MAP_RADIUS_RANGE, Math.max(minimum, radius));
         }
 
         private float getDisplaySpriteSize(CelestialObject body) {
@@ -1468,9 +1563,7 @@ public class OrbitalView {
 
         private float getRenderedBodyRadius(CelestialObject body) {
             if (getRenderTexture(body) != null && getDisplaySpriteSize(body) > 0.0001f) {
-                float spriteR = getSpriteRadius(body);
-                float cubeR = getCubeSizeForBody(body) * 0.5f;
-                return lerp(spriteR, cubeR, (float) viewState.isometricProgress);
+                return getSpriteRadius(body);
             }
             return body == viewRoot ? 11f : 7f;
         }
@@ -1505,16 +1598,38 @@ public class OrbitalView {
             OrbitalPlanetTrackingController.ClickAction action = planetTrackingController
                 .clickBody(clickedBody, opensSystemFromGalaxy);
             switch (action) {
-                case TRACK_ONLY -> centerOnBody(clickedBody);
+                case TRACK_ONLY -> {
+                    centerOnBody(clickedBody);
+                    if (bodySelectionListener != null) bodySelectionListener.onBodySelected(clickedBody, false);
+                }
                 case FOCUS_AND_SELECT -> {
                     focusOn(clickedBody);
-                    if (bodySelectionListener != null) bodySelectionListener.onBodySelected(clickedBody);
+                    if (bodySelectionListener != null) bodySelectionListener.onBodySelected(clickedBody, false);
                 }
                 case SELECT_ONLY -> {
-                    if (bodySelectionListener != null) bodySelectionListener.onBodySelected(clickedBody);
+                    if (bodySelectionListener != null)
+                        bodySelectionListener.onBodySelected(clickedBody, opensSystemFromGalaxy);
                 }
             }
             return true;
+        }
+
+        private void navigateToHiddenBody(CelestialObject body) {
+            centerOnBody(body);
+            double extent = body.orbitalParams()
+                .perigee();
+            double screenRadius = Math.min(getArea().width, getArea().height) * 0.25;
+            viewState.targetZoomLevel = OrbitalZoom.zoomForWorldDistance(extent, screenRadius);
+            if (bodySelectionListener != null) bodySelectionListener.onBodySelected(body, false);
+        }
+
+        private OrbitalScene.MarkerDrawCall findNavigationMarkerAt(float x, float y) {
+            if (transitionState.hasPending() || isLayerSwitchActive()) return null;
+            for (int i = sceneFrame.markerDrawCalls.size() - 1; i >= 0; i--) {
+                OrbitalScene.MarkerDrawCall marker = sceneFrame.markerDrawCalls.get(i);
+                if (marker.navigationBody() != null && marker.contains(x, y)) return marker;
+            }
+            return null;
         }
 
         public OrbitalMapClickMode getClickMode() {
@@ -1527,14 +1642,12 @@ public class OrbitalView {
 
         private void centerOnBody(CelestialObject body) {
             if (body == null) return;
+            boolean changedTarget = !isFollowing || !sameBody(focusedBody, body);
             focusedBody = body;
             focusedTransfer = null;
             isFollowing = true;
             double[] pos = getAbsoluteWorldPos(body);
-            if (pos != null) {
-                viewState.targetCameraX = pos[0];
-                viewState.targetCameraY = pos[1];
-            }
+            if (pos != null && changedTarget) viewState.beginFollowing(pos[0], pos[1], System.nanoTime());
             viewState.targetIsometricProgress = 0.0;
         }
 
@@ -1544,6 +1657,7 @@ public class OrbitalView {
         }
 
         private void setFocusImmediately(CelestialObject body) {
+            viewState.centeringOnFollowedBody = false;
             focusedBody = body;
             focusedTransfer = null;
             isFollowing = true;
@@ -1565,13 +1679,11 @@ public class OrbitalView {
         }
 
         private boolean isReadyForPendingLayerSwitch() {
-            return Math.abs(viewState.cameraX - viewState.targetCameraX) < PENDING_LAYER_SWITCH_CAMERA_THRESHOLD
-                && Math.abs(viewState.cameraY - viewState.targetCameraY) < PENDING_LAYER_SWITCH_CAMERA_THRESHOLD;
+            return viewState.cameraX == viewState.targetCameraX && viewState.cameraY == viewState.targetCameraY;
         }
 
         private boolean isReadyForLayerSwitchPhase() {
-            return isReadyForPendingLayerSwitch()
-                && Math.abs(viewState.zoomLevel - viewState.targetZoomLevel) < LAYER_SWITCH_CONVERGE_THRESHOLD;
+            return isReadyForPendingLayerSwitch() && viewState.zoomLevel == viewState.targetZoomLevel;
         }
 
         private boolean isLayerSwitchActive() {
@@ -1765,16 +1877,17 @@ public class OrbitalView {
         public void drawBackground(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
             clock.advance(isInWorld(), getServerOrbitalTime());
             updateManualDragging();
-            updateRenameFieldLayout();
-            double activeLerpSpeed = transitionState.hasPending() ? PENDING_LAYER_CENTER_LERP_SPEED
-                : isLayerSwitchActive() ? LAYER_SWITCH_LERP_SPEED : LERP_SPEED;
-            viewState.step(activeLerpSpeed);
-            viewState.snap(CONVERGE_THRESHOLD);
+            double animationSeconds = transitionState.hasPending() ? LAYER_CENTER_SECONDS
+                : isLayerSwitchActive() ? LAYER_ZOOM_PHASE_SECONDS : VIEW_ANIMATION_SECONDS;
+            long nowNanos = System.nanoTime();
+            viewState.step(animationSeconds, (nowNanos - lastAnimationFrameNanos) / 1_000_000_000.0);
+            lastAnimationFrameNanos = nowNanos;
             if (pendingFocusBody != null && viewState.isometricProgress < 0.01) {
                 setFocusImmediately(pendingFocusBody);
                 pendingFocusBody = null;
             }
             if (transitionState.hasPending() && isReadyForPendingLayerSwitch()) {
+                viewState.syncCameraToTarget();
                 CelestialObject targetLayer = transitionState.pendingTarget();
                 CelestialObject anchorBody = transitionState.pendingAnchor();
                 float currentAnchorSpriteSize = getDisplaySpriteSize(anchorBody);
@@ -1799,9 +1912,7 @@ public class OrbitalView {
             } else if (isFollowing && focusedBody != null) {
                 double[] pos = getAbsoluteWorldPos(focusedBody);
                 if (pos != null) {
-                    viewState.targetCameraX = pos[0];
-                    viewState.targetCameraY = pos[1];
-                    viewState.syncCameraToTarget();
+                    viewState.follow(pos[0], pos[1], System.nanoTime());
                 }
             }
             Gui.drawRect(0, 0, getArea().width, getArea().height, EnumColors.MapBackground.getColor());
@@ -1811,7 +1922,7 @@ public class OrbitalView {
             GlStateManager.disableTexture2D();
             GL11.glEnable(GL11.GL_LINE_SMOOTH);
             float labelAlpha = (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 2.5);
-            sceneFrame = sceneFrameBuilder.buildInto(sceneFrame, viewRoot, clock.time(), labelAlpha);
+            sceneFrame = sceneFrameBuilder.buildInto(sceneFrame, viewRoot, focusedBody, clock.time(), labelAlpha);
             syncRenderedLogisticsTransfers();
             if (transferSimulatorState.isOpen() && !transferSimulatorState.isWaitingForPick()
                 && viewRoot.objectClass() == CelestialObject.Class.STAR) {
@@ -1875,7 +1986,6 @@ public class OrbitalView {
             sceneRenderer.drawCollectedMarkers(sceneFrame);
             drawActionStatusMessage();
             sceneRenderer.drawViewTitleBanner(viewRoot, getArea().width);
-            drawViewStatusLabel(viewRoot, getArea().width);
             drawHammerTrajectoryLoadDebug(getArea().width);
             int localMouseX = getContext().getMouseX();
             int localMouseY = getContext().getMouseY();
@@ -1911,8 +2021,13 @@ public class OrbitalView {
                 && isVisibleInCurrentLayer(focusedBody)) sceneRenderer.drawSelectionHighlight(focusedBody, sceneFrame);
             if (debugOverlayEnabled) sceneRenderer.drawDebugOverlay(sceneFrame, getArea().height);
             super.drawBackground(context, widgetTheme);
+            hoverLines.clear();
             if (!dragging && !contextMenuState.isOpen() && !assetUiState.isAssetActionsOpen()) {
-                drawSatelliteMarkerTooltip(sceneFrame, localMouseX, localMouseY);
+                OrbitalScene.MarkerDrawCall marker = findNavigationMarkerAt(localMouseX, localMouseY);
+                if (marker != null) hoverLines.add(
+                    marker.navigationBody()
+                        .displayName());
+                else addSatelliteMarkerLines(sceneFrame, localMouseX, localMouseY);
             }
         }
 
@@ -1999,18 +2114,20 @@ public class OrbitalView {
             if (!transferSimulatorState.isWaitingForPick()) return false;
             if (viewRoot.objectClass() != CelestialObject.Class.STAR) {
                 transferSimulatorState.cancelPick();
-                showActionStatus("Open a star system first");
+                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.open_system"));
                 return true;
             }
             if (clickedBody == null || clickedBody == root
                 || clickedBody.objectClass() == CelestialObject.Class.GALAXY
                 || !isDescendantOrSelf(viewRoot, clickedBody)) {
                 transferSimulatorState.cancelPick();
-                showActionStatus("Pick a body from the current system");
+                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.pick_in_system"));
                 return true;
             }
             transferSimulatorState.applyPickedBody(clickedBody);
-            showActionStatus("Selected " + clickedBody.displayName());
+            showActionStatus(
+                StatCollector
+                    .translateToLocalFormatted("galaxia.gui.orbital.status.selected", clickedBody.displayName()));
             return true;
         }
 
@@ -2020,7 +2137,7 @@ public class OrbitalView {
                 : GalaxiaCelestialAPI.get(target.celestialObjectKey)
                     .orElse(null);
             if (sourceBody == null || sourceAsset == null || targetBody == null) {
-                showActionStatus("Transfer failed");
+                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.transfer_failed"));
                 return;
             }
             InterplanetaryTransferJob transfer = transferSupport.createTransferJob(
@@ -2031,11 +2148,11 @@ public class OrbitalView {
                 StarmapAssetActions.buildConstructionInventorySummary(sourceAsset),
                 clock.time());
             if (transfer == null) {
-                showActionStatus("Transfer failed");
+                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.transfer_failed"));
                 return;
             }
             transferState.addTransfer(transfer);
-            showActionStatus("Transfer dispatched");
+            showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.transfer_dispatched"));
         }
 
         private static boolean isInWorld() {
@@ -2122,38 +2239,38 @@ public class OrbitalView {
         private void dispatchSimulatedTransfer() {
             if (!transferSimulatorState.isOpen()) return;
             if (transferSimulatorState.originBody() == null || transferSimulatorState.destinationBody() == null) {
-                /// TODO: LOCALLIZE
-                showActionStatus("Select transfer origin and destination first");
+                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.select_endpoints"));
                 return;
             }
             if (!transferSimulatorState.hasPreview() || transferSimulatorState.previewTof() <= 0.0) {
-                showActionStatus("No valid transfer trajectory");
-                /// TODO: LOCALLIZE
+                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.no_trajectory"));
                 return;
             }
             InterplanetaryTransferJob transfer = transferSupport.createTransferJob(
                 root,
                 transferSimulatorState.originBody(),
                 transferSimulatorState.destinationBody(),
-                transferSimulatorState.originBody()
-                    .displayName() + " -> "
-                    + transferSimulatorState.destinationBody()
+                StatCollector.translateToLocalFormatted(
+                    "galaxia.gui.orbital.transfer.simulated_name",
+                    transferSimulatorState.originBody()
                         .displayName(),
-                "Simulation",
+                    transferSimulatorState.destinationBody()
+                        .displayName()),
+                StatCollector.translateToLocal("galaxia.gui.orbital.transfer.simulated_cargo"),
                 clock.time(),
                 transferSimulatorState.previewTof());
             if (transfer == null) {
-                showActionStatus("Transfer failed");
+                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.transfer_failed"));
                 return;
             }
             clientSimulatedTransferState.addTransfer(transfer);
-            showActionStatus("Transfer dispatched");
+            showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.transfer_dispatched"));
         }
 
         private void runTransferPlannerStressTest() {
             if (!transferSimulatorState.isOpen()) return;
             if (viewRoot.objectClass() != CelestialObject.Class.STAR) {
-                showActionStatus("Open a star system first");
+                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.open_system"));
                 return;
             }
 
@@ -2219,30 +2336,15 @@ public class OrbitalView {
                 actionStatusMessage = "";
                 return;
             }
-            // TODO: COLOR
             String[] lines = actionStatusMessage.split("\\R");
             for (int i = 0; i < lines.length; i++) {
-                Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(lines[i], 12, 36 + i * 11, 0xFFD9E0FF);
+                Minecraft.getMinecraft().fontRenderer
+                    .drawStringWithShadow(lines[i], 12, 36 + i * 11, GalaxiaGuiStyle.TEXT);
             }
         }
 
-        private void drawViewStatusLabel(CelestialObject viewRoot, int widgetWidth) {
-            if (viewRoot == null) return;
-            String title = viewRoot.objectClass() == CelestialObject.Class.GALAXY ? viewRoot.displayName()
-                : viewRoot.objectClass() == CelestialObject.Class.STAR ? viewRoot.displayName() + " System" : null;
-            if (title == null) return;
-
-            String statusText = "Zoom: x" + formatCompactDecimal(getDisplayZoomMultiplier(), 3);
-
-            Minecraft mc = Minecraft.getMinecraft();
-            int titleWidth = mc.fontRenderer.getStringWidth(title);
-            int statusX = Math.round(widgetWidth / 2f + titleWidth / 2f + 68f);
-            int statusY = 18;
-            mc.fontRenderer.drawStringWithShadow(statusText, statusX, statusY, EnumColors.MapStatusText.getColor());
-        }
-
         private void drawHammerTrajectoryLoadDebug(int widgetWidth) {
-            if (!isCreativeModeAvailable()) return;
+            if (!isCreativeBuildModeEnabled()) return;
             HammerTrajectoryLoadSample sample = CelestialClient.hammerTrajectoryLoadSample();
             String text = "route ms/tick own=" + formatDebugMillis(sample.ownMsPerTick())
                 + " all="
@@ -2250,7 +2352,7 @@ public class OrbitalView {
 
             Minecraft mc = Minecraft.getMinecraft();
             int x = Math.max(12, widgetWidth - mc.fontRenderer.getStringWidth(text) - 12);
-            mc.fontRenderer.drawStringWithShadow(text, x, 36, 0xFF9FD7FF);
+            mc.fontRenderer.drawStringWithShadow(text, x, 36, GalaxiaGuiStyle.TEXT_DIM);
         }
 
         private String formatDebugMillis(double value) {
@@ -2259,20 +2361,13 @@ public class OrbitalView {
             return String.format(java.util.Locale.ROOT, "%.1f", value);
         }
 
-        private String formatCompactDecimal(double value, int maxDecimals) {
-            String text = String.format(java.util.Locale.ROOT, "%." + maxDecimals + "f", value);
-            int cut = text.length();
-            while (cut > 0 && text.charAt(cut - 1) == '0') cut--;
-            if (cut > 0 && text.charAt(cut - 1) == '.') cut--;
-            return cut <= 0 ? "0" : text.substring(0, cut);
-        }
-
         private void openContextMenu(CelestialObject body, int localMouseX, int localMouseY) {
             if (body == null || body.objectClass() == CelestialObject.Class.GALAXY) {
                 closeContextMenu();
                 return;
             }
             contextMenuState.open(body, localMouseX, localMouseY);
+            contextMenuWidget.onBodyOpened(body);
         }
 
         private boolean isPointInContextMenu(int localMouseX, int localMouseY) {
@@ -2327,13 +2422,11 @@ public class OrbitalView {
         }
 
         private String formatDecimal1(double value) {
-            long scaled = Math.round(value * 10.0);
-            return (scaled / 10L) + "." + Math.abs(scaled % 10L);
+            return String.format(java.util.Locale.ROOT, "%.1f", value);
         }
 
         private String formatDecimal2(double value) {
-            long scaled = Math.round(value * 100.0);
-            return (scaled / 100L) + "." + Math.abs((scaled / 10L) % 10L) + Math.abs(scaled % 10L);
+            return String.format(java.util.Locale.ROOT, "%.2f", value);
         }
 
         private String formatStressBenchmarkBreakdown(InterplanetaryTransferSystem.LambertStressReport report) {
@@ -2367,17 +2460,30 @@ public class OrbitalView {
             return nanos / 1_000_000.0 / Math.max(1, runs);
         }
 
-        private void drawSatelliteMarkerTooltip(OrbitalScene.OrbitalSceneFrame frame, int localMouseX,
-            int localMouseY) {
+        private void addSatelliteMarkerLines(OrbitalScene.OrbitalSceneFrame frame, int localMouseX, int localMouseY) {
             CelestialObject body = findSatelliteMarkerBodyAt(frame, localMouseX, localMouseY);
             if (body == null) return;
-            List<String> lines = new ArrayList<>();
-            lines.add(satelliteCountSummary(body, SatelliteKind.COMMUNICATION));
-            lines.add(satelliteBandwidthSummary(body));
-            lines.add(satelliteCountSummary(body, SatelliteKind.PROSPECTING));
-            satelliteScanningSummary(body).ifPresent(lines::add);
-            lines.addAll(satellitePendingDataSummaries(body));
-            drawTooltip(lines, localMouseX + 10, localMouseY + 10);
+            hoverLines.add(satelliteCountSummary(body, SatelliteKind.COMMUNICATION));
+            hoverLines.add(satelliteBandwidthSummary(body));
+            hoverLines.add(satelliteCountSummary(body, SatelliteKind.PROSPECTING));
+            satelliteScanningSummary(body).ifPresent(hoverLines::add);
+            hoverLines.addAll(satellitePendingDataSummaries(body));
+        }
+
+        /** The hovered transfer, else the marker under the cursor, as a normal tooltip */
+        private void hoverTooltip(RichTooltip tooltip) {
+            InterplanetaryTransferJob simulated = clientSimulatedTransferState.hoveredTransfer();
+            InterplanetaryTransferJob transfer = simulated == null ? transferState.hoveredTransfer() : simulated;
+            if (transfer != null) {
+                InterplanetaryTransferSystem.transferTooltip(tooltip, transfer, viewContext);
+                return;
+            }
+            for (int i = 0; i < hoverLines.size(); i++) {
+                if (i == 0) tooltip.addLine(hoverLines.get(i));
+                else tooltip.addLine(
+                    IKey.str(hoverLines.get(i))
+                        .style(EnumChatFormatting.GRAY));
+            }
         }
 
         private CelestialObject findSatelliteMarkerBodyAt(OrbitalScene.OrbitalSceneFrame frame, int localMouseX,
@@ -2386,44 +2492,6 @@ public class OrbitalView {
                 if (bounds.contains(localMouseX, localMouseY)) return bounds.body();
             }
             return null;
-        }
-
-        private void drawTooltip(List<String> lines, int x, int y) {
-            if (lines == null || lines.isEmpty()) return;
-            Minecraft mc = Minecraft.getMinecraft();
-            int width = 0;
-            for (String line : lines) {
-                width = Math.max(width, mc.fontRenderer.getStringWidth(line));
-            }
-            int padding = 6;
-            int lineHeight = 10;
-            int tooltipWidth = width + padding * 2;
-            int tooltipHeight = padding * 2 + lines.size() * lineHeight;
-            int left = Math.min(Math.max(6, x), getArea().width - tooltipWidth - 6);
-            int top = Math.min(Math.max(6, y), getArea().height - tooltipHeight - 6);
-            Gui.drawRect(left, top, left + tooltipWidth, top + tooltipHeight, EnumColors.MAP_COLOR_MODAL_BG.getColor());
-            for (int i = 0; i < lines.size(); i++) {
-                mc.fontRenderer.drawStringWithShadow(
-                    lines.get(i),
-                    left + padding,
-                    top + padding + i * lineHeight,
-                    EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-            }
-        }
-
-        private void updateRenameFieldLayout() {
-            if (renameField == null) return;
-            ButtonRect layout = assetActionsWidget.getRenameInputBounds();
-            if (layout == null) {
-                renameField.top(-1000);
-                if (renameField.isEnabled()) renameField.setEnabled(false);
-                return;
-            }
-            if (!renameField.isEnabled()) renameField.setEnabled(true);
-            renameField.left(getArea().x + layout.left())
-                .top(getArea().y + layout.top())
-                .width(layout.right() - layout.left())
-                .height(layout.bottom() - layout.top());
         }
 
         private ResourceLocation getAssetIconTexture(CelestialAsset.Kind kind) {
@@ -2438,19 +2506,14 @@ public class OrbitalView {
             return isGregTech5UnofficialNewHorizonsLoaded();
         }
 
-        private boolean canCreateBaseStation(CelestialObject body) {
-            return body != null && body.properties()
-                .canCreateStation();
-        }
-
         private boolean canCreateAutomatedStation(CelestialObject body) {
-            return canCreateBaseStation(body) && isGT5AutomationAvailable();
+            return body != null && isGT5AutomationAvailable()
+                && assetActionController.canCreateAssetOnBody(body, CelestialAsset.Kind.AUTOMATED_STATION);
         }
 
         private boolean canCreateAutomatedFacility(CelestialObject body) {
             return body != null && isGT5AutomationAvailable()
-                && body.properties()
-                    .canCreateOutpost();
+                && assetActionController.canCreateAssetOnBody(body, CelestialAsset.Kind.AUTOMATED_OUTPOST);
         }
 
         private boolean canDebugSatellites(CelestialObject body) {
@@ -2478,7 +2541,7 @@ public class OrbitalView {
             if ((operation == SatelliteMutationOperation.ADD || operation == SatelliteMutationOperation.SET)
                 && !canDebugSatellites(body)) return;
             if (StarmapActionSyncHandler.sendSatelliteMutation(currentTeamId(), body.key(), kind, operation, amount)) {
-                showActionStatus("Satellite request sent");
+                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.satellite_sent"));
             }
         }
 
@@ -2514,15 +2577,18 @@ public class OrbitalView {
                 usedKbps = networkState.usedKbps(satelliteNetworkBodyKey);
                 capacityKbps = networkState.capacityKbps(satelliteNetworkBodyKey);
             }
-            return "Bandwidth: " + SatelliteBandwidthFormatter.formatKbps(usedKbps)
-                + " / "
-                + SatelliteBandwidthFormatter.formatKbps(capacityKbps);
+            return StatCollector.translateToLocalFormatted(
+                "galaxia.satellite.tooltip.bandwidth",
+                SatelliteBandwidthFormatter.formatKbps(usedKbps),
+                SatelliteBandwidthFormatter.formatKbps(capacityKbps));
         }
 
         private java.util.Optional<String> satelliteScanningSummary(CelestialObject body) {
             if (satelliteCount(body, SatelliteKind.PROSPECTING) <= 0) return java.util.Optional.empty();
             return CelestialDiscoveryClientState.scan(body.key(), CelestialDiscoveryCapability.PROSPECTING)
-                .map(scan -> "Scanning: " + scanProgressPercent(scan) + "%");
+                .map(
+                    scan -> StatCollector
+                        .translateToLocalFormatted("galaxia.satellite.tooltip.scanning", scanProgressPercent(scan)));
         }
 
         private int scanProgressPercent(CelestialDiscoveryScanSnapshot scan) {
@@ -2540,20 +2606,25 @@ public class OrbitalView {
                 return List.of();
             return networkState.pendingData(satelliteNetworkBodyKey)
                 .stream()
-                .map(
-                    entry -> SatelliteBandwidthFormatter.formatDataDeciKb(entry.deciKb()) + " "
-                        + pendingDataLabel(entry.key())
-                        + pendingDataDestinationLabel(entry))
+                .map(this::pendingDataLine)
                 .toList();
         }
 
-        private String pendingDataDestinationLabel(SatelliteNetworkState.PendingData entry) {
+        private String pendingDataLine(SatelliteNetworkState.PendingData entry) {
+            String amount = SatelliteBandwidthFormatter.formatDataDeciKb(entry.deciKb());
+            String label = pendingDataLabel(entry.key());
             if (entry.destinationBodyKeys()
-                .isEmpty()) return " waiting";
-            return " to " + entry.destinationBodyKeys()
-                .stream()
-                .map(this::bodyDisplayName)
-                .collect(Collectors.joining(", "));
+                .isEmpty())
+                return StatCollector
+                    .translateToLocalFormatted("galaxia.satellite.tooltip.pending_waiting", amount, label);
+            return StatCollector.translateToLocalFormatted(
+                "galaxia.satellite.tooltip.pending_to",
+                amount,
+                label,
+                entry.destinationBodyKeys()
+                    .stream()
+                    .map(this::bodyDisplayName)
+                    .collect(Collectors.joining(", ")));
         }
 
         private String bodyDisplayName(CelestialObjectKey bodyKey) {
@@ -2564,13 +2635,15 @@ public class OrbitalView {
                         .name()
                         .toLowerCase(Locale.ROOT)
                         .replace('_', ' ')
-                        : bodyKey.minorBodyId()
-                            .parentBodyId()
-                            .name()
-                            .toLowerCase(Locale.ROOT)
-                            .replace('_', ' ') + " asteroid "
-                            + bodyKey.minorBodyId()
-                                .index());
+                        : StatCollector.translateToLocalFormatted(
+                            "galaxia.satellite.tooltip.asteroid",
+                            bodyKey.minorBodyId()
+                                .parentBodyId()
+                                .name()
+                                .toLowerCase(Locale.ROOT)
+                                .replace('_', ' '),
+                            bodyKey.minorBodyId()
+                                .index()));
         }
 
         private String bodyDisplayName(CelestialObjectId bodyId) {
@@ -2582,8 +2655,10 @@ public class OrbitalView {
                 .name()
                 .toLowerCase(Locale.ROOT)
                 .replace('_', ' ');
-            if (!key.hasOrigin()) return type + " data";
-            return bodyDisplayName(key.origin()) + " " + type + " data";
+            if (!key.hasOrigin())
+                return StatCollector.translateToLocalFormatted("galaxia.satellite.tooltip.data", type);
+            return StatCollector
+                .translateToLocalFormatted("galaxia.satellite.tooltip.data_from", bodyDisplayName(key.origin()), type);
         }
 
         private float getInteractionRadius(float renderedRadius) {

@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.hazards;
 
 import java.util.Optional;
 
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
@@ -12,7 +13,8 @@ import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 public class HazardZeroG implements IEnvironmentalHazard {
 
     @Override
-    public HazardWarnings apply(EffectBuilder def, EntityPlayer player, Optional<TileStation> station) {
+    public HazardWarnings apply(EffectBuilder def, EntityLivingBase body, Optional<TileStation> station) {
+        if (!(body instanceof EntityPlayer player)) return HazardWarnings.FINE;
         if (GalaxiaAPI.getGravity(player) != 0) return HazardWarnings.FINE;
         if (GalaxiaAPI.hasZeroGMovementCapability(player)) return HazardWarnings.FINE;
 
