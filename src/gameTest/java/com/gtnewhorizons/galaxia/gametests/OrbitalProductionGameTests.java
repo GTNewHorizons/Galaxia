@@ -32,6 +32,12 @@ public final class OrbitalProductionGameTests {
             }
         }
         recipe(mixerRecipes, SIGE_BLEND);
+        recipe(blastFurnaceRecipes, SIGE_SEED, SIGE_BLEND);
+        recipe(blastFurnaceRecipes, SIGE_MONOCRYSTAL, SIGE_SEED);
+        recipe(blastFurnaceRecipes, null, FLUORIDE_GLASS_MIX);
+        recipe(fluidSolidifierRecipes, FLUORIDE_GLASS_BLANK);
+        recipe(blastFurnaceRecipes, HEATED_FLUORIDE_GLASS_PREFORM, FLUORIDE_GLASS_PREFORM);
+        recipe(extruderRecipes, FLUORIDE_OPTICAL_FIBER, HEATED_FLUORIDE_GLASS_PREFORM);
         recipe(fluidExtractionRecipes, null, POLY_SIGE);
         recipe(fluidExtractionRecipes, null, SIGE_SEED);
         recipe(hammerRecipes, SIGE_SEED);
@@ -62,6 +68,17 @@ public final class OrbitalProductionGameTests {
             if (contains(recipe.mInputs, SIGE_BLEND)) {
                 throw new AssertionError("Untreated SiGe blend has a melting bypass");
             }
+        }
+        GTRecipe powder = recipe(blastFurnaceRecipes, SIGE_SEED, SIGE_BLEND);
+        if (!contains(powder.mOutputs, POLY_SIGE) || powder.getOutputChance(0) != 1000
+            || powder.getOutputChance(1) != 9000
+            || powder.getOutputChance(2) != 10000) {
+            throw new AssertionError("Powder treatment lost independent seed/poly rolls or guaranteed residue");
+        }
+        for (GTRecipe hot : new GTRecipe[] { powder, recipe(blastFurnaceRecipes, SIGE_MONOCRYSTAL, SIGE_SEED),
+            recipe(blastFurnaceRecipes, null, FLUORIDE_GLASS_MIX),
+            recipe(blastFurnaceRecipes, HEATED_FLUORIDE_GLASS_PREFORM, FLUORIDE_GLASS_PREFORM) }) {
+            if (hot.mSpecialValue <= 0) throw new AssertionError("Orbital EBF operation lost coil heat requirement");
         }
         GTRecipe shaping = recipe(latheRecipes, FLUORIDE_GLASS_PREFORM);
         if (!contains(shaping.mOutputs, FLUORIDE_GLASS_MIX)) {
