@@ -160,7 +160,6 @@ public final class AndroidClient {
                 double x = actor.posX + look.xCoord * 1.5;
                 double y = actor.posY + actor.getEyeHeight() + look.yCoord * 1.5;
                 double z = actor.posZ + look.zCoord * 1.5;
-                // The server owns positional audio. This local effect has no damage, sound or knockback.
                 mc.theWorld.spawnParticle("hugeexplosion", x, y, z, 0, 0, 0);
             }
         }
@@ -595,7 +594,6 @@ public final class AndroidClient {
         GL11.glPopAttrib();
     }
 
-    /** Both projections use the ordinary biped equipment renderer, with distinct biological and android appearance. */
     public static final class BodyRenderer extends RenderBiped {
 
         public BodyRenderer() {

@@ -145,7 +145,7 @@ public final class AndroidControlPacket implements IMessage {
         }
     }
 
-    /** The server resolves the sender's current session without accepting a client-selected body. */
+    /** The server resolves the sender's current session. */
     public static final class EndRequest implements IMessage {
 
         @Override

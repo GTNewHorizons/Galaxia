@@ -47,7 +47,7 @@ public final class AndroidBodies {
         }
         if (!bodies.current.sessions()
             .isEmpty()) {
-            // Recovery returns operators to their recorded biological bodies. It never restarts remote control.
+            // Recovery returns operators to their recorded biological bodies.
             bodies.commit(
                 new Checkpoint(
                     bodies.current.androids(),

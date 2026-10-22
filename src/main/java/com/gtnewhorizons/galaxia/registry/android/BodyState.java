@@ -133,7 +133,7 @@ public final class BodyState {
         return new BodyState(resting);
     }
 
-    /** Restores a newly loaded player before JoinGame, without live equipment actions or network sends. */
+    /** Restores a newly loaded player before JoinGame. */
     public void hydrate(@Nonnull EntityPlayer player) {
         player.clearItemInUse();
         removeEquipmentModifiers(player);
@@ -309,7 +309,6 @@ public final class BodyState {
         player.inventory.markDirty();
     }
 
-    /** Applies coordinates and motion only. The lifecycle owner remains responsible for world transfer. */
     public void applyLocation(@Nonnull Entity body) {
         body.setLocationAndAngles(x(), y(), z(), yaw(), pitch());
         body.motionX = state.getDouble("motionX");
@@ -326,10 +325,7 @@ public final class BodyState {
 
     public record Metabolism(BodyState state, boolean starvationDue) {}
 
-    /**
-     * Passive capsule metabolism uses vanilla saved food fields. It consumes saturation before food and preserves
-     * fractional exhaustion on return. It does not simulate player movement or hunger-mod callbacks.
-     */
+    /** Consumes saturation before food and preserves fractional exhaustion on return. */
     public Metabolism tickBiological(EntityLivingBase body, int periodTicks) {
         if (periodTicks <= 0) throw new IllegalArgumentException("Metabolism period must be positive");
         NBTTagCompound updated = write();
@@ -367,7 +363,6 @@ public final class BodyState {
         return new BodyState(updated);
     }
 
-    /** Replaces a saved bauble after a resource operation without invoking player-only equipment callbacks. */
     public BodyState withBauble(int slot, @Nonnull ItemStack stack) {
         if (slot < 0) throw new IllegalArgumentException("Invalid body bauble slot");
         NBTTagCompound updated = write();
@@ -396,7 +391,7 @@ public final class BodyState {
         return new BodyState(updated);
     }
 
-    /** Independent stacks for a lifecycle-owned drop or dock operation, never another mutable inventory view. */
+    /** Returns independent item stacks for dropping belongings or processing them in a dock. */
     @Nonnull
     public List<ItemStack> carriedItems() {
         List<ItemStack> items = new ArrayList<>();
@@ -462,7 +457,6 @@ public final class BodyState {
         return withInventory(inventory, wearer);
     }
 
-    /** Handles the vanilla equipment setter without granting an entity a second authoritative inventory. */
     @Nonnull
     public BodyState withEquipment(int slot, @Nullable ItemStack stack, @Nonnull EntityLivingBase wearer) {
         if (slot < 0 || slot > 4) throw new IllegalArgumentException("Invalid body equipment slot");

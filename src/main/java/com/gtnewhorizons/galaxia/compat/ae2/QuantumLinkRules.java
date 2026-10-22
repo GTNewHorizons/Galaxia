@@ -56,7 +56,6 @@ public final class QuantumLinkRules {
         else BRIDGES.remove(bridge);
     }
 
-    /** Creates an AE2 bridge connection under the satellite-network policy. */
     public static IGridConnection createConnection(IAppEngApi api, IGridNode a, IGridNode b) throws FailedConnection {
         if (!isLinkAllowed(a, b)) throw new FailedConnection("No relay satellites between the bridges");
         if (!isInterplanetary(a, b)) return api.createGridConnection(a, b);
@@ -80,7 +79,6 @@ public final class QuantumLinkRules {
         }
     }
 
-    /** Whether an existing bridge connection may remain active. */
     public static boolean isConnectionAllowed(IGridConnection connection) {
         if (!isLinkAllowed(connection.a(), connection.b())) return false;
         if (!isInterplanetary(connection.a(), connection.b())) return true;
