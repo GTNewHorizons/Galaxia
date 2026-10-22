@@ -22,6 +22,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
  */
 public final class SatelliteNetworkCalculator {
 
+    public static final double LOCAL_DISTANCE = 3_500.0D;
+    public static final double LONG_RANGE_DISTANCE = 23_500.0D;
+
     private SatelliteNetworkCalculator() {}
 
     private record BackboneCandidate(int fromIndex, int toIndex, long capacityKbps, double distance) {}
@@ -64,7 +67,31 @@ public final class SatelliteNetworkCalculator {
                 .getOrDefault(new SatelliteNetworkGraph.DirectedEdge(edge.from(), edge.to()), 0L);
             long reverseUsed = directedUsedLinks
                 .getOrDefault(new SatelliteNetworkGraph.DirectedEdge(edge.to(), edge.from()), 0L);
-            links.add(new SatelliteNetworkState.Link(edge.from(), edge.to(), capacity, used, forwardUsed, reverseUsed));
+            SatelliteNetworkGraph.Node from = nodes.stream()
+                .filter(
+                    n -> n.bodyKey()
+                        .equals(edge.from()))
+                .findFirst()
+                .orElseThrow();
+            SatelliteNetworkGraph.Node to = nodes.stream()
+                .filter(
+                    n -> n.bodyKey()
+                        .equals(edge.to()))
+                .findFirst()
+                .orElseThrow();
+            double separation = Math.hypot(to.x() - from.x(), to.y() - from.y());
+            SatelliteNetworkState.Quality quality = separation <= LOCAL_DISTANCE ? SatelliteNetworkState.Quality.LOCAL
+                : separation <= LONG_RANGE_DISTANCE ? SatelliteNetworkState.Quality.LONG_RANGE
+                    : SatelliteNetworkState.Quality.DEEP_SPACE;
+            links.add(
+                new SatelliteNetworkState.Link(
+                    edge.from(),
+                    edge.to(),
+                    capacity,
+                    used,
+                    forwardUsed,
+                    reverseUsed,
+                    quality));
         }
 
         return new SatelliteNetworkState(teamId, revision, bodies, links);
@@ -131,8 +158,85 @@ public final class SatelliteNetworkCalculator {
     }
 
     public static WidestPath widestPath(CelestialObjectKey from, CelestialObjectKey to, SatelliteNetworkState state) {
+        return widestPath(from, to, state, 1L);
+    }
+
+    public static WidestPath widestPath(CelestialObjectKey from, CelestialObjectKey to, SatelliteNetworkState state,
+        long minimumDeliveredKbps) {
         if (state == null) return WidestPath.empty();
-        return widestPath(from, to, state.links(), state.capacityKbps(from));
+        for (SatelliteNetworkState.Quality quality : SatelliteNetworkState.Quality.values()) {
+            List<SatelliteNetworkState.Link> effective = state.links()
+                .stream()
+                .filter(
+                    link -> link.quality()
+                        .airtimeCost() <= quality.airtimeCost())
+                .map(
+                    link -> new SatelliteNetworkState.Link(
+                        link.from(),
+                        link.to(),
+                        Math.min(
+                            link.capacityKbps(),
+                            Math.min(state.capacityKbps(link.from()), state.capacityKbps(link.to())))
+                            / link.quality()
+                                .airtimeCost(),
+                        0L,
+                        0L,
+                        0L))
+                .toList();
+            WidestPath path = widestPath(from, to, effective, state.capacityKbps(from));
+            if (path.capacityKbps() >= minimumDeliveredKbps) return path;
+        }
+        return WidestPath.empty();
+    }
+
+    /** Removes actual raw capacity spent this tick, independently of the snapshot's visual traffic pulses. */
+    public static SatelliteNetworkState remaining(SatelliteNetworkState network,
+        Map<SatelliteNetworkGraph.Edge, Long> edges, Map<CelestialObjectKey, Long> bodies) {
+        Map<CelestialObjectKey, SatelliteNetworkState.Body> remainingBodies = new HashMap<>();
+        network.bodies()
+            .forEach(
+                (key, body) -> remainingBodies.put(
+                    key,
+                    new SatelliteNetworkState.Body(
+                        key,
+                        Math.max(0L, body.capacityKbps() - bodies.getOrDefault(key, 0L)),
+                        0L)));
+        List<SatelliteNetworkState.Link> remainingLinks = network.links()
+            .stream()
+            .map(
+                link -> new SatelliteNetworkState.Link(
+                    link.from(),
+                    link.to(),
+                    Math.max(0L, link.capacityKbps() - edges.getOrDefault(link.asEdge(), 0L)),
+                    0L,
+                    0L,
+                    0L,
+                    link.quality()))
+            .toList();
+        return new SatelliteNetworkState(network.teamId(), network.revision(), remainingBodies, remainingLinks);
+    }
+
+    public static Map<SatelliteNetworkGraph.Edge, Integer> airtimeCosts(SatelliteNetworkState state,
+        List<SatelliteNetworkGraph.Edge> path) {
+        Map<SatelliteNetworkGraph.Edge, Integer> costs = new HashMap<>();
+        for (SatelliteNetworkState.Link link : state.links()) {
+            if (path.contains(link.asEdge())) costs.put(
+                link.asEdge(),
+                link.quality()
+                    .airtimeCost());
+        }
+        return Map.copyOf(costs);
+    }
+
+    /** Each relay pays once, at the worse of its two adjacent links. */
+    public static Map<CelestialObjectKey, Integer> bodyAirtimeCosts(List<SatelliteNetworkGraph.Edge> path,
+        Map<SatelliteNetworkGraph.Edge, Integer> costs) {
+        Map<CelestialObjectKey, Integer> bodies = new HashMap<>();
+        for (SatelliteNetworkGraph.Edge edge : path) {
+            bodies.merge(edge.from(), costs.get(edge), Math::max);
+            bodies.merge(edge.to(), costs.get(edge), Math::max);
+        }
+        return bodies;
     }
 
     public record WidestPath(List<SatelliteNetworkGraph.Edge> edges, long capacityKbps) {
@@ -167,7 +271,10 @@ public final class SatelliteNetworkCalculator {
             CelestialObjectKey current = null;
             long currentBest = -1L;
             for (Map.Entry<CelestialObjectKey, Long> entry : best.entrySet()) {
-                if (!visited.contains(entry.getKey()) && entry.getValue() > currentBest) {
+                if (!visited.contains(entry.getKey())
+                    && (entry.getValue() > currentBest || entry.getValue() == currentBest && current != null
+                        && entry.getKey()
+                            .compareTo(current) < 0)) {
                     current = entry.getKey();
                     currentBest = entry.getValue();
                 }

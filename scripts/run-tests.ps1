@@ -19,7 +19,7 @@ $groups = [ordered]@{
     'automated-facilities' = @('galaxia:FacilityGameplayGameTests.', 'galaxia:StationGuiGameTests.')
     'rocket-production' = @('galaxia:ModuleConstructionGuiGameTests.')
     'starmap' = @('galaxia:StarmapGameTests.')
-    'satellites' = @('galaxia:SatelliteNetworkGuiGameTests.')
+    'satellites' = @('galaxia:SatelliteNetworkGuiGameTests.', 'galaxia:ComputerGameplayGameTests.', 'galaxia:QuantumBandwidthGameTests.')
     'androids' = @('galaxia:AndroidStationGameTests.', 'galaxia:AndroidControlGameTests.')
 }
 if ($ListSuites) {

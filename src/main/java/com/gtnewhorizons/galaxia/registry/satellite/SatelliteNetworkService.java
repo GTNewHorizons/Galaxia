@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
@@ -32,6 +33,7 @@ public final class SatelliteNetworkService {
 
     private static final int DATA_USAGE_VISIBLE_TICKS = 40;
     private static final Map<UUID, TeamRuntime> RUNTIMES = new HashMap<>();
+    private static int sampleTicks;
 
     private SatelliteNetworkService() {}
 
@@ -62,7 +64,7 @@ public final class SatelliteNetworkService {
         }
         SatelliteNetworkState available = remainingNetwork(
             runtime.state,
-            reservationUsage(runtime.reservations.values()));
+            reservationUsage(runtime.state, runtime.reservations.values()));
         SatelliteNetworkCalculator.WidestPath path = SatelliteNetworkCalculator.widestPath(from, to, available);
         if (path.capacityKbps() < requiredKbps) return false;
         runtime.reservations.put(reservationId, new BandwidthReservation(from, to, requiredKbps, path.edges()));
@@ -102,7 +104,7 @@ public final class SatelliteNetworkService {
         SatelliteNetworkState unloaded = SatelliteNetworkCalculator
             .forTeam(teamId, previous.revision() + 1, activeNodes, capacityByBody, Map.of());
         revalidateReservations(runtime, unloaded);
-        BandwidthUsage reserved = reservationUsage(runtime.reservations.values());
+        BandwidthUsage reserved = reservationUsage(unloaded, runtime.reservations.values());
         SatelliteNetworkState available = remainingNetwork(unloaded, reserved);
         clearActiveUsageIfTopologyChanged(runtime, previous, unloaded);
         SatelliteDataTransferPlanner.Plan plan = SatelliteDataTransferPlanner
@@ -130,6 +132,7 @@ public final class SatelliteNetworkService {
 
     public static void clear() {
         RUNTIMES.clear();
+        sampleTicks = 0;
     }
 
     static SatelliteDataBufferStore dataBuffers(UUID teamId) {
@@ -138,6 +141,43 @@ public final class SatelliteNetworkService {
 
     public static boolean canStartProcess(UUID teamId, CelestialObjectKey bodyKey, SatelliteDataKey outputKey) {
         return runtime(teamId).buffers.canStart(bodyKey, outputKey, current(teamId).capacityKbps(bodyKey));
+    }
+
+    public static void registerEndpoint(UUID teamId, SatelliteDataEndpointRegistry.Endpoint endpoint) {
+        runtime(teamId).endpoints.register(endpoint);
+    }
+
+    public static void unregisterEndpoint(UUID teamId, UUID endpointId) {
+        TeamRuntime runtime = RUNTIMES.get(teamId);
+        if (runtime != null) runtime.endpoints.unregister(endpointId);
+    }
+
+    public static long outputRoom(UUID teamId, CelestialObjectKey bodyKey, SatelliteDataKey key) {
+        long limit = Math.max(100L, SatelliteBandwidthFormatter.kilobits(current(teamId).capacityKbps(bodyKey)));
+        return Math.max(0L, limit - runtime(teamId).buffers.pendingDeciKb(bodyKey, key));
+    }
+
+    public static long offerData(UUID teamId, CelestialObjectKey bodyKey, SatelliteDataKey key, long amount) {
+        long accepted = Math.min(Math.max(0L, amount), outputRoom(teamId, bodyKey, key));
+        runtime(teamId).buffers.finishProduction(bodyKey, key, accepted);
+        return accepted;
+    }
+
+    static void acceptProspectingFlow(UUID teamId, CelestialObjectKey bodyKey, long amount) {
+        if (teamId != null && amount > 0L) runtime(teamId).prospectingFlow.merge(bodyKey, amount, Long::sum);
+    }
+
+    /** Mining reads the previous completed network tick. No bonus survives a tick with no received flow. */
+    public static double miningYieldBonus(UUID teamId, CelestialObjectKey bodyKey) {
+        TeamRuntime runtime = RUNTIMES.get(teamId);
+        return runtime == null ? 0.0D : 0.1D * Math.sqrt(runtime.prospectingFlow.getOrDefault(bodyKey, 0L) / 5.0D);
+    }
+
+    public static int mineralYieldMultiplier(double bonus, Random random) {
+        double nonnegative = Math.max(0.0D, bonus);
+        int whole = (int) Math.floor(nonnegative);
+        double fraction = nonnegative - whole;
+        return 1 + whole + (fraction > 0.0D && random.nextDouble() < fraction ? 1 : 0);
     }
 
     /*
@@ -150,14 +190,22 @@ public final class SatelliteNetworkService {
 
     private static void tickDataJobsSingleTick() {
         tickActiveUsage();
+        if (++sampleTicks >= 20) {
+            sampleTicks = 0;
+            double orbitalTime = GalaxiaCelestialAPI.currentOrbitalTime();
+            for (UUID teamId : List.copyOf(RUNTIMES.keySet())) {
+                if (teamId != null) rebuild(teamId, orbitalTime);
+            }
+        }
         for (Map.Entry<UUID, TeamRuntime> entry : RUNTIMES.entrySet()) {
             TeamRuntime runtime = entry.getValue();
+            runtime.prospectingFlow.clear();
             if (runtime.endpoints.isEmpty()) continue;
             SatelliteDataJobService.Usage usage = SatelliteDataJobService.tickEndpointsUsage(
                 entry.getKey(),
                 runtime.endpoints.endpoints(),
                 runtime.buffers,
-                remainingNetwork(runtime.state, reservationUsage(runtime.reservations.values())));
+                remainingNetwork(runtime.state, reservationUsage(runtime.state, runtime.reservations.values())));
             recordActiveUsage(runtime, usage);
         }
     }
@@ -166,6 +214,8 @@ public final class SatelliteNetworkService {
         if (teamId == null) return;
         if (asset instanceof AutomatedFacility facility) {
             runtime(teamId).endpoints.refreshFacility(facility);
+        } else if (asset instanceof Satellite satellite) {
+            runtime(teamId).endpoints.refreshSatellite(satellite);
         } else if (asset != null) {
             unregisterAssetEndpoints(asset.assetId);
         }
@@ -184,7 +234,7 @@ public final class SatelliteNetworkService {
         if (consumedTeam.equals(survivingTeam)) return;
         RUNTIMES.remove(consumedTeam);
         for (CelestialAsset asset : transferredAssets) {
-            if (asset instanceof AutomatedFacility facility) runtime(survivingTeam).endpoints.refreshFacility(facility);
+            refreshAssetEndpoints(survivingTeam, asset);
         }
     }
 
@@ -193,13 +243,13 @@ public final class SatelliteNetworkService {
         Map<UUID, BandwidthReservation> retained = new LinkedHashMap<>();
         List<UUID> reroute = new ArrayList<>();
         for (Map.Entry<UUID, BandwidthReservation> entry : runtime.reservations.entrySet()) {
-            SatelliteNetworkState available = remainingNetwork(network, reservationUsage(retained.values()));
+            SatelliteNetworkState available = remainingNetwork(network, reservationUsage(network, retained.values()));
             if (fits(entry.getValue(), available)) retained.put(entry.getKey(), entry.getValue());
             else reroute.add(entry.getKey());
         }
         for (UUID id : reroute) {
             BandwidthReservation reservation = runtime.reservations.get(id);
-            SatelliteNetworkState available = remainingNetwork(network, reservationUsage(retained.values()));
+            SatelliteNetworkState available = remainingNetwork(network, reservationUsage(network, retained.values()));
             SatelliteNetworkCalculator.WidestPath path = SatelliteNetworkCalculator
                 .widestPath(reservation.from(), reservation.to(), available);
             if (path.capacityKbps() >= reservation.requiredKbps()) {
@@ -219,66 +269,60 @@ public final class SatelliteNetworkService {
     }
 
     private static boolean fits(BandwidthReservation reservation, SatelliteNetworkState available) {
-        if (available.capacityKbps(reservation.from()) < reservation.requiredKbps()) return false;
+        Map<SatelliteNetworkGraph.Edge, Integer> costs = SatelliteNetworkCalculator
+            .airtimeCosts(available, reservation.path());
+        if (costs.size() != reservation.path()
+            .size()) return false;
+        for (Map.Entry<CelestialObjectKey, Integer> body : SatelliteNetworkCalculator
+            .bodyAirtimeCosts(reservation.path(), costs)
+            .entrySet()) {
+            if (available.capacityKbps(body.getKey()) / body.getValue() < reservation.requiredKbps()) return false;
+        }
         for (SatelliteNetworkGraph.Edge edge : reservation.path()) {
             if (available.links()
                 .stream()
                 .noneMatch(
                     link -> link.asEdge()
-                        .equals(edge) && link.capacityKbps() >= reservation.requiredKbps()))
+                        .equals(edge) && link.capacityKbps() / costs.get(edge) >= reservation.requiredKbps()))
                 return false;
         }
-        return true;
+        return available.capacityKbps(reservation.from()) >= reservation.requiredKbps();
     }
 
-    private static BandwidthUsage reservationUsage(Iterable<BandwidthReservation> reservations) {
+    private static BandwidthUsage reservationUsage(SatelliteNetworkState network,
+        Iterable<BandwidthReservation> reservations) {
         Map<SatelliteNetworkGraph.Edge, Long> edges = new HashMap<>();
         Map<SatelliteNetworkGraph.DirectedEdge, Long> directed = new HashMap<>();
         Map<CelestialObjectKey, Long> bodies = new HashMap<>();
         for (BandwidthReservation reservation : reservations) {
+            if (reservation.path()
+                .isEmpty()) {
+                bodies.merge(reservation.from(), reservation.requiredKbps(), Long::sum);
+                continue;
+            }
+            Map<SatelliteNetworkGraph.Edge, Integer> costs = SatelliteNetworkCalculator
+                .airtimeCosts(network, reservation.path());
+            if (costs.size() != reservation.path()
+                .size()) continue;
             for (SatelliteNetworkGraph.Edge edge : reservation.path())
-                edges.merge(edge, reservation.requiredKbps(), Long::sum);
-            for (CelestialObjectKey body : SatelliteDataTransferPlanner
-                .routeBodies(reservation.from(), reservation.path()))
-                bodies.merge(body, reservation.requiredKbps(), Long::sum);
-            SatelliteDataTransferPlanner.mergeDirectedUsage(
-                directed,
-                reservation.from(),
-                reservation.to(),
-                reservation.path(),
-                reservation.requiredKbps());
+                edges.merge(edge, reservation.requiredKbps() * costs.get(edge), Long::sum);
+            SatelliteNetworkCalculator.bodyAirtimeCosts(reservation.path(), costs)
+                .forEach((body, cost) -> bodies.merge(body, reservation.requiredKbps() * cost, Long::sum));
+            List<CelestialObjectKey> pathBodies = SatelliteDataTransferPlanner
+                .routeBodies(reservation.from(), reservation.path());
+            for (int i = 1; i < pathBodies.size(); i++) {
+                var edge = new SatelliteNetworkGraph.Edge(pathBodies.get(i - 1), pathBodies.get(i));
+                directed.merge(
+                    new SatelliteNetworkGraph.DirectedEdge(pathBodies.get(i - 1), pathBodies.get(i)),
+                    reservation.requiredKbps() * costs.get(edge),
+                    Long::sum);
+            }
         }
         return new BandwidthUsage(edges, directed, bodies);
     }
 
-    /* Capacity accounting never reads usage colours, which can include transfer pulses from earlier ticks. */
     private static SatelliteNetworkState remainingNetwork(SatelliteNetworkState network, BandwidthUsage reserved) {
-        Map<CelestialObjectKey, SatelliteNetworkState.Body> bodies = new HashMap<>();
-        for (SatelliteNetworkState.Body body : network.bodies()
-            .values()) {
-            long remaining = Math.max(
-                0L,
-                body.capacityKbps() - reserved.usedByBody()
-                    .getOrDefault(body.bodyKey(), 0L));
-            bodies.put(body.bodyKey(), new SatelliteNetworkState.Body(body.bodyKey(), remaining, 0L));
-        }
-        List<SatelliteNetworkState.Link> links = new ArrayList<>();
-        for (SatelliteNetworkState.Link link : network.links()) {
-            long remaining = Math.max(
-                0L,
-                link.capacityKbps() - reserved.usedByEdge()
-                    .getOrDefault(link.asEdge(), 0L));
-            remaining = Math.min(
-                remaining,
-                bodies.get(link.from())
-                    .capacityKbps());
-            remaining = Math.min(
-                remaining,
-                bodies.get(link.to())
-                    .capacityKbps());
-            links.add(new SatelliteNetworkState.Link(link.from(), link.to(), remaining, 0L, 0L, 0L));
-        }
-        return new SatelliteNetworkState(network.teamId(), network.revision(), bodies, links);
+        return SatelliteNetworkCalculator.remaining(network, reserved.usedByEdge(), reserved.usedByBody());
     }
 
     private static BandwidthUsage visibleUsage(TeamRuntime runtime, SatelliteNetworkState network,
@@ -525,11 +569,19 @@ public final class SatelliteNetworkService {
 
     private static final class TeamRuntime {
 
+        // Data buffers and processing progress are intentionally not saved yet.
+        // Current sources generate continuously without consuming finite inputs, and
+        // gameplay depends on sustained flow rather than accumulated data. Losing the
+        // small transient buffer on reload is acceptable, including EU already spent
+        // processing it. Revisit persistence when data generation consumes finite items
+        // or other scarce resources.
+
         private SatelliteNetworkState state;
         private final Map<SatelliteNetworkGraph.Edge, ActiveDataUsage> activeUsage = new HashMap<>();
         private final Map<SatelliteNetworkGraph.DirectedEdge, ActiveDataUsage> activeDirectionalUsage = new HashMap<>();
         private final SatelliteDataBufferStore buffers = new SatelliteDataBufferStore();
         private final SatelliteDataEndpointRegistry endpoints = new SatelliteDataEndpointRegistry();
+        private final Map<CelestialObjectKey, Long> prospectingFlow = new HashMap<>();
         private final Map<UUID, BandwidthReservation> reservations = new LinkedHashMap<>();
 
         private TeamRuntime(UUID teamId) {

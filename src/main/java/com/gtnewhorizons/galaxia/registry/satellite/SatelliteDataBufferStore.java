@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.satellite;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,15 @@ public final class SatelliteDataBufferStore {
                 if (amount > 0L) entries.add(new Entry(bodyEntry.getKey(), keyEntry.getKey(), amount));
             }
         }
+        entries.sort(
+            Comparator.comparing(Entry::bodyKey)
+                .thenComparing(
+                    entry -> entry.key()
+                        .type())
+                .thenComparing(
+                    entry -> entry.key()
+                        .origin(),
+                    Comparator.nullsFirst(Comparator.naturalOrder())));
         return List.copyOf(entries);
     }
 

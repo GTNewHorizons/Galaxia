@@ -28,6 +28,7 @@ import com.gtnewhorizons.galaxia.core.config.ConfigMain;
 import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
 import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
 import com.gtnewhorizons.galaxia.gt5.AndroidRecipes;
+import com.gtnewhorizons.galaxia.gt5.computer.ComputerContent;
 import com.gtnewhorizons.galaxia.handlers.CelestialEventHandler;
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
 import com.gtnewhorizons.galaxia.handlers.TeamEventHandler;
@@ -107,6 +108,7 @@ public class CommonProxy {
         // Registration
         GalaxiaItemList.registerAll();
         GalaxiaBlocksEnum.registerBlocks();
+        ComputerContent.preInit();
         PlanetBlocks.init();
         GalaxiaEffects.init();
 
@@ -156,6 +158,7 @@ public class CommonProxy {
     private void registerAttachments() {
         if (isGregTech5UnofficialNewHorizonsLoaded()) {
             GalaxiaGTAttachmentRegistration.init();
+            ComputerContent.registerMachines();
             GalaxiaCasingTextures.register();
         }
 

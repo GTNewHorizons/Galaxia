@@ -30,8 +30,8 @@ public final class GalaxiaSatelliteAPI {
         return CelestialAssetStore.SERVER.satelliteBandwidth(teamId, bodyKey);
     }
 
-    public static double miningSpeedBonus(UUID teamId, CelestialObjectKey bodyKey) {
-        return CelestialAssetStore.SERVER.satelliteMiningSpeedBonus(teamId, bodyKey);
+    public static double miningYieldBonus(UUID teamId, CelestialObjectKey bodyKey) {
+        return SatelliteNetworkService.miningYieldBonus(teamId, bodyKey);
     }
 
     public static long localCapacityKbps(UUID teamId, CelestialObjectKey bodyKey) {

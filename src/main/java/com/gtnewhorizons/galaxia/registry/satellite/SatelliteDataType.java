@@ -4,5 +4,6 @@ public enum SatelliteDataType {
 
     COMMUNICATION,
     PROSPECTING,
+    PROCESSED_PROSPECTING,
     RESEARCH
 }

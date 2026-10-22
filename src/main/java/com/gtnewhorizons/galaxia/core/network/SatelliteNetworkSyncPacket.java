@@ -85,6 +85,7 @@ public final class SatelliteNetworkSyncPacket implements IMessage {
             buf.writeLong(link.usedKbps());
             buf.writeLong(link.forwardUsedKbps());
             buf.writeLong(link.reverseUsedKbps());
+            PacketUtil.writeEnum(buf, link.quality());
         }
     }
 
@@ -98,8 +99,16 @@ public final class SatelliteNetworkSyncPacket implements IMessage {
             long usedKbps = buf.readLong();
             long forwardUsedKbps = buf.readLong();
             long reverseUsedKbps = buf.readLong();
+            SatelliteNetworkState.Quality quality = PacketUtil.readEnum(buf, SatelliteNetworkState.Quality.class);
             links.add(
-                new SatelliteNetworkState.Link(from, to, capacityKbps, usedKbps, forwardUsedKbps, reverseUsedKbps));
+                new SatelliteNetworkState.Link(
+                    from,
+                    to,
+                    capacityKbps,
+                    usedKbps,
+                    forwardUsedKbps,
+                    reverseUsedKbps,
+                    quality));
         }
         return links;
     }

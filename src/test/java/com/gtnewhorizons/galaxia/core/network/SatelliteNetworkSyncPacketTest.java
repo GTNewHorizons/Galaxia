@@ -39,7 +39,8 @@ final class SatelliteNetworkSyncPacketTest {
                     10L,
                     4L,
                     3L,
-                    1L)),
+                    1L,
+                    SatelliteNetworkState.Quality.DEEP_SPACE)),
             List.of(
                 new SatelliteNetworkState.PendingData(
                     CelestialObjectKey.registered(CelestialObjectId.MARS),

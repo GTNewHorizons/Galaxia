@@ -11,7 +11,6 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
 /**
  * Matches buffered produced data to compatible demand and assigns it to network paths for the current tick.
@@ -26,21 +25,23 @@ public final class SatelliteDataTransferPlanner {
 
     private SatelliteDataTransferPlanner() {}
 
-    public record Demand(ModuleInstance.ID sinkId, CelestialObjectKey bodyKey, SatelliteDataKey key, long deciKb) {
+    public record Demand(UUID sinkId, CelestialObjectKey bodyKey, SatelliteDataKey key, long deciKb) {
 
         public Demand {
             deciKb = Math.max(0L, deciKb);
         }
     }
 
-    public record Transfer(UUID teamId, ModuleInstance.ID sinkId, CelestialObjectKey sourceBodyKey,
+    public record Transfer(UUID teamId, UUID sinkId, CelestialObjectKey sourceBodyKey,
         CelestialObjectKey destinationBodyKey, SatelliteDataKey sourceKey, SatelliteDataKey demandKey, long deciKb,
-        List<SatelliteNetworkGraph.Edge> path, long bottleneckKbps) {
+        List<SatelliteNetworkGraph.Edge> path, long bottleneckKbps,
+        Map<SatelliteNetworkGraph.Edge, Integer> airtimeCosts) {
 
         public Transfer {
             deciKb = Math.max(0L, deciKb);
             path = List.copyOf(path == null ? List.of() : path);
             bottleneckKbps = Math.max(0L, bottleneckKbps);
+            airtimeCosts = Map.copyOf(airtimeCosts);
         }
 
     }
@@ -75,7 +76,7 @@ public final class SatelliteDataTransferPlanner {
         List<Transfer> transfers = new ArrayList<>();
         Map<SatelliteNetworkGraph.Edge, Long> usedByEdge = new HashMap<>();
         Map<CelestialObjectKey, Long> usedByBody = new HashMap<>();
-        Map<ModuleInstance.ID, Long> remainingDemand = new HashMap<>();
+        Map<UUID, Long> remainingDemand = new HashMap<>();
         Map<SatelliteNetworkGraph.DirectedEdge, SatelliteNetworkCalculator.WidestPath> paths = new HashMap<>();
         for (Demand demand : demands) remainingDemand.put(demand.sinkId(), demand.deciKb());
         /*
@@ -94,16 +95,18 @@ public final class SatelliteDataTransferPlanner {
             long remaining = produced.deciKb();
             // Satisfy local demand first, then offer the surplus to remote receivers.
             for (List<Route> priorityRoutes : List.of(localRoutes, remoteRoutes)) {
-                remaining -= allocateAcrossRoutes(
-                    teamId,
-                    networkState,
-                    produced,
-                    priorityRoutes,
-                    remaining,
-                    transfers,
-                    usedByEdge,
-                    usedByBody,
-                    remainingDemand);
+                for (int pass = 0; pass < 3 && remaining > 0L; pass++) {
+                    remaining -= allocateAcrossRoutes(
+                        teamId,
+                        networkState,
+                        produced,
+                        priorityRoutes,
+                        remaining,
+                        transfers,
+                        usedByEdge,
+                        usedByBody,
+                        remainingDemand);
+                }
             }
         }
         List<Transfer> resolvedTransfers = preferLocalExchangeForOpposingDemand(transfers);
@@ -111,7 +114,7 @@ public final class SatelliteDataTransferPlanner {
     }
 
     private static List<Route> routesForProducedData(SatelliteNetworkState networkState, List<Demand> demands,
-        Map<ModuleInstance.ID, Long> remainingDemand, SatelliteDataBufferStore.Entry produced,
+        Map<UUID, Long> remainingDemand, SatelliteDataBufferStore.Entry produced,
         Map<SatelliteNetworkGraph.DirectedEdge, SatelliteNetworkCalculator.WidestPath> paths) {
         List<SatelliteDataKey> demandKeys = demands.stream()
             .filter(demand -> remainingDemand.getOrDefault(demand.sinkId(), 0L) > 0L)
@@ -127,7 +130,7 @@ public final class SatelliteDataTransferPlanner {
      * can be served before remote traffic without consuming satellite bandwidth.
      */
     private static List<Route> routesForKeys(SatelliteNetworkState networkState,
-        SatelliteDataBufferStore.Entry produced, List<Demand> demands, Map<ModuleInstance.ID, Long> remainingDemand,
+        SatelliteDataBufferStore.Entry produced, List<Demand> demands, Map<UUID, Long> remainingDemand,
         List<SatelliteDataKey> keys,
         Map<SatelliteNetworkGraph.DirectedEdge, SatelliteNetworkCalculator.WidestPath> paths) {
         if (keys.isEmpty()) return List.of();
@@ -140,25 +143,54 @@ public final class SatelliteDataTransferPlanner {
             if (route != null) routes.add(route);
         }
         routes.sort(
-            Comparator.comparing(
+            Comparator.<Route, CelestialObjectKey>comparing(
                 route -> route.demand()
-                    .bodyKey()));
+                    .bodyKey())
+                .thenComparing(
+                    route -> route.demand()
+                        .sinkId()));
         return routes;
     }
 
     private static long allocateAcrossRoutes(UUID teamId, SatelliteNetworkState networkState,
         SatelliteDataBufferStore.Entry produced, List<Route> routes, long availableDeciKb, List<Transfer> transfers,
         Map<SatelliteNetworkGraph.Edge, Long> usedByEdge, Map<CelestialObjectKey, Long> usedByBody,
-        Map<ModuleInstance.ID, Long> remainingDemand) {
+        Map<UUID, Long> remainingDemand) {
+        SatelliteNetworkState remainingNetwork = SatelliteNetworkCalculator
+            .remaining(networkState, usedByEdge, usedByBody);
+        routes = routes.stream()
+            .map(candidate -> route(remainingNetwork, produced.bodyKey(), candidate.demand(), new HashMap<>()))
+            .filter(java.util.Objects::nonNull)
+            .toList();
         long totalWeight = routes.stream()
             .mapToLong(route -> route.weight(produced.bodyKey()))
             .reduce(0L, SatelliteDataTransferPlanner::addSaturated);
         if (availableDeciKb <= 0L || totalWeight <= 0L) return 0L;
+        long budget = availableDeciKb;
+        if (!routes.get(0)
+            .local(produced.bodyKey())) {
+            int minimumSourceCost = routes.stream()
+                .mapToInt(
+                    candidate -> SatelliteNetworkCalculator.airtimeCosts(networkState, candidate.path())
+                        .get(
+                            candidate.path()
+                                .get(0)))
+                .min()
+                .orElseThrow();
+            budget = Math
+                .min(budget, deciKbPerTick(remainingNetwork.capacityKbps(produced.bodyKey()) / minimumSourceCost));
+        }
+        if (budget <= 0L) return 0L;
         long allocated = 0L;
         for (int i = 0; i < routes.size(); i++) {
-            Route route = routes.get(i);
-            long availableKbps = route.local(produced.bodyKey()) ? 0L
-                : availableKbps(produced.bodyKey(), route, networkState, usedByEdge, usedByBody);
+            Route route = route(
+                SatelliteNetworkCalculator.remaining(networkState, usedByEdge, usedByBody),
+                produced.bodyKey(),
+                routes.get(i)
+                    .demand(),
+                new HashMap<>());
+            if (route == null) continue;
+            long availableKbps = route.local(produced.bodyKey()) ? 0L : route.bottleneckKbps();
             long sinkDemand = remainingDemand.getOrDefault(
                 route.demand()
                     .sinkId(),
@@ -166,10 +198,12 @@ public final class SatelliteDataTransferPlanner {
             long amount = allocatedAmount(
                 produced.bodyKey(),
                 route,
-                availableDeciKb,
+                budget,
                 allocated,
                 i == routes.size() - 1,
                 totalWeight,
+                routes.get(i)
+                    .weight(produced.bodyKey()),
                 availableKbps,
                 sinkDemand);
             if (amount <= 0L) continue;
@@ -186,8 +220,9 @@ public final class SatelliteDataTransferPlanner {
                         .key(),
                     amount,
                     route.path(),
-                    route.bottleneckKbps()));
-            recordCapacityUsage(produced.bodyKey(), route, amount, availableKbps, usedByEdge, usedByBody);
+                    route.bottleneckKbps(),
+                    SatelliteNetworkCalculator.airtimeCosts(networkState, route.path())));
+            recordCapacityUsage(produced.bodyKey(), route, amount, networkState, usedByEdge, usedByBody);
             allocated += amount;
             remainingDemand.put(
                 route.demand()
@@ -198,9 +233,8 @@ public final class SatelliteDataTransferPlanner {
     }
 
     private static long allocatedAmount(CelestialObjectKey sourceBodyKey, Route route, long availableDeciKb,
-        long allocatedDeciKb, boolean lastRoute, long totalWeight, long availableKbps, long sinkDemand) {
+        long allocatedDeciKb, boolean lastRoute, long totalWeight, long weight, long availableKbps, long sinkDemand) {
         boolean local = route.local(sourceBodyKey);
-        long weight = local ? route.weight(sourceBodyKey) : availableKbps;
         if (weight <= 0L) return 0L;
         long share = lastRoute ? availableDeciKb - allocatedDeciKb
             : weightedShare(availableDeciKb, weight, totalWeight);
@@ -209,34 +243,17 @@ public final class SatelliteDataTransferPlanner {
     }
 
     private static void recordCapacityUsage(CelestialObjectKey sourceBodyKey, Route route, long amount,
-        long availableKbps, Map<SatelliteNetworkGraph.Edge, Long> usedByEdge,
+        SatelliteNetworkState state, Map<SatelliteNetworkGraph.Edge, Long> usedByEdge,
         Map<CelestialObjectKey, Long> usedByBody) {
         if (route.local(sourceBodyKey)) return;
-        long usedKbps = Math.min(availableKbps, Math.max(1L, amount * TICKS_PER_SECOND / 10L));
-        for (SatelliteNetworkGraph.Edge edge : route.path())
-            usedByEdge.merge(edge, usedKbps, SatelliteDataTransferPlanner::addSaturated);
-        for (CelestialObjectKey bodyKey : routeBodies(sourceBodyKey, route.path()))
-            usedByBody.merge(bodyKey, usedKbps, SatelliteDataTransferPlanner::addSaturated);
-    }
-
-    private static long availableKbps(CelestialObjectKey sourceBodyKey, Route route, SatelliteNetworkState networkState,
-        Map<SatelliteNetworkGraph.Edge, Long> usedByEdge, Map<CelestialObjectKey, Long> usedByBody) {
-        long availableKbps = Math.max(0L, route.bottleneckKbps());
-        /*
-         * Capacity is consumed by both the traversed links and every body on the route. A destination with two inbound
-         * paths still has one local satellite bandwidth pool, so the planner clamps by usedByBody as well as
-         * usedByEdge.
-         */
-        for (SatelliteNetworkGraph.Edge edge : route.path()) {
-            long usedKbps = Math.max(0L, usedByEdge.getOrDefault(edge, 0L));
-            availableKbps = Math.min(availableKbps, Math.max(0L, route.bottleneckKbps() - usedKbps));
-        }
-        for (CelestialObjectKey bodyKey : routeBodies(sourceBodyKey, route.path())) {
-            long bodyCapacityKbps = networkState.capacityKbps(bodyKey);
-            long usedKbps = Math.max(0L, usedByBody.getOrDefault(bodyKey, 0L));
-            availableKbps = Math.min(availableKbps, Math.max(0L, bodyCapacityKbps - usedKbps));
-        }
-        return availableKbps;
+        long deliveredKbps = amount * TICKS_PER_SECOND / 10L;
+        Map<SatelliteNetworkGraph.Edge, Integer> costs = SatelliteNetworkCalculator.airtimeCosts(state, route.path());
+        costs.forEach(
+            (edge, cost) -> usedByEdge.merge(edge, deliveredKbps * cost, SatelliteDataTransferPlanner::addSaturated));
+        SatelliteNetworkCalculator.bodyAirtimeCosts(route.path(), costs)
+            .forEach(
+                (body, cost) -> usedByBody
+                    .merge(body, deliveredKbps * cost, SatelliteDataTransferPlanner::addSaturated));
     }
 
     static List<CelestialObjectKey> routeBodies(CelestialObjectKey sourceBodyKey,
@@ -314,7 +331,8 @@ public final class SatelliteDataTransferPlanner {
                         rightTransfer.demandKey(),
                         resolvedDeciKb,
                         List.of(),
-                        0L));
+                        0L,
+                        Map.of()));
                 localTransfers.add(
                     new Transfer(
                         rightTransfer.teamId(),
@@ -325,7 +343,8 @@ public final class SatelliteDataTransferPlanner {
                         leftTransfer.demandKey(),
                         resolvedDeciKb,
                         List.of(),
-                        0L));
+                        0L,
+                        Map.of()));
             }
         }
         List<Transfer> resolved = new ArrayList<>();
@@ -342,7 +361,8 @@ public final class SatelliteDataTransferPlanner {
                     transfer.demandKey(),
                     remainingDeciKb[i],
                     transfer.path(),
-                    transfer.bottleneckKbps()));
+                    transfer.bottleneckKbps(),
+                    transfer.airtimeCosts()));
         }
         resolved.addAll(localTransfers);
         return resolved;
@@ -377,14 +397,21 @@ public final class SatelliteDataTransferPlanner {
             long usedKbps = transferUsedKbps(transfer);
             if (usedKbps <= 0L) continue;
             for (SatelliteNetworkGraph.Edge edge : transfer.path()) {
-                edges.merge(edge, usedKbps, SatelliteDataTransferPlanner::addSaturated);
+                edges.merge(
+                    edge,
+                    usedKbps * transfer.airtimeCosts()
+                        .get(edge),
+                    SatelliteDataTransferPlanner::addSaturated);
             }
+            SatelliteNetworkCalculator.bodyAirtimeCosts(transfer.path(), transfer.airtimeCosts())
+                .forEach(
+                    (body, cost) -> bodies.merge(body, usedKbps * cost, SatelliteDataTransferPlanner::addSaturated));
             List<CelestialObjectKey> pathBodies = routeBodies(transfer.sourceBodyKey(), transfer.path());
             for (int i = 0; i < pathBodies.size(); i++) {
-                bodies.merge(pathBodies.get(i), usedKbps, SatelliteDataTransferPlanner::addSaturated);
                 if (i > 0) directed.merge(
                     new SatelliteNetworkGraph.DirectedEdge(pathBodies.get(i - 1), pathBodies.get(i)),
-                    usedKbps,
+                    usedKbps * transfer.airtimeCosts()
+                        .get(new SatelliteNetworkGraph.Edge(pathBodies.get(i - 1), pathBodies.get(i))),
                     SatelliteDataTransferPlanner::addSaturated);
             }
         }
@@ -405,7 +432,7 @@ public final class SatelliteDataTransferPlanner {
 
     private static long deciKbPerTick(long kbps) {
         if (kbps <= 0L) return 0L;
-        return Math.max(1L, SatelliteBandwidthFormatter.kilobits(kbps) / TICKS_PER_SECOND);
+        return SatelliteBandwidthFormatter.kilobits(kbps) / TICKS_PER_SECOND;
     }
 
     private static long weightedShare(long availableDeciKb, long weight, long totalWeight) {
@@ -429,7 +456,7 @@ public final class SatelliteDataTransferPlanner {
         if (from.equals(demand.bodyKey())) return new Route(demand, List.of(), 0L);
         SatelliteNetworkCalculator.WidestPath path = paths.computeIfAbsent(
             new SatelliteNetworkGraph.DirectedEdge(from, demand.bodyKey()),
-            edge -> SatelliteNetworkCalculator.widestPath(edge.from(), edge.to(), networkState));
+            edge -> SatelliteNetworkCalculator.widestPath(edge.from(), edge.to(), networkState, 2L));
         if (path.capacityKbps() <= 0L) return null;
         return new Route(demand, path.edges(), path.capacityKbps());
     }

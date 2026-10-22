@@ -15,11 +15,13 @@ import net.minecraftforge.common.util.ForgeDirection;
 import com.gtnewhorizon.gtnhlib.teams.TeamManager;
 import com.gtnewhorizons.galaxia.compat.ae2.QuantumLinkRules;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
+import com.gtnewhorizons.galaxia.core.network.AssetStateSync;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkCalculator;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkState;
 import com.gtnewhorizons.horizonqa.api.GameTestHelper;
@@ -57,8 +59,8 @@ public final class QuantumBandwidthGameTests {
             throw new AssertionError("A reserved connection failed validation");
         fixture.assertUsage(1000);
 
-        long capacity = fixture.network()
-            .capacityKbps(Fixture.EARTH);
+        long capacity = SatelliteNetworkCalculator.widestPath(Fixture.EARTH, Fixture.MARS, fixture.network())
+            .capacityKbps();
         if (!SatelliteNetworkService
             .reserveBandwidth(fixture.team, fixture.competitor, Fixture.EARTH, Fixture.MARS, capacity - 1000))
             throw new AssertionError("Could not reserve the remaining shared capacity");
@@ -112,8 +114,9 @@ public final class QuantumBandwidthGameTests {
         UUID next = nextTeam.getTeamId();
         helper.afterTest(() -> {
             nextTeam.removeMember(owner);
-            CelestialAssetStore.SERVER.setSatelliteCount(next, Fixture.EARTH, SatelliteKind.COMMUNICATION, 0);
-            CelestialAssetStore.SERVER.setSatelliteCount(next, Fixture.MARS, SatelliteKind.COMMUNICATION, 0);
+            for (CelestialObjectKey body : List.of(Fixture.EARTH, Fixture.MARS))
+                CelestialAssetStore.SERVER.setSatelliteCount(next, body, SatelliteKind.COMMUNICATION, 0)
+                    .forEach(id -> AssetStateSync.SERVER.publishRemoved(next, id));
             TeamManager.mergeTeams(oldTeam, nextTeam);
             oldTeam.removeMember(owner);
             oldTeam.removeMember(nextOwner);
@@ -147,9 +150,11 @@ public final class QuantumBandwidthGameTests {
         IGridConnection recreated = fixture.connect(0);
         if (!QuantumLinkRules.isConnectionAllowed(recreated))
             throw new AssertionError("The new team's available bandwidth did not restore the connection");
-        if (SatelliteNetworkService.rebuild(next, 0)
-            .usedKbps(Fixture.EARTH) != 1000)
-            throw new AssertionError("Recreated quantum bridge did not charge its current team");
+        SatelliteNetworkState current = SatelliteNetworkService.rebuild(next, 0);
+        if (current.usedKbps(Fixture.EARTH) != 1000L * current.links()
+            .get(0)
+            .quality()
+            .airtimeCost()) throw new AssertionError("Recreated quantum bridge did not charge its current team");
         fixture.assertUsage(0);
         fixture.close(recreated);
         if (SatelliteNetworkService.rebuild(next, 0)
@@ -161,7 +166,7 @@ public final class QuantumBandwidthGameTests {
 
         static final CelestialObjectKey EARTH = CelestialObjectKey.registered(CelestialObjectId.OVERWORLD);
         static final CelestialObjectKey MARS = CelestialObjectKey.registered(CelestialObjectId.MARS);
-        static final int RELAY_COUNT = 300;
+        static final int RELAY_COUNT = 300 * SatelliteNetworkState.Quality.DEEP_SPACE.airtimeCost();
         final UUID competitor = UUID.randomUUID();
         final List<IGridConnection> connections = new ArrayList<>();
         final IGridNode[][] nodes = new IGridNode[3][2];
@@ -196,8 +201,8 @@ public final class QuantumBandwidthGameTests {
             }
             setRelays(EARTH, RELAY_COUNT);
             setRelays(MARS, RELAY_COUNT);
-            if (network().capacityKbps(EARTH) <= 2000 || network().capacityKbps(MARS) <= 2000)
-                throw new AssertionError("Fixture needs capacity for two independent bridges");
+            if (SatelliteNetworkCalculator.widestPath(EARTH, MARS, network())
+                .capacityKbps() <= 2000) throw new AssertionError("Fixture needs capacity for two independent bridges");
         }
 
         IGridConnection connect(int pair) throws FailedConnection {
@@ -226,6 +231,10 @@ public final class QuantumBandwidthGameTests {
 
         void assertUsage(long expected) {
             SatelliteNetworkState state = network();
+            if (expected > 0L) expected *= state.links()
+                .get(0)
+                .quality()
+                .airtimeCost();
             if (state.usedKbps(EARTH) != expected || state.usedKbps(MARS) != expected) throw new AssertionError(
                 "Expected " + expected
                     + " kbps per endpoint, got "
@@ -243,7 +252,9 @@ public final class QuantumBandwidthGameTests {
         }
 
         void setRelays(CelestialObjectKey body, int count) {
-            CelestialAssetStore.SERVER.setSatelliteCount(team, body, SatelliteKind.COMMUNICATION, count);
+            boolean removing = count < relays(body);
+            var changed = CelestialAssetStore.SERVER.setSatelliteCount(team, body, SatelliteKind.COMMUNICATION, count);
+            if (removing) changed.forEach(id -> AssetStateSync.SERVER.publishRemoved(team, id));
         }
     }
 

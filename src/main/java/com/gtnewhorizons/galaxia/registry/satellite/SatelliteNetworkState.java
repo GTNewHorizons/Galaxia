@@ -74,7 +74,12 @@ public record SatelliteNetworkState(UUID teamId, int revision, Map<CelestialObje
      * so the renderer can show packets moving in the same direction as actual data.
      */
     public record Link(CelestialObjectKey from, CelestialObjectKey to, long capacityKbps, long usedKbps,
-        long forwardUsedKbps, long reverseUsedKbps) {
+        long forwardUsedKbps, long reverseUsedKbps, Quality quality) {
+
+        public Link(CelestialObjectKey from, CelestialObjectKey to, long capacityKbps, long usedKbps,
+            long forwardUsedKbps, long reverseUsedKbps) {
+            this(from, to, capacityKbps, usedKbps, forwardUsedKbps, reverseUsedKbps, Quality.LOCAL);
+        }
 
         public Link {
             SatelliteNetworkGraph.Edge normalized = new SatelliteNetworkGraph.Edge(from, to);
@@ -103,6 +108,31 @@ public record SatelliteNetworkState(UUID teamId, int revision, Map<CelestialObje
             return 0L;
         }
 
+        public long deliveredKbps() {
+            return usedKbps / quality.airtimeCost();
+        }
+
+    }
+
+    public enum Quality {
+
+        LOCAL(1),
+        LONG_RANGE(2),
+        DEEP_SPACE(4);
+
+        private final int airtimeCost;
+
+        Quality(int airtimeCost) {
+            this.airtimeCost = airtimeCost;
+        }
+
+        public int airtimeCost() {
+            return airtimeCost;
+        }
+
+        public int efficiencyPercent() {
+            return 100 / airtimeCost;
+        }
     }
 
     public record PendingData(CelestialObjectKey bodyKey, List<CelestialObjectKey> destinationBodyKeys,

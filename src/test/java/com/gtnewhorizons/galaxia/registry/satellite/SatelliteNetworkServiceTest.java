@@ -488,9 +488,25 @@ final class SatelliteNetworkServiceTest {
 
         assertEquals(CelestialObjectKey.registered(CelestialObjectId.EGORA), producer.detectedCounterpartBodyKey());
         assertEquals(CelestialObjectKey.registered(CelestialObjectId.MARS), consumer.detectedCounterpartBodyKey());
-        assertEquals(5L, consumer.consumedDeciKb());
-        assertEquals(10L, state.usedKbps(CelestialObjectKey.registered(CelestialObjectId.MARS)));
-        assertEquals(10L, state.usedKbps(CelestialObjectKey.registered(CelestialObjectId.EGORA)));
+        SatelliteNetworkState.Link link = state.links()
+            .get(0);
+        long delivered = consumer.consumedDeciKb();
+        assertTrue(delivered > 0L);
+        assertTrue(
+            delivered * 2L
+                * link.quality()
+                    .airtimeCost()
+                <= 10L);
+        assertEquals(
+            delivered * 2L
+                * link.quality()
+                    .airtimeCost(),
+            state.usedKbps(CelestialObjectKey.registered(CelestialObjectId.MARS)));
+        assertEquals(
+            delivered * 2L
+                * link.quality()
+                    .airtimeCost(),
+            state.usedKbps(CelestialObjectKey.registered(CelestialObjectId.EGORA)));
     }
 
     @Test

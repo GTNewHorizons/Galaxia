@@ -1689,7 +1689,11 @@ public final class AndroidControlGameTests {
         }
 
         private void addCommunication(CelestialObjectId planet) {
-            for (int index = 0; index < 10; index++) {
+            long bandwidth = SatelliteKind.COMMUNICATION.bandwidthKbps();
+            long required = ConfigMachines.android.requiredBandwidthKbps
+                * (long) com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkState.Quality.DEEP_SPACE
+                    .airtimeCost();
+            for (int index = 0; index < (required + bandwidth - 1L) / bandwidth; index++) {
                 CelestialAsset satellite = CelestialAsset.create(
                     CelestialObjectKey.registered(planet),
                     CelestialAsset.Kind.SATELLITE,
@@ -1950,15 +1954,19 @@ public final class AndroidControlGameTests {
                     throw new AssertionError("A communication satellite disappeared from the client starmap");
             }
             var state = com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkClientState.current();
+            long rawKbps = reservedKbps > 0L ? reservedKbps * state.links()
+                .get(0)
+                .quality()
+                .airtimeCost() : 0L;
             for (CelestialObjectId body : new CelestialObjectId[] { CelestialObjectId.OVERWORLD,
                 CelestialObjectId.MARS }) {
                 if (state.usedKbps(com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey.registered(body))
-                    != reservedKbps)
+                    != rawKbps)
                     throw new AssertionError("Client satellite bandwidth does not match the control reservation");
             }
             if (reservedKbps > 0 && state.links()
                 .stream()
-                .noneMatch(link -> link.usedKbps() >= reservedKbps))
+                .noneMatch(link -> link.usedKbps() >= rawKbps))
                 throw new AssertionError("The starmap link does not expose reserved bandwidth");
         }
 

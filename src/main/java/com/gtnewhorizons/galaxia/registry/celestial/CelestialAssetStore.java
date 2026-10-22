@@ -325,12 +325,7 @@ public final class CelestialAssetStore {
                     && satellite.satelliteKind() == SatelliteKind.COMMUNICATION
                     && asset.status() == Buildable.Status.OPERATIONAL)
             .count();
-        return (long) (operational * SatelliteKind.COMMUNICATION.effectPerSatellite());
-    }
-
-    public double satelliteMiningSpeedBonus(UUID teamId, CelestialObjectKey bodyKey) {
-        return satelliteCount(teamId, bodyKey, SatelliteKind.PROSPECTING)
-            * SatelliteKind.PROSPECTING.effectPerSatellite();
+        return operational * SatelliteKind.COMMUNICATION.bandwidthKbps();
     }
 
     public List<CelestialAsset.ID> addSatellites(UUID teamId, CelestialObjectKey bodyKey, SatelliteKind kind,

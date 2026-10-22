@@ -7,10 +7,9 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
 /**
- * Ticks data-producing and data-consuming debug modules.
+ * Advances live data endpoints and applies accepted network transfers.
  *
  * <p>
  * Modules only expose their desired mode through their component config. This service resolves those configs into
@@ -45,7 +44,7 @@ public final class SatelliteDataJobService {
             endpoints);
         for (SatelliteDataEndpointRegistry.Endpoint producer : endpoints) {
             if (!producer.produces()) continue;
-            if (!counterparts.containsKey(producer)) {
+            if (producer.requiresCounterpart() && !counterparts.containsKey(producer)) {
                 producer.clearProduction();
                 continue;
             }
@@ -105,7 +104,7 @@ public final class SatelliteDataJobService {
             .filter(SatelliteDataEndpointRegistry.Endpoint::consumes)
             .map(SatelliteDataEndpointRegistry.Endpoint::demand)
             .toList();
-        Map<ModuleInstance.ID, SatelliteDataEndpointRegistry.Endpoint> sinks = new HashMap<>();
+        Map<UUID, SatelliteDataEndpointRegistry.Endpoint> sinks = new HashMap<>();
         for (SatelliteDataEndpointRegistry.Endpoint endpoint : endpoints) sinks.put(endpoint.id(), endpoint);
         SatelliteDataTransferPlanner.Plan plan = SatelliteDataTransferPlanner
             .plan(teamId, networkState, store, demands);
@@ -115,7 +114,7 @@ public final class SatelliteDataJobService {
             SatelliteDataEndpointRegistry.Endpoint sink = sinks.get(transfer.sinkId());
             if (sink == null) continue;
             long available = store.pendingDeciKb(transfer.sourceBodyKey(), transfer.sourceKey());
-            long accepted = sink.accept(transfer.demandKey(), Math.min(transfer.deciKb(), available));
+            long accepted = sink.accept(transfer.sourceKey(), Math.min(transfer.deciKb(), available));
             long drained = store.drain(transfer.sourceBodyKey(), transfer.sourceKey(), accepted);
             if (drained <= 0L) continue;
             mergeTransferUsage(usedByEdge, directedUsedByEdge, transfer, drained);
@@ -128,15 +127,18 @@ public final class SatelliteDataJobService {
         SatelliteDataTransferPlanner.Transfer transfer, long deliveredDeciKb) {
         long usedKbps = Math.min(transfer.bottleneckKbps(), Math.max(1L, deliveredDeciKb * TICKS_PER_SECOND / 10L));
         if (usedKbps <= 0L) return;
-        for (SatelliteNetworkGraph.Edge edge : transfer.path()) {
-            usedByEdge.merge(edge, usedKbps, SatelliteDataJobService::addSaturated);
+        List<CelestialObjectKey> bodies = SatelliteDataTransferPlanner
+            .routeBodies(transfer.sourceBodyKey(), transfer.path());
+        for (int i = 1; i < bodies.size(); i++) {
+            SatelliteNetworkGraph.Edge edge = new SatelliteNetworkGraph.Edge(bodies.get(i - 1), bodies.get(i));
+            long raw = usedKbps * transfer.airtimeCosts()
+                .get(edge);
+            usedByEdge.merge(edge, raw, SatelliteDataJobService::addSaturated);
+            directedUsedByEdge.merge(
+                new SatelliteNetworkGraph.DirectedEdge(bodies.get(i - 1), bodies.get(i)),
+                raw,
+                SatelliteDataJobService::addSaturated);
         }
-        SatelliteDataTransferPlanner.mergeDirectedUsage(
-            directedUsedByEdge,
-            transfer.sourceBodyKey(),
-            transfer.destinationBodyKey(),
-            transfer.path(),
-            usedKbps);
     }
 
     private static long addSaturated(long left, long right) {

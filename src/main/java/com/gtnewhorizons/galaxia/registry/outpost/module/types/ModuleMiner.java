@@ -12,6 +12,7 @@ import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialBodyProperties;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -29,6 +30,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
 
 public final class ModuleMiner extends TieredModuleComponent {
 
@@ -116,7 +118,13 @@ public final class ModuleMiner extends TieredModuleComponent {
                     ItemStackWrapper ore = ItemStackWrapper.of(chosen);
                     if (shouldVoidOre(instance, facility, ore.toKey())) continue;
                     if (!featureEffects.shouldKeepOutput(RANDOM)) continue;
-                    facility.insert(ore, 1L);
+                    facility.insert(
+                        ore,
+                        SatelliteNetworkService.mineralYieldMultiplier(
+                            SatelliteNetworkService.miningYieldBonus(
+                                CelestialAssetStore.getTeamId(facility.assetId),
+                                facility.celestialObjectKey),
+                            RANDOM));
                 }
             });
     }

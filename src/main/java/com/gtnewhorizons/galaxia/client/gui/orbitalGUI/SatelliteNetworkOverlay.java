@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
+import java.awt.geom.Line2D;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -9,12 +10,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import net.minecraft.util.StatCollector;
+
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteBandwidthFormatter;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkCalculator;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkClientState;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkGraph;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkState;
@@ -185,11 +190,88 @@ final class SatelliteNetworkOverlay {
         int linkColor = link == null ? SatelliteNetworkLinkColor.GREEN
             : SatelliteNetworkLinkColor.forLoad(link.usedKbps(), link.capacityKbps());
 
-        drawThreadSegment(ends, 0.0D, 0.20D, fromColor, fromColor, alpha);
-        drawThreadSegment(ends, 0.20D, 0.30D, fromColor, linkColor, alpha);
-        drawThreadSegment(ends, 0.30D, 0.70D, linkColor, linkColor, alpha);
-        drawThreadSegment(ends, 0.70D, 0.80D, linkColor, toColor, alpha);
-        drawThreadSegment(ends, 0.80D, 1.0D, toColor, toColor, alpha);
+        SatelliteNetworkState.Quality quality = link == null ? SatelliteNetworkState.Quality.LOCAL : link.quality();
+        drawPatternSegment(ends, 0.0D, 0.20D, fromColor, fromColor, alpha, quality);
+        drawPatternSegment(ends, 0.20D, 0.30D, fromColor, linkColor, alpha, quality);
+        drawPatternSegment(ends, 0.30D, 0.70D, linkColor, linkColor, alpha, quality);
+        drawPatternSegment(ends, 0.70D, 0.80D, linkColor, toColor, alpha, quality);
+        drawPatternSegment(ends, 0.80D, 1.0D, toColor, toColor, alpha, quality);
+    }
+
+    private static void drawPatternSegment(float[] ends, double start, double end, int startColor, int endColor,
+        float alpha, SatelliteNetworkState.Quality quality) {
+        if (quality == SatelliteNetworkState.Quality.LOCAL) {
+            drawThreadSegment(ends, start, end, startColor, endColor, alpha);
+            return;
+        }
+        double duty = quality == SatelliteNetworkState.Quality.LONG_RANGE ? 0.65D : 0.25D;
+        // A fixed segment budget bounds rendering cost at every zoom level.
+        for (int dash = 0; dash < 24; dash++) {
+            double left = Math.max(start, dash / 24.0D);
+            double right = Math.min(end, (dash + duty) / 24.0D);
+            if (right > left) drawThreadSegment(ends, left, right, startColor, endColor, alpha);
+        }
+    }
+
+    List<String> linkTooltip(float mouseX, float mouseY) {
+        SatelliteNetworkState state = SatelliteNetworkClientState.current();
+        for (SatelliteNetworkGraph.Edge edge : visibleEdges) {
+            Endpoint from = endpoints.get(edge.from());
+            Endpoint to = endpoints.get(edge.to());
+            if (from == null || to == null) continue;
+            float[] ends = threadEndpoints(from, to);
+            if (Line2D.ptSegDist(ends[0], ends[1], ends[2], ends[3], mouseX, mouseY) > 5.0D) continue;
+            SatelliteNetworkState.Link link = linkFor(state, edge);
+            if (link == null) continue;
+            return List.of(
+                StatCollector.translateToLocal(
+                    "galaxia.satellite.quality." + link.quality()
+                        .name()
+                        .toLowerCase(java.util.Locale.ROOT)),
+                StatCollector.translateToLocalFormatted(
+                    "galaxia.satellite.link.efficiency",
+                    link.quality()
+                        .efficiencyPercent(),
+                    link.quality()
+                        .airtimeCost()),
+                StatCollector.translateToLocalFormatted(
+                    "galaxia.satellite.link.capacity",
+                    SatelliteBandwidthFormatter.formatKbps(link.capacityKbps()),
+                    SatelliteBandwidthFormatter.formatKbps(
+                        link.capacityKbps() / link.quality()
+                            .airtimeCost())),
+                StatCollector.translateToLocalFormatted(
+                    "galaxia.satellite.link.usage",
+                    SatelliteBandwidthFormatter.formatKbps(link.usedKbps()),
+                    SatelliteBandwidthFormatter.formatKbps(link.deliveredKbps())),
+                StatCollector.translateToLocal("galaxia.satellite.link.legend"));
+        }
+        return List.of();
+    }
+
+    void drawRanges(CelestialObjectKey bodyKey, StarmapViewContext view, float alpha) {
+        OrbitalScene.ResolvedBodyDrawState body = worldStates.get(bodyKey);
+        if (body == null || alpha <= 0.01F) return;
+        GlStateManager.disableTexture2D();
+        GL11.glLineWidth(1.0F);
+        StarmapColor.apply(StarmapColor.withAlpha(0xFF80D7FF, alpha * 0.35F));
+        GL11.glBegin(GL11.GL_LINES);
+        for (double radius : new double[] { SatelliteNetworkCalculator.LOCAL_DISTANCE,
+            SatelliteNetworkCalculator.LONG_RANGE_DISTANCE }) {
+            for (int segment = 0; segment < 96; segment++) {
+                double start = segment * 2.0D * Math.PI / 96.0D;
+                double end = (segment + 0.65D) * 2.0D * Math.PI / 96.0D;
+                GL11.glVertex2d(
+                    view.worldToScreenX(body.worldX() + Math.cos(start) * radius),
+                    view.worldToScreenY(body.worldY() + Math.sin(start) * radius));
+                GL11.glVertex2d(
+                    view.worldToScreenX(body.worldX() + Math.cos(end) * radius),
+                    view.worldToScreenY(body.worldY() + Math.sin(end) * radius));
+            }
+        }
+        GL11.glEnd();
+        GlStateManager.color(1F, 1F, 1F, 1F);
+        GlStateManager.enableTexture2D();
     }
 
     private static void drawThreadSegment(float[] ends, double startProgress, double endProgress, int startColor,

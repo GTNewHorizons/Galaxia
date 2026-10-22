@@ -7,13 +7,17 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
 
 import net.minecraft.item.ItemStack;
 
+import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
+import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
 
 import gregtech.api.enums.Materials;
 import gregtech.api.enums.OreMixes;
@@ -22,6 +26,7 @@ import gregtech.api.enums.SmallOres;
 import gregtech.api.enums.StoneCategory;
 import gregtech.api.enums.StoneType;
 import gregtech.api.interfaces.IOreMaterial;
+import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
 import gregtech.api.util.GTOreDictUnificator;
 import gregtech.common.OreMixBuilder;
 import gregtech.common.ores.OreInfo;
@@ -33,6 +38,26 @@ public final class GTCompat {
     private static final Set<String> GT_ORE_FAILURES = new HashSet<>();
 
     private GTCompat() {}
+
+    /** Called only at mineral generation sites, before the miner admits its normal output. */
+    public static int prospectingYieldFactor(IGregTechTileEntity base, Random random) {
+        if (!base.isServerSide()) return 1;
+        double bonus = GalaxiaCelestialAPI.findByDimension(base.getWorld().provider.dimensionId)
+            .map(
+                body -> SatelliteNetworkService
+                    .miningYieldBonus(GTTeamsCompat.getTeam(base.getOwnerUuid()), body.key()))
+            .orElse(0.0D);
+        return SatelliteNetworkService.mineralYieldMultiplier(bonus, random);
+    }
+
+    public static ItemStack prospectingOutput(IGregTechTileEntity base, ItemStack stack, Random random) {
+        if (stack == null) return null;
+        int factor = prospectingYieldFactor(base, random);
+        if (factor == 1) return stack;
+        ItemStack output = stack.copy();
+        output.stackSize = Math.multiplyExact(output.stackSize, factor);
+        return output;
+    }
 
     public static List<ItemStack> getGtOreDepositStacks(@Nonnull String... depositIds) {
         if (!isGregTech5UnofficialNewHorizonsLoaded()) return List.of();

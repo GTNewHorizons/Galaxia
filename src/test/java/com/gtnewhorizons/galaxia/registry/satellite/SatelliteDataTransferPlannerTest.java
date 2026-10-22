@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
 final class SatelliteDataTransferPlannerTest {
 
@@ -203,12 +202,7 @@ final class SatelliteDataTransferPlannerTest {
                 Map.of(asteroid, 10L, belt, 10L),
                 Map.of()),
             store,
-            List.of(
-                new SatelliteDataTransferPlanner.Demand(
-                    new ModuleInstance.ID(new UUID(0L, 1L)),
-                    belt,
-                    research,
-                    kb(100L))));
+            List.of(new SatelliteDataTransferPlanner.Demand(new UUID(0L, 1L), belt, research, kb(100L))));
 
         assertEquals(
             1,
@@ -389,7 +383,7 @@ final class SatelliteDataTransferPlannerTest {
     private static SatelliteDataTransferPlanner.Demand demand(long id, CelestialObjectId bodyId, SatelliteDataKey key,
         long amount) {
         return new SatelliteDataTransferPlanner.Demand(
-            new ModuleInstance.ID(new UUID(0L, id)),
+            new UUID(0L, id),
             CelestialObjectKey.registered(bodyId),
             key,
             amount);

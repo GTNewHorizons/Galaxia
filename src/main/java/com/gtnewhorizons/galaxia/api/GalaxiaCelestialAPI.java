@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.World;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialHierarchy;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
@@ -60,6 +61,32 @@ public final class GalaxiaCelestialAPI {
         if (orbit.isPresent()) return orbit.map(OrbitDimensions.Orbit::body);
         DimensionEnum dimension = DimensionEnum.fromId(dimensionId);
         return dimension == null ? Optional.empty() : findByDimension(dimension);
+    }
+
+    /** Physical environment for machines. Orbit uses the space background rather than the surface below it. */
+    public static Optional<MachineEnvironment> machineEnvironment(World world) {
+        return findByDimension(world.provider.dimensionId).map(body -> {
+            if (OrbitDimensions.byDimension(world.provider.dimensionId)
+                .isPresent()) {
+                return new MachineEnvironment(2.7D, 0.0D);
+            }
+            return new MachineEnvironment(
+                body.properties()
+                    .temperature(),
+                body.properties()
+                    .surfacePressurePa());
+        });
+    }
+
+    public record MachineEnvironment(double temperatureKelvin, double pressurePa) {
+
+        /** Space is the reference. Cold air can add convection above that reference. */
+        public double radiatorEfficiency() {
+            double radiation = Math.max(0.0D, 1.0D - Math.pow(temperatureKelvin / 300.0D, 4.0D));
+            double convection = Math.min(2.0D, pressurePa / 101325.0D)
+                * Math.max(0.0D, (300.0D - temperatureKelvin) / 100.0D);
+            return radiation + convection;
+        }
     }
 
     public static CelestialHierarchy getHierarchy() {

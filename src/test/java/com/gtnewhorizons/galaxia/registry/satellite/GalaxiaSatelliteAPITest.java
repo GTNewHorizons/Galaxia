@@ -57,10 +57,8 @@ final class GalaxiaSatelliteAPITest {
         CelestialAssetStore.SERVER.setSatelliteCount(TEAM, mars, SatelliteKind.PROSPECTING, 2);
 
         assertEquals(1, GalaxiaSatelliteAPI.count(TEAM, mars, SatelliteKind.COMMUNICATION));
-        assertEquals(SatelliteKind.COMMUNICATION.effectPerSatellite(), GalaxiaSatelliteAPI.bandwidth(TEAM, mars));
-        assertEquals(
-            2 * SatelliteKind.PROSPECTING.effectPerSatellite(),
-            GalaxiaSatelliteAPI.miningSpeedBonus(TEAM, mars));
+        assertEquals(SatelliteKind.COMMUNICATION.bandwidthKbps(), GalaxiaSatelliteAPI.bandwidth(TEAM, mars));
+        assertEquals(0.0D, GalaxiaSatelliteAPI.miningYieldBonus(TEAM, mars));
         assertEquals(10L, GalaxiaSatelliteAPI.localCapacityKbps(TEAM, mars));
         assertEquals(10L, GalaxiaSatelliteAPI.localUsedKbps(TEAM, mars));
         assertEquals(10L, GalaxiaSatelliteAPI.pathCapacityKbps(TEAM, mars, overworld));

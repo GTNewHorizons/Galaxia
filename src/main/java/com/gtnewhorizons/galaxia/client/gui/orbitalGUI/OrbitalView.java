@@ -2013,6 +2013,13 @@ public class OrbitalView {
                     localMouseY);
             }
             hoveredBody = dragging ? null : findBodyAtLocal(localMouseX, localMouseY);
+            if (!satelliteNetworkHidden && hoveredBody != null
+                && viewRoot.objectClass() == CelestialObject.Class.STAR) {
+                satelliteNetworkOverlay.drawRanges(
+                    hoveredBody.key(),
+                    viewContext,
+                    (float) Math.max(0.0D, 1.0D - viewState.isometricProgress * 2.5D));
+            }
             if (hoveredBody != null && hoveredBody.objectClass() == CelestialObject.Class.GALAXY) hoveredBody = null;
             if (hoveredBody != null && isVisibleInCurrentLayer(hoveredBody)) {
                 if (!sameBody(hoveredBody, focusedBody)) sceneRenderer.drawHoverHighlight(hoveredBody, sceneFrame);
@@ -2478,10 +2485,20 @@ public class OrbitalView {
                 InterplanetaryTransferSystem.transferTooltip(tooltip, transfer, viewContext);
                 return;
             }
-            for (int i = 0; i < hoverLines.size(); i++) {
-                if (i == 0) tooltip.addLine(hoverLines.get(i));
+            List<String> lines = hoverLines;
+            if (lines.isEmpty() && !satelliteNetworkHidden
+                && viewRoot.objectClass() == CelestialObject.Class.STAR
+                && viewState.isometricProgress < 0.4D
+                && !dragging
+                && !contextMenuState.isOpen()
+                && !assetUiState.isAssetActionsOpen()) {
+                Point mouse = inputMouse();
+                lines = satelliteNetworkOverlay.linkTooltip(mouse.x, mouse.y);
+            }
+            for (int i = 0; i < lines.size(); i++) {
+                if (i == 0) tooltip.addLine(lines.get(i));
                 else tooltip.addLine(
-                    IKey.str(hoverLines.get(i))
+                    IKey.str(lines.get(i))
                         .style(EnumChatFormatting.GRAY));
             }
         }
@@ -2651,10 +2668,10 @@ public class OrbitalView {
         }
 
         private String pendingDataLabel(SatelliteDataKey key) {
-            String type = key.type()
-                .name()
-                .toLowerCase(Locale.ROOT)
-                .replace('_', ' ');
+            String type = StatCollector.translateToLocal(
+                "galaxia.satellite.data_type." + key.type()
+                    .name()
+                    .toLowerCase(Locale.ROOT));
             if (!key.hasOrigin())
                 return StatCollector.translateToLocalFormatted("galaxia.satellite.tooltip.data", type);
             return StatCollector

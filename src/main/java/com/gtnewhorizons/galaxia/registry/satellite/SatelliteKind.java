@@ -2,16 +2,16 @@ package com.gtnewhorizons.galaxia.registry.satellite;
 
 public enum SatelliteKind {
 
-    COMMUNICATION(10.0D),
-    PROSPECTING(0.10D);
+    COMMUNICATION(10L),
+    PROSPECTING(0L);
 
-    private final double effectPerSatellite;
+    private final long bandwidthKbps;
 
-    SatelliteKind(double effectPerSatellite) {
-        this.effectPerSatellite = effectPerSatellite;
+    SatelliteKind(long bandwidthKbps) {
+        this.bandwidthKbps = bandwidthKbps;
     }
 
-    public double effectPerSatellite() {
-        return effectPerSatellite;
+    public long bandwidthKbps() {
+        return bandwidthKbps;
     }
 }
