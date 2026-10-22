@@ -30,4 +30,11 @@ public final class KineticTetherState {
     public static TetherData getClient() {
         return CLIENT_DATA;
     }
+
+    public static TetherData release(EntityPlayer player) {
+        TetherData data = get(player);
+        data.tetherActive = false;
+        data.propulsionActive = false;
+        return data;
+    }
 }

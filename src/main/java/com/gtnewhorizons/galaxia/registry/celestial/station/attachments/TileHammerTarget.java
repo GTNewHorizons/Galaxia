@@ -24,6 +24,7 @@ import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.TextWidget;
+import com.gtnewhorizon.structurelib.alignment.IAlignmentLimits;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
@@ -36,6 +37,12 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 
 public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget> implements IGuiHolder<PosGuiData> {
+
+    // Hammers work in any orientation
+    @Override
+    public IAlignmentLimits getAlignmentLimits() {
+        return IAlignmentLimits.UNLIMITED;
+    }
 
     private final static String STRUCTURE_PIECE_MAIN = "main";
     private static final IStructureDefinition<TileHammerTarget> STRUCTURE_DEFINITION = StructureDefinition
@@ -73,7 +80,7 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget> im
 
         @Override
         public BlockPos getPosition(TileHammerTarget attachment) {
-            return attachment.here;
+            return attachment.here();
         }
 
         @Override
@@ -103,18 +110,28 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget> im
     private final List<IInventory> inventory = new ArrayList<>();
     private final ResourceFilter<ItemStackWrapper> filter = ResourceFilter.forItems();
     private @Nullable StationGraph graph;
-    private final BlockPos here;
 
     public TileHammerTarget() {
         super();
-        here = new BlockPos(xCoord, yCoord, zCoord);
+    }
+
+    /** Coordinates are only set once the tile is placed, so the position is read when needed */
+    private BlockPos here() {
+        return new BlockPos(xCoord, yCoord, zCoord);
+    }
+
+    @Override
+    protected boolean checkStructure() {
+        // The chests are found again on every check
+        inventory.clear();
+        return super.checkStructure();
     }
 
     @Override
     public void onStructureDisformed() {
         super.onStructureDisformed();
         if (graph != null) {
-            graph.removeAttachment(here);
+            graph.removeAttachment(here());
         }
     }
 
@@ -176,18 +193,19 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget> im
         BooleanSyncValue structureValidSync = new BooleanSyncValue(() -> structureValid, () -> structureValid);
         syncManager.syncValue("structureValid", 0, structureValidSync);
 
-        return new ModularPanel("galaxia:station_room").size(210, 130)
+        return new ModularPanel("galaxia:hammer_target").size(210, 130)
             .child(
-                IKey.str(StatCollector.translateToLocal("galaxia.gui.station_room.title"))
+                IKey.str(StatCollector.translateToLocal("galaxia.gui.hammer_target.title"))
                     .asWidget()
                     .pos(8, 8))
             .child(new TextWidget<>(IKey.dynamic(() -> {
                 boolean valid = structureValidSync.getBoolValue();
-                String structure = StatCollector.translateToLocal("galaxia.gui.station_room.structure");
                 String status = StatCollector
                     .translateToLocal(valid ? "galaxia.gui.status_valid" : "galaxia.gui.status_invalid");
                 EnumChatFormatting color = valid ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;
-                return structure + ": " + color + status + EnumChatFormatting.RESET;
+                return StatCollector.translateToLocalFormatted(
+                    "galaxia.gui.station_controller.structure",
+                    color + status + EnumChatFormatting.RESET);
             })).pos(10, 30));
     }
 

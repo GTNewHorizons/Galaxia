@@ -19,6 +19,9 @@ public class GalaxiaKeyBinds {
         ? register(new KeyBinding("key.galaxia.starmap_offscreen", Keyboard.KEY_G, "key.categories.galaxia"))
         : null;
 
+    public static final KeyBinding END_ANDROID_CONTROL = register(
+        new KeyBinding("key.galaxia.end_android_control", Keyboard.KEY_END, "key.categories.galaxia"));
+
     private static KeyBinding register(KeyBinding binding) {
         ClientRegistry.registerKeyBinding(binding);
         return binding;

@@ -33,6 +33,19 @@ final class AsteroidDynamicCelestialObjectTest {
     }
 
     @Test
+    void generatedAsteroidObjectResolvesItsHostStar() {
+        CelestialObject asteroid = CelestialRegistry
+            .get(
+                CelestialObjectKey.minorBody(
+                    new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN)))
+            .orElseThrow();
+        assertEquals(
+            CelestialRegistry.get(CelestialObjectId.SOL)
+                .orElseThrow(),
+            GalaxiaCelestialAPI.findStar(GalaxiaCelestialAPI.getPrimaryRoot(), asteroid));
+    }
+
+    @Test
     void frozenBeltMinorBodyKeyResolvesGeneratedAsteroidObject() {
         CelestialObjectKey key = CelestialObjectKey
             .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, AsteroidSlotRanges.GENERATED_SLOT_MIN));

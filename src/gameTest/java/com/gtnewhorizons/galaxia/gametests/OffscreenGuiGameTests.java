@@ -10,6 +10,7 @@ import net.minecraft.inventory.InventoryBasic;
 import com.cleanroommc.modularui.ModularUIConfig;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.GalacticMapWidget;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.OffscreenStarmapGui;
+import com.gtnewhorizons.galaxia.client.gui.station.ModulePickerScreen;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
@@ -63,6 +64,9 @@ public final class OffscreenGuiGameTests {
                 station.facility(true);
             }))
             .async("size map independently of the game window", c -> map[0].resize(1280, 800))
+            .async("position camera preparation over Sol", c -> map[0].scroll(120, "Sol",
+                w -> GuiTestSupport.bodyTarget(CelestialObjectKey.registered(CelestialObjectId.SOL))))
+            .async("frame the inner Solar System", c -> map[0].run(w -> GuiTestSupport.zoomInnerSolarSystem()))
             .server("open a real server-owned chest container", () -> {
                 player[0].displayGUIChest(new InventoryBasic("Offscreen coexistence", true, 9));
                 chest[0] = player[0].openContainer;
@@ -87,15 +91,13 @@ public final class OffscreenGuiGameTests {
             .async(
                 "open station in the second window",
                 c -> map[0].click(0, "station", w -> GuiTestSupport.namedTarget("asset.manage." + station.assetId)))
-            .awaitAsync(
-                "second window displays station",
-                c -> map[0].run(w -> GuiTestSupport.requireScreen("galaxia_station_management")))
+            .awaitAsync("second window displays station", c -> map[0].run(w -> GuiTestSupport.requireStation()))
             .async(
                 "choose an empty station tile",
                 c -> map[0].click(0, "empty storage tile", w -> station.emptyTileTarget(StationTileCoord.of(-1, 0))))
             .awaitAsync(
                 "second window displays module picker",
-                c -> map[0].run(w -> GuiTestSupport.requireScreen("galaxia_station_module_picker")))
+                c -> map[0].run(w -> GuiTestSupport.requireWindow(ModulePickerScreen.WINDOW_ID)))
             .async(
                 "choose storage",
                 c -> map[0].click(0, "STORAGE", w -> GuiTestSupport.namedTarget("module.kind.STORAGE")))
@@ -110,7 +112,7 @@ public final class OffscreenGuiGameTests {
                     throw new AssertionError("Offscreen action replaced the server chest container");
             })
             .awaitAsync("build and payment synchronized in second window", c -> map[0].run(w -> {
-                GuiTestSupport.requireScreen("galaxia_station_management");
+                GuiTestSupport.requireStation();
                 station.assertDraftOutcome(true, true);
             }))
             .awaitClient(

@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import net.minecraft.entity.player.EntityPlayer;
 
@@ -24,9 +25,39 @@ public final class GTTeamsCompat {
         return team != null ? team.getTeamId() : null;
     }
 
+    /**
+     * Team of a player, null when the player has none
+     */
     public static UUID getTeam(@Nonnull EntityPlayer player) {
-        Team team = TeamManager.getTeamByPlayer(player.getUniqueID());
-        return team.getTeamId();
+        return getTeam(player.getUniqueID());
+    }
+
+    /**
+     * Team of a player by id, also works while the player is offline
+     *
+     * @param playerId The player's UUID
+     *
+     * @return The team id, or null when the player has no team
+     */
+    public static UUID getTeam(UUID playerId) {
+        if (playerId == null) return null;
+        Team team = TeamManager.getTeamByPlayer(playerId);
+        return team != null ? team.getTeamId() : null;
+    }
+
+    /** Resolves physical ownership references through the surviving team's persisted merge history. */
+    @Nullable
+    public static UUID resolveTeamId(@Nullable UUID teamId) {
+        if (teamId == null) return null;
+        Team active = TeamManager.getTeamById(teamId);
+        if (active != null) return active.getTeamId();
+        for (Team team : TeamManager.getTeamMap()
+            .values()) {
+            if (team.getData(GalaxiaTeamData.ID) instanceof GalaxiaTeamData data && data.hasMergedTeamId(teamId)) {
+                return team.getTeamId();
+            }
+        }
+        return null;
     }
 
     @SideOnly(Side.CLIENT)

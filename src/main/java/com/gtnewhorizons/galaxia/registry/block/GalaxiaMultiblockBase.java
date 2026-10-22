@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.block;
 
 import net.minecraft.block.Block;
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.NetworkManager;
@@ -8,8 +10,12 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.AxisAlignedBB;
+import net.minecraft.util.ChatComponentTranslation;
+import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
+import com.gtnewhorizon.structurelib.alignment.IAlignment;
+import com.gtnewhorizon.structurelib.alignment.IAlignmentLimits;
 import com.gtnewhorizon.structurelib.alignment.constructable.ISurvivalConstructable;
 import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
@@ -17,13 +23,25 @@ import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 
 import cpw.mods.fml.common.Optional;
+import gregtech.api.GregTechAPI;
 import gregtech.api.interfaces.tileentity.IMachineBlockUpdateable;
+import gregtech.api.util.GTUtility;
 import lombok.Getter;
 import lombok.Setter;
 
 @Optional.Interface(iface = "gregtech.api.interfaces.tileentity.IMachineBlockUpdateable", modid = "gregtech_nh")
 public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> extends TileEntity
-    implements ISurvivalConstructable, IMachineBlockUpdateable {
+    implements ISurvivalConstructable, IMachineBlockUpdateable, IAlignment {
+
+    /** Front faces a horizontal direction, no rotation or mirroring */
+    public static final IAlignmentLimits HORIZONTAL = (direction, rotation,
+        flip) -> direction.offsetY == 0 && rotation.isNotRotated() && flip.isNotFlipped();
+    /** Like {@link #HORIZONTAL}, but the structure may be mirrored left to right */
+    public static final IAlignmentLimits HORIZONTAL_MIRRORABLE = (direction, rotation,
+        flip) -> direction.offsetY == 0 && rotation.isNotRotated() && !flip.isVerticallyFliped();
+    /** Front faces any of the six directions, no rotation or mirroring */
+    public static final IAlignmentLimits ANY_DIRECTION = (direction, rotation, flip) -> rotation.isNotRotated()
+        && flip.isNotFlipped();
 
     @Setter
     @Getter
@@ -215,51 +233,113 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
         if (nbt.hasKey("facing")) {
             currentFacing = ExtendedFacing.byIndex(nbt.getInteger("facing"));
         }
-        if (nbt.hasKey("placedFacing")) {
-            placedFacing = ForgeDirection.values()[nbt.getInteger("placedFacing")];
-        }
+        // The structure is always checked with currentFacing, so the front texture has to follow it
+        placedFacing = currentFacing.getDirection();
         mCheckTimer = 0;
     }
 
     public void setFacing(ForgeDirection dir) {
-        if (dir == null) return;
+        if (dir == null || dir == ForgeDirection.UNKNOWN) return;
+        toolSetDirection(dir);
+    }
 
-        switch (dir) {
+    // IAlignment
 
-            case NORTH:
-                this.currentFacing = ExtendedFacing.NORTH_NORMAL_NONE;
-                break;
+    @Override
+    public ExtendedFacing getExtendedFacing() {
+        return currentFacing;
+    }
 
-            case SOUTH:
-                this.currentFacing = ExtendedFacing.SOUTH_NORMAL_NONE;
-                break;
-
-            case EAST:
-                this.currentFacing = ExtendedFacing.EAST_NORMAL_NONE;
-                break;
-
-            case WEST:
-                this.currentFacing = ExtendedFacing.WEST_NORMAL_NONE;
-                break;
-
-            case UP:
-                this.currentFacing = ExtendedFacing.UP_NORMAL_NONE;
-                break;
-
-            case DOWN:
-                this.currentFacing = ExtendedFacing.DOWN_NORMAL_NONE;
-                break;
-
-            default:
-                this.currentFacing = ExtendedFacing.DEFAULT;
-                break;
-        }
-
+    /**
+     * Applies a new orientation and schedules a structure check. Tools should go through
+     * {@link #toolSetExtendedFacing(ExtendedFacing)} so the limits are respected
+     *
+     * @param facing The new orientation
+     */
+    @Override
+    public void setExtendedFacing(ExtendedFacing facing) {
+        if (facing == null || facing == currentFacing) return;
+        currentFacing = facing;
+        placedFacing = facing.getDirection();
+        onFacingChanged();
+        markStructureDirty();
         markDirty();
+        if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+    }
 
-        if (worldObj != null) {
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+    @Override
+    public IAlignmentLimits getAlignmentLimits() {
+        return HORIZONTAL;
+    }
+
+    /** Called after the orientation changed, before the structure is re-checked */
+    protected void onFacingChanged() {}
+
+    /**
+     * Faces the controller towards whoever placed it, falling back to a horizontal direction when the vertical one is
+     * not allowed
+     *
+     * @param placer The entity that placed the controller
+     */
+    public void onPlacedBy(EntityLivingBase placer) {
+        if (!toolSetDirection(PlacementHelper.placeInEveryDirection(placer))) {
+            toolSetDirection(PlacementHelper.placeOnlyCardinal(placer));
         }
+    }
+
+    /**
+     * GTNH-style wrenching: hitting a side turns the front towards it, hitting the front rotates the structure and
+     * sneaking on the front mirrors it
+     *
+     * @param player The player holding the wrench
+     * @param side   The side that was hit, already adjusted for the wrench grid
+     *
+     * @return Boolean : True => the orientation changed
+     */
+    public boolean onWrench(EntityPlayer player, ForgeDirection side) {
+        boolean changed;
+        if (side == currentFacing.getDirection()) {
+            changed = player.isSneaking() ? toolSetFlip(null) : toolSetRotation(null);
+        } else {
+            changed = toolSetDirection(side);
+        }
+
+        if (changed) {
+            player.addChatComponentMessage(
+                new ChatComponentTranslation("galaxia.chat.multiblock.facing", currentFacing.getLocalizedName()));
+        }
+        return changed;
+    }
+
+    /**
+     * Shared wrench handling for every multiblock controller block, call it first in
+     * {@link Block#onBlockActivated}
+     *
+     * @return Boolean : True => the click was a wrench on a controller and has been consumed
+     */
+    public static boolean handleWrench(World world, int x, int y, int z, EntityPlayer player, int side, float hitX,
+        float hitY, float hitZ) {
+        if (!isWrench(player.getHeldItem())) return false;
+        if (!(world.getTileEntity(x, y, z) instanceof GalaxiaMultiblockBase<?>multiblock)) return false;
+        if (world.isRemote) return true;
+
+        ForgeDirection clicked = ForgeDirection.getOrientation(side);
+        ForgeDirection target = GalaxiaAPI.isGregTech5UnofficialNewHorizonsLoaded()
+            ? GTUtility.determineWrenchingSide(clicked, hitX, hitY, hitZ)
+            : clicked;
+        if (multiblock.onWrench(player, target)) {
+            world.playSoundEffect(x + 0.5, y + 0.5, z + 0.5, "random.anvil_use", 0.4F, 1.4F);
+        }
+        return true;
+    }
+
+    public static boolean isWrench(ItemStack stack) {
+        if (stack == null) return false;
+        if (stack.getItem()
+            .getToolClasses(stack)
+            .contains("wrench")) return true;
+        return GalaxiaAPI.isGregTech5UnofficialNewHorizonsLoaded()
+            && GTUtility.isStackInList(stack, GregTechAPI.sWrenchList);
     }
 
     @Override

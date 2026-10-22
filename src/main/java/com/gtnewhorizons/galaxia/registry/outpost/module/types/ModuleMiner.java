@@ -139,7 +139,7 @@ public final class ModuleMiner extends TieredModuleComponent {
 
     private static List<ItemStack> miningCandidates(@Nonnull CelestialBodyProperties properties,
         @Nonnull MiningFeatureEffects featureEffects) {
-        List<ItemStack> bodyOres = properties.getResolvedGtVeinOreStacks();
+        List<ItemStack> bodyOres = properties.getResolvedGtOreStacks();
         if (bodyOres.isEmpty()) return featureEffects.candidates();
         if (featureEffects.candidates()
             .isEmpty()) return bodyOres;

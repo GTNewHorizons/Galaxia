@@ -32,7 +32,7 @@ final class AutomatedFacilityInventoryTest {
     void recipeBoundsCheckLowerReserveAndUpperTargetInventoryAmounts() {
         AutomatedFacility outpost = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PROXIMA_CENTAURI,
+            CelestialObjectId.ROSS_128_B,
             CelestialAsset.Kind.AUTOMATED_OUTPOST,
             Buildable.Status.OPERATIONAL);
         ItemStackWrapper input = new ItemStackWrapper(Items.diamond, 0, null);
@@ -60,7 +60,7 @@ final class AutomatedFacilityInventoryTest {
     void recipeFluidBoundsCheckLowerReserveAndUpperTargetInventoryAmounts() {
         AutomatedFacility outpost = new AutomatedFacility(
             CelestialAsset.ID.create(),
-            CelestialObjectId.PROXIMA_CENTAURI,
+            CelestialObjectId.ROSS_128_B,
             CelestialAsset.Kind.AUTOMATED_OUTPOST,
             Buildable.Status.OPERATIONAL);
         outpost.insert(INPUT_KEY, 1000);

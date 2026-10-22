@@ -6,25 +6,24 @@ import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.Widget;
-import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenCollector;
 
+/**
+ * The leaves around an oxygen collector, seen from above
+ */
 public class LeafScanWidget extends Widget<LeafScanWidget> {
 
+    /** Oak leaves are grey until tinted, like the foliage colour tints them in the world */
+    private static final UITexture LEAVES = UITexture.fullImage("minecraft", "textures/blocks/leaves_oak_opaque.png");
+    private static final int LEAF_TINT = 0xFF4E9A2E;
+
     private final TileEntityOxygenCollector tile;
-    private static final UITexture GRID_TEX = EnumTextures.MIRAGE.getImage();
-    private static final UITexture DOT_TEX = EnumTextures.TENEBRAE.getImage();
-    private static final int RADIUS = 4;
-    private static final int DIAMETER = RADIUS * 2 + 1;
-    private static final int CELL_SIZE = 9;
-    private static final int SIZE = DIAMETER * CELL_SIZE;
-    private final boolean[] leaves = new boolean[DIAMETER * DIAMETER];
+    private final boolean[] leaves = new boolean[RadarGrid.CELLS * RadarGrid.CELLS];
 
     public LeafScanWidget(TileEntityOxygenCollector tile) {
         this.tile = tile;
-        size(SIZE, SIZE);
-        background(EnumTextures.SELECTION_FRAME.getImage());
+        size(RadarGrid.SIZE, RadarGrid.SIZE);
     }
 
     @Override
@@ -40,9 +39,9 @@ public class LeafScanWidget extends Widget<LeafScanWidget> {
     }
 
     private void refreshLeaves() {
-        for (int dx = -RADIUS; dx <= RADIUS; dx++) {
-            for (int dz = -RADIUS; dz <= RADIUS; dz++) {
-                leaves[(dx + RADIUS) * DIAMETER + dz + RADIUS] = hasLeafAt(dx, dz);
+        for (int dx = -RadarGrid.RADIUS; dx <= RadarGrid.RADIUS; dx++) {
+            for (int dz = -RadarGrid.RADIUS; dz <= RadarGrid.RADIUS; dz++) {
+                leaves[(dx + RadarGrid.RADIUS) * RadarGrid.CELLS + dz + RadarGrid.RADIUS] = hasLeafAt(dx, dz);
             }
         }
     }
@@ -50,21 +49,20 @@ public class LeafScanWidget extends Widget<LeafScanWidget> {
     @Override
     public void draw(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
         super.draw(context, widgetTheme);
-
-        GRID_TEX.draw(context, 0, 0, SIZE, SIZE, widgetTheme.getTheme());
-
-        for (int dx = -RADIUS; dx <= RADIUS; dx++) {
-            for (int dz = -RADIUS; dz <= RADIUS; dz++) {
-                if (leaves[(dx + RADIUS) * DIAMETER + dz + RADIUS]) {
-                    int px = (dx + RADIUS) * CELL_SIZE;
-                    int py = (dz + RADIUS) * CELL_SIZE;
-                    DOT_TEX.withColorOverride(EnumColors.MAP_LEAF_GREEN.getColor())
-                        .draw(context, px, py, CELL_SIZE, CELL_SIZE, widgetTheme.getTheme());
-                }
+        RadarGrid.draw(context, widgetTheme, EnumTextures.ICON_OXYGEN_COLLECTOR.getImage());
+        UITexture leaf = LEAVES.withColorOverride(LEAF_TINT);
+        for (int dx = -RadarGrid.RADIUS; dx <= RadarGrid.RADIUS; dx++) {
+            for (int dz = -RadarGrid.RADIUS; dz <= RadarGrid.RADIUS; dz++) {
+                if (!leaves[(dx + RadarGrid.RADIUS) * RadarGrid.CELLS + dz + RadarGrid.RADIUS]) continue;
+                leaf.draw(
+                    context,
+                    (dx + RadarGrid.RADIUS) * RadarGrid.CELL,
+                    (dz + RadarGrid.RADIUS) * RadarGrid.CELL,
+                    RadarGrid.CELL,
+                    RadarGrid.CELL,
+                    widgetTheme.getTheme());
             }
         }
-        DOT_TEX.withColorOverride(EnumColors.MAP_MACHINE_BLUE.getColor())
-            .draw(context, RADIUS * CELL_SIZE, RADIUS * CELL_SIZE, CELL_SIZE, CELL_SIZE, widgetTheme.getTheme());
     }
 
     private boolean hasLeafAt(int dx, int dz) {

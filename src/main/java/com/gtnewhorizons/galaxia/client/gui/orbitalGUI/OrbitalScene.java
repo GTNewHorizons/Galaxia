@@ -1,13 +1,17 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
+import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.StatCollector;
 
 import org.lwjgl.opengl.GL11;
 
@@ -15,6 +19,8 @@ import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
@@ -25,6 +31,21 @@ import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 public class OrbitalScene {
+
+    /** Plate with the name of the shown layer at the top of the map */
+    static final int TITLE_PLATE_HEIGHT = 16;
+    static final int TITLE_PLATE_TOP = 8;
+    static final int TITLE_PLATE_PADDING = 8;
+
+    /** Title of the shown layer: the galaxy, or a star's system */
+    static String viewTitle(CelestialObject viewRoot) {
+        if (viewRoot == null) return null;
+        if (viewRoot.objectClass() == CelestialObject.Class.GALAXY) return viewRoot.displayName();
+        if (viewRoot.objectClass() == CelestialObject.Class.STAR) {
+            return StatCollector.translateToLocalFormatted("galaxia.gui.orbital.system_title", viewRoot.displayName());
+        }
+        return null;
+    }
 
     private static final double[] ZERO_VIEW_ORIGIN = { 0.0, 0.0 };
 
@@ -208,6 +229,7 @@ public class OrbitalScene {
     static final class MarkerDrawCall {
 
         private ResourceLocation texture;
+        private CelestialObject navigationBody;
         private int x;
         private int y;
         private int size;
@@ -215,6 +237,7 @@ public class OrbitalScene {
 
         void set(ResourceLocation texture, int x, int y, int size, float alpha) {
             this.texture = texture;
+            this.navigationBody = null;
             this.x = x;
             this.y = y;
             this.size = size;
@@ -240,6 +263,14 @@ public class OrbitalScene {
         float alpha() {
             return alpha;
         }
+
+        CelestialObject navigationBody() {
+            return navigationBody;
+        }
+
+        boolean contains(float mouseX, float mouseY) {
+            return mouseX >= x && mouseY >= y && mouseX < x + size && mouseY < y + size;
+        }
     }
 
     static final class SatelliteMarkerBounds {
@@ -262,6 +293,10 @@ public class OrbitalScene {
 
         boolean contains(int localMouseX, int localMouseY) {
             return localMouseX >= x && localMouseX <= x + size && localMouseY >= y && localMouseY <= y + size;
+        }
+
+        Rectangle rectangle() {
+            return new Rectangle(x, y, size, size);
         }
     }
 
@@ -394,6 +429,10 @@ public class OrbitalScene {
 
     public static final class OrbitalSceneFrameBuilder {
 
+        private static final int CHILD_MARKER_SIZE = 12;
+        private static final int CHILD_MARKER_GAP = 3;
+        private static final int CHILD_MARKER_COLUMNS = 6;
+
         interface Callbacks {
 
             double[] getViewOrigin(CelestialObject viewRoot);
@@ -409,18 +448,63 @@ public class OrbitalScene {
         }
 
         private final Callbacks callbacks;
+        private final StarmapViewContext view;
+        private final List<CelestialObject> hiddenChildren = new ArrayList<>();
 
-        OrbitalSceneFrameBuilder(Callbacks callbacks) {
+        OrbitalSceneFrameBuilder(Callbacks callbacks, StarmapViewContext view) {
             this.callbacks = callbacks;
+            this.view = view;
         }
 
-        OrbitalSceneFrame buildInto(OrbitalSceneFrame frame, CelestialObject viewRoot, double globalTime,
-            float labelAlpha) {
+        OrbitalSceneFrame buildInto(OrbitalSceneFrame frame, CelestialObject viewRoot,
+            @Nullable CelestialObject selectedBody, double globalTime, float labelAlpha) {
             frame.resetForReuse();
             double[] viewOrigin = callbacks.getViewOrigin(viewRoot);
             if (viewOrigin == null) viewOrigin = ZERO_VIEW_ORIGIN;
             collectRecursive(frame, viewRoot, null, viewOrigin[0], viewOrigin[1], globalTime, labelAlpha);
+            if (viewRoot.objectClass() != CelestialObject.Class.GALAXY && labelAlpha > 0.02f)
+                registerHiddenChildren(frame, selectedBody);
             return frame;
+        }
+
+        private void registerHiddenChildren(OrbitalSceneFrame frame, @Nullable CelestialObject selectedBody) {
+            if (selectedBody == null) return;
+            for (ScreenBodyBounds parent : frame.screenBodies) {
+                if (!parent.body()
+                    .key()
+                    .equals(selectedBody.key())) continue;
+                if (parent.body()
+                    .isAsteroid()
+                    || parent.body()
+                        .isAsteroidBelt())
+                    continue;
+                hiddenChildren.clear();
+                for (CelestialObject child : CelestialClient.getChildren(parent.body())) {
+                    if (child.isAsteroid()) continue;
+                    ResolvedBodyDrawState state = frame.resolvedBodiesByBody.get(child);
+                    if (state == null || !state.renderBody() && state.bodyAlpha() > 0.01f) hiddenChildren.add(child);
+                }
+                int count = hiddenChildren.size();
+                if (count == 0) continue;
+                int stride = CHILD_MARKER_SIZE + CHILD_MARKER_GAP;
+                int columns = Math.min(CHILD_MARKER_COLUMNS, count);
+                int width = columns * stride - CHILD_MARKER_GAP;
+                int height = ((count + columns - 1) / columns) * stride - CHILD_MARKER_GAP;
+                int left = Math
+                    .max(0, Math.min(view.viewportWidth() - width, Math.round(parent.centerX() - width / 2f)));
+                int top = Math.round(parent.centerY() - parent.renderedRadius() - CHILD_MARKER_GAP - height);
+                if (top < 0) top = Math.round(parent.centerY() + parent.renderedRadius() + 20);
+                for (int i = 0; i < count; i++) {
+                    CelestialObject child = hiddenChildren.get(i);
+                    MarkerDrawCall marker = frame.addMarker(
+                        child.texture(),
+                        left + i % columns * stride,
+                        top + i / columns * stride,
+                        CHILD_MARKER_SIZE,
+                        1f);
+                    marker.navigationBody = child;
+                }
+            }
         }
 
         private void collectRecursive(OrbitalSceneFrame frame, CelestialObject body, CelestialObject parent,
@@ -679,8 +763,28 @@ public class OrbitalScene {
         }
 
         void drawCollectedMarkers(OrbitalSceneFrame frame) {
-            for (MarkerDrawCall marker : frame.markerDrawCalls)
-                drawUiSprite(marker.texture(), marker.x(), marker.y(), marker.size(), marker.alpha());
+            for (MarkerDrawCall marker : frame.markerDrawCalls) {
+                if (marker.navigationBody() != null) {
+                    Gui.drawRect(
+                        marker.x() - 1,
+                        marker.y() - 1,
+                        marker.x() + marker.size() + 1,
+                        marker.y() + marker.size() + 1,
+                        EnumColors.MapBackground.getColor());
+                }
+                if (marker.texture() != null) {
+                    drawUiSprite(marker.texture(), marker.x(), marker.y(), marker.size(), marker.alpha());
+                } else if (marker.navigationBody() != null) {
+                    drawFilledCircle(
+                        marker.x() + marker.size() / 2f,
+                        marker.y() + marker.size() / 2f,
+                        marker.size() / 2f,
+                        getFallbackBodyColor(
+                            marker.navigationBody()
+                                .objectClass()),
+                        marker.alpha());
+                }
+            }
         }
 
         void drawSelectionHighlight(CelestialObject body, OrbitalSceneFrame frame) {
@@ -731,33 +835,19 @@ public class OrbitalScene {
         }
 
         void drawViewTitleBanner(CelestialObject viewRoot, int widgetWidth) {
-            if (viewRoot == null) return;
-            String title = viewRoot.objectClass() == CelestialObject.Class.GALAXY ? viewRoot.displayName()
-                : viewRoot.objectClass() == CelestialObject.Class.STAR ? viewRoot.displayName() + " System" : null;
+            String title = viewTitle(viewRoot);
             if (title == null) return;
             Minecraft mc = Minecraft.getMinecraft();
             int textWidth = mc.fontRenderer.getStringWidth(title);
-            float centerX = widgetWidth / 2f;
-            int top = GALAXY_TITLE_TOP;
-            int bottom = top + GALAXY_TITLE_HEIGHT;
-            float bottomHalfWidth = Math.max(74f, textWidth / 2f + 28f);
-            float topHalfWidth = bottomHalfWidth + 8f;
-            drawFilledTrapezoid(
-                centerX,
-                top,
-                bottom,
-                topHalfWidth,
-                bottomHalfWidth,
-                EnumColors.MAP_COLOR_TITLE_BANNER_BG.getColor());
-            drawTrapezoidOutline(
-                centerX,
-                top,
-                bottom,
-                topHalfWidth,
-                bottomHalfWidth,
-                EnumColors.MAP_COLOR_TITLE_BANNER_BORDER.getColor(),
-                1.4f);
-            drawCenteredBannerString(title, centerX, top + 7, EnumColors.MAP_COLOR_TITLE_BANNER_TEXT.getColor());
+            int width = textWidth + TITLE_PLATE_PADDING * 2;
+            int left = Math.round(widgetWidth / 2f - width / 2f);
+            EnumTextures.GUI_PANEL.getImage()
+                .draw(left, TITLE_PLATE_TOP, width, TITLE_PLATE_HEIGHT);
+            mc.fontRenderer.drawStringWithShadow(
+                title,
+                left + TITLE_PLATE_PADDING,
+                TITLE_PLATE_TOP + 4,
+                GalaxiaGuiStyle.TEXT_TITLE);
         }
 
         void drawAssetIcon(CelestialAsset.Kind kind, int x, int y, int size, float alpha) {

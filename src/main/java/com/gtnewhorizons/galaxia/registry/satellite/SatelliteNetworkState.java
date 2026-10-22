@@ -8,7 +8,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 /*
  * Immutable server-derived snapshot synced to clients. It intentionally contains topology, current throughput, and
- * pending transfer summaries together so one packet can update lines, colours, and tooltips atomically.
+ * pending transfer summaries together so one packet can update lines, colors, and tooltips atomically.
  */
 public record SatelliteNetworkState(UUID teamId, int revision, Map<CelestialObjectKey, Body> bodies, List<Link> links,
     List<PendingData> pendingData) {
@@ -54,7 +54,7 @@ public record SatelliteNetworkState(UUID teamId, int revision, Map<CelestialObje
     }
 
     /*
-     * Body usage is local satellite load. It is not the sum of adjacent link colours; the planner clamps all paths that
+     * Body usage is local satellite load. It is not the sum of adjacent link colors; the planner clamps all paths that
      * pass through this body against this one local capacity pool.
      */
     public record Body(CelestialObjectKey bodyKey, long capacityKbps, long usedKbps) {

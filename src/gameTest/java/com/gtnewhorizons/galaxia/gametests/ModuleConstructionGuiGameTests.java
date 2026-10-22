@@ -7,11 +7,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayerMP;
 
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.utils.TreeUtil;
+import com.gtnewhorizons.galaxia.client.gui.station.ModulePickerScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.StationMapWidget;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.network.AssetStateSync;
@@ -44,8 +44,6 @@ import com.gtnewhorizons.horizonqa.api.client.ClientTest;
 @GameTestHolder(value = "galaxia", clientOnly = true, requiredMods = { "gregtech", "NotEnoughItems" })
 public final class ModuleConstructionGuiGameTests {
 
-    private static final String STATION_SCREEN = "galaxia_station_management";
-    private static final String PICKER_SCREEN = "galaxia_station_module_picker";
     private static final CelestialObjectKey BODY = CelestialObjectKey.registered(CelestialObjectId.OVERWORLD);
     private static final List<FacilityModuleKind> KINDS = List
         .of(FacilityModuleKind.HAMMER, FacilityModuleKind.STORAGE, FacilityModuleKind.TANK);
@@ -74,25 +72,29 @@ public final class ModuleConstructionGuiGameTests {
                     ClientTarget.of(
                         "empty station tile " + TILES.get(buildIndex),
                         c -> fixture.emptyTileTarget(TILES.get(buildIndex))))
-                .awaitClient(step + "module picker visible", c -> GuiTestSupport.requireScreen(PICKER_SCREEN))
-                .click(control("module.kind." + kind.name()))
-                .click(control("module.tier." + tier.name()));
+                .awaitClient(
+                    step + "module picker visible",
+                    c -> GuiTestSupport.requireWindow(ModulePickerScreen.WINDOW_ID))
+                .click(control("module.kind." + kind.name()));
             if (kind == FacilityModuleKind.HAMMER) {
-                scenario.click(control("module.hammer.BIG"));
+                scenario.click(control("module.hammer.BIG"))
+                    .click(control("module.tier.UV"));
             }
-            scenario.click(control("module.build"))
+            scenario.click(control("module.tier." + tier.name()))
+                .click(control("module.build"))
                 .awaitServer(
                     step + "server accepted paid construction",
                     () -> fixture.assertBuilt(false, buildIndex, false, buildIndex + 1))
-                .awaitClient(step + "station map restored", c -> GuiTestSupport.requireScreen(STATION_SCREEN));
+                .awaitClient(step + "station map restored", c -> requireStationWithoutPicker());
         }
         for (int index = 0; index < KINDS.size(); index++) {
             int buildIndex = index;
             String step = KINDS.get(index)
                 .name() + ": ";
             scenario.withinTicks(600)
-                .awaitServer(
-                    step + "normal ticks completed construction",
+                .awaitServerAccelerated(
+                    step + "simulation ticks completed construction",
+                    10,
                     () -> fixture.assertBuilt(false, buildIndex, true, KINDS.size()))
                 .withinTicks(150)
                 .awaitClient(
@@ -111,27 +113,14 @@ public final class ModuleConstructionGuiGameTests {
     public static void builtBigHammerCanUpgradeToUvThroughGui(GameTestHelper helper) {
         Fixture fixture = new Fixture();
         ClientScenario scenario = ClientTest.scenario(helper)
-            .server("prepare station with build and UV upgrade materials", () -> fixture.prepare(helper, true))
+            .server(
+                "prepare an operational BIG LuV HAMMER and exact UV upgrade materials",
+                () -> fixture.prepare(helper, true))
             .client(
                 "register fixture mirror cleanup",
                 c -> c.afterTest(() -> CelestialAssetStore.CLIENT.destroyAssetInternal(fixture.assetId)));
         GuiTestSupport.openFacility(scenario, helper, fixture.assetId, BODY)
-            .click(ClientTarget.of("empty HAMMER tile", c -> fixture.emptyTileTarget(TILES.getFirst())))
-            .awaitClient("module picker visible", c -> GuiTestSupport.requireScreen(PICKER_SCREEN))
-            .click(control("module.kind.HAMMER"))
-            .click(control("module.hammer.BIG"))
-            .click(control("module.tier.UV"))
-            .click(control("module.tier.LuV"))
-            .click(control("module.build"))
-            .withinTicks(700)
-            .awaitServerAccelerated("BIG LuV HAMMER completed", 10, () -> fixture.assertBuilt(false, 0, true, 1))
-            .withinTicks(150)
-            .awaitClient("built HAMMER synchronized", c -> fixture.assertBuilt(true, 0, true, 1))
-            .server(
-                "remember the built module identity",
-                () -> fixture.upgradeModuleId = fixture.facility(false)
-                    .stationLayout()
-                    .moduleAt(TILES.getFirst()).id)
+            .awaitClient("prepared BIG LuV HAMMER synchronized", c -> fixture.assertBuilt(true, 0, true, 1))
             .click(ClientTarget.of("built HAMMER tile", c -> fixture.tileTarget(TILES.getFirst())))
             .click(control("UPGRADE"))
             .click(control("module.upgrade.hammer.variant.BASE"))
@@ -140,7 +129,14 @@ public final class ModuleConstructionGuiGameTests {
             .click(control("module.upgrade.hammer.tier.UV"))
             .capture("big-hammer-uv-upgrade-selected")
             .click(control("module.upgrade.confirm"))
-            .awaitServer("GUI submitted the UV upgrade", () -> fixture.assertHammerUpgrade(false, false))
+            .awaitServer("GUI submitted the paid UV upgrade and reserved its materials", () -> {
+                fixture.assertHammerUpgrade(false, false);
+                fixture.assertMaterialsConsumed(false);
+            })
+            .awaitClient("paid UV upgrade and reserved materials synchronized", c -> {
+                fixture.assertHammerUpgrade(true, false);
+                fixture.assertMaterialsConsumed(true);
+            })
             .withinTicks(700)
             .awaitServerAccelerated(
                 "simulation ticks completed UV upgrade",
@@ -155,6 +151,17 @@ public final class ModuleConstructionGuiGameTests {
                 fixture.assertHammerUpgrade(true, true);
             })
             .capture("big-hammer-uv-upgrade-complete")
+            .escape()
+            .click(control("CONFIG"))
+            .awaitClient("hammer configuration open", c -> GuiTestSupport.requireWindow("hammer.items"))
+            .capture("hammer-configuration")
+            .click(control("hammer.items"))
+            .awaitClient("hammer logistics open", c -> {
+                if (GuiTestSupport.findNamedWidget("hammer.items") != null)
+                    throw new AssertionError("Hammer settings stayed in place of its logistics");
+                GuiTestSupport.requireWindow("station.config");
+            })
+            .capture("hammer-logistics")
             .succeed();
     }
 
@@ -171,27 +178,25 @@ public final class ModuleConstructionGuiGameTests {
                 c -> c.afterTest(() -> CelestialAssetStore.CLIENT.destroyAssetInternal(fixture.assetId)));
         GuiTestSupport.openFacility(scenario, helper, fixture.assetId, BODY)
             .click(ClientTarget.of("abandoned build tile", c -> fixture.emptyTileTarget(TILES.getFirst())))
-            .awaitClient("module picker visible", c -> GuiTestSupport.requireScreen(PICKER_SCREEN))
+            .awaitClient("module picker visible", c -> GuiTestSupport.requireWindow(ModulePickerScreen.WINDOW_ID))
             .click(control("module.kind.HAMMER"))
             .click(control("module.tier.LuV"))
             .click(control("module.hammer.BIG"))
             .step("leave the selected HAMMER without building")
             .escape()
-            .awaitClient("picker closed to gameplay", c -> {
-                if (Minecraft.getMinecraft().currentScreen != null)
-                    throw new AssertionError("Escape did not close the module picker");
-            })
+            .awaitClient("escape closed only the module picker", c -> requireStationWithoutPicker())
             .server("abandoned draft left server unchanged", () -> fixture.assertDraftOutcome(false, false))
-            .client("abandoned draft left client unchanged", c -> fixture.assertDraftOutcome(true, false));
-        GuiTestSupport.openFacility(scenario, helper, fixture.assetId, BODY)
+            .client("abandoned draft left client unchanged", c -> fixture.assertDraftOutcome(true, false))
             .click(ClientTarget.of("different build tile", c -> fixture.emptyTileTarget(TILES.get(1))))
-            .awaitClient("fresh module chooser visible", c -> GuiTestSupport.requireScreen(PICKER_SCREEN))
+            .awaitClient(
+                "fresh module chooser visible",
+                c -> GuiTestSupport.requireWindow(ModulePickerScreen.WINDOW_ID))
             .click(control("module.kind.STORAGE"))
             .click(control("module.tier.HV"))
             .click(control("module.build"))
             .awaitServer("only the replacement storage was ordered", () -> fixture.assertDraftOutcome(false, true))
             .awaitClient("replacement order synchronized", c -> {
-                GuiTestSupport.requireScreen(STATION_SCREEN);
+                requireStationWithoutPicker();
                 fixture.assertDraftOutcome(true, true);
             })
             .withinTicks(600)
@@ -216,6 +221,53 @@ public final class ModuleConstructionGuiGameTests {
 
     private static ModuleTier tier(FacilityModuleKind kind) {
         return kind == FacilityModuleKind.HAMMER ? ModuleTier.LuV : ModuleTier.HV;
+    }
+
+    /** The station inventory opens as a window with its tabs, bounds editor and item interactions over it */
+    @GameTest(timeoutTicks = 900)
+    public static void inventoryWindowOpensItsTools(GameTestHelper helper) {
+        Fixture fixture = new Fixture();
+        ClientScenario scenario = ClientTest.scenario(helper)
+            .server("prepare station with stored materials", () -> fixture.prepare(helper))
+            .client(
+                "register fixture mirror cleanup",
+                c -> c.afterTest(() -> CelestialAssetStore.CLIENT.destroyAssetInternal(fixture.assetId)));
+        GuiTestSupport.openFacility(scenario, helper, fixture.assetId, BODY)
+            .click(control("station.inventory.toggle"))
+            .awaitClient("inventory window open", c -> GuiTestSupport.requireWindow("station.inventory"))
+            .awaitClient("stored items listed", c -> GuiTestSupport.requireWindow("station.inventory.bounds.0"))
+            .capture("station-inventory")
+            .click(control("station.inventory.bounds.0"))
+            .awaitClient("bounds editor open", c -> GuiTestSupport.requireWindow("station.inventory.bounds"))
+            .capture("station-inventory-bounds")
+            .escape()
+            .awaitClient("Esc closed only the bounds editor", c -> {
+                if (GuiTestSupport.findNamedWidget("station.inventory.bounds") != null)
+                    throw new AssertionError("Bounds editor stayed open");
+                GuiTestSupport.requireWindow("station.inventory");
+            })
+            .click(control("station.inventory.interactions.0"))
+            .awaitClient("item interactions open", c -> GuiTestSupport.requireWindow("station.inventory.item"))
+            .capture("station-inventory-interactions")
+            .click(control("station.inventory.tab.UPKEEP"))
+            .awaitClient("upkeep tab closes the item window", c -> {
+                if (GuiTestSupport.findNamedWidget("station.inventory.item") != null)
+                    throw new AssertionError("Item interactions stayed open across tabs");
+            })
+            .click(control("station.inventory.toggle"))
+            .awaitClient("inventory closed by its button", c -> {
+                if (GuiTestSupport.findNamedWidget("station.inventory") != null)
+                    throw new AssertionError("Inventory stayed open");
+                requireStationWithoutPicker();
+            })
+            .succeed();
+    }
+
+    private static void requireStationWithoutPicker() {
+        GuiTestSupport.requireStation();
+        if (GuiTestSupport.findNamedWidget(ModulePickerScreen.WINDOW_ID) != null) {
+            throw new AssertionError("Module picker is still open");
+        }
     }
 
     static final class Fixture {
@@ -257,7 +309,7 @@ public final class ModuleConstructionGuiGameTests {
                 BODY,
                 CelestialAsset.Kind.AUTOMATED_STATION,
                 Buildable.Status.OPERATIONAL);
-            facility.setDisplayName("GUI module construction " + assetId);
+            facility.setDisplayName("Test Station");
             FacilityCommand.Result storage = facility.applyCommand(
                 new FacilityCommand.BuildModules(
                     assetId,
@@ -276,12 +328,21 @@ public final class ModuleConstructionGuiGameTests {
                 throw new AssertionError("Could not seed prerequisite cargo storage");
             prerequisiteModules = facility.modules()
                 .size();
-            for (FacilityModuleKind kind : KINDS) {
-                FacilityModuleRegistry.operationCost(
-                    FacilityModuleRegistry.get(kind)
-                        .getTierData(tier(kind))
-                        .constructionCost())
-                    .forEach((resource, amount) -> materials.merge(resource, amount, Long::sum));
+            if (includeHammerUpgrade) {
+                FacilityCommand.Result hammer = facility.applyCommand(
+                    new FacilityCommand.BuildModules(
+                        assetId,
+                        FacilityModuleKind.HAMMER,
+                        FacilityModuleKind.HAMMER.defaultShape(),
+                        new IModuleComponent.BuildPhysicalSpec.Hammer(ModuleTier.LuV, HammerVariant.BIG),
+                        null,
+                        true,
+                        List.of(ModulePlacement.at(TILES.getFirst()))),
+                    new FacilityCommand.Authority(true, true));
+                if (hammer.status() != FacilityCommand.Status.CHANGED)
+                    throw new AssertionError("Could not seed the operational BIG LuV HAMMER");
+                upgradeModuleId = facility.stationLayout()
+                    .moduleAt(TILES.getFirst()).id;
             }
             if (includeHammerUpgrade) {
                 FacilityModuleRegistry.operationCost(
@@ -289,6 +350,14 @@ public final class ModuleConstructionGuiGameTests {
                         .getTierData(ModuleTier.UV)
                         .constructionCost())
                     .forEach((resource, amount) -> materials.merge(resource, amount, Long::sum));
+            } else {
+                for (FacilityModuleKind kind : KINDS) {
+                    FacilityModuleRegistry.operationCost(
+                        FacilityModuleRegistry.get(kind)
+                            .getTierData(tier(kind))
+                            .constructionCost())
+                        .forEach((resource, amount) -> materials.merge(resource, amount, Long::sum));
+                }
             }
             materials.forEach(
                 (resource, amount) -> {
@@ -313,9 +382,8 @@ public final class ModuleConstructionGuiGameTests {
         }
 
         ClickTarget tileTarget(StationTileCoord tile) {
-            var screen = GuiTestSupport.requireScreen(STATION_SCREEN);
             List<StationMapWidget> maps = TreeUtil
-                .flatListByType(screen.getMainPanel(), StationMapWidget.class, IWidget::areAncestorsEnabled);
+                .flatListByType(GuiTestSupport.requireStation(), StationMapWidget.class, IWidget::areAncestorsEnabled);
             if (maps.size() != 1) throw new AssertionError("Expected one visible station map");
             StationMapWidget map = maps.getFirst();
             if (!assetId.equals(map.assetId())) throw new AssertionError("GUI opened a different facility");

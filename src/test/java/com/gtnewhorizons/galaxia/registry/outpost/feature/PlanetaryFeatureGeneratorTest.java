@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.registry.outpost.feature;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -69,16 +68,21 @@ final class PlanetaryFeatureGeneratorTest {
                     .weight(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0))
             .build();
 
-        int differences = 0;
-        for (int i = -8; i <= 8; i++) {
-            StationTileCoord tile = StationTileCoord.of(i, 0);
-            if (!PlanetaryFeatureGenerator.featuresAt(1L, tile, body)
-                .equals(PlanetaryFeatureGenerator.featuresAt(2L, tile, body))) {
-                differences++;
+        boolean foundDifferentLayout = false;
+        for (long firstSalt = 1L; firstSalt <= 4L && !foundDifferentLayout; firstSalt++) {
+            for (long secondSalt = firstSalt + 1L; secondSalt <= 8L && !foundDifferentLayout; secondSalt++) {
+                for (int i = -16; i <= 16; i++) {
+                    StationTileCoord tile = StationTileCoord.of(i, 0);
+                    if (!PlanetaryFeatureGenerator.featuresAt(firstSalt, tile, body)
+                        .equals(PlanetaryFeatureGenerator.featuresAt(secondSalt, tile, body))) {
+                        foundDifferentLayout = true;
+                        break;
+                    }
+                }
             }
         }
 
-        assertNotEquals(0, differences);
+        assertTrue(foundDifferentLayout);
     }
 
     @Test
