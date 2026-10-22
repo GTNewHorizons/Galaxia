@@ -16,6 +16,7 @@ import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
 import net.minecraftforge.common.ISpecialArmor;
 
+import com.gtnewhorizons.galaxia.core.network.PacketUtil;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.minecraft.MinecraftProfileTexture;
 
@@ -41,6 +42,7 @@ public final class EntityBody extends EntityLiving implements IEntityAdditionalS
     @SideOnly(Side.CLIENT)
     private boolean skinRequested;
     private BodyState projected;
+    private boolean processingDamage;
     private final ItemStack[] clientEquipment = new ItemStack[5];
 
     public EntityBody(World world) {
@@ -231,8 +233,28 @@ public final class EntityBody extends EntityLiving implements IEntityAdditionalS
     }
 
     @Override
+    public boolean attackEntityFrom(DamageSource source, float amount) {
+        boolean previous = processingDamage;
+        processingDamage = true;
+        try {
+            return super.attackEntityFrom(source, amount);
+        } finally {
+            processingDamage = previous;
+        }
+    }
+
+    @Override
+    public void setHealth(float health) {
+        // Cleanup must not persist a dead body without going through the damage lifecycle.
+        if (health <= 0 && !processingDamage && (worldObj == null || !worldObj.isRemote)) return;
+        super.setHealth(health);
+    }
+
+    @Override
     public void onDeath(DamageSource source) {
-        if (!worldObj.isRemote) AndroidControl.destroyPhysicalBody(this, source);
+        // Direct removal discards this projection. Only a lethal hit retires the authoritative body.
+        if (processingDamage && getHealth() <= 0 && !worldObj.isRemote)
+            AndroidControl.destroyPhysicalBody(this, source);
         setDead();
     }
 
@@ -256,8 +278,9 @@ public final class EntityBody extends EntityLiving implements IEntityAdditionalS
 
     @Override
     public void writeSpawnData(ByteBuf buffer) {
-        ByteBufUtils.writeUTF8String(buffer, bodyId.toString());
-        ByteBufUtils.writeUTF8String(buffer, operatorId == null ? "" : operatorId.toString());
+        PacketUtil.writeId(buffer, bodyId);
+        buffer.writeBoolean(operatorId != null);
+        if (operatorId != null) PacketUtil.writeId(buffer, operatorId);
         NBTTagCompound profile = new NBTTagCompound();
         if (operatorProfile != null) NBTUtil.func_152460_a(profile, operatorProfile);
         ByteBufUtils.writeTag(buffer, profile);
@@ -265,9 +288,8 @@ public final class EntityBody extends EntityLiving implements IEntityAdditionalS
 
     @Override
     public void readSpawnData(ByteBuf buffer) {
-        bodyId = UUID.fromString(ByteBufUtils.readUTF8String(buffer));
-        String operator = ByteBufUtils.readUTF8String(buffer);
-        operatorId = operator.isEmpty() ? null : UUID.fromString(operator);
+        bodyId = PacketUtil.readId(buffer);
+        operatorId = buffer.readBoolean() ? PacketUtil.readId(buffer) : null;
         GameProfile profile = NBTUtil.func_152459_a(ByteBufUtils.readTag(buffer));
         if (operatorId != null) {
             if (profile == null || !operatorId.equals(profile.getId()))

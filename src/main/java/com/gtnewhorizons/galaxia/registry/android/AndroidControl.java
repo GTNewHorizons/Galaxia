@@ -520,7 +520,7 @@ public final class AndroidControl implements ForgeChunkManager.LoadingCallback {
             || (existing != null && existing != body
                 && !existing.isDead
                 && DimensionManager.getWorld(existing.dimension) == existing.worldObj
-                && existing.worldObj.loadedEntityList.contains(existing))) {
+                && existing.worldObj.getEntityByID(existing.getEntityId()) == existing)) {
             event.setCanceled(true);
             return;
         }
@@ -741,7 +741,7 @@ public final class AndroidControl implements ForgeChunkManager.LoadingCallback {
         EntityBody existing = projections.get(id);
         if (existing != null && !existing.isDead
             && DimensionManager.getWorld(existing.dimension) == existing.worldObj
-            && existing.worldObj.loadedEntityList.contains(existing)) return;
+            && existing.worldObj.getEntityByID(existing.getEntityId()) == existing) return;
         WorldServer world = DimensionManager.getWorld(state.dimension());
         if (world == null
             || !world.blockExists((int) Math.floor(state.x()), (int) state.y(), (int) Math.floor(state.z()))) return;

@@ -135,13 +135,6 @@ public final class AndroidBodies {
 
     public record Session(@Nonnull UUID id, @Nonnull UUID operatorId, @Nonnull UUID bodyId) {}
 
-    @Nonnull
-    public AndroidBody manufacture(@Nonnull UUID teamId, @Nonnull Anchor dock, @Nonnull BodyState initialState,
-        @Nonnull Chassis chassis, long initialCharge) throws IOException {
-        UUID id = manufacture(UUID.randomUUID(), teamId, dock, initialState, chassis, initialCharge);
-        return requireBody(id);
-    }
-
     /**
      * Completes a dock job once. The returned identity remains completed after destruction, so callers must check
      * {@link #body(UUID)} before creating a world projection.
@@ -271,15 +264,6 @@ public final class AndroidBodies {
                 .values());
     }
 
-    public void enroll(@Nonnull UUID operatorId, @Nonnull Anchor capsule, @Nonnull BodyState state) throws IOException {
-        if (current.sessions()
-            .containsKey(operatorId)) throw new IllegalStateException("Operator is already controlling a body");
-        requireCapsuleDimension(capsule, state);
-        Map<UUID, BiologicalBody> biological = new LinkedHashMap<>(current.biological());
-        biological.put(operatorId, updatedBiological(operatorId, capsule, state));
-        commit(new Checkpoint(current.androids(), biological, current.sessions(), current.retired()));
-    }
-
     @Nonnull
     public Session activate(@Nonnull UUID operatorId, @Nonnull UUID teamId, @Nonnull UUID bodyId,
         @Nonnull Anchor capsule, @Nonnull BodyState biologicalState) throws IOException {
@@ -382,35 +366,13 @@ public final class AndroidBodies {
         if (ticks < 0) throw new IllegalArgumentException("Destruction countdown cannot be negative");
         AndroidBody body = requireBody(bodyId);
         if (body.armed() && (portalWarning || !body.portalWarning())) return;
-        commit(
-            withBody(
-                new AndroidBody(
-                    body.id(),
-                    body.teamId(),
-                    body.dock(),
-                    body.state(),
-                    body.battery(),
-                    body.chassis(),
-                    body.armed() ? body.destructionTicks() : ticks,
-                    portalWarning,
-                    body.name())));
+        commit(withBody(withCountdown(body, body.armed() ? body.destructionTicks() : ticks, portalWarning)));
     }
 
     public boolean cancelPortalWarning(@Nonnull UUID bodyId) throws IOException {
         AndroidBody body = requireBody(bodyId);
         if (!body.canRetreatFromPortal()) return false;
-        commit(
-            withBody(
-                new AndroidBody(
-                    body.id(),
-                    body.teamId(),
-                    body.dock(),
-                    body.state(),
-                    body.battery(),
-                    body.chassis(),
-                    -1,
-                    false,
-                    body.name())));
+        commit(withBody(withCountdown(body, -1, false)));
         return true;
     }
 
@@ -420,17 +382,7 @@ public final class AndroidBodies {
         if (ticks < 0 || ticks > body.destructionTicks()) {
             throw new IllegalArgumentException("An armed destruction countdown cannot be cancelled or extended");
         }
-        current = withBody(
-            new AndroidBody(
-                body.id(),
-                body.teamId(),
-                body.dock(),
-                body.state(),
-                body.battery(),
-                body.chassis(),
-                ticks,
-                body.portalWarning(),
-                body.name()));
+        current = withBody(withCountdown(body, ticks, body.portalWarning()));
     }
 
     @Nonnull
@@ -530,6 +482,19 @@ public final class AndroidBodies {
             body.chassis(),
             body.destructionTicks(),
             body.portalWarning(),
+            body.name());
+    }
+
+    private static AndroidBody withCountdown(AndroidBody body, int ticks, boolean portalWarning) {
+        return new AndroidBody(
+            body.id(),
+            body.teamId(),
+            body.dock(),
+            body.state(),
+            body.battery(),
+            body.chassis(),
+            ticks,
+            portalWarning,
             body.name());
     }
 

@@ -36,8 +36,9 @@ public final class BodyState {
 
     private final NBTTagCompound state;
 
-    private BodyState(NBTTagCompound state) {
-        this.state = (NBTTagCompound) state.copy();
+    /** Takes ownership of an isolated compound. Callers must copy externally owned item tags first. */
+    private BodyState(NBTTagCompound ownedState) {
+        this.state = ownedState;
     }
 
     @Nonnull
@@ -55,7 +56,8 @@ public final class BodyState {
         state.setTag("food", food);
         state.setInteger("lowOxygen", GalaxiaPlayerProperties.get(player).lowOxygenDuration);
         capturePhysical(player, state);
-        return new BodyState(state);
+        // Vanilla and Baubles serializers retain nested tags from the player's live item stacks.
+        return new BodyState((NBTTagCompound) state.copy());
     }
 
     @Nonnull
@@ -102,7 +104,7 @@ public final class BodyState {
                 .getDouble("Base") <= 0) {
             throw new IllegalArgumentException("Invalid physical body state");
         }
-        return new BodyState(state);
+        return new BodyState((NBTTagCompound) state.copy());
     }
 
     @Nonnull
@@ -140,10 +142,14 @@ public final class BodyState {
         }
         HashMap<Integer, PotionEffect> activePotions = ((LivingEquipmentAccessor) player).galaxia$activePotions();
         activePotions.clear();
-        player.inventory.readFromNBT(state.getTagList("inventory", 10));
+        player.inventory.readFromNBT(
+            (NBTTagList) state.getTagList("inventory", 10)
+                .copy());
         player.inventory.currentItem = state.getInteger("selectedSlot");
         InventoryBaubles baubles = new InventoryBaubles(player);
-        baubles.readNBT(state.getCompoundTag("baubles"));
+        baubles.readNBT(
+            (NBTTagCompound) state.getCompoundTag("baubles")
+                .copy());
         PlayerHandler.setPlayerBaubles(player, baubles);
         player.getEntityAttribute(SharedMonsterAttributes.maxHealth)
             .setBaseValue(
@@ -170,11 +176,15 @@ public final class BodyState {
     /** The lifecycle owner must settle containers and transport the player before applying this state. */
     public void apply(@Nonnull EntityPlayer player) {
         detachEquipment(player);
-        player.inventory.readFromNBT(state.getTagList("inventory", 10));
+        player.inventory.readFromNBT(
+            (NBTTagList) state.getTagList("inventory", 10)
+                .copy());
         player.inventory.currentItem = state.getInteger("selectedSlot");
 
         InventoryBaubles restored = new InventoryBaubles(player);
-        restored.readNBT(state.getCompoundTag("baubles"));
+        restored.readNBT(
+            (NBTTagCompound) state.getCompoundTag("baubles")
+                .copy());
         PlayerHandler.setPlayerBaubles(player, restored);
         applyPhysical(player);
         for (int slot = 0; slot < restored.getSizeInventory(); slot++) {
@@ -340,22 +350,24 @@ public final class BodyState {
     public ItemStack equipment(int slot) {
         if (slot < 0 || slot > 4) throw new IllegalArgumentException("Invalid body equipment slot");
         int inventorySlot = slot == 0 ? state.getInteger("selectedSlot") : slot - 1 + 100;
-        NBTTagList inventory = state.getTagList("inventory", 10);
-        for (int index = 0; index < inventory.tagCount(); index++) {
-            NBTTagCompound stack = inventory.getCompoundTagAt(index);
-            if ((stack.getByte("Slot") & 255) == inventorySlot) return ItemStack.loadItemStackFromNBT(stack);
-        }
-        return null;
+        return itemAt(state.getTagList("inventory", 10), inventorySlot);
     }
 
     @Nullable
     public ItemStack bauble(int slot) {
         if (slot < 0) throw new IllegalArgumentException("Invalid body bauble slot");
-        NBTTagList baubles = state.getCompoundTag("baubles")
-            .getTagList("Baubles.Inventory", 10);
-        for (int index = 0; index < baubles.tagCount(); index++) {
-            NBTTagCompound stack = baubles.getCompoundTagAt(index);
-            if ((stack.getByte("Slot") & 255) == slot) return ItemStack.loadItemStackFromNBT(stack);
+        return itemAt(
+            state.getCompoundTag("baubles")
+                .getTagList("Baubles.Inventory", 10),
+            slot);
+    }
+
+    @Nullable
+    private static ItemStack itemAt(NBTTagList items, int slot) {
+        for (int index = 0; index < items.tagCount(); index++) {
+            NBTTagCompound stack = items.getCompoundTagAt(index);
+            if ((stack.getByte("Slot") & 255) == slot)
+                return ItemStack.loadItemStackFromNBT((NBTTagCompound) stack.copy());
         }
         return null;
     }
@@ -413,7 +425,7 @@ public final class BodyState {
 
     private BodyState withInventory(NBTTagList inventory, EntityLivingBase wearer) {
         NBTTagCompound updated = write();
-        updated.setTag("inventory", inventory);
+        updated.setTag("inventory", inventory.copy());
         BodyState replacement = new BodyState(updated);
         // The old snapshot also identifies bonuses when the entity's owner has already replaced its projection.
         for (int slot = 0; slot < 5; slot++) {
@@ -447,7 +459,9 @@ public final class BodyState {
 
     private static void readItems(NBTTagList stacks, List<ItemStack> items) {
         for (int index = 0; index < stacks.tagCount(); index++) {
-            ItemStack stack = ItemStack.loadItemStackFromNBT(stacks.getCompoundTagAt(index));
+            ItemStack stack = ItemStack.loadItemStackFromNBT(
+                (NBTTagCompound) stacks.getCompoundTagAt(index)
+                    .copy());
             if (stack == null) throw new IllegalArgumentException("Invalid saved body item");
             items.add(stack);
         }

@@ -24,10 +24,6 @@ public class AndroidLateMixinLoader implements ILateMixinLoader {
         if (loadedMods.contains("Baubles")) {
             mixins.add("AndroidExternalMixin");
         }
-        if (loadedMods.contains("GalacticraftCore")) {
-            mixins.add("AndroidExternalMixin$Galacticraft");
-            mixins.add("AndroidExternalMixin$GalacticraftInventory");
-        }
         if (loadedMods.contains("Botania")) {
             mixins.add("AndroidEnderHandMixin");
         }

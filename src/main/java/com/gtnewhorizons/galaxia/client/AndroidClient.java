@@ -184,9 +184,7 @@ public final class AndroidClient {
         stationConnection = status;
     }
 
-    @SubscribeEvent
-    public void onWorldUnload(WorldEvent.Unload event) {
-        if (!event.world.isRemote) return;
+    private static void resetWorldPresentation() {
         ANDROID_ACTORS.clear();
         active = false;
         battery = 0;
@@ -199,20 +197,18 @@ public final class AndroidClient {
     }
 
     @SubscribeEvent
+    public void onWorldUnload(WorldEvent.Unload event) {
+        if (!event.world.isRemote) return;
+        resetWorldPresentation();
+    }
+
+    @SubscribeEvent
     public void onDisconnect(FMLNetworkEvent.ClientDisconnectionFromServerEvent event) {
         Minecraft.getMinecraft()
             .func_152344_a(() -> {
-                ANDROID_ACTORS.clear();
-                active = false;
-                battery = 0;
-                capacity = 0;
-                countdown = -1;
-                countdownSpan = 0;
-                biologicalDamageStarted = 0;
+                resetWorldPresentation();
                 acknowledgedAndroid = false;
                 transitionStarted = 0;
-                stationConnection = ConnectionStatus.NONE;
-                disconnectedStation = ConnectionStatus.NONE;
             });
     }
 
