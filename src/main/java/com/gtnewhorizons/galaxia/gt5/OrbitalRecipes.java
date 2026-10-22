@@ -45,6 +45,24 @@ public final class OrbitalRecipes {
             .duration(20 * SECONDS)
             .eut(120)
             .addTo(mixerRecipes);
+        // TODO: add environment: MICROGRAVITY
+        GTValues.RA.stdBuilder()
+            .itemInputs(SIGE_BLEND.get(1))
+            .itemOutputs(SIGE_SEED.get(1), POLY_SIGE.get(1), ore(OrePrefixes.dustTiny, Materials.Ash, 1))
+            .outputChances(1000, 9000, 10000)
+            .metadata(GTRecipeConstants.COIL_HEAT, 1784)
+            .duration(60 * SECONDS)
+            .eut(480)
+            .addTo(blastFurnaceRecipes);
+        // TODO: add environment: MICROGRAVITY
+        GTValues.RA.stdBuilder()
+            .itemInputs(SIGE_SEED.get(1))
+            .fluidInputs(OrbitalItems.Melt.SIGE.get(1008))
+            .itemOutputs(SIGE_MONOCRYSTAL.get(1))
+            .metadata(GTRecipeConstants.COIL_HEAT, 1784)
+            .duration(120 * SECONDS)
+            .eut(480)
+            .addTo(blastFurnaceRecipes);
         for (OrbitalItems feedstock : new OrbitalItems[] { POLY_SIGE, SIGE_SEED }) {
             GTValues.RA.stdBuilder()
                 .itemInputs(feedstock.get(1))
@@ -107,6 +125,37 @@ public final class OrbitalRecipes {
             .duration(15 * SECONDS)
             .eut(120)
             .addTo(mixerRecipes);
+        // TODO: add environment: MICROGRAVITY
+        GTValues.RA.stdBuilder()
+            .itemInputs(FLUORIDE_GLASS_MIX.get(1))
+            .fluidOutputs(OrbitalItems.Melt.FLUORIDE_GLASS.get(144))
+            .metadata(GTRecipeConstants.COIL_HEAT, 1800)
+            .duration(120 * SECONDS)
+            .eut(480)
+            .addTo(blastFurnaceRecipes);
+        // TODO: add environment: MICROGRAVITY
+        GTValues.RA.stdBuilder()
+            .itemInputs(ItemList.Shape_Mold_Ingot.get(0))
+            .fluidInputs(OrbitalItems.Melt.FLUORIDE_GLASS.get(288))
+            .itemOutputs(FLUORIDE_GLASS_BLANK.get(1))
+            .duration(20 * SECONDS)
+            .eut(120)
+            .addTo(fluidSolidifierRecipes);
+        // TODO: add environment: MICROGRAVITY
+        GTValues.RA.stdBuilder()
+            .itemInputs(FLUORIDE_GLASS_PREFORM.get(1))
+            .itemOutputs(HEATED_FLUORIDE_GLASS_PREFORM.get(1))
+            .metadata(GTRecipeConstants.COIL_HEAT, 1800)
+            .duration(20 * SECONDS)
+            .eut(480)
+            .addTo(blastFurnaceRecipes);
+        // TODO: add environment: MICROGRAVITY
+        GTValues.RA.stdBuilder()
+            .itemInputs(HEATED_FLUORIDE_GLASS_PREFORM.get(1), ItemList.Shape_Extruder_Wire.get(0))
+            .itemOutputs(FLUORIDE_OPTICAL_FIBER.get(8))
+            .duration(30 * SECONDS)
+            .eut(480)
+            .addTo(extruderRecipes);
         GTValues.RA.stdBuilder()
             .itemInputs(FLUORIDE_GLASS_BLANK.get(1))
             .itemOutputs(FLUORIDE_GLASS_PREFORM.get(1), FLUORIDE_GLASS_MIX.get(1))
