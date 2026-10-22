@@ -23,6 +23,8 @@ import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.profiler.Profiler;
 import net.minecraft.util.ChunkCoordinates;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.StringTranslate;
 import net.minecraft.world.EnumDifficulty;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldProviderSurface;
@@ -53,6 +55,36 @@ final class BodyStateTest {
         int itemId = 4096;
         while (Item.itemRegistry.getObjectById(itemId) != null) itemId++;
         Item.itemRegistry.addObject(itemId, "galaxia_body_state_test_bauble", LOGIN_BAUBLE);
+    }
+
+    /** Product contract: controlled android deaths identify the operator and preserve the cause. */
+    @Test
+    void androidDeathMessagesIncludeTheCurrentOperator() {
+        StringTranslate.inject(BodyStateTest.class.getResourceAsStream("/assets/galaxia/lang/en_US.lang"));
+        EntityPlayer operator = player("Pxx500");
+        UUID id = UUID.randomUUID();
+        AndroidBodies.AndroidBody body = new AndroidBodies.AndroidBody(
+            id,
+            UUID.randomUUID(),
+            new AndroidBodies.Anchor(UUID.randomUUID(), 0, 0, 64, 0),
+            BodyState.androidAt(0, .5, 64, .5, 20),
+            1000,
+            AndroidBodies.Chassis.EV,
+            -1,
+            false,
+            "Scout");
+        assertEquals(
+            "Android Scout (operated by Pxx500) died",
+            AndroidControl.deathMessage(body, DamageSource.generic, operator)
+                .getUnformattedText());
+        assertEquals(
+            "Android Scout (operated by Pxx500) self-destructed",
+            AndroidControl.deathMessage(body, new DamageSource("galaxia.android.selfDestruct"), operator)
+                .getUnformattedText());
+        assertEquals(
+            "Android Scout died",
+            AndroidControl.deathMessage(body, DamageSource.generic, new EntityBody(operator.worldObj, id, null))
+                .getUnformattedText());
     }
 
     /** Integration contract: restoring another body cannot move account identity or share mutable belongings. */
