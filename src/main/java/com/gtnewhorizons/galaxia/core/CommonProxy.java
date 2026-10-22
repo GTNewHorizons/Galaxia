@@ -19,6 +19,7 @@ import net.minecraftforge.common.ForgeChunkManager;
 import com.gtnewhorizon.gtnhlib.teams.TeamDataRegistry;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
+import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.OffscreenStarmapGui;
 import com.gtnewhorizons.galaxia.compat.GTCompat;
 import com.gtnewhorizons.galaxia.compat.ae2.QuantumLinkRules;
 import com.gtnewhorizons.galaxia.compat.gt.GalaxiaCasingTextures;
@@ -132,6 +133,7 @@ public class CommonProxy {
 
         // Why Gui code on server? idk ask mui2
         ItemPickerScreen.FACTORY.init();
+        OffscreenStarmapGui.FACTORY.init();
         TileEntityBodyStation.registerGuiFactory();
     }
 
