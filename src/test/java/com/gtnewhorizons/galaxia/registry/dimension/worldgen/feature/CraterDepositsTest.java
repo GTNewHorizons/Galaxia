@@ -75,6 +75,11 @@ class CraterDepositsTest {
         restored.readFromNBT(nbt);
         assertEquals(pending, restored.operation(pending.id()));
         assertEquals("crater", restored.find(-5, 20));
+        var snapshot = restored.inspect("crater");
+        assertEquals("crater", snapshot.id());
+        assertEquals(15, snapshot.x());
+        assertEquals(20, snapshot.z());
+        assertEquals(48, snapshot.diameter());
         assertTrue(restored.finish(pending.id(), true));
         assertEquals(
             2998,

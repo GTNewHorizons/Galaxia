@@ -154,13 +154,13 @@ public final class CraterExtractorGameTests {
             .succeed();
     }
 
-    private static final class Fixture {
+    static final class Fixture {
 
-        private World world;
-        private EntityPlayerMP player;
-        private int x, z;
-        private final int y = 120;
-        private String crater;
+        World world;
+        EntityPlayerMP player;
+        int x, z;
+        final int y = 120;
+        String crater;
 
         void build(GameTestHelper helper) {
             world = helper.getWorld();

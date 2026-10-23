@@ -16,7 +16,7 @@ $projectRoot = Split-Path $PSScriptRoot -Parent
 # Keep gameplay and GUI scenarios for each domain together.
 $groups = [ordered]@{
     'recipe-environments' = @('galaxia:RecipeEnvironmentGameTests.', 'galaxia:RoomPressureGameTests.')
-    'lunar-industry' = @('galaxia:LunarIndustryGameTests.', 'galaxia:CraterExtractorGameTests.', 'galaxia:SpaceGradeAlloyGameTests.', 'galaxia:CraterTerrainGameTests.')
+    'lunar-industry' = @('galaxia:LunarIndustryGameTests.', 'galaxia:CraterExtractorGameTests.', 'galaxia:CraterMapGameTests.', 'galaxia:SpaceGradeAlloyGameTests.', 'galaxia:CraterTerrainGameTests.')
     'physical-stations' = @('galaxia:AirlockGuiGameTests.')
     'automated-facilities' = @('galaxia:FacilityGameplayGameTests.', 'galaxia:StationGuiGameTests.')
     'rocket-production' = @('galaxia:ModuleConstructionGuiGameTests.')

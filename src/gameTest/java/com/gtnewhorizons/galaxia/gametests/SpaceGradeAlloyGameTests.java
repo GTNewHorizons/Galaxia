@@ -6,6 +6,7 @@ import static gregtech.api.util.GTRecipeConstants.COIL_HEAT;
 
 import java.util.List;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.CraftingManager;
@@ -71,6 +72,12 @@ public final class SpaceGradeAlloyGameTests {
                 if (fixture.machine().mMaxProgresstime <= 0) throw new AssertionError("Casting did not start on Luna");
             })
             .awaitServer("native GT completes four foils and retains the casting mold", fixture::assertCompleted)
+            .server("return from Luna after casting", fixture::returnHome)
+            .awaitClient("client has returned from Luna", client -> {
+                if (Minecraft.getMinecraft().thePlayer.dimension != fixture.home) {
+                    throw new AssertionError("Client has not returned from Luna");
+                }
+            })
             .succeed();
     }
 
@@ -184,18 +191,22 @@ public final class SpaceGradeAlloyGameTests {
         private World world;
         private int x, z;
         private final int y = 200;
+        private int home;
+        private double oldX, oldY, oldZ;
 
         void build(GameTestHelper helper) {
             player = (EntityPlayerMP) helper.getWorld().playerEntities.get(0);
-            int home = player.dimension;
-            double oldX = player.posX, oldY = player.posY, oldZ = player.posZ;
+            home = player.dimension;
+            oldX = player.posX;
+            oldY = player.posY;
+            oldZ = player.posZ;
             WorldSettings.GameType gameType = player.theItemInWorldManager.getGameType();
             player.setGameType(WorldSettings.GameType.CREATIVE);
             player.capabilities.isFlying = true;
             player.sendPlayerAbilities();
             helper.afterTest(() -> {
                 if (world != null) world.setBlockToAir(x, y, z);
-                OrbitTestSupport.moveTo(player, home, oldX, oldY, oldZ);
+                returnHome();
                 player.setGameType(gameType);
             });
             world = helper.getWorld();
@@ -212,6 +223,10 @@ public final class SpaceGradeAlloyGameTests {
             world = MinecraftServer.getServer()
                 .worldServerForDimension(moon);
             place();
+        }
+
+        void returnHome() {
+            OrbitTestSupport.moveTo(player, home, oldX, oldY, oldZ);
         }
 
         void place() {
