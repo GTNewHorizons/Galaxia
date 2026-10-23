@@ -7,7 +7,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
 
-import com.gtnewhorizons.galaxia.gt5.LunarRecipes;
+import com.gtnewhorizons.galaxia.gt5.CraterRecipes;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CraterProfile;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CraterSize;
 
@@ -51,7 +51,7 @@ public final class CraterDistributionHandler extends TemplateRecipeHandler {
     @Override
     public void loadCraftingRecipes(ItemStack result) {
         for (CraterProfile profile : CraterProfile.values()) {
-            for (ItemStack solid : LunarRecipes.solids(profile)) {
+            for (ItemStack solid : CraterRecipes.solids(profile)) {
                 if (solid.isItemEqual(result)) {
                     loadCraftingRecipes(ID);
                     return;
@@ -111,7 +111,7 @@ public final class CraterDistributionHandler extends TemplateRecipeHandler {
             int row = 0;
             for (CraterProfile profile : CraterProfile.values()) {
                 int column = 0;
-                for (ItemStack solid : LunarRecipes.solids(profile)) {
+                for (ItemStack solid : CraterRecipes.solids(profile)) {
                     solids.add(new PositionedStack(solid, 4 + column++ * 18, 54 + row * 21));
                 }
                 row++;

@@ -20,8 +20,8 @@ import com.gtnewhorizon.structurelib.alignment.constructable.ISurvivalConstructa
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
-import com.gtnewhorizons.galaxia.gt5.LunarMaterials;
-import com.gtnewhorizons.galaxia.gt5.LunarRecipes;
+import com.gtnewhorizons.galaxia.gt5.CraterMaterials;
+import com.gtnewhorizons.galaxia.gt5.CraterRecipes;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CraterDeposits;
 
 import gregtech.api.casing.Casings;
@@ -105,9 +105,9 @@ public final class MTECraterExtractor extends MTEExtendedPowerMultiBlockBase<MTE
             && depleteInput(new FluidStack(ItemList.sDrillingFluid, (int) requiredFluid), true);
         var operation = deposits.begin(crater, wet, tile.getWorld().rand.nextInt(4) == 0);
         if (operation == null) return CheckRecipeResultRegistry.NO_RECIPE;
-        ItemStack[] items = wet ? new ItemStack[0] : LunarRecipes.solids(snapshot.profile());
+        ItemStack[] items = wet ? new ItemStack[0] : CraterRecipes.solids(snapshot.profile());
         FluidStack[] fluids = wet
-            ? new FluidStack[] { new FluidStack(LunarMaterials.enriched(snapshot.profile()), 16000) }
+            ? new FluidStack[] { new FluidStack(CraterMaterials.enriched(snapshot.profile()), 16000) }
             : new FluidStack[0];
         if (!canOutputAll(items, fluids)) {
             deposits.finish(operation.id(), false);

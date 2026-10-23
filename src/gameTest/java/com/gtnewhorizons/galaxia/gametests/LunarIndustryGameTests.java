@@ -7,7 +7,7 @@ import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.core.nei.CraterDistributionHandler;
-import com.gtnewhorizons.galaxia.gt5.LunarMaterials;
+import com.gtnewhorizons.galaxia.gt5.CraterMaterials;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CraterProfile;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CraterSize;
 import com.gtnewhorizons.horizonqa.api.GameTestHelper;
@@ -30,7 +30,7 @@ public final class LunarIndustryGameTests {
             .server("check actual registered profile fluids and separator recipes", () -> {
                 var identities = new HashSet<Fluid>();
                 for (CraterProfile profile : CraterProfile.values()) {
-                    Fluid fluid = LunarMaterials.enriched(profile);
+                    Fluid fluid = CraterMaterials.enriched(profile);
                     if (fluid == null || !identities.add(fluid)) throw new AssertionError("Profile fluid identity");
                     boolean registered = RecipeMaps.centrifugeRecipes.getAllRecipes()
                         .stream()
@@ -40,7 +40,7 @@ public final class LunarIndustryGameTests {
                                 && recipe.mOutputs.length > 0
                                 && recipe.mFluidOutputs.length == 1
                                 && recipe.mFluidOutputs[0].amount == 16000
-                                && recipe.mFluidOutputs[0].getFluid() == LunarMaterials.spentCarrier);
+                                && recipe.mFluidOutputs[0].getFluid() == CraterMaterials.spentCarrier);
                     if (!registered) throw new AssertionError("Missing separator recipe for " + profile);
                     var selected = RecipeMaps.centrifugeRecipes.findRecipeQuery()
                         .fluids(new FluidStack(fluid, 16000))
@@ -51,7 +51,7 @@ public final class LunarIndustryGameTests {
                     }
                 }
                 var cleanup = RecipeMaps.centrifugeRecipes.findRecipeQuery()
-                    .fluids(new FluidStack(LunarMaterials.spentCarrier, 16000))
+                    .fluids(new FluidStack(CraterMaterials.spentCarrier, 16000))
                     .voltage(120)
                     .find();
                 if (cleanup == null || cleanup.mFluidOutputs.length != 1

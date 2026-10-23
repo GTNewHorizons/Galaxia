@@ -9,8 +9,8 @@ import net.minecraftforge.common.util.ForgeDirection;
 import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.compat.gt.crater.MTECraterExtractor;
-import com.gtnewhorizons.galaxia.gt5.LunarMaterials;
-import com.gtnewhorizons.galaxia.gt5.LunarRecipes;
+import com.gtnewhorizons.galaxia.gt5.CraterMaterials;
+import com.gtnewhorizons.galaxia.gt5.CraterRecipes;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CraterDeposits;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CraterProfile;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CraterSize;
@@ -51,7 +51,7 @@ public final class CraterExtractorGameTests {
             .awaitServer("native GT emits the minerals from the final portion", () -> {
                 fixture.charge();
                 var bus = fixture.tile(1, -1, 0);
-                for (ItemStack expected : LunarRecipes.solids(CraterProfile.IRON_SILICA)) {
+                for (ItemStack expected : CraterRecipes.solids(CraterProfile.IRON_SILICA)) {
                     int amount = 0;
                     for (int slot = 0; slot < bus.getSizeInventory(); slot++) {
                         ItemStack actual = bus.getStackInSlot(slot);
@@ -220,7 +220,7 @@ public final class CraterExtractorGameTests {
             FluidStack fluid = output.getFluid();
             if (amount == 0 && fluid == null) return;
             if (fluid == null || fluid.amount != amount
-                || fluid.getFluid() != LunarMaterials.enriched(CraterProfile.IRON_SILICA)) {
+                || fluid.getFluid() != CraterMaterials.enriched(CraterProfile.IRON_SILICA)) {
                 throw new AssertionError(
                     "Incorrect extraction output: " + fluid
                         + ", progress="
