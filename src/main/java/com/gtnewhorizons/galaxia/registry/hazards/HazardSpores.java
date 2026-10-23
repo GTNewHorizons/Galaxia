@@ -50,7 +50,7 @@ public class HazardSpores implements IEnvironmentalHazard {
 
         if (hasFilter) return HazardWarnings.FINE;
 
-        int effectToAdd = possibleEffects.get(rand.nextInt(possibleEffects.size() - 1) + 1).id;
+        int effectToAdd = possibleEffects.get(rand.nextInt(possibleEffects.size())).id;
         if (effectToAdd == Potion.hunger.id && AndroidControl.isAndroid(body)) return HazardWarnings.SPORES;
         body.addPotionEffect(new PotionEffect(effectToAdd, BASE_EFFECT_DURATION, harshness));
         return HazardWarnings.SPORES;
