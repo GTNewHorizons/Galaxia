@@ -67,6 +67,9 @@ public final class CraterDeposits extends WorldSavedData {
         Deposit deposit = deposits.get(id);
         if (deposit == null) return null;
         return new Snapshot(
+            deposit.id,
+            deposit.x,
+            deposit.z,
             deposit.profile,
             deposit.size,
             deposit.diameter,
@@ -205,8 +208,8 @@ public final class CraterDeposits extends WorldSavedData {
         return (long) x << 32 | z & 0xffffffffL;
     }
 
-    public record Snapshot(CraterProfile profile, CraterSize size, int diameter, long initialReserve,
-        long remainingReserve, long completedFracking, long nextFrackingFluid) {}
+    public record Snapshot(String id, int x, int z, CraterProfile profile, CraterSize size, int diameter,
+        long initialReserve, long remainingReserve, long completedFracking, long nextFrackingFluid) {}
 
     public record Operation(String id, String craterId, long reserveCost, long drillingFluid, boolean fracking,
         boolean wet) {}

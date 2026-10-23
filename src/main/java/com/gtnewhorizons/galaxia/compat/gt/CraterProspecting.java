@@ -1,11 +1,15 @@
 package com.gtnewhorizons.galaxia.compat.gt;
 
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.ChatComponentTranslation;
 import net.minecraft.util.MathHelper;
 import net.minecraft.world.World;
 
+import com.gtnewhorizons.galaxia.compat.VisualProspectingCompat;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CraterDeposits;
+
+import cpw.mods.fml.common.Loader;
 
 /** Crater analysis added to the existing GT prospector interactions. */
 public final class CraterProspecting {
@@ -18,6 +22,9 @@ public final class CraterProspecting {
         String id = deposits.find(MathHelper.floor_double(player.posX), MathHelper.floor_double(player.posZ));
         if (id == null) return;
         var snapshot = deposits.inspect(id);
+        if (player instanceof EntityPlayerMP serverPlayer && Loader.isModLoaded("visualprospecting")) {
+            VisualProspectingCompat.discover(serverPlayer, world, snapshot);
+        }
         player.addChatMessage(
             new ChatComponentTranslation(
                 "galaxia.crater.scan",

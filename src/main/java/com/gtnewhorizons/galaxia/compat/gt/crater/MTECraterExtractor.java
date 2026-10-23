@@ -20,10 +20,12 @@ import com.gtnewhorizon.structurelib.alignment.constructable.ISurvivalConstructa
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
+import com.gtnewhorizons.galaxia.compat.VisualProspectingCompat;
 import com.gtnewhorizons.galaxia.gt5.CraterMaterials;
 import com.gtnewhorizons.galaxia.gt5.CraterRecipes;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CraterDeposits;
 
+import cpw.mods.fml.common.Loader;
 import gregtech.api.casing.Casings;
 import gregtech.api.enums.ItemList;
 import gregtech.api.interfaces.ITexture;
@@ -152,8 +154,10 @@ public final class MTECraterExtractor extends MTEExtendedPowerMultiBlockBase<MTE
     private void finishOperation(boolean success) {
         if (pendingOperation.isEmpty()) return;
         var tile = getBaseMetaTileEntity();
-        CraterDeposits.get(tile.getWorld())
-            .finish(pendingOperation, success);
+        var deposits = CraterDeposits.get(tile.getWorld());
+        if (deposits.finish(pendingOperation, success) && success && Loader.isModLoaded("visualprospecting")) {
+            VisualProspectingCompat.update(tile.getWorld(), deposits.inspect(crater));
+        }
         pendingOperation = "";
     }
 

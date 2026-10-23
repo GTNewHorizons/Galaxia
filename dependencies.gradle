@@ -45,6 +45,10 @@ dependencies {
     compileOnly('com.github.GTNewHorizons:SC2:2.3.14:dev') {transitive=false}
     // Needed for NH ores and automation
     devOnlyNonPublishable("com.github.GTNewHorizons:GT5-Unofficial:5.99.99-mu6-environments.1:dev")
+    devOnlyNonPublishable("com.github.GTNewHorizons:VisualProspecting:1.5.39-craters.2:dev") {
+        exclude group: "com.github.GTNewHorizons", module: "Galacticraft"
+    }
+    devOnlyNonPublishable(rfg.deobf("maven.modrinth:journeymap:5.2.20"))
     // GT5 currently resolves ChunkAPI 0.8.1, whose S26 bulk chunk packet mixins leave
     // the read/write packet formats out of sync in this dev runtime.
     devOnlyNonPublishable("com.falsepattern:chunkapi-mc1.7.10:0.8.2:dev")
