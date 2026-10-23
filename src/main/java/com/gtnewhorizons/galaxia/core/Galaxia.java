@@ -7,10 +7,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.gtnewhorizons.galaxia.Tags;
+import com.gtnewhorizons.galaxia.api.RecipeEnvironments;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.SidedProxy;
+import cpw.mods.fml.common.event.FMLConstructionEvent;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLInterModComms;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
@@ -51,6 +53,11 @@ public final class Galaxia {
     @SidedProxy(clientSide = "com.gtnewhorizons.galaxia.core.ClientProxy", serverSide = "com.gtnewhorizons.galaxia.core.CommonProxy")
     public static CommonProxy proxy;
     // spotless:on
+
+    @Mod.EventHandler
+    public void construct(FMLConstructionEvent event) {
+        RecipeEnvironments.register();
+    }
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {

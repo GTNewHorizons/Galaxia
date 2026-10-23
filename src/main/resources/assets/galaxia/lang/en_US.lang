@@ -1038,3 +1038,8 @@ galaxia.gui.station_device.energy=Energy
 galaxia.gui.station_device.energy.tooltip=%s / %s EU, uses %s EU/t
 galaxia.gui.station_device.progress=Progress
 galaxia.gui.station_device.fluid_use=Uses %s L/s
+
+galaxia.environment.microgravity=Microgravity
+galaxia.environment.no_atmosphere=No atmosphere
+galaxia.environment.unknown=Unknown environment condition
+galaxia.gui.station_controller.pressure=Pressure: %s%%
