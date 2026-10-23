@@ -1583,6 +1583,4 @@ galaxia.solar.dynamo.info=Available: %s EU/t, accepted: %s EU/t
 galaxia.environment.microgravity=Microgravity
 galaxia.environment.no_atmosphere=No atmosphere
 galaxia.environment.unknown=Unknown environment condition
-galaxia.environment.required=Requires: %s
 galaxia.gui.station_controller.pressure=Pressure: %s%%
-GT5U.gui.text.recipe_result.galaxia_environment=Required environment conditions are not met

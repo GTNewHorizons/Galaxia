@@ -2,57 +2,56 @@ package com.gtnewhorizons.galaxia.api;
 
 import static com.gtnewhorizons.galaxia.api.RecipeEnvironments.MICROGRAVITY;
 import static com.gtnewhorizons.galaxia.api.RecipeEnvironments.NO_ATMOSPHERE;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import net.minecraft.nbt.NBTTagCompound;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
+import gregtech.api.recipe.RecipeEnvironment;
+
 class RecipeEnvironmentsTest {
 
     @BeforeAll
     static void bootstrap() {
         GalaxiaTestBootstrap.ensureMinecraft();
+        RecipeEnvironments.register();
     }
 
-    /** Product contract: each declared condition must be true, with vacuum independent of gravity. */
     @Test
-    void independentRequirementsAreConjunctiveAndUnknownConditionsFailClosed() {
-        var both = RecipeEnvironments.Requirement.of(MICROGRAVITY, NO_ATMOSPHERE);
-        assertTrue(both.matches(new RecipeEnvironments.Conditions(0, 0)));
-        assertFalse(both.matches(new RecipeEnvironments.Conditions(1, 0)));
-        assertFalse(both.matches(new RecipeEnvironments.Conditions(0, 101325)));
-        assertFalse(both.matches(null));
-        assertTrue(
-            RecipeEnvironments.Requirement.of(NO_ATMOSPHERE)
-                .matches(new RecipeEnvironments.Conditions(1, 0)));
-        assertTrue(new RecipeEnvironments.Requirement(List.of()).matches(null));
-        assertFalse(
-            new RecipeEnvironments.Requirement(List.of("unknown:condition"))
-                .matches(new RecipeEnvironments.Conditions(0, 0)));
+    void gravityAndPressureAreIndependentPhysicalConditions() {
+        var vacuumWithGravity = new RecipeEnvironments.Conditions(1, 0);
+        assertTrue(vacuumWithGravity.isVacuum());
+        assertFalse(vacuumWithGravity.isMicrogravity());
+        var pressurizedMicrogravity = new RecipeEnvironments.Conditions(0, 101325);
+        assertTrue(pressurizedMicrogravity.isMicrogravity());
+        assertFalse(pressurizedMicrogravity.isVacuum());
     }
 
-    /** Product contract: mutation of authors' lists and a native save/load cannot drop an active restriction. */
     @Test
-    void requirementsOwnTheirTagsAndSurviveNbtIncludingUnknownTags() {
-        var tags = new ArrayList<>(List.of("galaxia:no_atmosphere", "missing:tag"));
-        var requirement = new RecipeEnvironments.Requirement(tags);
-        tags.clear();
-        NBTTagCompound nbt = new NBTTagCompound();
-        requirement.writeToNBT(nbt);
-        var restored = RecipeEnvironments.Requirement.readFromNBT(nbt);
-        assertEquals(requirement, restored);
-        assertFalse(restored.matches(new RecipeEnvironments.Conditions(0, 0)));
-        assertTrue(
-            RecipeEnvironments.Requirement.readFromNBT(new NBTTagCompound())
-                .matches(null));
+    void recipeThresholdsExcludeResidualPressureAndTheGravityBoundary() {
+        assertTrue(new RecipeEnvironments.Conditions(0.009999, 0).isMicrogravity());
+        assertFalse(new RecipeEnvironments.Conditions(0.01, 0).isMicrogravity());
+        assertFalse(new RecipeEnvironments.Conditions(0, 0.001).isVacuum());
+        assertThrows(IllegalArgumentException.class, () -> new RecipeEnvironments.Conditions(-1, 0));
+        assertThrows(IllegalArgumentException.class, () -> new RecipeEnvironments.Conditions(0, -1));
+        assertThrows(IllegalArgumentException.class, () -> new RecipeEnvironments.Conditions(Double.NaN, 0));
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new RecipeEnvironments.Conditions(0, Double.POSITIVE_INFINITY));
+    }
+
+    @Test
+    void nativeRequirementsAreRegisteredAndUnknownWorldHasNoConditions() {
+        assertSame(MICROGRAVITY, RecipeEnvironment.get("galaxia:microgravity"));
+        assertSame(NO_ATMOSPHERE, RecipeEnvironment.get("galaxia:no_atmosphere"));
+        assertTrue(MICROGRAVITY.requiresContinuousValidation());
+        assertTrue(NO_ATMOSPHERE.requiresContinuousValidation());
+        assertNull(RecipeEnvironments.at(null, 0, 0, 0));
     }
 }
