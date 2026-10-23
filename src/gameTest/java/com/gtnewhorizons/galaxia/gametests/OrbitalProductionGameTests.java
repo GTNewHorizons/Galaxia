@@ -6,13 +6,20 @@ import static gregtech.api.recipe.RecipeMaps.*;
 import java.util.Arrays;
 
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.api.RecipeEnvironments;
 import com.gtnewhorizons.galaxia.gt5.OrbitalItems;
+import com.gtnewhorizons.galaxia.gt5.LunarMaterials;
+import com.gtnewhorizons.galaxia.gt5.SolarEquipment;
 import com.gtnewhorizons.horizonqa.api.GameTestHelper;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTest;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTestHolder;
+import com.ruling_0.materiallib.api.MaterialLibAPI;
 
+import gregtech.api.enums.materials.Materials;
+import gregtech.api.enums.materials.Shapes;
+import gregtech.api.enums.materials.TEBlockShapes;
 import gregtech.api.recipe.RecipeEnvironmentRequirements;
 import gregtech.api.recipe.RecipeMap;
 import gregtech.api.util.GTRecipe;
@@ -22,6 +29,36 @@ import gregtech.api.util.GTRecipeConstants;
 public final class OrbitalProductionGameTests {
 
     private OrbitalProductionGameTests() {}
+
+    /** Integration contract: both panel assemblies consume their parts without inheriting alloy processing conditions. */
+    @GameTest(timeoutTicks = 100)
+    public static void standardAndAlloyPanelAssembly(GameTestHelper helper) {
+        ItemStack[][] routes = {
+            { SPACE_GRADE_SOLAR_PANEL.get(1), MaterialLibAPI.getStack(Materials.Aluminium, Shapes.plate, 2),
+                MaterialLibAPI.getStack(Materials.Steel, Shapes.stick, 2) },
+            { SPACE_GRADE_SOLAR_PANEL.get(1),
+                MaterialLibAPI.getStack(LunarMaterials.spaceGradeAlloy, TEBlockShapes.frameGt, 1),
+                MaterialLibAPI.getStack(LunarMaterials.spaceGradeAlloy, Shapes.plate, 2) } };
+        for (ItemStack[] inputs : routes) {
+            GTRecipe assembly = assemblerRecipes.findRecipeQuery()
+                .items(inputs)
+                .voltage(480)
+                .find();
+            if (assembly == null || assembly.mOutputs.length != 1
+                || !assembly.mOutputs[0].isItemEqual(new ItemStack(SolarEquipment.panel))
+                || assembly.mOutputs[0].stackSize != 1) {
+                throw new AssertionError("Panel parts do not select their native assembler recipe");
+            }
+            if (!assembly.getEnvironmentRequirements().isEmpty()) {
+                throw new AssertionError("Panel assembly inherited alloy processing conditions");
+            }
+            if (!assembly.isRecipeInputEqual(true, false, new FluidStack[0], inputs)
+                || Arrays.stream(inputs).anyMatch(stack -> stack != null && stack.stackSize != 0)) {
+                throw new AssertionError("Panel assembly did not consume exactly its supplied parts");
+            }
+        }
+        helper.succeed();
+    }
 
     /** Integration contract: orbital ingredients are usable stacks and their finishing routes use standard GT maps. */
     @GameTest(timeoutTicks = 100)

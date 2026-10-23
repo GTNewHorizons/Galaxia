@@ -241,21 +241,15 @@ public final class OrbitalRecipes {
             .duration(60 * SECONDS)
             .eut(480)
             .addTo(assemblerRecipes);
-        String frame = "frameGtSpaceGradeAlloy", plate = "plateSpaceGradeAlloy";
-        if (!net.minecraftforge.oredict.OreDictionary.getOres(frame, false)
-            .isEmpty()
-            && !net.minecraftforge.oredict.OreDictionary.getOres(plate, false)
-                .isEmpty()) {
-            GTValues.RA.stdBuilder()
-                .itemInputs(SPACE_GRADE_SOLAR_PANEL.get(1), new Object[] { frame, 1 }, new Object[] { plate, 2 })
-                .itemOutputs(new ItemStack(SolarEquipment.panel))
-                .duration(30 * SECONDS)
-                .eut(480)
-                .addTo(assemblerRecipes);
-        } else {
-            com.gtnewhorizons.galaxia.core.Galaxia.LOG
-                .info("Solar panel SGA assembly awaits the canonical Space Grade Alloy frame and plate registrations");
-        }
+        GTValues.RA.stdBuilder()
+            .itemInputs(
+                SPACE_GRADE_SOLAR_PANEL.get(1),
+                MaterialLibAPI.getStack(LunarMaterials.spaceGradeAlloy, TEBlockShapes.frameGt, 1),
+                MaterialLibAPI.getStack(LunarMaterials.spaceGradeAlloy, Shapes.plate, 2))
+            .itemOutputs(new ItemStack(SolarEquipment.panel))
+            .duration(30 * SECONDS)
+            .eut(480)
+            .addTo(assemblerRecipes);
     }
 
     private static void satelliteParts() {
