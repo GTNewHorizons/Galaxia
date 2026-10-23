@@ -5,7 +5,9 @@ import java.util.List;
 import net.minecraft.block.Block;
 import net.minecraft.util.StatCollector;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
+import com.cleanroommc.modularui.value.sync.DoubleSyncValue;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.Widget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
@@ -142,6 +144,8 @@ public class RoomBehavior implements IStationBehaviorWithAttachments {
     public List<Widget<?>> buildBehaviourWidgets(TileStation station, PanelSyncManager syncManager, int yOffset) {
         BooleanSyncValue sealedSync = new BooleanSyncValue(() -> station.isSealed(), () -> station.isSealed());
         syncManager.syncValue("sealed", 0, sealedSync);
+        DoubleSyncValue pressure = new DoubleSyncValue(station::getPressureLevel);
+        syncManager.syncValue("pressure", pressure);
         return List.of(
             GalaxiaGuiStyle
                 .label(
@@ -177,6 +181,15 @@ public class RoomBehavior implements IStationBehaviorWithAttachments {
                     snap.totalCapacity(),
                     snap.attachmentCount());
             }, () -> GalaxiaGuiStyle.TEXT, 1f)
-                .pos(10, yOffset + 28));
+                .pos(10, yOffset + 28),
+            GalaxiaGuiStyle.bar(pressure::getDoubleValue, () -> GalaxiaGuiStyle.ACCENT)
+                .pos(10, yOffset + 42)
+                .size(194, 10)
+                .tooltip(
+                    tooltip -> tooltip.addLine(
+                        IKey.dynamic(
+                            () -> StatCollector.translateToLocalFormatted(
+                                "galaxia.gui.station_controller.pressure",
+                                Math.round(pressure.getDoubleValue() * 100))))));
     }
 }

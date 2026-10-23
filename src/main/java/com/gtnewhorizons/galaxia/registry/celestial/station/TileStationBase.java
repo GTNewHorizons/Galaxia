@@ -274,6 +274,10 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
             room.sealed = newSealed;
             room.sealedDirty = false;
         }
+        onAirflowChanged(component, breached);
     }
+
+    /** Called after the cached open-airlock component has been resolved. */
+    protected void onAirflowChanged(Set<TileStationBase<?>> rooms, boolean breached) {}
 
 }
