@@ -13,6 +13,7 @@ import com.gtnewhorizons.horizonqa.api.GameTestHelper;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTest;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTestHolder;
 
+import gregtech.api.recipe.RecipeEnvironmentRequirements;
 import gregtech.api.recipe.RecipeMap;
 import gregtech.api.util.GTRecipe;
 import gregtech.api.util.GTRecipeConstants;
@@ -85,8 +86,8 @@ public final class OrbitalProductionGameTests {
             recipe(blastFurnaceRecipes, null, FLUORIDE_GLASS_MIX), recipe(fluidSolidifierRecipes, FLUORIDE_GLASS_BLANK),
             recipe(blastFurnaceRecipes, HEATED_FLUORIDE_GLASS_PREFORM, FLUORIDE_GLASS_PREFORM),
             recipe(extruderRecipes, FLUORIDE_OPTICAL_FIBER, HEATED_FLUORIDE_GLASS_PREFORM) }) {
-            if (!RecipeEnvironments.of(orbital)
-                .equals(RecipeEnvironments.Requirement.of(RecipeEnvironments.MICROGRAVITY))) {
+            if (!orbital.getEnvironmentRequirements()
+                .equals(RecipeEnvironmentRequirements.of(RecipeEnvironments.MICROGRAVITY))) {
                 throw new AssertionError("Orbital processing lost its microgravity requirement");
             }
         }

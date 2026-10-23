@@ -25,14 +25,14 @@ import com.gtnewhorizons.horizonqa.api.GameTestHelper;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTest;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTestHolder;
 import com.gtnewhorizons.horizonqa.api.client.ClientTest;
+import com.ruling_0.materiallib.api.MaterialLibAPI;
 
 import cpw.mods.fml.common.registry.GameRegistry;
-import gregtech.api.enums.Materials;
-import gregtech.api.enums.OrePrefixes;
+import gregtech.api.enums.materials.Materials;
+import gregtech.api.enums.materials.TEBlockShapes;
 import gregtech.api.interfaces.metatileentity.IConnectable;
 import gregtech.api.interfaces.tileentity.IEnergyConnected;
 import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
-import gregtech.api.util.GTOreDictUnificator;
 import gregtech.common.blocks.ItemMachines;
 
 @GameTestHolder(value = "galaxia", clientOnly = true, requiredMods = { "gregtech" })
@@ -342,7 +342,7 @@ public final class SolarEquipmentGameTests {
         private void installCable() {
             put(x - 1, y, z, Blocks.air, 0);
             installReceiver(x - 2, y, z);
-            ItemStack wire = GTOreDictUnificator.get(OrePrefixes.cableGt01, Materials.Copper, 1);
+            ItemStack wire = MaterialLibAPI.getStack(Materials.Copper, TEBlockShapes.cableGt01, 1);
             if (!((ItemBlock) wire.getItem())
                 .placeBlockAt(wire, player, world, x - 1, y, z, 5, .5f, .5f, .5f, wire.getItemDamage()))
                 throw new AssertionError("Cable placement failed");
