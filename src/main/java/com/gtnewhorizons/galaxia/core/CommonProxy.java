@@ -31,6 +31,7 @@ import com.gtnewhorizons.galaxia.gt5.AndroidRecipes;
 import com.gtnewhorizons.galaxia.gt5.OrbitalItems;
 import com.gtnewhorizons.galaxia.gt5.OrbitalRecipes;
 import com.gtnewhorizons.galaxia.gt5.computer.ComputerContent;
+import com.gtnewhorizons.galaxia.gt5.computer.ComputerRecipes;
 import com.gtnewhorizons.galaxia.handlers.CelestialEventHandler;
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
 import com.gtnewhorizons.galaxia.handlers.TeamEventHandler;
@@ -155,6 +156,7 @@ public class CommonProxy {
         if (isGregTech5UnofficialNewHorizonsLoaded()) {
             AndroidRecipes.init();
             OrbitalRecipes.init();
+            ComputerRecipes.init();
         }
     }
 

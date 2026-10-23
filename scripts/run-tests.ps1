@@ -19,7 +19,7 @@ $groups = [ordered]@{
     'automated-facilities' = @('galaxia:FacilityGameplayGameTests.', 'galaxia:StationGuiGameTests.')
     'rocket-production' = @('galaxia:ModuleConstructionGuiGameTests.')
     'starmap' = @('galaxia:StarmapGameTests.')
-    'satellites' = @('galaxia:SatelliteNetworkGuiGameTests.', 'galaxia:ComputerGameplayGameTests.', 'galaxia:QuantumBandwidthGameTests.')
+    'satellites' = @('galaxia:SatelliteNetworkGuiGameTests.', 'galaxia:ComputerGameplayGameTests.', 'galaxia:ComputerRecipeGameTests.', 'galaxia:QuantumBandwidthGameTests.')
     'orbital-production' = @('galaxia:OrbitalProductionGameTests.')
     'androids' = @('galaxia:AndroidStationGameTests.', 'galaxia:AndroidControlGameTests.')
 }

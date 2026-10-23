@@ -20,7 +20,11 @@ import cpw.mods.fml.common.registry.GameRegistry;
 import gregtech.api.enums.FluidState;
 import gregtech.api.fluid.GTFluidFactory;
 
-/** Galaxia-hosted computing hardware and recipes, staged for later TecTech ownership. */
+/**
+ * Galaxia-hosted computing hardware, staged for later TecTech ownership.
+ * Forge and GT populate the registry fields during lifecycle events.
+ * Registered content is shared across worlds for the lifetime of the game process.
+ */
 public final class ComputerContent {
 
     public enum RackTier {
@@ -78,9 +82,8 @@ public final class ComputerContent {
             .getStackForm(1L);
         radiator = new MTEComputer(23062, "galaxia.coolant_radiator", "Coolant Radiator", MTEComputer.Kind.RADIATOR)
             .getStackForm(1L);
-        port = new MTEInformationPort(23063, "galaxia.information_connector", "Information Connector").getStackForm(1L);
-        cable = new MTEInformationCable(23064, "galaxia.information_cable", "Fluoride Information Cable")
-            .getStackForm(1L);
+        port = new MTEInformationPort(23063, "galaxia.information_connector", "Data Connector").getStackForm(1L);
+        cable = new MTEInformationCable(23064, "galaxia.information_cable", "Data Cable").getStackForm(1L);
     }
 
     public static FluidStack chilled(int amount) {
