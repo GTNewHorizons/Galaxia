@@ -51,11 +51,7 @@ public final class ComputerGameplayGameTests {
 
     private ComputerGameplayGameTests() {}
 
-    /** Product contract: all local miners share the bonus, and ordinary inventory outputs are unaffected. */
-    @GameTest(template = "computer_installation", timeoutTicks = 100)
-    public static void returnedFlowMultipliesFacilityAndNativeMinerOutputs(GameTestHelper helper) {
-        Fixture fixture = new Fixture(helper);
-        fixture.prepare();
+    private static void assertFacilityAndNativeMinerOutputs(GameTestHelper helper, Fixture fixture) {
         CelestialAssetStore.SERVER.setSatelliteCount(fixture.team, Fixture.EARTH, SatelliteKind.PROSPECTING, 500);
         var processed = SatelliteDataKey.origin(SatelliteDataType.PROCESSED_PROSPECTING, Fixture.EARTH);
         helper.assertTrue(
@@ -128,7 +124,6 @@ public final class ComputerGameplayGameTests {
             if (stack != null) ordinary += stack.stackSize;
         }
         helper.assertTrue(ordinary == 1L, "Prospecting multiplied an ordinary inventory output");
-        helper.succeed();
     }
 
     private static ModulePlacement plainMiningPlacement(AutomatedFacility facility) {
@@ -148,7 +143,7 @@ public final class ComputerGameplayGameTests {
     }
 
     /**
-     * Integration contract: actual mixed racks pay local resources and return origin-bound yield through the network.
+     * Integration contract: mixed racks on Earth return Mars data, stop without resources, and support mineral yield.
      */
     @GameTest(template = "computer_installation", timeoutTicks = 800)
     public static void physicalComputerProcessesAndStopsWithMissingInfrastructure(GameTestHelper helper) {
@@ -194,6 +189,9 @@ public final class ComputerGameplayGameTests {
             .thenWaitUntil("flow resumes after refilling", 100, () -> fixture.assertBonus(true))
             .thenExecute("unload cluster controller while its connector remains loaded", fixture::unloadCluster)
             .thenWaitUntil("unloaded hardware supplies no processing", 80, () -> fixture.assertBonus(false))
+            .thenExecute(
+                "verify Facility and native miner yield",
+                () -> assertFacilityAndNativeMinerOutputs(helper, fixture))
             .thenSucceed();
     }
 
@@ -221,6 +219,7 @@ public final class ComputerGameplayGameTests {
         }
 
         void prepare() {
+            helper.assertTrue(world.provider.dimensionId == 0, "Physical Computer must be on the Overworld");
             for (Object candidate : world.playerEntities) {
                 if (candidate instanceof EntityPlayerMP player) {
                     owner = player.getUniqueID();
