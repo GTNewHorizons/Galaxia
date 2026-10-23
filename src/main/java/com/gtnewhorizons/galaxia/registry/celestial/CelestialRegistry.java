@@ -15,7 +15,7 @@ import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 
 import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.FluidRegistry;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidCelestialMaterializer;
@@ -34,8 +34,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilde
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
-
-import gregtech.api.enums.Materials;
 
 public final class CelestialRegistry {
 
@@ -79,10 +77,10 @@ public final class CelestialRegistry {
             .build();
     }
 
-    private static Fluid requiredGas(Materials material) {
-        FluidStack stack = material.getGas(1L);
-        Fluid fluid = stack != null ? stack.getFluid() : null;
-        if (fluid == null) throw new IllegalStateException("Required atmosphere gas is not available: " + material);
+    private static Fluid requiredGas(String registeredName) {
+        Fluid fluid = FluidRegistry.getFluid(registeredName);
+        if (fluid == null)
+            throw new IllegalStateException("Required atmosphere gas is not available: " + registeredName);
         return fluid;
     }
 
@@ -516,7 +514,7 @@ public final class CelestialRegistry {
                         .localGravityG(1.0)
                         .orbitalRadiusEarthRelative(EARTH_RADIUS_TO_AU)
                         .surfacePressurePa(101325)
-                        .addAtmosphereIngredient(requiredGas(Materials.Air), 1.0)
+                        .addAtmosphereIngredient(requiredGas("air"), 1.0)
                         .temperature(288)
                         .radiation(0.00)
                         .oreProfile("gtnh_overworld")

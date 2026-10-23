@@ -27,8 +27,8 @@ import codechicken.nei.guihook.GuiContainerManager;
 import codechicken.nei.recipe.GuiRecipe;
 import codechicken.nei.recipe.GuiRecipeButton;
 import codechicken.nei.recipe.IRecipeHandler;
-import codechicken.nei.recipe.NEIRecipeWidget;
 import codechicken.nei.recipe.RecipeHandlerRef;
+import codechicken.nei.recipe.widget.RecipeWidget;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
@@ -37,7 +37,7 @@ import cpw.mods.fml.relauncher.SideOnly;
 public final class NativeRecipeWidget extends Widget<NativeRecipeWidget> implements Interactable {
 
     private final RecipeHandlerRef recipe;
-    private final NEIRecipeWidget view;
+    private final RecipeWidget view;
     private final RecipeHost host;
     private final Consumer<PositionedStack> selection;
     private int mouseX;
@@ -46,7 +46,7 @@ public final class NativeRecipeWidget extends Widget<NativeRecipeWidget> impleme
     public NativeRecipeWidget(RecipeHandlerRef recipe, Consumer<PositionedStack> selection) {
         this.recipe = recipe;
         this.selection = selection;
-        this.view = new NEIRecipeWidget(recipe) {
+        this.view = new RecipeWidget(recipe) {
 
             @Override
             public List<GuiRecipeButton> getRecipeButtons() {
