@@ -1618,3 +1618,6 @@ galaxia.environment.microgravity=Microgravity
 galaxia.environment.no_atmosphere=No atmosphere
 galaxia.environment.unknown=Unknown environment condition
 galaxia.gui.station_controller.pressure=Pressure: %s%%
+
+galaxia.material.space_grade_alloy.name=Space Grade Alloy
+item.galaxia.thin_strip_mold.name=Thin-strip Mold
