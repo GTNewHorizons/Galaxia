@@ -9,8 +9,8 @@ import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.api.RecipeEnvironments;
-import com.gtnewhorizons.galaxia.gt5.OrbitalItems;
 import com.gtnewhorizons.galaxia.gt5.LunarMaterials;
+import com.gtnewhorizons.galaxia.gt5.OrbitalItems;
 import com.gtnewhorizons.galaxia.gt5.SolarEquipment;
 import com.gtnewhorizons.horizonqa.api.GameTestHelper;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTest;
@@ -30,7 +30,9 @@ public final class OrbitalProductionGameTests {
 
     private OrbitalProductionGameTests() {}
 
-    /** Integration contract: both panel assemblies consume their parts without inheriting alloy processing conditions. */
+    /**
+     * Integration contract: both panel assemblies consume their parts without inheriting alloy processing conditions.
+     */
     @GameTest(timeoutTicks = 100)
     public static void standardAndAlloyPanelAssembly(GameTestHelper helper) {
         ItemStack[][] routes = {
@@ -49,11 +51,12 @@ public final class OrbitalProductionGameTests {
                 || assembly.mOutputs[0].stackSize != 1) {
                 throw new AssertionError("Panel parts do not select their native assembler recipe");
             }
-            if (!assembly.getEnvironmentRequirements().isEmpty()) {
+            if (!assembly.getEnvironmentRequirements()
+                .isEmpty()) {
                 throw new AssertionError("Panel assembly inherited alloy processing conditions");
             }
-            if (!assembly.isRecipeInputEqual(true, false, new FluidStack[0], inputs)
-                || Arrays.stream(inputs).anyMatch(stack -> stack != null && stack.stackSize != 0)) {
+            if (!assembly.isRecipeInputEqual(true, false, new FluidStack[0], inputs) || Arrays.stream(inputs)
+                .anyMatch(stack -> stack != null && stack.stackSize != 0)) {
                 throw new AssertionError("Panel assembly did not consume exactly its supplied parts");
             }
         }
