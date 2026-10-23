@@ -12,6 +12,7 @@ import net.minecraft.init.Bootstrap;
 import net.minecraft.item.Item;
 import net.minecraft.stats.StatList;
 import net.minecraft.util.RegistryNamespaced;
+import net.minecraftforge.fluids.FluidRegistry;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -20,7 +21,6 @@ import cpw.mods.fml.common.LoadController;
 import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.relauncher.Side;
 import gregtech.api.enums.FluidState;
-import gregtech.api.enums.Materials;
 import gregtech.api.fluid.GTFluidFactory;
 import sun.misc.Unsafe;
 
@@ -104,8 +104,8 @@ public final class GalaxiaTestBootstrap {
     }
 
     private static void ensureGtAirFluid() {
-        if (Materials.Air.getGas(1L) == null) {
-            GTFluidFactory.of("Air", "Air", Materials.Air, FluidState.GAS, 295);
+        if (FluidRegistry.getFluid("air") == null) {
+            GTFluidFactory.of("air", "Air", FluidState.GAS, 295);
         }
     }
 
