@@ -30,6 +30,8 @@ import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
 import com.gtnewhorizons.galaxia.gt5.AndroidRecipes;
 import com.gtnewhorizons.galaxia.gt5.OrbitalItems;
 import com.gtnewhorizons.galaxia.gt5.OrbitalRecipes;
+import com.gtnewhorizons.galaxia.gt5.SolarArrayTracking;
+import com.gtnewhorizons.galaxia.gt5.SolarEquipment;
 import com.gtnewhorizons.galaxia.handlers.CelestialEventHandler;
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
 import com.gtnewhorizons.galaxia.handlers.TeamEventHandler;
@@ -109,6 +111,9 @@ public class CommonProxy {
         // Registration
         GalaxiaItemList.registerAll();
         OrbitalItems.register();
+        SolarEquipment.registerPanel();
+        FMLBusRegister(SolarArrayTracking.EVENTS);
+        ForgeBusRegister(SolarArrayTracking.EVENTS);
         GalaxiaBlocksEnum.registerBlocks();
         PlanetBlocks.init();
         GalaxiaEffects.init();
@@ -162,6 +167,7 @@ public class CommonProxy {
     private void registerAttachments() {
         if (isGregTech5UnofficialNewHorizonsLoaded()) {
             GalaxiaGTAttachmentRegistration.init();
+            SolarEquipment.registerCollector();
             GalaxiaCasingTextures.register();
         }
 

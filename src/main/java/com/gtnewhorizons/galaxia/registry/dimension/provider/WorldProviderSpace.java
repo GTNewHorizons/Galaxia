@@ -20,6 +20,7 @@ import org.jetbrains.annotations.Nullable;
 import com.cardinalstar.cubicchunks.api.worldgen.IWorldGenerator;
 import com.cardinalstar.cubicchunks.world.ICubicWorldProvider;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.dimension.OrbitDimensions;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.ChunkProviderGalaxiaPlanet;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.CubicChunkProviderGalaxiaPlanet;
 
@@ -298,6 +299,7 @@ public class WorldProviderSpace extends WorldProvider implements ICubicWorldProv
      */
     @Override
     public float calculateCelestialAngle(long worldTime, float partialTicks) {
+        if (OrbitDimensions.isOrbit(dimensionId)) return 0;
         if (celestialCycleSpeed == 1.0F) {
             return super.calculateCelestialAngle(worldTime, partialTicks);
         } else {

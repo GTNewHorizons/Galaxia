@@ -515,7 +515,7 @@ public final class CelestialRegistry {
                         .canCreateOutpost(true)
                         .localGravityG(1.0)
                         .orbitalRadiusEarthRelative(EARTH_RADIUS_TO_AU)
-                        .surfacePressurePa(1.0)
+                        .surfacePressurePa(101325)
                         .addAtmosphereIngredient(requiredGas(Materials.Air), 1.0)
                         .temperature(288)
                         .radiation(0.00)

@@ -78,13 +78,13 @@ public final class OrbitGameTests {
             .server("look down at an angle from up high", () -> fixture.climb(250, 35))
             .awaitClient("high up and looking at an angle", c -> fixture.assertCamera(250, 35))
             .capture("orbit-planet-ahead-high")
-            .server("the sun stands low in the west", () -> {
+            .server("the fixed sun is to the east", () -> {
                 World planet = helper.getWorld();
                 long time = planet.getWorldTime();
                 helper.afterTest(() -> planet.setWorldTime(time));
                 planet.setWorldTime(5000);
                 fixture.climb(250, 0);
-                fixture.turn(90, 0);
+                fixture.turn(-90, 0);
             })
             .awaitClient("facing the low sun", c -> {
                 fixture.assertCamera(250, 0);
@@ -92,21 +92,21 @@ public final class OrbitGameTests {
             })
             .capture("orbit-sun-low")
             .server(
-                "the sun sets",
+                "the sun stays fixed in the evening",
                 () -> helper.getWorld()
                     .setWorldTime(6400))
-            .awaitClient("the sun sinks through the glow of the planet", c -> assertClientTime(6400))
-            .capture("orbit-sunset")
-            .server("the sun is behind the planet", () -> {
+            .awaitClient("the evening clock does not move the sun", c -> assertClientTime(6400))
+            .capture("orbit-sun-evening")
+            .server("the sun stays fixed at the night clock", () -> {
                 helper.getWorld()
                     .setWorldTime(12000);
-                fixture.turn(0, 45);
+                fixture.turn(-90, 0);
             })
-            .awaitClient("facing the sun below", c -> {
-                fixture.assertPitch(45);
+            .awaitClient("facing the same fixed sun", c -> {
+                fixture.assertPitch(0);
                 assertClientTime(12000);
             })
-            .capture("orbit-sun-behind-planet")
+            .capture("orbit-sun-night")
             .server("back down to the station", () -> fixture.climb(fixture.y + 9, -10))
             .server("look along the horizon", () -> fixture.look(-10))
             .awaitClient("looking ahead", c -> fixture.assertPitch(-10))

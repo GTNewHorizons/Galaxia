@@ -19,4 +19,10 @@ import net.minecraft.util.ResourceLocation;
 
 public record CelestialBody(ResourceLocation texture, float size, double distance, float inclination,
     long orbitalPeriodTicks, boolean hasPhases, int phaseCount, long phaseOffsetTicks, boolean isMainLightSource,
-    boolean isHorizon, float solidFraction) {}
+    boolean isHorizon, float solidFraction, Float fixedAngle) {
+
+    public float orbitalAngleAt(double timeWithPartial) {
+        return fixedAngle != null ? fixedAngle
+            : (float) (((timeWithPartial + phaseOffsetTicks) % orbitalPeriodTicks) / orbitalPeriodTicks);
+    }
+}

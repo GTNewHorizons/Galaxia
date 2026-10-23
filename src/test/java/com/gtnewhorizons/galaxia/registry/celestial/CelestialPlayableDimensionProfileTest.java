@@ -63,18 +63,19 @@ final class CelestialPlayableDimensionProfileTest {
     }
 
     @Test
-    void playableDimensionPressureIsAuthoredOnCelestialProperties() {
+    void overworldPhysicalPressureUsesPascalsWithoutChangingTheHazardScale() {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
-
-        for (CelestialObject body : CelestialRegistry.getPlayableBodies()) {
-            DimensionDef def = CelestialDimensionMaterializer.materializeDefinition(body);
-
-            assertEquals(
-                def.effects()
-                    .getPressure(null),
-                body.properties()
-                    .surfacePressurePa());
-        }
+        CelestialObject body = CelestialRegistry.get(CelestialObjectId.OVERWORLD)
+            .orElseThrow();
+        assertEquals(
+            101325,
+            body.properties()
+                .surfacePressurePa());
+        assertEquals(
+            1,
+            CelestialDimensionMaterializer.materializeDefinition(body)
+                .effects()
+                .getPressure(null));
     }
 
     @Test

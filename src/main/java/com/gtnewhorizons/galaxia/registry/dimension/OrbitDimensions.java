@@ -16,6 +16,7 @@ import com.gtnewhorizons.galaxia.core.config.ConfigDimensions;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.SolarIllumination;
 import com.gtnewhorizons.galaxia.registry.dimension.asteroidbelts.ChunkProviderAsteroidBelt;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenSpace;
@@ -163,8 +164,8 @@ public final class OrbitDimensions {
     private static final float SKY_PICTURE_SCALE = 4f;
 
     /**
-     * The sun above and the parent body straight below, filling most of the view down. Bodies drawn at a negative
-     * distance sit under the horizon, and with no orbital period of note the body stays put
+     * Keeps the Sun to the east and the parent body straight below, filling most of the downward view.
+     * The renderer draws the parent body below the horizon using a negative distance.
      */
     private static List<CelestialBody> sky(Orbit orbit) {
         return SkyBuilder.builder()
@@ -172,14 +173,14 @@ public final class OrbitDimensions {
                 s -> s.texture("minecraft:textures/environment/sun.png")
                     .size(30f)
                     .distance(100.0)
-                    .inclination(45)
-                    .period(24000L)
+                    .inclination(0)
+                    .fixedAngle(SolarIllumination.ORBITAL_SKY_ANGLE)
                     .mainLightSource())
             .addBody(
                 p -> p.texture(view(orbit))
                     .size(hasOrbitView(orbit) ? BODY_BELOW_SIZE * SKY_PICTURE_SCALE : BODY_BELOW_SIZE)
                     .distance(-BODY_BELOW_DISTANCE)
-                    .period(Long.MAX_VALUE)
+                    .fixedAngle(0)
                     .horizon(hasOrbitView(orbit) ? 1f / SKY_PICTURE_SCALE : 1f))
             .build();
     }

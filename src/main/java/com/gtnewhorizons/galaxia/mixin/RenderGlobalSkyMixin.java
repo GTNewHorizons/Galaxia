@@ -167,9 +167,9 @@ public abstract class RenderGlobalSkyMixin {
 
         galaxia$prepareBodies(bodies);
         float primarySunAngle = galaxia$primaryLightSource == null ? 0.0f
-            : galaxia$orbitalAngle(galaxia$primaryLightSource, timeWithPartial);
+            : galaxia$primaryLightSource.orbitalAngleAt(timeWithPartial);
         for (CelestialBody body : galaxia$drawBodies) {
-            drawCelestialBody(t, body, galaxia$orbitalAngle(body, timeWithPartial), primarySunAngle);
+            drawCelestialBody(t, body, body.orbitalAngleAt(timeWithPartial), primarySunAngle);
         }
 
         GL11.glPopMatrix(); // base | sky
@@ -208,12 +208,6 @@ public abstract class RenderGlobalSkyMixin {
                 .reversed());
     }
 
-    @Unique
-    private static float galaxia$orbitalAngle(CelestialBody body, double timeWithPartial) {
-        return (float) (((timeWithPartial + body.phaseOffsetTicks()) % body.orbitalPeriodTicks())
-            / (double) body.orbitalPeriodTicks());
-    }
-
     /**
      * Draws the solid part of bodies filling the ground below over the stars, so they hide the sun and stars behind
      * them while their glow lets them through. Runs once vanilla has drawn the stars, before it darkens the sky
@@ -243,7 +237,7 @@ public abstract class RenderGlobalSkyMixin {
         for (CelestialBody body : galaxia$horizonBodies) {
             GL11.glPushMatrix();
             GL11.glRotatef(body.inclination(), 0F, 0F, 1F);
-            GL11.glRotatef(galaxia$orbitalAngle(body, timeWithPartial) * 360.0F, 1F, 0F, 0F);
+            GL11.glRotatef(body.orbitalAngleAt(timeWithPartial) * 360.0F, 1F, 0F, 0F);
             mc.getTextureManager()
                 .bindTexture(body.texture());
             float size = body.size() * body.solidFraction();

@@ -21,7 +21,7 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
     double localGravityG, double massEarthRelative, double orbitalRadiusEarthRelative, double radiusEarthRelative,
     double standardGravitationalParameter, double sphereOfInfluenceRadius, double parkingOrbitRadius, String oreProfile,
     List<String> gtOreDepositIds, double radiation, double temperature, double surfacePressurePa,
-    double starmapAtmosphericDrag, List<AtmosphereIngredient> atmosphereIngredients,
+    double starmapAtmosphericDrag, double solarResourceModifier, List<AtmosphereIngredient> atmosphereIngredients,
     CelestialBodyProperties atmosphereCompositionSource, AsteroidFieldProfile asteroidFieldProfile,
     AsteroidNodeKind asteroidNodeKind, AsteroidSizeClass asteroidSizeClass, Map<String, String> metadata) {
 
@@ -39,6 +39,7 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
         temperature = requireNonNegativeFinite("temperature", temperature);
         surfacePressurePa = requireNonNegativeFinite("surfacePressurePa", surfacePressurePa);
         starmapAtmosphericDrag = requirePositiveFinite("starmapAtmosphericDrag", starmapAtmosphericDrag);
+        solarResourceModifier = requireNonNegativeFinite("solarResourceModifier", solarResourceModifier);
         if (oreProfile == null) oreProfile = "";
         if (metadata == null) metadata = Collections.emptyMap();
         else metadata = Collections.unmodifiableMap(new LinkedHashMap<>(metadata));
@@ -154,6 +155,7 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
         private double temperature;
         private double surfacePressurePa;
         private double starmapAtmosphericDrag = 1.0;
+        private double solarResourceModifier = 1.0;
         private final List<AtmosphereIngredient> atmosphereIngredients = new ArrayList<>();
         private CelestialBodyProperties atmosphereCompositionSource;
         private AsteroidFieldProfile asteroidFieldProfile;
@@ -181,6 +183,7 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
             this.temperature = source.temperature;
             this.surfacePressurePa = source.surfacePressurePa;
             this.starmapAtmosphericDrag = source.starmapAtmosphericDrag;
+            this.solarResourceModifier = source.solarResourceModifier;
             this.atmosphereCompositionSource = source.atmosphereCompositionSource;
             this.asteroidFieldProfile = source.asteroidFieldProfile;
             this.asteroidNodeKind = source.asteroidNodeKind;
@@ -283,6 +286,11 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
          * TODO: Wire this into starmap launch/landing/trajectory calculations. Keep it separate from dimension movement
          * air resistance, which controls in-world player/entity speed behavior.
          */
+        public Builder solarResourceModifier(double value) {
+            this.solarResourceModifier = requireNonNegativeFinite("solarResourceModifier", value);
+            return this;
+        }
+
         public Builder starmapAtmosphericDrag(double value) {
             this.starmapAtmosphericDrag = requirePositiveFinite("starmapAtmosphericDrag", value);
             return this;
@@ -356,6 +364,7 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
                 temperature,
                 surfacePressurePa,
                 starmapAtmosphericDrag,
+                solarResourceModifier,
                 atmosphereIngredients,
                 atmosphereCompositionSource,
                 asteroidFieldProfile,

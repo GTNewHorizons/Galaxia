@@ -1575,6 +1575,11 @@ item.galaxia.communication_satellite.name=Communication Satellite
 item.galaxia.prospecting_satellite.name=Prospecting Satellite
 item.galaxia.rocket_automation_controller.name=Rocket Automation Controller
 
+#### Physical solar equipment
+tile.galaxia.solar_panel.name=Solar Array Panel
+galaxia.solar.dynamo.desc=Collects a connected 5 x 5 solar plane and emits current generation at 32 V. Unused energy is discarded. Output connects at the rear.
+galaxia.solar.dynamo.info=Available: %s EU/t, accepted: %s EU/t
+
 galaxia.environment.microgravity=Microgravity
 galaxia.environment.no_atmosphere=No atmosphere
 galaxia.environment.unknown=Unknown environment condition

@@ -25,7 +25,10 @@
     "UnifiedGravityMixin$ArrowEntities",
     "UnifiedGravityMixin$NormalEntities",
     "UnifiedGravityMixin$ParticleGravityMixin",
-    "UnifiedGravityMixin$ThrowableEntities"
+    "UnifiedGravityMixin$ThrowableEntities",
+    "SolarBlockChangesMixin",
+    "SolarBlockChangesMixin$Notifications",
+    "SolarBlockChangesMixin$Opacity"
   ],
   "client": [
     "AndroidSkinMixin",
@@ -33,6 +36,5 @@
     "RenderGlobalSkyMixin",
     "RenderStarsMixin"
   ],
-  "server": [
-  ]
+  "server": []
 }

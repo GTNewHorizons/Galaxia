@@ -15,6 +15,7 @@ public class CelestialBodyBuilder {
     protected float inclination = 0f;
     protected long orbitalPeriodTicks = 24000L;
     protected long phaseOffsetTicks = 0L;
+    private Float fixedAngle;
     protected boolean isMainLightSource = false;
     protected boolean isHorizon = false;
     protected float solidFraction = 1f;
@@ -115,6 +116,12 @@ public class CelestialBodyBuilder {
      * @param ticks Number of ticks for one full cycle (24000 = 1 Minecraft day)
      * @return builder
      */
+    public CelestialBodyBuilder fixedAngle(float angle) {
+        if (!Float.isFinite(angle) || angle < 0 || angle >= 1) throw new IllegalArgumentException("Invalid sky angle");
+        fixedAngle = angle;
+        return this;
+    }
+
     public CelestialBodyBuilder period(long ticks) {
         this.orbitalPeriodTicks = ticks;
         return this;
@@ -181,7 +188,8 @@ public class CelestialBodyBuilder {
             phaseOffsetTicks,
             isMainLightSource,
             isHorizon,
-            solidFraction);
+            solidFraction,
+            fixedAngle);
     }
 
     protected void validate() {

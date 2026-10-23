@@ -27,6 +27,7 @@ public final class OrbitalRecipes {
         siliconGermanium();
         fluorideGlass();
         solarComponents();
+        solarEquipment();
         satelliteParts();
         payloads();
     }
@@ -200,6 +201,44 @@ public final class OrbitalRecipes {
             .duration(60 * SECONDS)
             .eut(480)
             .addTo(assemblerRecipes);
+    }
+
+    private static void solarEquipment() {
+        GTValues.RA.stdBuilder()
+            .itemInputs(
+                SPACE_GRADE_SOLAR_PANEL.get(1),
+                Materials.Aluminium.getPlates(2),
+                ore(OrePrefixes.stick, Materials.Steel, 2))
+            .itemOutputs(new ItemStack(SolarEquipment.panel))
+            .duration(30 * SECONDS)
+            .eut(480)
+            .addTo(assemblerRecipes);
+        GTValues.RA.stdBuilder()
+            .itemInputs(
+                ItemList.Hull_LV.get(1),
+                new Object[] { OrePrefixes.circuit.get(Materials.HV), 2 },
+                Materials.Aluminium.getPlates(4),
+                ore(OrePrefixes.cableGt01, Materials.Copper, 4),
+                ItemList.Sensor_MV.get(1))
+            .itemOutputs(SolarEquipment.collector.getStackForm(1))
+            .duration(60 * SECONDS)
+            .eut(480)
+            .addTo(assemblerRecipes);
+        String frame = "frameGtSpaceGradeAlloy", plate = "plateSpaceGradeAlloy";
+        if (!net.minecraftforge.oredict.OreDictionary.getOres(frame, false)
+            .isEmpty()
+            && !net.minecraftforge.oredict.OreDictionary.getOres(plate, false)
+                .isEmpty()) {
+            GTValues.RA.stdBuilder()
+                .itemInputs(SPACE_GRADE_SOLAR_PANEL.get(1), new Object[] { frame, 1 }, new Object[] { plate, 2 })
+                .itemOutputs(new ItemStack(SolarEquipment.panel))
+                .duration(30 * SECONDS)
+                .eut(480)
+                .addTo(assemblerRecipes);
+        } else {
+            com.gtnewhorizons.galaxia.core.Galaxia.LOG
+                .info("Solar panel SGA assembly awaits the canonical Space Grade Alloy frame and plate registrations");
+        }
     }
 
     private static void satelliteParts() {

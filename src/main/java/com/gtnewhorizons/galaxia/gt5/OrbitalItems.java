@@ -72,7 +72,7 @@ public enum OrbitalItems {
         }
     }
 
-    /** Explicit melts avoid generating a blend-melting bypass around powder treatment. */
+    /** These fluids are registered explicitly to prevent automatic melting recipes for untreated SiGe blend. */
     public enum Melt {
 
         SIGE("molten.galaxia.sige", 1784),
