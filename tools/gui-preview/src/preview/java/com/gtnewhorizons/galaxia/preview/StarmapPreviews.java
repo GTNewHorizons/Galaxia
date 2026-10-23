@@ -10,7 +10,7 @@ final class StarmapPreviews {
     static PreviewEntrypoint overview() {
         return PreviewEntrypoint.of(GalacticMapWidget.class, context -> {
             PreviewSupport.initializeStarmap();
-            return GalacticMapWidget.build(PreviewSupport.sync(context), PreviewSupport.player());
+            return GalacticMapWidget.build(PreviewSupport.player());
         });
     }
 }

@@ -476,7 +476,7 @@ final class BodyStationGui {
                 .size(CONTROL_WIDTH, SELECTION_LIST_HEIGHT)
                 .child(bodyList(syncManager).size(CONTROL_WIDTH, SELECTION_LIST_HEIGHT));
             return GalacticMapWidget
-                .buildBodyPicker(syncManager, data.getPlayer(), key -> selected.setValue(key, true, true), choices);
+                .buildBodyPicker(data.getPlayer(), key -> selected.setValue(key, true, true), choices);
         }
 
         private DynamicSyncedWidget<?> bodyList(PanelSyncManager syncManager) {
