@@ -18,16 +18,15 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkService;
+import com.ruling_0.materiallib.api.Material;
 
-import gregtech.api.enums.Materials;
 import gregtech.api.enums.OreMixes;
-import gregtech.api.enums.OrePrefixes;
 import gregtech.api.enums.SmallOres;
 import gregtech.api.enums.StoneCategory;
 import gregtech.api.enums.StoneType;
-import gregtech.api.interfaces.IOreMaterial;
+import gregtech.api.interfaces.IStoneType;
 import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
-import gregtech.api.util.GTOreDictUnificator;
+import gregtech.api.material.MaterialUtils;
 import gregtech.common.OreMixBuilder;
 import gregtech.common.ores.OreInfo;
 import gregtech.common.ores.OreManager;
@@ -73,12 +72,12 @@ public final class GTCompat {
             for (OreMixes mix : OreMixes.values()) {
                 OreMixBuilder builder = mix.oreMixBuilder;
                 if (builder == null || !depositId.equals(builder.oreMixName)) continue;
-                OrePrefixes prefix = builder.stoneCategories.contains(StoneCategory.Ice) ? OrePrefixes.orePackedIce
-                    : OrePrefixes.ore;
-                for (var material : new IOreMaterial[] { builder.primary, builder.secondary, builder.between,
+                IStoneType stone = builder.stoneCategories.contains(StoneCategory.Ice) ? StoneType.PackedIce
+                    : StoneType.Stone;
+                for (var material : new Material[] { builder.primary, builder.secondary, builder.between,
                     builder.sporadic }) {
                     if (material == null) continue;
-                    ItemStack stack = material.getPart(prefix, 1);
+                    ItemStack stack = oreStack(material, stone, false);
                     if (stack != null) ores.add(stack);
                 }
                 break;
@@ -91,12 +90,7 @@ public final class GTCompat {
         for (SmallOres ore : SmallOres.values()) {
             var builder = ore.smallOreBuilder;
             if (!depositId.equals(builder.smallOreName)) continue;
-            try (OreInfo<IOreMaterial> info = OreInfo.getNewInfo()) {
-                info.material = builder.ore;
-                info.stoneType = StoneType.Stone;
-                info.isSmall = true;
-                return OreManager.getStack(info, 1);
-            }
+            return oreStack(builder.ore, StoneType.Stone, true);
         }
         return null;
     }
@@ -144,6 +138,16 @@ public final class GTCompat {
     }
 
     private static ItemStack getUnifiedGtStack(String materialName) {
-        return GTOreDictUnificator.get(OrePrefixes.ore, Materials.get(materialName), 1);
+        return oreStack(MaterialUtils.byLegacyName(materialName), StoneType.Stone, false);
+    }
+
+    private static ItemStack oreStack(Material material, IStoneType stone, boolean small) {
+        if (material == null) return null;
+        try (OreInfo info = OreInfo.getNewInfo()) {
+            info.material = material;
+            info.stoneType = stone;
+            info.isSmall = small;
+            return OreManager.getStack(info, 1);
+        }
     }
 }

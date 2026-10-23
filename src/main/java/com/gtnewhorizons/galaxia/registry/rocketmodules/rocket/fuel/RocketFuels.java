@@ -9,8 +9,11 @@ import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.ModuleRecipe;
+import com.ruling_0.materiallib.api.Material;
+import com.ruling_0.materiallib.api.MaterialLibAPI;
 
-import gregtech.api.enums.Materials;
+import gregtech.api.enums.materials.FluidShapes;
+import gregtech.api.enums.materials.Materials;
 import gtPlusPlus.core.fluids.GTPPFluids;
 
 /**
@@ -93,9 +96,9 @@ public final class RocketFuels {
         return null;
     }
 
-    private static Fluid gtFluid(Materials material, String fallbackName) {
-        FluidStack stack = material.getFluid(1);
-        if (stack == null) stack = material.getGas(1);
-        return stack != null ? stack.getFluid() : FluidRegistry.getFluid(fallbackName);
+    private static Fluid gtFluid(Material material, String fallbackName) {
+        Fluid fluid = MaterialLibAPI.getFluid(material, FluidShapes.fluidLiquid);
+        if (fluid == null) fluid = MaterialLibAPI.getFluid(material, FluidShapes.fluidGas);
+        return fluid != null ? fluid : FluidRegistry.getFluid(fallbackName);
     }
 }
