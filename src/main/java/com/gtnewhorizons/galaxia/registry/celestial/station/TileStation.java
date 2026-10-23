@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.celestial.station;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.annotation.Nullable;
@@ -93,6 +94,64 @@ public class TileStation extends TileStationBase<TileStation> {
     private final LongArraySet witherBlockers = new LongArraySet();
 
     private double oxygenLevel = 0;
+    private RoomAtmosphere atmosphere = new RoomAtmosphere(0, List.of(this));
+
+    /** Bounded pressure, independent of oxygen. Open rooms share the same atmosphere state. */
+    public double getPressureLevel() {
+        super.tick();
+        return structureValid && isSealed() ? atmosphere.level : 0;
+    }
+
+    @Override
+    protected void onAirflowChanged(Set<TileStationBase<?>> rooms, boolean breached) {
+        double gas = 0;
+        long volume = 0;
+        for (TileStationBase<?> piece : rooms) {
+            if (piece instanceof TileStation room) {
+                long roomVolume = room.getVolume();
+                gas += room.atmosphere.level * roomVolume;
+                volume += roomVolume;
+            }
+        }
+        List<TileStation> controllers = new ArrayList<>();
+        for (TileStationBase<?> piece : rooms) {
+            if (piece instanceof TileStation room) controllers.add(room);
+        }
+        RoomAtmosphere shared = new RoomAtmosphere(breached || volume == 0 ? 0 : gas / volume, controllers);
+        for (TileStation room : controllers) {
+            room.atmosphere = shared;
+            room.markDirty();
+        }
+    }
+
+    private static final class RoomAtmosphere {
+
+        private static final double PASSIVE_LOSS_PER_TICK = 0.001;
+        private double level;
+        private long lastDecayTick = Long.MIN_VALUE;
+        private final List<TileStation> controllers;
+
+        private RoomAtmosphere(double level, List<TileStation> controllers) {
+            this.level = Math.clamp(level, 0, 1);
+            this.controllers = controllers;
+        }
+
+        private void tick(long worldTick, boolean oxygenatorWorking) {
+            double previous = level;
+            if (oxygenatorWorking) {
+                level = 1;
+            } else if (lastDecayTick != worldTick) {
+                level = Math.max(0, level - PASSIVE_LOSS_PER_TICK);
+            }
+            lastDecayTick = worldTick;
+            if (level != previous) controllers.forEach(TileStation::markDirty);
+        }
+
+        private void vent() {
+            level = 0;
+            controllers.forEach(TileStation::markDirty);
+        }
+    }
 
     public int getCoolingModifier() {
         return isSealed() ? (working(coolingCoils) * COIL_COOLING_FACTOR) : 0;
@@ -238,6 +297,7 @@ public class TileStation extends TileStationBase<TileStation> {
 
     @Override
     public void onStructureDisformed() {
+        atmosphere.vent();
         if (graph != null) {
             if (graph.getController() == this) {
                 graph.destroy();
@@ -377,13 +437,16 @@ public class TileStation extends TileStationBase<TileStation> {
             .getBackingStation() : getBackingStation();
         if (station == null) return;
 
-        if (station.tryConsumeEnergy(getUpkeepEUt()) && isSealed()) {
-
+        boolean powered = station.tryConsumeEnergy(getUpkeepEUt()) && isSealed();
+        int operatingOxygenators = powered ? working(oxygenators) : 0;
+        if (powered) {
             oxygenLevel = Math
-                .clamp(oxygenLevel + (double) (working(oxygenators) * OXYGEN_FACTOR) / getVolume(), 0.0, 100.0);
+                .clamp(oxygenLevel + (double) (operatingOxygenators * OXYGEN_FACTOR) / getVolume(), 0.0, 100.0);
         } else {
             oxygenLevel = Math.max(oxygenLevel - OXYGEN_DECAY_RATE, 0);
         }
+        if (isSealed()) atmosphere.tick(worldObj.getTotalWorldTime(), operatingOxygenators > 0);
+        else atmosphere.level = 0;
 
         if (!isMainController()) return;
 
@@ -609,6 +672,7 @@ public class TileStation extends TileStationBase<TileStation> {
                     .getLeastSignificantBits());
         }
         nbt.setDouble("oxygenLevel", oxygenLevel);
+        nbt.setDouble("roomPressure", atmosphere.level);
         nbt.setBoolean("proximityBlocked", proximityBlocked);
         behavior.writeToNBT(this, nbt);
     }
@@ -640,6 +704,7 @@ public class TileStation extends TileStationBase<TileStation> {
         if (nbt.hasKey("oxygenLevel")) {
             oxygenLevel = nbt.getDouble("oxygenLevel");
         }
+        atmosphere = new RoomAtmosphere(nbt.getDouble("roomPressure"), List.of(this));
         behavior.readFromNBT(this, nbt);
     }
 

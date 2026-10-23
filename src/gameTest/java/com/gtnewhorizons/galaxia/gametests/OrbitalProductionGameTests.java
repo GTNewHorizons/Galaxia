@@ -7,6 +7,7 @@ import java.util.Arrays;
 
 import net.minecraft.item.ItemStack;
 
+import com.gtnewhorizons.galaxia.api.RecipeEnvironments;
 import com.gtnewhorizons.galaxia.gt5.OrbitalItems;
 import com.gtnewhorizons.horizonqa.api.GameTestHelper;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTest;
@@ -79,6 +80,15 @@ public final class OrbitalProductionGameTests {
             recipe(blastFurnaceRecipes, null, FLUORIDE_GLASS_MIX),
             recipe(blastFurnaceRecipes, HEATED_FLUORIDE_GLASS_PREFORM, FLUORIDE_GLASS_PREFORM) }) {
             if (hot.mSpecialValue <= 0) throw new AssertionError("Orbital EBF operation lost coil heat requirement");
+        }
+        for (GTRecipe orbital : new GTRecipe[] { powder, recipe(blastFurnaceRecipes, SIGE_MONOCRYSTAL, SIGE_SEED),
+            recipe(blastFurnaceRecipes, null, FLUORIDE_GLASS_MIX), recipe(fluidSolidifierRecipes, FLUORIDE_GLASS_BLANK),
+            recipe(blastFurnaceRecipes, HEATED_FLUORIDE_GLASS_PREFORM, FLUORIDE_GLASS_PREFORM),
+            recipe(extruderRecipes, FLUORIDE_OPTICAL_FIBER, HEATED_FLUORIDE_GLASS_PREFORM) }) {
+            if (!RecipeEnvironments.of(orbital)
+                .equals(RecipeEnvironments.Requirement.of(RecipeEnvironments.MICROGRAVITY))) {
+                throw new AssertionError("Orbital processing lost its microgravity requirement");
+            }
         }
         GTRecipe shaping = recipe(latheRecipes, FLUORIDE_GLASS_PREFORM);
         if (!contains(shaping.mOutputs, FLUORIDE_GLASS_MIX)) {
