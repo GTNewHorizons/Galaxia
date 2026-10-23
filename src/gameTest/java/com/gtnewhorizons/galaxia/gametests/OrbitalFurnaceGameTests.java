@@ -105,6 +105,8 @@ public final class OrbitalFurnaceGameTests {
                 if (world != null) {
                     for (int dx = -1; dx <= 1; dx++) for (int dy = 0; dy <= 3; dy++)
                         for (int dz = 0; dz <= 2; dz++) world.setBlockToAir(x + dx, y + dy, z + dz);
+                    for (int dx = -1; dx <= 1; dx++)
+                        for (int dz = -5; dz <= -3; dz++) world.setBlockToAir(x + dx, y, z + dz);
                 }
                 OrbitTestSupport.moveTo(player, home, oldX, oldY, oldZ);
                 player.setGameType(mode);
@@ -120,6 +122,12 @@ public final class OrbitalFurnaceGameTests {
             OrbitTestSupport.moveTo(player, OrbitTestSupport.overworldOrbit(), x, y + 2, z - 4);
             world = MinecraftServer.getServer()
                 .worldServerForDimension(OrbitTestSupport.overworldOrbit());
+            for (int dx = -1; dx <= 1; dx++)
+                for (int dz = -5; dz <= -3; dz++) world.setBlock(x + dx, y, z + dz, Blocks.bedrock);
+            player.capabilities.isFlying = false;
+            player.motionX = player.motionY = player.motionZ = 0;
+            player.playerNetServerHandler.setPlayerLocation(x + 0.5, y + 1, z - 3.5, 0, 0);
+            player.sendPlayerAbilities();
             ticket = ForgeChunkManager.requestTicket(Galaxia.instance, world, ForgeChunkManager.Type.NORMAL);
             if (ticket == null) throw new AssertionError("Could not keep the native furnace chunk loaded");
             ForgeChunkManager.forceChunk(ticket, new ChunkCoordIntPair(x >> 4, z >> 4));
@@ -161,6 +169,8 @@ public final class OrbitalFurnaceGameTests {
         }
 
         private void charge() {
+            if (player.isDead || player.getHealth() <= 0 || player.posY < y - 1)
+                throw new IllegalStateException("The furnace test player did not remain alive on the platform");
             var energy = tile(-1, 0, 1);
             energy.increaseStoredEnergyUnits(energy.getEUCapacity() - energy.getStoredEU(), true);
         }
