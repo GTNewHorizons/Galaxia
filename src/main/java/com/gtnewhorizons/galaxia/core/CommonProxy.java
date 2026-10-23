@@ -157,6 +157,7 @@ public class CommonProxy {
         validateGtCelestialOrePools();
         if (isGregTech5UnofficialNewHorizonsLoaded()) {
             AndroidRecipes.init();
+            com.gtnewhorizons.galaxia.gt5.LunarRecipes.register();
             OrbitalRecipes.init();
         }
     }

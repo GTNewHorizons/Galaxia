@@ -32,6 +32,8 @@ import cpw.mods.fml.common.registry.GameRegistry;
  */
 public enum GalaxiaItemList {
 
+    THIN_STRIP_MOLD("parts/thin_strip_mold", Item::new, 1),
+
     GALAXIA_LOGO("galaxia_logo"),
 
     // TOOLS

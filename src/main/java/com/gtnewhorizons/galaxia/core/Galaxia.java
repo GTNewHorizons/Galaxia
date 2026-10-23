@@ -57,6 +57,7 @@ public final class Galaxia {
     @Mod.EventHandler
     public void construct(FMLConstructionEvent event) {
         RecipeEnvironments.register();
+        com.gtnewhorizons.galaxia.gt5.LunarMaterials.registerEventHandler();
     }
 
     @Mod.EventHandler
