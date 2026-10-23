@@ -23,6 +23,7 @@ import com.gtnewhorizons.galaxia.client.render.rockets.RocketSchematicItemRender
 import com.gtnewhorizons.galaxia.client.render.rockets.RocketTrophyRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.SiloRenderer;
 import com.gtnewhorizons.galaxia.client.render.sky.GalaxiaSkyBootstrap;
+import com.gtnewhorizons.galaxia.core.nei.CraterDistributionHandler;
 import com.gtnewhorizons.galaxia.core.nei.GalaxiaMultiblockHandler;
 import com.gtnewhorizons.galaxia.core.nei.IMCForNEI;
 import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
@@ -122,6 +123,7 @@ public class ClientProxy extends CommonProxy {
         GalaxiaMultiblockHandler handler = new GalaxiaMultiblockHandler();
         API.registerRecipeHandler(handler);
         API.registerUsageHandler(handler);
+        API.registerRecipeHandler(new CraterDistributionHandler());
         API.registerNEIGuiHandler(new INEIGuiAdapter() {
 
             @Override

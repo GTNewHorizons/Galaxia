@@ -29,6 +29,8 @@ import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData;
 import com.gtnewhorizons.galaxia.core.config.ConfigMain;
 import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
 import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
+import com.gtnewhorizons.galaxia.gt5.LunarMaterials;
+import com.gtnewhorizons.galaxia.gt5.LunarRecipes;
 import com.gtnewhorizons.galaxia.handlers.CelestialEventHandler;
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
 import com.gtnewhorizons.galaxia.handlers.TeamEventHandler;
@@ -71,6 +73,7 @@ public class CommonProxy {
     public void preInit(FMLPreInitializationEvent event) {
         // Dimension ids come from the config, so it is read before anything is registered, on servers too
         ConfigMain.RegisterGalaxiaConfig();
+        LunarMaterials.preInit();
         StationGuiFactory.init();
         CelestialServerRuntime celestialRuntime = CelestialServerRuntime.create();
         TeamEventHandler teamEventHandler = new TeamEventHandler(celestialRuntime);
@@ -140,6 +143,7 @@ public class CommonProxy {
         Galaxia.rcsSlot = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_REACTION_CONTROL_SYSTEM);
         CelestialRegistry.freezeAndBake();
         validateGtCelestialOrePools();
+        LunarRecipes.register();
     }
 
     // register server commands in this event handler (Remove if not needed)

@@ -53,10 +53,11 @@ import com.gtnewhorizons.horizonqa.api.client.ClientScenario;
 import com.gtnewhorizons.horizonqa.api.client.ClientTarget;
 import com.gtnewhorizons.horizonqa.api.client.ClientTest;
 
+import codechicken.lib.gui.GuiDraw;
 import codechicken.nei.recipe.GuiOverlayButton;
 import codechicken.nei.recipe.GuiRecipe;
 import codechicken.nei.recipe.GuiRecipeButton;
-import codechicken.nei.recipe.NEIRecipeWidget;
+import codechicken.nei.recipe.GuiRecipeTab;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
@@ -452,11 +453,15 @@ public final class StationGuiGameTests {
             GuiScreen screen = Minecraft.getMinecraft().currentScreen;
             for (var page : pages) {
                 if (page.gui != screen) continue;
-                NEIRecipeWidget widget = page.recipeWidget;
+                GuiRecipe<?> gui = (GuiRecipe<?>) screen;
+                Point mouse = GuiDraw.getMousePosition();
+                Point relativeMouse = gui.getRecipeMousePosition(page.handlerRef.recipeIndex);
+                int yShift = GuiRecipeTab.getHandlerInfo(page.handlerRef.handler)
+                    .getYShift();
                 for (GuiRecipeButton button : page.buttonList) {
                     if (!(button instanceof GuiOverlayButton) || !button.enabled || !button.visible) continue;
-                    int x = widget.x + button.xPosition + button.width / 2;
-                    int y = widget.y + button.yPosition + button.height / 2;
+                    int x = mouse.x - relativeMouse.x + button.xPosition + button.width / 2;
+                    int y = mouse.y - relativeMouse.y - yShift + button.yPosition + button.height / 2;
                     if (x < 0 || y < 0 || x >= screen.width || y >= screen.height) continue;
                     if (!(button.handlerRef.handler instanceof GTNEIDefaultHandler handler)) continue;
                     var recipe = ((GTNEIDefaultHandler.CachedDefaultRecipe) handler.arecipes

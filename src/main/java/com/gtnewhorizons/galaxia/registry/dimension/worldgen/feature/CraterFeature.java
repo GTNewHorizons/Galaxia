@@ -14,7 +14,7 @@ import lombok.Builder;
 public class CraterFeature implements SurfaceFeature {
 
     @Builder.Default
-    private int rarity = 16;
+    private int rarity = CraterSize.GENERATION_RARITY;
     private final Block tektite;
     private final BlockPredicate condition;
 
@@ -23,7 +23,8 @@ public class CraterFeature implements SurfaceFeature {
     /// Non-deterministic random. Used for minor details like the rim debris.
     private final WorldgenRandom nondetRand = new WorldgenRandom();
 
-    private record CraterSeed(int x, int y, int z, int diameter) {}
+    private record CraterSeed(String id, int x, int y, int z, int diameter, CraterSize size, CraterProfile profile,
+        long reserve) {}
 
     private CraterSeed getSeed(World world, GalaxiaPlanetGenerator generator, int cx, int cz) {
         seedRand.prime(world, cx, cz, 123, 5678);
@@ -44,16 +45,27 @@ public class CraterFeature implements SurfaceFeature {
 
         if (!condition.test(topBlock)) return null;
 
-        return new CraterSeed(wx, surface, wz, 16 + seedRand.nextInt(16));
+        CraterSize size = CraterSize.select(seedRand);
+        int diameter = size.sampleDiameter(seedRand);
+        CraterProfile profile = CraterProfile.select(size, seedRand);
+        long reserve = profile.initialReserve(size, diameter, seedRand);
+        return new CraterSeed(cx + ":" + cz, wx, surface, wz, diameter, size, profile, reserve);
     }
 
     @Override
     public void generateSurfaceFeature(World world, GalaxiaPlanetGenerator generator, int cx, int cz) {
-        for (int seedX = -2; seedX <= 2; seedX++) {
-            for (int seedZ = -2; seedZ <= 2; seedZ++) {
+        int reach = CraterSize.MAX_DIAMETER / 32 + 1;
+        for (int seedX = -reach; seedX <= reach; seedX++) {
+            for (int seedZ = -reach; seedZ <= reach; seedZ++) {
                 CraterSeed seed = getSeed(world, generator, seedX + cx, seedZ + cz);
 
                 if (seed != null) {
+                    int radius = (seed.diameter + 1) / 2;
+                    if (seed.x + radius < (cx << 4) || seed.x - radius > (cx << 4) + 15
+                        || seed.z + radius < (cz << 4)
+                        || seed.z - radius > (cz << 4) + 15) continue;
+                    CraterDeposits.get(world)
+                        .register(seed.id, seed.x, seed.z, seed.diameter, seed.size, seed.profile, seed.reserve);
                     generateSeed(world, generator, cx, cz, seed);
                 }
             }
@@ -63,6 +75,7 @@ public class CraterFeature implements SurfaceFeature {
     private void generateSeed(World world, GalaxiaPlanetGenerator generator, int cx, int cz, CraterSeed seed) {
         int radius = seed.diameter / 2;
         int squaredCraterRadius = radius * radius;
+        double rimWidth = Math.max(1.0, radius / 16.0);
 
         int x = seed.x;
         int y = seed.y + radius / 2;
@@ -81,29 +94,9 @@ public class CraterFeature implements SurfaceFeature {
                 if ((wz >> 4) != cz) continue;
 
                 double rimDistance = localX * localX + localZ * localZ;
-
-                double rimInner = squaredCraterRadius - nondetRand.nextInt(96);
-                double rimOuter = squaredCraterRadius + nondetRand.nextInt(64);
-
-                if (rimDistance >= rimInner && rimDistance < rimOuter) {
-                    boolean wasBelowAir = world.isAirBlock(wx, y - 10, wz);
-
-                    for (int rimY = -10; rimY <= 10; rimY++) {
-                        if (world.getBlock(wx, y + rimY + 1, wz) == tektite) {
-                            // 1 in 3 chance of aborting the scan per tektite already placed, to avoid large walls
-                            if (nondetRand.nextInt(3) == 0) break;
-                        }
-
-                        boolean belowAir = world.isAirBlock(wx, y + rimY + 1, wz);
-
-                        if (!wasBelowAir && belowAir) {
-                            generator.setBlockSafe(wx, y + rimY + 1, wz, tektite, 0);
-                            break;
-                        }
-
-                        wasBelowAir = belowAir;
-                    }
-                }
+                int surface = world.getHeightValue(wx, wz);
+                double surfaceOffset = surface - y;
+                double squaredMouthRadius = squaredCraterRadius - surfaceOffset * surfaceOffset;
 
                 for (int localY = -radius; localY <= radius; localY++) {
                     int wy = y + localY;
@@ -114,6 +107,19 @@ public class CraterFeature implements SurfaceFeature {
 
                     if (squaredDistance < squaredCraterRadius * (1.0 - nondetRand.nextDouble() * 0.1)) {
                         generator.setBlockSafe(wx, wy, wz, Blocks.air, 0);
+                    }
+                }
+
+                if (squaredMouthRadius > 0) {
+                    double mouthRadius = Math.sqrt(squaredMouthRadius);
+                    double rimInner = Math.max(0, mouthRadius - rimWidth * nondetRand.nextDouble());
+                    double rimOuter = Math.min(radius, mouthRadius + rimWidth * nondetRand.nextDouble());
+                    if (rimDistance >= rimInner * rimInner && rimDistance < rimOuter * rimOuter) {
+                        // Follow the carved surface and avoid stacking debris from overlapping craters.
+                        int rimY = world.getHeightValue(wx, wz);
+                        if (world.isAirBlock(wx, rimY, wz) && world.getBlock(wx, rimY - 1, wz) != tektite) {
+                            generator.setBlockSafe(wx, rimY, wz, tektite, 0);
+                        }
                     }
                 }
             }

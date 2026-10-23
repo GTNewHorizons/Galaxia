@@ -7,6 +7,7 @@ import cpw.mods.fml.common.event.FMLInterModComms;
 public class IMCForNEI {
 
     public static void IMCSender() {
+        registerHandlerInfo(CraterDistributionHandler.class.getName(), "minecraft:iron_ore", 154);
         registerHandlerInfo(
             GalaxiaMultiblockHandler.class.getName(),
             "structurelib:item.structurelib.constructableTrigger",

@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.compat.gt;
 
+import com.gtnewhorizons.galaxia.compat.gt.crater.MTECraterExtractor;
 import com.gtnewhorizons.galaxia.compat.gt.elevator.MTEGalaxiaSpaceElevator;
 import com.gtnewhorizons.galaxia.compat.gt.handlers.GTHatchEnergySourceHandler;
 import com.gtnewhorizons.galaxia.compat.gt.handlers.MTELapotronicSuperCapacitorHandler;
@@ -52,6 +53,7 @@ public final class GalaxiaGTAttachmentRegistration {
     }
 
     private static void registerHatches() {
+        new MTECraterExtractor();
         mteHatchStationMaintenance = new MTEHatchStationMaintenance(
             MTEHatchStationMaintenance.ID,
             "hatch.station_controller",

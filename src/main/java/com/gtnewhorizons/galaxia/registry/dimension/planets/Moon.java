@@ -283,7 +283,6 @@ public final class Moon {
             .caveShape(new CaveShapeTubes((byte) 16, (byte) 4, (short) 100))
             .surfaceFeature(
                 CraterFeature.builder()
-                    .rarity(64)
                     .tektite(MOON_TEKTITE)
                     .condition((block, meta) -> block == MOON_REGOLITH || block == MOON_BASALT)
                     .build())

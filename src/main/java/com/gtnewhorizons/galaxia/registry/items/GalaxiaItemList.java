@@ -60,6 +60,7 @@ public enum GalaxiaItemList {
     RAW_METEORIC_IRON("ore/raw_meteoric_iron"),
 
     // PARTS
+    THIN_STRIP_MOLD("parts/thin_strip_mold", Item::new, 1),
     HEAVY_DUTY_PLATE_BASE("parts/heavy_duty_plate_base"),
     SATELLITE_DISH("parts/satellite_dish"),
     BOROSILICATE_GLASS_BAR("parts/borosilicate_glass_bar"),

@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('unit', 'physical-stations', 'recipe-environments', 'automated-facilities', 'rocket-production', 'starmap', 'satellites', 'all')]
+    [ValidateSet('unit', 'physical-stations', 'recipe-environments', 'automated-facilities', 'rocket-production', 'starmap', 'satellites', 'lunar-industry', 'all')]
     [string[]] $Suite = @('unit'),
     [string] $HorizonQaRoot = '',
     [string] $HorizonQaJar = '',
@@ -16,6 +16,7 @@ $projectRoot = Split-Path $PSScriptRoot -Parent
 # Keep gameplay and GUI scenarios for each domain together.
 $groups = [ordered]@{
     'recipe-environments' = @('galaxia:RecipeEnvironmentGameTests.', 'galaxia:RoomPressureGameTests.')
+    'lunar-industry' = @('galaxia:LunarIndustryGameTests.', 'galaxia:CraterExtractorGameTests.', 'galaxia:SpaceGradeAlloyGameTests.', 'galaxia:CraterTerrainGameTests.')
     'physical-stations' = @('galaxia:AirlockGuiGameTests.')
     'automated-facilities' = @('galaxia:FacilityGameplayGameTests.', 'galaxia:StationGuiGameTests.')
     'rocket-production' = @('galaxia:ModuleConstructionGuiGameTests.')
