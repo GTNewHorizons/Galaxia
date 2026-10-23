@@ -48,14 +48,14 @@ import com.gtnewhorizons.horizonqa.api.GameTestHelper;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTest;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTestHolder;
 import com.gtnewhorizons.horizonqa.api.client.ClientTest;
+import com.ruling_0.materiallib.api.MaterialLibAPI;
 
 import baubles.api.BaublesApi;
 import gregtech.api.enums.ItemList;
-import gregtech.api.enums.Materials;
-import gregtech.api.enums.OrePrefixes;
+import gregtech.api.enums.materials.Materials;
+import gregtech.api.enums.materials.Shapes;
 import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
 import gregtech.api.metatileentity.implementations.MTEHatchInput;
-import gregtech.api.util.GTOreDictUnificator;
 import gregtech.common.blocks.ItemMachines;
 
 @GameTestHolder(value = "galaxia", clientOnly = true, requiredMods = { "gregtech" })
@@ -288,7 +288,7 @@ public final class RocketGameTests {
                 fixture.build(helper);
                 fixture.stockModules();
                 IGregTechTileEntity bus = fixture.machine(11, 2, 6);
-                bus.setInventorySlotContents(0, GTOreDictUnificator.get(OrePrefixes.plate, Materials.Steel, 5));
+                bus.setInventorySlotContents(0, MaterialLibAPI.getStack(Materials.Steel, Shapes.plate, 5));
             })
             .awaitServer("every multiblock formed", fixture::assertFormed)
             .awaitClient("the assembler reached the client", c -> {
@@ -648,8 +648,8 @@ public final class RocketGameTests {
 
         void queueDecoupler() {
             IGregTechTileEntity bus = machine(11, 2, 6);
-            bus.setInventorySlotContents(0, GTOreDictUnificator.get(OrePrefixes.plate, Materials.Steel, 8));
-            bus.setInventorySlotContents(1, GTOreDictUnificator.get(OrePrefixes.screw, Materials.Steel, 8));
+            bus.setInventorySlotContents(0, MaterialLibAPI.getStack(Materials.Steel, Shapes.plate, 8));
+            bus.setInventorySlotContents(1, MaterialLibAPI.getStack(Materials.Steel, Shapes.screw, 8));
             assembler.queueCraft(RocketPartRegistry.DECOUPLER, 1);
         }
 
