@@ -8,15 +8,15 @@ import static gregtech.api.util.GTRecipeBuilder.SECONDS;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
+import com.ruling_0.materiallib.api.MaterialLibAPI;
 
+import gregtech.api.enums.Circuits;
 import gregtech.api.enums.GTValues;
 import gregtech.api.enums.ItemList;
-import gregtech.api.enums.Materials;
-import gregtech.api.enums.OrePrefixes;
-import gregtech.api.util.GTOreDictUnificator;
+import gregtech.api.enums.materials.Materials;
+import gregtech.api.enums.materials.Shapes;
+import gregtech.api.material.MaterialUtils;
 import gregtech.api.util.GTRecipeConstants;
-import gtPlusPlus.core.material.MaterialsElements;
-import gtPlusPlus.core.material.nuclear.MaterialsFluorides;
 
 /** Standard GT processing and assembly for the orbital material chains. */
 public final class OrbitalRecipes {
@@ -33,27 +33,33 @@ public final class OrbitalRecipes {
 
     private static void siliconGermanium() {
         GTValues.RA.stdBuilder()
-            .itemInputs(ore(OrePrefixes.crushedPurified, Materials.Sphalerite, 1), Materials.Carbon.getDust(4))
-            .fluidInputs(Materials.SulfuricAcid.getFluid(250))
-            .fluidOutputs(MaterialsElements.getInstance().GERMANIUM.getFluidStack(8))
+            .itemInputs(
+                MaterialLibAPI.getStack(Materials.Sphalerite, Shapes.crushedPurified, 1),
+                MaterialLibAPI.getStack(Materials.Carbon, Shapes.dust, 4))
+            .fluidInputs(MaterialUtils.fluid(Materials.SulfuricAcid, 250))
+            .fluidOutputs(MaterialUtils.molten(Materials.Germanium, 8))
             .duration(30 * SECONDS)
             .eut(480)
             .addTo(GTRecipeConstants.UniversalChemical);
         GTValues.RA.stdBuilder()
-            .itemInputs(Materials.SiliconSG.getDust(7))
-            .fluidInputs(MaterialsElements.getInstance().GERMANIUM.getFluidStack(144))
+            .itemInputs(MaterialLibAPI.getStack(Materials.SiliconSG, Shapes.dust, 7))
+            .fluidInputs(MaterialUtils.molten(Materials.Germanium, 144))
             .itemOutputs(SIGE_BLEND.get(8))
             .duration(20 * SECONDS)
             .eut(120)
             .addTo(mixerRecipes);
-        GTValues.RA.stdBuilder().requiresEnvironment(MICROGRAVITY).itemInputs(SIGE_BLEND.get(1))
-            .itemOutputs(SIGE_SEED.get(1), POLY_SIGE.get(1), ore(OrePrefixes.dustTiny, Materials.Ash, 1))
+        GTValues.RA.stdBuilder()
+            .requiresEnvironment(MICROGRAVITY)
+            .itemInputs(SIGE_BLEND.get(1))
+            .itemOutputs(SIGE_SEED.get(1), POLY_SIGE.get(1), MaterialLibAPI.getStack(Materials.Ash, Shapes.dustTiny, 1))
             .outputChances(1000, 9000, 10000)
             .metadata(GTRecipeConstants.COIL_HEAT, 1784)
             .duration(60 * SECONDS)
             .eut(480)
             .addTo(blastFurnaceRecipes);
-        GTValues.RA.stdBuilder().requiresEnvironment(MICROGRAVITY).itemInputs(SIGE_SEED.get(1))
+        GTValues.RA.stdBuilder()
+            .requiresEnvironment(MICROGRAVITY)
+            .itemInputs(SIGE_SEED.get(1))
             .fluidInputs(OrbitalItems.Melt.SIGE.get(1008))
             .itemOutputs(SIGE_MONOCRYSTAL.get(1))
             .metadata(GTRecipeConstants.COIL_HEAT, 1784)
@@ -76,13 +82,13 @@ public final class OrbitalRecipes {
             .addTo(hammerRecipes);
         GTValues.RA.stdBuilder()
             .itemInputs(SIGE_MONOCRYSTAL.get(1))
-            .fluidInputs(Materials.Water.getFluid(100))
+            .fluidInputs(MaterialUtils.fluid(Materials.Water, 100))
             .itemOutputs(SIGE_WAFER.get(16))
             .duration(40 * SECONDS)
             .eut(120)
             .addTo(cutterRecipes);
         GTValues.RA.stdBuilder()
-            .itemInputs(SIGE_WAFER.get(1), ore(OrePrefixes.lens, Materials.Ruby, 0))
+            .itemInputs(SIGE_WAFER.get(1), MaterialLibAPI.getStack(Materials.Ruby, Shapes.lens, 0))
             .itemOutputs(CLC_WAFER.get(1))
             .requiresCleanRoom()
             .duration(45 * SECONDS)
@@ -90,22 +96,25 @@ public final class OrbitalRecipes {
             .addTo(laserEngraverRecipes);
         GTValues.RA.stdBuilder()
             .itemInputs(CLC_WAFER.get(1))
-            .fluidInputs(Materials.HydrochloricAcid.getFluid(250))
+            .fluidInputs(MaterialUtils.fluid(Materials.HydrochloricAcid, 250))
             .itemOutputs(ETCHED_CLC_WAFER.get(1))
             .duration(30 * SECONDS)
             .eut(480)
             .addTo(chemicalBathRecipes);
         GTValues.RA.stdBuilder()
             .itemInputs(ETCHED_CLC_WAFER.get(1))
-            .fluidInputs(Materials.Water.getFluid(100))
+            .fluidInputs(MaterialUtils.fluid(Materials.Water, 100))
             .itemOutputs(CLC_CHIP.get(4))
             .requiresCleanRoom()
             .duration(45 * SECONDS)
             .eut(120)
             .addTo(cutterRecipes);
         GTValues.RA.stdBuilder()
-            .itemInputs(CLC_CHIP.get(4), Materials.Copper.getPlates(2), ore(OrePrefixes.wireFine, Materials.Copper, 8))
-            .fluidInputs(Materials.Tin.getMolten(144))
+            .itemInputs(
+                CLC_CHIP.get(4),
+                MaterialLibAPI.getStack(Materials.Copper, Shapes.plate, 2),
+                MaterialLibAPI.getStack(Materials.Copper, Shapes.wireFine, 8))
+            .fluidInputs(MaterialUtils.molten(Materials.Tin, 144))
             .itemOutputs(CLC_MODULE.get(1))
             .duration(30 * SECONDS)
             .eut(480)
@@ -115,32 +124,39 @@ public final class OrbitalRecipes {
     private static void fluorideGlass() {
         GTValues.RA.stdBuilder()
             .itemInputs(
-                MaterialsFluorides.SODIUM_FLUORIDE.getDust(2),
-                Materials.AluminiumFluoride.getDust(4),
-                Materials.SiliconDioxide.getDust(3))
+                MaterialLibAPI.getStack(Materials.SodiumFluoride, Shapes.dust, 2),
+                MaterialLibAPI.getStack(Materials.AluminiumFluoride, Shapes.dust, 4),
+                MaterialLibAPI.getStack(Materials.SiliconDioxide, Shapes.dust, 3))
             .itemOutputs(FLUORIDE_GLASS_MIX.get(9))
             .duration(15 * SECONDS)
             .eut(120)
             .addTo(mixerRecipes);
-        GTValues.RA.stdBuilder().requiresEnvironment(MICROGRAVITY).itemInputs(FLUORIDE_GLASS_MIX.get(1))
+        GTValues.RA.stdBuilder()
+            .requiresEnvironment(MICROGRAVITY)
+            .itemInputs(FLUORIDE_GLASS_MIX.get(1))
             .fluidOutputs(OrbitalItems.Melt.FLUORIDE_GLASS.get(144))
             .metadata(GTRecipeConstants.COIL_HEAT, 1800)
             .duration(120 * SECONDS)
             .eut(480)
             .addTo(blastFurnaceRecipes);
-        GTValues.RA.stdBuilder().requiresEnvironment(MICROGRAVITY).itemInputs(ItemList.Shape_Mold_Ingot.get(0))
+        GTValues.RA.stdBuilder()
+            .requiresEnvironment(MICROGRAVITY)
+            .itemInputs(ItemList.Shape_Mold_Ingot.get(0))
             .fluidInputs(OrbitalItems.Melt.FLUORIDE_GLASS.get(288))
             .itemOutputs(FLUORIDE_GLASS_BLANK.get(1))
             .duration(20 * SECONDS)
             .eut(120)
             .addTo(fluidSolidifierRecipes);
-        GTValues.RA.stdBuilder().requiresEnvironment(MICROGRAVITY).itemInputs(FLUORIDE_GLASS_PREFORM.get(1))
+        GTValues.RA.stdBuilder()
+            .requiresEnvironment(MICROGRAVITY)
+            .itemInputs(FLUORIDE_GLASS_PREFORM.get(1))
             .itemOutputs(HEATED_FLUORIDE_GLASS_PREFORM.get(1))
             .metadata(GTRecipeConstants.COIL_HEAT, 1800)
             .duration(20 * SECONDS)
             .eut(480)
             .addTo(blastFurnaceRecipes);
-        GTValues.RA.stdBuilder().requiresEnvironment(MICROGRAVITY)
+        GTValues.RA.stdBuilder()
+            .requiresEnvironment(MICROGRAVITY)
             .itemInputs(HEATED_FLUORIDE_GLASS_PREFORM.get(1), ItemList.Shape_Extruder_Wire.get(0))
             .itemOutputs(FLUORIDE_OPTICAL_FIBER.get(8))
             .duration(30 * SECONDS)
@@ -163,27 +179,27 @@ public final class OrbitalRecipes {
     private static void solarComponents() {
         GTValues.RA.stdBuilder()
             .itemInputs(
-                Materials.SiliconSG.getDust(64),
-                Materials.Glass.getPlates(4),
-                new Object[] { OrePrefixes.circuit.get(Materials.HV), 2 },
-                Materials.Aluminium.getPlates(4),
-                ore(OrePrefixes.wireFine, Materials.Copper, 8),
-                MaterialsElements.getInstance().GERMANIUM.getDust(1),
+                MaterialLibAPI.getStack(Materials.SiliconSG, Shapes.dust, 64),
+                MaterialLibAPI.getStack(Materials.Glass, Shapes.plate, 4),
+                new Object[] { Circuits.HV.getIngredient(), 2 },
+                MaterialLibAPI.getStack(Materials.Aluminium, Shapes.plate, 4),
+                MaterialLibAPI.getStack(Materials.Copper, Shapes.wireFine, 8),
+                MaterialLibAPI.getStack(Materials.Germanium, Shapes.dust, 1),
                 FLUORIDE_GLASS_MIX.get(9))
-            .fluidInputs(Materials.Tin.getMolten(288))
+            .fluidInputs(MaterialUtils.molten(Materials.Tin, 288))
             .itemOutputs(SPACE_GRADE_SOLAR_PANEL.get(1))
             .duration(120 * SECONDS)
             .eut(480)
             .addTo(assemblerRecipes);
         GTValues.RA.stdBuilder()
-            .itemInputs(SIGE_WAFER.get(1), ore(OrePrefixes.lens, Materials.Glass, 0))
+            .itemInputs(SIGE_WAFER.get(1), MaterialLibAPI.getStack(Materials.Glass, Shapes.lens, 0))
             .itemOutputs(SOLAR_CELL.get(4))
             .duration(45 * SECONDS)
             .eut(480)
             .addTo(laserEngraverRecipes);
         GTValues.RA.stdBuilder()
             .itemInputs(FLUORIDE_GLASS_BLANK.get(1))
-            .fluidInputs(Materials.Water.getFluid(100))
+            .fluidInputs(MaterialUtils.fluid(Materials.Water, 100))
             .itemOutputs(SOLAR_GLASS_SHEET.get(3))
             .duration(20 * SECONDS)
             .eut(120)
@@ -193,9 +209,9 @@ public final class OrbitalRecipes {
                 SOLAR_CELL.get(2),
                 SOLAR_GLASS_SHEET.get(1),
                 CLC_MODULE.get(1),
-                Materials.Aluminium.getPlates(4),
-                ore(OrePrefixes.wireFine, Materials.Copper, 8))
-            .fluidInputs(Materials.Tin.getMolten(288))
+                MaterialLibAPI.getStack(Materials.Aluminium, Shapes.plate, 4),
+                MaterialLibAPI.getStack(Materials.Copper, Shapes.wireFine, 8))
+            .fluidInputs(MaterialUtils.molten(Materials.Tin, 288))
             .itemOutputs(SPACE_GRADE_SOLAR_PANEL.get(1))
             .duration(60 * SECONDS)
             .eut(480)
@@ -205,19 +221,19 @@ public final class OrbitalRecipes {
     private static void satelliteParts() {
         GTValues.RA.stdBuilder()
             .itemInputs(
-                Materials.Aluminium.getPlates(4),
-                ore(OrePrefixes.stick, Materials.Steel, 2),
-                ore(OrePrefixes.ring, Materials.Aluminium, 2))
+                MaterialLibAPI.getStack(Materials.Aluminium, Shapes.plate, 4),
+                MaterialLibAPI.getStack(Materials.Steel, Shapes.stick, 2),
+                MaterialLibAPI.getStack(Materials.Aluminium, Shapes.ring, 2))
             .itemOutputs(SATELLITE_FRAME.get(1))
             .duration(30 * SECONDS)
             .eut(480)
             .addTo(assemblerRecipes);
         GTValues.RA.stdBuilder()
             .itemInputs(
-                Materials.Aluminium.getPlates(4),
-                ore(OrePrefixes.wireFine, Materials.Copper, 4),
+                MaterialLibAPI.getStack(Materials.Aluminium, Shapes.plate, 4),
+                MaterialLibAPI.getStack(Materials.Copper, Shapes.wireFine, 4),
                 ItemList.Emitter_MV.get(1))
-            .fluidInputs(Materials.Tin.getMolten(144))
+            .fluidInputs(MaterialUtils.molten(Materials.Tin, 144))
             .itemOutputs(new ItemStack(GalaxiaItemList.SATELLITE_DISH.getItem()))
             .duration(20 * SECONDS)
             .eut(480)
@@ -230,12 +246,12 @@ public final class OrbitalRecipes {
             .itemInputs(
                 SATELLITE_FRAME.get(1),
                 dish,
-                ore(OrePrefixes.lens, Materials.Glass, 4),
-                new Object[] { OrePrefixes.circuit.get(Materials.HV), 1 },
+                MaterialLibAPI.getStack(Materials.Glass, Shapes.lens, 4),
+                new Object[] { Circuits.HV.getIngredient(), 1 },
                 ItemList.Sensor_MV.get(1),
                 ItemList.Battery_RE_HV_Lithium.get(1),
                 ItemList.Cover_SolarPanel.get(1))
-            .fluidInputs(Materials.Tin.getMolten(144))
+            .fluidInputs(MaterialUtils.molten(Materials.Tin, 144))
             .itemOutputs(PRIMITIVE_TELESCOPE_SATELLITE.get(1))
             .duration(45 * SECONDS)
             .eut(480)
@@ -250,7 +266,7 @@ public final class OrbitalRecipes {
                 FLUORIDE_FIBER_SPOOL.get(2),
                 ItemList.Battery_RE_HV_Lithium.get(1),
                 SPACE_GRADE_SOLAR_PANEL.get(2))
-            .fluidInputs(Materials.Tin.getMolten(288))
+            .fluidInputs(MaterialUtils.molten(Materials.Tin, 288))
             .itemOutputs(COMMUNICATION_SATELLITE.get(1))
             .duration(60 * SECONDS)
             .eut(480)
@@ -260,12 +276,12 @@ public final class OrbitalRecipes {
                 SATELLITE_FRAME.get(1),
                 ItemList.Emitter_HV.get(1),
                 ItemList.Sensor_HV.get(3),
-                ore(OrePrefixes.lens, Materials.Diamond, 2),
+                MaterialLibAPI.getStack(Materials.Diamond, Shapes.lens, 2),
                 CLC_MODULE.get(2),
                 FLUORIDE_FIBER_SPOOL.get(1),
                 ItemList.Battery_RE_HV_Lithium.get(1),
                 SPACE_GRADE_SOLAR_PANEL.get(1))
-            .fluidInputs(Materials.Tin.getMolten(288))
+            .fluidInputs(MaterialUtils.molten(Materials.Tin, 288))
             .itemOutputs(PROSPECTING_SATELLITE.get(1))
             .duration(60 * SECONDS)
             .eut(480)
@@ -273,19 +289,15 @@ public final class OrbitalRecipes {
         GTValues.RA.stdBuilder()
             .itemInputs(
                 CLC_MODULE.get(1),
-                new Object[] { OrePrefixes.circuit.get(Materials.HV), 2 },
+                new Object[] { Circuits.HV.getIngredient(), 2 },
                 ItemList.Sensor_HV.get(1),
                 ItemList.Emitter_HV.get(1),
-                Materials.Aluminium.getPlates(2),
-                ore(OrePrefixes.wireFine, Materials.Copper, 4))
-            .fluidInputs(Materials.Tin.getMolten(288))
+                MaterialLibAPI.getStack(Materials.Aluminium, Shapes.plate, 2),
+                MaterialLibAPI.getStack(Materials.Copper, Shapes.wireFine, 4))
+            .fluidInputs(MaterialUtils.molten(Materials.Tin, 288))
             .itemOutputs(ROCKET_AUTOMATION_CONTROLLER.get(1))
             .duration(45 * SECONDS)
             .eut(480)
             .addTo(assemblerRecipes);
-    }
-
-    private static ItemStack ore(OrePrefixes prefix, Materials material, int amount) {
-        return GTOreDictUnificator.get(prefix, material, amount);
     }
 }

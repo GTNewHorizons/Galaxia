@@ -13,8 +13,8 @@ import com.gtnewhorizons.horizonqa.api.GameTestHelper;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTest;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTestHolder;
 
-import gregtech.api.recipe.RecipeMap;
 import gregtech.api.recipe.RecipeEnvironmentRequirements;
+import gregtech.api.recipe.RecipeMap;
 import gregtech.api.util.GTRecipe;
 import gregtech.api.util.GTRecipeConstants;
 

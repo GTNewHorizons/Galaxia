@@ -18,7 +18,8 @@ import com.gtnewhorizons.horizonqa.api.annotation.GameTest;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTestHolder;
 
 import gregtech.api.enums.ItemList;
-import gregtech.api.enums.Materials;
+import gregtech.api.enums.materials.Materials;
+import gregtech.api.material.MaterialUtils;
 import gregtech.api.util.GTRecipe;
 
 @GameTestHolder(value = "galaxia", clientOnly = true, requiredMods = { "gregtech" })
@@ -67,7 +68,7 @@ public final class ComputerRecipeGameTests {
             if (rack) {
                 helper.assertTrue(
                     recipe.mFluidInputs.length == 1
-                        && recipe.mFluidInputs[0].isFluidEqual(Materials.SolderingAlloy.getMolten(1)),
+                        && recipe.mFluidInputs[0].isFluidEqual(MaterialUtils.molten(Materials.SolderingAlloy, 1)),
                     "Rack assembly must use Soldering Alloy");
                 for (ItemStack input : List.of(
                     OrbitalItems.CLC_MODULE.get(1),
