@@ -8,19 +8,22 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.api.RecipeEnvironments;
-import com.gtnewhorizons.galaxia.api.RecipeEnvironments.Requirement;
-import com.gtnewhorizons.galaxia.api.RecipeEnvironments.Tag;
 import com.gtnewhorizons.horizonqa.api.GameTestHelper;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTest;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTestHolder;
 
+import gregtech.api.enums.GTValues;
 import gregtech.api.enums.ItemList;
 import gregtech.api.metatileentity.BaseMetaTileEntity;
+import gregtech.api.metatileentity.MetaTileEntity;
 import gregtech.api.metatileentity.implementations.MTEBasicMachine;
+import gregtech.api.recipe.RecipeEnvironment;
+import gregtech.api.recipe.RecipeEnvironmentRequirements;
 import gregtech.api.recipe.RecipeMaps;
 import gregtech.api.recipe.check.CheckRecipeResult;
 import gregtech.common.tileentities.machines.multi.MTEElectricBlastFurnace;
@@ -37,7 +40,7 @@ public final class RecipeEnvironmentGameTests {
             .thenExecute(() -> {
                 for (ItemList type : List.of(ItemList.Machine_LV_Extruder, ItemList.Machine_LV_FluidSolidifier)) {
                     AtomicBoolean allowed = new AtomicBoolean(false);
-                    Tag tag = testTag(allowed);
+                    RecipeEnvironment tag = testTag(allowed);
                     BaseMetaTileEntity tile = new BaseMetaTileEntity();
                     tile.setWorldObj(helper.getWorld());
                     tile.setInitialValuesAsNBT(
@@ -48,7 +51,8 @@ public final class RecipeEnvironmentGameTests {
                     ItemStack input = new ItemStack(Items.written_book);
                     tile.setInventorySlotContents(machine.getInputSlot(), input);
                     boolean solidifier = type == ItemList.Machine_LV_FluidSolidifier;
-                    var builder = RecipeEnvironments.requiresEnvironment(tag)
+                    var builder = GTValues.RA.stdBuilder()
+                        .requiresEnvironment(tag)
                         .itemInputs(input.copy())
                         .itemOutputs(new ItemStack(Items.diamond))
                         .duration(80)
@@ -79,12 +83,12 @@ public final class RecipeEnvironmentGameTests {
                     machine.onPostTick(tile, 1);
                     helper.assertTrue(machine.mProgresstime > 0, "permitted operation advances");
                     NBTTagCompound saved = new NBTTagCompound();
-                    machine.saveNBTData(saved);
+                    tile.writeToNBT(saved);
                     helper.assertEquals(
-                        Requirement.of(tag),
-                        Requirement.readFromNBT(saved),
+                        RecipeEnvironmentRequirements.of(tag),
+                        RecipeEnvironmentRequirements
+                            .readFromNBT(saved.getTagList("recipeEnvironments", Constants.NBT.TAG_STRING)),
                         "active unbuffered restriction saved");
-                    machine.loadNBTData(saved);
                     long energy = tile.getStoredEU();
                     allowed.set(false);
                     machine.onPostTick(tile, 2);
@@ -108,7 +112,14 @@ public final class RecipeEnvironmentGameTests {
     public static void ebfValidationAndNativeShutdown(GameTestHelper helper) {
         helper.startSequence()
             .thenExecute(() -> {
-                var copied = RecipeEnvironments
+                MetaTileEntity unbound = new MTEElectricBlastFurnace("unbound_environment_test");
+                helper.assertFalse(
+                    RecipeEnvironments.MICROGRAVITY.isSatisfied(unbound),
+                    "unbound controller cannot satisfy microgravity");
+                helper.assertFalse(
+                    RecipeEnvironments.NO_ATMOSPHERE.isSatisfied(unbound),
+                    "unbound controller cannot satisfy vacuum");
+                var copied = GTValues.RA.stdBuilder()
                     .requiresEnvironment(RecipeEnvironments.MICROGRAVITY, RecipeEnvironments.NO_ATMOSPHERE)
                     .itemInputs(new ItemStack(Items.paper))
                     .itemOutputs(new ItemStack(Items.book))
@@ -120,17 +131,19 @@ public final class RecipeEnvironmentGameTests {
                     .copy();
                 helper.assertEquals(4500, copied.mSpecialValue, "recipe copy retains independent special value");
                 helper.assertEquals(
-                    Requirement.of(RecipeEnvironments.MICROGRAVITY, RecipeEnvironments.NO_ATMOSPHERE),
-                    RecipeEnvironments.of(copied),
+                    RecipeEnvironmentRequirements.of(RecipeEnvironments.MICROGRAVITY, RecipeEnvironments.NO_ATMOSPHERE),
+                    copied.getEnvironmentRequirements(),
                     "native recipe copy retains environment metadata");
                 helper.assertEquals(
-                    RecipeEnvironments.of(copied),
-                    RecipeEnvironments.of(copied.copyShallow()),
+                    copied.getEnvironmentRequirements(),
+                    copied.copyShallow()
+                        .getEnvironmentRequirements(),
                     "shallow recipe copies retain the same environment conditions");
                 AtomicBoolean allowed = new AtomicBoolean(false);
-                Tag tag = testTag(allowed);
+                RecipeEnvironment tag = testTag(allowed);
                 Furnace furnace = new Furnace(helper);
-                var recipes = RecipeEnvironments.requiresEnvironment(tag)
+                var recipes = GTValues.RA.stdBuilder()
+                    .requiresEnvironment(tag)
                     .itemInputs(new ItemStack(Items.written_book))
                     .itemOutputs(new ItemStack(Items.diamond))
                     .duration(80)
@@ -152,9 +165,13 @@ public final class RecipeEnvironmentGameTests {
                     "inherited EBF logic accepts satisfied requirements");
                 helper.assertEquals(0, input.stackSize, "accepted EBF input consumed");
                 NBTTagCompound saved = new NBTTagCompound();
-                furnace.saveNBTData(saved);
-                helper
-                    .assertEquals(Requirement.of(tag), Requirement.readFromNBT(saved), "active EBF requirement saved");
+                furnace.getBaseMetaTileEntity()
+                    .writeToNBT(saved);
+                helper.assertEquals(
+                    RecipeEnvironmentRequirements.of(tag),
+                    RecipeEnvironmentRequirements
+                        .readFromNBT(saved.getTagList("recipeEnvironments", Constants.NBT.TAG_STRING)),
+                    "active EBF requirement saved");
 
                 furnace.mMachine = true;
                 furnace.mStartUpCheck = -1000;
@@ -179,7 +196,8 @@ public final class RecipeEnvironmentGameTests {
                         .isAllowedToWork(),
                     "native shutdown disables work");
 
-                var hotRecipes = RecipeEnvironments.requiresEnvironment(tag)
+                var hotRecipes = GTValues.RA.stdBuilder()
+                    .requiresEnvironment(tag)
                     .itemInputs(new ItemStack(Items.compass))
                     .itemOutputs(new ItemStack(Items.diamond))
                     .duration(80)
@@ -198,9 +216,15 @@ public final class RecipeEnvironmentGameTests {
             .thenSucceed();
     }
 
-    private static Tag testTag(AtomicBoolean allowed) {
-        return RecipeEnvironments
-            .register("galaxia_test:" + UUID.randomUUID(), "galaxia.environment.unknown", conditions -> allowed.get());
+    private static RecipeEnvironment testTag(AtomicBoolean allowed) {
+        return RecipeEnvironment
+            .register(new RecipeEnvironment("galaxia_test:" + UUID.randomUUID(), "galaxia.environment.unknown") {
+
+                @Override
+                public boolean isSatisfied(MetaTileEntity machine) {
+                    return allowed.get();
+                }
+            });
     }
 
     /** Harness exception: supplies ordinary processing inputs without a complete EBF structure or hatch network. */

@@ -14,7 +14,6 @@ import net.minecraftforge.fluids.FluidStack;
 import com.cleanroommc.modularui.factory.GuiFactories;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.api.RecipeEnvironments;
-import com.gtnewhorizons.galaxia.api.RecipeEnvironments.Requirement;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockDoor;
@@ -29,11 +28,24 @@ import com.gtnewhorizons.horizonqa.api.client.ClientTest;
 import gregtech.api.GregTechAPI;
 import gregtech.api.enums.ItemList;
 import gregtech.api.metatileentity.BaseMetaTileEntity;
+import gregtech.api.metatileentity.MetaTileEntity;
+import gregtech.common.tileentities.machines.multi.MTEElectricBlastFurnace;
 
 @GameTestHolder(value = "galaxia", clientOnly = true, requiredMods = "gregtech")
 public final class RoomPressureGameTests {
 
     private RoomPressureGameTests() {}
+
+    private static MetaTileEntity controllerAt(WorldServer world, int x, int y, int z) {
+        BaseMetaTileEntity tile = new BaseMetaTileEntity();
+        tile.setWorldObj(world);
+        tile.xCoord = x;
+        tile.yCoord = y;
+        tile.zCoord = z;
+        MetaTileEntity machine = new MTEElectricBlastFurnace("room_condition_probe");
+        machine.setBaseMetaTileEntity(tile);
+        return machine;
+    }
 
     /** Product contract: pressure survives without oxygen, equalizes through airflow and empties through a breach. */
     @GameTest(timeoutTicks = 600)
@@ -81,12 +93,11 @@ public final class RoomPressureGameTests {
                     rooms.room(12)
                         .getPressureLevel(),
                     "second room is vacuum");
-                var vacuum = Requirement.of(RecipeEnvironments.NO_ATMOSPHERE);
                 helper.assertFalse(
-                    vacuum.matches(RecipeEnvironments.at(rooms.world, 35, 131, 3)),
+                    RecipeEnvironments.NO_ATMOSPHERE.isSatisfied(controllerAt(rooms.world, 35, 131, 3)),
                     "pressurized room denies vacuum recipes");
                 helper.assertTrue(
-                    vacuum.matches(RecipeEnvironments.at(rooms.world, 35, 131, 9)),
+                    RecipeEnvironments.NO_ATMOSPHERE.isSatisfied(controllerAt(rooms.world, 35, 131, 9)),
                     "vacuum room accepts vacuum recipes");
                 observedAt[0] = rooms.world.getTotalWorldTime();
             })
