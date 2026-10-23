@@ -17,13 +17,13 @@ $projectRoot = Split-Path $PSScriptRoot -Parent
 $groups = [ordered]@{
     'space-grade-alloy' = @('galaxia:SpaceGradeAlloyGameTests.')
     'physical-stations' = @('galaxia:AirlockGuiGameTests.')
-    'recipe-environments' = @('galaxia:RecipeEnvironmentGameTests.', 'galaxia:RoomPressureGameTests.')
+    'recipe-environments' = @('galaxia:RecipeEnvironmentGameTests.', 'galaxia:RoomPressureGameTests.', 'galaxia:OrbitGameTests.ebfVacuumExhaustPreservesNativeVenting')
     'automated-facilities' = @('galaxia:FacilityGameplayGameTests.', 'galaxia:StationGuiGameTests.')
     'rocket-production' = @('galaxia:ModuleConstructionGuiGameTests.')
     'starmap' = @('galaxia:StarmapGameTests.')
     'satellites' = @('galaxia:SatelliteNetworkGuiGameTests.')
     'solars' = @('galaxia:SolarEquipmentGameTests.')
-    'orbital-production' = @('galaxia:OrbitalProductionGameTests.')
+    'orbital-production' = @('galaxia:OrbitalProductionGameTests.', 'galaxia:OrbitalFurnaceGameTests.')
     'androids' = @('galaxia:AndroidStationGameTests.', 'galaxia:AndroidControlGameTests.')
 }
 if ($ListSuites) {
