@@ -29,7 +29,7 @@ final class EntityBodyTest {
         StringTranslate.inject(EntityBodyTest.class.getResourceAsStream("/assets/galaxia/lang/en_US.lang"));
     }
 
-    /** Death messages identify the chassis, retain Minecraft causes and never impersonate its operator. */
+    /** Product contract: inactive android deaths retain names and Minecraft causes. */
     @Test
     void androidDeathMessagesRetainNamesAndCauses() {
         UUID id = UUID.fromString("12345678-0000-0000-0000-000000000001");

@@ -400,9 +400,11 @@ public final class AndroidControl implements ForgeChunkManager.LoadingCallback {
                         .toString()
                         .substring(0, 8)
                 : body.name();
-        // An unspawned display subject keeps the operator's player identity out of the death message.
         EntityBody subject = new EntityBody(actor == null ? null : actor.worldObj, body.id(), null);
-        subject.setCustomNameTag(StatCollector.translateToLocalFormatted("galaxia.android.death.name", name));
+        subject.setCustomNameTag(
+            actor instanceof EntityPlayer operator ? StatCollector
+                .translateToLocalFormatted("galaxia.android.death.operated_name", name, operator.getCommandSenderName())
+                : StatCollector.translateToLocalFormatted("galaxia.android.death.name", name));
         if (actor != null) subject.setRevengeTarget(actor.func_94060_bK());
         return source.func_151519_b(subject);
     }
@@ -668,14 +670,13 @@ public final class AndroidControl implements ForgeChunkManager.LoadingCallback {
                     EXPLOSION_SOUND_PITCH);
                 if (operator != null) sync(operator, true);
             }
-            if (operator != null) {
-                if (viewed < ConfigMachines.android.viewTicks) {
-                    explosionViews.put(body.id(), viewed + 1);
-                    continue;
-                }
-                endControl(operator);
+            if (operator != null && viewed < ConfigMachines.android.viewTicks) {
+                explosionViews.put(body.id(), viewed + 1);
+                continue;
             }
-            destroy(body.id(), deathMessage(body, SELF_DESTRUCTION, null));
+            IChatComponent message = deathMessage(body, SELF_DESTRUCTION, operator);
+            if (operator != null) endControl(operator);
+            destroy(body.id(), message);
         }
         if (ticks % ConfigMachines.android.checkpointIntervalTicks == 0) checkpoint();
     }
