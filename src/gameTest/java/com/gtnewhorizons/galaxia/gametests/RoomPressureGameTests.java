@@ -14,6 +14,7 @@ import net.minecraftforge.fluids.FluidStack;
 import com.cleanroommc.modularui.factory.GuiFactories;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.api.RecipeEnvironments;
+import com.gtnewhorizons.galaxia.compat.gt.OrbitMachineRules;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockDoor;
@@ -28,7 +29,6 @@ import com.gtnewhorizons.horizonqa.api.client.ClientTest;
 import gregtech.api.GregTechAPI;
 import gregtech.api.enums.ItemList;
 import gregtech.api.metatileentity.BaseMetaTileEntity;
-import gregtech.api.metatileentity.MetaTileEntity;
 import gregtech.common.tileentities.machines.multi.MTEElectricBlastFurnace;
 
 @GameTestHolder(value = "galaxia", clientOnly = true, requiredMods = "gregtech")
@@ -36,13 +36,13 @@ public final class RoomPressureGameTests {
 
     private RoomPressureGameTests() {}
 
-    private static MetaTileEntity controllerAt(WorldServer world, int x, int y, int z) {
+    private static MTEElectricBlastFurnace controllerAt(WorldServer world, int x, int y, int z) {
         BaseMetaTileEntity tile = new BaseMetaTileEntity();
         tile.setWorldObj(world);
         tile.xCoord = x;
         tile.yCoord = y;
         tile.zCoord = z;
-        MetaTileEntity machine = new MTEElectricBlastFurnace("room_condition_probe");
+        MTEElectricBlastFurnace machine = new MTEElectricBlastFurnace("room_condition_probe");
         machine.setBaseMetaTileEntity(tile);
         return machine;
     }
@@ -99,6 +99,12 @@ public final class RoomPressureGameTests {
                 helper.assertTrue(
                     RecipeEnvironments.NO_ATMOSPHERE.isSatisfied(controllerAt(rooms.world, 35, 131, 9)),
                     "vacuum room accepts vacuum recipes");
+                helper.assertTrue(
+                    OrbitMachineRules.isExhaustBlocked(controllerAt(rooms.world, 35, 131, 3)),
+                    "pressurized room retains the EBF exhaust restriction");
+                helper.assertFalse(
+                    OrbitMachineRules.isExhaustBlocked(controllerAt(rooms.world, 35, 131, 9)),
+                    "vacuum room permits EBF exhaust");
                 observedAt[0] = rooms.world.getTotalWorldTime();
             })
             .awaitServer("unpowered room loses pressure slowly", () -> {

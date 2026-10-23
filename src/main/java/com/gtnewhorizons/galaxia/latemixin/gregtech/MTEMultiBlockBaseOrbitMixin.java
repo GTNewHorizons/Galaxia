@@ -14,7 +14,7 @@ import gregtech.api.metatileentity.implementations.MTEMultiBlockBase;
 import gregtech.api.recipe.check.CheckRecipeResult;
 
 /**
- * Multiblocks that pollute have nowhere to send their exhaust in orbit: they still form, but never start a recipe
+ * Applies orbital exhaust admission rules, including EBF venting into vacuum.
  */
 @Mixin(value = MTEMultiBlockBase.class, remap = false)
 public abstract class MTEMultiBlockBaseOrbitMixin {

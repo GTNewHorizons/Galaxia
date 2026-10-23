@@ -25,6 +25,7 @@ public class GalaxiaLateMixins implements ILateMixinLoader {
         List<String> mixins = new ArrayList<>();
         if (loadedMods.contains("gregtech")) {
             mixins.add("gregtech.MTEMultiBlockBaseOrbitMixin");
+            mixins.add("gregtech.MTEHatchMufflerVacuumMixin");
             mixins.add("gregtech.MTEHatchEnergyStationMixin");
             mixins.add("gregtech.MTEHatchDynamoStationMixin");
         }

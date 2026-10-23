@@ -1,12 +1,12 @@
 package com.gtnewhorizons.galaxia.gametests;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
 import net.minecraft.world.storage.WorldInfo;
@@ -34,10 +34,15 @@ import com.gtnewhorizons.horizonqa.api.annotation.GameTest;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTestHolder;
 import com.gtnewhorizons.horizonqa.api.client.ClientTest;
 
+import gregtech.GTMod;
 import gregtech.api.enums.ItemList;
 import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
+import gregtech.api.metatileentity.implementations.MTEHatchMuffler;
 import gregtech.api.metatileentity.implementations.MTEMultiBlockBase;
 import gregtech.common.blocks.ItemMachines;
+import gregtech.common.pollution.Pollution;
+import gtPlusPlus.xmod.gregtech.api.enums.GregtechItemList;
+import gtPlusPlus.xmod.gregtech.api.metatileentity.implementations.MTEHatchMufflerAdvanced;
 
 @GameTestHolder(value = "galaxia", clientOnly = true, requiredMods = { "gregtech" })
 public final class OrbitGameTests {
@@ -118,11 +123,10 @@ public final class OrbitGameTests {
     }
 
     /**
-     * Product contract: in orbit a multiblock that pollutes forms but never starts, whatever the pollution config says,
-     * while clean multiblocks run as usual and the same polluting machine works on a planet.
+     * Product contract: EBF can vent in vacuum, while other polluting multiblocks keep their orbital restriction.
      */
     @GameTest(timeoutTicks = 600)
-    public static void pollutingMultiblocksStopInOrbit(GameTestHelper helper) {
+    public static void ebfMayVentInOrbitalVacuum(GameTestHelper helper) {
         Fixture fixture = new Fixture();
         ClientTest.scenario(helper)
             .defaultTimeoutTicks(300)
@@ -130,16 +134,16 @@ public final class OrbitGameTests {
             .server("a blast furnace and a vacuum freezer in orbit", () -> {
                 fixture.placeMachine(0, 0, 0, ItemList.Machine_Multi_BlastFurnace.get(1));
                 fixture.placeMachine(4, 0, 0, ItemList.Machine_Multi_VacuumFreezer.get(1));
+                fixture.placeMachine(8, 0, 0, ItemList.PyrolyseOven.get(1));
             })
-            .server("only the polluting furnace is held back", () -> {
+            .server("vacuum permits EBF exhaust without changing other machine rules", () -> {
                 MTEMultiBlockBase furnace = fixture.multiblock(fixture.world, 0, 0, 0);
                 MTEMultiBlockBase freezer = fixture.multiblock(fixture.world, 4, 0, 0);
-                if (!OrbitMachineRules.isExhaustBlocked(furnace)) throw new AssertionError("Furnace may run in orbit");
+                helper.assertFalse(OrbitMachineRules.isExhaustBlocked(furnace), "EBF may vent in vacuum");
                 if (OrbitMachineRules.isExhaustBlocked(freezer)) throw new AssertionError("Freezer is held back");
-                if (checkRecipe(furnace)) throw new AssertionError("Furnace started a recipe in orbit");
-                if (furnace.getCheckRecipeResult() != OrbitMachineRules.NO_EXHAUST_IN_ORBIT) {
-                    throw new AssertionError("Furnace shows " + furnace.getCheckRecipeResult());
-                }
+                helper.assertTrue(
+                    OrbitMachineRules.isExhaustBlocked(fixture.multiblock(fixture.world, 8, 0, 0)),
+                    "other polluting multiblocks retain their restriction");
             })
             .server("the same furnace on the planet", () -> {
                 World planet = helper.getWorld();
@@ -149,6 +153,75 @@ public final class OrbitGameTests {
                 }
             })
             .succeed();
+    }
+
+    /** Product contract: vacuum removes EBF pollution without bypassing the muffler's physical outlet check. */
+    @GameTest(timeoutTicks = 600)
+    public static void ebfVacuumExhaustPreservesNativeVenting(GameTestHelper helper) {
+        Fixture fixture = new Fixture();
+        ClientTest.scenario(helper)
+            .server("enter the orbital vacuum", () -> fixture.enter(helper))
+            .server("enable pollution for the native emission check", () -> {
+                boolean previous = GTMod.proxy.mPollution;
+                helper.afterTest(() -> GTMod.proxy.mPollution = previous);
+                GTMod.proxy.mPollution = true;
+            })
+            .server("an orbital EBF vents without accumulating chunk pollution", () -> {
+                fixture.placeMachine(0, 0, 0, ItemList.Machine_Multi_BlastFurnace.get(1));
+                for (ItemStack hatch : List
+                    .of(ItemList.Hatch_Muffler_LV.get(1), GregtechItemList.Hatch_Muffler_Adv_LV.get(1))) {
+                    fixture.placeMachine(2, 0, 0, hatch);
+                    assertNativeVenting(
+                        helper,
+                        fixture.multiblock(fixture.world, 0, 0, 0),
+                        (IGregTechTileEntity) fixture.world.getTileEntity(2, 100, 0),
+                        0);
+                }
+            })
+            .server("the same equipment still pollutes on an atmospheric surface", () -> {
+                World planet = helper.getWorld();
+                fixture.placeMachineIn(planet, 0, 200, 0, ItemList.Machine_Multi_BlastFurnace.get(1));
+                for (ItemStack hatch : List
+                    .of(ItemList.Hatch_Muffler_LV.get(1), GregtechItemList.Hatch_Muffler_Adv_LV.get(1))) {
+                    fixture.placeMachineIn(planet, 2, 200, 0, hatch);
+                    assertNativeVenting(
+                        helper,
+                        fixture.multiblock(planet, 0, 200, 0),
+                        (IGregTechTileEntity) planet.getTileEntity(2, 200, 0),
+                        10000);
+                }
+            })
+            .succeed();
+    }
+
+    private static void assertNativeVenting(GameTestHelper helper, MTEMultiBlockBase controller,
+        IGregTechTileEntity base, int expectedPollution) {
+        World world = base.getWorld();
+        int x = base.getXCoord(), y = base.getYCoord(), z = base.getZCoord();
+        MTEHatchMuffler hatch = (MTEHatchMuffler) base.getMetaTileEntity();
+        base.setFrontFacing(ForgeDirection.UP);
+        Block[] previous = new Block[2];
+        int[] metadata = new int[2];
+        for (int i = 0; i < previous.length; i++) {
+            previous[i] = world.getBlock(x, y + i + 1, z);
+            metadata[i] = world.getBlockMetadata(x, y + i + 1, z);
+        }
+        int pollution = Pollution.getPollution(base);
+        try {
+            for (int i = 0; i < previous.length; i++) world.setBlockToAir(x, y + i + 1, z);
+            helper.assertTrue(hatch.polluteEnvironment(controller, 10000), "open muffler vents successfully");
+            helper.assertEquals(pollution + expectedPollution, Pollution.getPollution(base), "native chunk pollution");
+            int obstructedY = y + (hatch instanceof MTEHatchMufflerAdvanced ? 2 : 1);
+            world.setBlock(x, obstructedY, z, Blocks.stone);
+            helper.assertFalse(hatch.polluteEnvironment(controller, 10000), "blocked muffler cannot vent");
+            helper.assertEquals(
+                pollution + expectedPollution,
+                Pollution.getPollution(base),
+                "blocked outlet adds no pollution");
+        } finally {
+            Pollution.addPollution(base, pollution - Pollution.getPollution(base));
+            for (int i = 0; i < previous.length; i++) world.setBlock(x, y + i + 1, z, previous[i], metadata[i], 3);
+        }
     }
 
     /**
@@ -280,17 +353,6 @@ public final class OrbitGameTests {
             .dimensionId();
     }
 
-    /** Runs the recipe check every multiblock goes through */
-    private static boolean checkRecipe(MTEMultiBlockBase machine) {
-        try {
-            Method check = MTEMultiBlockBase.class.getDeclaredMethod("checkRecipe");
-            check.setAccessible(true);
-            return (boolean) check.invoke(machine);
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError("Cannot run the recipe check", e);
-        }
-    }
-
     private static final class Fixture {
 
         private final List<BlockPos> placed = new ArrayList<>();
@@ -306,7 +368,10 @@ public final class OrbitGameTests {
             player.capabilities.isFlying = true;
             player.sendPlayerAbilities();
             world = OrbitTestSupport.enterOrbit(helper, player, x + 3.5, y + 9, z - 4.5);
-            helper.afterTest(() -> { for (BlockPos pos : placed) world.setBlockToAir(pos.x(), pos.y(), pos.z()); });
+            helper.afterTest(() -> {
+                for (BlockPos pos : placed) world.setBlockToAir(pos.x(), pos.y(), pos.z());
+                cleanup.forEach(Runnable::run);
+            });
         }
 
         void assertVacuum() {
